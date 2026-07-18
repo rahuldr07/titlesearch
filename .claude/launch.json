@@ -1,0 +1,4 @@
+{
+  "command": "pnpm --filter web dev",
+  "port": 5173
+}

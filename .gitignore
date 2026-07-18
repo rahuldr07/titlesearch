@@ -1,0 +1,35 @@
+# County search packages contain GLBA NPI — never in VCS (CONTEXT §19: 644 MB incident).
+# Local upload/package storage lives OUTSIDE the working tree at an absolute configured
+# path; /data/ is the gitignored dev default. The pnpm workspace dir packages/ (contract,
+# ui, mocks — source code) IS tracked; the old prototype's uploads dir happened to share
+# the name.
+/data/
+*.seed
+
+# secrets
+.env
+.env.*
+!.env.example
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# node
+node_modules/
+dist/
+.vite/
+
+# test artifacts
+test-results/
+playwright-report/
+.playwright-mcp/
+
+# local artifacts
+*.log
+.DS_Store
