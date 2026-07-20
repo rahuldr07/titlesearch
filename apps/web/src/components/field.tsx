@@ -165,10 +165,19 @@ export function statePill(f: Field): ChipSpec {
         };
       }
       if (f.value === null && readingsDisagree(f)) {
-        return {
-          label: "ENGINES DISAGREE — A EMPTY, B FOUND",
-          className: base + "border border-act bg-act text-ink-invert",
-        };
+        // Say what the readings actually show: "A empty, B found" only when
+        // that is true — with two found-but-different values, claiming
+        // emptiness contradicts the evidence 20px below and kills trust.
+        const someEmpty = (f.readings ?? []).some((r) => r.value === null);
+        return someEmpty
+          ? {
+              label: "ENGINES DISAGREE — A EMPTY, B FOUND",
+              className: base + "border border-act bg-act text-ink-invert",
+            }
+          : {
+              label: "ENGINES DISAGREE — NOTHING SETTLED",
+              className: base + "border border-act bg-act text-ink-invert",
+            };
       }
       if (f.value === null) {
         return {
@@ -236,9 +245,39 @@ export function ProvenanceLine({
 }
 
 /**
+ * Character-level diff against the other reader's value. OCR failure modes
+ * are single-glyph (O vs 0, 6 vs 8) at 12px mono — older eyes miss them;
+ * the highlight does the squinting. Positional compare is deliberate: the
+ * variants are same-shape strings, and a smarter diff would imply an
+ * alignment judgment the UI has no business making.
+ */
+function DiffChars({ value, other }: { value: string; other: string }) {
+  return (
+    <>
+      {[...value].map((ch, i) =>
+        ch === (other[i] ?? null) ? (
+          ch
+        ) : (
+          <span
+            key={i}
+            data-testid="diff-hl"
+            className="rounded-[2px] bg-act px-px text-ink-invert"
+          >
+            {ch}
+          </span>
+        ),
+      )}
+    </>
+  );
+}
+
+/**
  * One engine reading (dark register). Readings are labeled by seat position
  * (READER A / READER B) in server order; cost + latency render dimmed —
- * recorded per call, never hidden (CONTEXT §8).
+ * recorded per call, never hidden (CONTEXT §8). With `compareTo`, characters
+ * differing from the other reader light up; with `onUse`, the value can be
+ * adopted into the correction editor without retyping (the why is still
+ * required — deliberateness survives, transcription errors don't).
  */
 export function ReadingCard({
   reading,
@@ -246,13 +285,18 @@ export function ReadingCard({
   pinned,
   pinnable,
   onPin,
+  compareTo = null,
+  onUse,
 }: {
   reading: FieldReading;
   seat: string;
   pinned: boolean;
   pinnable: boolean;
   onPin?: (() => void) | undefined;
+  compareTo?: string | null;
+  onUse?: ((value: string) => void) | undefined;
 }) {
+  const v = reading.value;
   return (
     <div
       onClick={pinnable ? onPin : undefined}
@@ -275,10 +319,16 @@ export function ReadingCard({
       <div className="min-w-0">
         <div
           className={`font-mono text-[12.5px] ${
-            reading.value === null ? "text-dk-act" : "text-dk-ink-strong"
+            v === null ? "text-dk-act" : "text-dk-ink-strong"
           }`}
         >
-          {reading.value ?? "∅ returned nothing"}
+          {v === null ? (
+            "∅ returned nothing"
+          ) : compareTo !== null && compareTo !== v ? (
+            <DiffChars value={v} other={compareTo} />
+          ) : (
+            v
+          )}
         </div>
         {reading.snippet !== null && (
           <div className="mt-[2px] text-[10.5px] text-ink-dim">
@@ -286,8 +336,23 @@ export function ReadingCard({
             {pinnable && <> · ⌖ click to pin the exact line</>}
           </div>
         )}
-        <div className="mt-[2px] font-mono text-[10px] text-ink-dim">
-          ${reading.cost_usd.toFixed(4)} · {(reading.latency_ms / 1000).toFixed(1)}s
+        <div className="mt-[2px] flex flex-wrap items-baseline gap-2">
+          <span className="font-mono text-[10px] text-ink-dim">
+            ${reading.cost_usd.toFixed(4)} · {(reading.latency_ms / 1000).toFixed(1)}s
+          </span>
+          {v !== null && onUse !== undefined && (
+            <button
+              type="button"
+              data-testid={`use-${reading.id}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                onUse(v);
+              }}
+              className="cursor-pointer rounded-[3px] border border-neutral bg-transparent px-[6px] py-px font-sans text-[10px] font-semibold text-action-border"
+            >
+              correct to this — the why is still yours
+            </button>
+          )}
         </div>
       </div>
     </div>

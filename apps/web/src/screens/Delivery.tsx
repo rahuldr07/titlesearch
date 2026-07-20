@@ -7,6 +7,7 @@ import {
   type DeliveryWithReport,
 } from "@titlepipe/contract";
 import { api } from "../api";
+import { MutationNote } from "../components/notice";
 import { ScreenFrame, TopBar } from "../components/TopBar";
 
 /**
@@ -15,9 +16,9 @@ import { ScreenFrame, TopBar } from "../components/TopBar";
  * listed — the pair is the defect record. A FAILED delivery is a TRANSIT
  * state (attend, retryable) and is never styled as a quality failure (act).
  *
- * Not ported (CONTRACT GAPs): client/vendor names, arrived→delivered elapsed
- * breakdown (no order-event timeline shape), the Lookup tab (no order-events
- * endpoint).
+ * Not ported (CONTRACT GAP): client/vendor names on the Delivery entity.
+ * (Order events exist — GET /api/orders/{id}/timeline feeds the order rail;
+ * a Lookup tab here could reuse it when the screen grows one.)
  */
 export function DeliveryScreen() {
   const deliveriesQ = useQuery({
@@ -63,6 +64,14 @@ export function DeliveryScreen() {
               picks a channel thirty times a day
             </div>
           </div>
+          {deliveriesQ.isPending && (
+            <p className="text-[13px] text-ink-dim">Fetching deliveries…</p>
+          )}
+          {deliveriesQ.error != null && (
+            <p className="text-[13px] text-act">
+              Deliveries unavailable: {String(deliveriesQ.error)}
+            </p>
+          )}
           {groups.map((g) => (
             <OrderDeliveryCard key={g.orderId} orderId={g.orderId} rows={g.rows} />
           ))}
@@ -117,6 +126,8 @@ function OrderDeliveryCard({
     mutationFn: (id: string) =>
       api(Ack, `/api/deliveries/${id}/retry`, { method: "POST" }),
     onSuccess: () =>
+      void queryClient.invalidateQueries({ queryKey: ["deliveries"] }),
+    onError: () =>
       void queryClient.invalidateQueries({ queryKey: ["deliveries"] }),
   });
 
@@ -198,6 +209,9 @@ function OrderDeliveryCard({
             the work is correct and stuck in transit — this is not a quality
             problem and must not be treated as one
           </span>
+          {retry.error != null && (
+            <MutationNote testid="retry-note" error={retry.error} />
+          )}
         </div>
       )}
     </div>

@@ -185,12 +185,17 @@ GET    /api/golden · POST /api/golden/corrections     (source+reason+signed)
 POST   /api/blind/{order}/entries    typist capture (blind enforced server-side) NEW-hardened
 GET    /api/reconciliation/{order}   divergences · POST rulings (citation required)
 GET    /api/bench/results            section × tag matrix
+GET    /api/engines                 engine registry (roster, kinds)
 GET    /api/engines/leaderboard      engine × section × jurisdiction          NEW
+GET    /api/engines/routing         current seat assignments (read side of POST)
 POST   /api/engines/routing          seat change (engineer, logged)           NEW
-GET    /api/orders/{id}/report       render status · POST /render
+GET    /api/orders/{id}/timeline    server-authored order events (feeds the order rail)
+GET    /api/orders/{id}/report       render status · POST /render  (documented; contract schema lands with the Delivery report view)
 GET    /api/deliveries · POST /api/deliveries/{id}/retry
+GET    /api/complaints              list, grouped client-side by how_it_got_through
 POST   /api/complaints               per-field capture
 GET    /api/audit                    append-only view (admin)
+GET    /api/me/permissions           caller's authz projection (rules-as-data; holder lists redacted)
 ```
 Server-side owns: all state machines, needs_review logic, queue ordering, derived values, blindness enforcement (typist endpoints physically cannot return model output or the other seat's entries), five-state field logic. Screens are thin.
 

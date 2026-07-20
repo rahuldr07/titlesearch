@@ -8,6 +8,8 @@ import {
   type Reconciliation,
 } from "@titlepipe/contract";
 import { api } from "../api";
+import { MutationNote } from "../components/notice";
+import { HomeTitle } from "../components/TopBar";
 
 /**
  * Reconciliation (frontend-master-prompt §4.13), to the Reconciliation
@@ -36,9 +38,10 @@ export function ReconciliationScreen() {
     <div className="flex h-screen flex-col bg-bg font-sans text-ink">
       <div className="flex flex-none flex-wrap items-baseline justify-between gap-x-[14px] gap-y-2 border-b border-line bg-surface px-[18px] py-[10px]">
         <div className="flex flex-wrap items-baseline gap-[14px]">
-          <div className="text-[12px] font-bold tracking-[.12em] text-label">
-            RECONCILIATION
-          </div>
+          <HomeTitle
+            title="RECONCILIATION"
+            className="text-[12px] font-bold tracking-[.12em] text-label"
+          />
           <div className="text-[13px] font-semibold">
             <span className="font-mono">{orderId}</span> ·{" "}
             {divergences.length} divergences
@@ -56,7 +59,30 @@ export function ReconciliationScreen() {
           nowhere
         </span>
       </div>
-      {open.length === 0 && divergences.length > 0 ? (
+      {reconQ.isPending ? (
+        <div className="flex flex-1 items-center justify-center p-[30px] text-[13px] text-ink-dim">
+          Loading divergences…
+        </div>
+      ) : reconQ.error != null ? (
+        <div className="flex flex-1 items-center justify-center p-[30px] text-[13px] text-act">
+          Reconciliation unavailable: {String(reconQ.error)}
+        </div>
+      ) : divergences.length === 0 ? (
+        <div className="flex flex-1 items-center justify-center p-[30px]">
+          <div
+            data-testid="recon-empty"
+            className="max-w-[460px] rounded-card border border-line-mid bg-input px-8 py-[30px]"
+          >
+            <div className="text-[15px] font-semibold">
+              No divergences recorded for this order.
+            </div>
+            <div className="mt-2 text-[13px] leading-[1.6] text-ink-secondary">
+              Either the blind pair hasn't been captured yet, or this order id
+              isn't part of the blind fifty. Nothing to rule on here.
+            </div>
+          </div>
+        </div>
+      ) : open.length === 0 ? (
         <div className="flex flex-1 items-center justify-center p-[30px]">
           <div
             data-testid="recon-done"
@@ -186,6 +212,12 @@ function DivergenceCard({
         body: JSON.stringify(buildRequest(withDraft)),
       }),
     onSuccess: () =>
+      void queryClient.invalidateQueries({
+        queryKey: ["reconciliation", orderId],
+      }),
+    // An already-ruled 409 refetches too: the row moving to the ruled list
+    // is itself the explanation.
+    onError: () =>
       void queryClient.invalidateQueries({
         queryKey: ["reconciliation", orderId],
       }),
@@ -330,6 +362,9 @@ function DivergenceCard({
                 File ruling + draft as PENDING
               </button>
             </div>
+          )}
+          {rule.error != null && (
+            <MutationNote testid="rule-note" error={rule.error} />
           )}
         </>
       )}

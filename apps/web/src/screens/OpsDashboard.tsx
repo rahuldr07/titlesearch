@@ -5,7 +5,9 @@ import {
   MetricsResponse,
 } from "@titlepipe/contract";
 import { api } from "../api";
+import { fieldLabel } from "../components/field";
 import { ScreenFrame, TopBar } from "../components/TopBar";
+import { canAccess } from "../nav";
 import { useSession } from "../session";
 
 /**
@@ -26,15 +28,15 @@ import { useSession } from "../session";
 export function OpsDashboardScreen() {
   const [drillSignal, setDrillSignal] = useState<string | null>(null);
   const sessionRole = useSession((s) => s.role);
-  const gated = sessionRole === "reviewer" || sessionRole === "typist";
+  // §0.7 from the authz table, not a hand-rolled role branch: whoever lacks
+  // the /dashboard door (reviewer, typist — and senior/engineer, whose
+  // worlds also exclude it) gets the gate, and the metrics query never runs.
+  const gated = !canAccess(sessionRole, "/dashboard");
   const metricsQ = useQuery({
     queryKey: ["metrics"],
     queryFn: () => api(MetricsResponse, "/api/metrics"),
     enabled: !gated,
   });
-
-  // §0.7: reviewers never see the dashboard, metrics, or anything
-  // throughput-adjacent. Mocked-session gate now; Clerk claims later.
   if (gated) {
     return (
       <ScreenFrame>
@@ -334,7 +336,13 @@ export function OpsDashboardScreen() {
                   onClick={() => setDrillSignal(`field:${f.path}`)}
                   className="grid cursor-pointer grid-cols-[1fr_120px_60px_60px] items-baseline gap-[10px] border-b border-hairline py-2"
                 >
-                  <span className="font-mono text-[12px]">{f.path}</span>
+                  {/* the human name leads; the raw path stays for grep/telemetry talk */}
+                  <span className="text-[12px]">
+                    <b>{fieldLabel(f.path)}</b>{" "}
+                    <span className="font-mono text-[10.5px] text-ink-dim">
+                      {f.path}
+                    </span>
+                  </span>
                   <div className="h-2 self-center overflow-hidden rounded-[2px] bg-track">
                     <div
                       className={`h-full ${i === 0 ? "bg-act" : "bg-ink-dim"}`}
@@ -449,7 +457,7 @@ function DrillDrawer({
     <>
       <div
         onClick={onClose}
-        className="fixed inset-0 z-50 bg-[rgb(31_28_23/0.25)]"
+        className="fixed inset-0 z-50 bg-[rgb(31_28_23/0.45)]"
       />
       <div
         data-testid="drill-drawer"

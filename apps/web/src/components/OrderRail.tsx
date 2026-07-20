@@ -34,8 +34,9 @@ export function OrderRail({
       api(OrderTimelineResponse, `/api/orders/${orderId}/timeline`),
   });
 
+  // The spine never vanishes: a failed or empty timeline still renders the
+  // shell — silence here would read as "no history", which is a lie.
   const events = timelineQ.data?.events ?? [];
-  if (events.length === 0) return null;
 
   const queued = fields.filter((f) => f.state === "needs_review").length;
   const resolved = fields.filter(
@@ -56,6 +57,20 @@ export function OrderRail({
       <span className={seg}>
         <span className="font-mono font-semibold text-ink">{orderId}</span>
       </span>
+      {timelineQ.error != null && (
+        <span className={seg}>
+          {dot}
+          <span className="text-attend">timeline unavailable</span>
+        </span>
+      )}
+      {timelineQ.error == null &&
+        !timelineQ.isPending &&
+        events.length === 0 && (
+          <span className={seg}>
+            {dot}
+            <span className="text-ink-dim">no recorded events</span>
+          </span>
+        )}
       {events.map((ev, i) => {
         const isLiveReview = ev.kind === "review" && fields.length > 0;
         const label = isLiveReview

@@ -8,6 +8,8 @@ import {
   type GoldenField,
 } from "@titlepipe/contract";
 import { api } from "../api";
+import { MutationNote } from "../components/notice";
+import { HomeTitle } from "../components/TopBar";
 
 /**
  * Seed Correction (frontend-master-prompt §4.9), to the Seed
@@ -38,13 +40,18 @@ export function SeedCorrectionScreen() {
     search.fieldId !== undefined
       ? (fields.find((g) => g.id === search.fieldId) ?? null)
       : null;
+  // An id WAS supplied but names nothing in the corpus — a stale link is not
+  // the same as arriving with no context; say which one happened.
+  const stale =
+    search.fieldId !== undefined && goldenQ.data !== undefined && field === null;
 
   return (
     <div className="flex h-screen flex-col bg-dk-deep font-mono text-[12px] text-dk-ink-soft">
       <div className="flex flex-none flex-wrap items-baseline gap-4 border-b border-dk-line px-[14px] py-2">
-        <span className="text-[11px] font-bold tracking-[.1em] text-ink-dim">
-          SEED CORRECTION
-        </span>
+        <HomeTitle
+          title="SEED CORRECTION"
+          className="text-[11px] font-bold tracking-[.1em] text-ink-dim"
+        />
         {field && (
           <span className="text-dk-ink-strong">{field.path}</span>
         )}
@@ -62,8 +69,37 @@ export function SeedCorrectionScreen() {
       <div className="flex min-h-0 flex-1">
         <ScanPane />
         <div className="min-w-[560px] flex-1 overflow-y-auto px-[18px] pt-[14px] pb-10">
+          {goldenQ.error != null && (
+            <div className="mt-4 text-[12px] text-dk-attend">
+              Golden corpus unavailable: {String(goldenQ.error)}
+            </div>
+          )}
           {field ? (
             <Investigation key={field.id} field={field} />
+          ) : stale ? (
+            <div
+              data-testid="stale-link"
+              className="mt-8 max-w-[480px] rounded-[6px] border-[1.5px] border-dashed border-dk-attend-border px-7 py-8 text-center"
+            >
+              <div className="mb-3 font-mono text-[20px] text-label">
+                — stale link —
+              </div>
+              <div className="text-[13px] font-semibold text-dk-ink">
+                This id names a seed field that isn't in the corpus.
+              </div>
+              <div className="mt-2 text-[12px] leading-[1.6] text-ink-dim">
+                The link that brought you here (
+                <span className="font-mono text-dk-attend">
+                  {search.fieldId}
+                </span>
+                ) points at nothing — the field may have been removed or the id
+                mistyped. Re-open from a failing cell in{" "}
+                <Link to="/bench/results" className="no-underline">
+                  bench results
+                </Link>
+                .
+              </div>
+            </div>
           ) : (
             !goldenQ.isPending && (
               <div
@@ -190,6 +226,8 @@ function Investigation({ field }: { field: GoldenField }) {
       }),
     onSuccess: () =>
       void queryClient.invalidateQueries({ queryKey: ["golden"] }),
+    onError: () =>
+      void queryClient.invalidateQueries({ queryKey: ["golden"] }),
   });
 
   const corrected = field.corrected_at !== null;
@@ -286,6 +324,13 @@ function Investigation({ field }: { field: GoldenField }) {
                   : "citation, reason and signature required — a correction with no source is an opinion"}
               </button>
             </div>
+            {correct.error != null && (
+              <MutationNote
+                register="dark"
+                testid="seed-correct-note"
+                error={correct.error}
+              />
+            )}
           </div>
           <div className="mb-2 rounded-[5px] border border-dk-card bg-dk-bg px-[14px] py-3">
             <span className="font-bold text-dash">3 · Demote to suspect</span>{" "}

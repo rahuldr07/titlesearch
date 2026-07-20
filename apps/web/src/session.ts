@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import type { Role } from "@titlepipe/contract";
 
 /**
  * Mocked local session (auth is mocked until Clerk lands). The demo identity
@@ -10,14 +11,11 @@ import { create } from "zustand";
  * readers use the `useSession` hook; event-time readers (router beforeLoad
  * guards, keydown handlers) use the `session` proxy, which reads the store at
  * call time — both always agree.
+ *
+ * Role is the contract's (authz.ts) — the session only SAYS which role;
+ * what a role may do lives in the permission table.
  */
-export type Role =
-  | "reviewer"
-  | "senior"
-  | "ops"
-  | "engineer"
-  | "typist"
-  | "admin";
+export type { Role };
 
 export interface Session {
   name: string;

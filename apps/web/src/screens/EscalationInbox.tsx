@@ -10,6 +10,7 @@ import {
   type Rule,
 } from "@titlepipe/contract";
 import { api } from "../api";
+import { MutationNote } from "../components/notice";
 import { ScreenFrame, TopBar } from "../components/TopBar";
 
 /**
@@ -84,6 +85,19 @@ export function EscalationInboxScreen() {
           <div className="px-1 pb-[10px] text-[10.5px] font-bold tracking-[.1em] text-label">
             OPEN — GROUPED BY WHAT'S CONFUSING PEOPLE, NOT BY TIME
           </div>
+          {escalationsQ.isPending && (
+            <p className="px-1 text-[12px] text-ink-dim">Fetching the inbox…</p>
+          )}
+          {escalationsQ.error != null && (
+            <p className="px-1 text-[12px] text-act">
+              Inbox unavailable: {String(escalationsQ.error)}
+            </p>
+          )}
+          {rulesQ.error != null && (
+            <p className="px-1 text-[12px] text-act">
+              Rulebook unavailable: {String(rulesQ.error)}
+            </p>
+          )}
           {openClusters.map((c) => (
             <ClusterCard
               key={c.path}
@@ -328,6 +342,12 @@ function ResolveCard({
       void queryClient.invalidateQueries({ queryKey: ["escalations"] });
       void queryClient.invalidateQueries({ queryKey: ["rules"] });
     },
+    // The per-escalation loop can half-succeed — the refetch shows what
+    // actually cleared; the note says why the rest didn't.
+    onError: () => {
+      void queryClient.invalidateQueries({ queryKey: ["escalations"] });
+      void queryClient.invalidateQueries({ queryKey: ["rules"] });
+    },
   });
 
   const citable = rules.filter((r) => r.status === "live");
@@ -419,6 +439,9 @@ function ResolveCard({
           no category, no priority, no assignee — just the rule
         </div>
       </div>
+      {resolve.error != null && (
+        <MutationNote testid="resolve-note" error={resolve.error} />
+      )}
     </div>
   );
 }

@@ -11,6 +11,10 @@ import {
   PassOrderRequest,
   ReconciliationRulingRequest,
   ResolveEscalationRequest,
+  canDo,
+  isRole,
+  rulesFor,
+  type Action,
   type Ack,
   type Engine,
   type Escalation,
@@ -221,6 +225,24 @@ const ok: Ack = { ok: true };
 const err = (message: string, status: number) =>
   HttpResponse.json({ error: message }, { status });
 
+/**
+ * Role gate on every mutation — the authz table (contract authz.ts) enforced
+ * server-side, standing in for core-api middleware. The x-mock-role header is
+ * the mock's JWT role claim; a missing header means the dev-default admin
+ * session (a real server would 401 instead — the mock has no anonymous
+ * callers). Runs BEFORE body validation: authorization refuses ahead of
+ * schema errors, exactly as middleware will.
+ */
+const guard = (
+  request: Request,
+  action: Action,
+): ReturnType<typeof err> | null => {
+  const raw = request.headers.get("x-mock-role");
+  const role = raw === null ? "admin" : isRole(raw) ? raw : null;
+  if (role !== null && canDo(role, action)) return null;
+  return err(`refused: role lacks ${action}`, 403);
+};
+
 /** sha256 stand-in for the mock: file name + byte size. */
 const seenPackages = new Map<string, string>();
 let createdOrders = 0;
@@ -242,6 +264,8 @@ export const handlers = [
    * separate, explicit call — never automatic.
    */
   http.post("/api/orders", async ({ request }) => {
+    const denied = guard(request, "order.create");
+    if (denied) return denied;
     // An empty multipart body fails to parse in some engines — same refusal.
     const form = await request.formData().catch(() => new FormData());
     const missing: string[] = [];
@@ -289,7 +313,9 @@ export const handlers = [
   }),
 
   /** Explicit accept — a named person signs for the package. Never auto. */
-  http.post("/api/orders/:id/accept", () => HttpResponse.json(ok)),
+  http.post("/api/orders/:id/accept", ({ request }) => {
+    return guard(request, "order.accept") ?? HttpResponse.json(ok);
+  }),
 
   http.get("/api/queue/next", () => {
     const body: QueueNextResponse = {
@@ -299,6 +325,8 @@ export const handlers = [
   }),
 
   http.post("/api/orders/:id/pass", async ({ request }) => {
+    const denied = guard(request, "order.pass");
+    if (denied) return denied;
     const parsed = PassOrderRequest.safeParse(await request.json());
     if (!parsed.success) {
       // No reason, no pass — the refusal is the product requirement.
@@ -322,6 +350,8 @@ export const handlers = [
    * confirmed field = 200; different value = 409; terminal state = 409.
    */
   http.post("/api/fields/:id/confirm", async ({ params, request }) => {
+    const denied = guard(request, "field.confirm");
+    if (denied) return denied;
     const parsed = ConfirmFieldRequest.safeParse(await request.json());
     if (!parsed.success) return err(parsed.error.message, 422);
     const field = fieldStore.find((f) => f.id === params["id"]);
@@ -343,6 +373,8 @@ export const handlers = [
   }),
 
   http.post("/api/fields/:id/correct", async ({ params, request }) => {
+    const denied = guard(request, "field.correct");
+    if (denied) return denied;
     const parsed = CorrectFieldRequest.safeParse(await request.json());
     if (!parsed.success) {
       // The refusal is the product requirement: no reason, no correction.
@@ -363,6 +395,8 @@ export const handlers = [
   }),
 
   http.post("/api/fields/:id/escalate", async ({ params, request }) => {
+    const denied = guard(request, "field.escalate");
+    if (denied) return denied;
     const parsed = EscalateFieldRequest.safeParse(await request.json());
     if (!parsed.success) return err(parsed.error.message, 422);
     const field = fieldStore.find((f) => f.id === params["id"]);
@@ -373,6 +407,8 @@ export const handlers = [
 
   /** Broken-input channel — routes to developers, never the rules inbox. */
   http.post("/api/bugs", async ({ request }) => {
+    const denied = guard(request, "bug.file");
+    if (denied) return denied;
     const parsed = CreateBugRequest.safeParse(await request.json());
     if (!parsed.success) return err(parsed.error.message, 422);
     return HttpResponse.json(ok, { status: 201 });
@@ -680,7 +716,9 @@ export const handlers = [
   ),
 
   /** Retry re-SENDS the same file — the report is never re-rendered. */
-  http.post("/api/deliveries/:id/retry", ({ params }) => {
+  http.post("/api/deliveries/:id/retry", ({ params, request }) => {
+    const denied = guard(request, "delivery.retry");
+    if (denied) return denied;
     const d = deliveryStore.find((x) => x.id === params["id"]);
     if (!d) return err("no such delivery", 404);
     d.status = "delivered";
@@ -695,6 +733,8 @@ export const handlers = [
 
   /** Per-field complaint capture. Two states only: recorded, resolved. */
   http.post("/api/complaints", async ({ request }) => {
+    const denied = guard(request, "complaint.record");
+    if (denied) return denied;
     const parsed = CreateComplaintRequest.safeParse(await request.json());
     if (!parsed.success) return err(parsed.error.message, 422);
     complaintCount += 1;
@@ -880,6 +920,8 @@ export const handlers = [
    * REQUIRED evidence. No auto-promotion exists anywhere.
    */
   http.post("/api/engines/routing", async ({ request }) => {
+    const denied = guard(request, "routing.flip");
+    if (denied) return denied;
     const parsed = EngineRoutingRequest.safeParse(await request.json());
     if (!parsed.success) return err(parsed.error.message, 422);
     const cell = routingStore.find(
@@ -897,9 +939,13 @@ export const handlers = [
   }),
 
   http.get("/api/reconciliation/:order", ({ params }) =>
+    // Filtered by order — an unknown id gets an EMPTY list, never someone
+    // else's divergences dressed up as this order's.
     HttpResponse.json({
       order_id: String(params["order"]),
-      divergences: reconStore,
+      divergences: reconStore.filter(
+        (d) => d.order_id === String(params["order"]),
+      ),
     }),
   ),
 
@@ -909,6 +955,8 @@ export const handlers = [
    * it lands PENDING, never live. Rulings are per-path.
    */
   http.post("/api/reconciliation/:order", async ({ request }) => {
+    const denied = guard(request, "reconciliation.rule");
+    if (denied) return denied;
     const parsed = ReconciliationRulingRequest.safeParse(await request.json());
     if (!parsed.success) return err(parsed.error.message, 422);
     const div = reconStore.find((d) => d.path === parsed.data.path);
@@ -919,7 +967,7 @@ export const handlers = [
     div.ruling_value = parsed.data.ruling_value;
     div.citation = parsed.data.citation;
     div.reason = parsed.data.reason ?? null;
-    div.ruled_by = "M. Estrada";
+    div.ruled_by = "L. Vance";
     if (parsed.data.general_rule_draft) {
       draftCount += 1;
       const rule: Rule = {
@@ -950,6 +998,8 @@ export const handlers = [
    * to `ruled`; the prior value survives in corrected_from forever.
    */
   http.post("/api/golden/corrections", async ({ request }) => {
+    const denied = guard(request, "golden.correct");
+    if (denied) return denied;
     const parsed = GoldenCorrectionRequest.safeParse(await request.json());
     if (!parsed.success) return err(parsed.error.message, 422);
     const gf = goldenStore.find((g) => g.id === parsed.data.golden_field_id);
@@ -971,6 +1021,8 @@ export const handlers = [
    * server-side; the security test lives with the real server.
    */
   http.post("/api/blind/:order/entries", async ({ request }) => {
+    const denied = guard(request, "blind.submit");
+    if (denied) return denied;
     const parsed = BlindEntriesRequest.safeParse(await request.json());
     if (!parsed.success) return err(parsed.error.message, 422);
     return HttpResponse.json({
@@ -983,10 +1035,26 @@ export const handlers = [
     HttpResponse.json({ escalations: escalationStore }),
   ),
 
+  /**
+   * Rules-as-data: the caller's authz projection, holder lists redacted.
+   * Contains ONLY this role's grants — a typist's payload does not mention
+   * other worlds. At P1 the role comes from the Clerk claim, same shape.
+   */
+  http.get("/api/me/permissions", ({ request }) => {
+    const raw = request.headers.get("x-mock-role");
+    // missing header = the dev-default admin session; a PRESENT-but-unknown
+    // role is refused — forged garbage must never yield the widest world
+    if (raw !== null && !isRole(raw)) return err("unknown role", 400);
+    const role = raw !== null && isRole(raw) ? raw : "admin";
+    return HttpResponse.json({ role, rules: rulesFor(role) });
+  }),
+
   http.get("/api/rules", () => HttpResponse.json({ rules: ruleStore })),
 
   /** The engineer gate: PENDING → live, with a named confirmer. */
-  http.post("/api/rules/:id/confirm", ({ params }) => {
+  http.post("/api/rules/:id/confirm", ({ params, request }) => {
+    const denied = guard(request, "rule.confirm");
+    if (denied) return denied;
     const rule = ruleStore.find((r) => r.id === params["id"]);
     if (!rule) return err("no such rule", 404);
     if (rule.status !== "pending") return err("rule is not pending", 409);
@@ -1049,6 +1117,8 @@ export const handlers = [
    * affect the pipeline until an engineer confirms it.
    */
   http.post("/api/escalations/:id/resolve", async ({ params, request }) => {
+    const denied = guard(request, "escalation.resolve");
+    if (denied) return denied;
     const parsed = ResolveEscalationRequest.safeParse(await request.json());
     if (!parsed.success) return err(parsed.error.message, 422);
     const esc = escalationStore.find((e) => e.id === params["id"]);
@@ -1079,7 +1149,9 @@ export const handlers = [
     }
     esc.resolution = parsed.data.ruling;
     esc.rule_id = ruleId;
-    esc.resolved_by = "M. Estrada";
+    // the demo session's name — "resolved by <someone else>" right after
+    // YOU resolved it reads as a bug
+    esc.resolved_by = "L. Vance";
     return HttpResponse.json(ok);
   }),
 ];

@@ -10,6 +10,8 @@ import {
   type Field,
 } from "@titlepipe/contract";
 import { api } from "../api";
+import { naText } from "../components/field";
+import { MutationNote } from "../components/notice";
 import { ScreenFrame, TopBar } from "../components/TopBar";
 import { Tabs } from "./Delivery";
 
@@ -74,6 +76,14 @@ export function ComplaintsScreen() {
             GROUPED BY HOW IT GOT THROUGH — THE GROUPING IS THE FINDING, NOT
             THE DATE
           </div>
+          {complaintsQ.isPending && (
+            <p className="text-[13px] text-ink-dim">Fetching complaints…</p>
+          )}
+          {complaintsQ.error != null && (
+            <p className="text-[13px] text-act">
+              Complaints unavailable: {String(complaintsQ.error)}
+            </p>
+          )}
           {groups.map((g) => {
             const items = complaints.filter(
               (c) => c.how_it_got_through === g.key,
@@ -180,6 +190,8 @@ function CaptureCard() {
       setWords("");
       void queryClient.invalidateQueries({ queryKey: ["complaints"] });
     },
+    onError: () =>
+      void queryClient.invalidateQueries({ queryKey: ["complaints"] }),
   });
 
   const fields = fieldsQ.data?.fields ?? [];
@@ -197,6 +209,12 @@ function CaptureCard() {
       </div>
       <div className="mt-[10px] grid grid-cols-[minmax(260px,1fr)_minmax(300px,1.2fr)] gap-4">
         <div>
+          {(deliveriesQ.error ?? fieldsQ.error) != null && (
+            <p className="mb-[6px] text-[11.5px] text-act">
+              Capture sources unavailable:{" "}
+              {String(deliveriesQ.error ?? fieldsQ.error)}
+            </p>
+          )}
           <div className="mb-[6px] flex flex-wrap items-baseline gap-2 text-[11px] text-ink-dim">
             <span>delivered report ·</span>
             {deliveredIds.map((id) => (
@@ -232,8 +250,9 @@ function CaptureCard() {
                 }`}
               >
                 <span className="truncate font-mono text-[11.5px]">{f.path}</span>
+                {/* §0.3: pending must never read "Not Available" */}
                 <span className="truncate font-mono text-[11.5px] text-ink-secondary">
-                  {f.value ?? "Not Available"}
+                  {naText(f.value, f.na_reason, f.state)}
                 </span>
                 <span className={chip.className}>{chip.label}</span>
               </div>
@@ -246,7 +265,11 @@ function CaptureCard() {
               <div className="text-[12px] text-ink-secondary">
                 <b>shipped:</b>{" "}
                 <span className="font-mono">
-                  {pickedField.value ?? "Not Available"}
+                  {naText(
+                    pickedField.value,
+                    pickedField.na_reason,
+                    pickedField.state,
+                  )}
                 </span>{" "}
                 · <b>how it shipped:</b> {provenanceChip(pickedField).label}
               </div>
@@ -289,6 +312,9 @@ function CaptureCard() {
                   two states only: recorded, resolved
                 </span>
               </div>
+              {record.error != null && (
+                <MutationNote testid="record-note" error={record.error} />
+              )}
             </>
           ) : (
             <div className="rounded-card border-[1.5px] border-dashed border-line-strong px-5 py-6 text-center text-[12px] text-ink-faint">
@@ -347,6 +373,8 @@ function ComplaintCard({ complaint }: { complaint: Complaint }) {
       </div>
       <div className="mt-[6px] text-[12.5px]">
         <span className="text-ink-dim">shipped</span>{" "}
+        {/* Complaint carries no state/na_reason — the NA split here needs a
+            contract change (CONTRACT GAP), not a UI one */}
         <b className="font-mono">{complaint.shipped_value ?? "Not Available"}</b>{" "}
         · <span className="text-ink-dim">client says</span>{" "}
         <b className="font-mono">{complaint.client_value ?? "—"}</b>

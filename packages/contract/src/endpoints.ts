@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ROLES } from "./authz.js";
 import { GoldenTag } from "./enums.js";
 import {
   Bug,
@@ -432,6 +433,31 @@ export const OrderTimelineResponse = z.object({
   events: z.array(OrderTimelineEvent),
 });
 export type OrderTimelineResponse = z.infer<typeof OrderTimelineResponse>;
+
+// ---- me / permissions ------------------------------------------------------
+
+/**
+ * GET /api/me/permissions — the session role's authz projection, served as
+ * DATA (rules-as-data: the client renders permissions it receives, it never
+ * re-derives them). The response contains ONLY the caller's grants with the
+ * holder lists redacted — other roles' capabilities are unrepresented, not
+ * hidden (a typist's payload does not mention other worlds). At P1 the role
+ * comes from the Clerk claim; the shape does not change.
+ */
+export const GrantedPermissionSchema = z.object({
+  action: z.string(),
+  path: z.string().optional(),
+  when: z
+    .record(z.string(), z.array(z.string().nullable()))
+    .optional(),
+});
+export type GrantedPermissionSchema = z.infer<typeof GrantedPermissionSchema>;
+
+export const MePermissionsResponse = z.object({
+  role: z.enum(ROLES),
+  rules: z.array(GrantedPermissionSchema),
+});
+export type MePermissionsResponse = z.infer<typeof MePermissionsResponse>;
 
 // ---- list responses (thin wrappers; demo data fills these via MSW) ---------
 

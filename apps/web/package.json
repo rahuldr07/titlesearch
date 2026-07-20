@@ -9,6 +9,7 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "typecheck": "tsc -b",
+    "test": "vitest run",
     "test:e2e": "playwright test"
   },
   "dependencies": {
