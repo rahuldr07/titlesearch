@@ -237,6 +237,14 @@ function CorpusTab() {
           <b>delivered_report</b> is anchored on typist behaviour, not truth —
           which is why the blind fifty still has to happen.
         </div>
+        {goldenQ.isPending && (
+          <p className="mt-2 text-[13px] text-ink-dim">Fetching the corpus…</p>
+        )}
+        {goldenQ.error != null && (
+          <p className="mt-2 text-[13px] text-act">
+            Corpus unavailable: {String(goldenQ.error)}
+          </p>
+        )}
         {(goldenQ.data?.golden_fields ?? []).map((g) => (
           <div
             key={g.id}

@@ -35,6 +35,23 @@ test("a g-sequence's second key never leaks into screen hotkeys", async ({
   await expect(page).toHaveURL(/\/escalations/);
 });
 
+test("the ? overlay swallows screen keys while open", async ({ page }) => {
+  await page.goto("/orders/ord_demo_1/review");
+  await expect(page.getByTestId("sel-label")).toHaveText("OWNER ZIP");
+  await page.keyboard.press("?");
+  await expect(page.getByTestId("key-map")).toBeVisible();
+  // c must not open the editor, j must not move — the map is modal
+  await page.keyboard.press("c");
+  await expect(page.getByTestId("edit-value")).toHaveCount(0);
+  await page.keyboard.press("j");
+  await expect(page.getByTestId("sel-label")).toHaveText("OWNER ZIP");
+  // Escape restores the screen's keys
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("key-map")).toHaveCount(0);
+  await page.keyboard.press("j");
+  await expect(page.getByTestId("sel-label")).toHaveText("MTG 1 — LENDER");
+});
+
 test("?field= deep links land on the exact field in context", async ({
   page,
 }) => {

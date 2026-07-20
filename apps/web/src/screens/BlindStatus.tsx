@@ -32,10 +32,11 @@ export function BlindStatusScreen() {
     <ScreenFrame>
       <TopBar
         title="Blind fifty — status"
-        links={[
-          { label: "Reconciliation queue", to: "/blind-status" },
-          { label: "Rulebook", to: "/account" },
-        ]}
+        // CONTRACT GAP: rows here should deep-link to /reconciliation/{order}
+        // ("in progress — 5 of 9 ruled" is an invitation to act), but the
+        // funnel shape carries order_ref only, no order id. The old
+        // "Reconciliation queue" link pointed at THIS screen — a lie; gone.
+        links={[{ label: "Rulebook", to: "/account" }]}
       >
         <div className="text-[12.5px] text-ink-secondary">
           read-only — you see the state, you act elsewhere
@@ -213,6 +214,11 @@ export function BlindStatusScreen() {
       {metricsQ.isPending && (
         <p className="px-[18px] py-4 text-[13px] text-ink-dim">
           Reading the funnel…
+        </p>
+      )}
+      {metricsQ.error != null && (
+        <p className="px-[18px] py-4 text-[13px] text-act">
+          Funnel unavailable: {String(metricsQ.error)}
         </p>
       )}
     </ScreenFrame>

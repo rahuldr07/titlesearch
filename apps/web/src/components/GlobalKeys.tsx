@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { session, useSession } from "../session";
 import { canAccess } from "../nav";
+import { useRail } from "../railStore";
 
 /**
  * Keyboard as navigation: `g` then a key jumps between screens; `?` shows
@@ -11,6 +12,7 @@ import { canAccess } from "../nav";
  * suspends inside form fields.
  */
 const GO: Record<string, { to: string; label: string }> = {
+  h: { to: "/", label: "home — the map, live" },
   q: { to: "/queue", label: "queue" },
   d: { to: "/dashboard", label: "readout" },
   i: { to: "/ingest", label: "ingest" },
@@ -56,7 +58,15 @@ export function GlobalKeys() {
         return;
       }
       if (e.key === "Escape" && showHelp) {
+        e.preventDefault();
+        e.stopPropagation();
         setShowHelp(false);
+        return;
+      }
+      if (showHelp) {
+        // the map is modal: no screen key, no chord start, fires beneath it
+        e.preventDefault();
+        e.stopPropagation();
         return;
       }
       if (pendingG) {
@@ -71,6 +81,14 @@ export function GlobalKeys() {
         if (dest && canAccess(session.role, dest.to)) {
           void navigate({ to: dest.to });
         }
+        return;
+      }
+      // `[` folds the rail — a keyboard-forward toggle for a keyboard-forward
+      // tool. Idle-state only (a pending `g` chord owns the next key).
+      if (e.key === "[" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        e.preventDefault();
+        e.stopPropagation();
+        useRail.getState().toggle();
         return;
       }
       if (e.key.toLowerCase() === "g" && !e.ctrlKey && !e.metaKey && !e.altKey) {
@@ -97,7 +115,7 @@ export function GlobalKeys() {
         <>
           <div
             onClick={() => setShowHelp(false)}
-            className="fixed inset-0 z-[70] bg-[rgb(31_28_23/0.25)]"
+            className="fixed inset-0 z-[70] bg-[rgb(31_28_23/0.45)]"
           />
           <div
             data-testid="key-map"
@@ -130,8 +148,9 @@ export function GlobalKeys() {
             <div className="mt-4 border-t border-hairline pt-3 text-[11.5px] leading-[1.6] text-ink-dim">
               On Review: <b>J/K</b> next/prev queued · <b>⏎</b> confirm ·{" "}
               <b>C</b> correct · <b>E</b> escalate · <b>B</b> pipeline bug ·{" "}
-              <b>S</b> re-centre source · <b>P</b> pass. Seed Correction has no
-              key and no menu — it opens only from a failing bench cell.
+              <b>S</b> re-centre source · <b>P</b> pass. <b>[</b> folds the side
+              rail. Seed Correction has no key and no menu — it opens only from a
+              failing bench cell.
             </div>
           </div>
         </>

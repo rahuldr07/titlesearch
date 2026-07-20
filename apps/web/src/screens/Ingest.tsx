@@ -9,6 +9,7 @@ import {
   type Order,
 } from "@titlepipe/contract";
 import { api } from "../api";
+import { MutationNote } from "../components/notice";
 import { ScreenFrame, TopBar } from "../components/TopBar";
 
 /**
@@ -51,12 +52,12 @@ const MANIFEST: {
   {
     key: "jurisdiction",
     label: "JURISDICTION",
-    why: "the routing cell — engines are seated per jurisdiction × section",
+    why: "decides which extraction setup reads this county's documents",
   },
   {
     key: "state",
     label: "STATE",
-    why: "rules carry jurisdiction scope (R15, R20 are state-law-dependent)",
+    why: "some house rules apply only in certain states — the state picks them",
   },
   {
     key: "county",
@@ -337,6 +338,9 @@ export function IngestScreen() {
                   nothing reaches a reviewer until someone says this is right
                 </span>
               </div>
+              {accept.error != null && (
+                <MutationNote testid="accept-note" error={accept.error} />
+              )}
             </div>
           </div>
         )}

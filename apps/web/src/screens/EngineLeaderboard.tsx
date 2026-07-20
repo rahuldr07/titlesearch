@@ -10,6 +10,8 @@ import {
   type LeaderboardCell,
 } from "@titlepipe/contract";
 import { api } from "../api";
+import { MutationNote } from "../components/notice";
+import { HomeTitle } from "../components/TopBar";
 
 /**
  * Engine Leaderboard (frontend-master-prompt §4.15), to the Engine
@@ -71,9 +73,10 @@ export function EngineLeaderboardScreen() {
   return (
     <div className="flex h-screen flex-col bg-dk-deep font-mono text-[12px] text-dk-ink-soft">
       <div className="flex flex-none flex-wrap items-baseline gap-[14px] border-b border-dk-line px-[14px] py-2">
-        <span className="text-[11px] font-bold tracking-[.1em] text-ink-dim">
-          ENGINE LEADERBOARD
-        </span>
+        <HomeTitle
+          title="ENGINE LEADERBOARD"
+          className="text-[11px] font-bold tracking-[.1em] text-ink-dim"
+        />
         <span className="text-dk-ink-strong">
           vs golden set · {engines.length} engines enabled
         </span>
@@ -88,6 +91,15 @@ export function EngineLeaderboardScreen() {
       </div>
       <div className="min-w-[1240px] flex-1 overflow-y-auto p-[14px]">
         <div className="max-w-[1250px]">
+          {(enginesQ.isPending || boardQ.isPending || routingQ.isPending) && (
+            <div className="mb-2 text-[12px] text-ink-dim">loading the board…</div>
+          )}
+          {(enginesQ.error ?? boardQ.error ?? routingQ.error) != null && (
+            <div className="mb-2 text-[12px] text-dk-attend">
+              Board unavailable:{" "}
+              {String(enginesQ.error ?? boardQ.error ?? routingQ.error)}
+            </div>
+          )}
           <div className="mb-[6px] text-[11px] font-bold tracking-[.08em] text-ink-dim">
             ENGINE × SECTION × JURISDICTION — PER-CELL WINNERS ON PURPOSE.
             THERE IS NO BEST ENGINE, ONLY BEST FOR A CELL; AN AGGREGATE
@@ -174,6 +186,13 @@ export function EngineLeaderboardScreen() {
               currently sends that cell
             </span>
             <span>NO TRUTH YET is not a zero — a cell without truth cannot be won</span>
+            <span>
+              cell codes = first letter of the truth tag:{" "}
+              <b className="text-dk-ink-soft">d</b> delivered_report ·{" "}
+              <b className="text-dk-ink-soft">r</b> ruled ·{" "}
+              <b className="text-dk-ink-soft">a</b> agreed ·{" "}
+              <b className="text-dk-ink-soft">s</b> suspect
+            </span>
           </div>
 
           {sel && (
@@ -291,6 +310,8 @@ function DetailPanel({
       setEvidence("");
       void queryClient.invalidateQueries({ queryKey: ["engines", "routing"] });
     },
+    onError: () =>
+      void queryClient.invalidateQueries({ queryKey: ["engines", "routing"] }),
   });
 
   return (
@@ -432,6 +453,13 @@ function DetailPanel({
                   config flip only — no deploy; the router reads the new
                   assignment on the next order
                 </div>
+                {flip.error != null && (
+                  <MutationNote
+                    register="dark"
+                    testid="flip-note"
+                    error={flip.error}
+                  />
+                )}
               </>
             )}
           </>

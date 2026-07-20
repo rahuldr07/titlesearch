@@ -4,9 +4,13 @@ import {
   createRoute,
   createRouter,
   redirect,
+  useRouterState,
 } from "@tanstack/react-router";
 import { AccountScreen } from "./screens/Account";
+import { NotFoundCard, RouteErrorCard } from "./components/fallbacks";
 import { GlobalKeys } from "./components/GlobalKeys";
+import { SideRail } from "./components/SideRail";
+import { HomeScreen } from "./screens/Home";
 import { BenchResultsScreen } from "./screens/BenchResults";
 import { BlindFiftyScreen } from "./screens/BlindFifty";
 import { BlindStatusScreen } from "./screens/BlindStatus";
@@ -22,14 +26,29 @@ import { OpsDashboardScreen } from "./screens/OpsDashboard";
 import { SeedCorrectionScreen } from "./screens/SeedCorrection";
 import { QueueScreen } from "./screens/Queue";
 import { ReviewScreen } from "./screens/Review";
-import { requireAccess } from "./nav";
+import { ROLE_HOME, requireAccess } from "./nav";
+import { session } from "./session";
 
+/**
+ * The rail sits beside the screen, not above it. Under /blind/* it is not
+ * mounted AT ALL — not merely hidden — so its live-signal hook never fires a
+ * single GET from the capture seat: structural blindness holds at the network
+ * level, not just visually (blind-blindness.spec proves the zero-GET floor).
+ * `min-w-0` lets dense screens (Review, the dark measurement panels) keep
+ * owning their own horizontal overflow.
+ */
 function RootLayout() {
+  const onBlind = useRouterState({
+    select: (s) => s.location.pathname.startsWith("/blind/"),
+  });
   return (
-    <>
-      <Outlet />
+    <div className="flex h-screen">
+      {!onBlind && <SideRail />}
+      <div className="flex min-w-0 flex-1 flex-col">
+        <Outlet />
+      </div>
       <GlobalKeys />
-    </>
+    </div>
   );
 }
 
@@ -37,12 +56,17 @@ const rootRoute = createRootRoute({
   component: RootLayout,
 });
 
+// "/" is the role-aware hub (Home.tsx) — the map, live. Typists never see
+// it: straight to the capture seat (§0.7), before the hub can render or fetch.
 const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/",
   beforeLoad: () => {
-    throw redirect({ to: "/queue" });
+    if (session.role === "typist") {
+      throw redirect({ to: ROLE_HOME.typist });
+    }
   },
+  component: HomeScreen,
 });
 
 const queueRoute = createRoute({
@@ -169,6 +193,10 @@ const accountRoute = createRoute({
 });
 
 export const router = createRouter({
+  // A wrong address or a render throw gets a coherent card, never a blank
+  // page. Both fallbacks are chrome-free — safe even under /blind/*.
+  defaultNotFoundComponent: NotFoundCard,
+  defaultErrorComponent: RouteErrorCard,
   routeTree: rootRoute.addChildren([
     indexRoute,
     queueRoute,

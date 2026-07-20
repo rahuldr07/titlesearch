@@ -147,6 +147,23 @@ html {
   animation: hlpulse 1.2s ease-out 1;
 }
 
+/* Rail urgent dot — one slow, low-opacity red ring. Reserved for the ACT
+ * signal (an unresolved complaint); amber attention dots stay still. Silenced
+ * for anyone who asked the OS to reduce motion. */
+@keyframes railpulse {
+  0% {
+    box-shadow: 0 0 0 0 rgb(169 39 28 / 0.4);
+  }
+  100% {
+    box-shadow: 0 0 0 5px rgb(169 39 28 / 0);
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .railpulse {
+    animation: railpulse 2s ease-out infinite;
+  }
+}
+
 ::-webkit-scrollbar {
   width: 10px;
 }

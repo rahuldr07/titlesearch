@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { useParams } from "@tanstack/react-router";
+import { Link, useParams } from "@tanstack/react-router";
 import {
   BlindEntriesResponse,
   type BlindConfidence,
@@ -8,6 +8,7 @@ import {
   type NaReason,
 } from "@titlepipe/contract";
 import { api } from "../api";
+import { HomeTitle } from "../components/TopBar";
 
 /**
  * Blind Fifty typist capture (frontend-master-prompt §4.12; §0.6 rules are
@@ -158,6 +159,20 @@ export function BlindFiftyScreen() {
             diverge, a senior rules on the batch — you are not involved, and
             you will not see the other set of answers.
           </div>
+          {/* Never a dead end: this is the least technical user's only
+              screen, and their world is capture + account. */}
+          <div className="mt-3 text-[13px] leading-[1.55] text-ink-secondary">
+            Nothing more is assigned to this seat right now — you're done.
+          </div>
+          <div className="mt-[14px]">
+            <Link
+              to="/account"
+              data-testid="blind-done-door"
+              className="text-[12.5px] font-semibold no-underline"
+            >
+              Your account →
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -167,9 +182,12 @@ export function BlindFiftyScreen() {
     <div className="flex h-screen flex-col bg-bg font-sans text-ink">
       <div className="flex flex-none flex-wrap items-baseline justify-between gap-x-[14px] gap-y-2 border-b border-line bg-surface px-[18px] py-[10px]">
         <div className="flex flex-wrap items-baseline gap-[14px]">
-          <div className="text-[12px] font-bold tracking-[.12em] text-label">
-            BLIND FIFTY
-          </div>
+          {/* HomeTitle renders PLAIN TEXT for typists — no door out of
+              blindness; the link exists only for roles that hold "/" */}
+          <HomeTitle
+            title="BLIND FIFTY"
+            className="text-[12px] font-bold tracking-[.12em] text-label"
+          />
           <div className="text-[13px] font-semibold" data-testid="blind-seat">
             {SEAT} · order <span className="font-mono">{orderId}</span>
           </div>
@@ -178,8 +196,9 @@ export function BlindFiftyScreen() {
           </div>
         </div>
         <span className="rounded-chip border border-dashed border-dash bg-surface-dim px-2 py-[2px] text-[10px] font-bold tracking-[.06em] text-ink-dim">
-          STRUCTURALLY BLIND — no draft, no other typist, no suggestions. Not
-          policy; the screen cannot show them.
+          NOTHING TO PEEK AT — no draft, no other typist's answers, no
+          suggestions. Not a rule you could break; the screen has no way to
+          show them.
         </span>
       </div>
       <div className="flex min-h-0 min-w-[1240px] flex-1">
@@ -292,6 +311,18 @@ export function BlindFiftyScreen() {
                 at
               </span>
             </div>
+            {submit.error != null && (
+              // Deliberate deviation from the shared MutationNote: the copy is
+              // FIXED. Nothing server-authored travels into blindness — not
+              // even an error string (§0.6; raw messages are a leak vector).
+              <div
+                data-testid="blind-submit-note"
+                className="mt-[6px] text-[11.5px] text-attend"
+              >
+                Not accepted — nothing was recorded. Check your entries and
+                submit again.
+              </div>
+            )}
           </div>
         </div>
       </div>

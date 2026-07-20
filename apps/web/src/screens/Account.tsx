@@ -3,12 +3,15 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Ack,
   AuditResponse,
+  MePermissionsResponse,
   RulesResponse,
+  canDo,
   type Rule,
 } from "@titlepipe/contract";
 import { api } from "../api";
+import { MutationNote } from "../components/notice";
 import { ScreenFrame, TopBar } from "../components/TopBar";
-import { session, type Role } from "../session";
+import { session, useSession, type Role } from "../session";
 
 /**
  * Account layer (frontend-master-prompt §4.16) — last on purpose. Auth is
@@ -33,6 +36,13 @@ export function AccountScreen() {
         links={[
           { label: "Readout", to: "/dashboard" },
           { label: "Blind fifty status", to: "/blind-status" },
+          // the typist's door back to their seat — canAccess filtering hides
+          // it from every role that doesn't hold /blind
+          {
+            label: "Blind capture",
+            to: "/blind/$orderId",
+            params: { orderId: "ord_demo_1" },
+          },
         ]}
       >
         <div className="flex overflow-hidden rounded-btn border border-line-strong">
@@ -88,6 +98,15 @@ const ROLES: Role[] = ["reviewer", "senior", "ops", "engineer", "typist", "admin
 
 function MeTab() {
   const [role, setRole] = useState<Role>(session.role);
+  // Rules-as-data: the role's projection FETCHED from the server, not read
+  // from the local table — the P1 wire shape, exercised now. The role in the
+  // key re-fetches on switch (the header carries the new role at call time).
+  const meQ = useQuery({
+    queryKey: ["me", "permissions", role],
+    queryFn: () => api(MePermissionsResponse, "/api/me/permissions"),
+  });
+  const doors = (meQ.data?.rules ?? []).filter((r) => r.path !== undefined);
+  const actions = (meQ.data?.rules ?? []).filter((r) => r.path === undefined);
   return (
     <div className="rounded-card border border-line-strong bg-card px-6 py-5">
       <div className="text-[14px] font-semibold">{session.name}</div>
@@ -121,6 +140,48 @@ function MeTab() {
         gate is server-side with Clerk claims — this switch exists so the
         gating renders honestly in dev.
       </div>
+      <div className="mt-4 border-t border-hairline pt-4" data-testid="my-world">
+        <div className="text-[11px] font-bold tracking-[.08em] text-label">
+          YOUR WORLD — AS THE SERVER SERVES IT
+        </div>
+        <div className="mt-1 max-w-[560px] text-[11.5px] leading-[1.5] text-ink-dim">
+          This list is GET /api/me/permissions rendered verbatim — the client
+          re-derives nothing, and other roles' capabilities are not in the
+          payload.
+        </div>
+        {meQ.isPending && (
+          <p className="mt-2 text-[12px] text-ink-dim">Fetching your world…</p>
+        )}
+        {meQ.error != null && (
+          <p className="mt-2 text-[12px] text-act">
+            Permissions unavailable: {String(meQ.error)}
+          </p>
+        )}
+        {meQ.data !== undefined && (
+          <>
+            <div className="mt-3 flex flex-wrap gap-[6px]">
+              {doors.map((d) => (
+                <span
+                  key={d.action}
+                  className="rounded-chip border border-line-strong bg-surface-dim px-2 py-[2px] font-mono text-[11px] text-ink-secondary"
+                >
+                  {d.path}
+                </span>
+              ))}
+            </div>
+            <div className="mt-2 flex flex-wrap gap-[6px]">
+              {actions.map((a) => (
+                <span
+                  key={a.action}
+                  className="rounded-chip border border-action-border bg-action-bg px-2 py-[2px] font-mono text-[11px] text-action"
+                >
+                  {a.action}
+                </span>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -135,6 +196,7 @@ const originBadge: Record<Rule["origin"], string> = {
 
 function RulebookTab() {
   const queryClient = useQueryClient();
+  const role = useSession((s) => s.role);
   const rulesQ = useQuery({
     queryKey: ["rules"],
     queryFn: () => api(RulesResponse, "/api/rules"),
@@ -143,6 +205,7 @@ function RulebookTab() {
     mutationFn: (rule: Rule) =>
       api(Ack, `/api/rules/${rule.id}/confirm`, { method: "POST" }),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["rules"] }),
+    onError: () => void queryClient.invalidateQueries({ queryKey: ["rules"] }),
   });
 
   const rules = rulesQ.data?.rules ?? [];
@@ -157,7 +220,7 @@ function RulebookTab() {
         <div className="text-[12.5px] text-ink-secondary tabular-nums">
           {rules.filter((r) => r.status === "live").length} live ·{" "}
           <span className={pending.length > 0 ? "font-bold text-attend" : ""}>
-            {pending.length} drafts pending
+            {pending.length} draft{pending.length === 1 ? "" : "s"} pending
           </span>
         </div>
         <div className="text-[11.5px] text-ink-dim">
@@ -165,6 +228,14 @@ function RulebookTab() {
           complaint — and nothing goes live without a named engineer
         </div>
       </div>
+      {rulesQ.isPending && (
+        <p className="mt-2 text-[13px] text-ink-dim">Fetching the rulebook…</p>
+      )}
+      {rulesQ.error != null && (
+        <p className="mt-2 text-[13px] text-act">
+          Rulebook unavailable: {String(rulesQ.error)}
+        </p>
+      )}
       {rules.map((r) => {
         const inert = r.status === "pending";
         return (
@@ -210,7 +281,10 @@ function RulebookTab() {
             >
               {r.text}
             </div>
-            {inert && (
+            {/* The confirm affordance exists only for holders of the
+                engineer gate — everyone else sees the PENDING chip, not a
+                dead button (authz table: rule.confirm). */}
+            {inert && canDo(role, "rule.confirm") && (
               <div className="mt-2 flex flex-wrap items-center gap-3">
                 <button
                   type="button"
@@ -225,6 +299,13 @@ function RulebookTab() {
                   confirming regenerates prompts for every engine — no
                   per-engine surgery
                 </span>
+                {confirm.error != null &&
+                  confirm.variables?.id === r.id && (
+                    <MutationNote
+                      testid="confirm-rule-note"
+                      error={confirm.error}
+                    />
+                  )}
               </div>
             )}
           </div>
@@ -248,6 +329,14 @@ function AuditTab() {
           screen and no write endpoint in the contract
         </div>
       </div>
+      {auditQ.isPending && (
+        <p className="mt-2 text-[13px] text-ink-dim">Fetching the log…</p>
+      )}
+      {auditQ.error != null && (
+        <p className="mt-2 text-[13px] text-act">
+          Audit unavailable: {String(auditQ.error)}
+        </p>
+      )}
       <div className="mt-3 overflow-hidden rounded-card border border-line-mid bg-card">
         {(auditQ.data?.entries ?? []).map((e) => (
           <div

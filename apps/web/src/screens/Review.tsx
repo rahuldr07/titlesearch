@@ -13,10 +13,12 @@ import {
   Ack,
   OrderFieldsResponse,
   PassOrderResponse,
+  canDo,
   type Field,
   type FieldReading,
 } from "@titlepipe/contract";
 import { api } from "../api";
+import { MutationNote } from "../components/notice";
 import { OrderRail } from "../components/OrderRail";
 import { parseLineCoords, type PdfHighlight } from "../components/coords";
 
@@ -35,6 +37,8 @@ import {
   sectionOf,
   statePill,
 } from "../components/field";
+import { HomeTitle } from "../components/TopBar";
+import { useSession } from "../session";
 import { useReviewUi } from "../stores/review";
 
 /**
@@ -59,7 +63,14 @@ export function ReviewScreen() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const ui = useReviewUi();
+  const role = useSession((s) => s.role);
   const [scrollNonce, setScrollNonce] = useState(0);
+  // "correct to this" seeds the editor with a clicked reading — retyping a
+  // value that is already on screen is the transcription-error class this
+  // product exists to kill. Cleared whenever the selection moves.
+  const [seedOverride, setSeedOverride] = useState<string | null>(null);
+  // A refused Enter must SAY so — silence reads as a broken keyboard.
+  const [nudge, setNudge] = useState<"escalate" | "bug" | "pass" | null>(null);
 
   const fieldsQ = useQuery({
     queryKey: ["orders", orderId, "fields"],
@@ -87,6 +98,8 @@ export function ReviewScreen() {
   }, [fields, queueIds, ui, search.field]);
 
   useEffect(() => () => useReviewUi.getState().reset(), [orderId]);
+  useEffect(() => setSeedOverride(null), [ui.selectedId]);
+  useEffect(() => setNudge(null), [ui.mode, ui.selectedId]);
 
   const invalidate = () =>
     queryClient.invalidateQueries({ queryKey: ["orders", orderId, "fields"] });
@@ -111,6 +124,10 @@ export function ReviewScreen() {
       void invalidate();
       advance(f.id);
     },
+    // A 409 (bug-5: different value, or terminal state) is an answer, not a
+    // no-op: the refetch repaints the field as the server has it, the note
+    // below the pill says why, and selection does NOT advance.
+    onError: () => void invalidate(),
   });
 
   const correct = useMutation({
@@ -124,6 +141,7 @@ export function ReviewScreen() {
       void invalidate();
       advance(v.field.id);
     },
+    onError: () => void invalidate(),
   });
 
   const escalate = useMutation({
@@ -137,6 +155,7 @@ export function ReviewScreen() {
       void invalidate();
       advance(v.field.id);
     },
+    onError: () => void invalidate(),
   });
 
   const fileBug = useMutation({
@@ -161,7 +180,12 @@ export function ReviewScreen() {
     onSuccess: () => void navigate({ to: "/queue" }),
   });
 
+  // Ops/engineer arrive here via deep links to SEE a field in context —
+  // acting on it belongs to review roles (authz table: field.*). The fine
+  // per-field state test below stays server-derived, as ever.
+  const mayReview = canDo(role, "field.confirm");
   const canAct =
+    mayReview &&
     selected !== null &&
     (selected.state === "needs_review" ||
       ((selected.state === "confirmed" || selected.state === "auto_confirmed") &&
@@ -183,7 +207,11 @@ export function ReviewScreen() {
   useHotkeys(
     "enter",
     () => {
-      if (selected && canAct) confirm.mutate(selected);
+      // ⏎ confirms only when there is a VALUE to confirm. On a missing/
+      // disagreement field the same key would mean "accept nothing" — a
+      // habituated confirm rhythm must never ship a blank; accepting N/A
+      // takes an explicit click.
+      if (selected && canAct && selected.value !== null) confirm.mutate(selected);
     },
     { ...hk, enabled: idle },
     [selected, canAct],
@@ -204,8 +232,22 @@ export function ReviewScreen() {
     { ...hk, enabled: idle },
     [canAct],
   );
-  useHotkeys("b", () => ui.setMode("bug"), { ...hk, enabled: idle }, []);
-  useHotkeys("p", () => ui.setMode("passing"), { ...hk, enabled: idle }, []);
+  useHotkeys(
+    "b",
+    () => {
+      if (canDo(role, "bug.file")) ui.setMode("bug");
+    },
+    { ...hk, enabled: idle },
+    [role],
+  );
+  useHotkeys(
+    "p",
+    () => {
+      if (canDo(role, "order.pass")) ui.setMode("passing");
+    },
+    { ...hk, enabled: idle },
+    [role],
+  );
   useHotkeys(
     "s",
     () => setScrollNonce((n) => n + 1),
@@ -247,9 +289,10 @@ export function ReviewScreen() {
       {/* header */}
       <div className="flex flex-none items-center justify-between border-b border-line bg-surface px-[18px] py-[10px]">
         <div className="flex items-baseline gap-[14px]">
-          <div className="text-[12px] font-bold tracking-[.12em] text-label">
-            TITLE REPORT REVIEW
-          </div>
+          <HomeTitle
+            title="TITLE REPORT REVIEW"
+            className="text-[12px] font-bold tracking-[.12em] text-label"
+          />
           <div className="text-[13px] font-semibold">
             Order <span className="font-mono">{orderId}</span>
           </div>
@@ -271,7 +314,7 @@ export function ReviewScreen() {
             >
               All resolved — next order
             </Link>
-          ) : (
+          ) : !canDo(role, "order.pass") ? null : (
             <div className="relative">
               <button
                 type="button"
@@ -292,14 +335,27 @@ export function ReviewScreen() {
                       if (e.key === "Enter") {
                         const reason = e.currentTarget.value.trim();
                         if (reason) pass.mutate(reason);
+                        else setNudge("pass");
                       } else if (e.key === "Escape") ui.setMode("idle");
                     }}
                     className="w-full rounded-btn border border-dash bg-input px-[10px] py-2 font-sans text-[13px]"
                   />
-                  <div className="mt-[5px] text-[11px] text-ink-dim">
-                    ⏎ pass · esc keep it · recorded against the order — 4 passes
-                    auto-raises an escalation
-                  </div>
+                  {nudge === "pass" ? (
+                    <div
+                      data-testid="nudge"
+                      className="mt-[5px] text-[11px] font-semibold text-attend"
+                    >
+                      held — a pass needs its why, one line.
+                    </div>
+                  ) : (
+                    <div className="mt-[5px] text-[11px] text-ink-dim">
+                      ⏎ pass · esc keep it · recorded against the order — 4
+                      passes auto-raises an escalation
+                    </div>
+                  )}
+                  {pass.error != null && (
+                    <MutationNote testid="pass-note" error={pass.error} />
+                  )}
                 </div>
               )}
             </div>
@@ -361,6 +417,10 @@ export function ReviewScreen() {
                     correct.mutate({ field: f, value, reason })
                   }
                   onCancel={() => ui.setMode("idle")}
+                  commitError={
+                    correct.variables?.field.id === f.id ? correct.error : null
+                  }
+                  seedOverride={f.id === ui.selectedId ? seedOverride : null}
                 />
               ))}
             </div>
@@ -391,29 +451,53 @@ export function ReviewScreen() {
                 </div>
                 <span className="text-[11.5px] text-dash tabular-nums">
                   {queueIds.includes(selected.id)
-                    ? `Queue · field ${queueIds.indexOf(selected.id) + 1} of ${queueIds.length}`
+                    ? `${queueIds.indexOf(selected.id) + 1} of ${queueIds.length} still queued`
                     : "Not in queue"}
                 </span>
               </div>
               <div className="mb-2 flex flex-wrap items-baseline gap-3">
+                {/* When readings carry candidates, the headline shows the
+                    draft AS a draft — "Not Available" above two visible
+                    values is a contradiction, not caution. */}
                 <span
                   className={`font-mono text-[19px] font-semibold ${
                     selected.value === null && selected.state === "needs_review"
-                      ? "text-dk-act"
+                      ? displayDraft(selected) !== null
+                        ? "text-dk-attend"
+                        : "text-dk-act"
                       : selected.na_reason === "NOT_PRESENT"
                         ? "text-ink-dim"
                         : "text-dk-ink-strong"
                   }`}
                 >
                   {selected.value ??
+                    (selected.state === "needs_review"
+                      ? displayDraft(selected)
+                      : null) ??
                     (selected.state === "pending"
                       ? "not yet extracted"
                       : "Not Available")}
                 </span>
+                {selected.value === null &&
+                  selected.state === "needs_review" &&
+                  displayDraft(selected) !== null && (
+                    <span className="text-[11px] text-ink-dim">
+                      draft — nothing settled yet
+                    </span>
+                  )}
                 <span className={statePill(selected).className} data-testid="sel-state">
                   {statePill(selected).label}
                 </span>
               </div>
+
+              {confirm.error != null &&
+                confirm.variables?.id === selected.id && (
+                  <MutationNote
+                    register="dark"
+                    testid="confirm-note"
+                    error={confirm.error}
+                  />
+                )}
 
               <ConfidenceBar field={selected} />
 
@@ -432,6 +516,14 @@ export function ReviewScreen() {
                       ui.pin(ui.pinnedReadingId === id ? null : id);
                       setScrollNonce((n) => n + 1);
                     }}
+                    onUse={
+                      canAct
+                        ? (value) => {
+                            setSeedOverride(value);
+                            ui.setMode("editing");
+                          }
+                        : undefined
+                    }
                   />
                 )}
 
@@ -448,14 +540,33 @@ export function ReviewScreen() {
                         const q = e.currentTarget.value.trim();
                         // Refusal §0.5: an escalation without a question never submits.
                         if (q) escalate.mutate({ field: selected, question: q });
+                        else setNudge("escalate");
                       } else if (e.key === "Escape") ui.setMode("idle");
                     }}
                     className="w-full rounded-btn border border-dk-attend-border bg-dk-card px-[10px] py-2 font-sans text-[13px] text-dk-ink-strong"
                   />
-                  <div className="text-[11px] text-ink-dim">
-                    ⏎ send to the inbox · esc cancel · clears this field from
-                    your queue — does not hold the order
-                  </div>
+                  {nudge === "escalate" ? (
+                    <div
+                      data-testid="nudge"
+                      className="text-[11px] font-semibold text-dk-attend"
+                    >
+                      held — an escalation needs its question. One line: what
+                      don't you know?
+                    </div>
+                  ) : (
+                    <div className="text-[11px] text-ink-dim">
+                      ⏎ send to the inbox · esc cancel · clears this field from
+                      your queue — does not hold the order
+                    </div>
+                  )}
+                  {escalate.error != null &&
+                    escalate.variables?.field.id === selected.id && (
+                      <MutationNote
+                        register="dark"
+                        testid="escalate-note"
+                        error={escalate.error}
+                      />
+                    )}
                 </div>
               )}
 
@@ -469,14 +580,31 @@ export function ReviewScreen() {
                       if (e.key === "Enter") {
                         const d = e.currentTarget.value.trim();
                         if (d) fileBug.mutate({ field: selected, description: d });
+                        else setNudge("bug");
                       } else if (e.key === "Escape") ui.setMode("idle");
                     }}
                     className="w-full rounded-btn border border-dk-act-border bg-dk-card px-[10px] py-2 font-sans text-[13px] text-dk-ink-strong"
                   />
-                  <div className="text-[11px] text-ink-dim">
-                    ⏎ file to engineering · esc cancel · routes to engineering,
-                    not the rules inbox — broken inputs, never corrections
-                  </div>
+                  {nudge === "bug" ? (
+                    <div
+                      data-testid="nudge"
+                      className="text-[11px] font-semibold text-dk-attend"
+                    >
+                      held — say what's broken, one line.
+                    </div>
+                  ) : (
+                    <div className="text-[11px] text-ink-dim">
+                      ⏎ file to engineering · esc cancel · routes to engineering,
+                      not the rules inbox — broken inputs, never corrections
+                    </div>
+                  )}
+                  {fileBug.error != null && (
+                    <MutationNote
+                      register="dark"
+                      testid="bug-note"
+                      error={fileBug.error}
+                    />
+                  )}
                 </div>
               )}
 
@@ -488,7 +616,7 @@ export function ReviewScreen() {
                   onEscalate={() => ui.setMode("escalating")}
                 />
               )}
-              {idle && (
+              {idle && canDo(role, "bug.file") && (
                 <button
                   type="button"
                   onClick={() => ui.setMode("bug")}
@@ -565,6 +693,8 @@ function FieldRow({
   onSelect,
   onCommit,
   onCancel,
+  commitError,
+  seedOverride,
 }: {
   field: Field;
   isSelected: boolean;
@@ -572,6 +702,8 @@ function FieldRow({
   onSelect: () => void;
   onCommit: (value: string, reason: string) => void;
   onCancel: () => void;
+  commitError: unknown;
+  seedOverride: string | null;
 }) {
   const unresolvedMissing =
     field.state === "needs_review" && field.value === null;
@@ -604,11 +736,16 @@ function FieldRow({
       </div>
       <div className="flex min-w-0 flex-wrap items-baseline gap-2">
         {editing ? (
-          <EditForm
-            seed={draft ?? ""}
-            onCommit={onCommit}
-            onCancel={onCancel}
-          />
+          <div className="flex w-full flex-col">
+            <EditForm
+              seed={seedOverride ?? draft ?? ""}
+              onCommit={onCommit}
+              onCancel={onCancel}
+            />
+            {commitError != null && (
+              <MutationNote testid="correct-note" error={commitError} />
+            )}
+          </div>
         ) : (
           <>
             <ValueCell field={field} draft={draft} />
@@ -700,8 +837,10 @@ function EditForm({
 }) {
   const [value, setValue] = useState(seed);
   const [reason, setReason] = useState("");
+  const [tried, setTried] = useState(false);
   const trySubmit = () => {
     if (value.trim() && reason.trim()) onCommit(value.trim(), reason.trim());
+    else setTried(true);
   };
   const onKey = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") trySubmit();
@@ -728,16 +867,25 @@ function EditForm({
         placeholder="why — required, recorded with the correction"
         className="w-full max-w-[340px] rounded-[3px] border border-dash bg-input px-[6px] py-[2px] font-sans text-[12px]"
       />
-      <span className="text-[10.5px] text-ink-dim">
-        ⏎ save (needs value + why) · esc cancel
-      </span>
+      {tried && !(value.trim() && reason.trim()) ? (
+        <span data-testid="nudge" className="text-[10.5px] font-semibold text-attend">
+          held — a correction needs both the value and its why.
+        </span>
+      ) : (
+        <span className="text-[10.5px] text-ink-dim">
+          ⏎ save (needs value + why) · esc cancel
+        </span>
+      )}
     </div>
   );
 }
 
 function ConfidenceBar({ field }: { field: Field }) {
   if (field.engine_confidence_raw === null) {
-    if (field.state === "needs_review" && field.value === null) {
+    // "returned nothing" may only be claimed when the readings agree —
+    // saying it above two visible candidate values is a contradiction.
+    const anyFound = (field.readings ?? []).some((r) => r.value !== null);
+    if (field.state === "needs_review" && field.value === null && !anyFound) {
       return (
         <div className="mb-2 text-[12px] text-dk-ink-soft">
           No confidence to show — extraction returned nothing at all.
@@ -760,8 +908,8 @@ function ConfidenceBar({ field }: { field: Field }) {
         ))}
       </div>
       <div className="mt-[7px] text-[12px] text-dk-ink-soft">
-        {field.engine_id} · {field.engine_confidence_raw.toFixed(2)} — raw and
-        unverified; a prioritization signal, never a gate.
+        {field.engine_id} · {field.engine_confidence_raw.toFixed(2)} — the
+        engine grading its own work. Shown for context; it decides nothing.
       </div>
     </div>
   );
@@ -771,10 +919,12 @@ function ReadingsPanel({
   field,
   pinnedReadingId,
   onPin,
+  onUse,
 }: {
   field: Field;
   pinnedReadingId: string | null;
   onPin: (readingId: string) => void;
+  onUse?: ((value: string) => void) | undefined;
 }) {
   const readings = field.readings ?? [];
   const disagree = readingsDisagree(field);
@@ -783,7 +933,7 @@ function ReadingsPanel({
       <div className="mb-[7px] text-[11px] font-bold tracking-[.08em] text-dk-info">
         {disagree
           ? "TWO ENGINES READ THIS PAGE INDEPENDENTLY — THEY DISAGREE. THAT IS WHY IT IS YOURS."
-          : "TWO ENGINES READ THIS PAGE INDEPENDENTLY — THEY AGREE; REGION CONFIDENCE ROUTED IT ANYWAY."}
+          : "TWO ENGINES READ THIS PAGE INDEPENDENTLY — THEY AGREE; A LOW-QUALITY SCAN REGION ROUTED IT TO YOU ANYWAY."}
       </div>
       {readings.map((r, i) => (
         <ReadingCard
@@ -793,6 +943,12 @@ function ReadingsPanel({
           pinned={pinnedReadingId === r.id}
           pinnable={parseLineCoords(r.line_coords).length > 0}
           onPin={() => onPin(r.id)}
+          compareTo={
+            disagree
+              ? (readings.find((o) => o.id !== r.id)?.value ?? null)
+              : null
+          }
+          onUse={onUse}
         />
       ))}
       {disagree && (
@@ -860,8 +1016,10 @@ function ActionRow({
           <button type="button" onClick={onCorrect} className={primary} data-testid="act-correct">
             Correct — type it from the page<span className={kbdP}>C</span>
           </button>
+          {/* No keyboard shortcut ON PURPOSE: accepting nothing must never
+              share a key with accepting a value — a click is the friction. */}
           <button type="button" onClick={onConfirm} className={secondary} data-testid="act-confirm">
-            Accept as Not Available<span className={kbdS}>⏎</span>
+            Accept as Not Available — click to be sure
           </button>
         </>
       ) : (

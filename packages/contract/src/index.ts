@@ -11,3 +11,4 @@
 export * from "./enums.js";
 export * from "./entities.js";
 export * from "./endpoints.js";
+export * from "./authz.js";

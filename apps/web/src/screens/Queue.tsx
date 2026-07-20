@@ -8,6 +8,7 @@ import {
   type Order,
 } from "@titlepipe/contract";
 import { api } from "../api";
+import { MutationNote } from "../components/notice";
 import { ScreenFrame, TopBar } from "../components/TopBar";
 
 /**
@@ -66,6 +67,7 @@ function NextOrderCard({ order }: { order: Order }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [passing, setPassing] = useState(false);
+  const [passNudge, setPassNudge] = useState(false);
   const [passedNote, setPassedNote] = useState<string | null>(null);
 
   const pass = useMutation({
@@ -162,17 +164,30 @@ function NextOrderCard({ order }: { order: Order }) {
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   const reason = e.currentTarget.value.trim();
-                  // Refusal (§0.5-adjacent): an empty reason never submits.
+                  // Refusal (§0.5-adjacent): an empty reason never submits —
+                  // and the refusal says so; silence reads as a broken key.
                   if (reason) pass.mutate(reason);
+                  else setPassNudge(true);
                 } else if (e.key === "Escape") {
                   setPassing(false);
+                  setPassNudge(false);
                 }
               }}
               className="w-full rounded-btn border border-dash bg-input px-[10px] py-2 font-sans text-[13px]"
             />
-            <div className="text-[11px] text-ink-dim">
-              ⏎ pass · esc keep it · recorded against the order, not against you
-            </div>
+            {passNudge ? (
+              <div data-testid="nudge" className="text-[11px] font-semibold text-attend">
+                held — a pass needs its why, one line.
+              </div>
+            ) : (
+              <div className="text-[11px] text-ink-dim">
+                ⏎ pass · esc keep it · recorded against the order, not against
+                you
+              </div>
+            )}
+            {pass.error != null && (
+              <MutationNote testid="pass-note" error={pass.error} />
+            )}
           </div>
         )}
         {passedNote && !passing && (

@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { BenchResultsResponse, RulesResponse } from "@titlepipe/contract";
 import { api } from "../api";
+import { HomeTitle } from "../components/TopBar";
 
 /**
  * Extraction Bench (frontend-master-prompt §4.10), to the Extraction
@@ -37,9 +38,10 @@ export function ExtractionBenchScreen() {
   return (
     <div className="flex h-screen flex-col bg-dk-deep font-mono text-[12px] text-dk-ink-soft">
       <div className="flex flex-none flex-wrap items-center gap-4 border-b border-dk-line px-[14px] py-[7px]">
-        <span className="text-[11px] font-bold tracking-[.1em] text-ink-dim">
-          EXTRACTION BENCH
-        </span>
+        <HomeTitle
+          title="EXTRACTION BENCH"
+          className="text-[11px] font-bold tracking-[.1em] text-ink-dim"
+        />
         <span className="text-ink-secondary">doc type:</span>
         <span className="font-semibold text-dk-ink-strong">Security Deed</span>
         <span className="ml-auto text-ink-secondary">
@@ -53,6 +55,11 @@ export function ExtractionBenchScreen() {
           results →
         </Link>
       </div>
+      {(rulesQ.error ?? resultsQ.error) != null && (
+        <div className="flex-none border-b border-dk-line px-[14px] py-[6px] text-[11.5px] text-dk-attend">
+          Bench data unavailable: {String(rulesQ.error ?? resultsQ.error)}
+        </div>
+      )}
       <div className="flex min-h-0 min-w-[1280px] flex-1">
         {/* scan pane */}
         <div className="flex w-[42%] min-w-[480px] flex-col border-r border-dk-line">

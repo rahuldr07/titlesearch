@@ -7,6 +7,7 @@ import {
   type BenchSection,
 } from "@titlepipe/contract";
 import { api } from "../api";
+import { HomeTitle } from "../components/TopBar";
 
 /**
  * Bench Results (frontend-master-prompt §4.11), to the Bench
@@ -48,9 +49,10 @@ export function BenchResultsScreen() {
   return (
     <div className="flex h-screen flex-col bg-dk-deep font-mono text-[12px] text-dk-ink-soft">
       <div className="flex flex-none flex-wrap items-baseline gap-4 border-b border-dk-line px-[14px] py-2">
-        <span className="text-[11px] font-bold tracking-[.1em] text-ink-dim">
-          BENCH RESULTS
-        </span>
+        <HomeTitle
+          title="BENCH RESULTS"
+          className="text-[11px] font-bold tracking-[.1em] text-ink-dim"
+        />
         <span className="text-dk-ink-strong">
           {data.run_ref} · {data.seed_version} · {data.total_fields} fields ·{" "}
           {data.orders} real orders
