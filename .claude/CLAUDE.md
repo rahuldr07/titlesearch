@@ -15,6 +15,6 @@ Read `CLAUDE.md` at repo root first (doc order: docs/HANDOFF.md → docs/CONTEXT
 - E2E: `pnpm --filter web test:e2e` (Playwright, apps/web/e2e)
 
 ## Conventions
-- Design pixel spec: `Title report review tool.zip` → `.dc.html` files (warm-paper palette, IBM Plex). Colors ONLY via tokens in `apps/web/src/index.css` — no raw hex in TSX.
+- Design pixel spec: `docs/archive/Title report review tool.zip` → `.dc.html` files (warm-paper palette, IBM Plex). Colors ONLY via tokens in `apps/web/src/index.css` — no raw hex in TSX.
 - Every API response parses through `@titlepipe/contract` at the boundary (`apps/web/src/api.ts`). Never widen a contract type locally — emit `CONTRACT GAP:` notes instead.
 - Refusal rules (correction needs reason, escalation needs question, ruling needs citation, golden correction needs source+reason+signature) live in contract schemas + Playwright tests — never hand-rolled.

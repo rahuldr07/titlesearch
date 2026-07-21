@@ -1,0 +1,12 @@
+# Normalize line endings: store text as LF in the repo, check out native.
+# Prevents the CRLF/LF churn seen on Windows checkouts.
+* text=auto
+
+# Explicit binary types (never diffed or line-ending-converted).
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.pdf binary
+*.zip binary
+*.seed binary
