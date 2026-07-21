@@ -64,8 +64,11 @@ export function BenchResultsScreen() {
           engine leaderboard →
         </Link>
       </div>
-      <div className="min-w-[1180px] flex-1 overflow-y-auto p-[14px]">
-        <div className="max-w-[1120px]">
+      {/* The section×tag matrix has a fixed minimum width; it scrolls WITHIN
+          this region (overflow-auto) so a narrow laptop never scrolls the
+          whole page sideways. min-w lives on the content, not the viewport. */}
+      <div className="flex-1 overflow-auto p-[14px]">
+        <div className="min-w-[1152px] max-w-[1120px]">
           <div className="mb-[6px] text-[11px] font-bold tracking-[.08em] text-ink-dim">
             SECTION × TAG. THE TWO AXES ARE THE FINDING; NO SINGLE NUMBER IS.
           </div>

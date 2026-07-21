@@ -89,7 +89,7 @@ export function EngineLeaderboardScreen() {
           </Link>
         </span>
       </div>
-      <div className="min-w-[1240px] flex-1 overflow-y-auto p-[14px]">
+      <div className="flex-1 overflow-y-auto p-[14px]">
         <div className="max-w-[1250px]">
           {(enginesQ.isPending || boardQ.isPending || routingQ.isPending) && (
             <div className="mb-2 text-[12px] text-ink-dim">loading the board…</div>
@@ -105,17 +105,23 @@ export function EngineLeaderboardScreen() {
             THERE IS NO BEST ENGINE, ONLY BEST FOR A CELL; AN AGGREGATE
             HEADLINE WOULD HIDE EXACTLY THE CELLS THAT PAY.
           </div>
+          {/* The matrix gets its own scroll box (both axes) so the header
+              row and the engine-label column stay pinned via position:sticky
+              — a wide board no longer forces you to lose the row/column you
+              are reading. The rest of the page (legend, detail, routing)
+              flows below in the outer scroll and reflows on narrow screens. */}
+          <div className="max-h-[62vh] overflow-auto">
           <div
             className="grid gap-[2px]"
             style={{
               gridTemplateColumns: `216px repeat(${columns.length}, minmax(102px, 1fr))`,
             }}
           >
-            <span />
+            <span className="sticky top-0 left-0 z-30 bg-dk-deep" />
             {columns.map((col) => (
               <div
                 key={`${col.jurisdiction}|${col.section}`}
-                className={`px-1 py-1 text-center text-[10.5px] ${
+                className={`sticky top-0 z-20 bg-dk-deep px-1 py-1 text-center text-[10.5px] ${
                   col.section === "judgments_liens"
                     ? "text-dk-attend"
                     : "text-ink-dim"
@@ -132,13 +138,16 @@ export function EngineLeaderboardScreen() {
             ].map((group) => [
               <div
                 key={group.label}
-                className="py-[6px] pr-2 text-[10px] font-bold tracking-[.06em] text-ink-secondary"
+                className="bg-dk-deep py-[6px] pr-2 text-[10px] font-bold tracking-[.06em] text-ink-secondary"
                 style={{ gridColumn: `1 / span ${columns.length + 1}` }}
               >
-                {group.label}
+                <span className="sticky left-0">{group.label}</span>
               </div>,
               ...group.list.map((e) => [
-                <span key={`${e.id}-label`} className="py-[5px] pr-2 text-dk-ink">
+                <span
+                  key={`${e.id}-label`}
+                  className="sticky left-0 z-10 bg-dk-deep py-[5px] pr-2 text-dk-ink"
+                >
                   {e.id}
                 </span>,
                 ...columns.map((col) => {
@@ -172,6 +181,7 @@ export function EngineLeaderboardScreen() {
                 }),
               ]),
             ])}
+          </div>
           </div>
           <div className="mt-2 flex flex-wrap gap-5 text-[10.5px] text-ink-dim">
             <span>

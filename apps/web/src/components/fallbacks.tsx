@@ -50,6 +50,23 @@ export function NotFoundCard() {
   );
 }
 
+/**
+ * Shown while a lazily-loaded route chunk resolves. PURE — no fetch, no
+ * chrome — so it is safe under /blind/* (a chunk load is a JS asset request,
+ * never an /api GET; the blindness floor is unaffected). Kept visually quiet:
+ * a route swap that resolves in a few ms should not flash a loud card.
+ */
+export function RoutePending() {
+  return (
+    <div
+      data-testid="route-pending"
+      className="flex h-screen items-center justify-center bg-bg"
+    >
+      <div className="h-5 w-5 animate-spin rounded-full border-2 border-line-mid border-t-ink-secondary" />
+    </div>
+  );
+}
+
 export function RouteErrorCard({ error }: { error: unknown }) {
   return (
     <FallbackFrame

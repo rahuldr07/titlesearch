@@ -97,7 +97,11 @@ export function ReconciliationScreen() {
           </div>
         </div>
       ) : (
-        <div className="flex min-h-0 min-w-[1280px] flex-1">
+        <div className="flex min-h-0 flex-1 overflow-x-auto">
+          {/* The symmetric two-pane layout has a fixed minimum width; it
+              scrolls horizontally WITHIN this region so the page body never
+              does — the header above stays put on a narrow laptop. */}
+          <div className="flex min-h-0 min-w-[1280px] flex-1">
           <div className="flex w-[44%] min-w-[500px] flex-col bg-dk-bg">
             <div className="flex flex-none flex-wrap items-center gap-[6px] border-b border-dk-line px-[18px] py-[10px]">
               <span className="text-[10.5px] tracking-[.05em] text-ink-dim">
@@ -157,6 +161,7 @@ export function ReconciliationScreen() {
               partial reconciliations
             </div>
           </div>
+        </div>
         </div>
       )}
     </div>

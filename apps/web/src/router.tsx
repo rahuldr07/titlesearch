@@ -3,29 +3,23 @@ import {
   createRootRoute,
   createRoute,
   createRouter,
+  lazyRouteComponent,
   redirect,
   useRouterState,
 } from "@tanstack/react-router";
-import { AccountScreen } from "./screens/Account";
-import { NotFoundCard, RouteErrorCard } from "./components/fallbacks";
+import {
+  NotFoundCard,
+  RouteErrorCard,
+  RoutePending,
+} from "./components/fallbacks";
 import { GlobalKeys } from "./components/GlobalKeys";
 import { SideRail } from "./components/SideRail";
+// Home stays eager: it is the landing route, so splitting it would only add a
+// pending flash on first paint with nothing to gain. Every other screen is a
+// separate chunk, fetched on navigation (and preloaded on hover/focus via
+// defaultPreload below) — the 610 KB single bundle becomes a small shell plus
+// per-route chunks, so first paint ships only what the landing needs.
 import { HomeScreen } from "./screens/Home";
-import { BenchResultsScreen } from "./screens/BenchResults";
-import { BlindFiftyScreen } from "./screens/BlindFifty";
-import { BlindStatusScreen } from "./screens/BlindStatus";
-import { ReconciliationScreen } from "./screens/Reconciliation";
-import { ComplaintsScreen } from "./screens/Complaints";
-import { ExtractionBenchScreen } from "./screens/ExtractionBench";
-import { DeliveryScreen } from "./screens/Delivery";
-import { EngineLeaderboardScreen } from "./screens/EngineLeaderboard";
-import { EscalationInboxScreen } from "./screens/EscalationInbox";
-import { GoldenSetScreen } from "./screens/GoldenSet";
-import { IngestScreen } from "./screens/Ingest";
-import { OpsDashboardScreen } from "./screens/OpsDashboard";
-import { SeedCorrectionScreen } from "./screens/SeedCorrection";
-import { QueueScreen } from "./screens/Queue";
-import { ReviewScreen } from "./screens/Review";
 import { ROLE_HOME, requireAccess } from "./nav";
 import { session } from "./session";
 
@@ -73,7 +67,7 @@ const queueRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/queue",
   beforeLoad: () => requireAccess("/queue"),
-  component: QueueScreen,
+  component: lazyRouteComponent(() => import("./screens/Queue"), "QueueScreen"),
 });
 
 /**
@@ -88,49 +82,49 @@ const reviewRoute = createRoute({
   beforeLoad: () => requireAccess("/orders"),
   validateSearch: (search: Record<string, unknown>): { field?: string } =>
     typeof search["field"] === "string" ? { field: search["field"] } : {},
-  component: ReviewScreen,
+  component: lazyRouteComponent(() => import("./screens/Review"), "ReviewScreen"),
 });
 
 const ingestRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/ingest",
   beforeLoad: () => requireAccess("/ingest"),
-  component: IngestScreen,
+  component: lazyRouteComponent(() => import("./screens/Ingest"), "IngestScreen"),
 });
 
 const escalationsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/escalations",
   beforeLoad: () => requireAccess("/escalations"),
-  component: EscalationInboxScreen,
+  component: lazyRouteComponent(() => import("./screens/EscalationInbox"), "EscalationInboxScreen"),
 });
 
 const dashboardRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/dashboard",
   beforeLoad: () => requireAccess("/dashboard"),
-  component: OpsDashboardScreen,
+  component: lazyRouteComponent(() => import("./screens/OpsDashboard"), "OpsDashboardScreen"),
 });
 
 const deliveryRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/delivery",
   beforeLoad: () => requireAccess("/delivery"),
-  component: DeliveryScreen,
+  component: lazyRouteComponent(() => import("./screens/Delivery"), "DeliveryScreen"),
 });
 
 const complaintsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/complaints",
   beforeLoad: () => requireAccess("/complaints"),
-  component: ComplaintsScreen,
+  component: lazyRouteComponent(() => import("./screens/Complaints"), "ComplaintsScreen"),
 });
 
 const goldenRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/golden",
   beforeLoad: () => requireAccess("/golden"),
-  component: GoldenSetScreen,
+  component: lazyRouteComponent(() => import("./screens/GoldenSet"), "GoldenSetScreen"),
 });
 
 const seedCorrectionRoute = createRoute({
@@ -139,49 +133,49 @@ const seedCorrectionRoute = createRoute({
   beforeLoad: () => requireAccess("/seed-correction"),
   validateSearch: (search: Record<string, unknown>): { fieldId?: string } =>
     typeof search["fieldId"] === "string" ? { fieldId: search["fieldId"] } : {},
-  component: SeedCorrectionScreen,
+  component: lazyRouteComponent(() => import("./screens/SeedCorrection"), "SeedCorrectionScreen"),
 });
 
 const benchRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/bench",
   beforeLoad: () => requireAccess("/bench"),
-  component: ExtractionBenchScreen,
+  component: lazyRouteComponent(() => import("./screens/ExtractionBench"), "ExtractionBenchScreen"),
 });
 
 const benchResultsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/bench/results",
   beforeLoad: () => requireAccess("/bench"),
-  component: BenchResultsScreen,
+  component: lazyRouteComponent(() => import("./screens/BenchResults"), "BenchResultsScreen"),
 });
 
 const blindRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/blind/$orderId",
   beforeLoad: () => requireAccess("/blind"),
-  component: BlindFiftyScreen,
+  component: lazyRouteComponent(() => import("./screens/BlindFifty"), "BlindFiftyScreen"),
 });
 
 const blindStatusRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/blind-status",
   beforeLoad: () => requireAccess("/blind-status"),
-  component: BlindStatusScreen,
+  component: lazyRouteComponent(() => import("./screens/BlindStatus"), "BlindStatusScreen"),
 });
 
 const reconciliationRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/reconciliation/$orderId",
   beforeLoad: () => requireAccess("/reconciliation"),
-  component: ReconciliationScreen,
+  component: lazyRouteComponent(() => import("./screens/Reconciliation"), "ReconciliationScreen"),
 });
 
 const leaderboardRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/leaderboard",
   beforeLoad: () => requireAccess("/leaderboard"),
-  component: EngineLeaderboardScreen,
+  component: lazyRouteComponent(() => import("./screens/EngineLeaderboard"), "EngineLeaderboardScreen"),
 });
 
 // /account carries no guard: every role keeps it in the mock-auth phase so
@@ -189,7 +183,7 @@ const leaderboardRoute = createRoute({
 const accountRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/account",
-  component: AccountScreen,
+  component: lazyRouteComponent(() => import("./screens/Account"), "AccountScreen"),
 });
 
 export const router = createRouter({
@@ -197,6 +191,14 @@ export const router = createRouter({
   // page. Both fallbacks are chrome-free — safe even under /blind/*.
   defaultNotFoundComponent: NotFoundCard,
   defaultErrorComponent: RouteErrorCard,
+  // While a route's chunk resolves, show the quiet spinner — not a blank frame.
+  defaultPendingComponent: RoutePending,
+  // Preload the target chunk + loader on hover/focus so the click lands on an
+  // already-warm route: navigation feels instant even though screens are split.
+  // (Intent preloading is a JS-asset prefetch — it issues no /api call, so the
+  // /blind/* zero-GET floor is untouched.)
+  defaultPreload: "intent",
+  defaultPreloadStaleTime: 0,
   routeTree: rootRoute.addChildren([
     indexRoute,
     queueRoute,
