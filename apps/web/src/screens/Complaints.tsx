@@ -6,8 +6,11 @@ import {
   ComplaintsResponse,
   DeliveriesResponse,
   OrderFieldsResponse,
+  ResolveComplaintRequest,
+  RulesResponse,
   type Complaint,
   type Field,
+  type Rule,
 } from "@titlepipe/contract";
 import { api } from "../api";
 import { naText } from "../components/field";
@@ -23,17 +26,26 @@ import { Tabs } from "./Delivery";
  * distinct because it means NO HUMAN SAW IT — a threshold failure, and only
  * this list can say so.
  *
- * CONTRACT GAPs (not built): complaint-resolve endpoint (rule + golden-case
- * offer flow — resolution renders from entity data only), complaints-per-100
- * trend metric.
+ * Resolving a complaint terminates in a rule (principle 3): the fix, the rule
+ * it cites or drafts (PENDING until an engineer confirms), and an optional
+ * free golden-case offer. Refused without a rule, exactly like an escalation.
+ *
+ * CONTRACT GAP (not built): complaints-per-100 trend metric.
  */
 export function ComplaintsScreen() {
   const complaintsQ = useQuery({
     queryKey: ["complaints"],
     queryFn: () => api(ComplaintsResponse, "/api/complaints"),
   });
+  // Rules for the cite path — a ruling may point at a live rule instead of
+  // drafting a new one. Fetched once here; passed to each open complaint.
+  const rulesQ = useQuery({
+    queryKey: ["rules"],
+    queryFn: () => api(RulesResponse, "/api/rules"),
+  });
 
   const complaints = complaintsQ.data?.complaints ?? [];
+  const rules = rulesQ.data?.rules ?? [];
   const groups: {
     key: Complaint["how_it_got_through"];
     title: string;
@@ -99,7 +111,7 @@ export function ComplaintsScreen() {
                   </span>
                 </div>
                 {items.map((c) => (
-                  <ComplaintCard key={c.id} complaint={c} />
+                  <ComplaintCard key={c.id} complaint={c} rules={rules} />
                 ))}
                 {items.length === 0 && (
                   <div className="px-[2px] py-[6px] text-[11.5px] text-ink-faint">
@@ -328,11 +340,20 @@ function CaptureCard() {
   );
 }
 
-function ComplaintCard({ complaint }: { complaint: Complaint }) {
+function ComplaintCard({
+  complaint,
+  rules,
+}: {
+  complaint: Complaint;
+  rules: Rule[];
+}) {
   const resolved = complaint.resolution !== null;
   if (resolved) {
     return (
-      <div className="mt-[7px] rounded-[5px] border border-line-mid bg-surface-dim px-[14px] py-[9px]">
+      <div
+        data-testid={`complaint-resolved-${complaint.field_path}`}
+        className="mt-[7px] rounded-[5px] border border-line-mid bg-surface-dim px-[14px] py-[9px]"
+      >
         <div className="flex flex-wrap items-baseline gap-[10px]">
           <span className="text-[12px] font-bold text-ok">✓ resolved</span>
           <span className="font-mono text-[12px]">{complaint.field_path}</span>
@@ -385,6 +406,186 @@ function ComplaintCard({ complaint }: { complaint: Complaint }) {
           settings failure. Nothing else in the system can tell you the
           threshold is wrong.
         </div>
+      )}
+      <ResolvePanel complaint={complaint} rules={rules} />
+    </div>
+  );
+}
+
+/**
+ * Resolve a complaint. Like an escalation, the fix is incidental — the RULE it
+ * cites or drafts is the point (principle 3). A ruling with no rule is refused
+ * by the contract schema. The golden-case offer is optional: turning the
+ * complaint into a permanent test case is the strongest fix a client sees.
+ */
+function ResolvePanel({
+  complaint,
+  rules,
+}: {
+  complaint: Complaint;
+  rules: Rule[];
+}) {
+  const queryClient = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [resolution, setResolution] = useState("");
+  const [mode, setMode] = useState<"cite" | "draft">("cite");
+  const [citedRuleId, setCitedRuleId] = useState("");
+  const [draftText, setDraftText] = useState("");
+  const [draftScope, setDraftScope] = useState("");
+  const [goldenOffer, setGoldenOffer] = useState(false);
+
+  const candidate = {
+    resolution: resolution.trim(),
+    rule:
+      mode === "cite"
+        ? { rule_id: citedRuleId }
+        : {
+            draft: {
+              text: draftText.trim(),
+              jurisdiction_scope:
+                draftScope.trim() === "" ? null : draftScope.trim(),
+            },
+          },
+    golden_offer_accepted: goldenOffer,
+  };
+  // The contract schema is the refusal gate — no rule, no resolution.
+  const valid =
+    ResolveComplaintRequest.safeParse(candidate).success &&
+    (mode !== "cite" || citedRuleId !== "");
+
+  const resolve = useMutation({
+    mutationFn: () =>
+      api(Ack, `/api/complaints/${complaint.id}/resolve`, {
+        method: "POST",
+        body: JSON.stringify(candidate),
+      }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["complaints"] });
+      void queryClient.invalidateQueries({ queryKey: ["rules"] });
+    },
+    onError: () => {
+      void queryClient.invalidateQueries({ queryKey: ["complaints"] });
+      void queryClient.invalidateQueries({ queryKey: ["rules"] });
+    },
+  });
+
+  const citable = rules.filter((r) => r.status === "live");
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        data-testid={`resolve-open-${complaint.field_path}`}
+        onClick={() => setOpen(true)}
+        className="mt-[10px] cursor-pointer rounded-btn border border-line-strong bg-input px-[12px] py-[5px] text-[12px] font-semibold text-ink-secondary"
+      >
+        Resolve — the rule it produces is the point
+      </button>
+    );
+  }
+
+  return (
+    <div
+      data-testid={`resolve-panel-${complaint.field_path}`}
+      className="mt-[10px] rounded-card border border-line-strong bg-card px-[14px] py-3"
+    >
+      <div className="mb-[6px] text-[11px] font-bold tracking-[.08em] text-label">
+        THE FIX — WHAT WAS DONE, ONE LINE
+      </div>
+      <textarea
+        data-testid="cmp-resolution"
+        value={resolution}
+        onChange={(e) => setResolution(e.target.value)}
+        placeholder="e.g. “v2 re-delivered with the lien restored; threshold on this field lowered pending review”"
+        className="min-h-[48px] w-full resize-y rounded-[5px] border-[1.5px] border-dash bg-input px-[12px] py-2 font-sans text-[13px] leading-[1.5] text-ink"
+      />
+      <div className="mt-3 text-[11px] font-bold tracking-[.08em] text-label">
+        THE RULE — REQUIRED. A RESOLUTION WITHOUT A RULE IS REFUSED.
+      </div>
+      <div className="mt-2 flex gap-4 text-[12.5px]">
+        <label className="flex cursor-pointer items-center gap-[6px]">
+          <input
+            type="radio"
+            checked={mode === "cite"}
+            onChange={() => setMode("cite")}
+          />
+          cite an existing rule
+        </label>
+        <label className="flex cursor-pointer items-center gap-[6px]">
+          <input
+            type="radio"
+            data-testid="cmp-mode-draft"
+            checked={mode === "draft"}
+            onChange={() => setMode("draft")}
+          />
+          draft a new one — lands PENDING
+        </label>
+      </div>
+      {mode === "cite" && (
+        <select
+          data-testid="cmp-cite-select"
+          value={citedRuleId}
+          onChange={(e) => setCitedRuleId(e.target.value)}
+          className="mt-2 w-full max-w-[560px] rounded-btn border border-line-strong bg-input px-2 py-[6px] font-sans text-[12.5px]"
+        >
+          <option value="">— pick the rule this resolution applies —</option>
+          {citable.map((r) => (
+            <option key={r.id} value={r.id}>
+              {r.code} — {r.text.slice(0, 90)}
+            </option>
+          ))}
+        </select>
+      )}
+      {mode === "draft" && (
+        <div className="mt-2 flex max-w-[560px] flex-col gap-2">
+          <textarea
+            data-testid="cmp-draft-input"
+            value={draftText}
+            onChange={(e) => setDraftText(e.target.value)}
+            placeholder="the general rule, one sentence — it lands PENDING and cannot affect the pipeline until an engineer confirms it"
+            className="min-h-[48px] w-full resize-y rounded-btn border border-dash bg-input px-[10px] py-2 font-sans text-[13px]"
+          />
+          <input
+            value={draftScope}
+            onChange={(e) => setDraftScope(e.target.value)}
+            placeholder="jurisdiction scope — optional, e.g. GA"
+            className="w-[240px] rounded-btn border border-line-strong bg-input px-[10px] py-[5px] font-mono text-[12px]"
+          />
+        </div>
+      )}
+      <label className="mt-3 flex cursor-pointer items-center gap-[6px] text-[12.5px] text-ink-secondary">
+        <input
+          type="checkbox"
+          data-testid="cmp-golden-offer"
+          checked={goldenOffer}
+          onChange={(e) => setGoldenOffer(e.target.checked)}
+        />
+        offer a free golden case — the complaint becomes a permanent test
+      </label>
+      <div className="mt-[10px] flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          data-testid={`cmp-resolve-btn-${complaint.field_path}`}
+          disabled={!valid || resolve.isPending}
+          onClick={() => resolve.mutate()}
+          className={`rounded-btn px-[16px] py-[6px] font-sans text-[12.5px] font-semibold ${
+            valid
+              ? "cursor-pointer border border-action bg-action text-ink-invert"
+              : "cursor-not-allowed border-[1.5px] border-dashed border-dash bg-track text-ink-dim"
+          }`}
+        >
+          {valid ? "Resolve — files the rule" : "Resolve — held, needs a fix and a rule"}
+        </button>
+        <button
+          type="button"
+          onClick={() => setOpen(false)}
+          className="cursor-pointer text-[11.5px] text-ink-dim"
+        >
+          cancel
+        </button>
+      </div>
+      {resolve.error != null && (
+        <MutationNote testid="cmp-resolve-note" error={resolve.error} />
       )}
     </div>
   );

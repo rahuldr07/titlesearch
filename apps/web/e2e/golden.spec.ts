@@ -2,8 +2,9 @@ import { expect, test } from "@playwright/test";
 
 /**
  * Golden Set + Seed Correction (§4.9): corrections require source + reason
- * + signature (contract-enforced), permanent-log framing, NO timers, and
- * capture never shows the pipeline's draft.
+ * (contract-enforced); the signer is derived from the authenticated session,
+ * never typed by the client. Permanent-log framing, NO timers, and capture
+ * never shows the pipeline's draft.
  */
 
 test("capture is blind and structured; don't-know ≠ not-stated", async ({
@@ -38,13 +39,15 @@ test("no timers anywhere on golden capture", async ({ page }) => {
   expect(body).toContain("this is reading, not queue-clearing");
 });
 
-test("seed correction is refused without citation + reason + signature", async ({
+test("seed correction is refused without citation + reason; signer is the session", async ({
   page,
 }) => {
   await page.goto("/seed-correction?fieldId=gf_1");
   const btn = page.getByTestId("seed-correct-btn");
   await expect(btn).toBeDisabled();
   await expect(btn).toContainText("a correction with no source is an opinion");
+  // the signer is not a client field — it's shown read-only from the session
+  await expect(page.getByTestId("seed-signed-as")).toContainText("L. Vance");
   await page.getByTestId("seed-new-value").fill("$220,224.00");
   await expect(btn).toBeDisabled();
   await page.getByTestId("seed-cite").fill("security deed p 3, amount in words");
@@ -52,8 +55,7 @@ test("seed correction is refused without citation + reason + signature", async (
   await page
     .getByTestId("seed-reason")
     .fill("words read Two Hundred Twenty Thousand; the seed followed smudged numerals");
-  await expect(btn).toBeDisabled(); // still unsigned
-  await page.getByTestId("seed-signed").fill("M. Estrada");
+  // citation + reason is the whole gate now — the signature is server-derived
   await expect(btn).toBeEnabled();
 });
 
@@ -64,11 +66,45 @@ test("a correction upgrades the tag to ruled and lands in the permanent log", as
   await page.getByTestId("seed-new-value").fill("$220,224.00");
   await page.getByTestId("seed-cite").fill("security deed p 3, amount in words");
   await page.getByTestId("seed-reason").fill("words prevail over numerals — §5");
-  await page.getByTestId("seed-signed").fill("M. Estrada");
   await page.getByTestId("seed-correct-btn").click();
   await expect(page.getByTestId("seed-tag")).toHaveText("ruled");
   await expect(page.getByTestId("seed-value")).toHaveText("$220,224.00");
   const log = page.getByTestId("seed-log");
-  await expect(log).toContainText("M. Estrada — corrected");
+  await expect(log).toContainText("L. Vance — corrected");
   await expect(log).toContainText("$202,224.00 → $220,224.00");
+});
+
+test("confirm-seed is refused without a reason, then affirms as-is: value stands, tag → ruled", async ({
+  page,
+}) => {
+  await page.goto("/seed-correction?fieldId=gf_1");
+  const btn = page.getByTestId("seed-confirm-btn");
+  await expect(btn).toBeDisabled();
+  await page
+    .getByTestId("seed-confirm-reason")
+    .fill("the words line reads $202,224 as typed — the model misread it");
+  // reason is the whole gate; the signer comes from the session
+  await expect(btn).toBeEnabled();
+  await btn.click();
+  await expect(page.getByTestId("seed-tag")).toHaveText("ruled");
+  await expect(page.getByTestId("seed-value")).toHaveText("$202,224.00");
+  const log = page.getByTestId("seed-log");
+  await expect(log).toContainText("L. Vance — confirmed the seed");
+  await expect(log).toContainText("value stands");
+});
+
+test("demote-to-suspect flags an ambiguous seed: value stands, tag → suspect", async ({
+  page,
+}) => {
+  await page.goto("/seed-correction?fieldId=gf_4");
+  const btn = page.getByTestId("seed-demote-btn");
+  await expect(btn).toBeDisabled();
+  await page
+    .getByTestId("seed-demote-reason")
+    .fill("consideration recital is illegible; neither figure can be confirmed");
+  await expect(btn).toBeEnabled();
+  await btn.click();
+  await expect(page.getByTestId("seed-tag")).toHaveText("suspect");
+  const log = page.getByTestId("seed-log");
+  await expect(log).toContainText("L. Vance — demoted to suspect");
 });

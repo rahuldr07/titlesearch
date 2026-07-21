@@ -151,15 +151,38 @@ export type ResolveEscalationRequest = z.infer<typeof ResolveEscalationRequest>;
 
 // ---- golden ----------------------------------------------------------------
 
-/** POST /api/golden/corrections — source + reason + signature, permanently logged. */
+/**
+ * POST /api/golden/corrections — source + reason, permanently logged and
+ * signed. The signer is derived server-side from the authenticated session,
+ * never declared by the client — a browser must not decide who signed a change
+ * to ground truth (that would be forgeable). The request carries the evidence
+ * (value + citation + reason); the server stamps the actor.
+ */
 export const GoldenCorrectionRequest = z.object({
   golden_field_id: z.string(),
   corrected_value: z.string().nullable(),
   source_citation: z.string().min(1),
   reason: z.string().min(1),
-  signed_by: z.string().min(1),
 });
 export type GoldenCorrectionRequest = z.infer<typeof GoldenCorrectionRequest>;
+
+/**
+ * The other two seed actions (SeedCorrection §4.9 — "three actions, nothing
+ * else"). Both leave the VALUE untouched and both are permanent, signed, and
+ * reasoned — this is the one screen where ground truth changes:
+ *   POST /api/golden/{id}/confirm — the seed is right; the model failure is
+ *     real. Tag upgrades to `ruled` (now human-verified, not merely typed).
+ *   POST /api/golden/{id}/demote  — the document is ambiguous; neither value
+ *     can be confirmed. Tag → `suspect` (a diagnosis, PRD §12).
+ * The field id travels in the URL, not the body. Refused without a reason;
+ * the action is still signed, but by the server-derived session identity (an
+ * unsigned change to ground truth is the failure the corpus exists to prevent,
+ * and a client-declared signer would be forgeable).
+ */
+export const GoldenAffirmRequest = z.object({
+  reason: z.string().min(1),
+});
+export type GoldenAffirmRequest = z.infer<typeof GoldenAffirmRequest>;
 
 // ---- blind fifty -----------------------------------------------------------
 
@@ -390,6 +413,31 @@ export const CreateComplaintRequest = z.object({
   description: z.string().optional(),
 });
 export type CreateComplaintRequest = z.infer<typeof CreateComplaintRequest>;
+
+/**
+ * POST /api/complaints/{id}/resolve — the complaint loop terminates in a rule
+ * (principle 3: escalations, reconciliation, AND complaints all produce a
+ * rulebook entry; PRD §12: resolution = fix + rule + free golden-case offer).
+ * REFUSED without a rule, exactly like escalation resolution — cite an
+ * existing rule or draft one, which lands PENDING (origin: complaint) and
+ * cannot affect the pipeline until an engineer confirms it. The golden-case
+ * offer is optional: a complaint that becomes a permanent test case is the
+ * strongest fix, but not every one earns it.
+ */
+export const ResolveComplaintRequest = z.object({
+  resolution: z.string().min(1),
+  rule: z.union([
+    z.object({ rule_id: z.string() }),
+    z.object({
+      draft: z.object({
+        text: z.string().min(1),
+        jurisdiction_scope: z.string().nullable().optional(),
+      }),
+    }),
+  ]),
+  golden_offer_accepted: z.boolean().optional(),
+});
+export type ResolveComplaintRequest = z.infer<typeof ResolveComplaintRequest>;
 
 // ---- audit -----------------------------------------------------------------
 

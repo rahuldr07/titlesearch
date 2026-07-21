@@ -7,9 +7,11 @@ import {
   CreateComplaintRequest,
   EngineRoutingRequest,
   EscalateFieldRequest,
+  GoldenAffirmRequest,
   GoldenCorrectionRequest,
   PassOrderRequest,
   ReconciliationRulingRequest,
+  ResolveComplaintRequest,
   ResolveEscalationRequest,
   canDo,
   isRole,
@@ -754,6 +756,50 @@ export const handlers = [
     return HttpResponse.json(ok, { status: 201 });
   }),
 
+  /**
+   * Complaint resolution — REFUSED without a rule (the complaint loop
+   * terminates in a rulebook entry, principle 3). A drafted rule lands
+   * PENDING (origin: complaint) and cannot affect the pipeline until an
+   * engineer confirms it. The golden-case offer is optional. Two states
+   * only: recorded → resolved; a resolved complaint 409s a second attempt.
+   */
+  http.post("/api/complaints/:id/resolve", async ({ params, request }) => {
+    const denied = guard(request, "complaint.resolve");
+    if (denied) return denied;
+    const parsed = ResolveComplaintRequest.safeParse(await request.json());
+    if (!parsed.success) return err(parsed.error.message, 422);
+    const c = complaintStore.find((x) => x.id === params["id"]);
+    if (!c) return err("no such complaint", 404);
+    if (c.resolution !== null) return err("already resolved", 409);
+    let ruleId: string;
+    if ("rule_id" in parsed.data.rule) {
+      ruleId = parsed.data.rule.rule_id;
+      if (!ruleStore.some((r) => r.id === ruleId)) {
+        return err("cited rule does not exist", 422);
+      }
+    } else {
+      const draft = parsed.data.rule.draft;
+      draftCount += 1;
+      const rule: Rule = {
+        id: `rule_draft_${draftCount}`,
+        code: `DRAFT-CMP-${draftCount}`,
+        text: draft.text,
+        origin: "complaint",
+        status: "pending",
+        jurisdiction_scope: draft.jurisdiction_scope ?? null,
+        version: 1,
+        confirmed_by: null,
+        source_doc_ref: null,
+      };
+      ruleStore.push(rule);
+      ruleId = rule.id;
+    }
+    c.resolution = parsed.data.resolution;
+    c.rule_id = ruleId;
+    c.golden_offer_accepted = parsed.data.golden_offer_accepted ?? null;
+    return HttpResponse.json(ok);
+  }),
+
   /** Section × tag matrix vs the golden set. No aggregate number exists here. */
   http.get("/api/bench/results", () =>
     HttpResponse.json({
@@ -994,8 +1040,11 @@ export const handlers = [
 
   /**
    * Golden correction — permanently logged, on the record. Refused without
-   * source_citation + reason + signed_by (contract-enforced). Tag upgrades
-   * to `ruled`; the prior value survives in corrected_from forever.
+   * source_citation + reason (contract-enforced). Tag upgrades to `ruled`; the
+   * prior value survives in corrected_from forever. The signer is derived from
+   * the authenticated identity (x-mock-actor stands in for the session/JWT
+   * identity claim), NEVER a client-supplied body field — a browser must not
+   * decide who signed a change to ground truth.
    */
   http.post("/api/golden/corrections", async ({ request }) => {
     const denied = guard(request, "golden.correct");
@@ -1008,7 +1057,48 @@ export const handlers = [
     gf.value = parsed.data.corrected_value;
     gf.tag = "ruled";
     gf.source_citation = parsed.data.source_citation;
-    gf.corrected_by = parsed.data.signed_by;
+    gf.corrected_by = request.headers.get("x-mock-actor") ?? "unknown";
+    gf.corrected_at = new Date().toISOString();
+    gf.correction_reason = parsed.data.reason;
+    return HttpResponse.json(ok, { status: 201 });
+  }),
+
+  /**
+   * Confirm seed — the seed is right; the model failure is real. VALUE
+   * unchanged (corrected_from stays null — nothing changed); tag upgrades
+   * delivered_report → `ruled` (now human-verified). Signed + reasoned,
+   * permanent. One action per field: a field already acted on 409s.
+   */
+  http.post("/api/golden/:id/confirm", async ({ params, request }) => {
+    const denied = guard(request, "golden.confirm");
+    if (denied) return denied;
+    const parsed = GoldenAffirmRequest.safeParse(await request.json());
+    if (!parsed.success) return err(parsed.error.message, 422);
+    const gf = goldenStore.find((g) => g.id === params["id"]);
+    if (!gf) return err("no such golden field", 404);
+    if (gf.corrected_at !== null) return err("seed already resolved", 409);
+    gf.tag = "ruled";
+    gf.corrected_by = request.headers.get("x-mock-actor") ?? "unknown";
+    gf.corrected_at = new Date().toISOString();
+    gf.correction_reason = parsed.data.reason;
+    return HttpResponse.json(ok, { status: 201 });
+  }),
+
+  /**
+   * Demote seed to suspect — the document is ambiguous; neither value can be
+   * confirmed (a diagnosis, PRD §12). VALUE unchanged; tag → `suspect`.
+   * Signed (server-derived actor) + reasoned, permanent. One action per field.
+   */
+  http.post("/api/golden/:id/demote", async ({ params, request }) => {
+    const denied = guard(request, "golden.demote");
+    if (denied) return denied;
+    const parsed = GoldenAffirmRequest.safeParse(await request.json());
+    if (!parsed.success) return err(parsed.error.message, 422);
+    const gf = goldenStore.find((g) => g.id === params["id"]);
+    if (!gf) return err("no such golden field", 404);
+    if (gf.corrected_at !== null) return err("seed already resolved", 409);
+    gf.tag = "suspect";
+    gf.corrected_by = request.headers.get("x-mock-actor") ?? "unknown";
     gf.corrected_at = new Date().toISOString();
     gf.correction_reason = parsed.data.reason;
     return HttpResponse.json(ok, { status: 201 });

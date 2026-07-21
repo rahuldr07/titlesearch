@@ -60,3 +60,26 @@ test("per-field capture records into its group", async ({ page }) => {
     page.getByTestId("complaint-deed.consideration"),
   ).toContainText("client says");
 });
+
+test("resolving a complaint is refused without a rule; a draft rule files it", async ({
+  page,
+}) => {
+  await page.goto("/complaints");
+  await page.getByTestId("resolve-open-assessment.city_tax").click();
+  const btn = page.getByTestId("cmp-resolve-btn-assessment.city_tax");
+  await expect(btn).toBeDisabled(); // no fix, no rule
+  await page
+    .getByTestId("cmp-resolution")
+    .fill("v2 re-delivered with the delinquent city tax restored");
+  await expect(btn).toBeDisabled(); // fix alone is not a resolution — a rule is required
+  await page.getByTestId("cmp-mode-draft").check();
+  await page
+    .getByTestId("cmp-draft-input")
+    .fill("delinquent city-tax lines are always surfaced, never auto-confirmed");
+  await expect(btn).toBeEnabled();
+  await page.getByTestId("cmp-golden-offer").check();
+  await btn.click();
+  const resolved = page.getByTestId("complaint-resolved-assessment.city_tax");
+  await expect(resolved).toContainText("resolved");
+  await expect(resolved).toContainText("GOLDEN CASE");
+});

@@ -24,12 +24,15 @@ export async function api<S extends z.ZodType>(
   init?: RequestInit,
 ): Promise<z.output<S>> {
   const res = await fetch(path, {
-    // x-mock-role stands in for the Clerk JWT's role claim so the MSW
-    // handlers can enforce the authz table server-side; it disappears when
-    // real auth lands. Action names only ever travel in bodies — never URLs.
+    // x-mock-role / x-mock-actor stand in for the session/JWT role and identity
+    // claims so the MSW handlers can enforce authz AND stamp the actor
+    // server-side; both disappear when real auth (WorkOS session) lands. The
+    // signer of an action is ALWAYS derived from this channel, never from a
+    // request body field. Action names only ever travel in bodies — never URLs.
     headers: {
       "content-type": "application/json",
       "x-mock-role": session.role,
+      "x-mock-actor": session.name,
     },
     ...init,
   });

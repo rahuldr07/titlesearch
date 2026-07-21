@@ -94,7 +94,10 @@ function CaptureTab() {
         this measures nothing. You are typing the answer the machine will be
         graded against.
       </div>
-      <div className="flex min-h-0 flex-1">
+      {/* Two-pane capture scrolls horizontally within this region so a narrow
+          laptop never scrolls the whole page sideways. */}
+      <div className="flex min-h-0 flex-1 overflow-x-auto">
+      <div className="flex min-h-0 min-w-[940px] flex-1">
         <div className="flex w-[56%] min-w-[520px] items-center justify-center bg-dk-bg p-[22px]">
           <div className="relative aspect-[8.5/11] w-[min(560px,100%)] self-start rounded-[2px] bg-page shadow-page">
             <div className="absolute top-[26px] left-[44px] h-[14px] w-[46%] rounded-[2px] bg-page-bar" />
@@ -211,6 +214,7 @@ function CaptureTab() {
             </div>
           </div>
         </div>
+      </div>
       </div>
     </>
   );

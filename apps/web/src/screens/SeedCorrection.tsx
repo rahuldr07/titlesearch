@@ -3,11 +3,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useSearch } from "@tanstack/react-router";
 import {
   Ack,
+  GoldenAffirmRequest,
   GoldenCorrectionRequest,
   GoldenResponse,
   type GoldenField,
 } from "@titlepipe/contract";
 import { api } from "../api";
+import { useSession } from "../session";
 import { MutationNote } from "../components/notice";
 import { HomeTitle } from "../components/TopBar";
 
@@ -22,8 +24,11 @@ import { HomeTitle } from "../components/TopBar";
  * opinion. Tag upgrades to `ruled`; the prior value survives forever in the
  * permanent log.
  *
- * Confirm-seed and demote-to-suspect have NO contract endpoints yet
- * (CONTRACT GAP) — they render as the designed actions but stay inert.
+ * All three actions leave a permanent, signed log entry. Confirm-seed affirms
+ * the value as-is (tag → ruled, nothing changes); demote-to-suspect flags an
+ * ambiguous document (tag → suspect). Both are refused without a reason and a
+ * signature — an unsigned change to ground truth is the failure this corpus
+ * exists to prevent. One action per field: acting on it retires the others.
  *
  * There is deliberately NO menu entry and no picker here: you arrive only by
  * expanding a failing bench cell (or a golden row) and clicking Investigate —
@@ -66,7 +71,10 @@ export function SeedCorrectionScreen() {
           ← bench results
         </Link>
       </div>
-      <div className="flex min-h-0 flex-1">
+      {/* Scan + investigation panes have a fixed minimum width; they scroll
+          horizontally within this region so the page body never does. */}
+      <div className="flex min-h-0 flex-1 overflow-x-auto">
+      <div className="flex min-h-0 min-w-[1080px] flex-1">
         <ScanPane />
         <div className="min-w-[560px] flex-1 overflow-y-auto px-[18px] pt-[14px] pb-10">
           {goldenQ.error != null && (
@@ -125,6 +133,7 @@ export function SeedCorrectionScreen() {
             )
           )}
         </div>
+      </div>
       </div>
     </div>
   );
@@ -203,19 +212,19 @@ function ScanPane() {
 
 function Investigation({ field }: { field: GoldenField }) {
   const queryClient = useQueryClient();
+  const actor = useSession((s) => s.name);
   const [value, setValue] = useState("");
   const [cite, setCite] = useState("");
   const [reason, setReason] = useState("");
-  const [signed, setSigned] = useState("");
 
   const candidate = {
     golden_field_id: field.id,
     corrected_value: value.trim() === "" ? null : value.trim(),
     source_citation: cite.trim(),
     reason: reason.trim(),
-    signed_by: signed.trim(),
   };
-  // The contract schema is the gate — no source, no signature, no correction.
+  // The contract schema is the gate — no source, no reason, no correction. The
+  // signer is the authenticated identity (stamped server-side), not typed here.
   const canCorrect = GoldenCorrectionRequest.safeParse(candidate).success;
 
   const correct = useMutation({
@@ -231,6 +240,19 @@ function Investigation({ field }: { field: GoldenField }) {
   });
 
   const corrected = field.corrected_at !== null;
+  // The log reflects which of the three actions was taken. A changed value
+  // (corrected_from set) is a correction; otherwise the tag says whether the
+  // seed was affirmed (ruled) or demoted (suspect).
+  const logVerb =
+    field.corrected_from !== null
+      ? "corrected"
+      : field.tag === "suspect"
+        ? "demoted to suspect"
+        : "confirmed the seed";
+  const logDetail =
+    field.corrected_from !== null
+      ? `${field.corrected_from ?? "—"} → ${field.value ?? "—"}`
+      : `value stands: ${field.value ?? "—"} · tag → ${field.tag}`;
 
   return (
     <>
@@ -261,9 +283,10 @@ function Investigation({ field }: { field: GoldenField }) {
           <div className="mb-2 rounded-[5px] border border-dk-card bg-dk-bg px-[14px] py-3">
             <span className="font-bold text-dk-ok">1 · Confirm seed</span>{" "}
             <span className="text-ink-dim">
-              the seed is correct — the model failure is real.{" "}
-              <i>No endpoint in the contract yet (CONTRACT GAP) — inert.</i>
+              the seed is correct — the model failure is real. Tag upgrades to{" "}
+              <b className="text-dk-ok">ruled</b>; the value does not change.
             </span>
+            <SeedAffirm field={field} kind="confirm" />
           </div>
           <div className="mb-2 rounded-[5px] border border-dk-attend-border bg-dk-bg px-[14px] py-3">
             <div className="flex flex-wrap items-baseline gap-3">
@@ -298,14 +321,13 @@ function Investigation({ field }: { field: GoldenField }) {
                 placeholder="one sentence — how the document reads"
                 className="w-full rounded-btn border border-dk-line-2 bg-dk-card px-[10px] py-[7px] font-mono text-[12px] text-dk-ink"
               />
-              <span className="text-ink-secondary">signed by</span>
-              <input
-                data-testid="seed-signed"
-                value={signed}
-                onChange={(e) => setSigned(e.target.value)}
-                placeholder="your name — the log carries it forever"
-                className="max-w-[220px] rounded-btn border border-dk-line-2 bg-dk-card px-[10px] py-[7px] font-mono text-[12px] text-dk-ink"
-              />
+              <span className="text-ink-secondary">signed as</span>
+              <span data-testid="seed-signed-as" className="text-dk-ink">
+                {actor}{" "}
+                <span className="text-ink-secondary">
+                  — from your session; the log carries it forever
+                </span>
+              </span>
             </div>
             <div className="mt-[10px] flex flex-wrap items-center gap-3">
               <button
@@ -321,7 +343,7 @@ function Investigation({ field }: { field: GoldenField }) {
               >
                 {canCorrect
                   ? `Correct the record: ${value} · tag → ruled`
-                  : "citation, reason and signature required — a correction with no source is an opinion"}
+                  : "citation and reason required — a correction with no source is an opinion"}
               </button>
             </div>
             {correct.error != null && (
@@ -335,9 +357,10 @@ function Investigation({ field }: { field: GoldenField }) {
           <div className="mb-2 rounded-[5px] border border-dk-card bg-dk-bg px-[14px] py-3">
             <span className="font-bold text-dash">3 · Demote to suspect</span>{" "}
             <span className="text-ink-dim">
-              the document is ambiguous — neither value can be confirmed.{" "}
-              <i>No endpoint in the contract yet (CONTRACT GAP) — inert.</i>
+              the document is ambiguous — neither value can be confirmed. Tag →{" "}
+              <b className="text-dash">suspect</b>; the value does not change.
             </span>
+            <SeedAffirm field={field} kind="demote" />
           </div>
         </>
       )}
@@ -352,12 +375,12 @@ function Investigation({ field }: { field: GoldenField }) {
           className="rounded-btn border border-dk-line bg-dk-bg px-[14px] py-[10px] text-[11.5px] leading-[1.6]"
         >
           <span className="font-semibold text-dk-ink-strong">
-            {field.corrected_by} — corrected
+            {field.corrected_by} — {logVerb}
           </span>
           <br />
           <span className="text-ink-dim">
-            {field.corrected_from ?? "—"} → {field.value ?? "—"} · citation:{" "}
-            {field.source_citation ?? "—"} · “{field.correction_reason}”
+            {logDetail} · citation: {field.source_citation ?? "—"} · “
+            {field.correction_reason}”
           </span>
         </div>
       ) : (
@@ -372,5 +395,90 @@ function Investigation({ field }: { field: GoldenField }) {
         bench; there is nothing to correct.
       </div>
     </>
+  );
+}
+
+/**
+ * Confirm-seed and demote-to-suspect: the value never changes, but the action
+ * is permanent and signed. The contract schema is the gate — no reason, no
+ * action. The signer is the authenticated session identity, stamped
+ * server-side, not typed here.
+ */
+function SeedAffirm({
+  field,
+  kind,
+}: {
+  field: GoldenField;
+  kind: "confirm" | "demote";
+}) {
+  const queryClient = useQueryClient();
+  const actor = useSession((s) => s.name);
+  const [reason, setReason] = useState("");
+
+  const candidate = { reason: reason.trim() };
+  const valid = GoldenAffirmRequest.safeParse(candidate).success;
+
+  const affirm = useMutation({
+    mutationFn: () =>
+      api(Ack, `/api/golden/${field.id}/${kind}`, {
+        method: "POST",
+        body: JSON.stringify(candidate),
+      }),
+    onSuccess: () =>
+      void queryClient.invalidateQueries({ queryKey: ["golden"] }),
+    onError: () =>
+      void queryClient.invalidateQueries({ queryKey: ["golden"] }),
+  });
+
+  const label = kind === "confirm" ? "Confirm — value stands, tag → ruled" : "Demote — value stands, tag → suspect";
+  const held =
+    kind === "confirm"
+      ? "reason required — even affirming ground truth is on the record"
+      : "reason required — a demotion is a diagnosis, on the record";
+
+  return (
+    <div className="mt-[10px] grid grid-cols-[130px_1fr] items-center gap-x-3 gap-y-2">
+      <span className="text-ink-secondary">reason</span>
+      <input
+        data-testid={`seed-${kind}-reason`}
+        value={reason}
+        onChange={(e) => setReason(e.target.value)}
+        placeholder={
+          kind === "confirm"
+            ? "one sentence — how the document confirms the seed"
+            : "one sentence — why neither value can be confirmed"
+        }
+        className="w-full rounded-btn border border-dk-line-2 bg-dk-card px-[10px] py-[7px] font-mono text-[12px] text-dk-ink"
+      />
+      <span className="text-ink-secondary">signed as</span>
+      <span data-testid={`seed-${kind}-signed-as`} className="text-dk-ink">
+        {actor}{" "}
+        <span className="text-ink-secondary">— from your session</span>
+      </span>
+      <div className="col-span-2 mt-[2px]">
+        <button
+          type="button"
+          data-testid={`seed-${kind}-btn`}
+          disabled={!valid || affirm.isPending}
+          onClick={() => affirm.mutate()}
+          className={`rounded-btn px-4 py-[7px] font-mono text-[12px] font-bold ${
+            valid
+              ? kind === "confirm"
+                ? "cursor-pointer border border-dk-ok bg-dk-ok text-ink-invert"
+                : "cursor-pointer border border-dash bg-dash text-ink-invert"
+              : "cursor-not-allowed border border-dashed border-dk-line bg-dk-bg text-ink-secondary"
+          }`}
+        >
+          {valid ? label : held}
+        </button>
+        {affirm.error != null && (
+          <MutationNote
+            register="dark"
+            testid={`seed-${kind}-note`}
+            error={affirm.error}
+          />
+        )}
+      </div>
+    </div>
   );
 }

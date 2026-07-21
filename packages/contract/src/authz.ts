@@ -104,12 +104,17 @@ export const PERMISSIONS = [
   { action: "escalation.resolve", roles: ["senior", "admin"], when: { resolution: [null] } },
   { action: "rule.confirm", roles: ["engineer", "admin"], when: { status: ["pending"] } },
   { action: "golden.correct", roles: ["senior", "engineer", "admin"] },
+  // the other two seed actions — affirm value as-is (→ ruled) / demote (→ suspect)
+  { action: "golden.confirm", roles: ["senior", "engineer", "admin"] },
+  { action: "golden.demote", roles: ["senior", "engineer", "admin"] },
   // admin here is mock-phase dev convenience (the demo session is admin);
   // under Clerk the blind protocol narrows this to the seated typist
   { action: "blind.submit", roles: ["typist", "admin"] },
   { action: "reconciliation.rule", roles: ["senior", "admin"] },
   { action: "routing.flip", roles: ["engineer", "admin"] },
   { action: "complaint.record", roles: ["ops", "admin"] },
+  // ops lead resolves complaints (PRD §5); refused unless still open
+  { action: "complaint.resolve", roles: ["ops", "admin"], when: { resolution: [null] } },
   { action: "delivery.retry", roles: ["ops", "admin"] },
 ] as const satisfies readonly Permission[];
 
