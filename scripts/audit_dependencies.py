@@ -52,6 +52,7 @@ def audit(project: str) -> bool:
             export += ["--no-emit-package", package]
         export += ["-o", str(requirements)]
 
+        # S603: the argv is built here from constants, never from user input.
         exported = subprocess.run(  # noqa: S603
             export, cwd=directory, capture_output=True, text=True, check=False
         )
@@ -102,11 +103,13 @@ def audit(project: str) -> bool:
 def main(argv: list[str]) -> int:
     projects = tuple(argv) if argv else PROJECTS
     print("Auditing locked dependencies:")
-    # Evaluated eagerly so every project is reported, not just up to the first
-    # failure — a single run should list everything that needs attention.
-    if all([audit(project) for project in projects]):
-        return 0
-    return 1
+    # Every project is audited before returning, so one run lists everything
+    # that needs attention rather than stopping at the first failure.
+    ok = True
+    for project in projects:
+        if not audit(project):
+            ok = False
+    return 0 if ok else 1
 
 
 if __name__ == "__main__":

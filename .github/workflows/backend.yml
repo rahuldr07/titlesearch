@@ -11,14 +11,30 @@ on:
       - "services/**"
       - "libs/**"
       - "infra/**"
+      # The enforcement surface. Omitting these let a change to the
+      # client-data guard, the lock check or the container build context merge
+      # without this workflow ever running.
+      - "scripts/**"
       - "ruff.toml"
+      - ".pre-commit-config.yaml"
+      - ".dockerignore"
+      - ".gitattributes"
+      - ".env.example"
       - ".github/workflows/backend.yml"
   pull_request:
     paths:
       - "services/**"
       - "libs/**"
       - "infra/**"
+      # The enforcement surface. Omitting these let a change to the
+      # client-data guard, the lock check or the container build context merge
+      # without this workflow ever running.
+      - "scripts/**"
       - "ruff.toml"
+      - ".pre-commit-config.yaml"
+      - ".dockerignore"
+      - ".gitattributes"
+      - ".env.example"
       - ".github/workflows/backend.yml"
   workflow_dispatch:
 
@@ -33,7 +49,47 @@ env:
   UV_VERSION: "0.11.26"
   PYTHON_VERSION: "3.13"
 
+# Supply-chain pinning status, stated plainly rather than implied:
+#
+#   pinned by exact version — uv, Python, Semgrep, pip-audit, every Python
+#                             dependency (via uv.lock), the uv container image
+#   pinned by tag only      — GitHub Actions (@v4/@v5), trivy-action (@0.28.0),
+#                             python:3.13-slim-bookworm base images
+#
+# Tag pinning is mutable: a tag can be repointed. Moving to SHA and digest pins
+# is tracked in docs/backend/GATE_1_FOUNDATION.md §9 and is blocked on the same
+# thing as the rest of the container work — no Docker on the build machine, so
+# no digest has ever been resolved. Pinning to a digest nobody has verified
+# would be worse than the honest tag.
+
 jobs:
+  # The same hooks a developer runs locally, run as the authority. This is what
+  # executes the client-data guard, the lock check and their tests in CI —
+  # without it those controls were only ever enforced on machines where someone
+  # had installed the hooks.
+  hygiene:
+    name: hygiene
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+
+      - name: Install Python ${{ env.PYTHON_VERSION }}
+        run: uv python install ${{ env.PYTHON_VERSION }}
+
+      - name: Pre-commit (all files)
+        run: uvx pre-commit run --all-files --show-diff-on-failure
+
+      # Belt and braces: the guard is also run directly over every tracked
+      # file, so it holds even if the hook wiring is changed.
+      - name: Client-data guard over the whole tree
+        run: git ls-files -z | xargs -0 python scripts/check_no_client_data.py
+
   # Each Python project is verified independently. They are separate
   # deployables with separate locks, and a single combined environment would
   # hide a missing dependency in one of them.

@@ -8,6 +8,7 @@
 target-version = "py313"
 line-length = 100
 src = [
+    "scripts",
     "services/core-api/src",
     "services/blind-svc/src",
     "services/extraction-svc/src",
@@ -48,6 +49,14 @@ ignore = [
 ]
 
 [lint.per-file-ignores]
+# Repository maintenance scripts. They are standalone CLI tools, not an
+# importable package, and `print` is their output channel — a structured
+# logger would be the wrong shape for a pre-commit hook's console output.
+"scripts/**" = [
+    "T201",    # print is the interface
+    "INP001",  # deliberately not a package
+    "S101",    # asserts in the scripts' own tests
+]
 # Tests assert on internals, use short-lived fixtures, and say the quiet part.
 "**/tests/**" = [
     "S101",    # assert is the point

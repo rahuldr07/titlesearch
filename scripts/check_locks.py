@@ -32,7 +32,7 @@ def check(project: str) -> bool:
         print(f"  skip {project} (no pyproject.toml)")
         return True
 
-    result = subprocess.run(  # noqa: S603
+    result = subprocess.run(
         ["uv", "lock", "--check"],  # noqa: S607 — uv is required tooling, resolved from PATH
         cwd=directory,
         capture_output=True,
@@ -51,7 +51,13 @@ def check(project: str) -> bool:
 
 def main() -> int:
     print("Checking uv locks:")
-    if all([check(project) for project in PROJECTS]):
+    # Every project is checked before returning, so one run lists everything
+    # that needs attention rather than stopping at the first failure.
+    ok = True
+    for project in PROJECTS:
+        if not check(project):
+            ok = False
+    if ok:
         return 0
     print("\nA lock is out of date. Run `uv lock` in the failing project.")
     return 1
