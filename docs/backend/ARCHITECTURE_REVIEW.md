@@ -210,6 +210,15 @@ Reference: [WorkOS Python session helpers](https://workos.com/docs/reference/aut
 
 ### 7. The Flask 155-test safety net is not currently available
 
+> [!success] Resolved at Gate 0 (2026-07-22) — the prototype was recovered
+> This finding was correct about the *checkout* and is now superseded by the recovery
+> result. The prototype was located outside the repository in `~/Downloads/titlepipe.zip`.
+> 145 of its 155 tests run green; the other 10 assert against client source material that
+> must not be in VCS. The safety net exists, with two caveats the port must respect: the
+> five bug fixes were never merged into the package, and `v14` does not exist.
+> See `docs/backend/GATE_0_RECOVERY.md`. The recovery procedure below was followed as
+> written.
+
 The repository documentation references a Flask prototype with approximately 2,700 lines and 155 passing tests. Those Python modules and tests are not present in the current checkout. The ZIP currently present contains design screens, not the backend prototype.
 
 Therefore, the first gate is prototype recovery:
