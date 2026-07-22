@@ -57,6 +57,15 @@ def test_production_refuses_each_unsafe_knob(override: dict[str, object], expect
         deployed(**override)
 
 
+def test_a_same_origin_deployment_may_have_no_cors_allowlist() -> None:
+    assert deployed(cors_allowed_origins=(), same_origin_deployment=True).cors_allowed_origins == ()
+
+
+def test_production_refuses_an_empty_cors_allowlist_by_default() -> None:
+    with pytest.raises(ValidationError, match="CORS allowlist is empty"):
+        deployed(cors_allowed_origins=())
+
+
 def test_production_refuses_the_placeholder_secret() -> None:
     with pytest.raises(ValidationError, match="placeholder"):
         deployed(cookie_seal_password=SecretStr(DEVELOPMENT_SEAL_PASSWORD))

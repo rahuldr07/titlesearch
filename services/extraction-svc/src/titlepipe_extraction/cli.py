@@ -79,6 +79,7 @@ def command_check() -> int:
         level=settings.log_level,
         renderer=settings.effective_log_renderer,
         redaction_enabled=settings.redaction_enabled,
+        environment=settings.environment,
     )
     get_logger(__name__).info(
         "configuration_valid",

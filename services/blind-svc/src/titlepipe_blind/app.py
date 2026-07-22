@@ -21,6 +21,7 @@ from titlepipe_blind.lifespan import build_lifespan, build_resources
 from titlepipe_blind.settings import BlindApiSettings
 from titlepipe_blind.telemetry.hooks import RequestMetrics
 from titlepipe_blind.telemetry.logging import configure_logging
+from titlepipe_blind.telemetry.sensitivity import BLIND_SENSITIVE_KEY_PARTS
 from titlepipe_domain import Clock, IdFactory
 
 API_TITLE = "TitlePipe Blind API"
@@ -45,6 +46,8 @@ def create_app(
         level=settings.log_level,
         renderer=settings.effective_log_renderer,
         redaction_enabled=settings.redaction_enabled,
+        environment=settings.environment,
+        extra_sensitive_parts=BLIND_SENSITIVE_KEY_PARTS,
     )
 
     resources = build_resources(settings, clock=clock, id_factory=id_factory, metrics=metrics)

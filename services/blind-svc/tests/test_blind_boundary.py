@@ -23,8 +23,9 @@ from pydantic import SecretStr, ValidationError
 
 import titlepipe_blind
 from titlepipe_blind.settings import ALLOWED_STORAGE_PREFIX, BlindApiSettings
-from titlepipe_blind.telemetry.redaction import REDACTED, is_sensitive_key, redact_mapping
+from titlepipe_blind.telemetry.sensitivity import BLIND_SENSITIVE_KEY_PARTS
 from titlepipe_domain import Environment
+from titlepipe_domain.redaction import REDACTED, is_sensitive_key, redact_mapping
 
 
 def route_paths(app: FastAPI) -> set[str]:
@@ -119,9 +120,17 @@ def test_the_permitted_storage_prefix_is_accepted() -> None:
 def test_model_and_cross_seat_keys_are_redacted_here(key: str) -> None:
     """None of this should exist in this process. If one ever appears in a log
     record it is a boundary failure — redaction keeps it out of the shipper
-    while the boundary tests keep it out of the code."""
-    assert is_sensitive_key(key)
-    assert redact_mapping({key: "anything"}) == {key: REDACTED}
+    while the boundary tests keep it out of the code.
+
+    These extend the shared rules rather than replacing them: `grantor` is
+    still redacted here too."""
+    assert is_sensitive_key(key, extra_parts=BLIND_SENSITIVE_KEY_PARTS)
+    assert redact_mapping({key: "anything"}, extra_parts=BLIND_SENSITIVE_KEY_PARTS) == {
+        key: REDACTED
+    }
+    assert redact_mapping({"grantor": "X"}, extra_parts=BLIND_SENSITIVE_KEY_PARTS) == {
+        "grantor": REDACTED
+    }
 
 
 def test_no_product_route_exists_at_this_gate(app: FastAPI) -> None:

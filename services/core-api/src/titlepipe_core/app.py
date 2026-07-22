@@ -44,6 +44,7 @@ def create_app(
         level=settings.log_level,
         renderer=settings.effective_log_renderer,
         redaction_enabled=settings.redaction_enabled,
+        environment=settings.environment,
     )
 
     resources = build_resources(settings, clock=clock, id_factory=id_factory, metrics=metrics)
