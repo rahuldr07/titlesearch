@@ -35,6 +35,7 @@ TitleSearch/
 │  ├─ domain/                       # framework-free primitives, imported by all four services
 │  │  └─ src/titlepipe_domain/
 │  │     ├─ errors.py               # the domain error taxonomy — no HTTP, no status codes
+│  │     ├─ redaction.py            # ONE shared implementation; see §5
 │  │     ├─ clock.py                # Clock protocol + SystemClock (tz-aware UTC)
 │  │     ├─ identifiers.py          # IdFactory protocol + Uuid4IdFactory
 │  │     └─ runtime.py              # Environment / ServiceName / LogRenderer
@@ -49,8 +50,7 @@ TitleSearch/
 │  │  ├─ api/request_context.py     # correlation id: generate, propagate, bind, reset
 │  │  ├─ api/routers/health.py      # /health, /ready
 │  │  └─ telemetry/
-│  │     ├─ redaction.py            # redaction processor — first in the chain
-│  │     ├─ logging.py              # structlog configuration
+│  │     ├─ logging.py              # structlog chain; redaction LAST, before the renderer
 │  │     └─ hooks.py                # narrow tracing/metrics seam (no OTel dependency)
 │  ├─ blind-svc/src/titlepipe_blind/     # same shape; stricter redaction; isolation refusals
 │  ├─ extraction-svc/src/titlepipe_extraction/
@@ -68,10 +68,12 @@ TitleSearch/
 ├─ scripts/
 │  ├─ check_locks.py                # every uv.lock matches its pyproject.toml
 │  ├─ check_no_client_data.py       # refuses PDFs, DOCX, .seed, uploads/
-│  └─ audit_dependencies.py         # pip-audit over each frozen lock
+│  ├─ audit_dependencies.py         # pip-audit over each frozen lock
+│  └─ tests/                        # the client-data guard is a control, so it has tests
 │
 ├─ .github/workflows/backend.yml
 ├─ .pre-commit-config.yaml
+├─ .dockerignore                    # deny-by-default build context; see §9
 ├─ ruff.toml                        # shared lint config; does not merge environments
 └─ .env.example                     # names and safe examples only
 ```
@@ -89,10 +91,17 @@ TitleSearch/
 
 Three of these are **enforced by tests**, not documentation:
 
-- `libs/domain/tests/test_domain_primitives.py::test_domain_imports_no_framework`
-  imports every module and then inspects `sys.modules`, which catches a lazy
-  import inside a function body that a static scan of the import block would
-  miss.
+- `libs/domain/tests/test_import_boundary.py` **parses** every module with `ast`
+  and rejects a forbidden import wherever it appears — module level, function
+  body, `TYPE_CHECKING` block or conditional.
+
+  > Corrected after review. The original test imported each module and diffed
+  > `sys.modules`, and its docstring claimed that caught a lazy import inside a
+  > function body. It does not: importing a module does not execute its function
+  > bodies, so `def load(): import boto3` passed. The AST scan catches it, and
+  > `test_the_scan_detects_a_lazy_import` proves the scan itself works. The
+  > `sys.modules` check is kept, rescoped to what it genuinely covers —
+  > *transitive* arrivals that no source file names.
 - `services/blind-svc/tests/test_blind_boundary.py` asserts both that the blind
   package does not import Core or the workers **and** that those packages are
   not installed in its environment at all — so a future import cannot reach
@@ -119,7 +128,9 @@ Repository-wide, from the root:
 ```bash
 python scripts/check_locks.py            # all six locks current
 python scripts/audit_dependencies.py     # pip-audit over each frozen lock
-uvx pre-commit run --all-files
+uv run --with pytest python -m pytest scripts/tests   # the client-data guard's own tests
+git ls-files -z | xargs -0 python scripts/check_no_client_data.py
+uvx pre-commit run --all-files           # verified to pass twice from a clean tree
 ```
 
 Workers, directly:
@@ -237,12 +248,32 @@ uses at Gate 2**, which is the main reason it is built and proven now.
 
 ### Logging and redaction
 
-Chain order: **redaction → context merge → level → logger name → timestamp →
-render.** Redaction is first. A processor that renders or exports before
-redaction has already put the value somewhere, and removing it afterwards
-removes only the copy you can see.
+Chain order: **context merge → level → timestamp → exception formatting →
+redaction → render.** Redaction is **last, immediately before the renderer.**
 
-Two mechanisms, because key-matching alone is insufficient:
+> **Corrected after review — this was a real NPI and credential leak.**
+> The first version put redaction *first*, on the theory that nothing
+> downstream could then see an unredacted value. That is wrong, because
+> processors after it **create** fields. `format_exc_info` builds the traceback
+> string after redaction had already run, so an exception message reached
+> stdout verbatim — and `handle_unexpected` calls `log.exception` on every
+> unhandled error in production. A `RuntimeError` carrying a connection string
+> or a party name was logged in full.
+>
+> Two further gaps found at the same time: `database_url` and
+> `connection_string` matched no key rule, and the defect existed in all four
+> duplicated copies of the module.
+>
+> The property that actually matters is that **no processor runs after
+> redaction except the renderer**, which is now asserted structurally by
+> `test_nothing_runs_after_redaction_except_the_renderer`.
+
+**Redaction now lives once, in `libs/domain/redaction.py`.** It is pure
+dict-and-string manipulation with no framework import, so it belongs there, and
+a compliance control that must be byte-identical in four processes should never
+have been copy-pasted. That duplication is exactly why one defect became four.
+
+Three mechanisms, because key-matching alone is insufficient:
 
 1. **By key** — substring match on a normalised key, so `grantor`,
    `grantor_name` and `mortgagor_names` all match without an exhaustive list.
@@ -250,10 +281,18 @@ Two mechanisms, because key-matching alone is insufficient:
    `page_count`) are explicitly exempt: redaction that eats the diagnostics gets
    switched off by whoever is on call, which is how the rest stops being
    enforced.
-2. **By shape** — a presigned URL is a bearer credential regardless of the key
-   it arrives under. Any URL carrying signing parameters is truncated to its
-   path. `{"location": "https://…?X-Amz-Signature=…"}` is exactly the leak this
-   exists to stop.
+2. **By shape, in any string value** — a credential does not become safe by
+   being logged under a friendly name. Presigned URLs are truncated at the
+   query string; `scheme://user:password@host` is masked wherever it appears,
+   including inside a `detail` message or a traceback; `password=` / `token=` /
+   `api_key=` pairs in a connection string are masked. The host survives,
+   because *which* database was unreachable is the diagnostic value.
+3. **Exception text** — in a deployed environment the traceback keeps its
+   **frames** (file, line, function) and its exception **type**, and drops every
+   message and echoed source line. Frames are code structure and identify no
+   one; a message is arbitrary data-controlled text. Locally the full text is
+   kept — there is no real NPI in development and a redacted traceback wastes an
+   afternoon — but credentials are masked even there.
 
 Recursion is depth-bounded, so a cyclic structure cannot turn a log call into a
 hang.
@@ -267,11 +306,13 @@ the value appears in the output. Without it, the passing tests would not
 distinguish "the processor removed it" from "the formatter happened not to
 print it".
 
-The blind service redacts strictly more: anything named for an engine, reading,
-confidence, model, extraction state, golden value, reconciliation or the other
-seat. None of that should exist in that process; if it appears in a log record
-it is a boundary failure, and redaction keeps it out of the shipper while the
-boundary tests keep it out of the code.
+The blind service redacts strictly more, via `extra_sensitive_parts` in
+`telemetry/sensitivity.py`: anything named for an engine, reading, confidence,
+model, extraction state, golden value, reconciliation or the other seat. These
+**extend** the shared rules rather than replacing them. None of that should
+exist in that process; if it appears in a log record it is a boundary failure,
+and redaction keeps it out of the shipper while the boundary tests keep it out
+of the code.
 
 > **A second real defect.** The worker CLI held a module-level
 > `_log = get_logger(__name__)`. structlog caches a bound logger on first use,
@@ -383,13 +424,17 @@ Node v24.15.0 · pnpm 10.33.2.
 
 | Project | `sync --frozen` | ruff check | ruff format | pyright strict | pytest | `uv build` |
 |---|:-:|:-:|:-:|:-:|---:|:-:|
-| `libs/domain` | pass | pass | pass | pass | **16 passed** | pass |
+| `libs/domain` | pass | pass | pass | pass | **77 passed** | pass |
 | `libs/test-support` | pass | pass | pass | pass | **7 passed** | pass |
-| `services/core-api` | pass | pass | pass | pass | **98 passed** | pass |
-| `services/blind-svc` | pass | pass | pass | pass | **37 passed** | pass |
+| `services/core-api` | pass | pass | pass | pass | **73 passed** | pass |
+| `services/blind-svc` | pass | pass | pass | pass | **39 passed** | pass |
 | `services/extraction-svc` | pass | pass | pass | pass | **13 passed** | pass |
 | `services/render-svc` | pass | pass | pass | pass | **20 passed** | pass |
-| | | | | | **191 total** | |
+| | | | | | **229 total** | |
+
+Up from 191 before review. The redaction rules and the import-boundary scan
+moved into `libs/domain` — which is why its count grew and `core-api`'s fell —
+and the review findings added tests of their own.
 
 Pyright ran in **strict** mode with **0 errors, 0 warnings** in every project.
 
@@ -399,8 +444,16 @@ Pyright ran in **strict** mode with **0 errors, 0 warnings** in every project.
 |---|---|
 | `python scripts/check_locks.py` | pass — all six locks current |
 | `python scripts/audit_dependencies.py` | pass — no known vulnerabilities |
+| `uv run --with pytest python -m pytest scripts/tests` | **20 passed** — the client-data guard's own tests |
+| `git ls-files -z \| xargs -0 python scripts/check_no_client_data.py` | pass over every tracked file |
+| `uvx pre-commit run --all-files` | **pass, twice consecutively** from a clean tree |
 | `git diff --check` | clean |
 | YAML parse: workflow, pre-commit, compose | all three parse |
+
+The pre-commit run is the one that previously failed. Its first pass added a
+trailing newline to two pre-existing frontend files (`apps/web/package.json`,
+`apps/web/public/favicon.svg`) — a one-byte, content-preserving change, and
+exactly what `end-of-file-fixer` is for. The second pass was clean.
 
 ### Frontend regression, run once after all Gate 1 work
 
@@ -412,6 +465,8 @@ Pyright ran in **strict** mode with **0 errors, 0 warnings** in every project.
 | `pnpm --filter web build` | pass, built in 711 ms |
 | `pnpm --filter web test:e2e` | **116 passed** |
 
+Re-run after the review fixes, not carried over from the first pass.
+
 ### Known warnings
 
 The 10 oxlint warnings are **pre-existing and unchanged** by this work — all
@@ -422,7 +477,29 @@ identical before and after Gate 1.
 No Python warnings remain: the Starlette TestClient deprecation warning was
 resolved by adopting `httpx2` (§4).
 
-## 9. Blocked — container verification
+## 9. Build context and container verification
+
+### Build context — `.dockerignore`
+
+Every image builds with the repository root as its context, because each service
+has a path dependency on `libs/domain`. There was **no `.dockerignore`**, so the
+whole tree would have been sent to the Docker daemon or a remote builder on
+every build.
+
+Measured on this checkout, that is **678 MB** of material with no business in an
+image: 258 MB of `node_modules`, 417 MB of service virtualenvs, and 3 MB of
+`.git`. `.gitignore` does not apply to a build context — a file being untracked
+says nothing about whether Docker ships it — so anything sitting in a gitignored
+`/data` or uploads directory would have gone too. That makes it a compliance
+issue, not a build-speed one.
+
+The policy is **deny-by-default**: exclude everything, then re-include the
+manifests, locks and `src/` trees the builds actually need, then re-exclude
+virtualenvs, caches, tests, `.env` files and every client-data file type even
+inside the allowed paths. A new service has to be added deliberately, which is
+the point.
+
+### Blocked — container verification
 
 **Docker is not installed. WSL2 is not installed.** `docker --version` reports
 not found; `wsl --list` reports the subsystem is not installed. Hyper-V is
@@ -437,10 +514,21 @@ Not produced, and not claimed:
 - [ ] Production commands carry no reload/debug flag
 - [ ] Trivy image scan and SBOM generation
 
-The Dockerfiles and compose file are written and reviewed, and the CI workflow
-contains real steps for every one of these checks — including a runtime `uid`
-assertion and a `Config.Cmd` scan for `--reload`/`--debug` — but a written step
-is not evidence that it passed.
+- [ ] Confirm `.dockerignore` actually excludes what it claims (`docker build`
+      reports the context size it transferred)
+- [ ] Resolve and pin base-image **digests**, and pin GitHub Actions by **SHA**
+
+The Dockerfiles, compose file and `.dockerignore` are written and reviewed, and
+the CI workflow contains real steps for every one of these checks — including a
+runtime `uid` assertion and a `Config.Cmd` scan for `--reload`/`--debug` — but a
+written step is not evidence that it passed.
+
+On pinning: uv, Python, Semgrep, pip-audit and every Python dependency are
+pinned to exact versions. GitHub Actions and the base images are pinned by
+**tag**, which is mutable. Moving to SHA and digest pins needs a registry
+resolution that has never been performed on this machine, and pinning to a
+digest nobody has verified would be worse than an honest tag — so it is listed
+here as blocked on the same Docker install, not quietly done.
 
 **To unblock**, from an administrator PowerShell:
 
@@ -462,6 +550,9 @@ Enable BitLocker before any real client NPI is stored on this machine.
 | Per-service `pyproject.toml` + exact locks | **PASS** | six projects, six committed `uv.lock` |
 | Ruff, Pyright strict, pytest, pre-commit configured | **PASS** | §8; `.pre-commit-config.yaml` |
 | CI skeleton including security scans and SBOM | **PASS (unrun)** | `.github/workflows/backend.yml` — real steps, valid YAML, equivalents run locally; not pushed, so remote CI is **PENDING REVIEW** |
+| CI protects the enforcement surface | **PASS** | Path filters cover `scripts/**`, `.pre-commit-config.yaml`, `.dockerignore`, `.gitattributes`, `.env.example`; a `hygiene` job runs the full pre-commit suite and the client-data guard over every tracked file |
+| Pre-commit runs clean from a fresh checkout | **PASS** | Twice consecutively; §8 |
+| Build context is bounded | **PASS (unbuilt)** | `.dockerignore`, deny-by-default; excludes 678 MB measured. Cannot be *observed* until a build runs — §9 |
 | Typed settings and startup safety checks | **PASS** | §6 |
 | `/health` and `/ready` | **PASS** | §7 |
 | Frozen install succeeds from a clean checkout | **PASS** | `uv sync --frozen --all-groups`, all six |
@@ -472,6 +563,28 @@ Enable BitLocker before any real client NPI is stored on this machine.
 > Source, tooling, lock, test and build criteria all pass. The container
 > criterion is blocked on Docker and is not claimed. Remote CI has not run
 > because nothing has been pushed pending review.
+
+## 10a. What the review changed
+
+Six blocking findings and four secondary ones were raised against the first
+submission. All were reproduced before being fixed; none was disputed.
+
+| # | Finding | Resolution |
+|---|---|---|
+| 1 | Gate 0 marked COMPLETE against its own failing exits | Now **PARTIAL**, with two named closure paths and a recommendation. Durable hash-verified archive replaces the temp-directory copy. |
+| 2 | **Redaction bypassed by traceback text and DSN keys — a real NPI/credential leak in all four services** | Redaction moved to `libs/domain` (one implementation), reordered to run last, exception text sanitised, credentials masked by shape. Reproduction re-run against the fix. |
+| 3 | Reported pre-commit verification was false | Hooks rescoped (JSONC, line endings), script lint fixed. Verified passing twice from a clean tree. |
+| 4 | CI path filters omitted the enforcement surface | Filters widened; `hygiene` job added running the full suite plus the guard over every tracked file. |
+| 5 | Client-data guard had a `packages/` bypass | Extension rule now applies everywhere; the exemption is scoped to the directory rule alone. 20 tests, starting with the reported bypass. |
+| 6 | No `.dockerignore`; 678 MB context including possible client data | Deny-by-default policy added. |
+| P2 | Boundary test could not detect lazy imports despite claiming to | Replaced with an AST scan; the `sys.modules` check kept and rescoped to what it does cover. |
+| P2 | Empty CORS allowlist refused, blocking same-origin deployment | `same_origin_deployment` opt-in; contradictory configuration refused. |
+| P3 | AI attribution in the Gate 0 executor field | Removed. |
+| P3 | Base images and actions tag-pinned, not digest-pinned | Semgrep pinned; the rest documented as blocked on the Docker install rather than silently left. §9. |
+
+Two of these — the redaction leak and the guard bypass — were controls that
+were being *cited as evidence* while not holding. Both now have tests that fail
+if the defect returns.
 
 ## 11. Deliberately deferred
 

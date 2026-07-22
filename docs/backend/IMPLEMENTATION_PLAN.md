@@ -1488,10 +1488,10 @@ Do this next, in order:
 
 ## 32. Implementation checklist index
 
-- [x] Gate 0: prototype/test recovery or reconstruction declaration — **PORT**; prototype recovered, 145/155 tests green. `docs/backend/GATE_0_RECOVERY.md`
+- [~] Gate 0: prototype/test recovery — **PORT** verdict settled and archive frozen/hash-verified, but the gate is **PARTIAL**: 145/155 green (10 need client source) and `v14` absent. `docs/backend/GATE_0_RECOVERY.md` §11
 - [~] Gate 0: R15 audit and v14 — R15 audit **PASS** (single release-verified suppression path, termination-independent); **`v14` does not exist** and is the first Gate 6 domain test
-- [x] Gate 1: Python/service foundation — 6 projects, 191 tests, Pyright strict clean. `docs/backend/GATE_1_FOUNDATION.md`
-- [~] Gate 1: CI/security/SBOM — workflow written with real steps and local equivalents green; **container build/run/scan blocked on Docker**, remote CI unrun pending review
+- [~] Gate 1: Python/service foundation — 6 projects, 229 tests, Pyright strict clean; **PARTIAL** pending container evidence. `docs/backend/GATE_1_FOUNDATION.md`
+- [~] Gate 1: CI/security/SBOM — workflow written with real steps, hygiene job enforcing pre-commit and the client-data guard, local equivalents green; **container build/run/scan blocked on Docker**, remote CI unrun pending review
 - [ ] Gate 2: schema, roles, RLS and pool tests
 - [ ] Gate 3: first Pydantic/OpenAPI/client slice
 - [ ] Gate 4: WorkOS sessions

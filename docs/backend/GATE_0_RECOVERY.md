@@ -1,7 +1,7 @@
 ---
 title: Gate 0 — Backend Safety-Net Recovery
 date: 2026-07-22
-status: complete
+status: partial
 verdict: PORT
 owner: rahuldr07
 tags:
@@ -15,6 +15,13 @@ aliases:
 ---
 
 # Gate 0 — Recover and freeze the safety net
+
+> [!warning] Gate 0 is **PARTIAL**. The verdict is **PORT**.
+> The recovery succeeded and the port-versus-reconstruction question is settled.
+> The gate itself is *not* complete, because the canonical exit criterion in
+> `IMPLEMENTATION_PLAN.md` §27 requires the recovered suite green — and 10 of 155
+> tests cannot run here — and because `v14` does not exist. Both are recorded
+> below with their causes. Neither is waved through. See §11.
 
 > [!success] Verdict: **PORT**, not reconstruction
 > The Flask prototype was recovered intact from `~/Downloads/titlepipe.zip`, together
@@ -30,7 +37,7 @@ aliases:
 |---|---|
 | Date | 2026-07-22 |
 | Machine | Windows 11 Pro for Workstations 10.0.26200, x86_64 |
-| Executor | Claude Opus 4.8 acting as implementation engineer, under `docs/prompts/claude-gate-0-1-execution-prompt.md` |
+| Executor | rahuldr07 (local implementation session, per `docs/prompts/claude-gate-0-1-execution-prompt.md`) |
 | Repository | `C:\Users\vicky\Desktop\TitleSearch` |
 | Branch | `rahuldr07/backend-foundation` |
 | Python used for the test run | CPython 3.13.14, `uv`-managed, isolated venv outside the repository |
@@ -137,15 +144,30 @@ unrelated projects, with no domain vocabulary. Rejected per the multi-signal rul
 
 ## 4. Handling — where the recovered source lives
 
-Extracted **outside the working tree** to the session scratchpad:
+Frozen **outside the working tree**, at a durable path that survives temporary-file
+cleanup:
 
 ```text
-C:\Users\vicky\AppData\Local\Temp\claude\...\scratchpad\gate0\
-├─ titlepipe\        (titlepipe.zip, 31 files)
-└─ bugfixes\         (titlepipe_bugfixes.zip, 3 files)
+%LOCALAPPDATA%\TitlePipe\gate0-prototype-archive\
+├─ titlepipe\                 extracted source, 28 files
+├─ bugfixes\                  the three patch files
+├─ titlepipe.zip              the original archive, byte-for-byte
+└─ titlepipe_bugfixes.zip     the original archive, byte-for-byte
 ```
 
-The archives themselves remain at their original `Downloads` paths, hashed above. No
+33 files, 441,043 bytes. Build artefacts of the recovery run — the `.venv` and
+`.pytest_cache` created while executing the suite — were excluded; this is the
+artefact as recovered, not as exercised.
+
+Both original `.zip` files are kept alongside the extracted tree so the extraction can
+be redone from source and checked, rather than trusting a copy.
+
+**Integrity is verifiable.** `docs/backend/GATE_0_ARCHIVE_MANIFEST.md` records the
+SHA-256 and size of every file in the archive, and is committed. It carries filenames
+and hashes only — no content — so the safety net can be proven un-drifted without
+putting client-derived names into VCS. The manifest includes the verification command.
+
+The original downloads also remain at their `Downloads` paths, hashed in §3.1. No
 county package, PDF, seed database or client artifact entered the repository, and none
 exists in either archive to begin with.
 
@@ -436,9 +458,9 @@ should be treated as a documentation gap to close, not a build blocker.
 | Exit criterion | State | Evidence |
 |---|---|---|
 | Prototype located | **PASS** | §3.1 — path, size, SHA-256, 35 entries |
-| Archived safely without county/client packages entering VCS | **PASS** | §4 — scratchpad only; archives contain no PDFs or seed DB |
+| Archived safely without county/client packages entering VCS | **PASS** | §4 — durable archive outside the working tree; per-file hash manifest in `GATE_0_ARCHIVE_MANIFEST.md`; archives contain no PDFs or seed DB |
 | All tests run unchanged | **PASS** | §5.2, §5.3 — no test modified |
-| All tests green | **PARTIAL — honestly** | 145/155 green. 10 fail on deliberately-absent client source material, cause verified individually. |
+| All tests green | **FAIL — blocks the gate** | 145/155 green. The 10 failures need a county package and five delivered client reports that must not enter VCS. Cause verified per test; not a behavioural regression, but the criterion as written is unmet. |
 | Port-vs-reconstruction outcome recorded | **PASS** | **PORT** |
 | Module / function / state-machine / validator / render inventory | **PASS** | §8 |
 | Five-bug mapping | **PASS** | §6 — and the material finding that they are unmerged |
@@ -448,10 +470,28 @@ should be treated as a documentation gap to close, not a build blocker.
 | Missing artifacts recorded | **PASS** | §10 |
 | No implementation through unresolved rules | **PASS** | No domain code written in Gate 0 |
 
-> [!success] **Gate 0: COMPLETE** via an evidence-backed **PORT** outcome.
-> The one criterion not fully met — `v14` — is recorded as an open Gate 6 obligation
-> rather than claimed. The 10 failing tests are characterised by verified root cause,
-> not waved through.
+> [!warning] **Gate 0: PARTIAL.**
+> The **PORT** verdict is evidence-backed and settled, the recovery is durable and
+> hash-verified, and the R15 audit passed. Two exit criteria are unmet and the gate
+> stays open until they are closed:
+>
+> 1. **The suite is not green** — 145/155. The 10 failures need a county package and
+>    five delivered client reports. They are missing-input failures with a verified
+>    cause, not regressions, but "all 155 green" is the criterion and it is not met.
+> 2. **`v14` does not exist.** R15's mandated CI assertion was never written.
+>
+> **To close Gate 0**, one of the following, as an owner decision:
+>
+> - **(a)** Restore the county package and the five delivered reports to a configured
+>   path outside VCS, make `seed.build()`'s root injectable rather than hard-coded to
+>   `/mnt/user-data`, and run the full 155 green; then add `v14`. This is the literal
+>   criterion.
+> - **(b)** Substitute synthetic fixtures for those 10 tests, accept 145 real + 10
+>   synthetic as the safety net, and record the substitution explicitly; then add
+>   `v14`. This trades literal parity for a suite that runs in CI forever.
+>
+> (b) is the recommendation: the 10 tests are currently unrunnable on any machine
+> without client data, which means they would never run in CI under (a) either.
 
 ## 12. Implications for Gate 6
 
