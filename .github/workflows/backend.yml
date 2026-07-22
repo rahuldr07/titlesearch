@@ -88,9 +88,10 @@ jobs:
         working-directory: ${{ matrix.project }}
         run: uv build
 
+      # Audits the lock, not the installed environment, so the result matches
+      # what the container will get. Same script a developer runs locally.
       - name: Audit dependencies
-        working-directory: ${{ matrix.project }}
-        run: uvx pip-audit==2.* --strict --disable-pip -r <(uv export --frozen --no-dev --no-emit-project)
+        run: python scripts/audit_dependencies.py ${{ matrix.project }}
 
   containers:
     name: container / ${{ matrix.service }}
