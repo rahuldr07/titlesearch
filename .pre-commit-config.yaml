@@ -1,0 +1,51 @@
+# Pre-commit hooks for the Python backend.
+#
+#   uvx pre-commit install
+#   uvx pre-commit run --all-files
+#
+# These mirror what CI enforces, so a failure is found in a second rather than
+# in a five-minute pipeline. CI remains the authority — a hook can be skipped.
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: detect-private-key
+      - id: mixed-line-ending
+        args: [--fix=lf]
+      # A county package, seed database or client document must never be
+      # committed. The 644 MB incident (docs/CONTEXT.md §19) is what this is for.
+      - id: check-added-large-files
+        args: [--maxkb=512]
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.0
+    hooks:
+      - id: ruff-check
+        args: [--fix]
+      - id: ruff-format
+
+  # Locks are verified per project. A drifted lock means the image and the
+  # manifest disagree, which `uv sync --frozen` in CI would catch later and
+  # more expensively.
+  - repo: local
+    hooks:
+      - id: uv-lock-check
+        name: uv lock is current (all projects)
+        entry: python scripts/check_locks.py
+        language: system
+        pass_filenames: false
+        files: '^(services|libs)/.*/(pyproject\.toml|uv\.lock)$'
+
+      - id: no-uploads-in-repo
+        name: no county packages, seed databases or client documents
+        entry: python scripts/check_no_client_data.py
+        language: system
+        pass_filenames: true
