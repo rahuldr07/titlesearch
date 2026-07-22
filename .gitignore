@@ -19,6 +19,13 @@ venv/
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
+# uv.lock IS tracked — one committed lock per deployable is what makes a
+# frozen install reproducible. Only build output and caches are ignored.
+*.egg-info/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
 
 # node
 node_modules/

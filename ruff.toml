@@ -1,0 +1,65 @@
+# Shared Ruff configuration for every Python project in the repository.
+#
+# This lives at the root and is discovered by walking up, because no service
+# pyproject.toml declares a [tool.ruff] section. Sharing lint rules does not
+# merge dependency environments — each deployable still owns its own
+# pyproject.toml, uv.lock and virtualenv.
+
+target-version = "py313"
+line-length = 100
+src = [
+    "services/core-api/src",
+    "services/blind-svc/src",
+    "services/extraction-svc/src",
+    "services/render-svc/src",
+    "libs/domain/src",
+    "libs/test-support/src",
+]
+
+[lint]
+select = [
+    "F",      # pyflakes
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "I",      # import sorting
+    "UP",     # pyupgrade
+    "B",      # bugbear
+    "C4",     # comprehensions
+    "SIM",    # simplify
+    "RUF",    # ruff-specific
+    "ASYNC",  # blocking calls in async def — the #1 correctness item
+    "S",      # bandit: security
+    "DTZ",    # naive datetimes — storage and APIs are UTC
+    "T20",    # print() in production code
+    "PT",     # pytest style
+    "PTH",    # pathlib over os.path
+    "TID",    # tidy imports
+    "LOG",    # logging correctness
+    "G",      # logging format
+    "INP",    # implicit namespace packages
+    "PIE",
+    "RET",
+    "ARG",    # unused arguments
+]
+ignore = [
+    "E501",    # line length is enforced by the formatter
+    "B008",    # FastAPI's Depends() in a default argument is the documented idiom
+    "RET504",  # a named result before return is often the clearer read
+]
+
+[lint.per-file-ignores]
+# Tests assert on internals, use short-lived fixtures, and say the quiet part.
+"**/tests/**" = [
+    "S101",    # assert is the point
+    "ARG001",  # fixtures are injected and sometimes unused by name
+    "S105",    # fixture secrets in configuration-safety tests
+    "S106",
+    "S104",    # 0.0.0.0 in a deployed-settings fixture
+    "INP001",  # pytest collects test dirs without __init__.py by design
+]
+
+[lint.flake8-tidy-imports]
+ban-relative-imports = "all"
+
+[format]
+docstring-code-format = true
