@@ -46,13 +46,36 @@ def test_the_baseline_deployed_configuration_is_valid() -> None:
         ({"docs_enabled": True}, "public API docs are enabled"),
         ({"redaction_enabled": False}, "log redaction is disabled"),
         ({"cors_allowed_origins": ("*",)}, "CORS allows any origin"),
-        ({"cors_allowed_origins": ()}, "CORS allowlist is empty"),
         ({"host": "127.0.0.1"}, "loopback"),
     ],
 )
 def test_production_refuses_each_unsafe_knob(override: dict[str, object], expected: str) -> None:
     with pytest.raises(ValidationError, match=expected):
         deployed(**override)
+
+
+def test_production_refuses_an_empty_cors_allowlist_by_default() -> None:
+    """An operator who simply forgot must not look like a deliberate
+    same-origin deployment."""
+    with pytest.raises(ValidationError, match="CORS allowlist is empty"):
+        deployed(cors_allowed_origins=())
+
+
+def test_a_same_origin_deployment_may_have_no_cors_allowlist() -> None:
+    """When the browser app is served from this origin, no cross-origin request
+    is ever made and the safest configuration is no CORS at all. Refusing it
+    pushed operators toward configuring CORS they did not need."""
+    settings = deployed(cors_allowed_origins=(), same_origin_deployment=True)
+    assert settings.cors_allowed_origins == ()
+
+
+def test_declaring_same_origin_while_configuring_cors_is_refused() -> None:
+    """The two contradict each other; one of them is a mistake."""
+    with pytest.raises(ValidationError, match="contradict"):
+        deployed(
+            cors_allowed_origins=("https://app.titlepipe.example",),
+            same_origin_deployment=True,
+        )
 
 
 def test_production_refuses_the_development_placeholder_secret() -> None:

@@ -44,12 +44,14 @@ FORBIDDEN_IMPORTS = frozenset(
 )
 
 
-def test_domain_imports_no_framework() -> None:
-    """The boundary rule, enforced rather than documented.
+def test_importing_the_package_pulls_in_no_framework() -> None:
+    """A runtime companion to the static scan in `test_import_boundary.py`.
 
-    Importing every module in the package and then inspecting `sys.modules`
-    catches a lazy import inside a function body, which a static scan of the
-    import block would miss.
+    This catches a framework arriving *transitively* — a dependency of a
+    dependency — which the AST scan cannot see because no source file here
+    names it. It does **not** catch a lazy import inside a function body:
+    importing a module does not execute its function bodies. That case is the
+    AST scan's job, and the division of labour is the point.
     """
     before = set(sys.modules)
     package_root = Path(titlepipe_domain.__file__).parent

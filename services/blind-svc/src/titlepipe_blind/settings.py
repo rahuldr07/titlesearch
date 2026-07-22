@@ -58,6 +58,13 @@ class BlindApiSettings(BaseSettings):
     reload: bool = False
     docs_enabled: bool = True
     cors_allowed_origins: tuple[str, ...] = ()
+    # An empty allowlist is correct when the browser app is served from this
+    # same origin: no cross-origin request is ever made, so CORS headers are
+    # unnecessary and the safest configuration is none at all. But an empty
+    # allowlist is *also* what an operator who simply forgot looks like, and
+    # those must not be indistinguishable — so the safe case is opted into
+    # explicitly and the forgetful case still fails startup.
+    same_origin_deployment: bool = False
 
     cookie_seal_password: SecretStr = SecretStr(DEVELOPMENT_SEAL_PASSWORD)
     mock_auth_enabled: bool = False
@@ -131,8 +138,16 @@ class BlindApiSettings(BaseSettings):
             unsafe.append("log redaction is disabled")
         if "*" in self.cors_allowed_origins:
             unsafe.append("CORS allows any origin")
-        if not self.cors_allowed_origins:
-            unsafe.append("CORS allowlist is empty")
+        if not self.cors_allowed_origins and not self.same_origin_deployment:
+            unsafe.append(
+                "CORS allowlist is empty; set same_origin_deployment=true if the app "
+                "is served from this origin and cross-origin access is not wanted"
+            )
+        if self.cors_allowed_origins and self.same_origin_deployment:
+            unsafe.append(
+                "same_origin_deployment is set but a CORS allowlist is configured; "
+                "the two contradict each other"
+            )
         if self.cookie_seal_password.get_secret_value() in PLACEHOLDER_SECRETS:
             unsafe.append("cookie_seal_password is a placeholder")
         if self.host == "127.0.0.1":
