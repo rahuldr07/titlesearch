@@ -1,9 +1,15 @@
 # ADR-0001 — core-api language: FastAPI (Python), not Hono/Bun (TypeScript)
 
-**Status:** PROPOSED — owner sign-off required (principle 5)
-**Date:** 2026-07-17
-**Deciders:** _(unsigned)_
+**Status:** ACCEPTED (decided 2026-07-21)
+**Date:** proposed 2026-07-17 · accepted 2026-07-21
+**Deciders:** rahuldr07 (owner)
 **Evidence:** deep-research run wf_f4a3917f-d01 — 24 sources, 25 claims adversarially verified 3-vote each (24 confirmed, 1 refuted), all primary sources fetched live 2026-07-17.
+
+> **Reconciliation note (2026-07-21).** The CORE decision of this ADR — **core-api = FastAPI (Python), not Hono/Bun** — still stands and is unchanged. Several *secondary* tooling picks mentioned below have since been superseded by the reconciled canonical plan in **`docs/backend/PLAN.md`** (which is authoritative on tooling):
+> - **Auth: Clerk → WorkOS** (AuthKit sealed-session cookies + Python session helpers; Postgres owns authorization).
+> - **Queue: Procrastinate → PgQueuer** (leading; adoption gated on crash/recovery tests; Procrastinate is the documented fallback).
+> - **Contract direction:** not "generate Zod from FastAPI's OpenAPI as a drift-check while Zod stays authoritative" but **Pydantic/OpenAPI becomes authoritative, migrated endpoint-by-endpoint**; the generated TS client is committed/deterministically built; Zod drops to UI-only.
+> Where this ADR's body and PLAN.md differ on these, **PLAN.md wins.** This note does not change the ADR's status; it removes the contradiction pending sign-off.
 
 ## Decision
 

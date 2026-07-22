@@ -68,7 +68,7 @@ export function BenchResultsScreen() {
           this region (overflow-auto) so a narrow laptop never scrolls the
           whole page sideways. min-w lives on the content, not the viewport. */}
       <div className="flex-1 overflow-auto p-[14px]">
-        <div className="min-w-[1152px] max-w-[1120px]">
+        <div className="min-w-[1152px]">
           <div className="mb-[6px] text-[11px] font-bold tracking-[.08em] text-ink-dim">
             SECTION × TAG. THE TWO AXES ARE THE FINDING; NO SINGLE NUMBER IS.
           </div>

@@ -51,13 +51,13 @@ flowchart LR
 
 ## 2. The stack (key picks; full version table in `TOOLCHAIN.md`)
 
-**Runtime/web:** Python 3.13 · FastAPI + Pydantic v2 · uvicorn[standard] (one process/container, platform-supervised, no reload, no public docs in prod) · orjson default · **response_model on every route** (validates + strips undeclared fields + feeds OpenAPI).
+**Runtime/web:** Python 3.13 · FastAPI + Pydantic v2 · uvicorn[standard] (one process/container, platform-supervised, no reload, no public docs in prod) · **typed Pydantic response models** (Rust-backed serialization — no custom response class; orjson/msgspec deferred until a benchmark) · **response_model on every route** (validates + strips undeclared fields + feeds OpenAPI).
 
 **Data:** SQLAlchemy 2 async (typed `Mapped[]`) · psycopg 3 · Alembic + **Squawk** (migration linter), **never run migrations at API startup** · PostgreSQL RLS.
 
 **Queue/state:** PgQueuer behind an interface · **domain tables are authoritative, the queue only delivers work** · every worker idempotent.
 
-**Auth:** WorkOS AuthKit + PyJWT/JWKS local verify · Postgres RBAC · HTTP-only cookies (never localStorage) + CSRF on cookie-auth mutations · `/me/capabilities` is UX-only, every route re-enforces.
+**Auth:** WorkOS AuthKit **sealed-session cookies + Python session helpers** (one session architecture; no standalone PyJWT/JWKS unless a concrete service-to-service/bearer case appears) · Postgres RBAC · HTTP-only cookies (never localStorage) + CSRF on cookie-auth mutations · `/me/capabilities` is UX-only, every route re-enforces.
 
 **Documents:** pikepdf/qpdf (validate + repair + password detect) · pypdfium2 (render, **process-isolated** — PDFium isn't thread-safe) · docxtpl + python-docx (reports) · **Gotenberg** isolated container (DOCX→PDF, no internet, pinned digest, resource limits) · Pillow (not pillow-simd). **Avoid PyMuPDF (AGPL); LLMWhisperer client is AGPL — legal sign-off before bundling.**
 
@@ -79,7 +79,7 @@ flowchart LR
 
 **Separate database identities** — distinct roles for migration / application / worker / blind. App role is **non-owner** with **forced RLS** on tenant tables; owner/BYPASSRLS never used by the app.
 
-**RLS the only correct way** — `set_config('app.current_tenant', <val>, true)` in an `after_begin` event, contextvars-fed, **parameterized** (never f-string), **deny-by-default** when unset, tenant-leading composite index. Every online RLS tutorial shows the leaky session-`SET` form; the mandated test is two tenants interleaved on one pooled connection asserting zero cross-read.
+**RLS lifecycle — the one property that must hold: transaction-scoped tenant context.** Set `set_config('app.current_tenant', <val>, true)` **per transaction** (an `after_begin` event hook is the reference implementation, not the only valid one), contextvars-fed, **parameterized** (never f-string), **deny-by-default** when unset, tenant-leading composite index. The full lifecycle: request/job middleware sets the contextvar → transaction start applies the setting → unset fails closed → the contextvar is always reset → pool-reuse/interleaved-tenant tests prove no leak. Every online RLS tutorial shows the leaky session-`SET` form; the mandated test is two tenants interleaved on one pooled connection asserting zero cross-read.
 
 **Upload pipeline** — browser requests a short-lived R2 presigned PUT → uploads direct to R2 (API never relays the 100 MB doc) → then: quarantine → byte/page limits → MIME + magic-byte check → SHA-256 → malware scan → pikepdf structural validation → password/encryption detection → sandboxed rasterization. Only then does extraction see it.
 
@@ -87,7 +87,7 @@ flowchart LR
 
 **Encryption at rest** — R2 auto-encrypts stored objects (AES-256-GCM, Cloudflare-managed keys) + TLS in transit. Where *customer-controlled* keys are required, use **application-layer envelope encryption** on the sensitive documents/fields, with an external KMS (AWS/GCP/Azure) wrapping the app data keys. **Do not** describe this as "R2 bucket SSE-KMS" — R2's customer option is SSE-C, not AWS-style bucket SSE-KMS.
 
-**Actor identity is server-derived, never client-declared** — drop `signed_by`/actor fields from request bodies; take the actor from the authenticated session and record it server-side (see §4 P0 fix).
+**Actor identity is server-derived, never client-declared** — the actor comes from the authenticated session and is recorded server-side; no `signed_by`/actor field is accepted in a request body (already enforced in the contract — see §4).
 
 ### Blind-service data flow (the boundary made explicit)
 
@@ -134,7 +134,7 @@ Layer 3 — Frontend Zod  →  UI-only form validation + immediate user feedback
 
 **Migration is endpoint-by-endpoint, not a big-bang flip:** port one endpoint's Pydantic model → generate its client slice → prove frontend parity → move contract ownership for that endpoint → repeat. This keeps the 116 e2e tests green throughout. The generated TS client is **committed (or deterministically generated in the build)**; CI diffs it as a drift alarm.
 
-**Security fix (P0) surfaced by review — `signed_by` must not come from the client.** `GoldenCorrectionRequest` currently accepts `signed_by: string` from the browser (`endpoints.ts:160`). A client must never declare who signed an action. In the port: **drop `signed_by` from the request body and derive the actor from the authenticated WorkOS session, recorded server-side.** Same rule for any actor/identity field on correction, review, rule-confirm, and release actions.
+**Server-derived actor identity — DONE (contract corrected).** `signed_by` has been removed from `GoldenCorrectionRequest` and `GoldenAffirmRequest`; the signer is stamped server-side from the authenticated session (mock: `x-mock-actor`; real backend: the WorkOS session), never a request-body field — a browser cannot declare who signed a change to ground truth. The same rule holds for every actor/identity field on correction, review, rule-confirm, and release actions: the client never declares who acted. (Backend work remaining is only wiring the real WorkOS session as the identity source; the contract and mocks already enforce the shape.)
 
 ---
 
@@ -149,7 +149,7 @@ Layer 3 — Frontend Zod  →  UI-only form validation + immediate user feedback
 4. **Foundation** — Python 3.13, per-service `uv` locks, Ruff, Pyright strict, pre-commit, CI wired with pip-audit + Semgrep + Trivy.
 5. **Postgres correctness gate (before any feature)** — schema, Alembic + Squawk, the four DB roles (migration/app/worker/blind, non-owner + forced RLS), RLS policies, and the **RLS test suite green** (tenant isolation + pooled-connection leak). Nothing ships until this passes.
 6. **Contract, endpoint-by-endpoint** — port **one read-only endpoint** behind the existing contract → generate its TS client slice → prove frontend parity → move ownership → repeat. Schemathesis + client-drift check in CI.
-7. **Auth** — WorkOS sealed-session cookies + Python session helpers, Postgres memberships + capabilities, `/me/capabilities` (UX-only), **server-derived actor identity** (fix `signed_by`).
+7. **Auth** — WorkOS sealed-session cookies + Python session helpers, Postgres memberships + capabilities, `/me/capabilities` (UX-only), **wire the real WorkOS session as the server-derived actor identity** (the contract already forbids client-declared signers).
 8. **Upload + first job** — direct-to-R2 presigned + the full quarantine/validation pipeline + the first **idempotent** job. **Adoption gate:** PgQueuer only after crash/duplicate/rollback/reclaim/cancellation tests pass (behind the queue interface so it's swappable).
 9. **Extraction worker** — provenance on every value, immutable rulebook/prompt version metadata, `NOT_PRESENT` vs `PRESENT_UNREADABLE` preserved, engine isolation; Hypothesis invariants on the normalizer.
 10. **Review + decision workflow** — refusals enforced server-side; judgments never auto-confirm.

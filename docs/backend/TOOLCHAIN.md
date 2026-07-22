@@ -20,7 +20,7 @@
 | Validation | **Pydantic v2** | 2.13.x | Rust core; your contract layer's model |
 | Config | **pydantic-settings** | 2.14.x | Typed 12-factor; `secrets_dir` for NPI, never env-dump secrets |
 | JSON | **Typed Pydantic response models — no custom response class** | — | **Corrected:** current FastAPI guidance says a declared response model (Rust-backed) is the fastest normal path; `ORJSONResponse` can add an intermediate conversion. Add **orjson/msgspec only after an endpoint benchmark**; large streaming → JSON Lines / SSE |
-| JSON (big lists) | **msgspec** | 0.21.x | Surgical: one custom Response subclass on 100+ record endpoints (queue/leaderboard feeds); ~6-9× less RAM than orjson on large arrays |
+| JSON (big lists) | **deferred** (candidate: msgspec) | — | **Not selected for P1.** If a 100+ record endpoint benchmarks badly, msgspec via one custom Response subclass is the escape hatch (~6-9× less RAM than orjson on large arrays). Do not add until measured |
 | Async safety | **anyio** | (via Starlette) | **#1 correctness item:** never block in `async def` — wrap sync calls in `run_in_threadpool`; use `anyio.from_thread.run` (never `asyncio.run`) to call async from a threadpool |
 
 **App layout:** `api/` (thin routers) · `services/` (state-machine callers, business logic) · `repositories/` (RLS-aware Postgres) · `schemas/` (Pydantic) · `core/` (settings, WorkOS, deps). Keep state-machine transitions in `services/`, never in `Depends`.
@@ -93,11 +93,11 @@
 |---|---|---|---|
 | Logging | **structlog** → JSON → stdout | 26.x | **Redaction processor FIRST** in the chain (NPI); `contextvars` for request/tenant IDs; `DropEvent` for health-check noise |
 | Tracing/metrics | **OpenTelemetry** (OTLP → self-hosted collector → Grafana Tempo/Loki/Prom) | SDK 1.3x, contrib 0.6xbNN | Pin beta contrib exactly. **Auto-instrumentation is the biggest silent NPI risk** (captures paths/query/SQL/URLs) → scrub at collector + span filters. **Logfire** = easier OTel wrapper but self-host is Enterprise-only |
-| Queue metrics | **prometheus-client** Gauge | 0.2x | Queue depth off `procrastinate_jobs`. **Keep tenant/order IDs out of labels** (cardinality + leak). Multiprocess mode for multi-worker |
+| Queue metrics | **PgQueuer built-in Prometheus** (+ prometheus-client for custom gauges) | — | PgQueuer ships OpenTelemetry + Prometheus; scrape its queue-depth/latency metrics directly. **Keep tenant/order IDs out of labels** (cardinality + leak). Multiprocess mode for multi-worker |
 | Errors | **Sentry SDK** (FastAPI) | 2.66.x | `send_default_pii=False` + `before_send` scrub + event_scrubber denylist for domain fields. **GlitchTip** if you want lighter self-host |
-| Runtime (API) | **uvicorn --workers** (or 1/pod on K8s) | — | Procrastinate workers as a **separate container** |
-| Container | **uv multi-stage** `python:3.13-slim` build → slim/distroless runtime, non-root | — | `UV_COMPILE_BYTECODE=1`, `UV_LINK_MODE=copy`, `--frozen`. Distroless = no shell → Python/K8s health probe, not curl |
-| Health/shutdown | K8s httpGet liveness/readiness + `shutdown_graceful_timeout` | — | Abort-aware tasks; `terminationGracePeriodSeconds` ≥ graceful timeout |
+| Runtime (API) | **one uvicorn process per container, scale by replicas** | — | Platform (Compose/systemd/host) owns supervision. **PgQueuer workers** run as a **separate container**. K8s is rejected for P1 — no K8s-specific runtime assumptions |
+| Container | **uv multi-stage** `python:3.13-slim` build → slim/distroless runtime, non-root | — | `UV_COMPILE_BYTECODE=1`, `UV_LINK_MODE=copy`, `--frozen`. Distroless = no shell → use a Python/HTTP health probe, not curl |
+| Health/shutdown | HTTP `/health` + `/ready` endpoints + graceful shutdown | — | Container-agnostic: the platform health-check hits the endpoints; drain in-flight jobs on SIGTERM with a grace window covering the worker's shutdown timeout. Abort-aware tasks |
 | Rate limiting | at ingress (proxy), **slowapi** only if a public API needs per-key limits | — | Likely unnecessary at this volume |
 
 ## NPI-safety (cross-cutting, the load-bearing constraint)

@@ -484,4 +484,3 @@ Reference: [llmwhisperer-client on PyPI](https://pypi.org/project/llmwhisperer-c
 
 > [!success] Final direction
 > Python coordinates the workflow. PostgreSQL enforces durable correctness. Native libraries perform expensive PDF/OCR work. Workers isolate long-running and failure-prone operations. WorkOS owns identity, while TitlePipe owns authorization. Blindness is enforced through topology, credentials, storage, and tests. Optimization follows production-shaped measurements, never benchmark headlines.
-

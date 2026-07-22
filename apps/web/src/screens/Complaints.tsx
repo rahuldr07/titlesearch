@@ -351,7 +351,7 @@ function ComplaintCard({
   if (resolved) {
     return (
       <div
-        data-testid={`complaint-resolved-${complaint.field_path}`}
+        data-testid={`complaint-resolved-${complaint.id}`}
         className="mt-[7px] rounded-[5px] border border-line-mid bg-surface-dim px-[14px] py-[9px]"
       >
         <div className="flex flex-wrap items-baseline gap-[10px]">
@@ -372,7 +372,7 @@ function ComplaintCard({
   const auto = complaint.how_it_got_through === "auto_confirmed";
   return (
     <div
-      data-testid={`complaint-${complaint.field_path}`}
+      data-testid={`complaint-${complaint.id}`}
       className="mt-[7px] rounded-card border border-line-mid bg-card px-4 py-[13px]"
     >
       <div className="flex flex-wrap items-baseline justify-between gap-3">
@@ -382,7 +382,7 @@ function ComplaintCard({
             to="/orders/$orderId/review"
             params={{ orderId: complaint.order_id }}
             search={{ field: complaint.field_path }}
-            data-testid={`complaint-open-${complaint.field_path}`}
+            data-testid={`complaint-open-${complaint.id}`}
             className="font-mono text-[12.5px] font-semibold text-action no-underline hover:underline"
           >
             {complaint.field_path}
@@ -475,7 +475,7 @@ function ResolvePanel({
     return (
       <button
         type="button"
-        data-testid={`resolve-open-${complaint.field_path}`}
+        data-testid={`resolve-open-${complaint.id}`}
         onClick={() => setOpen(true)}
         className="mt-[10px] cursor-pointer rounded-btn border border-line-strong bg-input px-[12px] py-[5px] text-[12px] font-semibold text-ink-secondary"
       >
@@ -486,14 +486,14 @@ function ResolvePanel({
 
   return (
     <div
-      data-testid={`resolve-panel-${complaint.field_path}`}
+      data-testid={`resolve-panel-${complaint.id}`}
       className="mt-[10px] rounded-card border border-line-strong bg-card px-[14px] py-3"
     >
       <div className="mb-[6px] text-[11px] font-bold tracking-[.08em] text-label">
         THE FIX — WHAT WAS DONE, ONE LINE
       </div>
       <textarea
-        data-testid="cmp-resolution"
+        data-testid={`cmp-resolution-${complaint.id}`}
         value={resolution}
         onChange={(e) => setResolution(e.target.value)}
         placeholder="e.g. “v2 re-delivered with the lien restored; threshold on this field lowered pending review”"
@@ -514,7 +514,7 @@ function ResolvePanel({
         <label className="flex cursor-pointer items-center gap-[6px]">
           <input
             type="radio"
-            data-testid="cmp-mode-draft"
+            data-testid={`cmp-mode-draft-${complaint.id}`}
             checked={mode === "draft"}
             onChange={() => setMode("draft")}
           />
@@ -523,7 +523,7 @@ function ResolvePanel({
       </div>
       {mode === "cite" && (
         <select
-          data-testid="cmp-cite-select"
+          data-testid={`cmp-cite-select-${complaint.id}`}
           value={citedRuleId}
           onChange={(e) => setCitedRuleId(e.target.value)}
           className="mt-2 w-full max-w-[560px] rounded-btn border border-line-strong bg-input px-2 py-[6px] font-sans text-[12.5px]"
@@ -539,7 +539,7 @@ function ResolvePanel({
       {mode === "draft" && (
         <div className="mt-2 flex max-w-[560px] flex-col gap-2">
           <textarea
-            data-testid="cmp-draft-input"
+            data-testid={`cmp-draft-input-${complaint.id}`}
             value={draftText}
             onChange={(e) => setDraftText(e.target.value)}
             placeholder="the general rule, one sentence — it lands PENDING and cannot affect the pipeline until an engineer confirms it"
@@ -556,7 +556,7 @@ function ResolvePanel({
       <label className="mt-3 flex cursor-pointer items-center gap-[6px] text-[12.5px] text-ink-secondary">
         <input
           type="checkbox"
-          data-testid="cmp-golden-offer"
+          data-testid={`cmp-golden-offer-${complaint.id}`}
           checked={goldenOffer}
           onChange={(e) => setGoldenOffer(e.target.checked)}
         />
@@ -565,7 +565,7 @@ function ResolvePanel({
       <div className="mt-[10px] flex flex-wrap items-center gap-3">
         <button
           type="button"
-          data-testid={`cmp-resolve-btn-${complaint.field_path}`}
+          data-testid={`cmp-resolve-btn-${complaint.id}`}
           disabled={!valid || resolve.isPending}
           onClick={() => resolve.mutate()}
           className={`rounded-btn px-[16px] py-[6px] font-sans text-[12.5px] font-semibold ${

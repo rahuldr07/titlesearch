@@ -19,10 +19,13 @@ import type { HighlightTone, NormRect, PdfHighlight } from "./coords";
  * same highlights render over react-pdf output.
  */
 
-pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-  "pdfjs-dist/build/pdf.worker.min.mjs",
-  import.meta.url,
-).toString();
+// The pdfjs worker is copied from the version-pinned `pdfjs-dist` into `public/`
+// by scripts/copy-pdf-worker.mjs (run before dev/build), so it is served from
+// the site root and lands in dist. A `?url`/`?worker` import fails on Vite 8's
+// rolldown resolver for node_modules paths, and a bare `new URL(...,
+// import.meta.url)` never emits the file — this keeps it version-synced and
+// bundler-agnostic.
+pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
 
 function rectCss(r: NormRect) {
   return {

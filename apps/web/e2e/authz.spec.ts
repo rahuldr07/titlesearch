@@ -124,7 +124,7 @@ test("ops arriving at review via a complaint deep link can look, not touch", asy
   await page.keyboard.press("g");
   await page.keyboard.press("c");
   await expect(page).toHaveURL(/\/complaints/);
-  await page.getByTestId("complaint-open-assessment.city_tax").click();
+  await page.getByTestId("complaint-open-cmp_1").click();
   await expect(page).toHaveURL(/\/orders\/ord_demo_2\/review/);
   await expect(page.getByTestId("sel-label")).toBeVisible();
   // the field is in context, but review actions belong to review roles:

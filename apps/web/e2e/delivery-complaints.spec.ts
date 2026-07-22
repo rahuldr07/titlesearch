@@ -38,7 +38,7 @@ test("complaints group by how it got through; auto-confirmed is distinct", async
     "AUTO-CONFIRMED — NO HUMAN SAW IT",
   );
   await expect(
-    page.getByTestId("complaint-assessment.city_tax"),
+    page.getByTestId("complaint-cmp_1"),
   ).toContainText("no human ever saw it");
   // no per-reviewer complaint counts, ever
   await expect(
@@ -57,7 +57,7 @@ test("per-field capture records into its group", async ({ page }) => {
     .fill("the HUD shows 215,500 — your report says 215,000");
   await record.click();
   await expect(
-    page.getByTestId("complaint-deed.consideration"),
+    page.getByTestId("complaint-cmp_new_1"),
   ).toContainText("client says");
 });
 
@@ -65,21 +65,21 @@ test("resolving a complaint is refused without a rule; a draft rule files it", a
   page,
 }) => {
   await page.goto("/complaints");
-  await page.getByTestId("resolve-open-assessment.city_tax").click();
-  const btn = page.getByTestId("cmp-resolve-btn-assessment.city_tax");
+  await page.getByTestId("resolve-open-cmp_1").click();
+  const btn = page.getByTestId("cmp-resolve-btn-cmp_1");
   await expect(btn).toBeDisabled(); // no fix, no rule
   await page
-    .getByTestId("cmp-resolution")
+    .getByTestId("cmp-resolution-cmp_1")
     .fill("v2 re-delivered with the delinquent city tax restored");
   await expect(btn).toBeDisabled(); // fix alone is not a resolution — a rule is required
-  await page.getByTestId("cmp-mode-draft").check();
+  await page.getByTestId("cmp-mode-draft-cmp_1").check();
   await page
-    .getByTestId("cmp-draft-input")
+    .getByTestId("cmp-draft-input-cmp_1")
     .fill("delinquent city-tax lines are always surfaced, never auto-confirmed");
   await expect(btn).toBeEnabled();
-  await page.getByTestId("cmp-golden-offer").check();
+  await page.getByTestId("cmp-golden-offer-cmp_1").check();
   await btn.click();
-  const resolved = page.getByTestId("complaint-resolved-assessment.city_tax");
+  const resolved = page.getByTestId("complaint-resolved-cmp_1");
   await expect(resolved).toContainText("resolved");
   await expect(resolved).toContainText("GOLDEN CASE");
 });
