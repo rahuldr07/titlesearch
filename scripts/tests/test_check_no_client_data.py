@@ -19,7 +19,7 @@ from check_no_client_data import main, violation_for
 @pytest.mark.parametrize(
     "path",
     [
-        "tests/fixtures/4171608-1_-_Search_Package.pdf",
+        "tests/fixtures/county-search-package.pdf",
         "uploads/report.docx",
         "data/titlepipe.seed",
         "services/core-api/golden.sqlite",

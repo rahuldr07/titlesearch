@@ -24,8 +24,13 @@ aliases:
 > The **official** gate stays partial. **Docker and WSL2 are not installed**, so
 > the container build, run, non-root and health-check evidence does not exist,
 > and nothing has been pushed so remote CI has never run. Both are deferred
-> until before staging, deliberately — neither blocks Gate 2, which needs
-> Testcontainers and therefore needs the same Docker install.
+> until before staging.
+>
+> To be precise, because an earlier wording implied otherwise: **Docker blocks
+> Gate 2**, which needs Testcontainers for the RLS and pooled-connection tests.
+> What is deferred is Gate 1's *container evidence* — image builds, non-root
+> checks, Trivy, SBOM — and remote CI. Installing Docker unblocks all of it at
+> once, and Gate 2 cannot start until it is installed.
 >
 > No container criterion is claimed. A written CI step is not evidence that it
 > passed.
@@ -568,11 +573,10 @@ Enable BitLocker before any real client NPI is stored on this machine.
 | CI green without application features | **PENDING REVIEW** | not pushed; local equivalents pass |
 
 > [!warning] **Gate 1: LOCAL FOUNDATION COMPLETE — OFFICIAL GATE PARTIAL.**
-> Source, tooling, lock, test and build criteria all pass; the foundation is
-> ready to build Gate 2 on. The container criterion and remote CI are
-> **deferred until before staging** and are not claimed. Neither blocks Gate 2,
-> which needs the same Docker install for Testcontainers — so the install
-> unblocks both at once.
+> Source, tooling, lock, test and build criteria all pass. The container
+> criterion and remote CI are **deferred until before staging** and are not
+> claimed. Gate 2 itself is blocked on the same Docker install, since its RLS
+> and pooled-connection tests need Testcontainers.
 
 ## 10a. What the review changed
 

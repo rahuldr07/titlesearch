@@ -2,10 +2,11 @@
 
 ## Why this exists
 
-Seven of the prototype's ingest tests assert against
-`tests/fixtures/4171608-1_-_Search_Package.pdf` — a real Clayton County search
-package containing GLBA NPI. It must never enter VCS, so on any machine without
-it those tests fail, which means they would never run in CI either.
+Seven of the prototype's ingest tests assert against a fixture under
+`tests/fixtures/` — a real Georgia county search package containing GLBA NPI.
+It must never enter VCS, so on any machine without it those tests fail, which
+means they would never run in CI either. (The exact filename is a client order
+number and stays in the prototype; the runner reads it from there.)
 
 This produces a **synthetic** package with the same *structural* properties the
 tests actually assert on — 36 pages, several recorded instruments, at least one

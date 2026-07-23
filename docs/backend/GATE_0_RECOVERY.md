@@ -508,21 +508,85 @@ Real packages are mostly scans. These fixtures exercise the ingest door, not
 OCR. Segmentation's own parser tests are unaffected and still run on the
 recovered stamp formats.
 
+### Client identifiers in the repository
+
+Review found the first synthetic-report generator had hardcoded the five real
+client **order identifiers** and delivered-report **filenames** that
+`seed.SOURCES` expects — in a file whose docstring called itself synthetic. Two
+of them were newly introduced by the closure commit.
+
+The client-data guard passed, correctly: it checks paths, extensions and
+directory names, not source contents. A passing guard was not evidence for a
+claim the guard does not make.
+
+**Fixed by removing the need for them.** The generator now reads `seed.SOURCES`
+from the prototype at run time, and the runner reads the package-fixture path
+out of `tests/test_ingest.py`. Neither identifier set is in VCS, and the
+generators can no longer drift from the seed they feed.
+
+```text
+rg '4171608|4171476|3791211|4114194|3913323|TYPING_REPORT' scripts/   ->  no matches
+```
+
+> **Still open, for the owner.** Client order identifiers appear elsewhere in
+> `docs/` — including in this file's own failure tables — as they do in
+> `CONTEXT.md` and `PRD.md`, which predate this work. Whether an order number is
+> client-derived data for VCS purposes is the same question as §4's on party
+> names, and it is the owner's to answer. This section records that the *code*
+> now carries none; the documents are unchanged and awaiting that ruling.
+
 ### v14
 
-Written, in `HARD_VALIDATORS`, with 8 tests. Three properties worth stating:
+Written, in `HARD_VALIDATORS`, with 20 tests.
 
-1. **It compares before and after.** `build_report` now retains the
-   pre-suppression mortgage set; without it the report shows only survivors and
-   a lien released is indistinguishable from a lien dropped by depth — the
-   single distinction R15 turns on.
+> **Corrected after review.** The first version compared `report.mortgages`
+> against the pre-filter blocks and nothing else — so removing an active
+> judgment from `judgments_liens` still returned `passed=True`, on a rule that
+> exists *because* a judgment survives the sale that preceded it. Mortgages
+> were the one category that needed the guard least. It also compared `id()`,
+> so assembly rebuilding an equal object reported a present lien as suppressed.
+>
+> It now covers **mortgages, judgments, liens and UCC filings**, identifies
+> instruments by recording identity, and has a mutation test per category.
+
+Four properties worth stating:
+
+1. **It compares before and after, across every lien-bearing category.**
+   `build_report` retains both `_all_mortgage_blocks` and `_all_lien_documents`;
+   without them the report shows only survivors and a lien released is
+   indistinguishable from a lien dropped by depth — the single distinction R15
+   turns on.
 2. **It fails closed.** If it cannot see that set it returns `False`, not "not
    applicable". An unprovable report must not look like a clean one; this
    codebase already named that failure — `unverifiable` looking like
    `confident`, the shape that produced the MERS phantom.
-3. **It was mutation-tested.** Stubbing the check to always pass makes
-   `test_v14_catches_a_lien_suppressed_without_a_release` fail. A guard nobody
-   has tried to break is a guard nobody knows works.
+3. **Suppression reasons are an allowlist.** A permitted reason is a finding
+   about the instrument — a reference-matched release, an R13 status exclusion,
+   the R20 collateral test. Chain-based reasons (`chain_terminated`,
+   `arms_length_sale`, `search_depth`) are explicitly refused, and refused even
+   when the instrument is still rendered, because honouring one is a single
+   edit away. An unrecognised reason fails rather than being assumed benign.
+4. **It was mutation-tested per category.** Removing a live mortgage, judgment,
+   tax lien or UCC filing each makes its own test fail. A guard nobody has
+   tried to break is a guard nobody knows works.
+
+### Changes made at closure — exact accounting
+
+Review caught the exit checklist claiming "no test was modified" and "no domain
+code written" while the closure patch did both. Stated precisely:
+
+| File | Kind | Change |
+|---|---|---|
+| `titlepipe/validators.py` | **domain** | `v14_liens_survive_chain_termination`, `PERMITTED_SUPPRESSIONS`, `FORBIDDEN_SUPPRESSIONS`, `instrument_key`; added to `HARD_VALIDATORS` |
+| `titlepipe/assemble.py` | **domain** | `build_report` retains `_all_mortgage_blocks` and `_all_lien_documents` |
+| `titlepipe/seed.py` | harness | `_docx_text` falls back to python-docx when pandoc is absent |
+| `tests/test_seed.py` | **test** | `TITLEPIPE_SEED_ROOT` makes the report root configurable |
+| `tests/test_v14_r15.py` | test (new) | 20 tests for `v14` |
+
+The recovery run itself was unmodified — that claim stands and is what §5.2
+records. The domain changes implement `v14`, which R15 (`RULED`) mandates, so
+no `OPEN` or `CONFLICT` rule was built past. Nothing else in the domain was
+touched.
 
 ### Prototype changes
 
@@ -541,20 +605,41 @@ machine-local.
 ### Reproducing
 
 ```bash
-python scripts/gate0/run_prototype_suite.py
+python scripts/gate0/run_prototype_suite.py --fresh
 ```
 
-Regenerates both fixture sets, installs the v14 guard, runs everything:
+`--fresh` rebuilds the worktree from the frozen archive, so the result is not
+contaminated by a tree someone already fixed by hand. The runner then applies
+`gate0-closure.patch`, **verifies five markers are present**, and refuses to run
+the suite if any is missing.
+
+Measured from a clean archive:
 
 ```text
-package suite : 139 passed      (131 recovered + 8 v14)
+closure applied and verified
+package suite : 151 passed      (131 recovered + 20 v14)
 patch suite   :  24 passed      (4 + 10 + 10, still unmerged)
-                163 total
+                175 total
 ```
+
+> Review found the earlier runner copied only the v14 *test* and never applied
+> the patch, so from a clean archive it produced 8 failures while the
+> documentation claimed one-command reproduction. The green result had come
+> from a worktree already patched by hand. That is what the marker check now
+> prevents.
+
+Archive integrity is separately checkable:
+
+```bash
+python scripts/gate0/verify_archive.py
+```
+
+It checks the file **set** as well as the hashes — the archive had accumulated
+31 `__pycache__` and pytest-cache files while every listed hash still matched.
 
 Needs `pdftotext`, which ships with Git for Windows but is not on the Windows
 PATH; the runner prepends it. `pdftoppm` and `tesseract` are deliberately not
-required.
+required. `git` applies the patch; `uv` builds the virtualenv on `--fresh`.
 
 ## 11. Gate 0 exit checklist
 
@@ -562,8 +647,8 @@ required.
 |---|---|---|
 | Prototype located | **PASS** | §3.1 — path, size, SHA-256, 35 entries |
 | Archived safely without county/client packages entering VCS | **PASS** | §4 — durable archive outside the working tree; per-file hash manifest in `GATE_0_ARCHIVE_MANIFEST.md`; archives contain no PDFs or seed DB |
-| All tests run unchanged | **PASS** | §5.2, §5.3 — no test modified |
-| All tests green | **PASS** | **163/163.** 145 as recovered; the other 10 against synthetic fixtures (§11a). Reproducible: `scripts/gate0/run_prototype_suite.py`. |
+| All tests run unchanged **at recovery** | **PASS** | §5.2, §5.3 — nothing was modified to make the recovery run pass |
+| All tests green | **PASS** | **175/175** from a clean archive (151 package + 24 patch). Reproducible: `python scripts/gate0/run_prototype_suite.py --fresh`. |
 | Port-vs-reconstruction outcome recorded | **PASS** | **PORT** |
 | Module / function / state-machine / validator / render inventory | **PASS** | §8 |
 | Five-bug mapping | **PASS** | §6 — and the material finding that they are unmerged |
@@ -571,7 +656,7 @@ required.
 | `v14` assertion | **PASS** | §7.4 — written, in `HARD_VALIDATORS`, fails closed, and mutation-tested |
 | Safe fixture / golden freeze | **PASS** | §9, §11a — synthetic package and reports, generated by committed scripts; render tests were already fixture-free |
 | Missing artifacts recorded | **PASS** | §10 |
-| No implementation through unresolved rules | **PASS** | No domain code written in Gate 0 |
+| No implementation through unresolved rules | **PASS** | No `OPEN`/`CONFLICT` rule was built past. Domain code *was* written at closure — `v14` and the assembly support it needs — under R15, which is `RULED`. Exact accounting below. |
 
 > [!success] **Gate 0: COMPLETE**, closed by route (b) — synthetic substitution.
 > Every exit criterion is met:

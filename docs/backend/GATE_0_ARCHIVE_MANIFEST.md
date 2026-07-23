@@ -24,16 +24,17 @@ client-derived names into VCS.
 
 ## Verifying
 
-```powershell
-$root = "$env:LOCALAPPDATA\TitlePipe\gate0-prototype-archive"
-Get-ChildItem $root -Recurse -File | Sort-Object FullName | ForEach-Object {
-  "{0}  {1,8}  {2}" -f (Get-FileHash $_ -Algorithm SHA256).Hash.ToLower(),
-                       $_.Length,
-                       ($_.FullName.Replace("$root\", '') -replace '\','/')
-}
+```bash
+python scripts/gate0/verify_archive.py
 ```
 
-The output must match the table below exactly.
+It checks the file **set** as well as every hash and size, and treats an
+unexpected file as a failure.
+
+That distinction is not pedantry: the archive had accumulated 31 `__pycache__`
+and pytest-cache files from a test run while every listed hash still matched, so
+a hash-only check reported success on an archive that was no longer the artefact
+that had been frozen. The caches have been removed and the set is now exact.
 
 ## Manifest
 

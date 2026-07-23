@@ -1,22 +1,28 @@
-"""v14 — R15: liens survive chain termination.
+"""v14 — R15: encumbrances survive chain termination.
 
 Kept in the repository rather than only in the prototype worktree, because the
 prototype source is not in VCS pending an owner ruling and this assertion must
-not be the thing that goes missing. `run_prototype_suite.py` copies it into
-`<worktree>/tests/`.
+not be the thing that goes missing. `run_prototype_suite.py` installs it.
 
 R15 is the highest-risk rule in the system. `docs/CONTEXT.md` §11 marks it ⚠,
 `docs/PRD.md` §18 lists v14 as a release gate, and the Gate 0 audit found the
-prototype's behaviour correct but **unguarded** — exactly one write to
-`released_by`, reachable only through a reference-matched release, and nothing
-stopping the next edit from changing that.
+prototype's behaviour correct but **unguarded**.
 
-The load-bearing test is `test_v14_catches_a_lien_suppressed_without_a_release`.
-Without it a green v14 would prove only that today's code passes, not that the
-assertion has any teeth.
+## What review corrected here
 
-The document helper mirrors `tests/test_assemble.py` so both build instruments
-the same way: `Recording.book_page` is a derived property, not a settable field.
+The first version of v14 compared `report.mortgages` against the pre-filter
+blocks and nothing else. Removing an active judgment from `judgments_liens`
+still returned `passed=True` — on a rule that exists *because* a judgment
+survives the sale that preceded it. Mortgages were the one category that did
+not need the guard most.
+
+It also compared `id()`, so assembly rebuilding an equal object reported a
+present lien as suppressed. A false failure on this rule is nearly as bad as a
+false pass: the guard gets switched off.
+
+So the mutation tests below cover **every lien-bearing category**, and a
+positive test asserting current assembly behaviour is never treated as evidence
+that the guard works — each has a paired mutation.
 """
 
 from datetime import date
@@ -43,12 +49,43 @@ def doc(dt, caption=None, inst=None, book=None, page=None, rec=None, ttax=None, 
     return d
 
 
-def package():
-    """A deed, two security deeds, and a release for exactly one of them.
+def judgment():
+    return doc(
+        DocType.JUDGMENT,
+        "Certificate of Judgment",
+        inst="CJ24017588",
+        rec=date(2024, 8, 1),
+        amount=Decimal("37696.56"),
+        plaintiff="SYNTHETIC LANDSCAPING INC",
+    )
 
-    Synthetic parties. The unreleased security deed is the lien R15 protects:
-    an arm's-length sale does not discharge it, and chain termination decides
-    only how far back to search.
+
+def tax_lien():
+    return doc(
+        DocType.LIEN,
+        "State Tax Execution",
+        inst="TL-2023-0091",
+        rec=date(2023, 4, 18),
+        amount=Decimal("4120.00"),
+    )
+
+
+def ucc():
+    return doc(
+        DocType.UCC,
+        "UCC-1 Financing Statement",
+        inst="UCC-2022-77",
+        rec=date(2022, 9, 30),
+        collateral_description="fixtures located on the real property",
+    )
+
+
+def package(extra=()):
+    """A deed, two security deeds, a release for exactly one, plus extras.
+
+    Synthetic parties throughout. The unreleased security deed and every extra
+    encumbrance are what R15 protects: an arm's-length sale discharges none of
+    them.
     """
     deed = doc(
         DocType.DEED,
@@ -87,95 +124,221 @@ def package():
         rec=date(2020, 1, 9),
         releases_book_page="11000/100",
     )
-    order = {
-        "order_no": "SYNTH-1",
-        "vendor": "66805",
-        "effective_date": date(2026, 7, 8),
-    }
-    return [deed, released, surviving, release], order
+    order = {"order_no": "SYNTH-1", "vendor": "66805", "effective_date": date(2026, 7, 8)}
+    return [deed, released, surviving, release, *extra], order
 
 
-def surviving_book_pages(report):
-    return [m.doc.recording.book_page.value for m in report.mortgages]
+def build(extra=()):
+    docs, order = package(extra)
+    return A.build_report(docs, order)
+
+
+# --- the baseline the mutations are measured against -------------------------
 
 
 def test_the_release_resolves_against_the_instrument_it_cites():
     """If this fails the rest of the file is testing the wrong thing."""
-    docs, order = package()
-    report = A.build_report(docs, order)
-    assert len(report._all_mortgage_blocks) == 2
+    report = build()
     released = [m for m in report._all_mortgage_blocks if m.released_by is not None]
     assert len(released) == 1
     assert released[0].doc.recording.book_page.value == "11000/100"
 
 
-def test_an_unreleased_lien_survives_into_the_report():
-    """R15 stated as a property of the output, not of the guard."""
-    docs, order = package()
-    report = A.build_report(docs, order)
-    assert "11416/322" in surviving_book_pages(report)
+def test_a_clean_report_passes():
+    report = build([judgment(), tax_lien(), ucc()])
+    result = V.v14_liens_survive_chain_termination(report)
+    assert result.passed is True, result.detail
 
 
-def test_a_released_lien_is_suppressed_and_v14_allows_it():
-    docs, order = package()
-    report = A.build_report(docs, order)
-    assert "11000/100" not in surviving_book_pages(report)
+def test_both_pre_suppression_sets_are_recorded():
+    """v14 cannot check what assembly does not hand it."""
+    report = build([judgment(), tax_lien(), ucc()])
+    assert len(report._all_mortgage_blocks) == 2
+    assert len(report._all_lien_documents) == 3
+
+
+# --- mutations: one per lien-bearing category --------------------------------
+#
+# Each removes a live encumbrance the way a chain-depth filter would, and
+# asserts v14 objects. A positive test alone would only prove that today's
+# assembly happens not to drop things.
+
+
+def test_v14_catches_a_removed_mortgage():
+    report = build()
+    report.mortgages = [
+        m for m in report.mortgages if m.doc.recording.book_page.value != "11416/322"
+    ]
+    result = V.v14_liens_survive_chain_termination(report)
+    assert result.passed is False, "a live mortgage was dropped and v14 allowed it"
+    assert "11416/322" in result.detail
+
+
+def test_v14_catches_a_removed_judgment():
+    """The category the first version of this validator could not see.
+
+    R15 exists because a judgment against the current owner survives the sale
+    that preceded it. If any mutation in this file must fail, it is this one.
+    """
+    report = build([judgment()])
+    assert len(report.judgments_liens) == 1
+    report.judgments_liens = []
+    result = V.v14_liens_survive_chain_termination(report)
+    assert result.passed is False, "an active judgment was dropped and v14 allowed it"
+    assert "CJ24017588" in result.detail
+
+
+def test_v14_catches_a_removed_tax_lien():
+    report = build([tax_lien()])
+    report.judgments_liens = []
+    result = V.v14_liens_survive_chain_termination(report)
+    assert result.passed is False
+    assert "TL-2023-0091" in result.detail
+
+
+def test_v14_catches_a_removed_ucc_filing():
+    report = build([ucc()])
+    report.judgments_liens = []
+    result = V.v14_liens_survive_chain_termination(report)
+    assert result.passed is False
+    assert "UCC-2022-77" in result.detail
+
+
+def test_v14_catches_one_removal_among_many():
+    """A single missing encumbrance must not hide behind its surviving peers."""
+    report = build([judgment(), tax_lien(), ucc()])
+    report.judgments_liens = [
+        d for d in report.judgments_liens if str(d.recording.instrument_no.value) != "TL-2023-0091"
+    ]
+    result = V.v14_liens_survive_chain_termination(report)
+    assert result.passed is False
+    assert "TL-2023-0091" in result.detail
+
+
+# --- suppression reasons -----------------------------------------------------
+
+
+def test_a_permitted_suppression_is_allowed():
+    """R13: a satisfied judgment leaves the report legitimately."""
+    report = build([judgment()])
+    dropped = report.judgments_liens[0]
+    dropped.suppression_reason = "satisfied"
+    report.judgments_liens = []
+    result = V.v14_liens_survive_chain_termination(report)
+    assert result.passed is True, result.detail
+
+
+def test_a_chain_based_suppression_reason_is_refused():
+    """R15 stated directly: termination is not a disposition. Declaring it as
+    one fails even though the code path 'explains' itself."""
+    report = build([judgment()])
+    dropped = report.judgments_liens[0]
+    dropped.suppression_reason = "chain_terminated"
+    report.judgments_liens = []
+    result = V.v14_liens_survive_chain_termination(report)
+    assert result.passed is False
+    assert "termination is not a disposition" in result.detail
+
+
+def test_a_chain_based_reason_fails_even_when_the_lien_is_still_rendered():
+    """The reason is a defect on its own. Honouring it is one edit away."""
+    report = build([judgment()])
+    report.judgments_liens[0].suppression_reason = "arms_length_sale"
+    result = V.v14_liens_survive_chain_termination(report)
+    assert result.passed is False
+    assert "chain-based suppression reason" in result.detail
+
+
+def test_an_unrecognised_reason_is_refused():
+    """An allowlist, not a denylist: a new reason must be reviewed, not assumed
+    benign because nobody thought to forbid it."""
+    report = build([judgment()])
+    report.judgments_liens[0].suppression_reason = "looked_unimportant"
+    report.judgments_liens = []
+    result = V.v14_liens_survive_chain_termination(report)
+    assert result.passed is False
+    assert "unrecognised reason" in result.detail
+
+
+# --- identity ----------------------------------------------------------------
+
+
+def test_a_rebuilt_but_equal_instrument_is_not_reported_as_suppressed():
+    """Identity is by instrument, not by `id()`.
+
+    Assembly legitimately rebuilds objects — a re-record collapse does exactly
+    that. The first version compared `id()` and reported a present lien as
+    missing. A false failure on this rule gets the guard switched off, which
+    costs more than the false pass it was protecting against.
+    """
+    report = build([judgment()])
+    original = report.judgments_liens[0]
+    rebuilt = doc(
+        DocType.JUDGMENT,
+        "Certificate of Judgment",
+        inst=str(original.recording.instrument_no.value),
+        rec=original.recording.recorded_date.value,
+    )
+    assert rebuilt is not original
+    report.judgments_liens = [rebuilt]
 
     result = V.v14_liens_survive_chain_termination(report)
     assert result.passed is True, result.detail
 
 
-def test_v14_catches_a_lien_suppressed_without_a_release():
-    """The regression v14 exists for.
-
-    Removes a still-encumbered lien from the report while it holds no release —
-    which is exactly what "the chain terminated, so drop it" looks like from
-    the outside. If this ever reports `passed is True`, R15 is unguarded again.
-    """
-    docs, order = package()
-    report = A.build_report(docs, order)
-    report.mortgages = [
-        m for m in report.mortgages if m.doc.recording.book_page.value != "11416/322"
-    ]
-
-    result = V.v14_liens_survive_chain_termination(report)
-    assert result.passed is False, "v14 did not catch a lien dropped without a release"
-    assert "without a verified release" in result.detail
-    assert "11416/322" in result.detail
+def test_instrument_key_prefers_the_instrument_number_then_book_page():
+    by_inst = doc(DocType.JUDGMENT, inst="CJ1", book="100", page="2")
+    by_bp = doc(DocType.JUDGMENT, book="100", page="2")
+    assert V.instrument_key(by_inst) == "inst:CJ1"
+    assert V.instrument_key(by_bp) == "bp:100/2"
 
 
-def test_v14_fails_closed_when_it_cannot_check():
-    """An unprovable report must not be indistinguishable from a clean one.
-    `unverifiable` looking like `confident` is the shape that produced the MERS
-    phantom, and R15 is the last rule that should inherit it."""
-    docs, order = package()
-    report = A.build_report(docs, order)
+# --- failing closed ----------------------------------------------------------
+
+
+def test_v14_fails_closed_when_the_mortgage_set_is_missing():
+    report = build()
     del report._all_mortgage_blocks
-
     result = V.v14_liens_survive_chain_termination(report)
     assert result.passed is False
     assert "could not be checked" in result.detail
 
 
-def test_chain_termination_does_not_touch_judgments_or_liens():
-    """The other half of R15: termination sets search depth. Judgments and
-    liens pass through assembly unfiltered."""
-    docs, order = package()
-    judgment = doc(
-        DocType.JUDGMENT,
-        "Certificate of Judgment",
-        inst="CJ24017588",
-        rec=date(2024, 8, 1),
-        amount=Decimal("37696.56"),
-        plaintiff="EVANS LANDSCAPING INC",
+def test_v14_fails_closed_when_the_lien_set_is_missing():
+    """Added after review: only the mortgage set was checked, so a report
+    carrying no lien set at all would have passed."""
+    report = build([judgment()])
+    del report._all_lien_documents
+    result = V.v14_liens_survive_chain_termination(report)
+    assert result.passed is False
+    assert "could not be checked" in result.detail
+
+
+def test_v14_accepts_explicitly_supplied_sets():
+    """So the backend port can pass them in rather than depending on private
+    attributes on the report."""
+    report = build([judgment()])
+    result = V.v14_liens_survive_chain_termination(
+        report,
+        pre_suppression={
+            "mortgages": report._all_mortgage_blocks,
+            "liens": report._all_lien_documents,
+        },
     )
-    report = A.build_report([*docs, judgment], order)
-    assert len(report.judgments_liens) == 1
+    assert result.passed is True, result.detail
+
+
+# --- registration ------------------------------------------------------------
 
 
 def test_v14_is_a_hard_validator():
     """R15 is a release gate, not a reviewer hint."""
     assert V.v14_liens_survive_chain_termination in V.HARD_VALIDATORS
+
+
+def test_chain_reasons_are_never_in_the_permitted_set():
+    assert not (V.PERMITTED_SUPPRESSIONS & V.FORBIDDEN_SUPPRESSIONS)
+    assert "verified_release" in V.PERMITTED_SUPPRESSIONS
 
 
 def test_v99_remains_deliberately_empty():

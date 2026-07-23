@@ -10,3 +10,8 @@
 *.pdf binary
 *.zip binary
 *.seed binary
+
+# Unified diffs encode a blank context line as a single space, so git's
+# whitespace check flags every one. Stripping them corrupts the patch.
+*.patch -whitespace -text
+*.diff  -whitespace -text

@@ -1,44 +1,47 @@
-# Gate 0 closure — changes to the recovered prototype
-#
-# Apply to the as-recovered source to reproduce the state in which all 163
-# tests pass:
-#
-#     cd <worktree>/titlepipe
-#     git apply --unsafe-paths --directory . ../../gate0-closure.patch
-#     # or: patch -p1 < gate0-closure.patch
-#
-# The frozen archive at %LOCALAPPDATA%\TitlePipe\gate0-prototype-archive stays
-# as-recovered and hash-verified against GATE_0_ARCHIVE_MANIFEST.md. This patch
-# is the delta, kept in VCS so the closure is not machine-local.
-#
-# Four changes, each with its reason in the code:
-#
-#   seed.py       _docx_text falls back to python-docx when pandoc is absent.
-#                 pandoc was the only reader, so a missing system binary made
-#                 two orders silently vanish from the seed — indistinguishable
-#                 from a missing report.
-#
-#   assemble.py   build_report retains the pre-suppression mortgage set. Without
-#                 it the report shows only survivors and v14 cannot tell a lien
-#                 released from one dropped by chain termination — the single
-#                 distinction R15 turns on.
-#
-#   validators.py v14_liens_survive_chain_termination, the assertion R15
-#                 mandated and Gate 0 found missing. Added to HARD_VALIDATORS.
-#                 Fails closed when it cannot see the pre-suppression set.
-#
-#   test_seed.py  TITLEPIPE_SEED_ROOT makes the delivered-report root
-#                 configurable. It defaulted to /mnt/user-data, a path in the
-#                 sandbox the prototype was written in.
-#
-# Contains no client-derived party names, addresses or amounts.
-#
+Gate 0 closure — changes to the recovered prototype
+
+Applied automatically by scripts/gate0/run_prototype_suite.py, which will not
+run the suite unless these are present. Manual equivalent, from the prototype
+root:
+
+    git apply -p1 gate0-closure.patch
+
+The frozen archive at %LOCALAPPDATA%\TitlePipe\gate0-prototype-archive stays
+as-recovered and hash-verified against GATE_0_ARCHIVE_MANIFEST.md. This is the
+delta, in VCS so the closure is not machine-local.
+
+Four changes:
+
+  seed.py       _docx_text falls back to python-docx when pandoc is absent.
+                pandoc was the only reader, so a missing system binary made two
+                orders silently vanish from the seed — indistinguishable from a
+                missing report.
+
+  assemble.py   build_report retains the pre-suppression sets for BOTH
+                mortgages and lien-bearing documents. Without them a lien
+                suppressed for a permitted reason and one dropped by chain
+                termination are indistinguishable — the distinction R15 turns
+                on.
+
+  validators.py v14_liens_survive_chain_termination, the assertion R15 mandated
+                and Gate 0 found missing. Covers mortgages, judgments, liens and
+                UCC filings; identifies instruments by recording identity rather
+                than object identity; allowlists permitted suppression reasons
+                and explicitly refuses chain-based ones. In HARD_VALIDATORS.
+                Fails closed when either pre-suppression set is absent.
+
+  test_seed.py  TITLEPIPE_SEED_ROOT makes the delivered-report root
+                configurable. It defaulted to /mnt/user-data, a path in the
+                sandbox the prototype was written in.
+
+Contains no client-derived party names, addresses or amounts.
+
 --- a/titlepipe/seed.py
 +++ b/titlepipe/seed.py
 @@ -172,10 +172,29 @@
  }
- 
- 
+
+
 -def _text(path: Path, kind, pages):
 -    if kind == "docx":
 +def _docx_text(path: Path) -> str:
@@ -69,77 +72,149 @@
           str(path), "-"], capture_output=True, text=True).stdout
 --- a/titlepipe/assemble.py
 +++ b/titlepipe/assemble.py
-@@ -429,6 +429,11 @@
+@@ -429,6 +429,16 @@
          exceptions=by(DocType.POWER_OF_ATTORNEY),
      )
      r._chain_reason = chain.reason
-+    # Every mortgage block considered, BEFORE `is_open` filtering. Without this
-+    # the report shows only survivors and v14 cannot tell a lien suppressed by a
-+    # verified release from one dropped by chain termination — which is the
-+    # single distinction R15 turns on.
++    # Everything R15 protects, BEFORE any filtering. Without these the report
++    # shows only survivors, and v14 cannot tell an instrument suppressed for a
++    # permitted reason from one dropped by chain termination — the single
++    # distinction R15 turns on.
++    #
++    # Both categories, because R15 is a LIEN-survival rule: judgments, tax
++    # liens and UCC filings are the canonical case, not mortgages.
 +    r._all_mortgage_blocks = blocks
++    r._all_lien_documents = (by(DocType.JUDGMENT) + by(DocType.LIEN)
++                             + by(DocType.UCC))
      for m in r.mortgages:
          m.doc.fields["non_person_name"] = derive_non_person_name(m.doc)
      if r.mortgages:
 --- a/titlepipe/validators.py
 +++ b/titlepipe/validators.py
-@@ -201,6 +201,53 @@
+@@ -201,6 +201,120 @@
      return Result("13_review_routing", not leaked, f"leaked: {leaked}")
- 
- 
-+def v14_liens_survive_chain_termination(report, all_mortgage_blocks=None) -> Result:
-+    """R15 — a lien survives an arm's-length sale.
+
+
++# R15 — the only reasons an encumbrance may leave the report.
++#
++# Every one is a positive finding about the instrument itself. None is a
++# statement about the chain, which is the whole point: chain termination sets
++# SEARCH DEPTH and never lien disposition.
++PERMITTED_SUPPRESSIONS = frozenset({
++    "verified_release",        # R15/R16 — reference-matched release
++    "satisfied",               # R13 — judgment status
++    "released",
++    "canceled",
++    "vacated",
++    "duplicate",
++    "personal_property_only",  # R20 — UCC collateral test
++    "re_recording_of",         # R14 — same instrument, recorded twice
++})
 +
-+    Chain termination sets SEARCH DEPTH. It never decides lien disposition. The
-+    only thing that may suppress a lien is a **verified release**: one whose
-+    reference matches the instrument it discharges.
++# Reasons that are themselves the defect. Named so a future author who reaches
++# for one gets a failing validator rather than a plausible-looking report.
++FORBIDDEN_SUPPRESSIONS = frozenset({
++    "chain_terminated",
++    "out_of_chain",
++    "search_depth",
++    "before_terminator",
++    "arms_length_sale",
++})
 +
-+    This is the assertion R15 mandated and the highest-risk regression in the
-+    system. The prototype's behaviour was audited and found correct — exactly
-+    one write to `released_by`, reachable only through a reference-matched
-+    release — but correct-by-inspection is not the same as guarded, and the
-+    audit was a point-in-time reading of code that Gate 6 is about to move.
 +
-+    The check: every block present before filtering and absent after it must
-+    carry a release. A block that vanished without one was dropped by depth,
-+    which is the defect.
++def instrument_key(doc) -> str:
++    """A stable identity for an instrument.
 +
-+    **Fails closed when it cannot see the pre-filter set.** Returning "not
-+    applicable" would make an unprovable report indistinguishable from a clean
-+    one, and this codebase already has a name for that failure — `unverifiable`
-+    looking like `confident`, the shape that produced the MERS phantom. For
-+    R15, silence is not a pass.
++    Deliberately not `id()`. Assembly may rebuild an equal object — a
++    re-record collapse does exactly that — and an identity comparison then
++    reports a lien as suppressed when it is present under a new object. That is
++    a false failure on the one rule that must not cry wolf.
 +    """
-+    blocks = all_mortgage_blocks
-+    if blocks is None:
-+        blocks = getattr(report, "_all_mortgage_blocks", None)
-+    if blocks is None:
++    rec = doc.recording
++    if rec.instrument_no.is_present:
++        return f"inst:{str(rec.instrument_no.value).strip().upper()}"
++    if rec.book_page.is_present:
++        return f"bp:{str(rec.book_page.value).strip().upper()}"
++    recorded = rec.recorded_date.value
++    caption = doc.caption.value if doc.caption.is_present else doc.doc_type
++    return f"fallback:{caption}|{recorded}"
++
++
++def _suppression_reason(item) -> str | None:
++    """Why this instrument left the report, as recorded by assembly."""
++    reason = getattr(item, "suppression_reason", None)
++    if reason:
++        return str(reason)
++    # A matched release is the mortgage path's way of saying the same thing.
++    if getattr(item, "released_by", None) is not None:
++        return "verified_release"
++    return None
++
++
++def v14_liens_survive_chain_termination(report, pre_suppression=None) -> Result:
++    """R15 — an encumbrance survives an arm's-length sale.
++
++    Chain termination sets SEARCH DEPTH. It never decides lien disposition. An
++    encumbrance may leave the report only for a reason that is a finding about
++    the instrument: a reference-matched release, a R13 status exclusion, the
++    R20 collateral test, a R14 re-record collapse.
++
++    Covers **every lien-bearing output**, not only mortgages. Judgments, tax
++    liens and UCC filings are the canonical R15 case — the rule was written
++    because a judgment against the current owner survives the sale that
++    preceded it — and an earlier version of this validator checked mortgages
++    alone, so removing an active judgment passed.
++
++    **Fails closed when it cannot see the pre-suppression sets.** Returning "not
++    applicable" would make an unprovable report indistinguishable from a clean
++    one, and this codebase already has a name for that failure: `unverifiable`
++    looking like `confident`, the shape that produced the MERS phantom.
++    """
++    sets = pre_suppression or {}
++    blocks = sets.get("mortgages", getattr(report, "_all_mortgage_blocks", None))
++    liens = sets.get("liens", getattr(report, "_all_lien_documents", None))
++    if blocks is None or liens is None:
++        missing = [n for n, v in (("mortgages", blocks), ("liens", liens)) if v is None]
 +        return Result(
 +            "14_liens_survive_termination", False,
-+            "pre-suppression mortgage set unavailable; R15 could not be checked")
++            f"pre-suppression set unavailable for {missing}; R15 could not be checked")
 +
-+    surviving = {id(m) for m in report.mortgages}
-+    suppressed = [m for m in blocks if id(m) not in surviving]
-+    unreleased = [m for m in suppressed if getattr(m, "released_by", None) is None]
++    problems: list[str] = []
++    surviving_mortgages = {instrument_key(m.doc) for m in report.mortgages}
++    surviving_liens = {instrument_key(d) for d in report.judgments_liens}
 +
-+    def _name(m):
-+        rec = m.doc.recording
-+        return (str(rec.instrument_no.value) if rec.instrument_no.is_present
-+                else str(rec.book_page.value) if rec.book_page.is_present else "?")
++    for item, doc, present in (
++        [(m, m.doc, instrument_key(m.doc) in surviving_mortgages) for m in blocks]
++        + [(d, d, instrument_key(d) in surviving_liens) for d in liens]
++    ):
++        reason = _suppression_reason(item)
++        key = instrument_key(doc)
++        if present:
++            # Declaring a forbidden reason is a defect even if the instrument
++            # happens to still be rendered — the next edit will honour it.
++            if reason in FORBIDDEN_SUPPRESSIONS:
++                problems.append(f"{key}: chain-based suppression reason {reason!r}")
++            continue
++        if reason is None:
++            problems.append(f"{key}: suppressed with no reason")
++        elif reason in FORBIDDEN_SUPPRESSIONS:
++            problems.append(f"{key}: suppressed by {reason!r} — termination is not a disposition")
++        elif reason not in PERMITTED_SUPPRESSIONS:
++            problems.append(f"{key}: suppressed by unrecognised reason {reason!r}")
 +
++    checked = len(blocks) + len(liens)
 +    return Result(
-+        "14_liens_survive_termination", not unreleased,
-+        (f"{len(suppressed)} suppressed, all released"
-+         if not unreleased
-+         else f"suppressed without a verified release: {[_name(m) for m in unreleased]}"))
++        "14_liens_survive_termination", not problems,
++        f"{checked} encumbrances checked, all dispositions permitted"
++        if not problems else "; ".join(problems))
 +
 +
  def v99_never_assert_land_plus_building(report) -> Result:
      """NOT a validator. A reminder that this assertion must not exist.
- 
-@@ -211,4 +258,4 @@
- 
- 
+
+@@ -211,4 +325,4 @@
+
+
  HARD_VALIDATORS = [v01_chains_flag, v06_mortgages_ordered, v07_release_resolved,
 -                   v13_review_routing]
 +                   v13_review_routing, v14_liens_survive_chain_termination]
@@ -150,7 +225,7 @@
 +import os
  from pathlib import Path
  from titlepipe.seed import build, parse_shape_a, ORDER_SUPPLIED, CORRECTIONS
- 
+
 -ROOT = Path("/mnt/user-data")
 +# The delivered client reports these tests parse are the most identifying
 +# artefacts in the system and are never in VCS. The default is the sandbox path
@@ -163,6 +238,6 @@
 +# are literals in seed.CORRECTIONS, asserted directly, and re-verifying them
 +# needs the real documents.
 +ROOT = Path(os.environ.get("TITLEPIPE_SEED_ROOT", "/mnt/user-data"))
- 
- 
+
+
  def test_order_supplied_fields_never_enter_the_seed():

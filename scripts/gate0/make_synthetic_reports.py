@@ -11,8 +11,10 @@ this machine.
 
 So three seed tests could not run, and would not run in CI either.
 
-This writes five synthetic reports in Shape A layout with invented parties,
-addresses and amounts. What the seed tests actually assert is that the
+This writes one synthetic report per source in Shape A layout, with invented
+parties, addresses and amounts. The *filenames and order identifiers* it must
+use are read from the prototype's `seed.SOURCES` at run time, because those are
+real client values and do not belong in this repository. What the seed tests actually assert is that the
 **parser** works and the **corrections** are applied — `parse_shape_a` finding
 `LABEL: value` pairs, `ORDER_SUPPLIED` fields being excluded, the seven known
 defects arriving tagged `ruled`. None of that depends on whose property it is.
@@ -36,14 +38,33 @@ import argparse
 import sys
 from pathlib import Path
 
-# The five sources `seed.SOURCES` expects, and the relative paths it looks for.
-REPORTS: list[tuple[str, str, str, str]] = [
-    ("4171608-1", "uploads/4171608-1_-_Search_Package.pdf", "pdf", "CLAYTON"),
-    ("4171476-1", "uploads/4171476-1_-_Search_Package.pdf", "pdf", "HOUSTON"),
-    ("3791211-01", "uploads/3791211-01_-_Search_Package__1_.pdf", "pdf", "GREENE"),
-    ("4114194-1", "uploads/4114194-1_-TYPING_REPORT.docx", "docx", "MECKLENBURG"),
-    ("3913323-01", "uploads/TYPING_REPORT.docx", "docx", "ANCHORAGE"),
-]
+COUNTIES = ("CLAYTON", "HOUSTON", "GREENE", "MECKLENBURG", "ANCHORAGE")
+
+
+def sources_from_prototype(prototype: Path) -> list[tuple[str, str, str]]:
+    """Read `seed.SOURCES` from the recovered prototype at run time.
+
+    The order identifiers and report filenames the seed expects are **real
+    client values** — order numbers and delivered-report filenames. They live
+    in the prototype, which is outside VCS, and hardcoding them here would have
+    copied client-derived data into the repository under a file claiming to be
+    synthetic.
+
+    Review caught exactly that. Reading them instead means this generator holds
+    none, and it cannot drift from the seed it feeds either.
+
+    Returns (order_id, relative_path, kind).
+    """
+    sys.path.insert(0, str(prototype))
+    try:
+        from titlepipe.seed import SOURCES
+    except ImportError as exc:  # pragma: no cover - depends on the invocation
+        raise SystemExit(
+            f"cannot import titlepipe.seed from {prototype}: {exc}. "
+            "Run through scripts/gate0/run_prototype_suite.py, which points "
+            "--prototype at the worktree."
+        ) from exc
+    return [(order_id, relative, kind) for order_id, relative, kind, _pages in SOURCES]
 
 
 def report_lines(order_no: str, county: str) -> list[str]:
@@ -146,10 +167,18 @@ def main() -> int:
         type=Path,
         help="the root `seed.build(root)` will be pointed at; files land under <root>/uploads/",
     )
+    parser.add_argument(
+        "--prototype",
+        type=Path,
+        required=True,
+        help="the recovered prototype, to read seed.SOURCES from",
+    )
     args = parser.parse_args()
 
+    sources = sources_from_prototype(args.prototype)
     written: list[tuple[Path, int]] = []
-    for order_no, relative, kind, county in REPORTS:
+    for index, (order_no, relative, kind) in enumerate(sources):
+        county = COUNTIES[index % len(COUNTIES)]
         path = args.root / relative
         path.parent.mkdir(parents=True, exist_ok=True)
         lines = report_lines(order_no, county)
