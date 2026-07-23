@@ -1,7 +1,7 @@
 ---
 title: Gate 1 — Python Backend Foundation
 date: 2026-07-22
-status: partial
+status: local-foundation-complete-official-gate-partial
 owner: rahuldr07
 tags:
   - titlepipe
@@ -15,12 +15,20 @@ aliases:
 
 # Gate 1 — Python backend foundation
 
-> [!warning] Gate 1 is **PARTIAL**, not complete
-> Every source, tooling, lock, test and build criterion passes. **Docker is not
-> installed on this machine and WSL2 is not installed**, so the container build,
-> run, non-root and health-check evidence could not be produced. That is the
-> only outstanding work, and it is listed as blocked rather than assumed. No
-> container criterion is claimed.
+> [!warning] **Gate 1: LOCAL FOUNDATION COMPLETE — OFFICIAL GATE PARTIAL**
+>
+> Every source, tooling, lock, test and build criterion passes, and the
+> foundation is complete enough to develop Gate 2 on. That is the working
+> status: **local-development complete**.
+>
+> The **official** gate stays partial. **Docker and WSL2 are not installed**, so
+> the container build, run, non-root and health-check evidence does not exist,
+> and nothing has been pushed so remote CI has never run. Both are deferred
+> until before staging, deliberately — neither blocks Gate 2, which needs
+> Testcontainers and therefore needs the same Docker install.
+>
+> No container criterion is claimed. A written CI step is not evidence that it
+> passed.
 
 ## 1. What exists
 
@@ -559,10 +567,12 @@ Enable BitLocker before any real client NPI is stored on this machine.
 | All service shells build and run **in containers** | **BLOCKED** | §9 — Docker absent |
 | CI green without application features | **PENDING REVIEW** | not pushed; local equivalents pass |
 
-> [!warning] **Gate 1: PARTIAL.**
-> Source, tooling, lock, test and build criteria all pass. The container
-> criterion is blocked on Docker and is not claimed. Remote CI has not run
-> because nothing has been pushed pending review.
+> [!warning] **Gate 1: LOCAL FOUNDATION COMPLETE — OFFICIAL GATE PARTIAL.**
+> Source, tooling, lock, test and build criteria all pass; the foundation is
+> ready to build Gate 2 on. The container criterion and remote CI are
+> **deferred until before staging** and are not claimed. Neither blocks Gate 2,
+> which needs the same Docker install for Testcontainers — so the install
+> unblocks both at once.
 
 ## 10a. What the review changed
 

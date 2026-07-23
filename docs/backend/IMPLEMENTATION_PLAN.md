@@ -1488,10 +1488,10 @@ Do this next, in order:
 
 ## 32. Implementation checklist index
 
-- [~] Gate 0: prototype/test recovery — **PORT** verdict settled and archive frozen/hash-verified, but the gate is **PARTIAL**: 145/155 green (10 need client source) and `v14` absent. `docs/backend/GATE_0_RECOVERY.md` §11
-- [~] Gate 0: R15 audit and v14 — R15 audit **PASS** (single release-verified suppression path, termination-independent); **`v14` does not exist** and is the first Gate 6 domain test
-- [~] Gate 1: Python/service foundation — 6 projects, 229 tests, Pyright strict clean; **PARTIAL** pending container evidence. `docs/backend/GATE_1_FOUNDATION.md`
-- [~] Gate 1: CI/security/SBOM — workflow written with real steps, hygiene job enforcing pre-commit and the client-data guard, local equivalents green; **container build/run/scan blocked on Docker**, remote CI unrun pending review
+- [x] Gate 0: prototype/test recovery — **COMPLETE**. **PORT**; archive frozen and hash-verified; **163/163 green** via synthetic fixtures for the 10 client-dependent tests. `docs/backend/GATE_0_RECOVERY.md` §11a
+- [x] Gate 0: R15 audit and v14 — R15 audit **PASS** (single release-verified suppression path, termination-independent); **`v14` written**, in `HARD_VALIDATORS`, fails closed, mutation-tested
+- [~] Gate 1: Python/service foundation — **LOCAL FOUNDATION COMPLETE**; 6 projects, 229 tests, Pyright strict clean. Official gate **PARTIAL** pending container evidence. `docs/backend/GATE_1_FOUNDATION.md`
+- [~] Gate 1: CI/security/SBOM — workflow written with real steps, hygiene job enforcing pre-commit and the client-data guard, local equivalents green; **container build/run/scan and remote CI deferred until before staging** (both blocked on the Docker install, which Gate 2 also needs)
 - [ ] Gate 2: schema, roles, RLS and pool tests
 - [ ] Gate 3: first Pydantic/OpenAPI/client slice
 - [ ] Gate 4: WorkOS sessions

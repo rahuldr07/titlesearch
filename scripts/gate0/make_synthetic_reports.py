@@ -1,0 +1,172 @@
+"""Generate synthetic delivered reports for the Gate 0 seed tests.
+
+## Why this exists
+
+`titlepipe/seed.py` builds the golden seed by parsing five **delivered client
+reports** — three PDFs and two DOCX — from a root that was hard-coded to
+`/mnt/user-data`, a path in the sandbox the prototype was written in. Those are
+finished work products for real properties: the most client-identifying
+artefacts in the whole system. They will never be in VCS, and they are not on
+this machine.
+
+So three seed tests could not run, and would not run in CI either.
+
+This writes five synthetic reports in Shape A layout with invented parties,
+addresses and amounts. What the seed tests actually assert is that the
+**parser** works and the **corrections** are applied — `parse_shape_a` finding
+`LABEL: value` pairs, `ORDER_SUPPLIED` fields being excluded, the seven known
+defects arriving tagged `ruled`. None of that depends on whose property it is.
+
+## What this fixture cannot stand in for
+
+The real reports are the evidence for the *content* of the seven defects — that
+Anchorage's card really says 843,000, that Greene really has four mortgages and
+not five. Those values live in `seed.CORRECTIONS` as literals and are asserted
+directly, so the tests still check them; but a synthetic report can never
+re-derive them. If the corrections are ever re-verified, that must be done
+against the real documents.
+
+The reports are deliberately close to Shape A in structure and deliberately
+unlike it in content.
+"""
+
+from __future__ import annotations
+
+import argparse
+import sys
+from pathlib import Path
+
+# The five sources `seed.SOURCES` expects, and the relative paths it looks for.
+REPORTS: list[tuple[str, str, str, str]] = [
+    ("4171608-1", "uploads/4171608-1_-_Search_Package.pdf", "pdf", "CLAYTON"),
+    ("4171476-1", "uploads/4171476-1_-_Search_Package.pdf", "pdf", "HOUSTON"),
+    ("3791211-01", "uploads/3791211-01_-_Search_Package__1_.pdf", "pdf", "GREENE"),
+    ("4114194-1", "uploads/4114194-1_-TYPING_REPORT.docx", "docx", "MECKLENBURG"),
+    ("3913323-01", "uploads/TYPING_REPORT.docx", "docx", "ANCHORAGE"),
+]
+
+
+def report_lines(order_no: str, county: str) -> list[str]:
+    """One synthetic Shape A report.
+
+    Two mortgage blocks, because `parse_shape_a` indexes mortgages off each
+    `MORTGAGOR:` line and a single block would never exercise that.
+
+    `TRUSTEE: Not Available` on the second block is deliberate: `_clean` drops
+    it, which is what a Georgia security deed legitimately produces, and the
+    parser must omit rather than guess.
+    """
+    return [
+        "ABSTRACTOR CALL BACK SHEET",
+        f"ORDER #: {order_no}    VENDOR: 66805",
+        "SEARCH DATE: 07/15/2026    EFFECTIVE DATE: 07/08/2026",
+        "",
+        "CURRENT VESTING DEED",
+        "DEED TYPE: LIMITED WARRANTY DEED",
+        "GRANTOR: ARBORFIELD HOLDINGS LLC",
+        "GRANTEE: DANA REYES AND MORGAN REYES",
+        "CONS: $255,000.00",
+        "",
+        "LOCATION: 118 SYNTHETIC WAY",
+        "CITY/TWP/BORO: TESTVILLE",
+        f"COUNTY/PARISH: {county}",
+        "ZIP CODE: 30296",
+        "",
+        "ASSESSMENT",
+        "TAX ID#: 05-1234-567",
+        "LAND: $22,000",
+        "BUILDING: $198,000",
+        "TOTAL: $220,000",
+        "",
+        "MORTGAGE/DEED OF TRUST",
+        "MORTGAGOR: DANA REYES",
+        "ENTITY TYPE: INDIVIDUAL",
+        "NON-PERSON NAME: REYES",
+        "MORTGAGEE: NORTHGATE SAVINGS BANK",
+        "TRUSTEE: FIRST SYNTHETIC TITLE COMPANY",
+        "AMOUNT: $204,000.00",
+        "MIN: 1000314-0000237903-3",
+        "",
+        "MORTGAGOR: MORGAN REYES",
+        "ENTITY TYPE: INDIVIDUAL",
+        "NON-PERSON NAME: REYES",
+        "MORTGAGEE: MERIDIAN LOAN SERVICING LLC",
+        "TRUSTEE: Not Available",
+        "AMOUNT: $38,500.00",
+        "MIN: 1000314-0000237904-1",
+        "",
+        "#OF MTGS: 02",
+        "#OF JUDGMENTS: 01",
+        "#OF TAX LIENS: 00",
+        "",
+        "This is a synthetic report generated for automated testing.",
+        "It contains no client data and no personal information.",
+    ]
+
+
+# --- PDF ---------------------------------------------------------------------
+#
+# Reuses the hand-written writer from the package generator: no new dependency,
+# deterministic bytes.
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from make_synthetic_package import build_pdf  # noqa: E402  # isort: skip
+
+
+# --- DOCX --------------------------------------------------------------------
+
+
+def write_docx(path: Path, lines: list[str]) -> None:
+    """One paragraph per line.
+
+    Both readers — pandoc and the python-docx fallback — turn a paragraph into
+    a line, and `parse_shape_a` terminates a value at end-of-line, so the same
+    text parses identically either way.
+    """
+    try:
+        from docx import Document
+    except ImportError:  # pragma: no cover - depends on the invoking environment
+        print(
+            "python-docx is required to write the .docx fixtures:\n"
+            "  uv run --with python-docx python scripts/gate0/make_synthetic_reports.py ...",
+            file=sys.stderr,
+        )
+        raise
+
+    document = Document()
+    for line in lines:
+        document.add_paragraph(line)
+    document.save(str(path))
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "root",
+        type=Path,
+        help="the root `seed.build(root)` will be pointed at; files land under <root>/uploads/",
+    )
+    args = parser.parse_args()
+
+    written: list[tuple[Path, int]] = []
+    for order_no, relative, kind, county in REPORTS:
+        path = args.root / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        lines = report_lines(order_no, county)
+        if kind == "pdf":
+            # Split across two pages: `seed.SOURCES` reads page ranges, so a
+            # single-page fixture would not exercise that.
+            half = len(lines) // 2
+            path.write_bytes(build_pdf([lines[:half], lines[half:]]))
+        else:
+            write_docx(path, lines)
+        written.append((path, path.stat().st_size))
+
+    for path, size in written:
+        print(f"wrote {path} ({size:,} bytes)")
+
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
