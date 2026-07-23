@@ -16,6 +16,7 @@ from titlepipe_domain import Environment
 from titlepipe_test_support import FrozenClock, SequenceIdFactory
 
 DEPLOYED_SEAL_PASSWORD = "a-real-32-character-seal-secret!"
+DEPLOYED_BASE_URL = "https://capture.titlepipe.example"  # must match allowed_hosts
 
 
 @pytest.fixture
@@ -40,6 +41,7 @@ def production_settings() -> BlindApiSettings:
         host="0.0.0.0",
         docs_enabled=False,
         cors_allowed_origins=("https://capture.titlepipe.example",),
+        allowed_hosts=("capture.titlepipe.example",),
         cookie_seal_password=SecretStr(DEPLOYED_SEAL_PASSWORD),
     )
 

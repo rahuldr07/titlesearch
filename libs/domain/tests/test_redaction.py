@@ -184,3 +184,43 @@ def test_a_local_traceback_keeps_its_message_but_still_masks_credentials() -> No
     safe = sanitise_exception(traceback_text, keep_messages=True)
     assert "hunter2" not in safe
     assert "RuntimeError" in safe
+
+
+# --- allowlist mode (deployed environments) ---------------------------------
+#
+# Review demonstrated the blocklist alone is bypassable: `field_value`, `party`,
+# `result` and `reason` all carried a party name to stdout, because none of
+# those words is sensitive-looking and none was in the list.
+
+
+@pytest.mark.parametrize("key", ["field_value", "party", "result", "reason", "note", "who"])
+def test_an_unnamed_field_is_dropped_when_deployed(key: str) -> None:
+    assert redact_mapping({key: "EXAMPLE PERSON"})[key] == "EXAMPLE PERSON"
+    assert redact_mapping({key: "EXAMPLE PERSON"}, allowlist_only=True)[key] == REDACTED
+
+
+@pytest.mark.parametrize(
+    "key",
+    ["event", "level", "timestamp", "request_id", "service_name", "status_code", "error_code"],
+)
+def test_named_diagnostics_survive_when_deployed(key: str) -> None:
+    assert redact_mapping({key: "value"}, allowlist_only=True)[key] == "value"
+
+
+def test_a_measurement_suffix_survives_only_with_a_non_string_value() -> None:
+    """`page_count=181` is a diagnostic. `page_count="TIMOTHY BUCHANAN"` is a
+    value smuggled through a numeric-looking name."""
+    assert redact_mapping({"page_count": 181}, allowlist_only=True)["page_count"] == 181
+    assert redact_mapping({"duration_ms": 12.5}, allowlist_only=True)["duration_ms"] == 12.5
+    assert redact_mapping({"page_count": "TIMOTHY"}, allowlist_only=True)["page_count"] == REDACTED
+
+
+def test_a_blocked_key_stays_blocked_even_if_allowlisted_by_suffix() -> None:
+    """The blocklist still narrows: allowlisting is necessary, not sufficient."""
+    assert redact_mapping({"grantor_count": "X"}, allowlist_only=True)["grantor_count"] == REDACTED
+
+
+def test_allowlist_mode_reaches_into_nested_structures() -> None:
+    out = redact_mapping({"checks": {"startup_complete": True, "party": "X"}}, allowlist_only=True)
+    assert out["checks"]["startup_complete"] is True
+    assert out["checks"]["party"] == REDACTED

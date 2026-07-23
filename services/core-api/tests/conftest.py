@@ -21,6 +21,7 @@ from titlepipe_domain import Environment
 from titlepipe_test_support import FrozenClock, SequenceIdFactory
 
 DEPLOYED_SEAL_PASSWORD = "a-real-32-character-seal-secret!"
+DEPLOYED_BASE_URL = "https://app.titlepipe.example"  # must match allowed_hosts
 
 
 @pytest.fixture
@@ -50,6 +51,7 @@ def production_settings() -> CoreApiSettings:
         mock_auth_enabled=False,
         redaction_enabled=True,
         cors_allowed_origins=("https://app.titlepipe.example",),
+        allowed_hosts=("app.titlepipe.example",),
         cookie_seal_password=SecretStr(DEPLOYED_SEAL_PASSWORD),
     )
 

@@ -29,6 +29,7 @@ upload directory. So `packages/` is exempt from the **directory** rule only.
 
 from __future__ import annotations
 
+import hashlib
 import sys
 from pathlib import Path
 
@@ -36,16 +37,32 @@ from pathlib import Path
 # everywhere, including inside exempt directories.
 FORBIDDEN_SUFFIXES = frozenset(
     {
+        # documents
         ".pdf",
         ".docx",
         ".doc",
+        ".rtf",
+        ".tif",
+        ".tiff",
+        # databases
         ".seed",
         ".sqlite",
         ".sqlite3",
         ".db",
-        ".tif",
-        ".tiff",
         ".mdb",
+        # archives — an archive is a container for all of the above, and the
+        # 644 MB incident was exactly a directory of county packages. Review
+        # showed `packages/county-client.zip` sailing through while the same
+        # PDFs loose on disk were refused.
+        ".zip",
+        ".7z",
+        ".rar",
+        ".tar",
+        ".gz",
+        ".tgz",
+        ".bz2",
+        ".xz",
+        ".zst",
     }
 )
 
@@ -58,10 +75,16 @@ DIRECTORY_RULE_EXEMPT_PREFIXES = ("packages/",)
 # Not source, and not ours to police.
 SKIPPED_PREFIXES = ("node_modules/", ".git/")
 
-# Individual paths permitted despite matching. Each needs a stated reason.
-ALLOWLIST: dict[str, str] = {
+# Individual paths permitted despite matching.
+#
+# Pinned by SHA-256, not by path. An allowlisted *path* is a hole: the file at
+# it can be replaced with a county package and the guard would wave it through
+# on the strength of a decision made about different bytes. The hash means an
+# approved archive stays approved and a swapped one is refused.
+ALLOWLIST: dict[str, tuple[str, str]] = {
     "docs/archive/Title report review tool.zip": (
-        "design screens only; verified to contain no client documents"
+        "baf71d954f1a55a1594a008e39b393f4479c9dcb5cb2c654c4d33f01854c6bda",
+        "design screens only; inspected and verified to contain no client documents",
     ),
 }
 
@@ -71,6 +94,16 @@ def violation_for(path: Path) -> str | None:
     relative = path.as_posix()
 
     if relative in ALLOWLIST:
+        expected, reason = ALLOWLIST[relative]
+        if not path.exists():
+            return None  # deleted or renamed; nothing to admit
+        actual = hashlib.sha256(path.read_bytes()).hexdigest()
+        if actual != expected:
+            return (
+                f"allowlisted as {reason!r}, but the content has changed "
+                f"(sha256 {actual[:16]}… != {expected[:16]}…). Re-inspect it and "
+                "update the hash deliberately."
+            )
         return None
     if relative.startswith(SKIPPED_PREFIXES):
         return None

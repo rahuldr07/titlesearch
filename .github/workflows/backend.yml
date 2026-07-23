@@ -51,8 +51,9 @@ env:
 
 # Supply-chain pinning status, stated plainly rather than implied:
 #
-#   pinned by exact version — uv, Python, Semgrep, pip-audit, every Python
-#                             dependency (via uv.lock), the uv container image
+#   pinned by exact version — uv, Python, Semgrep, every Python dependency
+#                             (via uv.lock), the uv container image
+#   pinned by minor range   — pip-audit (2.*)
 #   pinned by tag only      — GitHub Actions (@v4/@v5), trivy-action (@0.28.0),
 #                             python:3.13-slim-bookworm base images
 #
@@ -204,6 +205,9 @@ jobs:
               done
               curl -fsS http://127.0.0.1:8000/health | tee /dev/stderr | grep -q '"status":"ok"'
               curl -fsS http://127.0.0.1:8000/ready  | tee /dev/stderr | grep -q '"ready":true'
+              # Production must not serve docs, and must refuse a forged Host.
+              test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8000/docs)" = 404
+              test "$(curl -s -o /dev/null -w '%{http_code}'                 -H 'Host: evil.example' http://127.0.0.1:8000/health)" = 400
               docker rm -f probe
               ;;
             blind-svc)
@@ -217,10 +221,10 @@ jobs:
               docker rm -f probe
               ;;
             extraction-svc)
-              docker run --rm "${image}" titlepipe-extraction check
+              docker run --rm -e TITLEPIPE_EXTRACTION_ENVIRONMENT=production \n                "${image}" titlepipe-extraction check
               ;;
             render-svc)
-              docker run --rm "${image}" titlepipe-render check
+              docker run --rm -e TITLEPIPE_RENDER_ENVIRONMENT=production \n                "${image}" titlepipe-render check
               ;;
           esac
 

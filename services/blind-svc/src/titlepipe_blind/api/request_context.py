@@ -23,7 +23,7 @@ from __future__ import annotations
 import re
 from collections.abc import Awaitable, Callable
 from contextvars import ContextVar
-from typing import Final, cast
+from typing import Any, Final, cast
 
 import structlog
 from starlette.requests import Request
@@ -93,9 +93,18 @@ class RequestContextMiddleware:
     middleware exists to avoid.
     """
 
-    def __init__(self, app: ASGIApp, *, id_factory: IdFactory | None = None) -> None:
+    def __init__(
+        self,
+        app: ASGIApp,
+        *,
+        id_factory: IdFactory | None = None,
+        on_unhandled: Callable[[str, BaseException], Response] | None = None,
+    ) -> None:
         self.app = app
         self._id_factory: IdFactory = id_factory or Uuid4IdFactory()
+        # Builds the 500 envelope. Injected rather than imported so this module
+        # stays free of the error-mapping layer, which imports from here.
+        self._on_unhandled = on_unhandled
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http":
@@ -123,9 +132,16 @@ class RequestContextMiddleware:
         async def send_with_request_id(message: Message) -> None:
             if message["type"] == "http.response.start":
                 raw: object = message.get("headers")
-                headers: list[tuple[bytes, bytes]] = (
+                existing_headers: list[tuple[bytes, bytes]] = (
                     list(cast("list[tuple[bytes, bytes]]", raw)) if isinstance(raw, list) else []
                 )
+                # Replace, never append: this wrapper is the single writer of
+                # the header, and appending emitted it twice when a downstream
+                # response had already set it.
+                name = REQUEST_ID_HEADER.lower().encode("latin-1")
+                headers: list[tuple[bytes, bytes]] = [
+                    (key, value) for key, value in existing_headers if key.lower() != name
+                ]
                 headers.append(
                     (REQUEST_ID_HEADER.lower().encode("latin-1"), request_id.encode("latin-1"))
                 )
@@ -134,9 +150,33 @@ class RequestContextMiddleware:
 
         try:
             await self.app(scope, receive, send_with_request_id)
+        except Exception as exc:
+            # Caught HERE, not left to Starlette's ServerErrorMiddleware.
+            #
+            # That middleware is the outermost layer — outside this one and
+            # outside CORS — so a response it produces carries neither the
+            # correlation header appended above nor any CORS header, and it runs
+            # after the `finally` below has already unbound the logging context.
+            # Review measured all three missing on a production 500: the body had
+            # an id, the header did not, and the error log was uncorrelated.
+            #
+            # Handling it inside this frame fixes all three at once: the context
+            # is still bound, the send wrapper still appends the header, and CORS
+            # is still upstream of us.
+            if self._on_unhandled is None:
+                raise
+            _log().exception("unhandled_exception")
+            response = self._on_unhandled(request_id, exc)
+            await response(scope, receive, send_with_request_id)
         finally:
             structlog.contextvars.unbind_contextvars("request_id")
             _request_id.reset(token)
+
+
+def _log() -> Any:
+    """Acquired at call time; a module-level proxy would pin the first
+    configuration structlog ever saw."""
+    return structlog.get_logger(__name__)
 
 
 RequestHandler = Callable[[Request], Awaitable[Response]]

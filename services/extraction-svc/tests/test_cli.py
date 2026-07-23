@@ -122,6 +122,7 @@ def test_a_per_order_ceiling_above_the_daily_one_is_refused() -> None:
     """It would never bind, which is a bound that only looks like one."""
     with pytest.raises(ValidationError, match="would never bind"):
         ExtractionSettings(
+            environment=Environment.DEVELOPMENT,
             daily_spend_ceiling_usd=Decimal("5.00"),
             per_order_spend_ceiling_usd=Decimal("10.00"),
         )
@@ -129,7 +130,7 @@ def test_a_per_order_ceiling_above_the_daily_one_is_refused() -> None:
 
 def test_spend_ceilings_are_decimal_not_float() -> None:
     """Money is never binary floating point, including a ceiling."""
-    settings = ExtractionSettings()
+    settings = ExtractionSettings(environment=Environment.DEVELOPMENT)
     assert isinstance(settings.daily_spend_ceiling_usd, Decimal)
     assert isinstance(settings.per_order_spend_ceiling_usd, Decimal)
 
@@ -152,7 +153,10 @@ def test_the_worker_logs_json_when_deployed(
 
 
 def test_renderer_follows_the_environment_when_unset() -> None:
-    assert ExtractionSettings().effective_log_renderer is LogRenderer.CONSOLE
+    assert (
+        ExtractionSettings(environment=Environment.DEVELOPMENT).effective_log_renderer
+        is LogRenderer.CONSOLE
+    )
     assert (
         ExtractionSettings(environment=Environment.PRODUCTION).effective_log_renderer
         is LogRenderer.JSON

@@ -35,6 +35,10 @@ ENV PATH="/app/.venv/bin:$PATH"     PYTHONUNBUFFERED=1     PYTHONDONTWRITEBYTECO
 WORKDIR /app
 COPY --from=builder --chown=titlepipe:titlepipe /build/services/render-svc/.venv /app/.venv
 
+# No ENV default for the deployment environment. The settings model
+# requires it, so a deployment that forgets to set it fails at startup
+# rather than booting this publicly-bound container in development mode
+# with public docs and the placeholder seal password.
 USER titlepipe
 
 # Configuration validity is the only thing this worker can truthfully assert

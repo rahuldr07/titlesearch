@@ -172,6 +172,6 @@ def test_docs_are_absent_when_disabled(
     production_settings: CoreApiSettings, frozen_clock: FrozenClock
 ) -> None:
     app = create_app(production_settings, clock=frozen_clock)
-    with TestClient(app) as client:
+    with TestClient(app, base_url="https://app.titlepipe.example") as client:
         assert client.get("/openapi.json").status_code == 404
         assert client.get("/docs").status_code == 404

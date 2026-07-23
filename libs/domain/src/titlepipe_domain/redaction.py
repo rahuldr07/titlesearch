@@ -135,6 +135,76 @@ SAFE_KEY_EXCEPTIONS: Final[frozenset[str]] = frozenset(
     }
 )
 
+# --------------------------------------------------------------- the allowlist
+#
+# Everything above is a *blocklist*: it names what must not be logged. A
+# blocklist is the wrong default for a deployed environment, because it is only
+# ever as good as the last field someone thought of. Review demonstrated the
+# gap — `field_value`, `party`, `result` and `reason` all carried a party name
+# straight to stdout, because none of those words is in the list above and none
+# of them looks alarming.
+#
+# So in a deployed environment the rule inverts: **a field is dropped unless it
+# is named here.** New code that wants a field in production logs has to add it
+# deliberately, which is a review conversation rather than a silent leak.
+#
+# Development keeps the blocklist, because a developer debugging their own
+# synthetic data needs to see their own fields, and there is no real NPI there.
+
+SAFE_DIAGNOSTIC_KEYS: Final[frozenset[str]] = frozenset(
+    {
+        # structlog's own
+        "event",
+        "level",
+        "timestamp",
+        "logger",
+        "logger_name",
+        "exception",  # sanitised separately by sanitise_exception
+        # correlation and identity of the process, never of a person
+        "request_id",
+        "correlation_id",
+        "service_name",
+        "environment",
+        # HTTP shape — the templated route, never a resolved path
+        "method",
+        "route",
+        "status_code",
+        "status_class",
+        # outcome
+        "error_code",
+        "error_name",
+        "exception_name",
+        "outcome",
+        "ready",
+        "startup_complete",
+        # work identity, not work content
+        "job_name",
+        "queue_name",
+        "attempt",
+        "renderer",
+        # configuration echoed at startup; all bounded, none client-derived
+        "max_concurrent_jobs",
+        "max_concurrent_provider_calls",
+        "gotenberg_timeout_seconds",
+        "invalid_fields",
+        "checks",
+        "detail",
+    }
+)
+
+# Suffixes that mark a *measurement*. Allowed only when the value is not a
+# string: `page_count=181` is a diagnostic, `page_count="TIMOTHY BUCHANAN"` is
+# someone smuggling a value through a numeric-looking name.
+SAFE_NUMERIC_SUFFIXES: Final[tuple[str, ...]] = (
+    "_count",
+    "_ms",
+    "_seconds",
+    "_bytes",
+    "_total",
+    "_index",
+    "_attempt",
+)
+
 # Query parameters that make a URL a bearer credential.
 _SIGNING_PARAMS: Final[frozenset[str]] = frozenset(
     {
@@ -168,12 +238,35 @@ _KEY_VALUE_SECRET_RE: Final = re.compile(
 )
 
 
+def normalise_key(key: str) -> str:
+    return key.strip().lower().lstrip("_")
+
+
 def is_sensitive_key(key: str, *, extra_parts: frozenset[str] = frozenset()) -> bool:
-    """Whether a log field name marks its value as unloggable."""
-    normalised = key.strip().lower().lstrip("_")
+    """Whether a log field name marks its value as unloggable.
+
+    The blocklist. Used on its own in development; in a deployed environment
+    `is_allowed_key` decides instead and this only narrows further.
+    """
+    normalised = normalise_key(key)
     if normalised in SAFE_KEY_EXCEPTIONS:
         return False
     return any(part in normalised for part in SENSITIVE_KEY_PARTS | extra_parts)
+
+
+def is_allowed_key(key: str, value: Any) -> bool:
+    """Whether a field may appear in a **deployed** environment's logs.
+
+    The allowlist. A field survives only by being named in
+    `SAFE_DIAGNOSTIC_KEYS`, or by carrying a measurement suffix with a
+    non-string value — because `page_count=181` is a diagnostic and
+    `page_count="TIMOTHY BUCHANAN"` is a value smuggled through a
+    numeric-looking name.
+    """
+    normalised = normalise_key(key)
+    if normalised in SAFE_DIAGNOSTIC_KEYS:
+        return True
+    return normalised.endswith(SAFE_NUMERIC_SUFFIXES) and not isinstance(value, str)
 
 
 def scrub_signed_url(value: str) -> str:
@@ -212,8 +305,14 @@ def scrub_text(value: str) -> str:
     return scrub_credentials(scrub_signed_url(value))
 
 
-def redact_value(value: Any, *, depth: int = 0, extra_parts: frozenset[str] = frozenset()) -> Any:
-    """Recursively scrub a value kept because its key is safe.
+def redact_value(
+    value: Any,
+    *,
+    depth: int = 0,
+    extra_parts: frozenset[str] = frozenset(),
+    allowlist_only: bool = False,
+) -> Any:
+    """Recursively scrub a value kept because its key is permitted.
 
     Depth is bounded: a cyclic or pathologically nested structure must not turn
     a log call into a hang.
@@ -224,12 +323,18 @@ def redact_value(value: Any, *, depth: int = 0, extra_parts: frozenset[str] = fr
         return scrub_text(value)
     if isinstance(value, dict):
         return redact_mapping(
-            cast("dict[str, Any]", value), depth=depth + 1, extra_parts=extra_parts
+            cast("dict[str, Any]", value),
+            depth=depth + 1,
+            extra_parts=extra_parts,
+            allowlist_only=allowlist_only,
         )
     if isinstance(value, (list, tuple, set, frozenset)):
         items = cast("Iterable[Any]", value)
         scrubbed: list[Any] = [
-            redact_value(item, depth=depth + 1, extra_parts=extra_parts) for item in items
+            redact_value(
+                item, depth=depth + 1, extra_parts=extra_parts, allowlist_only=allowlist_only
+            )
+            for item in items
         ]
         # A tuple stays a tuple so a caller comparing shapes is not surprised;
         # sets become lists because a scrubbed element may not be hashable.
@@ -238,17 +343,35 @@ def redact_value(value: Any, *, depth: int = 0, extra_parts: frozenset[str] = fr
 
 
 def redact_mapping(
-    mapping: dict[str, Any], *, depth: int = 0, extra_parts: frozenset[str] = frozenset()
+    mapping: dict[str, Any],
+    *,
+    depth: int = 0,
+    extra_parts: frozenset[str] = frozenset(),
+    allowlist_only: bool = False,
 ) -> dict[str, Any]:
-    """Apply every rule across one mapping."""
+    """Apply every rule across one mapping.
+
+    `allowlist_only` inverts the default: a field is dropped unless it is named
+    in `SAFE_DIAGNOSTIC_KEYS`. Deployed environments run this way, because a
+    blocklist is only as good as the last field somebody thought of.
+    """
     if depth >= MAX_REDACTION_DEPTH:
         return {"truncated": REDACTED}
     result: dict[str, Any] = {}
     for key, value in mapping.items():
-        if is_sensitive_key(str(key), extra_parts=extra_parts):
+        if allowlist_only:
+            permitted = is_allowed_key(str(key), value) and not is_sensitive_key(
+                str(key), extra_parts=extra_parts
+            )
+        else:
+            permitted = not is_sensitive_key(str(key), extra_parts=extra_parts)
+
+        if not permitted:
             result[key] = REDACTED
         else:
-            result[key] = redact_value(value, depth=depth, extra_parts=extra_parts)
+            result[key] = redact_value(
+                value, depth=depth, extra_parts=extra_parts, allowlist_only=allowlist_only
+            )
     return result
 
 

@@ -32,7 +32,11 @@ class ExtractionSettings(BaseSettings):
         frozen=True,
     )
 
-    environment: Environment = Environment.DEVELOPMENT
+    # No default. A forgotten variable must not silently mean "development":
+    # the container binds 0.0.0.0, so failing open would publish the API docs,
+    # the placeholder seal password and detailed exception bodies. Requiring it
+    # turns that into a startup error, which is the cheap failure.
+    environment: Environment
     service_name: ServiceName = ServiceName.EXTRACTION_WORKER
 
     debug: bool = False
@@ -57,6 +61,17 @@ class ExtractionSettings(BaseSettings):
         if self.log_renderer is not None:
             return self.log_renderer
         return LogRenderer.JSON if self.environment.is_deployed else LogRenderer.CONSOLE
+
+    @classmethod
+    def from_environment(cls) -> ExtractionSettings:
+        """Build from the process environment.
+
+        `environment` has no default, so a type checker sees a required
+        argument missing here. pydantic-settings fills it from the environment
+        at runtime, and if it is absent that is exactly the startup failure the
+        missing default exists to cause.
+        """
+        return cls()  # pyright: ignore[reportCallIssue]
 
     @model_validator(mode="after")
     def _per_order_ceiling_fits_inside_the_daily_one(self) -> Self:

@@ -12,8 +12,9 @@ from __future__ import annotations
 
 from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 
-from titlepipe_core.api.errors import register_error_handlers
+from titlepipe_core.api.errors import build_unhandled_response, register_error_handlers
 from titlepipe_core.api.request_context import RequestContextMiddleware
 from titlepipe_core.api.routers import health
 from titlepipe_core.lifespan import build_lifespan, build_resources
@@ -38,7 +39,7 @@ def create_app(
     Settings are validated before anything else runs, so an unsafe deployed
     configuration fails here rather than after the port is bound.
     """
-    settings = settings or CoreApiSettings()
+    settings = settings or CoreApiSettings.from_environment()
 
     configure_logging(
         level=settings.log_level,
@@ -67,7 +68,11 @@ def create_app(
     # rejected preflight never reaches the request-context machinery; the
     # request-context middleware then wraps everything below it, which is what
     # guarantees an error response still carries its correlation id.
-    app.add_middleware(RequestContextMiddleware, id_factory=resources.id_factory)
+    app.add_middleware(
+        RequestContextMiddleware,
+        id_factory=resources.id_factory,
+        on_unhandled=build_unhandled_response(settings.environment),
+    )
     if settings.cors_allowed_origins:
         app.add_middleware(
             CORSMiddleware,
@@ -76,6 +81,12 @@ def create_app(
             allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
             allow_headers=["Content-Type", "X-Request-ID"],
         )
+
+    if settings.allowed_hosts:
+        # Added last, so it runs outermost: a forged Host header is
+        # rejected before any other layer inspects the request. Guards
+        # cache poisoning and password-reset link forgery.
+        app.add_middleware(TrustedHostMiddleware, allowed_hosts=list(settings.allowed_hosts))
 
     register_error_handlers(app, environment=settings.environment)
     app.include_router(health.router)

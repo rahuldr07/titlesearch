@@ -306,6 +306,22 @@ Three mechanisms, because key-matching alone is insufficient:
    one; a message is arbitrary data-controlled text. Locally the full text is
    kept — there is no real NPI in development and a redacted traceback wastes an
    afternoon — but credentials are masked even there.
+4. **Allowlist, when deployed** — a field is dropped unless it is a *named*
+   diagnostic.
+
+   > Added after review. The three mechanisms above are all blocklists, and a
+   > blocklist is only as good as the last field somebody thought of: review
+   > showed `field_value`, `party`, `result` and `reason` each carrying a party
+   > name to stdout, because none of those words is sensitive-looking. In a
+   > deployed environment the rule now inverts, so new code has to add a field
+   > to `SAFE_DIAGNOSTIC_KEYS` deliberately — a review conversation rather than
+   > a silent leak. Development keeps the blocklist, because a developer needs
+   > to see their own synthetic fields.
+
+   A measurement suffix (`_count`, `_ms`, `_seconds`, …) survives only with a
+   non-string value: `page_count=181` is a diagnostic, `page_count="TIMOTHY
+   BUCHANAN"` is a value smuggled through a numeric-looking name. The blocklist
+   still narrows the allowlist, so `grantor_count` is refused regardless.
 
 Recursion is depth-bounded, so a cyclic structure cannot turn a log call into a
 hang.
@@ -379,6 +395,25 @@ Refusals in a deployed environment — each with its own test:
 | empty CORS allowlist | ✓ | ✓ | — |
 | placeholder seal password | ✓ | ✓ | — |
 | loopback-only host | ✓ | ✓ | — |
+
+**`environment` has no default.** A forgotten variable must not silently mean
+"development": the container binds `0.0.0.0`, so failing open would publish the
+API docs, the placeholder seal password and detailed exception bodies to the
+internet. It is a required field, so the process dies at startup instead —
+`CoreApiSettings.from_environment()` is where that failure surfaces.
+
+Two refusals added after review:
+
+| Refusal | core-api | blind-svc | workers |
+|---|:-:|:-:|:-:|
+| `environment` missing (**every** environment) | ✓ | ✓ | ✓ |
+| empty `allowed_hosts` when deployed | ✓ | ✓ | — |
+| wildcard in `allowed_hosts` | ✓ | ✓ | — |
+
+`TrustedHostMiddleware` is added **last**, so it runs outermost and a forged
+`Host` is rejected before any other layer inspects the request. Without it a
+service can be made to emit absolute links pointing at an attacker's domain,
+and is a cache-poisoning target.
 
 Refusals that apply in **every** environment, including development:
 
@@ -585,7 +620,7 @@ submission. All were reproduced before being fixed; none was disputed.
 
 | # | Finding | Resolution |
 |---|---|---|
-| 1 | Gate 0 marked COMPLETE against its own failing exits | Now **PARTIAL**, with two named closure paths and a recommendation. Durable hash-verified archive replaces the temp-directory copy. |
+| 1 | Gate 0 marked COMPLETE against its own failing exits | At that review point it was corrected to **PARTIAL** with two closure paths. Gate 0 later closed through synthetic substitution, a hash-verified archive and a pinned 177-test fresh-reproduction runner. |
 | 2 | **Redaction bypassed by traceback text and DSN keys — a real NPI/credential leak in all four services** | Redaction moved to `libs/domain` (one implementation), reordered to run last, exception text sanitised, credentials masked by shape. Reproduction re-run against the fix. |
 | 3 | Reported pre-commit verification was false | Hooks rescoped (JSONC, line endings), script lint fixed. Verified passing twice from a clean tree. |
 | 4 | CI path filters omitted the enforcement surface | Filters widened; `hygiene` job added running the full suite plus the guard over every tracked file. |
@@ -595,6 +630,24 @@ submission. All were reproduced before being fixed; none was disputed.
 | P2 | Empty CORS allowlist refused, blocking same-origin deployment | `same_origin_deployment` opt-in; contradictory configuration refused. |
 | P3 | AI attribution in the Gate 0 executor field | Removed. |
 | P3 | Base images and actions tag-pinned, not digest-pinned | Semgrep pinned; the rest documented as blocked on the Docker install rather than silently left. §9. |
+
+### Second review round — deployment hardening
+
+Four blocking findings and four secondary, all reproduced before being fixed.
+
+| # | Finding | Resolution |
+|---|---|---|
+| 1 | **Deployment failed open into development.** `environment` defaulted to `development` while the container binds `0.0.0.0` — a forgotten variable published docs, the placeholder seal password and detailed exception bodies | No default; required field. CI's smoke test now runs **production** config and asserts `/docs` → 404 and a forged `Host` → 400 |
+| 2 | **Client-data guard accepted archives.** `packages/county-client.zip` passed while the same PDFs loose on disk were refused | Archive extensions refused; the allowlist is pinned by **SHA-256**, because an allowlisted *path* can have its bytes swapped |
+| 3 | **Validation responses exposed submitted NPI.** Stripping `input`/`ctx` was not enough — a custom validator's `msg` carried the value | Allowlist: only `type` and `loc` survive. The denylist was the defect |
+| 4 | **Log redaction was blocklist-based and bypassable.** `field_value`, `party`, `result`, `reason` all reached stdout | Allowlist mode in deployed environments; see §5 |
+| P2 | Unhandled 500 lost its correlation header, CORS headers and log correlation | Caught inside `RequestContextMiddleware` instead of Starlette's `ServerErrorMiddleware`, which sits outside both layers. Also fixed a resulting duplicate header |
+| P2 | No `Host` validation | `TrustedHostMiddleware`, outermost, required when deployed |
+| P2 | Supply-chain pinning overstated | Semgrep pinned exactly; pip-audit honestly labelled a minor range; digest/SHA pinning still listed as blocked on Docker |
+| P3 | `.env.example` showed comma-separated CORS origins | pydantic-settings parses these as JSON; corrected to `[]` with both forms shown |
+
+Findings 1–4 were all controls being cited as evidence while not holding. Each
+now has a test that fails if the defect returns.
 
 Two of these — the redaction leak and the guard bypass — were controls that
 were being *cited as evidence* while not holding. Both now have tests that fail

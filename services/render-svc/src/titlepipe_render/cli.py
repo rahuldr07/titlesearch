@@ -51,7 +51,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 def load_settings() -> RenderSettings:
     """Read and validate configuration. Raises `ValidationError` if unusable."""
-    return RenderSettings()
+    return RenderSettings.from_environment()
 
 
 def command_check() -> int:

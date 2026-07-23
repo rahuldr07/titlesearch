@@ -27,6 +27,7 @@ same `request_id` the caller was given.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any, Final, cast
 
 from fastapi import FastAPI
@@ -82,7 +83,14 @@ _HTTP_STATUS_CODES: Final[dict[int, str]] = {
     405: CODE_METHOD_NOT_ALLOWED,
 }
 
-_VALIDATION_KEYS_TO_DROP: Final = frozenset({"input", "ctx", "url"})
+# Only these survive from a Pydantic error. `type` is a stable machine-readable
+# code the frontend can branch on; `loc` names the field.
+#
+# `msg` is deliberately NOT kept. Review demonstrated why: a custom validator
+# raising `ValueError(f"grantor must be uppercase, got {value!r}")` puts the
+# submitted value into `msg`, and on this system that value is a party name. The
+# input was already stripped; keeping the message re-admitted it by another door.
+_VALIDATION_KEYS_TO_KEEP: Final = ("type", "loc")
 
 
 class ErrorBody(BaseModel):
@@ -147,18 +155,27 @@ def envelope(
 
 
 def sanitise_validation_errors(raw: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Keep the field location and the failed rule; drop the submitted value.
+    """Reduce Pydantic errors to a stable code and a field location.
 
-    `loc` names *which* field was wrong, which is what a caller needs. `input`
-    is what they sent, which on this system is a person, an address or a legal
-    description and must not be echoed into a response body or a log.
+    An allowlist, not a denylist. `loc` names *which* field was wrong and `type`
+    names *what rule* it broke — enough for a caller to act on, and enough for
+    the frontend to render its own copy.
+
+    Everything else is dropped, including `msg`. A denylist here was the defect:
+    `input` and `ctx` were removed, but a custom validator's message carried the
+    submitted value anyway, and on this system that is a party name.
     """
     cleaned: list[dict[str, Any]] = []
     for item in raw:
-        entry = {k: v for k, v in item.items() if k not in _VALIDATION_KEYS_TO_DROP}
-        loc = entry.get("loc")
-        if isinstance(loc, (list, tuple)):
-            entry["loc"] = [str(part) for part in loc]  # pyright: ignore[reportUnknownVariableType, reportUnknownArgumentType]
+        entry: dict[str, Any] = {}
+        for key in _VALIDATION_KEYS_TO_KEEP:
+            if key not in item:
+                continue
+            value = item[key]
+            if key == "loc" and isinstance(value, (list, tuple)):
+                entry[key] = [str(part) for part in value]  # pyright: ignore[reportUnknownVariableType, reportUnknownArgumentType]
+            else:
+                entry[key] = str(value)
         cleaned.append(entry)
     return cleaned
 
@@ -249,6 +266,41 @@ async def handle_unexpected(request: Request, exc: Exception) -> JSONResponse:
             request=request,
         ),
     )
+
+
+def build_unhandled_response(
+    environment: Environment,
+) -> Callable[[str, BaseException], JSONResponse]:
+    """The 500 envelope, as a plain function of the correlation id.
+
+    Handed to `RequestContextMiddleware` so the response is produced *inside*
+    the correlation and CORS layers. Starlette's `ServerErrorMiddleware` sits
+    outside both, so a 500 it renders reaches the caller with no
+    `X-Request-ID` header and no CORS headers.
+    """
+
+    def build(request_id: str, exc: BaseException) -> JSONResponse:
+        details: dict[str, Any] = {}
+        if not environment.is_deployed:
+            # Locally the developer message is present: there is no real NPI in
+            # a development environment and a blank 500 wastes an afternoon.
+            details = {"exception": type(exc).__name__, "developer_message": str(exc)}
+        return JSONResponse(
+            status_code=500,
+            content=ErrorEnvelope(
+                error=ErrorBody(
+                    code=CODE_INTERNAL_ERROR,
+                    message=GENERIC_INTERNAL_MESSAGE,
+                    request_id=request_id,
+                    details=details,
+                )
+            ).model_dump(),
+        )
+        # No X-Request-ID here: RequestContextMiddleware's send wrapper is the
+        # single writer of that header. Setting it in both places emitted it
+        # twice, which reads as `trace-500, trace-500` to a client.
+
+    return build
 
 
 def register_error_handlers(app: FastAPI, *, environment: Environment) -> None:

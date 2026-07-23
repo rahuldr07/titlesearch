@@ -30,6 +30,7 @@ def deployed(**overrides: object) -> BlindApiSettings:
         "host": "0.0.0.0",
         "docs_enabled": False,
         "cors_allowed_origins": ("https://capture.titlepipe.example",),
+        "allowed_hosts": ("capture.titlepipe.example",),
         "cookie_seal_password": SecretStr(GOOD_SECRET),
     }
     base.update(overrides)
@@ -112,7 +113,9 @@ def test_an_unhandled_exception_leaks_nothing_in_production(
     async def _boom() -> None:
         raise RuntimeError("blind db dsn postgresql://blind:hunter2@host/blind")
 
-    with TestClient(app, raise_server_exceptions=False) as client:
+    with TestClient(
+        app, raise_server_exceptions=False, base_url="https://capture.titlepipe.example"
+    ) as client:
         response = client.get("/boom")
 
     assert response.status_code == 500

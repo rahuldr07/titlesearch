@@ -51,7 +51,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 def load_settings() -> ExtractionSettings:
     """Read and validate configuration. Raises `ValidationError` if unusable."""
-    return ExtractionSettings()
+    return ExtractionSettings.from_environment()
 
 
 def command_check() -> int:

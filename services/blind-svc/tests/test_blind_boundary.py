@@ -91,13 +91,13 @@ def test_storage_may_only_point_at_the_blind_input_area(prefix: str) -> None:
     """The blind credential reaches source pages and nothing else — not
     extraction output, not rendered reports."""
     with pytest.raises(ValidationError, match="blind_storage_prefix"):
-        BlindApiSettings(blind_storage_prefix=prefix)
+        BlindApiSettings(environment=Environment.DEVELOPMENT, blind_storage_prefix=prefix)
 
 
 def test_the_permitted_storage_prefix_is_accepted() -> None:
-    assert BlindApiSettings(blind_storage_prefix=ALLOWED_STORAGE_PREFIX).blind_storage_prefix == (
-        ALLOWED_STORAGE_PREFIX
-    )
+    assert BlindApiSettings(
+        environment=Environment.DEVELOPMENT, blind_storage_prefix=ALLOWED_STORAGE_PREFIX
+    ).blind_storage_prefix == (ALLOWED_STORAGE_PREFIX)
 
 
 @pytest.mark.parametrize(

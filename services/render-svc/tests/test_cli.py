@@ -145,12 +145,14 @@ def test_a_public_converter_is_refused(url: str) -> None:
     ],
 )
 def test_an_internal_converter_is_accepted(url: str) -> None:
-    assert RenderSettings(gotenberg_url=url).gotenberg_url == url
+    assert (
+        RenderSettings(environment=Environment.DEVELOPMENT, gotenberg_url=url).gotenberg_url == url
+    )
 
 
 def test_a_converter_url_without_a_host_is_refused() -> None:
     with pytest.raises(ValidationError, match="no host"):
-        RenderSettings(gotenberg_url="not-a-url")
+        RenderSettings(environment=Environment.DEVELOPMENT, gotenberg_url="not-a-url")
 
 
 def test_production_refuses_debug_and_disabled_redaction() -> None:
@@ -171,7 +173,10 @@ def test_the_worker_logs_json_when_deployed(
 
 
 def test_renderer_follows_the_environment_when_unset() -> None:
-    assert RenderSettings().effective_log_renderer is LogRenderer.CONSOLE
+    assert (
+        RenderSettings(environment=Environment.DEVELOPMENT).effective_log_renderer
+        is LogRenderer.CONSOLE
+    )
     assert (
         RenderSettings(environment=Environment.PRODUCTION).effective_log_renderer
         is LogRenderer.JSON

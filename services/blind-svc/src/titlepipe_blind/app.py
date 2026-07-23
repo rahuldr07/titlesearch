@@ -13,8 +13,9 @@ from __future__ import annotations
 
 from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 
-from titlepipe_blind.api.errors import register_error_handlers
+from titlepipe_blind.api.errors import build_unhandled_response, register_error_handlers
 from titlepipe_blind.api.request_context import RequestContextMiddleware
 from titlepipe_blind.api.routers import health
 from titlepipe_blind.lifespan import build_lifespan, build_resources
@@ -40,7 +41,7 @@ def create_app(
     Settings are validated first, so both the deployed-environment rules and
     the blind isolation rules fail here rather than after the port is bound.
     """
-    settings = settings or BlindApiSettings()
+    settings = settings or BlindApiSettings.from_environment()
 
     configure_logging(
         level=settings.log_level,
@@ -63,7 +64,11 @@ def create_app(
     )
     app.state.resources = resources
 
-    app.add_middleware(RequestContextMiddleware, id_factory=resources.id_factory)
+    app.add_middleware(
+        RequestContextMiddleware,
+        id_factory=resources.id_factory,
+        on_unhandled=build_unhandled_response(settings.environment),
+    )
     if settings.cors_allowed_origins:
         app.add_middleware(
             CORSMiddleware,
@@ -72,6 +77,12 @@ def create_app(
             allow_methods=["GET", "POST", "OPTIONS"],
             allow_headers=["Content-Type", "X-Request-ID"],
         )
+
+    if settings.allowed_hosts:
+        # Added last, so it runs outermost: a forged Host header is
+        # rejected before any other layer inspects the request. Guards
+        # cache poisoning and password-reset link forgery.
+        app.add_middleware(TrustedHostMiddleware, allowed_hosts=list(settings.allowed_hosts))
 
     register_error_handlers(app, environment=settings.environment)
     app.include_router(health.router)

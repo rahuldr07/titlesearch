@@ -33,6 +33,7 @@ from titlepipe_domain.redaction import redact_mapping, sanitise_exception
 def build_redaction_processor(
     *,
     keep_exception_messages: bool,
+    allowlist_only: bool,
     extra_sensitive_parts: frozenset[str] = frozenset(),
 ) -> Any:
     """The final processor before rendering.
@@ -40,6 +41,11 @@ def build_redaction_processor(
     Handles the `exception` field explicitly. It is produced by
     `format_exc_info` immediately upstream and is free text with no key a
     name-based rule could match, so it is sanitised rather than passed through.
+
+    `allowlist_only` is on in deployed environments: a field is dropped unless
+    it is a named diagnostic. Review showed the blocklist alone missed
+    `field_value`, `party`, `result` and `reason` — none of which looks
+    alarming, all of which carried a party name to stdout.
     """
 
     def processor(_logger: Any, _method_name: str, event_dict: dict[str, Any]) -> dict[str, Any]:
@@ -48,7 +54,11 @@ def build_redaction_processor(
             event_dict["exception"] = sanitise_exception(
                 formatted, keep_messages=keep_exception_messages
             )
-        return redact_mapping(event_dict, extra_parts=extra_sensitive_parts)
+        return redact_mapping(
+            event_dict,
+            extra_parts=extra_sensitive_parts,
+            allowlist_only=allowlist_only,
+        )
 
     return processor
 
@@ -81,6 +91,7 @@ def configure_logging(
         processors.append(
             build_redaction_processor(
                 keep_exception_messages=not environment.is_deployed,
+                allowlist_only=environment.is_deployed,
                 extra_sensitive_parts=extra_sensitive_parts,
             )
         )

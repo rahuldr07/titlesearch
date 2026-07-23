@@ -20,6 +20,7 @@ services:
       dockerfile: infra/containers/Dockerfile.core-api
     image: titlepipe/core-api:dev
     environment:
+      # Required — the settings model has no default, deliberately.
       TITLEPIPE_ENVIRONMENT: development
       TITLEPIPE_HOST: 0.0.0.0
       TITLEPIPE_PORT: "8000"

@@ -26,6 +26,7 @@ def deployed(**overrides: object) -> CoreApiSettings:
         "host": "0.0.0.0",
         "docs_enabled": False,
         "cors_allowed_origins": ("https://app.titlepipe.example",),
+        "allowed_hosts": ("app.titlepipe.example",),
         "cookie_seal_password": SecretStr(GOOD_SECRET),
     }
     base.update(overrides)
@@ -99,27 +100,34 @@ def test_development_permits_the_convenient_defaults() -> None:
 def test_seal_password_must_be_exactly_32_characters() -> None:
     """WorkOS sealed sessions require it. Fail at startup, not at first login."""
     with pytest.raises(ValidationError, match="exactly 32 characters"):
-        CoreApiSettings(cookie_seal_password=SecretStr("too-short"))
+        CoreApiSettings(
+            environment=Environment.DEVELOPMENT, cookie_seal_password=SecretStr("too-short")
+        )
 
 
 def test_the_development_default_satisfies_its_own_length_rule() -> None:
     assert len(DEVELOPMENT_SEAL_PASSWORD) == 32
-    assert CoreApiSettings().cookie_seal_password.get_secret_value() == (DEVELOPMENT_SEAL_PASSWORD)
+    assert CoreApiSettings(
+        environment=Environment.DEVELOPMENT
+    ).cookie_seal_password.get_secret_value() == (DEVELOPMENT_SEAL_PASSWORD)
 
 
 def test_renderer_is_console_locally_and_json_when_deployed() -> None:
-    assert CoreApiSettings().effective_log_renderer is LogRenderer.CONSOLE
+    assert (
+        CoreApiSettings(environment=Environment.DEVELOPMENT).effective_log_renderer
+        is LogRenderer.CONSOLE
+    )
     assert deployed().effective_log_renderer is LogRenderer.JSON
 
 
 def test_renderer_can_be_overridden_explicitly() -> None:
-    settings = CoreApiSettings(log_renderer=LogRenderer.JSON)
+    settings = CoreApiSettings(environment=Environment.DEVELOPMENT, log_renderer=LogRenderer.JSON)
     assert settings.effective_log_renderer is LogRenderer.JSON
 
 
 def test_docs_disabled_removes_the_schema_route() -> None:
     assert deployed().openapi_url is None
-    assert CoreApiSettings().openapi_url == "/openapi.json"
+    assert CoreApiSettings(environment=Environment.DEVELOPMENT).openapi_url == "/openapi.json"
 
 
 def test_secrets_do_not_appear_in_repr_or_str() -> None:
@@ -134,4 +142,4 @@ def test_unknown_configuration_keys_are_rejected() -> None:
     """A typo in a deployment variable must fail loudly rather than silently
     leaving the safe default in place."""
     with pytest.raises(ValidationError):
-        CoreApiSettings(dbeug=True)  # pyright: ignore[reportCallIssue]
+        CoreApiSettings(environment=Environment.DEVELOPMENT, dbeug=True)  # pyright: ignore[reportCallIssue]

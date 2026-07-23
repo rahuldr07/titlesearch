@@ -49,7 +49,11 @@ class BlindApiSettings(BaseSettings):
         frozen=True,
     )
 
-    environment: Environment = Environment.DEVELOPMENT
+    # No default. A forgotten variable must not silently mean "development":
+    # the container binds 0.0.0.0, so failing open would publish the API docs,
+    # the placeholder seal password and detailed exception bodies. Requiring it
+    # turns that into a startup error, which is the cheap failure.
+    environment: Environment
     service_name: ServiceName = ServiceName.BLIND_API
 
     host: str = "127.0.0.1"
@@ -65,6 +69,11 @@ class BlindApiSettings(BaseSettings):
     # those must not be indistinguishable — so the safe case is opted into
     # explicitly and the forgetful case still fails startup.
     same_origin_deployment: bool = False
+
+    # Host header allowlist. Empty is permitted only outside deployed
+    # environments; a deployed service that accepts any Host is open to
+    # cache poisoning and forged absolute links.
+    allowed_hosts: tuple[str, ...] = ()
 
     cookie_seal_password: SecretStr = SecretStr(DEVELOPMENT_SEAL_PASSWORD)
     mock_auth_enabled: bool = False
@@ -86,6 +95,17 @@ class BlindApiSettings(BaseSettings):
     @property
     def openapi_url(self) -> str | None:
         return "/openapi.json" if self.docs_enabled else None
+
+    @classmethod
+    def from_environment(cls) -> BlindApiSettings:
+        """Build from the process environment.
+
+        `environment` has no default, so a type checker sees a required
+        argument missing here. pydantic-settings fills it from the environment
+        at runtime, and if it is absent that is exactly the startup failure the
+        missing default exists to cause.
+        """
+        return cls()  # pyright: ignore[reportCallIssue]
 
     @model_validator(mode="after")
     def _seal_password_is_the_right_length(self) -> Self:
@@ -152,6 +172,10 @@ class BlindApiSettings(BaseSettings):
             unsafe.append("cookie_seal_password is a placeholder")
         if self.host == "127.0.0.1":
             unsafe.append("host is loopback-only and unreachable behind a proxy")
+        if not self.allowed_hosts:
+            unsafe.append("allowed_hosts is empty; the service would accept any Host header")
+        if "*" in self.allowed_hosts:
+            unsafe.append("allowed_hosts contains a wildcard")
 
         if unsafe:
             raise ValueError(

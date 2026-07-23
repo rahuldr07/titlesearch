@@ -7,9 +7,10 @@ are the contract the frontend and the refusal tests will branch on.
 from __future__ import annotations
 
 import pytest
+from conftest import DEPLOYED_BASE_URL
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from titlepipe_core.api.errors import (
     CODE_INTERNAL_ERROR,
@@ -46,6 +47,20 @@ class ReasonPayload(BaseModel):
 
 class PageCountPayload(BaseModel):
     page_count: int
+
+
+class UppercaseGrantor(BaseModel):
+    """A custom validator whose message embeds the submitted value — the exact
+    shape that leaked a party name into a production 422."""
+
+    grantor: str
+
+    @field_validator("grantor")
+    @classmethod
+    def _must_be_uppercase(cls, value: str) -> str:
+        if not value.isupper():
+            raise ValueError(f"grantor must be uppercase, got {value!r}")
+        return value
 
 
 DOMAIN_CASES: list[tuple[type[DomainError], int, str]] = [
@@ -143,7 +158,7 @@ def test_a_schema_failure_never_echoes_the_submitted_value(app: FastAPI) -> None
     assert "TIMOTHY BUCHANAN" not in response.text
 
 
-def test_sanitise_validation_errors_drops_the_input_and_context() -> None:
+def test_sanitise_validation_errors_keeps_only_the_code_and_location() -> None:
     cleaned = sanitise_validation_errors(
         [
             {
@@ -156,13 +171,7 @@ def test_sanitise_validation_errors_drops_the_input_and_context() -> None:
             }
         ]
     )
-    assert cleaned == [
-        {
-            "type": "string_type",
-            "loc": ["body", "grantor"],
-            "msg": "Input should be a valid string",
-        }
-    ]
+    assert cleaned == [{"type": "string_type", "loc": ["body", "grantor"]}]
 
 
 def test_an_unhandled_exception_leaks_nothing_in_production(
@@ -178,7 +187,9 @@ def test_an_unhandled_exception_leaks_nothing_in_production(
     async def _boom() -> None:
         raise RuntimeError("connection string postgres://user:hunter2@db/titlepipe")
 
-    with TestClient(app, raise_server_exceptions=False) as client:
+    with TestClient(
+        app, raise_server_exceptions=False, base_url="https://app.titlepipe.example"
+    ) as client:
         response = client.get("/boom")
 
     assert response.status_code == 500
@@ -225,3 +236,69 @@ def test_domain_and_service_code_never_import_httpexception() -> None:
         if "HTTPException" in path.read_text(encoding="utf-8") and path.name != "errors.py"
     ]
     assert not offenders, f"HTTPException outside the mapping layer: {offenders}"
+
+
+# --- fixes from the deployment-hardening review -----------------------------
+
+
+def test_a_validator_message_never_reaches_the_caller(
+    production_settings: CoreApiSettings, frozen_clock: FrozenClock
+) -> None:
+    """Review reproduced a production 422 containing the submitted party name.
+
+    Stripping `input` and `ctx` was not enough: a custom validator puts the
+    value into `msg`, which was still being returned.
+    """
+    app = create_app(production_settings, clock=frozen_clock)
+
+    @app.post("/correct")
+    async def _correct(payload: UppercaseGrantor) -> dict[str, str]:
+        return {"grantor": payload.grantor}
+
+    with TestClient(app, base_url=DEPLOYED_BASE_URL) as client:
+        response = client.post("/correct", json={"grantor": "Timothy Buchanan"})
+
+    assert response.status_code == 422
+    assert "Timothy Buchanan" not in response.text
+
+    errors = response.json()["error"]["details"]["errors"]
+    assert errors == [{"type": "value_error", "loc": ["body", "grantor"]}]
+
+
+def test_an_unhandled_500_carries_the_correlation_header_and_cors(
+    production_settings: CoreApiSettings, frozen_clock: FrozenClock
+) -> None:
+    """All three were missing when Starlette's ServerErrorMiddleware rendered
+    the 500: it sits outside both the correlation and CORS layers."""
+    app = create_app(production_settings, clock=frozen_clock)
+
+    @app.get("/boom")
+    async def _boom() -> None:
+        raise RuntimeError("connection string postgres://u:hunter2@db/core")
+
+    with TestClient(app, raise_server_exceptions=False, base_url=DEPLOYED_BASE_URL) as client:
+        response = client.get(
+            "/boom",
+            headers={"Origin": "https://app.titlepipe.example", "X-Request-ID": "trace-500"},
+        )
+
+    assert response.status_code == 500
+    assert response.headers["X-Request-ID"] == "trace-500"
+    assert response.headers["access-control-allow-origin"] == "https://app.titlepipe.example"
+    assert response.json()["error"]["request_id"] == "trace-500"
+    assert "hunter2" not in response.text
+    assert "RuntimeError" not in response.text
+
+
+def test_a_forged_host_header_is_refused(
+    production_settings: CoreApiSettings, frozen_clock: FrozenClock
+) -> None:
+    """Without a Host allowlist, an absolute link the service generates can be
+    pointed at an attacker's domain."""
+    app = create_app(production_settings, clock=frozen_clock)
+
+    with TestClient(app, base_url="https://evil.example") as client:
+        assert client.get("/health").status_code == 400
+
+    with TestClient(app, base_url=DEPLOYED_BASE_URL) as client:
+        assert client.get("/health").status_code == 200
