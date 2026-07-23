@@ -1,6 +1,6 @@
 ---
 title: Gate 0 — Backend Safety-Net Recovery
-date: 2026-07-22
+date: 2026-07-23
 status: complete
 verdict: PORT
 owner: rahuldr07
@@ -19,9 +19,9 @@ aliases:
 > [!success] Gate 0 is **COMPLETE**, by the synthetic-fixture route. Verdict **PORT**.
 > The two conditions that held it open are closed:
 >
-> - **The suite is green: 163 tests.** The 10 tests that needed a county package
+> - **The suite is green: 177 tests.** The 10 tests that needed a county package
 >   and five delivered client reports now run against synthetic fixtures. Command:
->   `python scripts/gate0/run_prototype_suite.py`.
+>   `python scripts/gate0/run_prototype_suite.py --fresh`.
 > - **`v14` exists.** R15's mandated assertion, in `HARD_VALIDATORS`, with a
 >   regression test that fails if the guard is weakened.
 >
@@ -34,7 +34,7 @@ aliases:
 > the previously-missing `docs/spec.md` are all present. The 155-test figure is
 > reconciled below: it is **131 package tests + 24 patch tests**. 145 ran as
 > recovered; the other 10 needed client data and now run against synthetic
-> fixtures. With `v14` the suite stands at **163**.
+> fixtures. With 22 `v14` tests the suite stands at **177**.
 
 ## 1. Execution record
 
@@ -339,7 +339,8 @@ still proves where the chain terminates. `CLAUDE.md` invariant 3 and `validators
 
 ### 7.4 v14 — written at closure
 
-`validators.py` contains `v01`–`v13` plus `v99`. **There is no `v14`.**
+At recovery, `validators.py` contained `v01`–`v13` plus `v99`. **There was no
+`v14`.**
 
 ```text
 v01_chains_flag · v02_non_person_name · v03_rerecord_identity · v04_assignment_continuity
@@ -361,9 +362,9 @@ v01_chains_flag · v06_mortgages_ordered · v07_release_resolved
 v13_review_routing · v14_liens_survive_chain_termination
 ```
 
-`v14` asserts that every mortgage block absent from the report carries a verified
-release, fails closed when it cannot see the pre-suppression set, and is proven to
-have teeth by mutation.
+At closure, `v14` asserts across mortgages, judgments, liens and UCC filings. It
+fails closed without stable recording identity or the pre-suppression sets,
+preserves duplicate-key multiplicity, and is proven to have teeth by mutation.
 
 `v99` is confirmed correctly and deliberately empty — it returns `None` with the
 explanation `intentionally not implemented`, and its docstring warns that anyone adding
@@ -537,7 +538,7 @@ rg '4171608|4171476|3791211|4114194|3913323|TYPING_REPORT' scripts/   ->  no mat
 
 ### v14
 
-Written, in `HARD_VALIDATORS`, with 20 tests.
+Written, in `HARD_VALIDATORS`, with 22 tests.
 
 > **Corrected after review.** The first version compared `report.mortgages`
 > against the pre-filter blocks and nothing else — so removing an active
@@ -569,6 +570,10 @@ Four properties worth stating:
 4. **It was mutation-tested per category.** Removing a live mortgage, judgment,
    tax lien or UCC filing each makes its own test fail. A guard nobody has
    tried to break is a guard nobody knows works.
+5. **Identity fails closed and preserves multiplicity.** Instrument number or
+   book/page is required; caption plus date is never invented as identity.
+   Counter-based comparison prevents one survivor from hiding another candidate
+   with the same recording key.
 
 ### Changes made at closure — exact accounting
 
@@ -581,7 +586,7 @@ code written" while the closure patch did both. Stated precisely:
 | `titlepipe/assemble.py` | **domain** | `build_report` retains `_all_mortgage_blocks` and `_all_lien_documents` |
 | `titlepipe/seed.py` | harness | `_docx_text` falls back to python-docx when pandoc is absent |
 | `tests/test_seed.py` | **test** | `TITLEPIPE_SEED_ROOT` makes the report root configurable |
-| `tests/test_v14_r15.py` | test (new) | 20 tests for `v14` |
+| `tests/test_v14_r15.py` | test (new) | 22 tests for `v14`, including missing-identity and duplicate-key regressions |
 
 The recovery run itself was unmodified — that claim stands and is what §5.2
 records. The domain changes implement `v14`, which R15 (`RULED`) mandates, so
@@ -598,7 +603,7 @@ machine-local.
 | File | Change |
 |---|---|
 | `seed.py` | `_docx_text` falls back to python-docx when pandoc is absent |
-| `assemble.py` | `build_report` retains the pre-suppression mortgage set |
+| `assemble.py` | `build_report` retains the pre-suppression mortgage and lien-document sets |
 | `validators.py` | `v14_liens_survive_chain_termination`, added to `HARD_VALIDATORS` |
 | `tests/test_seed.py` | `TITLEPIPE_SEED_ROOT` makes the report root configurable |
 
@@ -611,15 +616,18 @@ python scripts/gate0/run_prototype_suite.py --fresh
 `--fresh` rebuilds the worktree from the frozen archive, so the result is not
 contaminated by a tree someone already fixed by hand. The runner then applies
 `gate0-closure.patch`, **verifies five markers are present**, and refuses to run
-the suite if any is missing.
+the suite if any is missing. Before replacing a worktree it verifies the archive
+and requires the runner-owned sentinel; arbitrary or unowned paths are refused.
+Python is pinned to 3.13.14 and all 18 direct/transitive packages are exact in
+`scripts/gate0/requirements.lock`.
 
 Measured from a clean archive:
 
 ```text
 closure applied and verified
-package suite : 151 passed      (131 recovered + 20 v14)
+package suite : 153 passed      (131 recovered + 22 v14)
 patch suite   :  24 passed      (4 + 10 + 10, still unmerged)
-                175 total
+                177 total
 ```
 
 > Review found the earlier runner copied only the v14 *test* and never applied
@@ -648,7 +656,7 @@ required. `git` applies the patch; `uv` builds the virtualenv on `--fresh`.
 | Prototype located | **PASS** | §3.1 — path, size, SHA-256, 35 entries |
 | Archived safely without county/client packages entering VCS | **PASS** | §4 — durable archive outside the working tree; per-file hash manifest in `GATE_0_ARCHIVE_MANIFEST.md`; archives contain no PDFs or seed DB |
 | All tests run unchanged **at recovery** | **PASS** | §5.2, §5.3 — nothing was modified to make the recovery run pass |
-| All tests green | **PASS** | **175/175** from a clean archive (151 package + 24 patch). Reproducible: `python scripts/gate0/run_prototype_suite.py --fresh`. |
+| All tests green | **PASS** | **177/177** from a clean archive (153 package + 24 patch), Python 3.13.14 and exact dependency lock. Reproducible: `python scripts/gate0/run_prototype_suite.py --fresh`. |
 | Port-vs-reconstruction outcome recorded | **PASS** | **PORT** |
 | Module / function / state-machine / validator / render inventory | **PASS** | §8 |
 | Five-bug mapping | **PASS** | §6 — and the material finding that they are unmerged |
@@ -661,7 +669,7 @@ required. `git` applies the patch; `uv` builds the virtualenv on `--fresh`.
 > [!success] **Gate 0: COMPLETE**, closed by route (b) — synthetic substitution.
 > Every exit criterion is met:
 >
-> - **163/163 green**, reproducible by one command.
+> - **177/177 green**, reproducible by one command from the verified archive and pinned environment.
 > - **`v14` exists**, fails closed, and is mutation-tested.
 > - **PORT** verdict evidence-backed; archive durable and hash-verified; R15 audit
 >   passed.

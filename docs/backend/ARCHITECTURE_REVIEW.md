@@ -213,9 +213,10 @@ Reference: [WorkOS Python session helpers](https://workos.com/docs/reference/aut
 > [!success] Resolved at Gate 0 (2026-07-22) — the prototype was recovered
 > This finding was correct about the *checkout* and is now superseded by the recovery
 > result. The prototype was located outside the repository in `~/Downloads/titlepipe.zip`.
-> 145 of its 155 tests run green; the other 10 assert against client source material that
-> must not be in VCS. The safety net exists, with two caveats the port must respect: the
-> five bug fixes were never merged into the package, and `v14` does not exist.
+> At recovery, 145 of 155 tests ran green; the other 10 asserted against client source
+> material that must not be in VCS. Gate 0 subsequently closed with synthetic replacements
+> and 22 v14 tests: 177/177 now pass from the pinned fresh-reproduction runner. The five
+> bug fixes were never merged into the package and remain mandatory Gate 6 port inputs.
 > See `docs/backend/GATE_0_RECOVERY.md`. The recovery procedure below was followed as
 > written.
 

@@ -1,5 +1,5 @@
 # TITLEPIPE — PROJECT MEMORY / HANDOFF PROMPT
-# Paste this into any new session to restore full context. Last updated: July 17, 2026.
+# Paste this into any new session to restore full context. Last updated: July 23, 2026.
 
 You are picking up TitlePipe, a title-search report automation product. Everything below is settled unless marked OPEN. Do not re-litigate closed decisions; extend them.
 
@@ -13,7 +13,7 @@ Product: machine extraction + human review of uncertain fields only + measured q
 
 ## 2. WHAT EXISTS (validated prototype phase — v1)
 
-- **Backend prototype:** Python/Flask/SQLite, ~2,700 lines, **155 passing tests**. **[Gate 0, 2026-07-22 — RECOVERED, held outside VCS; see `docs/backend/GATE_0_RECOVERY.md`.** Measured: 2,786 lines; 155 = 131 package tests + 24 patch tests, of which **145 run green** and 10 need client source material that stays out of VCS. Two corrections to this paragraph: the five bug fixes are **standalone patches never merged** into the package, and `models.py` defines **three** NA reasons — `NOT_USED_IN_JURISDICTION` / `NOT_FOUND` / `NOT_STATED` — **not** the `NOT_PRESENT` / `PRESENT_UNREADABLE` pair named below. The taxonomy needs a ruling before Gate 6 writes the field model.**]** Modules: models.py (Field with provenance envelope; TWO NA states: NOT_PRESENT vs PRESENT_UNREADABLE), validators.py (13 CI assertions incl. v99 = deliberately empty: land+building must NEVER be checked against total — known defect in delivered reports), segment.py (recording-stamp parser, 4 independent checks), assemble.py (chains, MERS, releases), render.py (Shape A docx, programmatic: TRUSTEE deleted not blanked, CONDO rewritten not filled), api.py (Flask+SQLite), ingest.py, golden.py.
+- **Backend prototype:** Python/Flask/SQLite, 2,786 lines. **[Gate 0, closed 2026-07-23 — COMPLETE by synthetic-fixture route; verdict PORT; see `docs/backend/GATE_0_RECOVERY.md`.** The recovered baseline is 131 package tests plus 24 standalone patch tests. Closure adds 22 v14 tests and replaces the 10 client-dependent inputs with generated fixtures: **177/177 pass from the hash-verified archive using a pinned Python 3.13.14 environment**. The five bug fixes remain standalone patches and must be folded into the Gate 6 port. `models.py` still defines three legacy NA reasons — `NOT_USED_IN_JURISDICTION` / `NOT_FOUND` / `NOT_STATED` — rather than the required `NOT_PRESENT` / `PRESENT_UNREADABLE` pair; that taxonomy needs a ruling before Gate 6 writes the field model.**]** Modules: models.py (Field with provenance envelope), validators.py (v1–v14 plus deliberately-empty v99), segment.py (recording-stamp parser), assemble.py (chains, MERS, releases), render.py (Shape A DOCX), api.py (Flask+SQLite), ingest.py, golden.py.
 - **Five bugs found and FIXED** (files delivered as titlepipe_bugfixes.zip): (1) undated sub vanished from overlap validator → flagged NO_DATED_DATE, sorted last, never dropped; (2) MERS phantom marked OK → release grantor checked against MERS AND underlying lender from nominee clause, else MERS_PHANTOM_RISK; (3) chain stopped at first release → requires release.reference_doc == security_deed.doc_number; no reference → RELEASE_NO_REFERENCE, chain stays open; (4) needs_review routed identical names differently → normalize_name(): uppercase, strip apostrophes, punctuation→space, TOKEN-SORT (handles last/first vs first/last); (5) approve returned 409 on double-submit → idempotent: same value = 200, different value = 409 w/ message, terminal state = 409.
 - **15 screens designed AND built** as .dc.html components + shared api.js, calling the REST contract with MSW-style demo fallbacks. All in the design tool. Screens: Ingest, Reviewer Queue, Review, Escalation Inbox, Ops Dashboard, Account layer (Login/Me/MyOrg/People/Rulebook/Audit/Retention/Billing), Delivery, Complaints, Golden Set, Extraction Bench, Bench Results, Blind Fifty (typist), Reconciliation, Seed Correction, Blind Fifty Status. Screen #15 Engine Leaderboard is specced in PRD, not yet built.
 - **Seed bench:** 131 fields, 6 orders, provenance-tagged: delivered_report / ruled / delivered_report_suspect / ORDER_SUPPLIED (excluded — e.g. location.zip: client-supplied 03029 vs deed's 30296; order wins; NEVER an extraction target). Known seed issue: mortgages.1.amount seed $202,224 vs model $220,224 — fax artifact, words-line legible; likely seed wrong (typist read degraded numeral). Rule §5: amount-in-WORDS prevails over numerals.
@@ -89,7 +89,7 @@ Setup sequence: (1) admin PowerShell `wsl --install` + reboot; (2) Ollama for Wi
 
 ## 8. PHASES & STATUS
 
-- **P0 (NOW, all parallel):** R15 lien-suppression audit + v14 assertion · reviewer session protocol doc (BLOCKS typists) · 5 usability sessions on built screens w/ real reviewers (3 days; feeds protocol + v2 latency bar) · pick 50 blind-fifty orders · machine setup + 20-worst-pages six-engine bake-off → first Leaderboard CSV.
+- **P0 (NOW, all parallel):** ✅ R15 lien-suppression audit + v14 assertion · reviewer session protocol doc (BLOCKS typists) · 5 usability sessions on built screens w/ real reviewers (3 days; feeds protocol + v2 latency bar) · pick 50 blind-fifty orders · machine setup + 20-worst-pages six-engine bake-off → first Leaderboard CSV.
 - **P1 (wk1–2):** service-layout repo · Postgres+tenant_id+RLS+Alembic · Procrastinate · engine registry + pdftotext/Tesseract adapters · Clerk · audit log · field encryption · fold R13–R24 into spec + schema v2 · 155→~200 tests.
 - **P2 (wk2–5):** Track A extraction (classifier, Readers A/B, second-opinion, router, Leaderboard v1, RuleContext prompt-gen, Shape B) ∥ Track B v2 UI (foundation wk: scaffold+tokens+PDF-overlay+Queue → Review → rest).
 - **P3 (wk3–5):** blind fifty runs; continuous reconciliation; PENDING confirmations weekly.
@@ -105,7 +105,7 @@ titlepipe_bugfixes.zip (fix_segment.py, fix_assemble.py, fix_api.py — 24 tests
 
 ## 10. OPEN ITEMS
 
-Session protocol doc (P0) · R15 audit (P0) · usability sessions (P0) · blind-fifty order selection (P0) · machine setup (P0) · Engine Leaderboard screen build · Shape B build (P2) · frontend scaffold (ready) · benchmark harness (waiting on WSL) · SOC 2 (on client demand) · client portal (separate product, Next.js candidate) · tenant_id/RLS implementation (P1).
+Session protocol doc (P0) · usability sessions (P0) · blind-fifty order selection (P0) · machine setup (P0) · Engine Leaderboard screen build · Shape B build (P2) · frontend scaffold (ready) · benchmark harness (waiting on WSL) · SOC 2 (on client demand) · client portal (separate product, Next.js candidate) · tenant_id/RLS implementation (P1). R15 audit + v14 are complete in Gate 0.
 
 ## 11. VOICE & WORKING STYLE (match this)
 

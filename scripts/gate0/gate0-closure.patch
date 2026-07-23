@@ -91,7 +91,16 @@ Contains no client-derived party names, addresses or amounts.
      if r.mortgages:
 --- a/titlepipe/validators.py
 +++ b/titlepipe/validators.py
-@@ -201,6 +201,120 @@
+@@ -10,6 +10,8 @@
+ """
+
+ from __future__ import annotations
++
++from collections import Counter
+
+ import math
+ import re
+@@ -201,6 +201,131 @@
      return Result("13_review_routing", not leaked, f"leaked: {leaked}")
 
 
@@ -122,22 +131,24 @@ Contains no client-derived party names, addresses or amounts.
 +})
 +
 +
-+def instrument_key(doc) -> str:
++def instrument_key(doc) -> str | None:
 +    """A stable identity for an instrument.
 +
 +    Deliberately not `id()`. Assembly may rebuild an equal object — a
 +    re-record collapse does exactly that — and an identity comparison then
 +    reports a lien as suppressed when it is present under a new object. That is
 +    a false failure on the one rule that must not cry wolf.
++
++    Caption and date are not identity. Two unrelated judgments can share both,
++    so inventing a fallback from them lets one survivor hide another missing
++    instrument. Missing recording identity therefore fails closed in v14.
 +    """
 +    rec = doc.recording
 +    if rec.instrument_no.is_present:
 +        return f"inst:{str(rec.instrument_no.value).strip().upper()}"
 +    if rec.book_page.is_present:
 +        return f"bp:{str(rec.book_page.value).strip().upper()}"
-+    recorded = rec.recorded_date.value
-+    caption = doc.caption.value if doc.caption.is_present else doc.doc_type
-+    return f"fallback:{caption}|{recorded}"
++    return None
 +
 +
 +def _suppression_reason(item) -> str | None:
@@ -180,16 +191,25 @@ Contains no client-derived party names, addresses or amounts.
 +            f"pre-suppression set unavailable for {missing}; R15 could not be checked")
 +
 +    problems: list[str] = []
-+    surviving_mortgages = {instrument_key(m.doc) for m in report.mortgages}
-+    surviving_liens = {instrument_key(d) for d in report.judgments_liens}
++    # Counters preserve multiplicity. A set lets one surviving item hide a
++    # second, distinct pre-suppression item with the same recording key.
++    surviving_mortgages = Counter(instrument_key(m.doc) for m in report.mortgages)
++    surviving_liens = Counter(instrument_key(d) for d in report.judgments_liens)
 +
-+    for item, doc, present in (
-+        [(m, m.doc, instrument_key(m.doc) in surviving_mortgages) for m in blocks]
-+        + [(d, d, instrument_key(d) in surviving_liens) for d in liens]
++    for item, doc, survivors in (
++        [(m, m.doc, surviving_mortgages) for m in blocks]
++        + [(d, d, surviving_liens) for d in liens]
 +    ):
 +        reason = _suppression_reason(item)
 +        key = instrument_key(doc)
++        if key is None:
++            label = doc.caption.value if doc.caption.is_present else str(doc.doc_type)
++            problems.append(
++                f"{label}: stable recording identity unavailable; R15 could not be checked")
++            continue
++        present = survivors[key] > 0
 +        if present:
++            survivors[key] -= 1
 +            # Declaring a forbidden reason is a defect even if the instrument
 +            # happens to still be rendered — the next edit will honour it.
 +            if reason in FORBIDDEN_SUPPRESSIONS:
@@ -212,7 +232,7 @@ Contains no client-derived party names, addresses or amounts.
  def v99_never_assert_land_plus_building(report) -> Result:
      """NOT a validator. A reminder that this assertion must not exist.
 
-@@ -211,4 +325,4 @@
+@@ -211,4 +336,4 @@
 
 
  HARD_VALIDATORS = [v01_chains_flag, v06_mortgages_ordered, v07_release_resolved,

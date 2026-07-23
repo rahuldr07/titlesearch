@@ -293,6 +293,47 @@ def test_instrument_key_prefers_the_instrument_number_then_book_page():
     assert V.instrument_key(by_bp) == "bp:100/2"
 
 
+def test_v14_fails_closed_without_recording_identity():
+    """Caption plus date is not identity: unrelated liens routinely share both."""
+    unidentified = doc(
+        DocType.JUDGMENT,
+        "Certificate of Judgment",
+        rec=date(2024, 8, 1),
+        plaintiff="SYNTHETIC PARTY",
+    )
+    report = build([unidentified])
+
+    result = V.v14_liens_survive_chain_termination(report)
+
+    assert result.passed is False
+    assert "stable recording identity unavailable" in result.detail
+
+
+def test_v14_preserves_multiplicity_for_the_same_recording_key():
+    """A set comparison lets one survivor hide a second missing candidate."""
+    first = doc(
+        DocType.LIEN,
+        "State Tax Execution",
+        inst="DUPLICATE-KEY-1",
+        rec=date(2024, 8, 1),
+        amount=Decimal("100.00"),
+    )
+    second = doc(
+        DocType.LIEN,
+        "State Tax Execution",
+        inst="DUPLICATE-KEY-1",
+        rec=date(2024, 8, 1),
+        amount=Decimal("200.00"),
+    )
+    report = build([first, second])
+    report.judgments_liens = [report.judgments_liens[0]]
+
+    result = V.v14_liens_survive_chain_termination(report)
+
+    assert result.passed is False
+    assert "suppressed with no reason" in result.detail
+
+
 # --- failing closed ----------------------------------------------------------
 
 

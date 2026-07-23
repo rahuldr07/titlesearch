@@ -120,8 +120,8 @@ def report_lines(order_no: str, county: str) -> list[str]:
         "#OF JUDGMENTS: 01",
         "#OF TAX LIENS: 00",
         "",
-        "This is a synthetic report generated for automated testing.",
-        "It contains no client data and no personal information.",
+        "This report body is synthetic and generated for automated testing.",
+        "Its isolated order identifier is retained only for recovered-parser compatibility.",
     ]
 
 
@@ -176,7 +176,7 @@ def main() -> int:
     args = parser.parse_args()
 
     sources = sources_from_prototype(args.prototype)
-    written: list[tuple[Path, int]] = []
+    written_sizes: list[int] = []
     for index, (order_no, relative, kind) in enumerate(sources):
         county = COUNTIES[index % len(COUNTIES)]
         path = args.root / relative
@@ -189,10 +189,10 @@ def main() -> int:
             path.write_bytes(build_pdf([lines[:half], lines[half:]]))
         else:
             write_docx(path, lines)
-        written.append((path, path.stat().st_size))
+        written_sizes.append(path.stat().st_size)
 
-    for path, size in written:
-        print(f"wrote {path} ({size:,} bytes)")
+    for index, size in enumerate(written_sizes, start=1):
+        print(f"wrote isolated synthetic report {index} ({size:,} bytes)")
 
     return 0
 

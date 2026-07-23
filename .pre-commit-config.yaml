@@ -19,13 +19,17 @@
 #    the working tree fights that by design and tried to rewrite 78 files.
 #    Git already guarantees the only thing that matters, which is what is
 #    stored.
+#
+# 3. Unified-diff context lines are byte-sensitive evidence. The Gate 0 closure
+#    patch is excluded from whitespace rewriting and is instead proved by an
+#    actual `git apply --check` plus the fresh 177-test reproduction.
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:
       - id: trailing-whitespace
-        exclude: '\.lock$'
+        exclude: '(\.lock$|^scripts/gate0/gate0-closure\.patch$)'
       - id: end-of-file-fixer
         exclude: '\.lock$'
       - id: check-yaml

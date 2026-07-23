@@ -259,7 +259,10 @@ def main() -> int:
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_bytes(build_pdf(pages))
-    print(f"wrote {args.output} ({args.output.stat().st_size:,} bytes, {len(pages)} pages)")
+    print(
+        f"wrote isolated synthetic package "
+        f"({args.output.stat().st_size:,} bytes, {len(pages)} pages)"
+    )
     return 0
 
 

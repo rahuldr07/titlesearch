@@ -1488,7 +1488,7 @@ Do this next, in order:
 
 ## 32. Implementation checklist index
 
-- [x] Gate 0: prototype/test recovery — **COMPLETE**. **PORT**; archive frozen and hash-verified; **163/163 green** via synthetic fixtures for the 10 client-dependent tests. `docs/backend/GATE_0_RECOVERY.md` §11a
+- [x] Gate 0: prototype/test recovery — **COMPLETE**. **PORT**; archive frozen and hash-verified; **177/177 green** from the pinned fresh-reproduction runner, including synthetic fixtures for the 10 client-dependent tests and 22 v14 tests. `docs/backend/GATE_0_RECOVERY.md` §11a
 - [x] Gate 0: R15 audit and v14 — R15 audit **PASS** (single release-verified suppression path, termination-independent); **`v14` written**, in `HARD_VALIDATORS`, fails closed, mutation-tested
 - [~] Gate 1: Python/service foundation — **LOCAL FOUNDATION COMPLETE**; 6 projects, 229 tests, Pyright strict clean. Official gate **PARTIAL** pending container evidence. `docs/backend/GATE_1_FOUNDATION.md`
 - [~] Gate 1: CI/security/SBOM — workflow written with real steps, hygiene job enforcing pre-commit and the client-data guard, local equivalents green; **container build/run/scan and remote CI deferred until before staging** (both blocked on the Docker install, which Gate 2 also needs)

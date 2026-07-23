@@ -27,10 +27,15 @@ verifiably present**, so that cannot happen again.
   (see `docs/backend/GATE_0_ARCHIVE_MANIFEST.md`). `--fresh` rebuilds the
   worktree from it, which is the mode that proves reproduction.
 - `git`, to apply the patch.
-- `uv`, if `--fresh` needs to create the virtualenv.
+- `uv`, if `--fresh` needs to create the Python 3.13.14 virtualenv. Every
+  package is pinned in `scripts/gate0/requirements.lock`.
 - `pdftotext` on PATH. It ships with Git for Windows at
   `C:\\Program Files\\Git\\mingw64\\bin` but is **not** on the Windows PATH by
   default, which is why `--pdftotext-dir` exists.
+
+`--fresh` replaces only a directory carrying this runner's ownership sentinel.
+An existing unmarked directory, a linked path, the repository, the archive,
+the home directory and filesystem roots are refused.
 
 `pdftoppm` and `tesseract` are deliberately not required: the synthetic package
 is born-digital, so segmentation never reaches the OCR path.
@@ -65,10 +70,14 @@ HERE = Path(__file__).resolve().parent
 
 LOCAL_APPDATA = Path(os.environ.get("LOCALAPPDATA", Path.home() / ".local"))
 DEFAULT_ARCHIVE = LOCAL_APPDATA / "TitlePipe" / "gate0-prototype-archive"
-DEFAULT_WORKTREE = LOCAL_APPDATA / "TitlePipe" / "gate0-worktree"
+DEFAULT_WORKTREE = LOCAL_APPDATA / "TitlePipe" / "gate0-generated-worktree"
 GIT_POPPLER_DIR = Path(r"C:\Program Files\Git\mingw64\bin")
 
 CLOSURE_PATCH = HERE / "gate0-closure.patch"
+DEPENDENCY_LOCK = HERE / "requirements.lock"
+WORKTREE_SENTINEL = ".titlepipe-gate0-generated-worktree"
+WORKTREE_SENTINEL_CONTENT = "TitlePipe Gate 0 generated worktree; safe to replace.\n"
+PYTHON_VERSION = "3.13.14"
 
 CRLF = b"\r\n"
 LF = b"\n"
@@ -88,11 +97,16 @@ CLOSURE_MARKERS: tuple[tuple[str, str], ...] = (
     ("tests/test_seed.py", "TITLEPIPE_SEED_ROOT"),
 )
 
-DEPENDENCIES = ("pytest", "pypdf", "pillow", "flask", "python-docx")
 
-
-def run(command: list[str], cwd: Path, env: dict[str, str]) -> int:
-    print(f"\n$ {' '.join(command)}   (in {cwd})")
+def run(
+    command: list[str],
+    cwd: Path,
+    env: dict[str, str],
+    *,
+    display_command: list[str] | None = None,
+) -> int:
+    shown = display_command if display_command is not None else command
+    print(f"\n$ {' '.join(shown)}   (in {cwd})")
     return subprocess.run(command, cwd=cwd, env=env, check=False).returncode  # noqa: S603
 
 
@@ -127,21 +141,79 @@ def diff_body(patch: Path) -> bytes:
     return text[start:]
 
 
+def _resolved(path: Path) -> Path:
+    return path.expanduser().resolve(strict=False)
+
+
+def _contains(container: Path, candidate: Path) -> bool:
+    """Whether deleting `container` would also delete `candidate`."""
+    try:
+        candidate.relative_to(container)
+    except ValueError:
+        return False
+    return True
+
+
+def validate_worktree_target(archive: Path, worktree: Path) -> tuple[Path, Path]:
+    """Resolve deletion boundaries and refuse any directory we do not own."""
+    archive = _resolved(archive)
+    worktree = _resolved(worktree)
+    protected = {
+        _resolved(Path.home()),
+        _resolved(REPO_ROOT),
+        archive,
+    }
+
+    if worktree == Path(worktree.anchor):
+        raise SystemExit(f"refusing filesystem root as worktree: {worktree}")
+    if any(_contains(worktree, path) for path in protected):
+        raise SystemExit(f"refusing worktree that contains a protected path: {worktree}")
+    if _contains(REPO_ROOT, worktree):
+        raise SystemExit(f"worktree must stay outside the repository: {worktree}")
+    if _contains(archive, worktree):
+        raise SystemExit(f"worktree must stay outside the frozen archive: {worktree}")
+
+    if worktree.exists():
+        is_link = worktree.is_symlink() or (
+            hasattr(os.path, "isjunction") and os.path.isjunction(worktree)
+        )
+        if is_link:
+            raise SystemExit(f"refusing linked worktree path: {worktree}")
+        sentinel = worktree / WORKTREE_SENTINEL
+        if (
+            not sentinel.is_file()
+            or sentinel.is_symlink()
+            or sentinel.read_text(encoding="utf-8") != WORKTREE_SENTINEL_CONTENT
+        ):
+            raise SystemExit(
+                f"refusing to replace unowned worktree: {worktree}\n"
+                f"Expected runner sentinel: {sentinel}\n"
+                "Choose a new --worktree path or remove the old directory manually."
+            )
+    return archive, worktree
+
+
 def rebuild_worktree(archive: Path, worktree: Path) -> None:
+    archive, worktree = validate_worktree_target(archive, worktree)
     if not archive.exists():
         raise SystemExit(
             f"frozen archive not found at {archive}\nSee docs/backend/GATE_0_ARCHIVE_MANIFEST.md."
         )
+    for name in ("titlepipe", "bugfixes"):
+        if not (archive / name).is_dir():
+            raise SystemExit(f"frozen archive is missing required directory: {archive / name}")
+
     if worktree.exists():
-        shutil.rmtree(worktree, ignore_errors=True)
+        shutil.rmtree(worktree)
     worktree.mkdir(parents=True)
+    (worktree / WORKTREE_SENTINEL).write_text(WORKTREE_SENTINEL_CONTENT, encoding="utf-8")
     for name in ("titlepipe", "bugfixes"):
         shutil.copytree(archive / name, worktree / name)
 
     # Build artefacts of an earlier run are not part of the artefact.
     for junk in ("__pycache__", ".pytest_cache"):
         for path in worktree.rglob(junk):
-            shutil.rmtree(path, ignore_errors=True)
+            shutil.rmtree(path)
 
     # Normalise to LF before patching. The committed patch is LF; if a future
     # re-zip of the archive stores CRLF, every context line would differ and
@@ -167,18 +239,31 @@ def ensure_venv(prototype: Path, env: dict[str, str]) -> Path:
 
     if shutil.which("uv") is None:
         raise SystemExit(f"no virtualenv at {prototype / '.venv'} and uv is not on PATH")
+    if not DEPENDENCY_LOCK.is_file():
+        raise SystemExit(f"Gate 0 dependency lock is missing: {DEPENDENCY_LOCK}")
     print(f"creating a virtualenv in {prototype}")
-    if run(["uv", "venv", "--python", "3.13", ".venv"], cwd=prototype, env=env):
+    if run(["uv", "venv", "--python", PYTHON_VERSION, ".venv"], cwd=prototype, env=env):
         raise SystemExit("uv venv failed")
     python = prototype / ".venv" / "Scripts" / "python.exe"
     if not python.exists():
         python = prototype / ".venv" / "bin" / "python"
     if run(
-        ["uv", "pip", "install", "--python", str(python), *DEPENDENCIES],
+        [
+            "uv",
+            "pip",
+            "install",
+            "--python",
+            str(python),
+            "--no-deps",
+            "--requirements",
+            str(DEPENDENCY_LOCK),
+        ],
         cwd=prototype,
         env=env,
     ):
         raise SystemExit("dependency install failed")
+    if run(["uv", "pip", "check", "--python", str(python)], cwd=prototype, env=env):
+        raise SystemExit("locked dependency environment is inconsistent")
     return python
 
 
@@ -249,6 +334,18 @@ def main() -> int:
     env["TITLEPIPE_SEED_ROOT"] = str(seed_root)
 
     if args.fresh:
+        print("=== verifying the frozen archive ===")
+        if run(
+            [
+                sys.executable,
+                str(HERE / "verify_archive.py"),
+                "--archive",
+                str(args.archive),
+            ],
+            cwd=REPO_ROOT,
+            env=env,
+        ):
+            return 1
         print("=== rebuilding from the frozen archive ===")
         rebuild_worktree(args.archive, args.worktree)
     if not prototype.exists():
@@ -273,6 +370,11 @@ def main() -> int:
         ],
         cwd=REPO_ROOT,
         env=env,
+        display_command=[
+            str(python),
+            str(HERE / "make_synthetic_package.py"),
+            "<isolated synthetic-package path>",
+        ],
     ):
         return 1
     if run(
@@ -297,11 +399,12 @@ def main() -> int:
     print("\n=== bug-fix patch suite (24 tests, still unmerged) ===")
     bugfix_rc = 0
     for module in ("fix_segment.py", "fix_assemble.py", "fix_api.py"):
-        bugfix_rc = bugfix_rc or run(
+        rc = run(
             [str(python), "-m", "unittest", "discover", "-s", "bugfixes", "-p", module],
             cwd=args.worktree,
             env=env,
         )
+        bugfix_rc = bugfix_rc or rc
 
     print("\n" + "=" * 60)
     print(f"package suite : {'PASS' if package_rc == 0 else 'FAIL'}")
