@@ -64,10 +64,14 @@ def create_app(
     )
     app.state.resources = resources
 
-    # Order matters. CORS is added last and therefore runs outermost, so a
-    # rejected preflight never reaches the request-context machinery; the
-    # request-context middleware then wraps everything below it, which is what
-    # guarantees an error response still carries its correlation id.
+    # Order matters, and `add_middleware` prepends — the last one added runs
+    # outermost. Reading downward, the resulting stack is:
+    #
+    #     TrustedHost -> CORS -> RequestContext -> router
+    #
+    # CORS therefore sits outside the request-context middleware, so a rejected
+    # preflight never reaches it, and the 500 that middleware builds is still
+    # inside the CORS layer and still carries its correlation id.
     app.add_middleware(
         RequestContextMiddleware,
         id_factory=resources.id_factory,

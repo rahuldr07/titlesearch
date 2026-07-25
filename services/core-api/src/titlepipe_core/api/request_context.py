@@ -129,8 +129,14 @@ class RequestContextMiddleware:
         token = _request_id.set(request_id)
         structlog.contextvars.bind_contextvars(request_id=request_id)
 
+        # Whether the status line has gone out. Once it has, the response can no
+        # longer be substituted — see the `except` below.
+        response_started = False
+
         async def send_with_request_id(message: Message) -> None:
+            nonlocal response_started
             if message["type"] == "http.response.start":
+                response_started = True
                 raw: object = message.get("headers")
                 existing_headers: list[tuple[bytes, bytes]] = (
                     list(cast("list[tuple[bytes, bytes]]", raw)) if isinstance(raw, list) else []
@@ -163,9 +169,22 @@ class RequestContextMiddleware:
             # Handling it inside this frame fixes all three at once: the context
             # is still bound, the send wrapper still appends the header, and CORS
             # is still upstream of us.
-            if self._on_unhandled is None:
-                raise
+            # Logged first, and unconditionally: this frame is the last place
+            # the correlation context is still bound, so a re-raise below still
+            # leaves a correlated record behind.
             _log().exception("unhandled_exception")
+            if self._on_unhandled is None or response_started:
+                # Nothing can be substituted once the status line is on the
+                # wire. Sending a second `http.response.start` raises an ASGI
+                # protocol error that *replaces* the real failure — the caller
+                # gets a truncated body, the log gets the protocol error, and
+                # the original exception is lost. Starlette's own
+                # `ServerErrorMiddleware` guards the same way; this middleware
+                # took over its job and has to take over its guard too.
+                #
+                # Re-raising lets the server abort the response, which is the
+                # only honest outcome for a stream that failed halfway.
+                raise
             response = self._on_unhandled(request_id, exc)
             await response(scope, receive, send_with_request_id)
         finally:

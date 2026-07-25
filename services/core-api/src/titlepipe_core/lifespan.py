@@ -23,6 +23,7 @@ import contextlib
 from collections.abc import AsyncGenerator, Callable
 from dataclasses import dataclass, field
 from datetime import datetime
+from typing import Any
 
 from fastapi import FastAPI
 
@@ -31,7 +32,13 @@ from titlepipe_core.telemetry.hooks import NullRequestMetrics, RequestMetrics
 from titlepipe_core.telemetry.logging import get_logger
 from titlepipe_domain import Clock, IdFactory, SystemClock, Uuid4IdFactory
 
-_log = get_logger(__name__)
+def _log() -> Any:
+    """Acquired at call time, never bound at import. A module-level logger pins
+    whatever logging configuration was active first and silently ignores a later
+    one — see `get_logger`'s own warning. This module's own docstring forbids
+    module globals for exactly this reason: two apps in one process must log
+    under their own settings."""
+    return get_logger(__name__)
 
 
 @dataclass
@@ -89,7 +96,7 @@ def build_lifespan(
     @contextlib.asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncGenerator[None]:
         resources.started_at = resources.clock.now()
-        _log.info(
+        _log().info(
             "service_started",
             service_name=resources.settings.service_name.value,
             environment=resources.settings.environment.value,
@@ -100,7 +107,7 @@ def build_lifespan(
             # Release in reverse order of acquisition once there is more than
             # one resource. Runs on both clean shutdown and startup failure.
             resources.started_at = None
-            _log.info(
+            _log().info(
                 "service_stopped",
                 service_name=resources.settings.service_name.value,
             )

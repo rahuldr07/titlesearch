@@ -51,7 +51,13 @@ from titlepipe_domain import (
     ValidationError,
 )
 
-_log = get_logger(__name__)
+def _log() -> Any:
+    """Acquired at call time, never bound at import. A module-level logger pins
+    whatever logging configuration was active first and silently ignores a later
+    one — see `get_logger`'s own warning. `request_context._log` follows the same
+    rule; two apps in one process must each log under their own settings."""
+    return get_logger(__name__)
+
 
 # Codes for failures that arise below the domain layer and so have no
 # `DomainError` to carry them.
@@ -201,7 +207,7 @@ async def handle_domain_error(request: Request, exc: Exception) -> JSONResponse:
     if status >= 500:
         # An unmapped domain error is a gap in DOMAIN_ERROR_STATUS, not a
         # caller mistake. Say so loudly enough to be fixed.
-        _log.error(
+        _log().error(
             "domain_error_unmapped",
             error_name=type(error).__name__,
             error_code=error.code,
@@ -253,7 +259,7 @@ async def handle_unexpected(request: Request, exc: Exception) -> JSONResponse:
     The detail goes to the log, bound to the same request id the caller is
     given, and never into the response body of a deployed environment.
     """
-    _log.exception("unhandled_exception", exception_name=type(exc).__name__)
+    _log().exception("unhandled_exception", exception_name=type(exc).__name__)
     details: dict[str, Any] = {}
     if not _environment_of(request).is_deployed:
         details = {"exception": type(exc).__name__, "developer_message": str(exc)}

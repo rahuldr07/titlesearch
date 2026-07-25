@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+from collections.abc import AsyncGenerator
+
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from starlette.responses import StreamingResponse
 
 from titlepipe_core.api.request_context import (
     MAX_INBOUND_REQUEST_ID_LENGTH,
@@ -82,4 +85,38 @@ def test_the_context_is_cleared_even_when_the_handler_raises(
         response = client.get("/boom")
 
     assert response.status_code == 500
+    assert current_request_id() is None
+
+
+def test_a_mid_stream_failure_does_not_start_a_second_response(app: FastAPI) -> None:
+    """Once the status line is on the wire, no envelope can replace it.
+
+    The middleware catches `Exception` to keep the correlation header and the
+    CORS layer around a 500 — but that substitution is only legal *before* the
+    response starts. Sending a second `http.response.start` replaces the real
+    failure with an ASGI protocol error and drops the connection mid-body, so
+    the original exception is neither served nor readable in the log.
+
+    Starlette's own `ServerErrorMiddleware` guards this with a `response_started`
+    flag; this middleware replaced it and had to grow the same guard. The shape
+    is not hypothetical: page delivery and report download stream.
+    """
+
+    @app.get("/stream")
+    async def _stream() -> StreamingResponse:
+        async def body() -> AsyncGenerator[bytes]:
+            yield b"partial"
+            raise RuntimeError("failed after the first chunk")
+
+        return StreamingResponse(body(), media_type="text/plain")
+
+    # `raise_server_exceptions=True` is what makes the assertion meaningful:
+    # what surfaces must be the handler's own RuntimeError. Before the guard it
+    # was `AssertionError: Received multiple "http.response.start" messages` —
+    # the protocol error standing where the real cause should be.
+    with TestClient(app) as client, pytest.raises(RuntimeError, match="after the first chunk"):
+        client.get("/stream")
+
+    # The context is still torn down on the way out, exactly as for a
+    # pre-response failure.
     assert current_request_id() is None
