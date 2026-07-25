@@ -192,41 +192,117 @@ jobs:
             *--reload*|*--debug*) echo "development flag in production command"; exit 1 ;;
           esac
 
+      # The probes run the image as production, because that is the
+      # configuration whose refusals are worth asserting — and because the
+      # settings model has no default for `environment` by design, so an
+      # incomplete environment here is a container that never starts.
+      #
+      # A valid production configuration is therefore the whole set, not just
+      # the host: docs off, a Host allowlist, an explicit same-origin
+      # declaration and a non-placeholder seal password. Anything less and
+      # `_deployed_environments_refuse_unsafe_configuration` refuses to build.
+      #
+      # The seal password is a throwaway for a container that serves no session
+      # and is destroyed at the end of the step. It only has to be 32 characters
+      # and absent from PLACEHOLDER_SECRETS.
       - name: Smoke test
+        env:
+          SEAL: "ci-smoke-only-not-a-real-secret!"
         run: |
           set -euo pipefail
           image="titlepipe/${{ matrix.service }}:${{ github.sha }}"
+
+          # Waits for a URL, and fails loudly with the container's own logs if
+          # it never answers. The previous version looped and then fell through,
+          # so a container that exited at startup produced a confusing failure
+          # at the next assertion instead of the real reason here.
+          await() {
+            local url="$1"
+            for _ in $(seq 1 30); do
+              if curl -fsS "${url}" >/dev/null 2>&1; then
+                return 0
+              fi
+              if [ -z "$(docker ps -q -f name=probe)" ]; then
+                echo "::error::container exited before serving ${url}"
+                docker logs probe || true
+                return 1
+              fi
+              sleep 1
+            done
+            echo "::error::timed out waiting for ${url}"
+            docker logs probe || true
+            return 1
+          }
+
           case "${{ matrix.service }}" in
             core-api)
               docker run -d --name probe -p 8000:8000 \
-                -e TITLEPIPE_HOST=0.0.0.0 "${image}"
-              for _ in $(seq 1 30); do
-                curl -fsS http://127.0.0.1:8000/health && break || sleep 1
-              done
+                -e TITLEPIPE_ENVIRONMENT=production \
+                -e TITLEPIPE_HOST=0.0.0.0 \
+                -e TITLEPIPE_DOCS_ENABLED=false \
+                -e TITLEPIPE_SAME_ORIGIN_DEPLOYMENT=true \
+                -e TITLEPIPE_ALLOWED_HOSTS='["127.0.0.1","localhost"]' \
+                -e TITLEPIPE_COOKIE_SEAL_PASSWORD="${SEAL}" \
+                "${image}"
+              await http://127.0.0.1:8000/health
               curl -fsS http://127.0.0.1:8000/health | tee /dev/stderr | grep -q '"status":"ok"'
               curl -fsS http://127.0.0.1:8000/ready  | tee /dev/stderr | grep -q '"ready":true'
               # Production must not serve docs, and must refuse a forged Host.
               test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8000/docs)" = 404
-              test "$(curl -s -o /dev/null -w '%{http_code}'                 -H 'Host: evil.example' http://127.0.0.1:8000/health)" = 400
+              test "$(curl -s -o /dev/null -w '%{http_code}' \
+                -H 'Host: evil.example' http://127.0.0.1:8000/health)" = 400
+              # Correlation is part of the contract, so it is asserted on the
+              # image rather than only in the unit suite.
+              curl -fsS -D - -o /dev/null http://127.0.0.1:8000/health \
+                | grep -iq '^x-request-id:'
               docker rm -f probe
               ;;
             blind-svc)
               docker run -d --name probe -p 8100:8100 \
-                -e TITLEPIPE_BLIND_HOST=0.0.0.0 "${image}"
-              for _ in $(seq 1 30); do
-                curl -fsS http://127.0.0.1:8100/health && break || sleep 1
-              done
+                -e TITLEPIPE_BLIND_ENVIRONMENT=production \
+                -e TITLEPIPE_BLIND_HOST=0.0.0.0 \
+                -e TITLEPIPE_BLIND_DOCS_ENABLED=false \
+                -e TITLEPIPE_BLIND_SAME_ORIGIN_DEPLOYMENT=true \
+                -e TITLEPIPE_BLIND_ALLOWED_HOSTS='["127.0.0.1","localhost"]' \
+                -e TITLEPIPE_BLIND_COOKIE_SEAL_PASSWORD="${SEAL}" \
+                "${image}"
+              await http://127.0.0.1:8100/health
               curl -fsS http://127.0.0.1:8100/health | tee /dev/stderr | grep -q '"service":"blind-api"'
               curl -fsS http://127.0.0.1:8100/ready  | tee /dev/stderr | grep -q '"ready":true'
+              test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8100/docs)" = 404
               docker rm -f probe
               ;;
             extraction-svc)
-              docker run --rm -e TITLEPIPE_EXTRACTION_ENVIRONMENT=production \n                "${image}" titlepipe-extraction check
+              docker run --rm -e TITLEPIPE_EXTRACTION_ENVIRONMENT=production \
+                "${image}" titlepipe-extraction check
               ;;
             render-svc)
-              docker run --rm -e TITLEPIPE_RENDER_ENVIRONMENT=production \n                "${image}" titlepipe-render check
+              docker run --rm -e TITLEPIPE_RENDER_ENVIRONMENT=production \
+                -e TITLEPIPE_RENDER_GOTENBERG_URL=http://gotenberg.internal:3000 \
+                "${image}" titlepipe-render check
               ;;
           esac
+
+      # A container that refuses an incomplete configuration is a claim the
+      # Dockerfiles make in a comment ("No ENV default for the deployment
+      # environment") and that nothing checked. Asserted here because it is a
+      # property of the image, not of the settings model's unit tests.
+      - name: Verify the image refuses to start without an environment
+        run: |
+          set -uo pipefail
+          image="titlepipe/${{ matrix.service }}:${{ github.sha }}"
+          case "${{ matrix.service }}" in
+            core-api|blind-svc) probe=(timeout 20 docker run --rm "${image}") ;;
+            extraction-svc)     probe=(docker run --rm "${image}" titlepipe-extraction check) ;;
+            render-svc)         probe=(docker run --rm "${image}" titlepipe-render check) ;;
+          esac
+          if output="$("${probe[@]}" 2>&1)"; then
+            echo "::error::image started with no environment configured"
+            echo "${output}"
+            exit 1
+          fi
+          echo "refused as expected:"
+          echo "${output}" | tail -5
 
       - name: Trivy image scan
         uses: aquasecurity/trivy-action@0.28.0
