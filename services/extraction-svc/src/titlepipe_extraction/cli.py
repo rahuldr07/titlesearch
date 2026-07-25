@@ -20,11 +20,13 @@ chain — a `print` in a worker bypasses redaction entirely.
 from __future__ import annotations
 
 import argparse
+import os
 from typing import Final
 
 from pydantic import ValidationError
 
-from titlepipe_extraction.settings import ExtractionSettings
+from titlepipe_domain import Environment, LogRenderer
+from titlepipe_extraction.settings import ENV_PREFIX, ExtractionSettings
 from titlepipe_extraction.telemetry.logging import configure_logging, get_logger
 
 EXIT_OK: Final = 0
@@ -54,6 +56,28 @@ def load_settings() -> ExtractionSettings:
     return ExtractionSettings.from_environment()
 
 
+def environment_for_failed_configuration() -> Environment:
+    """Which environment to configure logging for when settings are unusable.
+
+    Fails closed. This runs on the one path where the settings object does not
+    exist, and configuring logging for DEVELOPMENT there would give the weakest
+    redaction — blocklist instead of allowlist, exception messages kept, console
+    instead of JSON — to the process least able to justify any of it. A
+    misconfigured production worker is exactly when a traceback is most likely
+    to carry a DSN.
+
+    The raw variable is read directly rather than through the model, because
+    the model is what just refused to build. An unrecognised or absent value
+    resolves to PRODUCTION; `api/errors.py::_environment_of` resolves an unknown
+    environment the same way, for the same reason.
+    """
+    raw = os.environ.get(f"{ENV_PREFIX}ENVIRONMENT", "").strip().lower()
+    try:
+        return Environment(raw)
+    except ValueError:
+        return Environment.PRODUCTION
+
+
 def command_check() -> int:
     """Validate configuration and report whether work could start.
 
@@ -64,7 +88,11 @@ def command_check() -> int:
     try:
         settings = load_settings()
     except ValidationError as exc:
-        configure_logging()
+        environment = environment_for_failed_configuration()
+        configure_logging(
+            renderer=LogRenderer.JSON if environment.is_deployed else LogRenderer.CONSOLE,
+            environment=environment,
+        )
         get_logger(__name__).error(
             "configuration_invalid",
             service_name="extraction-worker",

@@ -20,6 +20,7 @@ from titlepipe_render.cli import (
     EXIT_NOT_IMPLEMENTED,
     EXIT_OK,
     build_parser,
+    environment_for_failed_configuration,
     main,
 )
 from titlepipe_render.settings import RenderSettings
@@ -92,6 +93,57 @@ def test_a_configuration_failure_logs_field_names_and_never_values(
     captured = capsys.readouterr().out
     assert "configuration_invalid" in captured
     assert "max_concurrent_jobs" in captured
+    assert "not-a-number" not in captured
+
+
+@pytest.mark.parametrize(
+    ("declared", "expected"),
+    [
+        ("production", Environment.PRODUCTION),
+        ("staging", Environment.STAGING),
+        ("development", Environment.DEVELOPMENT),
+        # Unusable values all resolve the same way: closed.
+        ("", Environment.PRODUCTION),
+        ("prod", Environment.PRODUCTION),
+        ("PRODUCTION ", Environment.PRODUCTION),
+        ("nonsense", Environment.PRODUCTION),
+    ],
+)
+def test_an_unusable_configuration_still_resolves_its_environment(
+    monkeypatch: pytest.MonkeyPatch, declared: str, expected: Environment
+) -> None:
+    """The failure path must not silently become a development process.
+
+    `configure_logging()` with no arguments means blocklist redaction, kept
+    exception messages and a console renderer. Taking that default on the one
+    path where settings could not be read gives the weakest redaction to the
+    process least able to justify it — a misconfigured production worker, whose
+    traceback is exactly where a DSN turns up.
+    """
+    if declared:
+        monkeypatch.setenv("TITLEPIPE_RENDER_ENVIRONMENT", declared)
+    assert environment_for_failed_configuration() is expected
+
+
+def test_a_production_configuration_failure_is_redacted_and_shippable(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Production rules apply even though the settings object never existed."""
+    apply(
+        monkeypatch,
+        {
+            "TITLEPIPE_RENDER_ENVIRONMENT": "production",
+            "TITLEPIPE_RENDER_GOTENBERG_URL": "http://gotenberg:3000",
+            "TITLEPIPE_RENDER_MAX_CONCURRENT_JOBS": "not-a-number",
+        },
+    )
+    assert main(["check"]) == EXIT_INVALID_CONFIGURATION
+
+    captured = capsys.readouterr().out
+    # JSON, because a deployed environment has a log shipper reading this.
+    record = json.loads(captured.strip().splitlines()[-1])
+    assert record["event"] == "configuration_invalid"
+    assert "max_concurrent_jobs" in record["invalid_fields"]
     assert "not-a-number" not in captured
 
 
