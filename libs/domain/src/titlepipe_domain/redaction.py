@@ -118,6 +118,9 @@ SENSITIVE_KEY_PARTS: Final[frozenset[str]] = frozenset(
 
 # Keys that contain a sensitive substring but are safe and diagnostically
 # valuable. Checked first, so this wins.
+#
+# Every entry here must be an exact key, never a fragment: the point is to
+# readmit one named field, not to open a hole the width of a substring.
 SAFE_KEY_EXCEPTIONS: Final[frozenset[str]] = frozenset(
     {
         "event",
@@ -132,6 +135,13 @@ SAFE_KEY_EXCEPTIONS: Final[frozenset[str]] = frozenset(
         "content_type",
         "document_count",
         "page_count",
+        # Work identity, not a person. Both contain `name` and were therefore
+        # redacted in every environment despite being on the allowlist below —
+        # the two tables are maintained separately and had contradicted each
+        # other unnoticed. `test_every_allowlisted_diagnostic_actually_survives`
+        # now covers the whole table rather than a hand-picked sample.
+        "job_name",
+        "queue_name",
     }
 )
 

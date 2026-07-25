@@ -10,6 +10,7 @@ import pytest
 
 from titlepipe_domain.redaction import (
     REDACTED,
+    SAFE_DIAGNOSTIC_KEYS,
     is_sensitive_key,
     redact_mapping,
     sanitise_exception,
@@ -199,12 +200,24 @@ def test_an_unnamed_field_is_dropped_when_deployed(key: str) -> None:
     assert redact_mapping({key: "EXAMPLE PERSON"}, allowlist_only=True)[key] == REDACTED
 
 
-@pytest.mark.parametrize(
-    "key",
-    ["event", "level", "timestamp", "request_id", "service_name", "status_code", "error_code"],
-)
-def test_named_diagnostics_survive_when_deployed(key: str) -> None:
-    assert redact_mapping({key: "value"}, allowlist_only=True)[key] == "value"
+@pytest.mark.parametrize("key", sorted(SAFE_DIAGNOSTIC_KEYS))
+def test_every_allowlisted_diagnostic_actually_survives(key: str) -> None:
+    """The whole table, in both modes — not a hand-picked sample of it.
+
+    The allowlist and the blocklist are maintained separately, and
+    `redact_mapping` requires a field to pass *both*: allowlisted **and** not
+    blocked. So an entry added to one can be silently cancelled by the other,
+    which is exactly what happened — `job_name` and `queue_name` were
+    allowlisted as work identity, both contain `name`, neither was excepted,
+    and both rendered `[redacted]` in every environment. The previous version
+    of this test named seven keys by hand and none of them was the broken pair.
+    """
+    assert redact_mapping({key: "value"})[key] == "value", (
+        f"{key} is on the allowlist but the blocklist drops it in development"
+    )
+    assert redact_mapping({key: "value"}, allowlist_only=True)[key] == "value", (
+        f"{key} is on the allowlist but the blocklist drops it when deployed"
+    )
 
 
 def test_a_measurement_suffix_survives_only_with_a_non_string_value() -> None:
