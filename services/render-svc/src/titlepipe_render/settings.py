@@ -25,12 +25,17 @@ from titlepipe_domain import Environment, LogRenderer, ServiceName
 INTERNAL_HOST_SUFFIXES = (".internal", ".local", ".svc", ".cluster.local")
 INTERNAL_HOST_NAMES = ("gotenberg", "localhost", "127.0.0.1")
 
+# Named, because `cli.py` needs it too: when the model below fails to validate
+# there is no settings object to read the environment off, and the logging that
+# reports the failure still has to be configured for the right one.
+ENV_PREFIX = "TITLEPIPE_RENDER_"
+
 
 class RenderSettings(BaseSettings):
     """Render worker configuration. Instantiating this validates it."""
 
     model_config = SettingsConfigDict(
-        env_prefix="TITLEPIPE_RENDER_",
+        env_prefix=ENV_PREFIX,
         env_file=None,
         extra="forbid",
         frozen=True,

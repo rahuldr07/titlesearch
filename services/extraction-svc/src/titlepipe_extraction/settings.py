@@ -21,12 +21,17 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from titlepipe_domain import Environment, LogRenderer, ServiceName
 
+# Named, because `cli.py` needs it too: when the model below fails to validate
+# there is no settings object to read the environment off, and the logging that
+# reports the failure still has to be configured for the right one.
+ENV_PREFIX = "TITLEPIPE_EXTRACTION_"
+
 
 class ExtractionSettings(BaseSettings):
     """Extraction worker configuration. Instantiating this validates it."""
 
     model_config = SettingsConfigDict(
-        env_prefix="TITLEPIPE_EXTRACTION_",
+        env_prefix=ENV_PREFIX,
         env_file=None,
         extra="forbid",
         frozen=True,
