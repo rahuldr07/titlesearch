@@ -34,6 +34,30 @@ def test_client_data_is_refused(path: str) -> None:
 @pytest.mark.parametrize(
     "path",
     [
+        "docs/page-0007.jpg",
+        "docs/page-0007.jpeg",
+        "apps/web/public/scan.png",
+        "anywhere/deed.webp",
+        "anywhere/deed.heic",
+        "packages/mocks/page.png",
+        "uploads/page.bmp",
+    ],
+)
+def test_a_rasterised_page_is_refused_like_the_pdf_it_came_from(path: str) -> None:
+    """Scanned packages arrive as images, and a page exported on its own is a
+    JPEG or a PNG far more often than a TIFF.
+
+    Only `.tif`/`.tiff` were listed originally, so the two commonest formats
+    walked through. `check-added-large-files --maxkb=512` does not cover the
+    gap either — one scanned page fits inside that comfortably.
+    """
+    assert violation_for(Path(path)) is not None
+    assert main([path]) == 1
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
         "packages/county-package.pdf",
         "packages/contract/fixtures/order.docx",
         "packages/mocks/seed.sqlite",

@@ -42,8 +42,23 @@ FORBIDDEN_SUFFIXES = frozenset(
         ".docx",
         ".doc",
         ".rtf",
+        # page images. A county package arrives scanned, and a rasterised page
+        # is the same NPI as the PDF it came from. `.tif` was covered from the
+        # start and the rest were not, which left the most common export format
+        # for a single page — a JPEG or a PNG — walking straight through. Size
+        # does not help either: `check-added-large-files --maxkb=512` passes a
+        # single scanned page comfortably.
         ".tif",
         ".tiff",
+        ".jpg",
+        ".jpeg",
+        ".png",
+        ".gif",
+        ".bmp",
+        ".webp",
+        ".heic",
+        ".heif",
+        ".jp2",
         # databases
         ".seed",
         ".sqlite",
@@ -85,6 +100,24 @@ ALLOWLIST: dict[str, tuple[str, str]] = {
     "docs/archive/Title report review tool.zip": (
         "baf71d954f1a55a1594a008e39b393f4479c9dcb5cb2c654c4d33f01854c6bda",
         "design screens only; inspected and verified to contain no client documents",
+    ),
+    # UI crops kept as the reference for the two-NA-states rendering and the
+    # action panel. Each was opened and read: every value shown resolves to a
+    # fixture in packages/mocks/src/data.ts (the plaintiff is the mocks'
+    # CREEKBANK RECOVERY SPV LLC), so there is no client data in any of them.
+    # Re-inspect before updating a hash — a screenshot of the same screen taken
+    # against a real package would look almost identical and would not be.
+    "docs/archive/action-panel-after-c.png": (
+        "e9108722247bff5e87fdeaed89a2578c344cdc91766c6afa0b8eb0af425f453c",
+        "UI crop of the action panel; all values are packages/mocks fixtures",
+    ),
+    "docs/archive/na-expected-row.png": (
+        "498b51e28dae52242158159c8caabb87aa4c7bf867b9628dd61ff79c3285d897",
+        "UI crop of an N/A — EXPECTED row; all values are packages/mocks fixtures",
+    ),
+    "docs/archive/unreadable-row.png": (
+        "e3926563e68894eacec750c08cfd4d2c6c9b433f0a25e3507b5a50ff5fbd504e",
+        "UI crop of a PRESENT — UNREADABLE row; all values are packages/mocks fixtures",
     ),
 }
 
