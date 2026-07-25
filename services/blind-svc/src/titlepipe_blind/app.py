@@ -4,7 +4,7 @@ Capture and assignment only. This service has no route that returns model
 output, extraction state, golden values, reconciliation results or the other
 seat's entry — not because a filter removes them, but because the data is not
 reachable from this process. The guarantee is topology and credentials, proven
-by `tests/test_boundaries.py`, not a check somewhere in a handler.
+by `tests/test_blind_boundary.py`, not a check somewhere in a handler.
 
 No product `/api/*` route exists at Gate 1. Only liveness and readiness.
 """
@@ -64,6 +64,14 @@ def create_app(
     )
     app.state.resources = resources
 
+    # Order matters, and `add_middleware` prepends — the last one added runs
+    # outermost. Reading downward, the resulting stack is:
+    #
+    #     TrustedHost -> CORS -> RequestContext -> router
+    #
+    # CORS therefore sits outside the request-context middleware, so a rejected
+    # preflight never reaches it, and the 500 that middleware builds is still
+    # inside the CORS layer and still carries its correlation id.
     app.add_middleware(
         RequestContextMiddleware,
         id_factory=resources.id_factory,

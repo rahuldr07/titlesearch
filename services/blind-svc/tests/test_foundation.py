@@ -7,11 +7,14 @@ than the internal one would be exactly backwards.
 
 from __future__ import annotations
 
+from collections.abc import AsyncGenerator
+
 import pytest
 import structlog
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from pydantic import SecretStr, ValidationError
+from starlette.responses import StreamingResponse
 
 from titlepipe_blind.api.errors import CODE_INTERNAL_ERROR, GENERIC_INTERNAL_MESSAGE
 from titlepipe_blind.api.request_context import REQUEST_ID_HEADER
@@ -85,6 +88,28 @@ def test_a_request_id_is_returned_and_propagated(client: TestClient) -> None:
         client.get("/health", headers={REQUEST_ID_HEADER: "edge-1"}).headers[REQUEST_ID_HEADER]
         == "edge-1"
     )
+
+
+def test_a_mid_stream_failure_does_not_start_a_second_response(app: FastAPI) -> None:
+    """The same guard as the Core API, asserted here rather than assumed.
+
+    The middleware substitutes a 500 envelope to keep the correlation header
+    and the CORS layer, but only while the status line is still unsent. A
+    second `http.response.start` replaces the real failure with an ASGI
+    protocol error and truncates the body. Capture uploads stream, so this is
+    reachable here first.
+    """
+
+    @app.get("/stream")
+    async def _stream() -> StreamingResponse:
+        async def body() -> AsyncGenerator[bytes]:
+            yield b"partial"
+            raise RuntimeError("failed after the first chunk")
+
+        return StreamingResponse(body(), media_type="text/plain")
+
+    with TestClient(app) as client, pytest.raises(RuntimeError, match="after the first chunk"):
+        client.get("/stream")
 
 
 def test_a_domain_refusal_maps_to_the_documented_envelope(app: FastAPI) -> None:
