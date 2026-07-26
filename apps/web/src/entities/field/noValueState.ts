@@ -69,9 +69,12 @@ export function describeNoValue(v: NoValue): NoValueDescriptor {
       // extracted" or "Not Available" here would be a false claim of absence
       // while the readings sit right there. Principle 6, mirrored: never
       // assert an absence you cannot substantiate.
+      // The wording stays short because the row also carries an A≠B marker and
+      // the panel spells out the disagreement in full. What it must never say
+      // is that the field is empty or unread.
       return {
         testId: "nv-unsettled",
-        label: "nothing settled — the readings disagree",
+        label: "nothing settled yet",
         tone: "unsettled",
         carriesPage: false,
       };

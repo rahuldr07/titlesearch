@@ -43,8 +43,8 @@ test.skip("a both-found disagreement never claims emptiness — draft leads, lab
   ).toHaveCount(0);
 });
 
-// TODO(rebuild): un-skip when this feature lands — rule: differing characters between readings are highlighted
-test.skip("differing characters between readings are highlighted", async ({
+// UN-SKIPPED 2026-07-27 (Pass 3, increment 3). Assertions unchanged.
+test("differing characters between readings are highlighted", async ({
   page,
 }) => {
   await go(page);

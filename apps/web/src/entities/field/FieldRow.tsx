@@ -1,4 +1,5 @@
 import type { Field } from "@titlepipe/contract";
+import { readingsDiffer } from "./charDiff";
 import { NoValue } from "./NoValue";
 import { noValueOf } from "./noValueState";
 
@@ -50,6 +51,10 @@ export function FieldRow({
   onSelect: () => void;
 }) {
   const nv = noValueOf(field);
+  // Disagreement leads the visual hierarchy (master §4.2). Marked on the row
+  // itself so a reviewer scanning the report sees where the arguments are
+  // without opening anything — and it is marked whether or not a value merged.
+  const disagree = readingsDiffer((field.readings ?? []).map((r) => r.value));
 
   return (
     <button
@@ -68,6 +73,14 @@ export function FieldRow({
       </span>
 
       <span className="flex min-w-0 flex-1 flex-wrap items-baseline gap-2">
+        {disagree ? (
+          <span
+            data-testid={`ab-${field.path}`}
+            className="rounded-xs border border-state-attend-border bg-state-attend-surface px-1.5 py-px text-micro font-bold tracking-badge text-state-attend uppercase"
+          >
+            A≠B
+          </span>
+        ) : null}
         {nv !== null ? (
           <NoValue state={nv} />
         ) : (

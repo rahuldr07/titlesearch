@@ -2,8 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { OrderFieldsResponse } from "@titlepipe/contract";
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { api } from "../../api";
-import { FieldRow, fieldLabel } from "../../entities/field/FieldRow";
-import { StatePill } from "../../entities/field/StatePill";
+import { FieldRow } from "../../entities/field/FieldRow";
+import { DecisionPanel } from "./DecisionPanel";
 
 /**
  * Review — the assembled report, field by field.
@@ -89,17 +89,7 @@ export function ReviewScreen() {
         </span>
       </div>
 
-      {selected === undefined ? null : (
-        <div className="flex flex-wrap items-center gap-3 border-b border-line-subtle bg-surface-panel px-5 py-3">
-          <span
-            data-testid="sel-label"
-            className="text-md font-semibold text-ink-primary"
-          >
-            {fieldLabel(selected.path)}
-          </span>
-          <StatePill state={selected.state} testId="sel-state" />
-        </div>
-      )}
+      {selected === undefined ? null : <DecisionPanel field={selected} />}
 
       <div className="min-h-0 flex-1 overflow-auto">
         {all.map((f) => (

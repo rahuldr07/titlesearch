@@ -127,17 +127,49 @@ test("a confirmed value without provenance renders visibly flagged", async ({
   );
 });
 
-// TODO(rebuild): un-skip when this feature lands — rule: A≠B disagreement leads: chip on the row, both readings in the panel
-test.skip("A≠B disagreement leads: chip on the row, both readings in the panel", async ({
+/*
+ * UN-SKIPPED 2026-07-27 (Pass 3, increment 3). One copy assertion rewritten:
+ * "THEY DISAGREE. THAT IS WHY IT IS YOURS." was the old design's voice. The
+ * panel still has to say why the field is the reviewer's — that is the rule —
+ * but in design-mock's register. Asserted through the `why-yours` testid plus
+ * the substance ("disagree", "yours") rather than a verbatim sentence, so a
+ * future copy edit does not fail the test while a missing explanation does.
+ *
+ * Everything else is unchanged, and two assertions are ADDED: neither reading
+ * may be pre-selected, and confidence must not read as a recommendation. Both
+ * are hard constraints (5) that this panel is the main opportunity to violate.
+ */
+test("A≠B disagreement leads: chip on the row, both readings in the panel", async ({
   page,
 }) => {
   await go(page);
   const lender = page.getByTestId("row-mortgages.1.lender");
   await expect(lender).toContainText("A≠B");
   await lender.click();
-  await expect(page.getByText("THEY DISAGREE. THAT IS WHY IT IS YOURS.")).toBeVisible();
+
+  // the panel says why this field is a person's problem
+  const why = page.getByTestId("why-yours");
+  await expect(why).toBeVisible();
+  await expect(why).toContainText("disagree");
+  await expect(why).toContainText("yours");
+
+  // both readings, each attributed to its engine
   await expect(page.getByText("gemini-2.5-flash").first()).toBeVisible();
   await expect(page.getByText("llmwhisperer-hq").first()).toBeVisible();
+  await expect(page.getByTestId("reading-gemini-2.5-flash")).toBeVisible();
+  await expect(page.getByTestId("reading-llmwhisperer-hq")).toBeVisible();
+
+  // NEITHER is pre-selected or marked as preferred — the page decides, not the
+  // engine, and not the UI (constraint 5)
+  await expect(why).toContainText("Neither reading is preferred");
+
+  // confidence renders as context, never as a score or endorsement
+  const panel = page.getByTestId("decision-panel");
+  await expect(panel).toContainText("it decides nothing");
+  const body = (await panel.innerText()).toLowerCase();
+  for (const forbidden of ["recommended", "best match", "most likely", "winner"]) {
+    expect(body).not.toContain(forbidden);
+  }
 });
 
 // TODO(rebuild): un-skip when this feature lands — rule: correction without a reason never submits
