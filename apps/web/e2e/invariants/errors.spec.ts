@@ -30,8 +30,8 @@ test("an unknown route renders the not-found card, never a blank page", async ({
   await expect(card).toContainText("Nothing lives at this address.");
 });
 
-// TODO(rebuild): depends on a screen deleted in Pass 1 (/escalations) or on the order rail, not yet rebuilt
-test.skip("the escalation inbox says unavailable when the list 500s", async ({
+// UN-SKIPPED 2026-07-27 (Pass 3). /escalations is back; a failed list is named, not blank.
+test("the escalation inbox says unavailable when the list 500s", async ({
   page,
 }) => {
   await interceptApi(page, {

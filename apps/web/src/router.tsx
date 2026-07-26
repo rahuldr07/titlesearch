@@ -9,7 +9,6 @@ import {
 } from "@tanstack/react-router";
 import {
   NotFoundCard,
-  RebuildingCard,
   RouteErrorCard,
   RoutePending,
 } from "./components/fallbacks";
@@ -69,8 +68,9 @@ const indexRoute = createRoute({
  * SCREENS were deleted; the ROUTES stayed, pointed at RebuildingCard, because
  * the surviving screens cross-link to them and those links are pinned by
  * harvested invariants. Restore each real component in Pass 3 and drop its
- * scaffold: /queue is back (2026-07-27); /ingest and /escalations still stand
- * on the card.
+ * scaffold: /queue and /escalations are back (2026-07-27) — the escalation
+ * inbox returns with the Q11/D1 redraw, the rule step INSIDE resolution. No
+ * route still stands on RebuildingCard, so the card is no longer imported here.
  *
  * The order-scoped shape below is worth restoring verbatim: the order is the
  * resource, review is a view of it, and `?field=` as validated search keeps
@@ -113,7 +113,10 @@ const escalationsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/escalations",
   beforeLoad: () => requireAccess("/escalations"),
-  component: () => <RebuildingCard screen="The escalation inbox" />,
+  component: lazyRouteComponent(
+    () => import("./features/escalations/EscalationsScreen"),
+    "EscalationsScreen",
+  ),
 });
 
 const dashboardRoute = createRoute({

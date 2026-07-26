@@ -18,8 +18,8 @@ import { expect, test } from "@playwright/test";
  * rule (cite existing OR draft new → lands PENDING, visibly inert).
  */
 
-// TODO(rebuild): the /escalations screen was deleted in Pass 1; rebuild needs the Q11 redraw (rule required to resolve)
-test.skip("resolve stays held without a ruling AND a rule", async ({ page }) => {
+// UN-SKIPPED 2026-07-27 (Pass 3). Rebuilt inbox holds the submit until BOTH exist.
+test("resolve stays held without a ruling AND a rule", async ({ page }) => {
   await page.goto("/escalations");
   const btn = page.getByTestId("resolve-btn");
   await expect(btn).toBeDisabled();
@@ -34,8 +34,8 @@ test.skip("resolve stays held without a ruling AND a rule", async ({ page }) => 
   await expect(btn).toBeDisabled();
 });
 
-// TODO(rebuild): the /escalations screen was deleted in Pass 1; rebuild needs the Q11 redraw (rule required to resolve)
-test.skip("citing an existing rule resolves the cluster", async ({ page }) => {
+// UN-SKIPPED 2026-07-27 (Pass 3). Cite path lands; the cited rule renders LIVE.
+test("citing an existing rule resolves the cluster", async ({ page }) => {
   await page.goto("/escalations");
   await page
     .getByTestId("ruling-input")
@@ -48,8 +48,8 @@ test.skip("citing an existing rule resolves the cluster", async ({ page }) => {
   await expect(page.getByText("LIVE IN PIPELINE — R13").first()).toBeVisible();
 });
 
-// TODO(rebuild): the /escalations screen was deleted in Pass 1; rebuild needs the Q11 redraw (rule required to resolve)
-test.skip("a drafted rule lands PENDING and renders visibly inert", async ({
+// UN-SKIPPED 2026-07-27 (Pass 3). Draft path lands PENDING and stamps itself inert.
+test("a drafted rule lands PENDING and renders visibly inert", async ({
   page,
 }) => {
   await page.goto("/escalations");
@@ -67,8 +67,8 @@ test.skip("a drafted rule lands PENDING and renders visibly inert", async ({
   ).toBeVisible();
 });
 
-// TODO(rebuild): the /escalations screen was deleted in Pass 1; rebuild needs the Q11 redraw (rule required to resolve)
-test.skip("no priority, category, or assignee affordances exist", async ({
+// UN-SKIPPED 2026-07-27 (Pass 3). No triage surface built (O4); one combobox only.
+test("no priority, category, or assignee affordances exist", async ({
   page,
 }) => {
   await page.goto("/escalations");
