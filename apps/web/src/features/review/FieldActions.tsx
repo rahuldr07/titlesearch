@@ -1,6 +1,8 @@
-import type { Field } from "@titlepipe/contract";
+import { canDo, type Field } from "@titlepipe/contract";
 import { useEffect, useRef, useState } from "react";
 import { noValueOf } from "../../entities/field/noValueState";
+import { session } from "../../session";
+import { BugChannel } from "./BugChannel";
 import { isTypingTarget } from "./keys";
 import { useFieldDecision } from "./useFieldDecision";
 
@@ -191,6 +193,40 @@ export function FieldActions({
   const btn =
     "rounded-md border px-3 py-2 text-sm font-semibold disabled:opacity-50";
 
+  /*
+   * AFFORDANCES ARE ABSENT, NOT DISABLED (orphan rule O13).
+   *
+   * Senior, ops and engineer roles reach this screen legitimately, via
+   * context-carrying deep links — a complaint retro, an escalation cluster. They
+   * may LOOK. They may not decide: field decisions belong to review roles.
+   *
+   * A greyed-out button would leak the existence of a capability the role does
+   * not hold, which is the same leak `rulesFor` goes to the trouble of avoiding
+   * in the permission payload. Undoing it in the DOM at the last step would make
+   * that effort pointless.
+   *
+   * The one channel that stays open to everyone is the bug report — anyone in
+   * the pipeline can say "this input is broken", and that routes to engineering,
+   * not to the rules inbox.
+   */
+  const role = session.role;
+  const mayDecide =
+    canDo(role, "field.confirm") ||
+    canDo(role, "field.correct") ||
+    canDo(role, "field.escalate");
+
+  if (!mayDecide) {
+    return (
+      <div data-testid="field-actions" className="mt-3">
+        <p className="text-sm text-ink-secondary">
+          You are here for context. Field decisions belong to the reviewer on
+          this order.
+        </p>
+        <BugChannel orderId={orderId} fieldId={field.id} />
+      </div>
+    );
+  }
+
   return (
     <div data-testid="field-actions" className="mt-3">
       <div className="flex flex-wrap gap-2">
@@ -340,6 +376,8 @@ export function FieldActions({
           </button>
         </div>
       ) : null}
+
+      <BugChannel orderId={orderId} fieldId={field.id} />
     </div>
   );
 }

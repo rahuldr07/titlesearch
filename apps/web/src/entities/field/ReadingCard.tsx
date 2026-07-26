@@ -19,6 +19,7 @@ export function ReadingCard({
   seat,
   segments,
   onAdopt,
+  onPin,
 }: {
   reading: FieldReading;
   /** positional label only — A/B is the seat, not a ranking */
@@ -30,6 +31,8 @@ export function ReadingCard({
    * the reading has no value to adopt.
    */
   onAdopt?: (value: string) => void;
+  /** pin this reader's line on the page — absent when it declared no coords */
+  onPin?: (() => void) | undefined;
 }) {
   return (
     <div
@@ -40,9 +43,27 @@ export function ReadingCard({
         <span className="text-micro font-bold tracking-badge text-ink-muted uppercase">
           Reader {seat}
         </span>
-        <span className="font-mono text-tiny text-ink-secondary">
-          {reading.engine_id}
-        </span>
+        {/*
+          Clicking the engine id pins THAT reader's line on the page — the
+          click-to-source path. It is the engine name and not a separate icon
+          because the question a reviewer has is "where did THIS reader get
+          that?", and the name is the thing they are looking at when they ask.
+          Engines that declared no coordinates are not clickable: there is
+          nothing to pin, and a dead button that looks live is worse than none.
+        */}
+        {onPin === undefined ? (
+          <span className="font-mono text-tiny text-ink-secondary">
+            {reading.engine_id}
+          </span>
+        ) : (
+          <button
+            type="button"
+            onClick={onPin}
+            className="cursor-pointer font-mono text-tiny text-page-ref underline decoration-dotted"
+          >
+            {reading.engine_id}
+          </button>
+        )}
         {reading.page === null ? null : (
           <span className="rounded-xs border border-page-ref-border bg-page-ref-surface px-1.5 py-px font-mono text-tiny font-semibold text-page-ref">
             p{reading.page}

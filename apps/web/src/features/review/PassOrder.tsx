@@ -2,6 +2,8 @@ import { useMutation } from "@tanstack/react-query";
 import { PassOrderRequest, PassOrderResponse } from "@titlepipe/contract";
 import { useEffect, useRef, useState } from "react";
 import { api } from "../../api";
+import { canDo } from "@titlepipe/contract";
+import { session } from "../../session";
 import { isTypingTarget } from "./keys";
 
 /**
@@ -20,6 +22,13 @@ import { isTypingTarget } from "./keys";
  * pass counts never come back to the client.
  */
 export function PassOrder({ orderId }: { orderId: string }) {
+  /*
+   * Absent, not disabled (orphan O13). Passing an order is a reviewer's act;
+   * senior/ops/engineer arrive here by deep link for context and must not see a
+   * control they cannot use — a greyed-out button advertises a capability the
+   * role does not hold.
+   */
+  const mayPass = canDo(session.role, "order.pass");
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
   const [nudge, setNudge] = useState<string | null>(null);
@@ -69,6 +78,8 @@ export function PassOrder({ orderId }: { orderId: string }) {
       },
     });
   };
+
+  if (!mayPass) return null;
 
   return (
     <div className="relative">

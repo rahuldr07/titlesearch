@@ -258,7 +258,7 @@ test("J/K walk the queued fields only", async ({ page }) => {
 });
 
 // TODO(rebuild): needs the document pane + click-to-source (react-pdf), not yet built
-test.skip("reader B line pins on the page from its coordinates", async ({
+test("reader B line pins on the page from its coordinates", async ({
   page,
 }) => {
   await go(page);

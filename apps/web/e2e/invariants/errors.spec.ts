@@ -63,7 +63,7 @@ test("delivery says unavailable when deliveries 500s", async ({ page }) => {
 });
 
 // TODO(rebuild): depends on a screen deleted in Pass 1 (/escalations) or on the order rail, not yet rebuilt
-test.skip("the order spine survives a timeline failure", async ({ page }) => {
+test("the order spine survives a timeline failure", async ({ page }) => {
   await interceptApi(page, {
     method: "GET",
     match: "/timeline",

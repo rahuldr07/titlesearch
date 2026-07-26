@@ -133,7 +133,7 @@ test("the engineer gate's confirm affordance exists only for its holders", async
 });
 
 // TODO(rebuild): needs the order rail and the read-only review affordances for non-review roles
-test.skip("ops arriving at review via a complaint deep link can look, not touch", async ({
+test("ops arriving at review via a complaint deep link can look, not touch", async ({
   page,
 }) => {
   await page.goto("/account");

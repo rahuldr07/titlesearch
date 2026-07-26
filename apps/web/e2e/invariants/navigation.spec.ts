@@ -21,7 +21,7 @@ import { expect, test } from "@playwright/test";
  */
 
 // TODO(rebuild): needs the global chord layer + ? map (chrome, not yet rebuilt) or the order rail
-test.skip("g-sequences jump between screens; ? shows the map", async ({ page }) => {
+test("g-sequences jump between screens; ? shows the map", async ({ page }) => {
   await page.goto("/queue");
   await expect(page.getByTestId("order-ref")).toBeVisible();
   await page.keyboard.press("g");
@@ -69,14 +69,31 @@ test("the ? overlay swallows screen keys while open", async ({ page }) => {
 });
 
 // TODO(rebuild): needs the global chord layer + ? map (chrome, not yet rebuilt) or the order rail
-test.skip("?field= deep links land on the exact field in context", async ({
+test("?field= deep links land on the exact field in context", async ({
   page,
 }) => {
   await page.goto("/orders/ord_demo_1/review?field=judgments.1.case_no");
   await expect(page.getByTestId("sel-label")).toHaveText("JGMT 1 — CASE NO");
-  await expect(page.getByTestId("sel-state")).toContainText(
-    "PRESENT — UNREADABLE",
-  );
+
+  /*
+   * REWRITTEN for the same reason as ux.spec's disagreement test: the original
+   * expected `sel-state` to read "PRESENT — UNREADABLE", i.e. the old UI
+   * overloaded the state pill — server state for most fields, the NA reason for
+   * unreadable ones. Two different facts through one element, which also meant
+   * the client could rewrite the pill for special cases. server-owns-state.spec
+   * requires that pill verbatim.
+   *
+   * So the pill now says what the server says, and the field's CONDITION renders
+   * beside it in its own element. The rule — a deep link lands on the exact
+   * field with its condition visible — is unchanged and now asserted on both
+   * halves rather than one conflated one.
+   */
+  await expect(page.getByTestId("sel-state")).toHaveText("NEEDS REVIEW");
+  const condition = page.getByTestId("sel-navalue");
+  await expect(condition).toContainText("Present — unreadable on page");
+  // and it still cites the page it is unreadable ON — an unreadable with no
+  // page reference would be a claim with nothing behind it
+  await expect(condition.getByTestId("nv-unreadable-page")).toHaveText("p30");
 });
 
 // TODO(rebuild): un-skip when this feature lands — rule: seed correction without context shows the no-menu-entry state
@@ -101,7 +118,7 @@ test("bench results carries context into seed correction", async ({ page }) => {
 });
 
 // TODO(rebuild): needs the global chord layer + ? map (chrome, not yet rebuilt) or the order rail
-test.skip("the order spine travels with the order on Review", async ({ page }) => {
+test("the order spine travels with the order on Review", async ({ page }) => {
   await page.goto("/orders/ord_demo_1/review");
   const rail = page.getByTestId("order-rail");
   await expect(rail).toContainText("ord_demo_1");
