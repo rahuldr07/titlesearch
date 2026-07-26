@@ -36,6 +36,13 @@
   --color-surface-document: #dcdde3; /* ORPHANED IN SOURCE — document pane backdrop */
   --color-surface-paper: #faf9f4; /* the scanned page itself */
 
+  /* page-reference chip — "this value was read from page N". Its own token
+     rather than reusing --color-action, because during the transition
+     --color-action collides with the legacy palette (see index.css). */
+  --color-page-ref: #4a2fae;
+  --color-page-ref-surface: #efeafd;
+  --color-page-ref-border: #dfd6fb;
+
   /* evidence highlight — the marker drawn over a cited line on the page */
   --color-surface-evidence: rgb(255 214 53 / 0.5);
   --color-border-evidence: #d9a400;

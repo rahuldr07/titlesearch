@@ -121,6 +121,32 @@ The flagship screen looks different from its mock in one respect — the surroun
 
 ---
 
+## D3 — Four no-value states, ratified. Contract widened.
+
+**Owner, 2026-07-26.** Resolves Q1.
+
+`NaReason` = `NOT_PRESENT` · `NOT_FOUND` · `NOT_STATED` · `PRESENT_UNREADABLE`.
+
+Purely **additive** — the previous two members keep their names, so `field.tsx`, `BlindFifty.tsx` and `Complaints.tsx` all still compile untouched. Renaming `NOT_PRESENT` → `NOT_USED_IN_JURISDICTION` to match Python would have churned three surviving screens for no behavioural gain; that reconciliation belongs to the Gate 6 port.
+
+`pending` is the fifth **render** and deliberately not an enum member: "we have not looked yet" is a statement about the pipeline, not the document. Conflating them is the ghost-chasing bug one level up.
+
+Built as a pure module (`entities/field/noValue.ts`) separate from the component, so exhaustiveness is testable in node — there is no DOM test environment and adding one would mean new dependencies. 12 static tests now pin it, including that all five renders are distinct and that an unknown member throws rather than rendering a silent blank.
+
+---
+
+## Incidental finding — the two token registers are NOT disjoint
+
+I asserted in `index.css` that the legacy and new token sets share no names. **That was wrong: 11 names collide** (measured):
+
+`--color-action` · `--color-action-border` · `--color-ink-secondary` · `--color-line-strong` · `--color-track` · `--color-row-hover` · `--font-sans` · `--font-mono` · `--shadow-page` · `--shadow-card` · `--shadow-pop`
+
+The legacy `@theme` is declared second, so **legacy wins every collision** — verified in the built CSS, where `--color-action` resolves to the legacy blue `#23508f`, not the new violet. That is the correct outcome for now: the 12 surviving screens keep their exact appearance.
+
+The consequence, which is easy to trip over: **new components cannot use any of those 11 names and get the new value.** Where the new register needs a colliding concept it gets its own token — hence `--color-page-ref` rather than `--color-action` for the page chip. The collisions resolve when the legacy block is deleted with the last re-platformed screen.
+
+---
+
 ## Also folded in — the six mapping gaps
 
 Closed while resolving D2, since they blocked the same work. All now in `packages/ui-tokens`:

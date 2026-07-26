@@ -6,7 +6,7 @@ import { defineConfig } from "vitest/config";
  */
 export default defineConfig({
   test: {
-    include: ["vocabulary.test.ts", "authz.test.ts"],
+    include: ["vocabulary.test.ts", "authz.test.ts", "noValue.test.ts"],
     environment: "node",
   },
 });

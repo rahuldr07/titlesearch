@@ -1,6 +1,31 @@
 @import "tailwindcss";
 
 /*
+ * The NEW register (design-mock/) — cool grey, violet action. Everything built
+ * from Pass 3 onward uses these names.
+ *
+ * TWO REGISTERS COEXIST DURING THE TRANSITION, and they are NOT disjoint:
+ * 11 token names collide (measured, not assumed):
+ *
+ *   --color-action  --color-action-border  --color-ink-secondary
+ *   --color-line-strong  --color-track  --color-row-hover
+ *   --font-sans  --font-mono  --shadow-page  --shadow-card  --shadow-pop
+ *
+ * The legacy @theme below is declared SECOND, so on every collision the legacy
+ * value WINS. That is deliberate: the 12 measurement screens must keep their
+ * exact appearance until each is re-platformed. The cost is that new code
+ * cannot use any of the 11 names above and get the new value.
+ *
+ * So: new components use non-colliding names only. Where the new register
+ * needs a colliding concept, it gets its own token — e.g. --color-page-ref
+ * instead of --color-action for the page chip.
+ *
+ * The collisions resolve themselves when the legacy block is deleted with the
+ * last re-platformed screen. See docs/frontend/replatform-mapping.md.
+ */
+@import "@titlepipe/ui-tokens/tokens.css";
+
+/*
  * Register tokens. Values are the exact palette from the .dc.html pixel spec
  * (design_handoff_titlepipe README "Design Tokens") — warm paper, IBM Plex.
  * The .dc.html wins on pixels (frontend-master-prompt §0 preamble); the

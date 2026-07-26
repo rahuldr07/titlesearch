@@ -24,7 +24,15 @@ Every RULE element from the design export, as a numbered question. A RULE elemen
 
 That is now three sources converging on four members against a contract that ships two.
 
-**What I need:** ratify the four, and name them. If ratified, `packages/contract` must widen in the same change — the brief forbids widening a contract type locally, so this cannot be worked around in the UI.
+### RESOLVED — four states, ratified by the owner 2026-07-26. See `decisions.md` D3.
+
+`packages/contract` `NaReason` widened 2 → 4: `NOT_PRESENT`, `NOT_FOUND`, `NOT_STATED`, `PRESENT_UNREADABLE`. Purely additive, so nothing in the surviving screens broke.
+
+`pending` ("not yet extracted") is a fifth *render* but deliberately **not** an enum member — it is a statement about the pipeline, not the document.
+
+Implemented as `apps/web/src/entities/field/noValue.ts` with an exhaustive switch and a `never` guard, plus 12 static tests. Adding a member to the enum without giving it a render is now a compile error.
+
+Backend mapping: Python `models.py` calls `NOT_PRESENT` → `NOT_USED_IN_JURISDICTION`. Same concept; reconcile at the Gate 6 port rather than renaming here.
 
 **Sub-question Q1a.** Is golden capture's `__DONT_KNOW__` (the *capturer* could not determine it) a fifth member, or a separate capture-time vocabulary? It is a statement about a person; the other four are statements about the document. Collapsing them repeats the §11 mistake one level up.
 
