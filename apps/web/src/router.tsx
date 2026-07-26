@@ -13,7 +13,7 @@ import {
   RoutePending,
 } from "./components/fallbacks";
 import { GlobalKeys } from "./components/GlobalKeys";
-import { SideRail } from "./components/SideRail";
+import { AppHeader } from "./shared/ui/AppHeader";
 // Home stays eager: it is the landing route, so splitting it would only add a
 // pending flash on first paint with nothing to gain. Every other screen is a
 // separate chunk, fetched on navigation (and preloaded on hover/focus via
@@ -24,21 +24,27 @@ import { ROLE_HOME, requireAccess } from "./nav";
 import { session } from "./session";
 
 /**
- * The rail sits beside the screen, not above it. Under /blind/* it is not
- * mounted AT ALL — not merely hidden — so its live-signal hook never fires a
- * single GET from the capture seat: structural blindness holds at the network
- * level, not just visually (blind-blindness.spec proves the zero-GET floor).
- * `min-w-0` lets dense screens (Review, the dark measurement panels) keep
- * owning their own horizontal overflow.
+ * design-mock has NO SIDEBAR: a 60px top header carries the nav as a tab strip,
+ * and the screen owns everything below it. The old side rail is gone.
+ *
+ * Under /blind/* the chrome is not mounted AT ALL — not merely hidden. The
+ * capture seat must issue zero /api GETs, and a header that renders live signals
+ * would fire them; structural blindness holds at the network level, not just
+ * visually (blind-blindness.spec proves the zero-GET floor). This is the same
+ * reason the rail was conditionally mounted, and it survives the redesign
+ * unchanged because it is a rule about the seat, not about the navigator.
+ *
+ * `min-w-0` lets dense screens (Review, the dark measurement panels) keep owning
+ * their own horizontal overflow.
  */
 function RootLayout() {
   const onBlind = useRouterState({
     select: (s) => s.location.pathname.startsWith("/blind/"),
   });
   return (
-    <div className="flex h-screen">
-      {!onBlind && <SideRail />}
-      <div className="flex min-w-0 flex-1 flex-col">
+    <div className="flex h-screen flex-col">
+      {!onBlind && <AppHeader />}
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <Outlet />
       </div>
       <GlobalKeys />

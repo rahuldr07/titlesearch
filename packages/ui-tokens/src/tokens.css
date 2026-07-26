@@ -134,6 +134,13 @@
   /* ── neutral chip (machine/automated badges) ──────────────────────────── */
   --color-chip-neutral-surface: #eceef2; /* ORPHANED IN SOURCE */
 
+  /*
+   * Modal scrim. A COLOUR token, not a shadow one: `--shadow-scrim` emits no
+   * `bg-*` utility, so a `bg-[var(--shadow-scrim)]` class silently produces
+   * nothing and the modal loses its backdrop while the build stays green.
+   */
+  --color-scrim: rgb(20 20 30 / 0.34);
+
   /* ── idle — "nothing is happening here", distinct from settled ────────── */
   /* Old palette had --color-neutral* (slate) for idle/abandoned states; the
      export dropped it. Restored cool. Used by dashboard bar segments, idle

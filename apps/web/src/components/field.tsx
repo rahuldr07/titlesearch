@@ -84,7 +84,7 @@ export interface ChipSpec {
 }
 
 const chipBase =
-  "rounded-chip px-[6px] py-px text-[9.5px] font-bold tracking-[.07em] whitespace-nowrap ";
+  "rounded-xs px-[6px] py-px text-[9.5px] font-bold tracking-[.07em] whitespace-nowrap ";
 
 /** Row chips for a field (light register). Order matters — first chip leads. */
 export function fieldChips(f: Field): ChipSpec[] {
@@ -93,19 +93,19 @@ export function fieldChips(f: Field): ChipSpec[] {
     if (f.na_reason === "PRESENT_UNREADABLE") {
       chips.push({
         label: "PRESENT — UNREADABLE",
-        className: chipBase + "border-[1.5px] border-act bg-card text-act",
+        className: chipBase + "border-[1.5px] border-state-halt bg-surface-panel text-state-halt",
       });
     } else if (f.value === null && !readingsDisagree(f)) {
       chips.push({
         label: "MISSING FROM CAPTURE",
-        className: chipBase + "border-[1.5px] border-act bg-card text-act",
+        className: chipBase + "border-[1.5px] border-state-halt bg-surface-panel text-state-halt",
       });
     }
     if (f.engine_confidence_raw !== null) {
       chips.push({
         label: `OCR ${f.engine_confidence_raw.toFixed(2)}`,
         className:
-          chipBase + "border border-attend-border bg-chip-low-bg text-attend",
+          chipBase + "border border-state-attend-border bg-state-attend-surface text-state-attend",
       });
     }
     if (readingsDisagree(f)) {
@@ -119,13 +119,13 @@ export function fieldChips(f: Field): ChipSpec[] {
               label: "READER B FOUND A LINE",
               className:
                 chipBase +
-                "border border-neutral-border bg-neutral-bg text-neutral",
+                "border border-state-idle-border bg-state-idle-surface text-state-idle",
             }
           : {
               label: "A≠B",
               className:
                 chipBase +
-                "border border-neutral-border bg-neutral-bg text-neutral",
+                "border border-state-idle-border bg-state-idle-surface text-state-idle",
             },
       );
     }
@@ -133,14 +133,14 @@ export function fieldChips(f: Field): ChipSpec[] {
   if (f.na_reason === "NOT_PRESENT") {
     chips.push({
       label: "N/A — EXPECTED",
-      className: chipBase + "border border-line bg-track text-ink-dim",
+      className: chipBase + "border border-line-strong bg-track text-ink-secondary",
     });
   }
   if (provenanceMissing(f)) {
     // §0.8: a value that arrived with nothing behind it is never silently normal.
     chips.push({
       label: "NO PROVENANCE",
-      className: chipBase + "border-[1.5px] border-act bg-act-bg text-act",
+      className: chipBase + "border-[1.5px] border-state-halt bg-state-halt-surface text-state-halt",
     });
   }
   return chips;
@@ -149,11 +149,11 @@ export function fieldChips(f: Field): ChipSpec[] {
 /** Bottom-panel state chip (dark register). Rendered verbatim from server state. */
 export function statePill(f: Field): ChipSpec {
   const base =
-    "rounded-chip px-2 py-[2px] text-[10px] font-bold tracking-[.08em] ";
+    "rounded-xs px-2 py-[2px] text-[10px] font-bold tracking-[.08em] ";
   if (f.na_reason === "NOT_PRESENT") {
     return {
       label: "N/A — EXPECTED, NOT QUEUED",
-      className: base + "border border-ink-secondary text-ink-dim",
+      className: base + "border border-ink-secondary text-ink-secondary",
     };
   }
   switch (f.state) {
@@ -161,7 +161,7 @@ export function statePill(f: Field): ChipSpec {
       if (f.na_reason === "PRESENT_UNREADABLE") {
         return {
           label: "PRESENT — UNREADABLE",
-          className: base + "border border-act bg-act text-ink-invert",
+          className: base + "border border-state-halt bg-state-halt text-ink-on-action",
         };
       }
       if (f.value === null && readingsDisagree(f)) {
@@ -172,53 +172,53 @@ export function statePill(f: Field): ChipSpec {
         return someEmpty
           ? {
               label: "ENGINES DISAGREE — A EMPTY, B FOUND",
-              className: base + "border border-act bg-act text-ink-invert",
+              className: base + "border border-state-halt bg-state-halt text-ink-on-action",
             }
           : {
               label: "ENGINES DISAGREE — NOTHING SETTLED",
-              className: base + "border border-act bg-act text-ink-invert",
+              className: base + "border border-state-halt bg-state-halt text-ink-on-action",
             };
       }
       if (f.value === null) {
         return {
           label: "MISSING — REAL DEFECT",
-          className: base + "border border-act bg-act text-ink-invert",
+          className: base + "border border-state-halt bg-state-halt text-ink-on-action",
         };
       }
       if (readingsDisagree(f)) {
         return {
           label: "ENGINES DISAGREE — VERIFY",
-          className: base + "border border-dk-attend-border text-dk-attend",
+          className: base + "border border-document-attend-border text-document-attend",
         };
       }
       return {
         label: "NEEDS REVIEW — VERIFY",
-        className: base + "border border-dk-attend-border text-dk-attend",
+        className: base + "border border-document-attend-border text-document-attend",
       };
     case "auto_confirmed":
       return {
         label: "AUTO-CONFIRMED",
-        className: base + "border border-dk-ok-border text-dk-ok",
+        className: base + "border border-document-settled-border text-document-settled",
       };
     case "confirmed":
       return {
         label: "CONFIRMED",
-        className: base + "border border-dk-ok-border text-dk-ok",
+        className: base + "border border-document-settled-border text-document-settled",
       };
     case "corrected":
       return {
         label: "CORRECTED",
-        className: base + "border border-dk-ok-border text-dk-ok",
+        className: base + "border border-document-settled-border text-document-settled",
       };
     case "escalated":
       return {
         label: "ESCALATED — IN THE INBOX",
-        className: base + "border border-dk-attend-border text-dk-attend",
+        className: base + "border border-document-attend-border text-document-attend",
       };
     case "pending":
       return {
         label: "PENDING — NOT YET EXTRACTED",
-        className: base + "border border-dk-line-2 text-dk-ink-soft",
+        className: base + "border border-document-line-strong text-document-ink-soft",
       };
   }
 }
@@ -236,7 +236,7 @@ export function ProvenanceLine({
     <button
       type="button"
       onClick={onJump}
-      className="cursor-pointer border-none bg-transparent p-0 text-left font-mono text-[10.5px] text-ink-dim hover:text-action"
+      className="cursor-pointer border-none bg-transparent p-0 text-left font-mono text-[10.5px] text-ink-secondary hover:text-page-ref"
     >
       {field.source_page !== null && <>p {field.source_page}</>}
       {field.source_snippet !== null && <> · “{field.source_snippet}”</>}
@@ -261,7 +261,7 @@ function DiffChars({ value, other }: { value: string; other: string }) {
           <span
             key={i}
             data-testid="diff-hl"
-            className="rounded-[2px] bg-act px-px text-ink-invert"
+            className="rounded-[2px] bg-state-halt px-px text-ink-on-action"
           >
             {ch}
           </span>
@@ -302,24 +302,24 @@ export function ReadingCard({
       onClick={pinnable ? onPin : undefined}
       className={`mb-[2px] grid grid-cols-[150px_1fr] items-start gap-3 rounded-[3px] border px-[7px] py-[5px] ${
         pinned
-          ? "border-action-border bg-dk-info-row"
+          ? "border-page-ref-border bg-document-info-row"
           : pinnable
-            ? "cursor-pointer border-dk-line-2"
+            ? "cursor-pointer border-document-line-strong"
             : "border-transparent"
       }`}
     >
       <div>
-        <div className="text-[10px] font-bold tracking-[.07em] text-dk-info">
+        <div className="text-[10px] font-bold tracking-[.07em] text-document-info">
           {seat}
         </div>
-        <div className="font-mono text-[10.5px] text-ink-dim">
+        <div className="font-mono text-[10.5px] text-ink-secondary">
           {reading.engine_id}
         </div>
       </div>
       <div className="min-w-0">
         <div
           className={`font-mono text-[12.5px] ${
-            v === null ? "text-dk-act" : "text-dk-ink-strong"
+            v === null ? "text-document-halt" : "text-document-ink-strong"
           }`}
         >
           {v === null ? (
@@ -331,13 +331,13 @@ export function ReadingCard({
           )}
         </div>
         {reading.snippet !== null && (
-          <div className="mt-[2px] text-[10.5px] text-ink-dim">
+          <div className="mt-[2px] text-[10.5px] text-ink-secondary">
             “{reading.snippet}”
             {pinnable && <> · ⌖ click to pin the exact line</>}
           </div>
         )}
         <div className="mt-[2px] flex flex-wrap items-baseline gap-2">
-          <span className="font-mono text-[10px] text-ink-dim">
+          <span className="font-mono text-[10px] text-ink-secondary">
             ${reading.cost_usd.toFixed(4)} · {(reading.latency_ms / 1000).toFixed(1)}s
           </span>
           {v !== null && onUse !== undefined && (
@@ -348,7 +348,7 @@ export function ReadingCard({
                 e.stopPropagation();
                 onUse(v);
               }}
-              className="cursor-pointer rounded-[3px] border border-neutral bg-transparent px-[6px] py-px font-sans text-[10px] font-semibold text-action-border"
+              className="cursor-pointer rounded-[3px] border border-state-idle bg-transparent px-[6px] py-px font-sans text-[10px] font-semibold text-page-ref-border"
             >
               correct to this — the why is still yours
             </button>

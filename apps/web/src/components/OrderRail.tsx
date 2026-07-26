@@ -52,15 +52,15 @@ export function OrderRail({
   return (
     <div
       data-testid="order-rail"
-      className="flex flex-none flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-line bg-surface-dim px-[18px] py-[5px] text-[11px] text-ink-secondary"
+      className="flex flex-none flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-line-strong bg-surface-raised px-[18px] py-[5px] text-[11px] text-ink-secondary"
     >
       <span className={seg}>
-        <span className="font-mono font-semibold text-ink">{orderId}</span>
+        <span className="font-mono font-semibold text-ink-primary">{orderId}</span>
       </span>
       {timelineQ.error != null && (
         <span className={seg}>
           {dot}
-          <span className="text-attend">timeline unavailable</span>
+          <span className="text-state-attend">timeline unavailable</span>
         </span>
       )}
       {timelineQ.error == null &&
@@ -68,7 +68,7 @@ export function OrderRail({
         events.length === 0 && (
           <span className={seg}>
             {dot}
-            <span className="text-ink-dim">no recorded events</span>
+            <span className="text-ink-secondary">no recorded events</span>
           </span>
         )}
       {events.map((ev, i) => {
@@ -79,11 +79,11 @@ export function OrderRail({
         const to = KIND_LINK[ev.kind];
         const tone = ev.attend
           ? ev.kind === "complaint"
-            ? "font-semibold text-act"
-            : "font-semibold text-attend"
+            ? "font-semibold text-state-halt"
+            : "font-semibold text-state-attend"
           : ev.kind === "delivered"
-            ? "font-semibold text-ok"
-            : "text-ink-dim";
+            ? "font-semibold text-state-settled"
+            : "text-ink-secondary";
         return (
           <span key={`${ev.kind}-${ev.at}-${i}`} className={seg}>
             {dot}

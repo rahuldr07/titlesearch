@@ -251,7 +251,7 @@ function DivergenceCard({
   return (
     <div
       data-testid={`div-${d.path}`}
-      className="mb-[10px] rounded-md border border-line-strong bg-surface-panel px-4 py-[13px] shadow-card"
+      className="mb-[10px] rounded-md border border-line-strong bg-surface-panel px-4 py-[13px] shadow-surface-panel"
     >
       <div className="flex flex-wrap items-baseline justify-between gap-[10px]">
         <span className="font-mono text-[13px] font-semibold">{d.path}</span>

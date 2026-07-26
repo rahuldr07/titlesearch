@@ -19,12 +19,12 @@ function FallbackFrame({
   testid: string;
 }) {
   return (
-    <div className="flex h-screen items-center justify-center bg-bg p-[30px] font-sans text-ink">
+    <div className="flex h-screen items-center justify-center bg-surface-app p-[30px] font-sans text-ink-primary">
       <div
         data-testid={testid}
-        className="max-w-[460px] rounded-card border-[1.5px] border-dashed border-line-strong bg-card px-8 py-[30px] text-center"
+        className="max-w-[460px] rounded-md border-[1.5px] border-dashed border-line-strong bg-surface-panel px-8 py-[30px] text-center"
       >
-        <div className="mb-3 font-mono text-[20px] text-label">{heading}</div>
+        <div className="mb-3 font-mono text-[20px] text-ink-secondary">{heading}</div>
         <div className="text-[15px] font-semibold">{title}</div>
         <div className="mt-2 text-[12.5px] leading-[1.6] text-ink-secondary">
           {body}
@@ -85,9 +85,9 @@ export function RoutePending() {
   return (
     <div
       data-testid="route-pending"
-      className="flex h-screen items-center justify-center bg-bg"
+      className="flex h-screen items-center justify-center bg-surface-app"
     >
-      <div className="h-5 w-5 animate-spin rounded-full border-2 border-line-mid border-t-ink-secondary" />
+      <div className="h-5 w-5 animate-spin rounded-full border-2 border-line-strong border-t-ink-secondary" />
     </div>
   );
 }

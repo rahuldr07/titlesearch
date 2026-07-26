@@ -457,7 +457,7 @@ function DrillDrawer({
     <>
       <div
         onClick={onClose}
-        className="fixed inset-0 z-50 bg-[rgb(31_28_23/0.45)]"
+        className="fixed inset-0 z-50 bg-scrim"
       />
       <div
         data-testid="drill-drawer"

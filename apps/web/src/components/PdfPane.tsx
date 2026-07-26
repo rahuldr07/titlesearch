@@ -37,16 +37,16 @@ function rectCss(r: NormRect) {
 }
 
 const calloutBorder: Record<HighlightTone, string> = {
-  ok: "border-ok-soft",
-  attend: "border-attend-border",
-  act: "border-act",
-  pin: "border-action-border",
+  ok: "border-state-settled",
+  attend: "border-state-attend-border",
+  act: "border-state-halt",
+  pin: "border-page-ref-border",
 };
 const chipBg: Record<HighlightTone, string> = {
-  ok: "bg-dk-ok-border",
-  attend: "bg-hl-low",
-  act: "bg-act",
-  pin: "bg-neutral",
+  ok: "bg-document-settled-border",
+  attend: "bg-border-evidence",
+  act: "bg-state-halt",
+  pin: "bg-state-idle",
 };
 
 function CalloutHighlight({ hl }: { hl: PdfHighlight }) {
@@ -55,15 +55,15 @@ function CalloutHighlight({ hl }: { hl: PdfHighlight }) {
     <div
       id={`hl-${hl.id}`}
       onClick={hl.onClick}
-      className={`hlpulse absolute left-[8%] w-[84%] rounded-[3px] border-2 bg-hl-bg ${calloutBorder[hl.tone]}`}
+      className={`tp-highlight-arrive absolute left-[8%] w-[84%] rounded-[3px] border-2 bg-surface-evidence ${calloutBorder[hl.tone]}`}
       style={{ top }}
     >
       <div
-        className={`absolute -top-5 -left-0.5 rounded-t-[3px] px-[7px] py-px text-[10px] font-bold tracking-[.06em] text-ink-invert ${chipBg[hl.tone]}`}
+        className={`absolute -top-5 -left-0.5 rounded-t-[3px] px-[7px] py-px text-[10px] font-bold tracking-[.06em] text-ink-on-action ${chipBg[hl.tone]}`}
       >
         {hl.chip}
       </div>
-      <div className="px-2 py-[6px] font-mono text-[12.5px] text-ink">
+      <div className="px-2 py-[6px] font-mono text-[12.5px] text-ink-primary">
         {hl.snippet}
       </div>
     </div>
@@ -78,12 +78,12 @@ function LineHighlight({ hl }: { hl: PdfHighlight }) {
           key={i}
           id={i === 0 ? `hl-${hl.id}` : undefined}
           onClick={hl.onClick}
-          className={`hlpulse absolute rounded-[2px] border-2 bg-pin-bg ${calloutBorder[hl.tone]}`}
+          className={`tp-highlight-arrive absolute rounded-[2px] border-2 bg-surface-pin ${calloutBorder[hl.tone]}`}
           style={rectCss(r)}
         >
           {i === 0 && (
             <div
-              className={`absolute -top-[18px] -left-0.5 rounded-t-[3px] px-[7px] py-px text-[10px] font-bold tracking-[.06em] whitespace-nowrap text-ink-invert ${chipBg[hl.tone]}`}
+              className={`absolute -top-[18px] -left-0.5 rounded-t-[3px] px-[7px] py-px text-[10px] font-bold tracking-[.06em] whitespace-nowrap text-ink-on-action ${chipBg[hl.tone]}`}
             >
               {hl.chip}
             </div>
@@ -148,7 +148,7 @@ export function PdfPane({
         </div>
       ) : (
         <div className="relative aspect-[8.5/11] w-[540px] flex-none self-start rounded-[2px] bg-page shadow-page">
-          {/* designed mock page (.dc.html): title bar + text-line texture */}
+          {/* designed mock page (.dc.html): title bar + text-line-strong texture */}
           <div className="absolute top-[26px] left-[44px] h-[14px] w-[46%] rounded-[2px] bg-page-bar" />
           <div
             className="absolute top-[52px] right-[44px] bottom-[40px] left-[44px]"
@@ -157,7 +157,7 @@ export function PdfPane({
                 "repeating-linear-gradient(to bottom, var(--color-page-line) 0 9px, transparent 9px 22px)",
             }}
           />
-          <div className="absolute right-6 bottom-[14px] font-mono text-[10px] text-ink-faint">
+          <div className="absolute right-6 bottom-[14px] font-mono text-[10px] text-ink-muted">
             {pageStamp}
           </div>
           <OverlayLayer highlights={highlights} />

@@ -13,7 +13,7 @@ import { useSession } from "./session";
 
 /**
  * The live attention layer, shared by the hub (Home.tsx) and the side rail
- * (components/SideRail.tsx). Amber pulls; quiet recedes — an open escalation, a
+ * (the hub). Amber pulls; quiet recedes — an open escalation, a
  * delivery stuck in transit, or a rule draft waiting at the engineer gate PULL
  * you to their screen. Signals are queried ONLY for doors in the session role's
  * world — neither surface fetches what its viewer isn't allowed to see.

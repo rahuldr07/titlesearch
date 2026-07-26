@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { session, useSession } from "../session";
 import { canAccess } from "../nav";
-import { useRail } from "../railStore";
 
 /**
  * Keyboard as navigation: `g` then a key jumps between screens; `?` shows
@@ -83,14 +82,17 @@ export function GlobalKeys() {
         }
         return;
       }
-      // `[` folds the rail — a keyboard-forward toggle for a keyboard-forward
-      // tool. Idle-state only (a pending `g` chord owns the next key).
-      if (e.key === "[" && !e.ctrlKey && !e.metaKey && !e.altKey) {
-        e.preventDefault();
-        e.stopPropagation();
-        useRail.getState().toggle();
-        return;
-      }
+      /*
+       * The `[` fold binding is GONE with the side rail (2026-07-27).
+       * design-mock has no sidebar — the nav is a tab strip in the header, and
+       * there is nothing to fold. Claiming a key for an affordance that does not
+       * exist is worse than not binding it: it swallows the keystroke and does
+       * nothing, which is the dead-keystroke failure O10 exists to prevent.
+       *
+       * The rule it shared with `[`-inside-a-text-field — typed text never
+       * triggers an action (O15) — is unaffected and still enforced, by the
+       * typing guard in features/review/keys.ts and by hard.spec's chord test.
+       */
       if (e.key.toLowerCase() === "g" && !e.ctrlKey && !e.metaKey && !e.altKey) {
         setPendingG(true);
         timer = window.setTimeout(() => setPendingG(false), 1200);
@@ -107,7 +109,7 @@ export function GlobalKeys() {
   return (
     <>
       {pendingG && (
-        <div className="fixed bottom-3 left-3 z-[60] rounded-btn border border-line-strong bg-surface px-3 py-1 font-mono text-[11.5px] text-ink-secondary shadow-pop">
+        <div className="fixed bottom-3 left-3 z-[60] rounded-sm border border-line-strong bg-surface-panel px-3 py-1 font-mono text-[11.5px] text-ink-secondary shadow-pop">
           g …
         </div>
       )}
@@ -115,20 +117,20 @@ export function GlobalKeys() {
         <>
           <div
             onClick={() => setShowHelp(false)}
-            className="fixed inset-0 z-[70] bg-[rgb(31_28_23/0.45)]"
+            className="fixed inset-0 z-[70] bg-scrim"
           />
           <div
             data-testid="key-map"
-            className="fixed top-1/2 left-1/2 z-[71] w-[520px] -translate-x-1/2 -translate-y-1/2 rounded-card border border-line-strong bg-card px-6 py-5 shadow-pop"
+            className="fixed top-1/2 left-1/2 z-[71] w-[520px] -translate-x-1/2 -translate-y-1/2 rounded-lg border border-line-strong bg-surface-panel px-6 py-5 shadow-pop"
           >
             <div className="flex items-baseline justify-between">
-              <div className="text-[12px] font-bold tracking-[.1em] text-label">
+              <div className="text-[12px] font-bold tracking-[.1em] text-ink-secondary">
                 THE MAP — KEYBOARD AS NAVIGATION
               </div>
               <button
                 type="button"
                 onClick={() => setShowHelp(false)}
-                className="cursor-pointer border-none bg-transparent px-1 text-[14px] text-ink-dim"
+                className="cursor-pointer border-none bg-transparent px-1 text-[14px] text-ink-secondary"
               >
                 ×
               </button>
@@ -138,19 +140,18 @@ export function GlobalKeys() {
                 .filter(([, v]) => canAccess(role, v.to))
                 .map(([k, v]) => (
                   <div key={k} className="flex items-baseline gap-2">
-                    <b className="rounded-chip border border-line-strong bg-line-light px-[5px] font-mono">
+                    <b className="rounded-xs border border-line-strong bg-surface-app px-[5px] font-mono">
                       g {k}
                     </b>
                     <span className="text-ink-secondary">{v.label}</span>
                   </div>
                 ))}
             </div>
-            <div className="mt-4 border-t border-hairline pt-3 text-[11.5px] leading-[1.6] text-ink-dim">
+            <div className="mt-4 border-t border-line-subtle pt-3 text-[11.5px] leading-[1.6] text-ink-secondary">
               On Review: <b>J/K</b> next/prev queued · <b>⏎</b> confirm ·{" "}
-              <b>C</b> correct · <b>E</b> escalate · <b>B</b> pipeline bug ·{" "}
-              <b>S</b> re-centre source · <b>P</b> pass. <b>[</b> folds the side
-              rail. Seed Correction has no key and no menu — it opens only from a
-              failing bench cell.
+              <b>C</b> correct · <b>E</b> escalate · <b>P</b> pass. Seed
+              Correction has no key and no menu — it opens only from a failing
+              bench cell.
             </div>
           </div>
         </>

@@ -69,14 +69,14 @@ export function TopBar({
   const name = useSession((s) => s.name);
   const role = useSession((s) => s.role);
   return (
-    <div className="flex flex-none items-center justify-between border-b border-line bg-surface px-[18px] py-[10px]">
+    <div className="flex flex-none items-center justify-between border-b border-line-strong bg-surface-panel px-[18px] py-[10px]">
       <div className="flex items-baseline gap-[14px]">
         <HomeTitle
           title={title}
-          className="text-[12px] font-bold tracking-[.12em] text-label uppercase"
+          className="text-[12px] font-bold tracking-[.12em] text-ink-secondary uppercase"
         />
         <div className="text-[13px] font-semibold">{name}</div>
-        <div className="text-[12px] text-ink-dim">
+        <div className="text-[12px] text-ink-secondary">
           {barDate} · {barTime}
         </div>
         {children}
@@ -104,7 +104,7 @@ export function TopBar({
 /** Full-height screen frame: 100vh flex column, page background. */
 export function ScreenFrame({ children }: { children: ReactNode }) {
   return (
-    <div className="flex h-screen flex-col bg-bg font-sans text-ink">
+    <div className="flex h-screen flex-col bg-surface-app font-sans text-ink-primary">
       {children}
     </div>
   );

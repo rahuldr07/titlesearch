@@ -1,6 +1,6 @@
 /**
  * The doors — the one canonical list of screen destinations. The home hub
- * (Home.tsx) and the side rail (components/SideRail.tsx) both render from this;
+ * (Home.tsx) and the header nav (shared/ui/AppHeader.tsx) both render from this;
  * the keyboard chords (GlobalKeys.GO) mirror the same `key`→`to` pairing.
  * Keep the three in sync by keeping the source here.
  *

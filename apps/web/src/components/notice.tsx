@@ -53,7 +53,7 @@ export function MutationNote({
     <div
       data-testid={testid}
       className={`mt-[6px] text-[11.5px] leading-[1.5] ${
-        register === "dark" ? "text-dk-attend" : "text-attend"
+        register === "dark" ? "text-document-attend" : "text-state-attend"
       }`}
     >
       {errorLine(error)}
