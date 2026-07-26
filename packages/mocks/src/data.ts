@@ -480,6 +480,45 @@ export const demoFields: Field[] = [
     approved_at: null,
   },
   {
+    // NOT_FOUND: the field exists in this jurisdiction and was searched for;
+    // nothing is of record. Distinct from NOT_PRESENT — this one IS surfaced,
+    // because a real gap in the record is a finding. (Ratified Q1, 2026-07-26.)
+    id: "fld_fedlien",
+    order_id: oid,
+    path: "judgments.1.federal_tax_lien",
+    value: null,
+    na_reason: "NOT_FOUND",
+    state: "confirmed",
+    source_doc_id: "doc_fifa",
+    source_page: 28,
+    source_snippet: "no federal tax lien index entries for the subject owner",
+    source_line_coords: null,
+    engine_id: "llmwhisperer-hq",
+    engine_confidence_raw: null,
+    rule_refs: [],
+    approved_by: "rev_demo",
+    approved_at: "2026-07-17T11:04:00Z",
+  },
+  {
+    // NOT_STATED: the search returned the document and the document is silent.
+    // Distinct from NOT_FOUND — the instrument exists, it just does not say.
+    id: "fld_deeddated",
+    order_id: oid,
+    path: "deed.dated_date",
+    value: null,
+    na_reason: "NOT_STATED",
+    state: "needs_review",
+    source_doc_id: "doc_deed",
+    source_page: 6,
+    source_snippet: "…executed this ____ day of ____…",
+    source_line_coords: null,
+    engine_id: "gemini-2.5-flash",
+    engine_confidence_raw: null,
+    rule_refs: [],
+    approved_by: null,
+    approved_at: null,
+  },
+  {
     // auto-confirmed with an EMPTY provenance envelope — principle 6's failure
     // shape; the UI must render it visibly flagged, never silently normal.
     id: "fld_j1amt",

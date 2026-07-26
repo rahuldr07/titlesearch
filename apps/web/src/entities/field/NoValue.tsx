@@ -1,4 +1,4 @@
-import { describeNoValue, type NoValue as NoValueState } from "./noValue";
+import { describeNoValue, type NoValue as NoValueState } from "./noValueState";
 
 /**
  * Renders a field that has no value — one of four NA states, or "not yet
@@ -47,6 +47,20 @@ export function NoValue({ state }: { state: NoValueState }) {
   if (d.tone === "pipeline") {
     return (
       <span data-testid={d.testId} className="text-xs text-ink-muted italic">
+        {d.label}
+      </span>
+    );
+  }
+
+  // `unsettled` is not empty and must not read as empty. It gets the ATTEND
+  // treatment — this field is waiting on a person — and never the quiet grey of
+  // an NA state, which would tell the reviewer there was nothing to look at.
+  if (d.tone === "unsettled") {
+    return (
+      <span
+        data-testid={d.testId}
+        className="inline-flex items-center gap-1.5 rounded-sm border border-state-attend-border bg-state-attend-surface px-2.5 py-0.5 text-xs font-semibold text-state-attend"
+      >
         {d.label}
       </span>
     );

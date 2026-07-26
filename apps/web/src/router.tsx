@@ -88,7 +88,10 @@ const reviewRoute = createRoute({
   beforeLoad: () => requireAccess("/orders"),
   validateSearch: (search: Record<string, unknown>): { field?: string } =>
     typeof search["field"] === "string" ? { field: search["field"] } : {},
-  component: () => <RebuildingCard screen="The review workstation" />,
+  component: lazyRouteComponent(
+    () => import("./features/review/ReviewScreen"),
+    "ReviewScreen",
+  ),
 });
 
 const ingestRoute = createRoute({

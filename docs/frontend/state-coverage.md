@@ -56,6 +56,21 @@ That distinction is the product's central claim (*"zero shipped defects on auto-
 
 Not a broken invariant — no current spec asserts a visual difference on the draft report — but a real gap. **Recommend a distinct treatment and a new invariant spec.**
 
+### 2.2b FOUND DURING BUILD — a sixth render: "nothing settled, the readings disagree"
+
+Caught on screen during Pass 3 increment 2, not by any test.
+
+**The contract encodes two different situations identically.** Both arrive as `value: null, na_reason: null`:
+
+1. *Not yet extracted* — the pipeline has not reached this field.
+2. *The engines read it and disagreed* — nothing merged, but the field is emphatically **not** empty; `readings` holds two candidate values.
+
+Only the presence of `readings` separates them. Rendering the second as the first tells a reviewer there is nothing to look at while two candidate values sit in the payload — the exact defect `ux.spec`'s *"a both-found disagreement never claims emptiness"* (orphan **O8**) exists to catch. That spec is still skipped, so nothing caught it; the screenshot did.
+
+Implemented as a sixth arm, `unsettled`, with the ATTEND treatment — this field is waiting on a person — and never the quiet grey of an NA state. It is not an `NaReason` member: like `pending`, it is a statement about the pipeline, not the document.
+
+**CONTRACT GAP.** These two should be distinct on the wire — an explicit `unsettled` marker, or a distinguishing field — so that a client which forgets to consult `readings` cannot silently claim absence. Right now the safe render depends on the client doing extra work, which is the wrong place for that obligation.
+
 ### 2.3 NEW — `notparty` / "Excluded — not our party"
 
 The design adds a terminal field state with no contract member: for identity decisions (R13 party identity), the reviewer may exclude a judgment as belonging to a different person. Renders struck-through with a green "Excluded — not our party" chip.

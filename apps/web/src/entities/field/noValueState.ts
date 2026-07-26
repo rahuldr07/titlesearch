@@ -20,6 +20,7 @@ import type { NaReason } from "@titlepipe/contract";
 
 export type NoValue =
   | { readonly kind: "pending" }
+  | { readonly kind: "unsettled" }
   | { readonly kind: "not_present" }
   | { readonly kind: "not_found" }
   | { readonly kind: "not_stated" }
@@ -39,7 +40,9 @@ export type NoValueTone =
   /** on the page and unreadable; the loudest of the four */
   | "halt"
   /** not an NA state at all — the pipeline has not reached it */
-  | "pipeline";
+  | "pipeline"
+  /** not an NA state — engines returned values and disagreed; nothing settled */
+  | "unsettled";
 
 export interface NoValueDescriptor {
   readonly testId: string;
@@ -58,6 +61,18 @@ export function describeNoValue(v: NoValue): NoValueDescriptor {
         testId: "nv-pending",
         label: "not yet extracted",
         tone: "pipeline",
+        carriesPage: false,
+      };
+    case "unsettled":
+      // The engines DID read this field and returned different values. Nothing
+      // is settled, but the field is emphatically not empty — saying "not yet
+      // extracted" or "Not Available" here would be a false claim of absence
+      // while the readings sit right there. Principle 6, mirrored: never
+      // assert an absence you cannot substantiate.
+      return {
+        testId: "nv-unsettled",
+        label: "nothing settled — the readings disagree",
+        tone: "unsettled",
         carriesPage: false,
       };
     case "not_present":
@@ -104,14 +119,29 @@ export function describeNoValue(v: NoValue): NoValueDescriptor {
  * a value — the caller renders the value instead.
  *
  * This is the ONE place a null `value` is legitimately read, and it is reading
- * the server's own encoding (contract: "a null value with null na_reason means
- * not yet extracted"), not deriving anything. Nothing downstream may key off
- * null again — that is the collapse this module exists to prevent.
+ * the server's own encoding, not deriving anything. Nothing downstream may key
+ * off null again — that is the collapse this module exists to prevent.
+ *
+ * The `unsettled` case is why `readings` has to be consulted here. The contract
+ * encodes "not yet extracted" and "the engines disagreed and nothing merged"
+ * IDENTICALLY at the top level — both are `value: null, na_reason: null` — and
+ * only the presence of readings tells them apart. Treating the second as the
+ * first tells a reviewer the field is empty while two candidate values sit in
+ * the payload, which is the exact defect ux.spec's "a both-found disagreement
+ * never claims emptiness" exists to catch.
+ *
+ * Note this reads readings to pick a RENDER, never to pick a state: `state` is
+ * already `needs_review` from the server, and nothing here changes that.
+ *
+ * CONTRACT GAP: the two cases would be safer as distinct server-side encodings
+ * — an explicit `unsettled` marker, or an `na_reason` member — so a client that
+ * forgets to look at `readings` cannot silently claim absence.
  */
 export function noValueOf(field: {
   readonly value: string | null;
   readonly na_reason: NaReason | null;
   readonly source_page?: number | null;
+  readonly readings?: readonly { readonly value: string | null }[] | undefined;
 }): NoValue | null {
   if (field.na_reason !== null) {
     switch (field.na_reason) {
@@ -129,6 +159,10 @@ export function noValueOf(field: {
       }
     }
   }
-  if (field.value === null) return { kind: "pending" };
+  if (field.value === null) {
+    // engines read it and returned something — nothing merged, but not empty
+    const read = (field.readings ?? []).some((r) => r.value !== null);
+    return read ? { kind: "unsettled" } : { kind: "pending" };
+  }
   return null;
 }

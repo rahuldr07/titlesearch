@@ -7,7 +7,7 @@ import {
   describeNoValue,
   noValueOf,
   type NoValue,
-} from "./src/entities/field/noValue.ts";
+} from "./src/entities/field/noValueState.ts";
 import { NaReason } from "../../packages/contract/src/enums.ts";
 
 /**
@@ -24,6 +24,7 @@ import { NaReason } from "../../packages/contract/src/enums.ts";
 
 const ALL: NoValue[] = [
   { kind: "pending" },
+  { kind: "unsettled" },
   { kind: "not_present" },
   { kind: "not_found" },
   { kind: "not_stated" },
@@ -54,10 +55,71 @@ describe("the four NA states never collapse", () => {
     ]);
   });
 
-  test("all five renders are distinct in label and testId", () => {
+  test("all six renders are distinct in label and testId", () => {
     const d = ALL.map(describeNoValue);
-    expect(new Set(d.map((x) => x.label)).size).toBe(5);
-    expect(new Set(d.map((x) => x.testId)).size).toBe(5);
+    expect(new Set(d.map((x) => x.label)).size).toBe(6);
+    expect(new Set(d.map((x) => x.testId)).size).toBe(6);
+  });
+});
+
+/**
+ * The disagreement case. The contract encodes "not yet extracted" and "the
+ * engines disagreed and nothing merged" identically — both `value: null,
+ * na_reason: null` — so only `readings` separates them. Getting this wrong
+ * tells a reviewer the field is empty while two candidate values sit in the
+ * payload, which is the defect ux.spec's "a both-found disagreement never
+ * claims emptiness" exists to catch.
+ */
+describe("a disagreement is not emptiness", () => {
+  const disagreed = {
+    value: null,
+    na_reason: null,
+    readings: [
+      { value: "SOUTHSTONE MORTGAGE LLC" },
+      { value: "S0UTH5TONE M0RTGAGE LLC" },
+    ],
+  };
+
+  test("readings present means unsettled, never pending", () => {
+    expect(noValueOf(disagreed)).toEqual({ kind: "unsettled" });
+  });
+
+  test("unsettled never claims the field is empty or unextracted", () => {
+    const label = describeNoValue({ kind: "unsettled" }).label.toLowerCase();
+    for (const lie of [
+      "not available",
+      "not yet extracted",
+      "n/a",
+      "not found",
+      "nothing at all",
+    ]) {
+      expect(label).not.toContain(lie);
+    }
+  });
+
+  test("unsettled reads as attend, not as a quiet NA state", () => {
+    expect(describeNoValue({ kind: "unsettled" }).tone).toBe("unsettled");
+    expect(describeNoValue({ kind: "unsettled" }).tone).not.toBe("quiet");
+  });
+
+  test("readings that are themselves all null stay pending", () => {
+    // the engines ran and genuinely returned nothing — that IS pending
+    expect(
+      noValueOf({ value: null, na_reason: null, readings: [{ value: null }] }),
+    ).toEqual({ kind: "pending" });
+  });
+
+  test("an na_reason still wins over readings", () => {
+    // the server made a determination about the document; readings do not
+    // override it
+    expect(
+      noValueOf({
+        value: null,
+        na_reason: "PRESENT_UNREADABLE",
+        source_page: 4,
+        readings: [{ value: "maybe" }],
+      }),
+    ).toEqual({ kind: "unreadable", page: 4 });
   });
 });
 

@@ -23,25 +23,102 @@ const go = async (page: import("@playwright/test").Page) => {
   await expect(page.getByTestId("sel-label")).toBeVisible();
 };
 
-// TODO(rebuild): un-skip when this feature lands — rule: both NA states + pending render distinctly
-test.skip("both NA states + pending render distinctly", async ({ page }) => {
+/*
+ * UN-SKIPPED 2026-07-26 (Pass 3, increment 2), and REWRITTEN — this is the one
+ * migrated spec whose ASSERTIONS changed, not just its selectors, so the change
+ * is spelled out rather than made quietly:
+ *
+ *  - It covered TWO NA states. It now covers FOUR, per the ratified Q1 ruling.
+ *    That is the rule getting stronger, not weaker.
+ *  - The old copy ("Not Available", "N/A — EXPECTED", "PRESENT — UNREADABLE")
+ *    was the old design's wording. design-mock/ words all four differently, so
+ *    the expected strings are its wording now. The RULE — four states that
+ *    render distinctly and route oppositely — is unchanged.
+ *  - The pending assertion was `not.toContainText("Not Available")`. Under the
+ *    new copy that string appears nowhere, so it would have passed trivially
+ *    and protected nothing. It now asserts pending carries NONE of the four NA
+ *    phrasings, and that it does not render as an NA chip at all.
+ *  - Distinctness is additionally pinned structurally: each state renders its
+ *    own testid, so a future collapse into one shared render fails here even if
+ *    the copy still matches.
+ */
+test("all four NA states + pending render distinctly", async ({ page }) => {
   await go(page);
-  // NOT_PRESENT — quiet, chip says expected
+
+  // NOT_PRESENT — structurally absent in this jurisdiction. Correct, and quiet:
+  // it must never prompt action. Surfacing it is the ghost-chasing bug.
   const plat = page.getByTestId("row-legal.plat_book_page");
-  await expect(plat).toContainText("Not Available");
-  await expect(plat).toContainText("N/A — EXPECTED");
-  // PRESENT_UNREADABLE — surfaced for attention
+  await expect(plat).toContainText("n/a — not used in this jurisdiction");
+  await expect(plat.getByTestId("nv-not-present")).toBeVisible();
+
+  // NOT_FOUND — searched, nothing of record. A real gap, so it IS surfaced.
+  const fedLien = page.getByTestId("row-judgments.1.federal_tax_lien");
+  await expect(fedLien).toContainText("Not found — searched, none of record");
+  await expect(fedLien.getByTestId("nv-not-found")).toBeVisible();
+
+  // NOT_STATED — the instrument exists and is silent on the point.
+  const dated = page.getByTestId("row-deed.dated_date");
+  await expect(dated).toContainText("Document silent — not stated on any page");
+  await expect(dated.getByTestId("nv-not-stated")).toBeVisible();
+
+  // PRESENT_UNREADABLE — on the page and unreadable. The only NA state that
+  // cites a page, and it must: it asserts something IS there.
   const caseNo = page.getByTestId("row-judgments.1.case_no");
-  await expect(caseNo).toContainText("Not Available");
-  await expect(caseNo).toContainText("PRESENT — UNREADABLE");
-  // pending — a third, distinct render; never "Not Available"
+  await expect(caseNo).toContainText("Present — unreadable on page");
+  await expect(caseNo.getByTestId("nv-unreadable-page")).toHaveText("p30");
+
+  // pending — a fifth, distinct render. NOT an NA state: it is a statement
+  // about the pipeline, not the document.
   const pending = page.getByTestId("row-assessment.tax_status");
   await expect(pending).toContainText("not yet extracted");
-  await expect(pending).not.toContainText("Not Available");
+  for (const naPhrase of [
+    "Not Available",
+    "not used in this jurisdiction",
+    "Not found",
+    "Document silent",
+    "unreadable",
+  ]) {
+    await expect(pending).not.toContainText(naPhrase);
+  }
+  // and it is not rendered as an NA chip at all
+  for (const chip of [
+    "nv-not-present",
+    "nv-not-found",
+    "nv-not-stated",
+    "nv-unreadable",
+  ]) {
+    await expect(pending.getByTestId(chip)).toHaveCount(0);
+  }
+
+  // four NA states, four different renders — the collapse would show up here
+  for (const id of [
+    "nv-not-present",
+    "nv-not-found",
+    "nv-not-stated",
+    "nv-unreadable",
+  ]) {
+    await expect(page.getByTestId(id).first()).toBeVisible();
+  }
+
+  /*
+   * An A/B disagreement is NOT emptiness. This field has no merged value but
+   * two readings that both returned something. It arrives on the wire looking
+   * exactly like "not yet extracted" — value null, na_reason null — and only
+   * `readings` tells them apart. Rendering it as pending tells the reviewer
+   * there is nothing to look at while two candidate values sit in the payload.
+   *
+   * Added here after that defect was caught on screen during increment 2.
+   */
+  const disagreed = page.getByTestId("row-mortgages.1.lender");
+  await expect(disagreed.getByTestId("nv-unsettled")).toBeVisible();
+  await expect(disagreed).not.toContainText("not yet extracted");
+  await expect(disagreed).not.toContainText("Not Available");
+  // and the genuinely-unextracted field is not dressed up as a disagreement
+  await expect(pending.getByTestId("nv-unsettled")).toHaveCount(0);
 });
 
-// TODO(rebuild): un-skip when this feature lands — rule: a confirmed value without provenance renders visibly flagged
-test.skip("a confirmed value without provenance renders visibly flagged", async ({
+// UN-SKIPPED 2026-07-26 (Pass 3, increment 2). Assertion unchanged.
+test("a confirmed value without provenance renders visibly flagged", async ({
   page,
 }) => {
   await go(page);

@@ -74,8 +74,8 @@ const crafted = {
   ],
 };
 
-// TODO(rebuild): un-skip when this feature lands — rule: a null pending field renders 'not yet extracted' — never Not Available, never queued
-test.skip("a null pending field renders 'not yet extracted' — never Not Available, never queued", async ({
+// UN-SKIPPED 2026-07-26 (Pass 3, increment 2). Assertions unchanged.
+test("a null pending field renders 'not yet extracted' — never Not Available, never queued", async ({
   page,
 }) => {
   await interceptApi(page, {
@@ -93,8 +93,8 @@ test.skip("a null pending field renders 'not yet extracted' — never Not Availa
   await expect(page.getByTestId("sel-label")).toHaveText("OWNER ZIP");
 });
 
-// TODO(rebuild): un-skip when this feature lands — rule: the state pill renders server state verbatim — confidence never promotes or demotes
-test.skip("the state pill renders server state verbatim — confidence never promotes or demotes", async ({
+// UN-SKIPPED 2026-07-26 (Pass 3, increment 2). Assertions unchanged.
+test("the state pill renders server state verbatim — confidence never promotes or demotes", async ({
   page,
 }) => {
   await interceptApi(page, {
