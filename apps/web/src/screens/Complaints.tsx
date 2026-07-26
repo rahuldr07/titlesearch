@@ -58,14 +58,14 @@ export function ComplaintsScreen() {
       meaning:
         "the threshold is wrong — a settings failure, and only this list can say so",
       chipClass:
-        "rounded-chip border-[1.5px] border-act bg-card px-[7px] py-px text-[10px] font-bold tracking-[.06em] text-act",
+        "rounded-xs border-[1.5px] border-state-halt bg-surface-panel px-[7px] py-px text-[10px] font-bold tracking-[.06em] text-state-halt",
     },
     {
       key: "human_confirmed",
       title: "CONFIRMED BY A REVIEWER",
       meaning: "a rule is missing, or training is — never a name",
       chipClass:
-        "rounded-chip border border-ok-border bg-ok-bg px-[7px] py-px text-[10px] font-bold tracking-[.06em] text-ok",
+        "rounded-xs border border-state-settled-border bg-state-settled-surface px-[7px] py-px text-[10px] font-bold tracking-[.06em] text-state-settled",
     },
   ];
 
@@ -84,15 +84,15 @@ export function ComplaintsScreen() {
       <div className="flex-1 overflow-y-auto px-[22px] pt-[18px] pb-[60px]">
         <div className="mx-auto max-w-[1060px]">
           <CaptureCard />
-          <div className="mt-[18px] mb-2 text-[11px] font-bold tracking-[.08em] text-label">
+          <div className="mt-[18px] mb-2 text-[11px] font-bold tracking-[.08em] text-ink-secondary">
             GROUPED BY HOW IT GOT THROUGH — THE GROUPING IS THE FINDING, NOT
             THE DATE
           </div>
           {complaintsQ.isPending && (
-            <p className="text-[13px] text-ink-dim">Fetching complaints…</p>
+            <p className="text-[13px] text-ink-secondary">Fetching complaints…</p>
           )}
           {complaintsQ.error != null && (
-            <p className="text-[13px] text-act">
+            <p className="text-[13px] text-state-halt">
               Complaints unavailable: {String(complaintsQ.error)}
             </p>
           )}
@@ -114,14 +114,14 @@ export function ComplaintsScreen() {
                   <ComplaintCard key={c.id} complaint={c} rules={rules} />
                 ))}
                 {items.length === 0 && (
-                  <div className="px-[2px] py-[6px] text-[11.5px] text-ink-faint">
+                  <div className="px-[2px] py-[6px] text-[11.5px] text-ink-muted">
                     none recorded — silence is only good if catching holds
                   </div>
                 )}
               </div>
             );
           })}
-          <div className="rounded-[5px] border border-line-mid bg-surface-dim px-[14px] py-[10px] text-[11.5px] leading-[1.55] text-ink-secondary">
+          <div className="rounded-[5px] border border-line-strong bg-surface-raised px-[14px] py-[10px] text-[11.5px] leading-[1.55] text-ink-secondary">
             No per-reviewer complaint counts exist here, for anyone. A
             complaint traced to a reviewer teaches reviewers to escalate
             everything, or nothing. And there is no “disputed” state: even a
@@ -136,25 +136,25 @@ export function ComplaintsScreen() {
 /** Chip for how a shipped value got through review, from server field state. */
 function provenanceChip(f: Field): { label: string; className: string } {
   const base =
-    "rounded-chip px-[6px] py-px text-[9.5px] font-bold tracking-[.06em] whitespace-nowrap ";
+    "rounded-xs px-[6px] py-px text-[9.5px] font-bold tracking-[.06em] whitespace-nowrap ";
   if (f.state === "auto_confirmed")
     return {
       label: `AUTO-CONFIRMED${f.engine_confidence_raw !== null ? ` ${f.engine_confidence_raw.toFixed(2)}` : ""}`,
-      className: base + "border border-act-border bg-act-bg text-act",
+      className: base + "border border-state-halt-border bg-state-halt-surface text-state-halt",
     };
   if (f.state === "corrected")
     return {
       label: "CORRECTED IN REVIEW",
-      className: base + "border border-attend-border bg-attend-bg text-attend",
+      className: base + "border border-state-attend-border bg-state-attend-surface text-state-attend",
     };
   if (f.state === "escalated")
     return {
       label: "ESCALATED",
-      className: base + "border border-neutral-border bg-neutral-bg text-neutral",
+      className: base + "border border-state-idle-border bg-state-idle-surface text-state-idle",
     };
   return {
     label: "CONFIRMED BY REVIEWER",
-    className: base + "border border-ok-border bg-ok-bg text-ok",
+    className: base + "border border-state-settled-border bg-state-settled-surface text-state-settled",
   };
 }
 
@@ -215,19 +215,19 @@ function CaptureCard() {
     words.trim() !== "";
 
   return (
-    <div className="rounded-card border border-line-mid bg-input px-[18px] py-[14px]">
-      <div className="text-[11px] font-bold tracking-[.08em] text-label">
+    <div className="rounded-md border border-line-strong bg-surface-panel px-[18px] py-[14px]">
+      <div className="text-[11px] font-bold tracking-[.08em] text-ink-secondary">
         RECORD ONE — AGAINST THE FIELD, NOT THE ORDER. UNDER A MINUTE.
       </div>
       <div className="mt-[10px] grid grid-cols-[minmax(260px,1fr)_minmax(300px,1.2fr)] gap-4">
         <div>
           {(deliveriesQ.error ?? fieldsQ.error) != null && (
-            <p className="mb-[6px] text-[11.5px] text-act">
+            <p className="mb-[6px] text-[11.5px] text-state-halt">
               Capture sources unavailable:{" "}
               {String(deliveriesQ.error ?? fieldsQ.error)}
             </p>
           )}
-          <div className="mb-[6px] flex flex-wrap items-baseline gap-2 text-[11px] text-ink-dim">
+          <div className="mb-[6px] flex flex-wrap items-baseline gap-2 text-[11px] text-ink-secondary">
             <span>delivered report ·</span>
             {deliveredIds.map((id) => (
               <button
@@ -237,10 +237,10 @@ function CaptureCard() {
                   setChosenOrder(id);
                   setPicked(null);
                 }}
-                className={`cursor-pointer rounded-chip border px-[7px] py-px font-mono text-[10.5px] ${
+                className={`cursor-pointer rounded-xs border px-[7px] py-px font-mono text-[10.5px] ${
                   id === orderId
-                    ? "border-action bg-action-bg text-action"
-                    : "border-line-mid bg-transparent text-ink-secondary"
+                    ? "border-page-ref bg-page-ref-surface text-page-ref"
+                    : "border-line-strong bg-transparent text-ink-secondary"
                 }`}
               >
                 {id}
@@ -255,9 +255,9 @@ function CaptureCard() {
                 key={f.id}
                 data-testid={`cap-${f.path}`}
                 onClick={() => setPicked(f.path)}
-                className={`grid cursor-pointer grid-cols-[minmax(120px,1.3fr)_minmax(70px,1fr)_auto] items-baseline gap-[10px] rounded-btn border px-[9px] py-[6px] ${
+                className={`grid cursor-pointer grid-cols-[minmax(120px,1.3fr)_minmax(70px,1fr)_auto] items-baseline gap-[10px] rounded-sm border px-[9px] py-[6px] ${
                   picked === f.path
-                    ? "border-action bg-sel-bg"
+                    ? "border-page-ref bg-page-ref-surface"
                     : "border-transparent"
                 }`}
               >
@@ -290,14 +290,14 @@ function CaptureCard() {
                 value={should}
                 onChange={(e) => setShould(e.target.value)}
                 placeholder="what the client says it should be"
-                className="mt-2 w-full rounded-btn border border-line-strong bg-card px-[10px] py-[7px] font-mono text-[12.5px]"
+                className="mt-2 w-full rounded-sm border border-line-strong bg-surface-panel px-[10px] py-[7px] font-mono text-[12.5px]"
               />
               <input
                 data-testid="cap-words"
                 value={words}
                 onChange={(e) => setWords(e.target.value)}
                 placeholder="their words, verbatim — “…”"
-                className="mt-2 w-full rounded-btn border border-line-strong bg-card px-[10px] py-[7px] font-sans text-[12.5px]"
+                className="mt-2 w-full rounded-sm border border-line-strong bg-surface-panel px-[10px] py-[7px] font-sans text-[12.5px]"
               />
               <div className="mt-[10px] flex items-center gap-3">
                 <button
@@ -312,15 +312,15 @@ function CaptureCard() {
                       });
                     }
                   }}
-                  className={`rounded-btn px-[14px] py-[6px] font-sans text-[12px] font-semibold ${
+                  className={`rounded-sm px-[14px] py-[6px] font-sans text-[12px] font-semibold ${
                     canRecord
-                      ? "cursor-pointer border border-action bg-action text-ink-invert"
-                      : "cursor-not-allowed border-[1.5px] border-dashed border-dash bg-track text-ink-dim"
+                      ? "cursor-pointer border border-page-ref bg-page-ref text-ink-on-action"
+                      : "cursor-not-allowed border-[1.5px] border-dashed border-line-dashed bg-track text-ink-secondary"
                   }`}
                 >
                   Record — it lands in its “how it got through” group
                 </button>
-                <span className="text-[11px] text-ink-dim">
+                <span className="text-[11px] text-ink-secondary">
                   two states only: recorded, resolved
                 </span>
               </div>
@@ -329,7 +329,7 @@ function CaptureCard() {
               )}
             </>
           ) : (
-            <div className="rounded-card border-[1.5px] border-dashed border-line-strong px-5 py-6 text-center text-[12px] text-ink-faint">
+            <div className="rounded-md border-[1.5px] border-dashed border-line-strong px-5 py-6 text-center text-[12px] text-ink-muted">
               pick a field on the left — the shipped value and its provenance
               fill in automatically
             </div>
@@ -352,16 +352,16 @@ function ComplaintCard({
     return (
       <div
         data-testid={`complaint-resolved-${complaint.id}`}
-        className="mt-[7px] rounded-[5px] border border-line-mid bg-surface-dim px-[14px] py-[9px]"
+        className="mt-[7px] rounded-[5px] border border-line-strong bg-surface-raised px-[14px] py-[9px]"
       >
         <div className="flex flex-wrap items-baseline gap-[10px]">
-          <span className="text-[12px] font-bold text-ok">✓ resolved</span>
+          <span className="text-[12px] font-bold text-state-settled">✓ resolved</span>
           <span className="font-mono text-[12px]">{complaint.field_path}</span>
           <span className="text-[12px] text-ink-secondary">
             {complaint.resolution}
           </span>
           {complaint.golden_offer_accepted === true && (
-            <span className="rounded-chip border border-ok-border bg-ok-bg px-[6px] py-px text-[9.5px] font-bold text-ok">
+            <span className="rounded-xs border border-state-settled-border bg-state-settled-surface px-[6px] py-px text-[9.5px] font-bold text-state-settled">
               GOLDEN CASE
             </span>
           )}
@@ -373,7 +373,7 @@ function ComplaintCard({
   return (
     <div
       data-testid={`complaint-${complaint.id}`}
-      className="mt-[7px] rounded-card border border-line-mid bg-card px-4 py-[13px]"
+      className="mt-[7px] rounded-md border border-line-strong bg-surface-panel px-4 py-[13px]"
     >
       <div className="flex flex-wrap items-baseline justify-between gap-3">
         <div className="flex flex-wrap items-baseline gap-[10px]">
@@ -383,7 +383,7 @@ function ComplaintCard({
             params={{ orderId: complaint.order_id }}
             search={{ field: complaint.field_path }}
             data-testid={`complaint-open-${complaint.id}`}
-            className="font-mono text-[12.5px] font-semibold text-action no-underline hover:underline"
+            className="font-mono text-[12.5px] font-semibold text-page-ref no-underline hover:underline"
           >
             {complaint.field_path}
           </Link>
@@ -393,15 +393,15 @@ function ComplaintCard({
         </div>
       </div>
       <div className="mt-[6px] text-[12.5px]">
-        <span className="text-ink-dim">shipped</span>{" "}
+        <span className="text-ink-secondary">shipped</span>{" "}
         {/* Complaint carries no state/na_reason — the NA split here needs a
             contract change (CONTRACT GAP), not a UI one */}
         <b className="font-mono">{complaint.shipped_value ?? "Not Available"}</b>{" "}
-        · <span className="text-ink-dim">client says</span>{" "}
+        · <span className="text-ink-secondary">client says</span>{" "}
         <b className="font-mono">{complaint.client_value ?? "—"}</b>
       </div>
       {auto && (
-        <div className="mt-2 rounded-btn border border-act-border bg-act-bg px-[10px] py-[7px] text-[12px] font-semibold text-act">
+        <div className="mt-2 rounded-sm border border-state-halt-border bg-state-halt-surface px-[10px] py-[7px] text-[12px] font-semibold text-state-halt">
           Auto-confirmed — no human ever saw it. Not a reviewer failure; a
           settings failure. Nothing else in the system can tell you the
           threshold is wrong.
@@ -477,7 +477,7 @@ function ResolvePanel({
         type="button"
         data-testid={`resolve-open-${complaint.id}`}
         onClick={() => setOpen(true)}
-        className="mt-[10px] cursor-pointer rounded-btn border border-line-strong bg-input px-[12px] py-[5px] text-[12px] font-semibold text-ink-secondary"
+        className="mt-[10px] cursor-pointer rounded-sm border border-line-strong bg-surface-panel px-[12px] py-[5px] text-[12px] font-semibold text-ink-secondary"
       >
         Resolve — the rule it produces is the point
       </button>
@@ -487,9 +487,9 @@ function ResolvePanel({
   return (
     <div
       data-testid={`resolve-panel-${complaint.id}`}
-      className="mt-[10px] rounded-card border border-line-strong bg-card px-[14px] py-3"
+      className="mt-[10px] rounded-md border border-line-strong bg-surface-panel px-[14px] py-3"
     >
-      <div className="mb-[6px] text-[11px] font-bold tracking-[.08em] text-label">
+      <div className="mb-[6px] text-[11px] font-bold tracking-[.08em] text-ink-secondary">
         THE FIX — WHAT WAS DONE, ONE LINE
       </div>
       <textarea
@@ -497,9 +497,9 @@ function ResolvePanel({
         value={resolution}
         onChange={(e) => setResolution(e.target.value)}
         placeholder="e.g. “v2 re-delivered with the lien restored; threshold on this field lowered pending review”"
-        className="min-h-[48px] w-full resize-y rounded-[5px] border-[1.5px] border-dash bg-input px-[12px] py-2 font-sans text-[13px] leading-[1.5] text-ink"
+        className="min-h-[48px] w-full resize-y rounded-[5px] border-[1.5px] border-line-dashed bg-surface-panel px-[12px] py-2 font-sans text-[13px] leading-[1.5] text-ink-primary"
       />
-      <div className="mt-3 text-[11px] font-bold tracking-[.08em] text-label">
+      <div className="mt-3 text-[11px] font-bold tracking-[.08em] text-ink-secondary">
         THE RULE — REQUIRED. A RESOLUTION WITHOUT A RULE IS REFUSED.
       </div>
       <div className="mt-2 flex gap-4 text-[12.5px]">
@@ -526,7 +526,7 @@ function ResolvePanel({
           data-testid={`cmp-cite-select-${complaint.id}`}
           value={citedRuleId}
           onChange={(e) => setCitedRuleId(e.target.value)}
-          className="mt-2 w-full max-w-[560px] rounded-btn border border-line-strong bg-input px-2 py-[6px] font-sans text-[12.5px]"
+          className="mt-2 w-full max-w-[560px] rounded-sm border border-line-strong bg-surface-panel px-2 py-[6px] font-sans text-[12.5px]"
         >
           <option value="">— pick the rule this resolution applies —</option>
           {citable.map((r) => (
@@ -543,13 +543,13 @@ function ResolvePanel({
             value={draftText}
             onChange={(e) => setDraftText(e.target.value)}
             placeholder="the general rule, one sentence — it lands PENDING and cannot affect the pipeline until an engineer confirms it"
-            className="min-h-[48px] w-full resize-y rounded-btn border border-dash bg-input px-[10px] py-2 font-sans text-[13px]"
+            className="min-h-[48px] w-full resize-y rounded-sm border border-line-dashed bg-surface-panel px-[10px] py-2 font-sans text-[13px]"
           />
           <input
             value={draftScope}
             onChange={(e) => setDraftScope(e.target.value)}
             placeholder="jurisdiction scope — optional, e.g. GA"
-            className="w-[240px] rounded-btn border border-line-strong bg-input px-[10px] py-[5px] font-mono text-[12px]"
+            className="w-[240px] rounded-sm border border-line-strong bg-surface-panel px-[10px] py-[5px] font-mono text-[12px]"
           />
         </div>
       )}
@@ -568,10 +568,10 @@ function ResolvePanel({
           data-testid={`cmp-resolve-btn-${complaint.id}`}
           disabled={!valid || resolve.isPending}
           onClick={() => resolve.mutate()}
-          className={`rounded-btn px-[16px] py-[6px] font-sans text-[12.5px] font-semibold ${
+          className={`rounded-sm px-[16px] py-[6px] font-sans text-[12.5px] font-semibold ${
             valid
-              ? "cursor-pointer border border-action bg-action text-ink-invert"
-              : "cursor-not-allowed border-[1.5px] border-dashed border-dash bg-track text-ink-dim"
+              ? "cursor-pointer border border-page-ref bg-page-ref text-ink-on-action"
+              : "cursor-not-allowed border-[1.5px] border-dashed border-line-dashed bg-track text-ink-secondary"
           }`}
         >
           {valid ? "Resolve — files the rule" : "Resolve — held, needs a fix and a rule"}
@@ -579,7 +579,7 @@ function ResolvePanel({
         <button
           type="button"
           onClick={() => setOpen(false)}
-          className="cursor-pointer text-[11.5px] text-ink-dim"
+          className="cursor-pointer text-[11.5px] text-ink-secondary"
         >
           cancel
         </button>

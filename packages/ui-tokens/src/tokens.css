@@ -177,6 +177,45 @@
   --color-document-attend: #e5c078; /* 8.86:1 */
   --color-document-halt: #e39a92; /* 6.79:1 */
   --color-document-ink-on-accent: #16171b;
+  /* borders for the state accents on dark — a tinted surface alone does not
+     separate a card from the pane at these luminances */
+  --color-document-settled-border: #4a6b5b;
+  --color-document-attend-border: #7d6a3a;
+  --color-document-halt-border: #7a4a44;
+  --color-document-halt-surface: #2b2429;
+  /*
+   * The ACCENT tier on dark. Needed because the light register's accent
+   * (--color-page-ref #4a2fae) is 1.85:1 on the dark pane — unreadable — while
+   * its light border tint (#dfd6fb) is 12:1 and reads as near-white, which turns
+   * every rule code and seat label into a shout. Neither is usable, so the dark
+   * register gets its own violet at a legible-but-not-shouting weight.
+   */
+  --color-document-accent: #a595e0; /* 6.40:1 on deep, 5.82:1 on bg */
+  --color-document-accent-border: #6b5aa8;
+  --color-document-accent-surface: #2e2a40;
+
+  /* keyboard chips on the dark pane — the review screen's key hints */
+  --color-document-kbd-surface: #3a3543;
+  /* a note/annotation block on dark: quieter than attend, still legible */
+  --color-document-note-ink: #cdc6b4;
+  --color-document-note-surface: #33313c;
+  --color-document-note-border: #4d4a5a;
+  /* an informational (not attention) block on dark */
+  --color-document-info: #a9b2c9;
+  --color-document-info-surface: #2a2d36;
+  --color-document-info-row: #2b3140;
+
+  /* ── the scanned page itself ──────────────────────────────────────────── */
+  /* Distinct from --color-surface-paper: `paper` is the clean modern print,
+     `scan` is the degraded-fax register the measurement screens simulate. Both
+     exist because the product's whole problem is that most pages are the second
+     kind (CONTEXT §5 — median text-layer coverage well under 25%). */
+  --color-scan: #cfc9b8;
+  --color-scan-line: #d5d0c0;
+  --color-scan-line-soft: #dedace;
+  --color-page: #fdfdfb;
+  --color-page-bar: #d6d2c8;
+  --color-page-line: #e9e6de;
 
   /* ── type ─────────────────────────────────────────────────────────────── */
   --font-sans: "IBM Plex Sans", system-ui, sans-serif;

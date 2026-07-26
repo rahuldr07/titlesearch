@@ -59,23 +59,23 @@ export function DeliveryScreen() {
             <div className="text-[15px] font-bold">
               Delivered — turnaround closes here
             </div>
-            <div className="text-[11.5px] text-ink-dim">
+            <div className="text-[11.5px] text-ink-secondary">
               method is per-client configuration — approval delivers; nobody
               picks a channel thirty times a day
             </div>
           </div>
           {deliveriesQ.isPending && (
-            <p className="text-[13px] text-ink-dim">Fetching deliveries…</p>
+            <p className="text-[13px] text-ink-secondary">Fetching deliveries…</p>
           )}
           {deliveriesQ.error != null && (
-            <p className="text-[13px] text-act">
+            <p className="text-[13px] text-state-halt">
               Deliveries unavailable: {String(deliveriesQ.error)}
             </p>
           )}
           {groups.map((g) => (
             <OrderDeliveryCard key={g.orderId} orderId={g.orderId} rows={g.rows} />
           ))}
-          <div className="mt-[10px] text-[11px] text-ink-faint">
+          <div className="mt-[10px] text-[11px] text-ink-muted">
             arrived → delivered has never been measured in this business —
             “too slow” is the premise of the whole project, and this list
             answers where the hours actually go
@@ -89,10 +89,10 @@ export function DeliveryScreen() {
 export function Tabs({ active }: { active: "deliveries" | "complaints" }) {
   const tab = (on: boolean) =>
     `px-[14px] py-[5px] text-[12px] font-semibold whitespace-nowrap no-underline ${
-      on ? "bg-action text-ink-invert" : "bg-card text-ink-secondary"
+      on ? "bg-page-ref text-ink-on-action" : "bg-surface-panel text-ink-secondary"
     }`;
   return (
-    <div className="flex overflow-hidden rounded-btn border border-line-strong">
+    <div className="flex overflow-hidden rounded-sm border border-line-strong">
       <Link to="/delivery" className={tab(active === "deliveries")}>
         Deliveries
       </Link>
@@ -135,27 +135,27 @@ function OrderDeliveryCard({
   if (!latest) return null;
   const failed = latest.delivered_at === null;
   const chip =
-    "rounded-chip px-[7px] py-px text-[9.5px] font-bold tracking-[.06em] whitespace-nowrap uppercase";
+    "rounded-xs px-[7px] py-px text-[9.5px] font-bold tracking-[.06em] whitespace-nowrap uppercase";
 
   return (
     <div
       data-testid={`delivery-${orderId}`}
-      className={`mt-[10px] rounded-card bg-card px-4 py-[13px] ${
-        failed ? "border-[1.5px] border-attend-border" : "border border-line-mid"
+      className={`mt-[10px] rounded-md bg-surface-panel px-4 py-[13px] ${
+        failed ? "border-[1.5px] border-state-attend-border" : "border border-line-strong"
       }`}
     >
       <div className="flex flex-wrap items-baseline justify-between gap-3">
         <div className="flex flex-wrap items-baseline gap-3">
           <span className="font-mono text-[13.5px] font-semibold">{orderId}</span>
-          <span className={`${chip} border border-line-strong bg-surface-dim text-ink-secondary`}>
+          <span className={`${chip} border border-line-strong bg-surface-raised text-ink-secondary`}>
             {latest.method}
           </span>
           <span
             data-testid="delivery-status"
             className={`${chip} ${
               failed
-                ? "border border-attend-border bg-attend-bg text-attend"
-                : "border border-ok-border bg-ok-bg text-ok"
+                ? "border border-state-attend-border bg-state-attend-surface text-state-attend"
+                : "border border-state-settled-border bg-state-settled-surface text-state-settled"
             }`}
           >
             {failed
@@ -175,7 +175,7 @@ function OrderDeliveryCard({
           key={d.id}
           className="flex flex-wrap items-baseline gap-3 pt-[5px] text-[12px]"
         >
-          <span className="font-mono font-semibold text-ink-body">
+          <span className="font-mono font-semibold text-ink-primary">
             v{d.report?.version ?? "?"}
           </span>
           <span className="text-ink-secondary">
@@ -185,12 +185,12 @@ function OrderDeliveryCard({
             {d.report ? ` · shape ${d.report.shape}` : ""}
           </span>
           {d.evidence !== null && d.report?.version === 2 && (
-            <span className="rounded-chip border border-attend-border bg-attend-bg px-[7px] py-px text-[11px] text-attend">
+            <span className="rounded-xs border border-state-attend-border bg-state-attend-surface px-[7px] py-px text-[11px] text-state-attend">
               {d.evidence} — defect record
             </span>
           )}
           {d.evidence !== null && d.report?.version !== 2 && (
-            <span className="text-ink-dim">{d.evidence}</span>
+            <span className="text-ink-secondary">{d.evidence}</span>
           )}
         </div>
       ))}
@@ -201,7 +201,7 @@ function OrderDeliveryCard({
             data-testid="retry-btn"
             onClick={() => retry.mutate(latest.id)}
             disabled={retry.isPending}
-            className="cursor-pointer rounded-btn border border-action bg-action px-[14px] py-[5px] font-sans text-[12px] font-semibold text-ink-invert"
+            className="cursor-pointer rounded-sm border border-page-ref bg-page-ref px-[14px] py-[5px] font-sans text-[12px] font-semibold text-ink-on-action"
           >
             Retry send
           </button>

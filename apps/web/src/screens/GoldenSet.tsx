@@ -38,17 +38,17 @@ export function GoldenSetScreen() {
           { label: "Blind fifty status", to: "/blind-status" },
         ]}
       >
-        <div className="text-[12px] text-ink-dim">
+        <div className="text-[12px] text-ink-secondary">
           the eval, the spec, and the first honest number — all at once
         </div>
-        <div className="flex overflow-hidden rounded-btn border border-line-strong">
+        <div className="flex overflow-hidden rounded-sm border border-line-strong">
           <button
             type="button"
             onClick={() => setTab("capture")}
             className={`cursor-pointer border-none px-[14px] py-[5px] font-sans text-[12px] font-semibold ${
               tab === "capture"
-                ? "bg-action text-ink-invert"
-                : "bg-card text-ink-secondary"
+                ? "bg-page-ref text-ink-on-action"
+                : "bg-surface-panel text-ink-secondary"
             }`}
           >
             Capture
@@ -58,8 +58,8 @@ export function GoldenSetScreen() {
             onClick={() => setTab("corpus")}
             className={`cursor-pointer border-none px-[14px] py-[5px] font-sans text-[12px] font-semibold ${
               tab === "corpus"
-                ? "bg-action text-ink-invert"
-                : "bg-card text-ink-secondary"
+                ? "bg-page-ref text-ink-on-action"
+                : "bg-surface-panel text-ink-secondary"
             }`}
           >
             Corpus
@@ -88,7 +88,7 @@ function CaptureTab() {
 
   return (
     <>
-      <div className="flex-none border-b border-line bg-track px-[18px] py-2 text-[12.5px] text-ink-body">
+      <div className="flex-none border-b border-line-strong bg-track px-[18px] py-2 text-[12.5px] text-ink-primary">
         You never see the pipeline's draft here — not greyed out, not behind a
         toggle. A draft you can see is a draft you will agree with, and then
         this measures nothing. You are typing the answer the machine will be
@@ -98,7 +98,7 @@ function CaptureTab() {
           laptop never scrolls the whole page sideways. */}
       <div className="flex min-h-0 flex-1 overflow-x-auto">
       <div className="flex min-h-0 min-w-[940px] flex-1">
-        <div className="flex w-[56%] min-w-[520px] items-center justify-center bg-dk-bg p-[22px]">
+        <div className="flex w-[56%] min-w-[520px] items-center justify-center bg-document-bg p-[22px]">
           <div className="relative aspect-[8.5/11] w-[min(560px,100%)] self-start rounded-[2px] bg-page shadow-page">
             <div className="absolute top-[26px] left-[44px] h-[14px] w-[46%] rounded-[2px] bg-page-bar" />
             <div
@@ -108,16 +108,16 @@ function CaptureTab() {
                   "repeating-linear-gradient(to bottom, var(--color-page-line) 0 9px, transparent 9px 22px)",
               }}
             />
-            <div className="absolute right-6 bottom-[14px] font-mono text-[10px] text-ink-faint">
+            <div className="absolute right-6 bottom-[14px] font-mono text-[10px] text-ink-muted">
               read freely — this is reading, not queue-clearing
             </div>
           </div>
         </div>
-        <div className="flex min-w-[420px] flex-1 flex-col border-l border-line-strong bg-input">
+        <div className="flex min-w-[420px] flex-1 flex-col border-l border-line-strong bg-surface-panel">
           <div className="flex-1 overflow-y-auto px-5 pt-4 pb-5">
             {CAPTURE_FORM.map((s) => (
               <div key={s.sec} className="mb-[18px]">
-                <div className="mb-[6px] rounded-[3px] bg-track px-[10px] py-1 text-[11px] font-bold tracking-[.1em] text-ink-body">
+                <div className="mb-[6px] rounded-[3px] bg-track px-[10px] py-1 text-[11px] font-bold tracking-[.1em] text-ink-primary">
                   {s.sec}
                 </div>
                 {s.fields.map((label) => {
@@ -128,7 +128,7 @@ function CaptureTab() {
                       key={label}
                       className="grid grid-cols-[150px_minmax(160px,1fr)_auto] items-center gap-2 px-1 py-[5px]"
                     >
-                      <span className="text-[10.5px] font-semibold tracking-[.05em] text-label">
+                      <span className="text-[10.5px] font-semibold tracking-[.05em] text-ink-secondary">
                         {label}
                       </span>
                       {sp === undefined ? (
@@ -139,7 +139,7 @@ function CaptureTab() {
                             onChange={(e) =>
                               setVals((v) => ({ ...v, [k]: e.target.value }))
                             }
-                            className="w-full rounded-[3px] border border-line-strong bg-card px-2 py-1 font-mono text-[12.5px]"
+                            className="w-full rounded-[3px] border border-line-strong bg-surface-panel px-2 py-1 font-mono text-[12.5px]"
                           />
                           <span className="flex gap-[5px]">
                             <button
@@ -148,7 +148,7 @@ function CaptureTab() {
                               onClick={() =>
                                 setSpecial((v) => ({ ...v, [k]: "dk" }))
                               }
-                              className="cursor-pointer rounded-[3px] border border-attend-border bg-transparent px-2 py-[3px] font-sans text-[10px] font-bold tracking-[.04em] text-attend"
+                              className="cursor-pointer rounded-[3px] border border-state-attend-border bg-transparent px-2 py-[3px] font-sans text-[10px] font-bold tracking-[.04em] text-state-attend"
                             >
                               DON'T KNOW
                             </button>
@@ -158,7 +158,7 @@ function CaptureTab() {
                               onClick={() =>
                                 setSpecial((v) => ({ ...v, [k]: "na" }))
                               }
-                              className="cursor-pointer rounded-[3px] border border-line-strong bg-transparent px-2 py-[3px] font-sans text-[10px] font-bold tracking-[.04em] text-ink-dim"
+                              className="cursor-pointer rounded-[3px] border border-line-strong bg-transparent px-2 py-[3px] font-sans text-[10px] font-bold tracking-[.04em] text-ink-secondary"
                             >
                               NOT STATED
                             </button>
@@ -169,8 +169,8 @@ function CaptureTab() {
                           <span
                             className={`rounded-[3px] border px-2 py-1 font-mono text-[12px] ${
                               sp === "dk"
-                                ? "border-attend-border bg-attend-bg text-attend"
-                                : "border-line bg-surface-dim text-ink-dim"
+                                ? "border-state-attend-border bg-state-attend-surface text-state-attend"
+                                : "border-line-strong bg-surface-raised text-ink-secondary"
                             }`}
                           >
                             {sp === "dk"
@@ -186,7 +186,7 @@ function CaptureTab() {
                                 return next;
                               })
                             }
-                            className="cursor-pointer border-none bg-transparent p-0 text-[10.5px] font-semibold text-action"
+                            className="cursor-pointer border-none bg-transparent p-0 text-[10.5px] font-semibold text-page-ref"
                           >
                             clear
                           </button>
@@ -198,8 +198,8 @@ function CaptureTab() {
               </div>
             ))}
           </div>
-          <div className="flex-none border-t border-line-light bg-surface px-5 py-[9px]">
-            <div className="text-[10px] font-bold tracking-[.08em] text-label">
+          <div className="flex-none border-t border-line-subtle bg-surface-panel px-5 py-[9px]">
+            <div className="text-[10px] font-bold tracking-[.08em] text-ink-secondary">
               WHAT YOU ARE BUILDING — STRUCTURED FROM THE FIRST KEYSTROKE
             </div>
             <div
@@ -208,7 +208,7 @@ function CaptureTab() {
             >
               {`{ ${entries.join(", ")} }`}
             </div>
-            <div className="mt-[3px] text-[10.5px] text-ink-faint">
+            <div className="mt-[3px] text-[10.5px] text-ink-muted">
               → consumed by the test suite directly. No transcription step, no
               Word document, no new source of error.
             </div>
@@ -222,10 +222,10 @@ function CaptureTab() {
 
 const tagChip: Record<GoldenField["tag"], string> = {
   delivered_report:
-    "border border-attend-border bg-attend-bg text-attend",
-  ruled: "border border-action-border bg-action-bg text-action",
-  suspect: "border border-dash bg-surface-dim text-ink-dim",
-  agreed: "border border-ok-border bg-ok-bg text-ok",
+    "border border-state-attend-border bg-state-attend-surface text-state-attend",
+  ruled: "border border-page-ref-border bg-page-ref-surface text-page-ref",
+  suspect: "border border-line-dashed bg-surface-raised text-ink-secondary",
+  agreed: "border border-state-settled-border bg-state-settled-surface text-state-settled",
 };
 
 function CorpusTab() {
@@ -242,10 +242,10 @@ function CorpusTab() {
           which is why the blind fifty still has to happen.
         </div>
         {goldenQ.isPending && (
-          <p className="mt-2 text-[13px] text-ink-dim">Fetching the corpus…</p>
+          <p className="mt-2 text-[13px] text-ink-secondary">Fetching the corpus…</p>
         )}
         {goldenQ.error != null && (
-          <p className="mt-2 text-[13px] text-act">
+          <p className="mt-2 text-[13px] text-state-halt">
             Corpus unavailable: {String(goldenQ.error)}
           </p>
         )}
@@ -253,7 +253,7 @@ function CorpusTab() {
           <div
             key={g.id}
             data-testid={`golden-row-${g.id}`}
-            className="mt-[10px] rounded-card border border-line-mid bg-card px-4 py-3"
+            className="mt-[10px] rounded-md border border-line-strong bg-surface-panel px-4 py-3"
           >
             <div className="flex flex-wrap items-baseline justify-between gap-3">
               <div className="flex flex-wrap items-baseline gap-[10px]">
@@ -264,7 +264,7 @@ function CorpusTab() {
                   {g.value ?? "Not Available"}
                 </span>
                 <span
-                  className={`rounded-chip px-[6px] py-px text-[9.5px] font-bold tracking-[.05em] ${tagChip[g.tag]}`}
+                  className={`rounded-xs px-[6px] py-px text-[9.5px] font-bold tracking-[.05em] ${tagChip[g.tag]}`}
                 >
                   {g.tag.toUpperCase()}
                 </span>
@@ -278,7 +278,7 @@ function CorpusTab() {
               </Link>
             </div>
             {g.corrected_at !== null && (
-              <div className="mt-[5px] text-[11px] text-ink-dim">
+              <div className="mt-[5px] text-[11px] text-ink-secondary">
                 corrected {g.corrected_from ?? "—"} → {g.value ?? "—"} ·{" "}
                 {g.corrected_by} · “{g.correction_reason}” — permanent, on the
                 record

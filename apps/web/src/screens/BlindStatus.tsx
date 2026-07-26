@@ -21,9 +21,9 @@ export function BlindStatusScreen() {
 
   const statusInk = (s: "submitted" | "in_progress" | "not_started") =>
     s === "submitted"
-      ? "font-semibold text-ok"
+      ? "font-semibold text-state-settled"
       : s === "in_progress"
-        ? "text-action"
+        ? "text-page-ref"
         : "text-line-strong";
   const statusText = (s: "submitted" | "in_progress" | "not_started") =>
     s === "submitted" ? "✓ submitted" : s === "in_progress" ? "in progress" : "·";
@@ -44,19 +44,19 @@ export function BlindStatusScreen() {
       </TopBar>
       {bf && (
         <>
-          <div className="flex flex-none flex-wrap gap-3 bg-bg px-[18px] py-3">
-            <div className="min-w-[280px] rounded-card border-[1.5px] border-attend-border bg-attend-bg px-[18px] py-3">
-              <div className="text-[10.5px] font-bold tracking-[.08em] text-attend">
+          <div className="flex flex-none flex-wrap gap-3 bg-surface-app px-[18px] py-3">
+            <div className="min-w-[280px] rounded-md border-[1.5px] border-state-attend-border bg-state-attend-surface px-[18px] py-3">
+              <div className="text-[10.5px] font-bold tracking-[.08em] text-state-attend">
                 READY FOR RECONCILIATION
               </div>
               <div className="mt-[2px] flex items-baseline gap-[10px]">
                 <span
                   data-testid="ready-count"
-                  className="font-mono text-[30px] font-semibold text-attend-strong"
+                  className="font-mono text-[30px] font-semibold text-state-attend-ink"
                 >
                   {bf.ready_for_reconciliation}
                 </span>
-                <span className="text-[12px] leading-[1.4] text-attend-strong">
+                <span className="text-[12px] leading-[1.4] text-state-attend-ink">
                   both typists done, senior hasn't started —
                   {bf.oldest_waiting_days != null && (
                     <>
@@ -68,8 +68,8 @@ export function BlindStatusScreen() {
                 </span>
               </div>
             </div>
-            <div className="min-w-[250px] rounded-card border border-line-mid bg-card px-[18px] py-3">
-              <div className="text-[10.5px] font-bold tracking-[.08em] text-label">
+            <div className="min-w-[250px] rounded-md border border-line-strong bg-surface-panel px-[18px] py-3">
+              <div className="text-[10.5px] font-bold tracking-[.08em] text-ink-secondary">
                 TYPIST DIVERGENCE — ORDER LEVEL ONLY
               </div>
               <div className="mt-[2px] flex items-baseline gap-[10px]">
@@ -82,19 +82,19 @@ export function BlindStatusScreen() {
                 </span>
               </div>
             </div>
-            <div className="rounded-card border border-line-mid bg-card px-[18px] py-3">
-              <div className="text-[10.5px] font-bold tracking-[.08em] text-label">
+            <div className="rounded-md border border-line-strong bg-surface-panel px-[18px] py-3">
+              <div className="text-[10.5px] font-bold tracking-[.08em] text-ink-secondary">
                 RECONCILED
               </div>
               <div className="mt-[2px] font-mono text-[20px] font-semibold">
                 {bf.reconciled}{" "}
-                <span className="font-sans text-[12px] font-normal text-ink-dim">
+                <span className="font-sans text-[12px] font-normal text-ink-secondary">
                   of {bf.orders_total} — the count, not a percentage
                 </span>
               </div>
             </div>
-            <div className="rounded-card border border-line-mid bg-card px-[18px] py-3">
-              <div className="text-[10.5px] font-bold tracking-[.08em] text-label">
+            <div className="rounded-md border border-line-strong bg-surface-panel px-[18px] py-3">
+              <div className="text-[10.5px] font-bold tracking-[.08em] text-ink-secondary">
                 RULEBOOK DRAFTS PENDING
               </div>
               <div className="mt-[2px] font-mono text-[20px] font-semibold">
@@ -106,7 +106,7 @@ export function BlindStatusScreen() {
                   → rulebook
                 </Link>
               </div>
-              <div className="mt-[2px] text-[10.5px] text-ink-dim">
+              <div className="mt-[2px] text-[10.5px] text-ink-secondary">
                 amber above 5 · above 10 needs an engineer before the fifty
                 closes
               </div>
@@ -114,7 +114,7 @@ export function BlindStatusScreen() {
           </div>
           <div className="flex-1 overflow-y-auto px-[18px] pt-1 pb-[50px]">
             <div className="max-w-[1120px]">
-              <div className="grid grid-cols-[110px_120px_130px_130px_170px_minmax(120px,1fr)_90px] gap-[10px] px-3 py-[6px] text-[10px] font-bold tracking-[.08em] text-ink-faint">
+              <div className="grid grid-cols-[110px_120px_130px_130px_170px_minmax(120px,1fr)_90px] gap-[10px] px-3 py-[6px] text-[10px] font-bold tracking-[.08em] text-ink-muted">
                 <span>ORDER</span>
                 <span>JURISDICTION</span>
                 <span>TYPIST A</span>
@@ -130,8 +130,8 @@ export function BlindStatusScreen() {
                     key={o.order_ref}
                     className={`grid grid-cols-[110px_120px_130px_130px_170px_minmax(120px,1fr)_90px] items-baseline gap-[10px] rounded-[3px] border-b px-3 py-[5px] ${
                       waiting
-                        ? "border-attend-bg bg-attend-bg"
-                        : "border-surface-dim bg-card"
+                        ? "border-state-attend-surface bg-state-attend-surface"
+                        : "border-surface-raised bg-surface-panel"
                     }`}
                   >
                     <span className="font-mono text-[12px] font-semibold">
@@ -149,11 +149,11 @@ export function BlindStatusScreen() {
                     <span
                       className={`text-[11.5px] ${
                         waiting
-                          ? "font-bold text-attend"
+                          ? "font-bold text-state-attend"
                           : o.reconciliation === "complete"
-                            ? "text-ok"
+                            ? "text-state-settled"
                             : o.reconciliation !== null
-                              ? "font-semibold text-action"
+                              ? "font-semibold text-page-ref"
                               : "text-line-strong"
                       }`}
                     >
@@ -162,20 +162,20 @@ export function BlindStatusScreen() {
                     <span className="font-mono text-[11.5px] text-ink-secondary">
                       {o.golden_line ?? ""}
                     </span>
-                    <span className="text-[11.5px] text-ink-dim">
+                    <span className="text-[11.5px] text-ink-secondary">
                       {o.drafts ?? ""}
                     </span>
                   </div>
                 );
               })}
-              <div className="px-3 py-2 text-[11px] text-ink-faint">
+              <div className="px-3 py-2 text-[11px] text-ink-muted">
                 sorted by reconciliation readiness, not order id — the
                 actionable rows are already at the top. Field-level
                 disagreements stay blind until reconciliation; the model
                 appears nowhere.
               </div>
-              <div className="mt-[14px] max-w-[640px] rounded-card border border-line-mid bg-card px-[18px] py-[14px]">
-                <div className="mb-2 text-[11px] font-bold tracking-[.08em] text-label">
+              <div className="mt-[14px] max-w-[640px] rounded-md border border-line-strong bg-surface-panel px-[18px] py-[14px]">
+                <div className="mb-2 text-[11px] font-bold tracking-[.08em] text-ink-secondary">
                   GOLDEN SET COVERAGE BY SECTION — WHAT THE BENCH WILL BE ABLE
                   TO SEE
                 </div>
@@ -183,11 +183,11 @@ export function BlindStatusScreen() {
                   <div
                     key={c.section}
                     data-testid={`coverage-${c.section}`}
-                    className="grid grid-cols-[150px_90px_1fr] items-baseline gap-3 border-b border-hairline py-[5px]"
+                    className="grid grid-cols-[150px_90px_1fr] items-baseline gap-3 border-b border-line-subtle py-[5px]"
                   >
                     <span
                       className={`font-mono text-[12px] ${
-                        c.warn ? "font-bold text-attend" : "text-ink-secondary"
+                        c.warn ? "font-bold text-state-attend" : "text-ink-secondary"
                       }`}
                     >
                       {c.section}
@@ -199,7 +199,7 @@ export function BlindStatusScreen() {
                     </span>
                     <span
                       className={`text-[11px] leading-[1.45] ${
-                        c.warn ? "text-attend" : "text-ink-faint"
+                        c.warn ? "text-state-attend" : "text-ink-muted"
                       }`}
                     >
                       {c.note ?? ""}
@@ -212,12 +212,12 @@ export function BlindStatusScreen() {
         </>
       )}
       {metricsQ.isPending && (
-        <p className="px-[18px] py-4 text-[13px] text-ink-dim">
+        <p className="px-[18px] py-4 text-[13px] text-ink-secondary">
           Reading the funnel…
         </p>
       )}
       {metricsQ.error != null && (
-        <p className="px-[18px] py-4 text-[13px] text-act">
+        <p className="px-[18px] py-4 text-[13px] text-state-halt">
           Funnel unavailable: {String(metricsQ.error)}
         </p>
       )}

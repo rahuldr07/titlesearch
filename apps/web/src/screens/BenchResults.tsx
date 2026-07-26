@@ -29,7 +29,7 @@ export function BenchResultsScreen() {
   const data = resultsQ.data;
   if (!data) {
     return (
-      <div className="flex h-screen items-center justify-center bg-dk-deep font-mono text-[12px] text-ink-dim">
+      <div className="flex h-screen items-center justify-center bg-document-deep font-mono text-[12px] text-document-ink-soft">
         {resultsQ.error != null ? String(resultsQ.error) : "reading the bench…"}
       </div>
     );
@@ -37,9 +37,9 @@ export function BenchResultsScreen() {
 
   const TAGS = ["delivered_report", "ruled", "suspect"] as const;
   const tagInk: Record<string, string> = {
-    delivered_report: "text-dk-ok",
-    ruled: "text-action-border",
-    suspect: "text-dk-attend",
+    delivered_report: "text-document-settled",
+    ruled: "text-document-accent",
+    suspect: "text-document-attend",
   };
   const sections = [...new Set(data.cells.map((c) => c.section))];
   const shown = data.sections.filter(
@@ -47,13 +47,13 @@ export function BenchResultsScreen() {
   );
 
   return (
-    <div className="flex h-screen flex-col bg-dk-deep font-mono text-[12px] text-dk-ink-soft">
-      <div className="flex flex-none flex-wrap items-baseline gap-4 border-b border-dk-line px-[14px] py-2">
+    <div className="flex h-screen flex-col bg-document-deep font-mono text-[12px] text-document-ink-soft">
+      <div className="flex flex-none flex-wrap items-baseline gap-4 border-b border-document-line px-[14px] py-2">
         <HomeTitle
           title="BENCH RESULTS"
-          className="text-[11px] font-bold tracking-[.1em] text-ink-dim"
+          className="text-[11px] font-bold tracking-[.1em] text-document-ink-soft"
         />
-        <span className="text-dk-ink-strong">
+        <span className="text-document-ink-strong">
           {data.run_ref} · {data.seed_version} · {data.total_fields} fields ·{" "}
           {data.orders} real orders
         </span>
@@ -69,7 +69,7 @@ export function BenchResultsScreen() {
           whole page sideways. min-w lives on the content, not the viewport. */}
       <div className="flex-1 overflow-auto p-[14px]">
         <div className="min-w-[1152px]">
-          <div className="mb-[6px] text-[11px] font-bold tracking-[.08em] text-ink-dim">
+          <div className="mb-[6px] text-[11px] font-bold tracking-[.08em] text-document-ink-soft">
             SECTION × TAG. THE TWO AXES ARE THE FINDING; NO SINGLE NUMBER IS.
           </div>
           <div className="grid grid-cols-[150px_repeat(3,minmax(150px,1fr))_110px] gap-[2px]">
@@ -82,7 +82,7 @@ export function BenchResultsScreen() {
                 {t}
               </span>
             ))}
-            <span className="py-1 text-center text-[10.5px] text-ink-secondary">
+            <span className="py-1 text-center text-[10.5px] text-document-ink-soft">
               section
             </span>
             {sections.map((secName) => {
@@ -91,7 +91,7 @@ export function BenchResultsScreen() {
               return [
                 <span
                   key={`${secName}-label`}
-                  className={`py-[5px] pr-[6px] ${suspectSec ? "font-bold text-dk-attend" : "text-ink-dim"}`}
+                  className={`py-[5px] pr-[6px] ${suspectSec ? "font-bold text-document-attend" : "text-document-ink-soft"}`}
                 >
                   {secName}
                 </span>,
@@ -103,7 +103,7 @@ export function BenchResultsScreen() {
                     return (
                       <span
                         key={`${secName}-${tag}`}
-                        className="rounded-[2px] bg-dk-bg py-[5px] text-center text-dk-line"
+                        className="rounded-[2px] bg-document-bg py-[5px] text-center text-document-line"
                       >
                         —
                       </span>
@@ -112,17 +112,17 @@ export function BenchResultsScreen() {
                   const failCount = cell.fields - cell.passed;
                   const cls =
                     failCount === 0
-                      ? "text-dk-ok"
+                      ? "text-document-settled"
                       : tag === "suspect"
-                        ? "border border-dashed border-dk-attend-border text-dk-attend"
+                        ? "border border-dashed border-document-attend-border text-document-attend"
                         : tag === "ruled"
-                          ? "bg-dk-act-bg font-bold text-dk-act"
-                          : "text-dk-act";
+                          ? "bg-document-halt-surface font-bold text-document-halt"
+                          : "text-document-halt";
                   return (
                     <span
                       key={`${secName}-${tag}`}
                       data-testid={`cell-${secName}-${tag}`}
-                      className={`rounded-[2px] bg-dk-bg py-[5px] text-center ${cls}`}
+                      className={`rounded-[2px] bg-document-bg py-[5px] text-center ${cls}`}
                     >
                       {cell.fields}f · {cell.passed}/{cell.fields}
                     </span>
@@ -130,21 +130,21 @@ export function BenchResultsScreen() {
                 }),
                 <span
                   key={`${secName}-tot`}
-                  className="py-[5px] text-center text-ink-dim"
+                  className="py-[5px] text-center text-document-ink-soft"
                 >
                   {secData ? `${secData.passed}/${secData.n}` : "—"}
                 </span>,
               ];
             })}
           </div>
-          <div className="mt-2 flex flex-wrap gap-5 text-[10.5px] text-ink-dim">
+          <div className="mt-2 flex flex-wrap gap-5 text-[10.5px] text-document-ink-soft">
             <span>
-              <b className="text-dk-attend">judgments_liens × suspect</b> is
+              <b className="text-document-attend">judgments_liens × suspect</b> is
               the cell to learn to ignore until the blind fifty lands — 3 of 7
               known defects live in that seed source
             </span>
             <span>
-              <b className="text-action-border">ruled</b> failures are always
+              <b className="text-document-accent">ruled</b> failures are always
               actionable — the seed is authoritative there
             </span>
             <span>
@@ -154,7 +154,7 @@ export function BenchResultsScreen() {
           </div>
 
           <div className="mt-4 mb-[10px] flex flex-wrap items-center gap-[6px]">
-            <span className="text-[10.5px] tracking-[.06em] text-ink-secondary">
+            <span className="text-[10.5px] tracking-[.06em] text-document-ink-soft">
               FILTER
             </span>
             {["all", ...sections].map((f) => (
@@ -164,8 +164,8 @@ export function BenchResultsScreen() {
                 onClick={() => setFilter(f)}
                 className={`cursor-pointer rounded-[3px] border bg-transparent px-[10px] py-[2px] font-mono text-[11px] ${
                   filter === f
-                    ? "border-action-border text-dk-ink-strong"
-                    : "border-dk-line text-ink-secondary"
+                    ? "border-document-accent-border text-document-ink-strong"
+                    : "border-document-line text-document-ink-soft"
                 }`}
               >
                 {f}
@@ -181,7 +181,7 @@ export function BenchResultsScreen() {
               onToggle={(p) => setExpanded(expanded === p ? null : p)}
             />
           ))}
-          <div className="mt-[6px] text-[10.5px] text-ink-secondary">
+          <div className="mt-[6px] text-[10.5px] text-document-ink-soft">
             read-only — fixes happen in the code, not here · no run-over-run
             delta on purpose: the seed is the comparand, not last time
           </div>
@@ -193,10 +193,10 @@ export function BenchResultsScreen() {
 
 function tagChip(tag: BenchFailRow["tag"]): string {
   const base = "rounded-[3px] px-[7px] py-px text-[10px] whitespace-nowrap justify-self-start ";
-  if (tag === "ruled") return base + "border border-neutral text-action-border";
+  if (tag === "ruled") return base + "border border-state-idle text-document-accent";
   if (tag === "suspect")
-    return base + "border border-dashed border-dk-attend-border text-dk-attend";
-  return base + "border border-dk-ok-border text-dk-ok";
+    return base + "border border-dashed border-document-attend-border text-document-attend";
+  return base + "border border-document-settled-border text-document-settled";
 }
 
 function SectionBlock({
@@ -210,14 +210,14 @@ function SectionBlock({
 }) {
   return (
     <div className="mb-[14px]">
-      <div className="flex flex-wrap items-baseline gap-3 rounded-[3px] bg-dk-bg px-2 py-1">
-        <span className="font-bold text-dk-ink-strong">{sec.section}</span>
-        <span className="text-ink-secondary">
+      <div className="flex flex-wrap items-baseline gap-3 rounded-[3px] bg-document-bg px-2 py-1">
+        <span className="font-bold text-document-ink-strong">{sec.section}</span>
+        <span className="text-document-ink-soft">
           {sec.passed}/{sec.n} pass
           {sec.note !== null ? ` · ${sec.note}` : ""}
         </span>
         {sec.suspect_note !== null && (
-          <span className="rounded-[3px] border border-dashed border-dk-attend-border px-2 py-px text-[10.5px] text-dk-attend">
+          <span className="rounded-[3px] border border-dashed border-document-attend-border px-2 py-px text-[10.5px] text-document-attend">
             {sec.suspect_note}
           </span>
         )}
@@ -231,23 +231,23 @@ function SectionBlock({
               data-testid={`fail-${f.path}`}
               onClick={() => onToggle(f.path)}
               className={`mt-[2px] grid cursor-pointer grid-cols-[16px_minmax(180px,auto)_minmax(70px,auto)_1fr] items-baseline gap-[10px] rounded-[3px] px-2 py-1 ${
-                exp ? "bg-dk-card" : ""
+                exp ? "bg-document-card" : ""
               }`}
             >
               <span
-                className={`w-4 flex-none ${suspect ? "text-dk-attend" : "font-bold text-dk-act"}`}
+                className={`w-4 flex-none ${suspect ? "text-document-attend" : "font-bold text-document-halt"}`}
               >
                 ✗
               </span>
-              <span className="truncate text-dk-ink-soft">{f.path}</span>
+              <span className="truncate text-document-ink-soft">{f.path}</span>
               <span className={tagChip(f.tag)}>{f.tag}</span>
               <span
                 className={`truncate text-[10.5px] ${
                   f.tag === "ruled"
-                    ? "font-bold text-dk-act"
+                    ? "font-bold text-document-halt"
                     : suspect
-                      ? "text-dk-attend"
-                      : "text-dk-act"
+                      ? "text-document-attend"
+                      : "text-document-halt"
                 }`}
               >
                 {f.tag === "ruled"
@@ -258,15 +258,15 @@ function SectionBlock({
               </span>
             </div>
             {exp && (
-              <div className="mb-[3px] grid grid-cols-[110px_1fr] gap-x-3 gap-y-[6px] border-l-2 border-dk-line-2 bg-dk-bg py-2 pr-3 pl-[34px] text-[11.5px]">
-                <span className="text-ink-secondary">model</span>
-                <span className="text-dk-act">{f.model_value ?? "∅"}</span>
-                <span className="text-ink-secondary">seed</span>
-                <span className="text-dk-ok">{f.seed_value ?? "∅"}</span>
-                <span className="text-ink-secondary">tag</span>
+              <div className="mb-[3px] grid grid-cols-[110px_1fr] gap-x-3 gap-y-[6px] border-l-2 border-document-line-strong bg-document-bg py-2 pr-3 pl-[34px] text-[11.5px]">
+                <span className="text-document-ink-soft">model</span>
+                <span className="text-document-halt">{f.model_value ?? "∅"}</span>
+                <span className="text-document-ink-soft">seed</span>
+                <span className="text-document-settled">{f.seed_value ?? "∅"}</span>
+                <span className="text-document-ink-soft">tag</span>
                 <span>{f.tag}</span>
-                <span className="text-ink-secondary">source</span>
-                <span className="text-ink-dim">{f.source_note}</span>
+                <span className="text-document-ink-soft">source</span>
+                <span className="text-document-ink-soft">{f.source_note}</span>
                 {f.golden_field_id !== null && (
                   <>
                     <span />
@@ -287,7 +287,7 @@ function SectionBlock({
         );
       })}
       {sec.passed > 0 && (
-        <div className="px-2 py-1 text-[11px] text-ink-secondary">
+        <div className="px-2 py-1 text-[11px] text-document-ink-soft">
           {sec.passed} passing — collapsed; passes take no space
         </div>
       )}
