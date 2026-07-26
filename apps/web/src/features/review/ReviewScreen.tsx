@@ -4,14 +4,18 @@ import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { api } from "../../api";
 import { FieldRow } from "../../entities/field/FieldRow";
 import { DecisionPanel } from "./DecisionPanel";
+import { PassOrder } from "./PassOrder";
+import { QueueKeys } from "./QueueKeys";
 
 /**
  * Review — the assembled report, field by field.
  *
- * PASS 3 INCREMENT 2. This is the field list and its selection ONLY. The
- * document pane, the decision actions (confirm / correct / escalate / bug), the
- * A-vs-B reading comparison, and the order rail are separate increments and are
- * deliberately absent rather than stubbed.
+ * Built so far: the field list with selection, the A/B reading comparison, the
+ * three field decisions, pass-order, and the J/K keyboard path.
+ *
+ * STILL ABSENT, deliberately rather than stubbed: the document pane and
+ * click-to-source, the bug channel, the report section grouping, the read-only
+ * intake sign-off block, and finalize. The last two are gated on rulings Q5/Q6.
  *
  * Everything here renders server state verbatim. Nothing computes `state`,
  * nothing derives whether a field needs review, and nothing keys off a null
@@ -77,8 +81,29 @@ export function ReviewScreen() {
     });
   };
 
+  /**
+   * Move to the next field the SERVER has queued, after this one. Called only
+   * when a decision was ACCEPTED — a refusal (a 409) leaves the reviewer on the
+   * field they were refused on, so they can read the server's message against
+   * the thing it refused.
+   *
+   * The queue is the server's. This walks it in the order it arrived; it does
+   * not sort, re-rank, or skip.
+   */
+  const advance = () => {
+    const here = queued.findIndex((f) => f.path === selectedPath);
+    const next = queued[here + 1] ?? queued.find((f) => f.path !== selectedPath);
+    if (next !== undefined) select(next.path);
+  };
+
   return (
     <div className="flex h-full min-h-0 flex-col bg-surface-app">
+      {/*
+        Renders nothing — it owns the J/K listener. A component rather than a
+        hook in this function because the loading and error branches above return
+        early, and a conditionally-called hook is a bug waiting to happen.
+      */}
+      <QueueKeys queued={queued} selectedPath={selectedPath} onSelect={select} />
       <div className="flex flex-wrap items-baseline gap-3 border-b border-line-strong bg-surface-panel px-5 py-3">
         <span className="text-micro font-bold tracking-eyebrow text-page-ref uppercase">
           Assembled report
@@ -87,9 +112,16 @@ export function ReviewScreen() {
         <span className="ml-auto text-sm text-ink-secondary">
           {queued.length} remaining
         </span>
+        <PassOrder orderId={orderId} />
       </div>
 
-      {selected === undefined ? null : <DecisionPanel field={selected} />}
+      {selected === undefined ? null : (
+        <DecisionPanel
+          field={selected}
+          orderId={orderId}
+          onSettled={advance}
+        />
+      )}
 
       <div className="min-h-0 flex-1 overflow-auto">
         {all.map((f) => (

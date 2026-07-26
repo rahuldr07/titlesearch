@@ -41,6 +41,35 @@ function hasProvenance(f: Field): boolean {
   return f.source_page !== null && f.source_doc_id !== null;
 }
 
+/**
+ * The mark showing what was decided on this field, read from the server's state.
+ * Nothing is inferred about WHO decided or WHEN — only what the state is.
+ *
+ * "accepted N/A" is distinguished from "confirmed" because accepting an absence
+ * is a materially different act from confirming a value, and the reviewer should
+ * be able to see at a glance which absences someone signed for.
+ */
+function decisionMark(f: Field): string | null {
+  switch (f.state) {
+    case "corrected":
+      return "✎ corrected";
+    case "escalated":
+      return "↗ escalated";
+    case "confirmed":
+      return f.value === null ? "✓ accepted N/A" : "✓ confirmed";
+    case "pending":
+    case "needs_review":
+    case "auto_confirmed":
+      // auto_confirmed is the MACHINE's decision, not a reviewer's — it gets no
+      // reviewer mark. Its state is visible in the pill when selected.
+      return null;
+    default: {
+      const unhandled: never = f.state;
+      throw new Error(`unhandled field state: ${JSON.stringify(unhandled)}`);
+    }
+  }
+}
+
 export function FieldRow({
   field,
   selected,
@@ -55,6 +84,7 @@ export function FieldRow({
   // itself so a reviewer scanning the report sees where the arguments are
   // without opening anything — and it is marked whether or not a value merged.
   const disagree = readingsDiffer((field.readings ?? []).map((r) => r.value));
+  const mark = decisionMark(field);
 
   return (
     <button
@@ -112,6 +142,15 @@ export function FieldRow({
           </>
         )}
       </span>
+
+      {mark === null ? null : (
+        <span
+          data-testid="row-mark"
+          className="shrink-0 pt-0.5 text-tiny font-semibold text-ink-secondary"
+        >
+          {mark}
+        </span>
+      )}
     </button>
   );
 }

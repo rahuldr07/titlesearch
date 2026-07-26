@@ -25,22 +25,61 @@ const go = async (page: import("@playwright/test").Page) => {
   await expect(page.getByTestId("sel-label")).toBeVisible();
 };
 
-// TODO(rebuild): un-skip when this feature lands — rule: a both-found disagreement never claims emptiness — draft leads, labeled
-test.skip("a both-found disagreement never claims emptiness — draft leads, labeled", async ({
+// UN-SKIPPED 2026-07-27 (Pass 3, increment 4). rule: a both-found disagreement never claims emptiness — draft leads, labeled
+/*
+ * REWRITTEN, and this one is worth reading closely — the original assertion
+ * CONFLICTED with a stricter rule, so satisfying it literally would have meant
+ * breaking §0.2.
+ *
+ * The old spec expected `sel-state` to read "ENGINES DISAGREE — NOTHING
+ * SETTLED". That means the old UI overloaded the state pill with a DERIVED
+ * label: for most fields it showed the server's state, and for a disagreement it
+ * showed something the server never said. `server-owns-state.spec` requires that
+ * same pill to render `state` verbatim, so the two specs only coexisted because
+ * they happened to test different fields.
+ *
+ * Here the pill renders the server's state, always — and the disagreement is
+ * labelled in its own elements (`sel-disagree`, `why-yours`). That separates two
+ * facts the old UI conflated, and it makes the rule stronger: the state can no
+ * longer be quietly rewritten by the client for a special case.
+ *
+ * The rule this protects is UNCHANGED and is asserted more thoroughly than
+ * before: when both engines returned values and disagreed, nothing anywhere may
+ * claim the field is empty, unread, or unavailable.
+ */
+test("a both-found disagreement never claims emptiness — labeled, not blanked", async ({
   page,
 }) => {
   await go(page);
   await page.getByTestId("row-mortgages.1.lender").click();
-  // the pill states the true situation…
-  await expect(page.getByTestId("sel-state")).toHaveText(
-    "ENGINES DISAGREE — NOTHING SETTLED",
+
+  // the pill still says exactly what the SERVER says — no client-side rewrite
+  await expect(page.getByTestId("sel-state")).toHaveText("NEEDS REVIEW");
+
+  // the disagreement is labelled, in its own right
+  await expect(page.getByTestId("sel-disagree")).toHaveText("A≠B");
+  await expect(page.getByTestId("why-yours")).toContainText("disagree");
+
+  // both readings are on screen with their values — the field is plainly not empty
+  await expect(page.getByTestId("reading-gemini-2.5-flash")).toContainText(
+    "SOUTHSTONE",
   );
-  // …the headline shows the draft AS a draft, not "Not Available"…
-  await expect(page.getByText("draft — nothing settled yet")).toBeVisible();
-  // …and nothing claims extraction returned nothing while readings show values
-  await expect(
-    page.getByText("extraction returned nothing at all"),
-  ).toHaveCount(0);
+  await expect(page.getByTestId("reading-llmwhisperer-hq")).toContainText(
+    "M0RTGAGE",
+  );
+
+  // and NOTHING claims absence — the original checked one phrase; this checks
+  // every way the UI could tell the reviewer there is nothing here
+  const panel = page.getByTestId("decision-panel");
+  for (const lie of [
+    "extraction returned nothing at all",
+    "Not Available",
+    "not yet extracted",
+    "none of record",
+    "Document silent",
+  ]) {
+    await expect(panel).not.toContainText(lie);
+  }
 });
 
 // UN-SKIPPED 2026-07-27 (Pass 3, increment 3). Assertions unchanged.
@@ -73,8 +112,8 @@ test.skip("a reading can be adopted into the correction editor without retyping"
   ).toHaveText("✎ corrected");
 });
 
-// TODO(rebuild): un-skip when this feature lands — rule: ⏎ never accepts a blank — missing fields demand a click
-test.skip("⏎ never accepts a blank — missing fields demand a click", async ({
+// UN-SKIPPED 2026-07-27 (Pass 3, increment 4). rule: ⏎ never accepts a blank — missing fields demand a click
+test("⏎ never accepts a blank — missing fields demand a click", async ({
   page,
 }) => {
   await page.goto("/orders/ord_demo_1/review?field=mortgages.1.lender");
@@ -92,8 +131,8 @@ test.skip("⏎ never accepts a blank — missing fields demand a click", async (
   ).toHaveText("✓ accepted N/A");
 });
 
-// TODO(rebuild): un-skip when this feature lands — rule: refused submits SAY so — escalate, correct, pass all nudge
-test.skip("refused submits SAY so — escalate, correct, pass all nudge", async ({
+// UN-SKIPPED 2026-07-27 (Pass 3, increment 4). rule: refused submits SAY so — escalate, correct, pass all nudge
+test("refused submits SAY so — escalate, correct, pass all nudge", async ({
   page,
 }) => {
   await go(page);

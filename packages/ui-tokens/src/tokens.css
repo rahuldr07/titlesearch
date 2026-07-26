@@ -40,6 +40,7 @@
      rather than reusing --color-action, because during the transition
      --color-action collides with the legacy palette (see index.css). */
   --color-page-ref: #4a2fae;
+  --color-page-ref-ink: #392291; /* text sitting ON page-ref-surface */
   --color-page-ref-surface: #efeafd;
   --color-page-ref-border: #dfd6fb;
 
@@ -54,7 +55,22 @@
   /* ── ink ──────────────────────────────────────────────────────────────── */
   --color-ink-primary: #16171b;
   --color-ink-secondary: #565a66;
-  --color-ink-muted: #8a8e99; /* eyebrow labels, meta, "recede" */
+  /*
+   * DARKENED from the design's #8a8e99, which failed WCAG AA on every surface
+   * it is used on — 3.28:1 on panel, 2.65:1 on the app background, and it is
+   * the most-used token in the design (eyebrow labels, meta, the whole "recede"
+   * tier). Measured before/after:
+   *
+   *              panel  app   raised  sunken
+   *   #8a8e99     3.28  2.65   2.95    3.19   <- fails AA everywhere
+   *   #616673     5.74  4.65   5.18    5.55   <- clears AA everywhere
+   *
+   * This is the one place the palette is deliberately not as drawn, and it is a
+   * correctness fix rather than a taste call: at 2.65:1 the label tier is not
+   * legible to a substantial share of readers. The hue and the recede INTENT are
+   * preserved — it still reads as the quietest tier, just legibly.
+   */
+  --color-ink-muted: #616673; /* eyebrow labels, meta, "recede" */
 
   /* ── lines ────────────────────────────────────────────────────────────── */
   --color-line-strong: #d4d7de; /* card borders, dividers that must read */

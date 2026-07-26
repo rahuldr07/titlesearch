@@ -20,8 +20,8 @@ import { interceptApi } from "../helpers/net";
  * selection does not advance, and the field repaints as the server has it.
  */
 
-// TODO(rebuild): un-skip when this feature lands — rule: confirm 409 (different value) surfaces the server's message and never advances
-test.skip("confirm 409 (different value) surfaces the server's message and never advances", async ({
+// UN-SKIPPED 2026-07-27 (Pass 3, increment 4). rule: confirm 409 (different value) surfaces the server's message and never advances
+test("confirm 409 (different value) surfaces the server's message and never advances", async ({
   page,
 }) => {
   await interceptApi(page, {
@@ -44,8 +44,8 @@ test.skip("confirm 409 (different value) surfaces the server's message and never
   ).toHaveCount(0);
 });
 
-// TODO(rebuild): un-skip when this feature lands — rule: confirm 409 (terminal state) is answered, not a dead no-op
-test.skip("confirm 409 (terminal state) is answered, not a dead no-op", async ({
+// UN-SKIPPED 2026-07-27 (Pass 3, increment 4). rule: confirm 409 (terminal state) is answered, not a dead no-op
+test("confirm 409 (terminal state) is answered, not a dead no-op", async ({
   page,
 }) => {
   await interceptApi(page, {
@@ -63,8 +63,8 @@ test.skip("confirm 409 (terminal state) is answered, not a dead no-op", async ({
   await expect(page.getByTestId("sel-label")).toHaveText("OWNER ZIP");
 });
 
-// TODO(rebuild): un-skip when this feature lands — rule: bug-5 mock semantics hold: same value 200/200, different value 409
-test.skip("bug-5 mock semantics hold: same value 200/200, different value 409", async ({
+// UN-SKIPPED 2026-07-27 (Pass 3, increment 4). rule: bug-5 mock semantics hold: same value 200/200, different value 409
+test("bug-5 mock semantics hold: same value 200/200, different value 409", async ({
   page,
 }) => {
   // no interception — this pins the MSW contract the UI now depends on

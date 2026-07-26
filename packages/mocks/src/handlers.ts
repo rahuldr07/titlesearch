@@ -5,6 +5,7 @@ import {
   CorrectFieldRequest,
   CreateBugRequest,
   CreateComplaintRequest,
+  NaReason,
   EngineRoutingRequest,
   EscalateFieldRequest,
   GoldenAffirmRequest,
@@ -386,11 +387,13 @@ export const handlers = [
     if (!field) return err("no such field", 404);
     field.state = "corrected";
     field.value = parsed.data.value;
-    field.na_reason =
-      parsed.data.na_reason === "NOT_PRESENT" ||
-      parsed.data.na_reason === "PRESENT_UNREADABLE"
-        ? parsed.data.na_reason
-        : null;
+    // Validate against the contract enum rather than an inline list. The list
+    // was the old two members, so widening NaReason to four (ratified Q1)
+    // silently dropped NOT_FOUND and NOT_STATED to null here — a reviewer's
+    // correction to "document silent" would have been recorded as no NA reason
+    // at all. Reading the enum means the next widening cannot repeat it.
+    const na = NaReason.safeParse(parsed.data.na_reason);
+    field.na_reason = na.success ? na.data : null;
     field.approved_by = "L. Vance";
     field.approved_at = new Date().toISOString();
     return HttpResponse.json(ok);

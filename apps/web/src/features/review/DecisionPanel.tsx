@@ -3,6 +3,7 @@ import { diffChars, readingsDiffer } from "../../entities/field/charDiff";
 import { fieldLabel } from "../../entities/field/FieldRow";
 import { ReadingCard } from "../../entities/field/ReadingCard";
 import { StatePill } from "../../entities/field/StatePill";
+import { FieldActions } from "./FieldActions";
 
 /**
  * The selected field, opened up: what the engines read, and why it is a
@@ -21,7 +22,15 @@ import { StatePill } from "../../entities/field/StatePill";
  * Nothing here ranks the readings. Order is seat order (A, B) as the server
  * returned them — not confidence, not cost, not latency.
  */
-export function DecisionPanel({ field }: { field: Field }) {
+export function DecisionPanel({
+  field,
+  orderId,
+  onSettled,
+}: {
+  field: Field;
+  orderId: string;
+  onSettled: () => void;
+}) {
   const readings = field.readings ?? [];
   const disagree = readingsDiffer(readings.map((r) => r.value));
 
@@ -99,6 +108,8 @@ export function DecisionPanel({ field }: { field: Field }) {
           ))}
         </div>
       )}
+
+      <FieldActions field={field} orderId={orderId} onSettled={onSettled} />
     </div>
   );
 }

@@ -172,8 +172,8 @@ test("A≠B disagreement leads: chip on the row, both readings in the panel", as
   }
 });
 
-// TODO(rebuild): un-skip when this feature lands — rule: correction without a reason never submits
-test.skip("correction without a reason never submits", async ({ page }) => {
+// UN-SKIPPED 2026-07-27 (Pass 3, increment 4). rule: correction without a reason never submits
+test("correction without a reason never submits", async ({ page }) => {
   await go(page);
   await page.getByTestId("row-mortgages.1.lender").click();
   await page.keyboard.press("c");
@@ -187,8 +187,8 @@ test.skip("correction without a reason never submits", async ({ page }) => {
   ).toHaveCount(0);
 });
 
-// TODO(rebuild): un-skip when this feature lands — rule: correction with value + reason submits and renders the server's state
-test.skip("correction with value + reason submits and renders the server's state", async ({
+// UN-SKIPPED 2026-07-27 (Pass 3, increment 4). rule: correction with value + reason submits and renders the server's state
+test("correction with value + reason submits and renders the server's state", async ({
   page,
 }) => {
   await go(page);
@@ -203,8 +203,8 @@ test.skip("correction with value + reason submits and renders the server's state
   ).toHaveText("✎ corrected");
 });
 
-// TODO(rebuild): un-skip when this feature lands — rule: escalation without a question never submits
-test.skip("escalation without a question never submits", async ({ page }) => {
+// UN-SKIPPED 2026-07-27 (Pass 3, increment 4). rule: escalation without a question never submits
+test("escalation without a question never submits", async ({ page }) => {
   await go(page);
   await page.getByTestId("row-owner.zip").click();
   await page.keyboard.press("e");
@@ -217,8 +217,8 @@ test.skip("escalation without a question never submits", async ({ page }) => {
   ).toHaveCount(0);
 });
 
-// TODO(rebuild): un-skip when this feature lands — rule: escalation with a question records; confirm via ⏎ records
-test.skip("escalation with a question records; confirm via ⏎ records", async ({
+// UN-SKIPPED 2026-07-27 (Pass 3, increment 4). rule: escalation with a question records; confirm via ⏎ records
+test("escalation with a question records; confirm via ⏎ records", async ({
   page,
 }) => {
   await go(page);
@@ -235,8 +235,8 @@ test.skip("escalation with a question records; confirm via ⏎ records", async (
   await expect(page.getByTestId("sel-label")).toHaveText("MTG 1 — LENDER");
 });
 
-// TODO(rebuild): un-skip when this feature lands — rule: no approve-all, no throughput, no timers
-test.skip("no approve-all, no throughput, no timers", async ({ page }) => {
+// UN-SKIPPED 2026-07-27 (Pass 3, increment 4). rule: no approve-all, no throughput, no timers
+test("no approve-all, no throughput, no timers", async ({ page }) => {
   await go(page);
   const body = (await page.locator("body").innerText()).toLowerCase();
   expect(body).not.toContain("approve");
@@ -245,8 +245,8 @@ test.skip("no approve-all, no throughput, no timers", async ({ page }) => {
   expect(body).not.toMatch(/\btimer\b/);
 });
 
-// TODO(rebuild): un-skip when this feature lands — rule: J/K walk the queued fields only
-test.skip("J/K walk the queued fields only", async ({ page }) => {
+// UN-SKIPPED 2026-07-27 (Pass 3, increment 4). rule: J/K walk the queued fields only
+test("J/K walk the queued fields only", async ({ page }) => {
   await go(page);
   await expect(page.getByTestId("sel-label")).toHaveText("OWNER ZIP");
   await page.keyboard.press("j");
