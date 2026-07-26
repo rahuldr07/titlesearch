@@ -19,8 +19,8 @@ import { expect, test } from "@playwright/test";
  * pace. Pass requires a reason.
  */
 
-// TODO(rebuild): the /queue screen was deleted in Pass 1; rebuild from design-mock
-test.skip("renders the server's next order verbatim — exactly one order, no list", async ({
+// UN-SKIPPED 2026-07-27 (Pass 3). rule: GET /api/queue/next serves ONE order and the queue is not browsable — Next up is the only section with data (ruling Q12 still open for the rest)
+test("renders the server's next order verbatim — exactly one order, no list", async ({
   page,
 }) => {
   await page.goto("/queue");
@@ -31,8 +31,8 @@ test.skip("renders the server's next order verbatim — exactly one order, no li
   await expect(page.getByText("DEMO-0002")).toHaveCount(0);
 });
 
-// TODO(rebuild): the /queue screen was deleted in Pass 1; rebuild from design-mock
-test.skip("no pace indicators or throughput language renders", async ({ page }) => {
+// UN-SKIPPED 2026-07-27 (Pass 3). rule: no pace, no throughput, no time estimates — the only clock on the screen is the order's own arrival time
+test("no pace indicators or throughput language renders", async ({ page }) => {
   await page.goto("/queue");
   await expect(page.getByTestId("order-ref")).toBeVisible();
   const body = (await page.locator("body").innerText()).toLowerCase();
@@ -44,8 +44,8 @@ test.skip("no pace indicators or throughput language renders", async ({ page }) 
   expect(body).not.toContain("last one like it");
 });
 
-// TODO(rebuild): the /queue screen was deleted in Pass 1; rebuild from design-mock
-test.skip("pass without a reason is refused; esc keeps the order", async ({
+// UN-SKIPPED 2026-07-27 (Pass 3). rule: orphan O1 — a pass costs a reason; the refusal is structural (RequiredComment) and Escape leaves the order where it was
+test("pass without a reason is refused; esc keeps the order", async ({
   page,
 }) => {
   await page.goto("/queue");
@@ -60,8 +60,8 @@ test.skip("pass without a reason is refused; esc keeps the order", async ({
   await expect(input).toHaveCount(0);
 });
 
-// TODO(rebuild): the /queue screen was deleted in Pass 1; rebuild from design-mock
-test.skip("pass with a reason records and advances to the next order", async ({
+// UN-SKIPPED 2026-07-27 (Pass 3). rule: the pass is recorded and the SERVER re-picks — the screen re-asks /api/queue/next rather than advancing a cursor of its own
+test("pass with a reason records and advances to the next order", async ({
   page,
 }) => {
   await page.goto("/queue");
@@ -76,8 +76,8 @@ test.skip("pass with a reason records and advances to the next order", async ({
   await expect(page.getByTestId("order-ref")).toHaveText("DEMO-0002");
 });
 
-// TODO(rebuild): the /queue screen was deleted in Pass 1; rebuild from design-mock
-test.skip("enter starts review on the served order", async ({ page }) => {
+// UN-SKIPPED 2026-07-27 (Pass 3). rule: keyboard-first (Q3) — ⏎ takes the order the server served, never one the reviewer chose
+test("enter starts review on the served order", async ({ page }) => {
   await page.goto("/queue");
   await expect(page.getByTestId("order-ref")).toBeVisible();
   await page.keyboard.press("Enter");

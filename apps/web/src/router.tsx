@@ -66,9 +66,11 @@ const indexRoute = createRoute({
 
 /*
  * REMOVED IN PASS 1 (2026-07-26) — the four screens design-mock replaces. The
- * SCREENS are deleted; the ROUTES stay, pointed at RebuildingCard, because the
- * surviving screens cross-link to them and those links are pinned by harvested
- * invariants. Restore the real components in Pass 3 and delete the scaffold.
+ * SCREENS were deleted; the ROUTES stayed, pointed at RebuildingCard, because
+ * the surviving screens cross-link to them and those links are pinned by
+ * harvested invariants. Restore each real component in Pass 3 and drop its
+ * scaffold: /queue is back (2026-07-27); /ingest and /escalations still stand
+ * on the card.
  *
  * The order-scoped shape below is worth restoring verbatim: the order is the
  * resource, review is a view of it, and `?field=` as validated search keeps
@@ -79,7 +81,10 @@ const queueRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/queue",
   beforeLoad: () => requireAccess("/queue"),
-  component: () => <RebuildingCard screen="The reviewer queue" />,
+  component: lazyRouteComponent(
+    () => import("./features/queue/QueueScreen"),
+    "QueueScreen",
+  ),
 });
 
 const reviewRoute = createRoute({
@@ -98,7 +103,10 @@ const ingestRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/ingest",
   beforeLoad: () => requireAccess("/ingest"),
-  component: () => <RebuildingCard screen="Ingest" />,
+  component: lazyRouteComponent(
+    () => import("./features/ingest/IngestScreen"),
+    "IngestScreen",
+  ),
 });
 
 const escalationsRoute = createRoute({

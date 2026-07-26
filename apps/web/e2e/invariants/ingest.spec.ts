@@ -34,8 +34,10 @@ async function fillOrder(page: import("@playwright/test").Page) {
   await page.getByTestId("package-input").setInputFiles(PKG);
 }
 
-// TODO(rebuild): the /ingest screen was deleted in Pass 1; rebuild from design-mock Upload
-test.skip("an incomplete upload is refused with the server's missing fields, verbatim", async ({
+// UN-SKIPPED 2026-07-27 (Pass 3). Selectors unchanged; assertions unchanged. The
+// rebuilt screen posts the empty form as typed and renders the 400's
+// IngestRejection — the server's field names and its own reason, verbatim.
+test("an incomplete upload is refused with the server's missing fields, verbatim", async ({
   page,
 }) => {
   await page.goto("/ingest");
@@ -50,8 +52,10 @@ test.skip("an incomplete upload is refused with the server's missing fields, ver
   );
 });
 
-// TODO(rebuild): the /ingest screen was deleted in Pass 1; rebuild from design-mock Upload
-test.skip("acceptance is explicit — upload alone never queues the order", async ({
+// UN-SKIPPED 2026-07-27 (Pass 3). Selectors unchanged; assertions unchanged.
+// Upload and accept stayed two calls in the rebuild — the accepted card does not
+// exist until POST /api/orders/{id}/accept has answered.
+test("acceptance is explicit — upload alone never queues the order", async ({
   page,
 }) => {
   await page.goto("/ingest");
@@ -66,8 +70,10 @@ test.skip("acceptance is explicit — upload alone never queues the order", asyn
   );
 });
 
-// TODO(rebuild): the /ingest screen was deleted in Pass 1; rebuild from design-mock Upload
-test.skip("a byte-identical re-upload surfaces the server's duplicate notice", async ({
+// UN-SKIPPED 2026-07-27 (Pass 3). Selectors unchanged; assertions unchanged. The
+// 409 renders in the ingest banner as the server worded it; nothing client-side
+// hashes or remembers a package.
+test("a byte-identical re-upload surfaces the server's duplicate notice", async ({
   page,
 }) => {
   await page.goto("/ingest");

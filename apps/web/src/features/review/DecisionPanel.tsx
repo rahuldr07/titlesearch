@@ -1,4 +1,5 @@
 import type { Field } from "@titlepipe/contract";
+import { useState } from "react";
 import { diffChars, readingsDiffer } from "../../entities/field/charDiff";
 import { fieldLabel } from "../../entities/field/FieldRow";
 import { ReadingCard } from "../../entities/field/ReadingCard";
@@ -31,6 +32,19 @@ export function DecisionPanel({
   orderId: string;
   onSettled: () => void;
 }) {
+  /**
+   * The value a reviewer chose to adopt from a reading, and a counter so
+   * adopting the SAME value twice still re-opens the editor. Held here rather
+   * than in FieldActions because the reading cards are siblings of the actions,
+   * not children.
+   */
+  const [adopted, setAdoptedRaw] = useState<{
+    value: string;
+    n: number;
+  } | null>(null);
+  const setAdopted = (value: string) =>
+    setAdoptedRaw((prev) => ({ value, n: (prev?.n ?? 0) + 1 }));
+
   const readings = field.readings ?? [];
   const disagree = readingsDiffer(readings.map((r) => r.value));
 
@@ -104,12 +118,18 @@ export function DecisionPanel({
                 withValues.findIndex((w) => w.id === r.id),
                 r.value,
               )}
+              onAdopt={setAdopted}
             />
           ))}
         </div>
       )}
 
-      <FieldActions field={field} orderId={orderId} onSettled={onSettled} />
+      <FieldActions
+        field={field}
+        orderId={orderId}
+        onSettled={onSettled}
+        adopted={adopted}
+      />
     </div>
   );
 }

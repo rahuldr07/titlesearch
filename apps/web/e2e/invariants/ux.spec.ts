@@ -93,8 +93,8 @@ test("differing characters between readings are highlighted", async ({
   expect(await marks.count()).toBeGreaterThan(0);
 });
 
-// TODO(rebuild): needs adopt-a-reading in the correction editor, or the /queue screen
-test.skip("a reading can be adopted into the correction editor without retyping", async ({
+// UN-SKIPPED 2026-07-27 (Pass 3). Adopt-a-reading built — orphan rule O11.
+test("a reading can be adopted into the correction editor without retyping", async ({
   page,
 }) => {
   await go(page);
@@ -155,8 +155,8 @@ test("refused submits SAY so — escalate, correct, pass all nudge", async ({
   await expect(page.getByTestId("nudge")).toContainText("a pass needs its why");
 });
 
-// TODO(rebuild): needs adopt-a-reading in the correction editor, or the /queue screen
-test.skip("the queue's pass refusal nudges too", async ({ page }) => {
+// UN-SKIPPED 2026-07-27 (Pass 3). rule: the queue's pass refusal SAYS why too — same shared RequiredComment, so the two refusals cannot drift
+test("the queue's pass refusal nudges too", async ({ page }) => {
   await page.goto("/queue");
   await expect(page.getByTestId("order-ref")).toBeVisible();
   await page.keyboard.press("p");

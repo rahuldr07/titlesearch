@@ -18,12 +18,18 @@ export function ReadingCard({
   reading,
   seat,
   segments,
+  onAdopt,
 }: {
   reading: FieldReading;
   /** positional label only — A/B is the seat, not a ranking */
   seat: string;
   /** pre-diffed value; differing runs are marked */
   segments: readonly DiffSeg[];
+  /**
+   * Adopt this reading into the correction editor (orphan rule O11). Absent when
+   * the reading has no value to adopt.
+   */
+  onAdopt?: (value: string) => void;
 }) {
   return (
     <div
@@ -72,6 +78,27 @@ export function ReadingCard({
           “{reading.snippet}”
         </div>
       )}
+
+      {/*
+        A READING IS ADOPTED, NEVER RETYPED (orphan rule O11).
+        Transcription is itself an error channel: making a reviewer retype a
+        value they have already judged correct manufactures a new defect at the
+        exact moment the system is trying to remove one. The seed defect in
+        HANDOFF §2 ($202,224 vs $220,224) is that failure.
+
+        This carries no endorsement — every reading gets the same button, in seat
+        order. Adopting still requires a reason before it can be recorded.
+      */}
+      {onAdopt !== undefined && reading.value !== null ? (
+        <button
+          type="button"
+          data-testid={`use-${reading.engine_id}`}
+          onClick={() => onAdopt(reading.value ?? "")}
+          className="mt-2 rounded-sm border border-line-strong bg-surface-panel px-2 py-1 text-tiny font-semibold text-ink-secondary"
+        >
+          Use this — the why is still yours
+        </button>
+      ) : null}
 
       {/*
         Cost, latency and the engine's self-report — deliberately the quietest

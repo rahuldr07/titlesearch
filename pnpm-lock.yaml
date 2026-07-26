@@ -28,6 +28,9 @@ importers:
       '@titlepipe/contract':
         specifier: workspace:*
         version: link:../../packages/contract
+      '@titlepipe/ui-tokens':
+        specifier: workspace:*
+        version: link:../../packages/ui-tokens
       pdfjs-dist:
         specifier: 5.4.296
         version: 5.4.296
@@ -118,6 +121,8 @@ importers:
       typescript:
         specifier: ^5.6.0
         version: 5.9.3
+
+  packages/ui-tokens: {}
 
 packages:
 

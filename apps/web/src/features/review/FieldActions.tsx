@@ -39,11 +39,17 @@ export function FieldActions({
   field,
   orderId,
   onSettled,
+  adopted,
 }: {
   field: Field;
   orderId: string;
   /** advance only on ACCEPTANCE — never on a refusal */
   onSettled: () => void;
+  /**
+   * A reading the reviewer chose to adopt (orphan O11). The counter makes
+   * adopting the same value twice re-open the editor rather than look broken.
+   */
+  adopted?: { value: string; n: number } | null;
 }) {
   const d = useFieldDecision(orderId);
   const [panel, setPanel] = useState<Panel>("none");
@@ -71,6 +77,20 @@ export function FieldActions({
 
   const valueRef = useRef<HTMLInputElement | null>(null);
   const questionRef = useRef<HTMLInputElement | null>(null);
+
+  /**
+   * Adopting a reading opens the correction editor PREFILLED with that reading's
+   * exact text — no retyping (orphan O11). The reason is deliberately NOT
+   * prefilled: the reviewer still has to say why this reading is the right one,
+   * because that is what makes the correction reviewable and able to become a
+   * rule. Adopting is choosing a value, not skipping the justification.
+   */
+  useEffect(() => {
+    if (adopted == null) return;
+    setValue(adopted.value);
+    setNudge(null);
+    setPanel("correct");
+  }, [adopted?.value, adopted?.n]);
 
   // focus follows the panel that just opened, so the keyboard path never
   // strands the reviewer having to reach for the mouse

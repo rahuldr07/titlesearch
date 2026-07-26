@@ -5,10 +5,19 @@ import { session } from "./session";
  * the explanation the user must see, not debug noise. */
 export class ApiError extends Error {
   readonly status: number;
-  constructor(status: number, message: string) {
+  /**
+   * The refusal body as it arrived. Kept because not every refusal is an
+   * `{ error }` string: POST /api/orders answers an incomplete package with an
+   * `IngestRejection` — the server's own list of what is missing, which the UI
+   * must render verbatim and may not reconstruct. `unknown` on purpose, so a
+   * caller cannot read it without parsing it through a contract schema first.
+   */
+  readonly body: unknown;
+  constructor(status: number, message: string, body: unknown = null) {
     super(message);
     this.name = "ApiError";
     this.status = status;
+    this.body = body;
   }
 }
 
@@ -30,7 +39,14 @@ export async function api<S extends z.ZodType>(
     // signer of an action is ALWAYS derived from this channel, never from a
     // request body field. Action names only ever travel in bodies — never URLs.
     headers: {
-      "content-type": "application/json",
+      // A multipart body (the ingest package upload) must keep the boundary
+      // the browser generates for it — forcing application/json here makes the
+      // server read an EMPTY form and refuse every field as missing, which
+      // looks exactly like a real refusal. JSON stays the default for
+      // everything else.
+      ...(init?.body instanceof FormData
+        ? {}
+        : { "content-type": "application/json" }),
       "x-mock-role": session.role,
       "x-mock-actor": session.name,
     },
@@ -48,6 +64,7 @@ export async function api<S extends z.ZodType>(
     throw new ApiError(
       res.status,
       serverMsg ?? `${init?.method ?? "GET"} ${path} → ${res.status}`,
+      body,
     );
   }
   return schema.parse(await res.json());
