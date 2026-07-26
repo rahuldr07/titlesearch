@@ -93,7 +93,7 @@ test("differing characters between readings are highlighted", async ({
   expect(await marks.count()).toBeGreaterThan(0);
 });
 
-// TODO(rebuild): un-skip when this feature lands — rule: a reading can be adopted into the correction editor without retyping
+// TODO(rebuild): needs adopt-a-reading in the correction editor, or the /queue screen
 test.skip("a reading can be adopted into the correction editor without retyping", async ({
   page,
 }) => {
@@ -155,7 +155,7 @@ test("refused submits SAY so — escalate, correct, pass all nudge", async ({
   await expect(page.getByTestId("nudge")).toContainText("a pass needs its why");
 });
 
-// TODO(rebuild): un-skip when this feature lands — rule: the queue's pass refusal nudges too
+// TODO(rebuild): needs adopt-a-reading in the correction editor, or the /queue screen
 test.skip("the queue's pass refusal nudges too", async ({ page }) => {
   await page.goto("/queue");
   await expect(page.getByTestId("order-ref")).toBeVisible();

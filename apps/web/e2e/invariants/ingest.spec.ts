@@ -34,7 +34,7 @@ async function fillOrder(page: import("@playwright/test").Page) {
   await page.getByTestId("package-input").setInputFiles(PKG);
 }
 
-// TODO(rebuild): un-skip when this feature lands — rule: an incomplete upload is refused with the server's missing fields, verbatim
+// TODO(rebuild): the /ingest screen was deleted in Pass 1; rebuild from design-mock Upload
 test.skip("an incomplete upload is refused with the server's missing fields, verbatim", async ({
   page,
 }) => {
@@ -50,7 +50,7 @@ test.skip("an incomplete upload is refused with the server's missing fields, ver
   );
 });
 
-// TODO(rebuild): un-skip when this feature lands — rule: acceptance is explicit — upload alone never queues the order
+// TODO(rebuild): the /ingest screen was deleted in Pass 1; rebuild from design-mock Upload
 test.skip("acceptance is explicit — upload alone never queues the order", async ({
   page,
 }) => {
@@ -66,7 +66,7 @@ test.skip("acceptance is explicit — upload alone never queues the order", asyn
   );
 });
 
-// TODO(rebuild): un-skip when this feature lands — rule: a byte-identical re-upload surfaces the server's duplicate notice
+// TODO(rebuild): the /ingest screen was deleted in Pass 1; rebuild from design-mock Upload
 test.skip("a byte-identical re-upload surfaces the server's duplicate notice", async ({
   page,
 }) => {

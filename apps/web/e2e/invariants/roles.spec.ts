@@ -38,7 +38,7 @@ const chord = async (
 };
 
 // TODO(rebuild): un-skip when this feature lands — rule: typist world: no doors but capture and account
-test.skip("typist world: no doors but capture and account", async ({ page }) => {
+test("typist world: no doors but capture and account", async ({ page }) => {
   await become(page, "typist");
   // the map offers only the account door
   await page.keyboard.press("?");
@@ -64,7 +64,7 @@ test.skip("typist world: no doors but capture and account", async ({ page }) => 
 });
 
 // TODO(rebuild): un-skip when this feature lands — rule: senior world: escalations open; queue and readout do not exist
-test.skip("senior world: escalations open; queue and readout do not exist", async ({
+test("senior world: escalations open; queue and readout do not exist", async ({
   page,
 }) => {
   await become(page, "senior");
@@ -77,7 +77,7 @@ test.skip("senior world: escalations open; queue and readout do not exist", asyn
 });
 
 // TODO(rebuild): un-skip when this feature lands — rule: ops world: readout opens; the bench does not exist
-test.skip("ops world: readout opens; the bench does not exist", async ({
+test("ops world: readout opens; the bench does not exist", async ({
   page,
 }) => {
   await become(page, "ops");
@@ -88,7 +88,7 @@ test.skip("ops world: readout opens; the bench does not exist", async ({
 });
 
 // TODO(rebuild): un-skip when this feature lands — rule: engineer world: bench opens; the readout does not exist
-test.skip("engineer world: bench opens; the readout does not exist", async ({
+test("engineer world: bench opens; the readout does not exist", async ({
   page,
 }) => {
   await become(page, "engineer");

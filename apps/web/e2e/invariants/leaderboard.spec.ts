@@ -20,7 +20,7 @@ import { expect, test } from "@playwright/test";
  */
 
 // TODO(rebuild): un-skip when this feature lands — rule: a cell below golden coverage reads NO TRUTH YET, not zero
-test.skip("a cell below golden coverage reads NO TRUTH YET, not zero", async ({
+test("a cell below golden coverage reads NO TRUTH YET, not zero", async ({
   page,
 }) => {
   await page.goto("/leaderboard");
@@ -32,7 +32,7 @@ test.skip("a cell below golden coverage reads NO TRUTH YET, not zero", async ({
 });
 
 // TODO(rebuild): un-skip when this feature lands — rule: undeclared capability renders — (never a faked score)
-test.skip("undeclared capability renders — (never a faked score)", async ({
+test("undeclared capability renders — (never a faked score)", async ({
   page,
 }) => {
   await page.goto("/leaderboard");
@@ -42,7 +42,7 @@ test.skip("undeclared capability renders — (never a faked score)", async ({
 });
 
 // TODO(rebuild): un-skip when this feature lands — rule: a seat flip is refused without evidence, then logged with who/when
-test.skip("a seat flip is refused without evidence, then logged with who/when", async ({
+test("a seat flip is refused without evidence, then logged with who/when", async ({
   page,
 }) => {
   await page.goto("/leaderboard");
@@ -60,7 +60,7 @@ test.skip("a seat flip is refused without evidence, then logged with who/when", 
 });
 
 // TODO(rebuild): un-skip when this feature lands — rule: no aggregate headline, no auto-promotion affordance
-test.skip("no aggregate headline, no auto-promotion affordance", async ({
+test("no aggregate headline, no auto-promotion affordance", async ({
   page,
 }) => {
   await page.goto("/leaderboard");

@@ -25,7 +25,7 @@ const go = async (page: import("@playwright/test").Page) => {
 };
 
 // TODO(rebuild): un-skip when this feature lands — rule: the page is structurally blind — no engine, model, or pipeline strings
-test.skip("the page is structurally blind — no engine, model, or pipeline strings", async ({
+test("the page is structurally blind — no engine, model, or pipeline strings", async ({
   page,
 }) => {
   await go(page);
@@ -53,7 +53,7 @@ test.skip("the page is structurally blind — no engine, model, or pipeline stri
 });
 
 // TODO(rebuild): un-skip when this feature lands — rule: no clock, no rate, no score
-test.skip("no clock, no rate, no score", async ({ page }) => {
+test("no clock, no rate, no score", async ({ page }) => {
   await go(page);
   const body = (await page.locator("body").innerText()).toLowerCase();
   expect(body).toContain("no clock, no rate, no score");
@@ -62,7 +62,7 @@ test.skip("no clock, no rate, no score", async ({ page }) => {
 });
 
 // TODO(rebuild): un-skip when this feature lands — rule: the three-part contract gates Record: value/NA + source + confidence
-test.skip("the three-part contract gates Record: value/NA + source + confidence", async ({
+test("the three-part contract gates Record: value/NA + source + confidence", async ({
   page,
 }) => {
   await go(page);
@@ -80,7 +80,7 @@ test.skip("the three-part contract gates Record: value/NA + source + confidence"
 });
 
 // TODO(rebuild): un-skip when this feature lands — rule: unclear with a source is a legitimate, recordable answer
-test.skip("unclear with a source is a legitimate, recordable answer", async ({
+test("unclear with a source is a legitimate, recordable answer", async ({
   page,
 }) => {
   await go(page);
@@ -95,7 +95,7 @@ test.skip("unclear with a source is a legitimate, recordable answer", async ({
 });
 
 // TODO(rebuild): un-skip when this feature lands — rule: judgment TYPE takes a second pass and gates its siblings
-test.skip("judgment TYPE takes a second pass and gates its siblings", async ({
+test("judgment TYPE takes a second pass and gates its siblings", async ({
   page,
 }) => {
   await go(page);
@@ -115,7 +115,7 @@ test.skip("judgment TYPE takes a second pass and gates its siblings", async ({
 });
 
 // TODO(rebuild): un-skip when this feature lands — rule: submit renders only the local confirmation — nothing comes back
-test.skip("submit renders only the local confirmation — nothing comes back", async ({
+test("submit renders only the local confirmation — nothing comes back", async ({
   page,
 }) => {
   await go(page);

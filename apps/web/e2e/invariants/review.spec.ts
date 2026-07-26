@@ -257,7 +257,7 @@ test("J/K walk the queued fields only", async ({ page }) => {
   await expect(page.getByTestId("sel-label")).toHaveText("MTG 1 — LENDER");
 });
 
-// TODO(rebuild): un-skip when this feature lands — rule: reader B line pins on the page from its coordinates
+// TODO(rebuild): needs the document pane + click-to-source (react-pdf), not yet built
 test.skip("reader B line pins on the page from its coordinates", async ({
   page,
 }) => {

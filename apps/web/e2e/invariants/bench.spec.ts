@@ -19,7 +19,7 @@ import { expect, test } from "@playwright/test";
  */
 
 // TODO(rebuild): un-skip when this feature lands — rule: results matrix renders section × tag with no aggregate headline
-test.skip("results matrix renders section × tag with no aggregate headline", async ({
+test("results matrix renders section × tag with no aggregate headline", async ({
   page,
 }) => {
   await page.goto("/bench/results");
@@ -36,7 +36,7 @@ test.skip("results matrix renders section × tag with no aggregate headline", as
 });
 
 // TODO(rebuild): un-skip when this feature lands — rule: a ruled fail is always actionable; a suspect fail doubts the seed
-test.skip("a ruled fail is always actionable; a suspect fail doubts the seed", async ({
+test("a ruled fail is always actionable; a suspect fail doubts the seed", async ({
   page,
 }) => {
   await page.goto("/bench/results");
@@ -52,7 +52,7 @@ test.skip("a ruled fail is always actionable; a suspect fail doubts the seed", a
 });
 
 // TODO(rebuild): un-skip when this feature lands — rule: bench has no auto-tune affordance and prompts come from the rulebook
-test.skip("bench has no auto-tune affordance and prompts come from the rulebook", async ({
+test("bench has no auto-tune affordance and prompts come from the rulebook", async ({
   page,
 }) => {
   await page.goto("/bench");

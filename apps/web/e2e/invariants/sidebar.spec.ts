@@ -21,7 +21,7 @@ import { expect, test } from "@playwright/test";
  */
 
 // TODO(rebuild): un-skip when this feature lands — rule: live attention dots ride the doors — red for a complaint, amber for a gap
-test.skip("live attention dots ride the doors — red for a complaint, amber for a gap", async ({
+test("live attention dots ride the doors — red for a complaint, amber for a gap", async ({
   page,
 }) => {
   await page.goto("/queue");
@@ -37,7 +37,7 @@ test.skip("live attention dots ride the doors — red for a complaint, amber for
 });
 
 // TODO(rebuild): un-skip when this feature lands — rule: doors outside the role's world are ABSENT, not dimmed
-test.skip("doors outside the role's world are ABSENT, not dimmed", async ({
+test("doors outside the role's world are ABSENT, not dimmed", async ({
   page,
 }) => {
   await page.goto("/account");
@@ -51,7 +51,7 @@ test.skip("doors outside the role's world are ABSENT, not dimmed", async ({
 });
 
 // TODO(rebuild): un-skip when this feature lands — rule: the capture seat has no rail — structural blindness stays whole
-test.skip("the capture seat has no rail — structural blindness stays whole", async ({
+test("the capture seat has no rail — structural blindness stays whole", async ({
   page,
 }) => {
   await page.goto("/blind/ord_demo_1");
@@ -60,7 +60,7 @@ test.skip("the capture seat has no rail — structural blindness stays whole", a
 });
 
 // TODO(rebuild): un-skip when this feature lands — rule: [ folds the rail from the keyboard
-test.skip("[ folds the rail from the keyboard", async ({ page }) => {
+test("[ folds the rail from the keyboard", async ({ page }) => {
   await page.goto("/queue");
   const rail = page.getByTestId("side-rail");
   await expect(rail).toHaveAttribute("data-collapsed", "0");
@@ -71,7 +71,7 @@ test.skip("[ folds the rail from the keyboard", async ({ page }) => {
 });
 
 // TODO(rebuild): un-skip when this feature lands — rule: [ inside a text field is text, not a fold
-test.skip("[ inside a text field is text, not a fold", async ({ page }) => {
+test("[ inside a text field is text, not a fold", async ({ page }) => {
   await page.goto("/orders/ord_demo_1/review?field=owner.zip");
   await expect(page.getByTestId("sel-label")).toBeVisible();
   await page.keyboard.press("c");
@@ -88,7 +88,7 @@ test.skip("[ inside a text field is text, not a fold", async ({ page }) => {
 });
 
 // TODO(rebuild): un-skip when this feature lands — rule: collapse is a persisted UI preference
-test.skip("collapse is a persisted UI preference", async ({ page }) => {
+test("collapse is a persisted UI preference", async ({ page }) => {
   await page.goto("/queue");
   const rail = page.getByTestId("side-rail");
   await expect(rail).toHaveAttribute("data-collapsed", "0");

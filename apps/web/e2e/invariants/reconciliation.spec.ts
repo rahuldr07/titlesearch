@@ -23,7 +23,7 @@ import { expect, test } from "@playwright/test";
 const PATH = "judgments_liens.1.type";
 
 // TODO(rebuild): un-skip when this feature lands — rule: a ruling without a citation is refused
-test.skip("a ruling without a citation is refused", async ({ page }) => {
+test("a ruling without a citation is refused", async ({ page }) => {
   await page.goto("/reconciliation/ord_demo_1");
   await page.getByTestId(`pick-B-${PATH}`).click();
   const fieldBtn = page.getByTestId(`rule-field-${PATH}`);
@@ -35,7 +35,7 @@ test.skip("a ruling without a citation is refused", async ({ page }) => {
 });
 
 // TODO(rebuild): un-skip when this feature lands — rule: neither field-only nor general is pre-selected; the draft starts empty
-test.skip("neither field-only nor general is pre-selected; the draft starts empty", async ({
+test("neither field-only nor general is pre-selected; the draft starts empty", async ({
   page,
 }) => {
   await page.goto("/reconciliation/ord_demo_1");
@@ -49,7 +49,7 @@ test.skip("neither field-only nor general is pre-selected; the draft starts empt
 });
 
 // TODO(rebuild): un-skip when this feature lands — rule: a general-rule ruling files the draft as PENDING
-test.skip("a general-rule ruling files the draft as PENDING", async ({ page }) => {
+test("a general-rule ruling files the draft as PENDING", async ({ page }) => {
   await page.goto("/reconciliation/ord_demo_1");
   await page.getByTestId(`pick-B-${PATH}`).click();
   await page.getByTestId(`cite-${PATH}`).fill("FiFa p 31, caption — R22");
@@ -64,7 +64,7 @@ test.skip("a general-rule ruling files the draft as PENDING", async ({ page }) =
 });
 
 // TODO(rebuild): un-skip when this feature lands — rule: a third value needs its why; the model appears nowhere
-test.skip("a third value needs its why; the model appears nowhere", async ({
+test("a third value needs its why; the model appears nowhere", async ({
   page,
 }) => {
   await page.goto("/reconciliation/ord_demo_1");
@@ -85,7 +85,7 @@ test.skip("a third value needs its why; the model appears nowhere", async ({
 });
 
 // TODO(rebuild): un-skip when this feature lands — rule: status shows the judgment ≥40 gate and no typist pace data
-test.skip("status shows the judgment ≥40 gate and no typist pace data", async ({
+test("status shows the judgment ≥40 gate and no typist pace data", async ({
   page,
 }) => {
   await page.goto("/blind-status");

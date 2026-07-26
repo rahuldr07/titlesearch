@@ -21,7 +21,7 @@ import { expect, test } from "@playwright/test";
  */
 
 // TODO(rebuild): un-skip when this feature lands — rule: the mock server refuses a mutation the role doesn't hold — before validation
-test.skip("the mock server refuses a mutation the role doesn't hold — before validation", async ({
+test("the mock server refuses a mutation the role doesn't hold — before validation", async ({
   page,
 }) => {
   await page.goto("/account");
@@ -46,7 +46,7 @@ test.skip("the mock server refuses a mutation the role doesn't hold — before v
 });
 
 // TODO(rebuild): un-skip when this feature lands — rule: a senior may resolve; an ops role may not — same endpoint, same table
-test.skip("a senior may resolve; an ops role may not — same endpoint, same table", async ({
+test("a senior may resolve; an ops role may not — same endpoint, same table", async ({
   page,
 }) => {
   await page.goto("/account");
@@ -62,7 +62,7 @@ test.skip("a senior may resolve; an ops role may not — same endpoint, same tab
 });
 
 // TODO(rebuild): un-skip when this feature lands — rule: the wire serves per-role projections — a typist's payload never mentions other worlds
-test.skip("the wire serves per-role projections — a typist's payload never mentions other worlds", async ({
+test("the wire serves per-role projections — a typist's payload never mentions other worlds", async ({
   page,
 }) => {
   await page.goto("/account");
@@ -92,7 +92,7 @@ test.skip("the wire serves per-role projections — a typist's payload never men
 });
 
 // TODO(rebuild): un-skip when this feature lands — rule: the Me tab renders the served world and re-fetches on role switch
-test.skip("the Me tab renders the served world and re-fetches on role switch", async ({
+test("the Me tab renders the served world and re-fetches on role switch", async ({
   page,
 }) => {
   await page.goto("/account");
@@ -110,7 +110,7 @@ test.skip("the Me tab renders the served world and re-fetches on role switch", a
 });
 
 // TODO(rebuild): un-skip when this feature lands — rule: the engineer gate's confirm affordance exists only for its holders
-test.skip("the engineer gate's confirm affordance exists only for its holders", async ({
+test("the engineer gate's confirm affordance exists only for its holders", async ({
   page,
 }) => {
   await page.goto("/account");
@@ -132,7 +132,7 @@ test.skip("the engineer gate's confirm affordance exists only for its holders", 
   await expect(page.getByTestId("confirm-DRAFT-HOA-AGE")).toBeVisible();
 });
 
-// TODO(rebuild): un-skip when this feature lands — rule: ops arriving at review via a complaint deep link can look, not touch
+// TODO(rebuild): needs the order rail and the read-only review affordances for non-review roles
 test.skip("ops arriving at review via a complaint deep link can look, not touch", async ({
   page,
 }) => {

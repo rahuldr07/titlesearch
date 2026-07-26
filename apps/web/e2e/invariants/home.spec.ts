@@ -21,7 +21,7 @@ import { expect, test } from "@playwright/test";
  */
 
 // TODO(rebuild): un-skip when this feature lands — rule: the hub's doors are role-locked — absent, never dimmed
-test.skip("the hub's doors are role-locked — absent, never dimmed", async ({
+test("the hub's doors are role-locked — absent, never dimmed", async ({
   page,
 }) => {
   await page.goto("/account");
@@ -38,7 +38,7 @@ test.skip("the hub's doors are role-locked — absent, never dimmed", async ({
 });
 
 // TODO(rebuild): un-skip when this feature lands — rule: typists cannot chord to the hub
-test.skip("typists cannot chord to the hub", async ({ page }) => {
+test("typists cannot chord to the hub", async ({ page }) => {
   await page.goto("/account");
   await page.getByRole("button", { name: "Me" }).click();
   await page.getByTestId("role-typist").click();
@@ -48,7 +48,7 @@ test.skip("typists cannot chord to the hub", async ({ page }) => {
 });
 
 // TODO(rebuild): un-skip when this feature lands — rule: nothing forbidden leaks onto the hub
-test.skip("nothing forbidden leaks onto the hub", async ({ page }) => {
+test("nothing forbidden leaks onto the hub", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByTestId("home-hub")).toBeVisible();
   const body = (await page.locator("body").innerText()).toLowerCase();

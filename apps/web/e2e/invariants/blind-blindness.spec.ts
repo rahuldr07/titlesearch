@@ -21,7 +21,7 @@ import { apiLog, trackApi } from "../helpers/net";
  */
 
 // TODO(rebuild): un-skip when this feature lands — rule: the typist screen issues zero /api GETs — the only network call is the submit POST
-test.skip("the typist screen issues zero /api GETs — the only network call is the submit POST", async ({
+test("the typist screen issues zero /api GETs — the only network call is the submit POST", async ({
   page,
 }) => {
   await trackApi(page);
@@ -50,7 +50,7 @@ test.skip("the typist screen issues zero /api GETs — the only network call is 
 });
 
 // TODO(rebuild): un-skip when this feature lands — rule: global keys are dead on /blind/*: no map, no chords
-test.skip("global keys are dead on /blind/*: no map, no chords", async ({
+test("global keys are dead on /blind/*: no map, no chords", async ({
   page,
 }) => {
   await page.goto("/blind/ord_demo_1");

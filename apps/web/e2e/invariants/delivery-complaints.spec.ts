@@ -20,7 +20,7 @@ import { expect, test } from "@playwright/test";
  */
 
 // TODO(rebuild): un-skip when this feature lands — rule: a failed delivery reads as transit, offers retry, and retry delivers
-test.skip("a failed delivery reads as transit, offers retry, and retry delivers", async ({
+test("a failed delivery reads as transit, offers retry, and retry delivers", async ({
   page,
 }) => {
   await page.goto("/delivery");
@@ -34,7 +34,7 @@ test.skip("a failed delivery reads as transit, offers retry, and retry delivers"
 });
 
 // TODO(rebuild): un-skip when this feature lands — rule: both report versions list as the defect record
-test.skip("both report versions list as the defect record", async ({ page }) => {
+test("both report versions list as the defect record", async ({ page }) => {
   await page.goto("/delivery");
   const card = page.getByTestId("delivery-ord_demo_3");
   await expect(card.getByTestId("delivery-status")).toHaveText(
@@ -46,7 +46,7 @@ test.skip("both report versions list as the defect record", async ({ page }) => 
 });
 
 // TODO(rebuild): un-skip when this feature lands — rule: complaints group by how it got through; auto-confirmed is distinct
-test.skip("complaints group by how it got through; auto-confirmed is distinct", async ({
+test("complaints group by how it got through; auto-confirmed is distinct", async ({
   page,
 }) => {
   await page.goto("/complaints");
@@ -63,7 +63,7 @@ test.skip("complaints group by how it got through; auto-confirmed is distinct", 
 });
 
 // TODO(rebuild): un-skip when this feature lands — rule: per-field capture records into its group
-test.skip("per-field capture records into its group", async ({ page }) => {
+test("per-field capture records into its group", async ({ page }) => {
   await page.goto("/complaints");
   await page.getByTestId("cap-deed.consideration").click();
   const record = page.getByTestId("cap-record");
@@ -79,7 +79,7 @@ test.skip("per-field capture records into its group", async ({ page }) => {
 });
 
 // TODO(rebuild): un-skip when this feature lands — rule: resolving a complaint is refused without a rule; a draft rule files it
-test.skip("resolving a complaint is refused without a rule; a draft rule files it", async ({
+test("resolving a complaint is refused without a rule; a draft rule files it", async ({
   page,
 }) => {
   await page.goto("/complaints");

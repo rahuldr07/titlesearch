@@ -26,7 +26,7 @@ const ready = async (page: import("@playwright/test").Page) => {
 };
 
 // TODO(rebuild): un-skip when this feature lands — rule: the typist role is refused at EVERY mutation except the blind submit
-test.skip("the typist role is refused at EVERY mutation except the blind submit", async ({
+test("the typist role is refused at EVERY mutation except the blind submit", async ({
   page,
 }) => {
   await ready(page);
@@ -66,7 +66,7 @@ test.skip("the typist role is refused at EVERY mutation except the blind submit"
 });
 
 // TODO(rebuild): un-skip when this feature lands — rule: a forged role header is refused — mutations 403, the projection 400
-test.skip("a forged role header is refused — mutations 403, the projection 400", async ({
+test("a forged role header is refused — mutations 403, the projection 400", async ({
   page,
 }) => {
   await ready(page);
@@ -91,7 +91,7 @@ test.skip("a forged role header is refused — mutations 403, the projection 400
 });
 
 // TODO(rebuild): un-skip when this feature lands — rule: the blind submit response carries NOTHING beyond the ack (§0.6 at the wire)
-test.skip("the blind submit response carries NOTHING beyond the ack (§0.6 at the wire)", async ({
+test("the blind submit response carries NOTHING beyond the ack (§0.6 at the wire)", async ({
   page,
 }) => {
   await ready(page);
@@ -121,7 +121,7 @@ test.skip("the blind submit response carries NOTHING beyond the ack (§0.6 at th
 });
 
 // TODO(rebuild): un-skip when this feature lands — rule: resolving the same escalation twice is refused the second time
-test.skip("resolving the same escalation twice is refused the second time", async ({
+test("resolving the same escalation twice is refused the second time", async ({
   page,
 }) => {
   await ready(page);
@@ -142,7 +142,7 @@ test.skip("resolving the same escalation twice is refused the second time", asyn
 });
 
 // TODO(rebuild): un-skip when this feature lands — rule: chord keys typed inside an input never navigate
-test.skip("chord keys typed inside an input never navigate", async ({ page }) => {
+test("chord keys typed inside an input never navigate", async ({ page }) => {
   await page.goto("/orders/ord_demo_1/review");
   await expect(page.getByTestId("sel-label")).toHaveText("OWNER ZIP");
   await page.keyboard.press("e");
@@ -159,7 +159,7 @@ test.skip("chord keys typed inside an input never navigate", async ({ page }) =>
 });
 
 // TODO(rebuild): un-skip when this feature lands — rule: the complaint capture list renders pending as 'not yet extracted' (§0.3)
-test.skip("the complaint capture list renders pending as 'not yet extracted' (§0.3)", async ({
+test("the complaint capture list renders pending as 'not yet extracted' (§0.3)", async ({
   page,
 }) => {
   await page.goto("/complaints");

@@ -18,7 +18,7 @@ import { expect, test } from "@playwright/test";
  * rule (cite existing OR draft new → lands PENDING, visibly inert).
  */
 
-// TODO(rebuild): un-skip when this feature lands — rule: resolve stays held without a ruling AND a rule
+// TODO(rebuild): the /escalations screen was deleted in Pass 1; rebuild needs the Q11 redraw (rule required to resolve)
 test.skip("resolve stays held without a ruling AND a rule", async ({ page }) => {
   await page.goto("/escalations");
   const btn = page.getByTestId("resolve-btn");
@@ -34,7 +34,7 @@ test.skip("resolve stays held without a ruling AND a rule", async ({ page }) => 
   await expect(btn).toBeDisabled();
 });
 
-// TODO(rebuild): un-skip when this feature lands — rule: citing an existing rule resolves the cluster
+// TODO(rebuild): the /escalations screen was deleted in Pass 1; rebuild needs the Q11 redraw (rule required to resolve)
 test.skip("citing an existing rule resolves the cluster", async ({ page }) => {
   await page.goto("/escalations");
   await page
@@ -48,7 +48,7 @@ test.skip("citing an existing rule resolves the cluster", async ({ page }) => {
   await expect(page.getByText("LIVE IN PIPELINE — R13").first()).toBeVisible();
 });
 
-// TODO(rebuild): un-skip when this feature lands — rule: a drafted rule lands PENDING and renders visibly inert
+// TODO(rebuild): the /escalations screen was deleted in Pass 1; rebuild needs the Q11 redraw (rule required to resolve)
 test.skip("a drafted rule lands PENDING and renders visibly inert", async ({
   page,
 }) => {
@@ -67,7 +67,7 @@ test.skip("a drafted rule lands PENDING and renders visibly inert", async ({
   ).toBeVisible();
 });
 
-// TODO(rebuild): un-skip when this feature lands — rule: no priority, category, or assignee affordances exist
+// TODO(rebuild): the /escalations screen was deleted in Pass 1; rebuild needs the Q11 redraw (rule required to resolve)
 test.skip("no priority, category, or assignee affordances exist", async ({
   page,
 }) => {

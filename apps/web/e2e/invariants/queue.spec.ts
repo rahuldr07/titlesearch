@@ -19,7 +19,7 @@ import { expect, test } from "@playwright/test";
  * pace. Pass requires a reason.
  */
 
-// TODO(rebuild): un-skip when this feature lands — rule: renders the server's next order verbatim — exactly one order, no list
+// TODO(rebuild): the /queue screen was deleted in Pass 1; rebuild from design-mock
 test.skip("renders the server's next order verbatim — exactly one order, no list", async ({
   page,
 }) => {
@@ -31,7 +31,7 @@ test.skip("renders the server's next order verbatim — exactly one order, no li
   await expect(page.getByText("DEMO-0002")).toHaveCount(0);
 });
 
-// TODO(rebuild): un-skip when this feature lands — rule: no pace indicators or throughput language renders
+// TODO(rebuild): the /queue screen was deleted in Pass 1; rebuild from design-mock
 test.skip("no pace indicators or throughput language renders", async ({ page }) => {
   await page.goto("/queue");
   await expect(page.getByTestId("order-ref")).toBeVisible();
@@ -44,7 +44,7 @@ test.skip("no pace indicators or throughput language renders", async ({ page }) 
   expect(body).not.toContain("last one like it");
 });
 
-// TODO(rebuild): un-skip when this feature lands — rule: pass without a reason is refused; esc keeps the order
+// TODO(rebuild): the /queue screen was deleted in Pass 1; rebuild from design-mock
 test.skip("pass without a reason is refused; esc keeps the order", async ({
   page,
 }) => {
@@ -60,7 +60,7 @@ test.skip("pass without a reason is refused; esc keeps the order", async ({
   await expect(input).toHaveCount(0);
 });
 
-// TODO(rebuild): un-skip when this feature lands — rule: pass with a reason records and advances to the next order
+// TODO(rebuild): the /queue screen was deleted in Pass 1; rebuild from design-mock
 test.skip("pass with a reason records and advances to the next order", async ({
   page,
 }) => {
@@ -76,7 +76,7 @@ test.skip("pass with a reason records and advances to the next order", async ({
   await expect(page.getByTestId("order-ref")).toHaveText("DEMO-0002");
 });
 
-// TODO(rebuild): un-skip when this feature lands — rule: enter starts review on the served order
+// TODO(rebuild): the /queue screen was deleted in Pass 1; rebuild from design-mock
 test.skip("enter starts review on the served order", async ({ page }) => {
   await page.goto("/queue");
   await expect(page.getByTestId("order-ref")).toBeVisible();

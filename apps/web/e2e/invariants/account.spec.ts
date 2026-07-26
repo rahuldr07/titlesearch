@@ -20,7 +20,7 @@ import { expect, test } from "@playwright/test";
  */
 
 // TODO(rebuild): un-skip when this feature lands — rule: rulebook shows origin/status/jurisdiction badges; PENDING is inert
-test.skip("rulebook shows origin/status/jurisdiction badges; PENDING is inert", async ({
+test("rulebook shows origin/status/jurisdiction badges; PENDING is inert", async ({
   page,
 }) => {
   await page.goto("/account");
@@ -34,7 +34,7 @@ test.skip("rulebook shows origin/status/jurisdiction badges; PENDING is inert", 
 });
 
 // TODO(rebuild): un-skip when this feature lands — rule: the engineer gate confirms a pending rule into the live book
-test.skip("the engineer gate confirms a pending rule into the live book", async ({
+test("the engineer gate confirms a pending rule into the live book", async ({
   page,
 }) => {
   await page.goto("/account");
@@ -45,7 +45,7 @@ test.skip("the engineer gate confirms a pending rule into the live book", async 
 });
 
 // TODO(rebuild): un-skip when this feature lands — rule: audit is a read-only append-only view
-test.skip("audit is a read-only append-only view", async ({ page }) => {
+test("audit is a read-only append-only view", async ({ page }) => {
   await page.goto("/account");
   await page.getByRole("button", { name: "Audit" }).click();
   await expect(page.getByText("golden_correction")).toBeVisible();
@@ -55,7 +55,7 @@ test.skip("audit is a read-only append-only view", async ({ page }) => {
 });
 
 // TODO(rebuild): un-skip when this feature lands — rule: a reviewer never sees the dashboard (§0.7)
-test.skip("a reviewer never sees the dashboard (§0.7)", async ({ page }) => {
+test("a reviewer never sees the dashboard (§0.7)", async ({ page }) => {
   await page.goto("/account");
   await page.getByRole("button", { name: "Me" }).click();
   await page.getByTestId("role-reviewer").click();

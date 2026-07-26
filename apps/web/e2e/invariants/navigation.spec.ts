@@ -20,7 +20,7 @@ import { expect, test } from "@playwright/test";
  * (states travel with you).
  */
 
-// TODO(rebuild): un-skip when this feature lands — rule: g-sequences jump between screens; ? shows the map
+// TODO(rebuild): needs the global chord layer + ? map (chrome, not yet rebuilt) or the order rail
 test.skip("g-sequences jump between screens; ? shows the map", async ({ page }) => {
   await page.goto("/queue");
   await expect(page.getByTestId("order-ref")).toBeVisible();
@@ -39,7 +39,7 @@ test.skip("g-sequences jump between screens; ? shows the map", async ({ page }) 
 });
 
 // TODO(rebuild): un-skip when this feature lands — rule: a g-sequence's second key never leaks into screen hotkeys
-test.skip("a g-sequence's second key never leaks into screen hotkeys", async ({
+test("a g-sequence's second key never leaks into screen hotkeys", async ({
   page,
 }) => {
   await page.goto("/orders/ord_demo_1/review");
@@ -51,7 +51,7 @@ test.skip("a g-sequence's second key never leaks into screen hotkeys", async ({
 });
 
 // TODO(rebuild): un-skip when this feature lands — rule: the ? overlay swallows screen keys while open
-test.skip("the ? overlay swallows screen keys while open", async ({ page }) => {
+test("the ? overlay swallows screen keys while open", async ({ page }) => {
   await page.goto("/orders/ord_demo_1/review");
   await expect(page.getByTestId("sel-label")).toHaveText("OWNER ZIP");
   await page.keyboard.press("?");
@@ -68,7 +68,7 @@ test.skip("the ? overlay swallows screen keys while open", async ({ page }) => {
   await expect(page.getByTestId("sel-label")).toHaveText("MTG 1 — LENDER");
 });
 
-// TODO(rebuild): un-skip when this feature lands — rule: ?field= deep links land on the exact field in context
+// TODO(rebuild): needs the global chord layer + ? map (chrome, not yet rebuilt) or the order rail
 test.skip("?field= deep links land on the exact field in context", async ({
   page,
 }) => {
@@ -80,7 +80,7 @@ test.skip("?field= deep links land on the exact field in context", async ({
 });
 
 // TODO(rebuild): un-skip when this feature lands — rule: seed correction without context shows the no-menu-entry state
-test.skip("seed correction without context shows the no-menu-entry state", async ({
+test("seed correction without context shows the no-menu-entry state", async ({
   page,
 }) => {
   await page.goto("/seed-correction");
@@ -92,7 +92,7 @@ test.skip("seed correction without context shows the no-menu-entry state", async
 });
 
 // TODO(rebuild): un-skip when this feature lands — rule: bench results carries context into seed correction
-test.skip("bench results carries context into seed correction", async ({ page }) => {
+test("bench results carries context into seed correction", async ({ page }) => {
   await page.goto("/bench/results");
   await page.getByTestId("fail-mortgages.1.amount").click();
   await page.getByText("Investigate seed →").click();
@@ -100,7 +100,7 @@ test.skip("bench results carries context into seed correction", async ({ page })
   await expect(page.getByTestId("seed-value")).toHaveText("$202,224.00");
 });
 
-// TODO(rebuild): un-skip when this feature lands — rule: the order spine travels with the order on Review
+// TODO(rebuild): needs the global chord layer + ? map (chrome, not yet rebuilt) or the order rail
 test.skip("the order spine travels with the order on Review", async ({ page }) => {
   await page.goto("/orders/ord_demo_1/review");
   const rail = page.getByTestId("order-rail");

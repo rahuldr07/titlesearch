@@ -21,7 +21,7 @@ import { interceptApi } from "../helpers/net";
  */
 
 // TODO(rebuild): un-skip when this feature lands — rule: an unknown route renders the not-found card, never a blank page
-test.skip("an unknown route renders the not-found card, never a blank page", async ({
+test("an unknown route renders the not-found card, never a blank page", async ({
   page,
 }) => {
   await page.goto("/no-such-door");
@@ -30,7 +30,7 @@ test.skip("an unknown route renders the not-found card, never a blank page", asy
   await expect(card).toContainText("Nothing lives at this address.");
 });
 
-// TODO(rebuild): un-skip when this feature lands — rule: the escalation inbox says unavailable when the list 500s
+// TODO(rebuild): depends on a screen deleted in Pass 1 (/escalations) or on the order rail, not yet rebuilt
 test.skip("the escalation inbox says unavailable when the list 500s", async ({
   page,
 }) => {
@@ -49,7 +49,7 @@ test.skip("the escalation inbox says unavailable when the list 500s", async ({
 });
 
 // TODO(rebuild): un-skip when this feature lands — rule: delivery says unavailable when deliveries 500s
-test.skip("delivery says unavailable when deliveries 500s", async ({ page }) => {
+test("delivery says unavailable when deliveries 500s", async ({ page }) => {
   await interceptApi(page, {
     method: "GET",
     match: "/api/deliveries",
@@ -62,7 +62,7 @@ test.skip("delivery says unavailable when deliveries 500s", async ({ page }) => 
   });
 });
 
-// TODO(rebuild): un-skip when this feature lands — rule: the order spine survives a timeline failure
+// TODO(rebuild): depends on a screen deleted in Pass 1 (/escalations) or on the order rail, not yet rebuilt
 test.skip("the order spine survives a timeline failure", async ({ page }) => {
   await interceptApi(page, {
     method: "GET",
@@ -79,7 +79,7 @@ test.skip("the order spine survives a timeline failure", async ({ page }) => {
 });
 
 // TODO(rebuild): un-skip when this feature lands — rule: reconciliation with an unknown order shows the empty state, not a working grid
-test.skip("reconciliation with an unknown order shows the empty state, not a working grid", async ({
+test("reconciliation with an unknown order shows the empty state, not a working grid", async ({
   page,
 }) => {
   await page.goto("/reconciliation/ord_nope");
@@ -88,7 +88,7 @@ test.skip("reconciliation with an unknown order shows the empty state, not a wor
 });
 
 // TODO(rebuild): un-skip when this feature lands — rule: seed correction with a stale fieldId names the stale link
-test.skip("seed correction with a stale fieldId names the stale link", async ({
+test("seed correction with a stale fieldId names the stale link", async ({
   page,
 }) => {
   await page.goto("/seed-correction?fieldId=gf_nope");
@@ -99,7 +99,7 @@ test.skip("seed correction with a stale fieldId names the stale link", async ({
 });
 
 // TODO(rebuild): un-skip when this feature lands — rule: a delivery retry failure surfaces the server's message
-test.skip("a delivery retry failure surfaces the server's message", async ({
+test("a delivery retry failure surfaces the server's message", async ({
   page,
 }) => {
   await interceptApi(page, {

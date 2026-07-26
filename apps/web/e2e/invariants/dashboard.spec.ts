@@ -20,14 +20,14 @@ import { expect, test } from "@playwright/test";
  */
 
 // TODO(rebuild): un-skip when this feature lands — rule: catch rate is the headline, with its denominator
-test.skip("catch rate is the headline, with its denominator", async ({ page }) => {
+test("catch rate is the headline, with its denominator", async ({ page }) => {
   await page.goto("/dashboard");
   await expect(page.getByTestId("catch-rate")).toHaveText("71%");
   await expect(page.getByText("n = 34 probes this week · 24 caught")).toBeVisible();
 });
 
 // TODO(rebuild): un-skip when this feature lands — rule: no aggregate accuracy, no probe details, no reviewer names
-test.skip("no aggregate accuracy, no probe details, no reviewer names", async ({
+test("no aggregate accuracy, no probe details, no reviewer names", async ({
   page,
 }) => {
   await page.goto("/dashboard");
@@ -40,7 +40,7 @@ test.skip("no aggregate accuracy, no probe details, no reviewer names", async ({
 });
 
 // TODO(rebuild): un-skip when this feature lands — rule: a backlog row opens its server-authored drill-down
-test.skip("a backlog row opens its server-authored drill-down", async ({ page }) => {
+test("a backlog row opens its server-authored drill-down", async ({ page }) => {
   await page.goto("/dashboard");
   await page.getByTestId("backlog-judgments.1.plaintiff_attorney").click();
   const drawer = page.getByTestId("drill-drawer");
@@ -53,7 +53,7 @@ test.skip("a backlog row opens its server-authored drill-down", async ({ page })
 });
 
 // TODO(rebuild): un-skip when this feature lands — rule: derived-source corrections read as upstream bugs
-test.skip("derived-source corrections read as upstream bugs", async ({ page }) => {
+test("derived-source corrections read as upstream bugs", async ({ page }) => {
   await page.goto("/dashboard");
   await page.getByText("SHOULD BE IMPOSSIBLE", { exact: false }).first().click();
   await expect(page.getByTestId("drill-drawer")).toContainText(

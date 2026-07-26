@@ -21,7 +21,7 @@ import { expect, test } from "@playwright/test";
  */
 
 // TODO(rebuild): un-skip when this feature lands — rule: capture is blind and structured; don't-know ≠ not-stated
-test.skip("capture is blind and structured; don't-know ≠ not-stated", async ({
+test("capture is blind and structured; don't-know ≠ not-stated", async ({
   page,
 }) => {
   await page.goto("/golden");
@@ -45,7 +45,7 @@ test.skip("capture is blind and structured; don't-know ≠ not-stated", async ({
 });
 
 // TODO(rebuild): un-skip when this feature lands — rule: no timers anywhere on golden capture
-test.skip("no timers anywhere on golden capture", async ({ page }) => {
+test("no timers anywhere on golden capture", async ({ page }) => {
   await page.goto("/golden");
   await expect(page.getByTestId("fixture-line")).toBeVisible();
   const body = (await page.locator("body").innerText()).toLowerCase();
@@ -55,7 +55,7 @@ test.skip("no timers anywhere on golden capture", async ({ page }) => {
 });
 
 // TODO(rebuild): un-skip when this feature lands — rule: seed correction is refused without citation + reason; signer is the session
-test.skip("seed correction is refused without citation + reason; signer is the session", async ({
+test("seed correction is refused without citation + reason; signer is the session", async ({
   page,
 }) => {
   await page.goto("/seed-correction?fieldId=gf_1");
@@ -76,7 +76,7 @@ test.skip("seed correction is refused without citation + reason; signer is the s
 });
 
 // TODO(rebuild): un-skip when this feature lands — rule: a correction upgrades the tag to ruled and lands in the permanent log
-test.skip("a correction upgrades the tag to ruled and lands in the permanent log", async ({
+test("a correction upgrades the tag to ruled and lands in the permanent log", async ({
   page,
 }) => {
   await page.goto("/seed-correction?fieldId=gf_1");
@@ -92,7 +92,7 @@ test.skip("a correction upgrades the tag to ruled and lands in the permanent log
 });
 
 // TODO(rebuild): un-skip when this feature lands — rule: confirm-seed is refused without a reason, then affirms as-is: value stands, tag → ruled
-test.skip("confirm-seed is refused without a reason, then affirms as-is: value stands, tag → ruled", async ({
+test("confirm-seed is refused without a reason, then affirms as-is: value stands, tag → ruled", async ({
   page,
 }) => {
   await page.goto("/seed-correction?fieldId=gf_1");
@@ -112,7 +112,7 @@ test.skip("confirm-seed is refused without a reason, then affirms as-is: value s
 });
 
 // TODO(rebuild): un-skip when this feature lands — rule: demote-to-suspect flags an ambiguous seed: value stands, tag → suspect
-test.skip("demote-to-suspect flags an ambiguous seed: value stands, tag → suspect", async ({
+test("demote-to-suspect flags an ambiguous seed: value stands, tag → suspect", async ({
   page,
 }) => {
   await page.goto("/seed-correction?fieldId=gf_4");
