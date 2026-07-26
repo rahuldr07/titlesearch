@@ -1,3 +1,16 @@
+/*
+ * HARVESTED INVARIANT SPECS — migrated by Pass 1 (2026-07-26).
+ *
+ * Every test here asserts a PRODUCT RULE, not the old UI's DOM. They were all
+ * green immediately before migration (116/116). They are skipped, not deleted:
+ * un-skip each one as the rebuilt feature reaches it, rewriting SELECTORS only.
+ *
+ * NEVER weaken an assertion to make it pass. If an invariant cannot pass
+ * against the new design, that is a CONFLICT in the design — stop and report.
+ *
+ * Classification + the rule each protects: docs/frontend/test-harvest.md
+ */
+
 import { expect, test } from "@playwright/test";
 
 /**
@@ -7,7 +20,8 @@ import { expect, test } from "@playwright/test";
  * (states travel with you).
  */
 
-test("g-sequences jump between screens; ? shows the map", async ({ page }) => {
+// TODO(rebuild): un-skip when this feature lands — rule: g-sequences jump between screens; ? shows the map
+test.skip("g-sequences jump between screens; ? shows the map", async ({ page }) => {
   await page.goto("/queue");
   await expect(page.getByTestId("order-ref")).toBeVisible();
   await page.keyboard.press("g");
@@ -24,7 +38,8 @@ test("g-sequences jump between screens; ? shows the map", async ({ page }) => {
   await expect(map).toHaveCount(0);
 });
 
-test("a g-sequence's second key never leaks into screen hotkeys", async ({
+// TODO(rebuild): un-skip when this feature lands — rule: a g-sequence's second key never leaks into screen hotkeys
+test.skip("a g-sequence's second key never leaks into screen hotkeys", async ({
   page,
 }) => {
   await page.goto("/orders/ord_demo_1/review");
@@ -35,7 +50,8 @@ test("a g-sequence's second key never leaks into screen hotkeys", async ({
   await expect(page).toHaveURL(/\/escalations/);
 });
 
-test("the ? overlay swallows screen keys while open", async ({ page }) => {
+// TODO(rebuild): un-skip when this feature lands — rule: the ? overlay swallows screen keys while open
+test.skip("the ? overlay swallows screen keys while open", async ({ page }) => {
   await page.goto("/orders/ord_demo_1/review");
   await expect(page.getByTestId("sel-label")).toHaveText("OWNER ZIP");
   await page.keyboard.press("?");
@@ -52,7 +68,8 @@ test("the ? overlay swallows screen keys while open", async ({ page }) => {
   await expect(page.getByTestId("sel-label")).toHaveText("MTG 1 — LENDER");
 });
 
-test("?field= deep links land on the exact field in context", async ({
+// TODO(rebuild): un-skip when this feature lands — rule: ?field= deep links land on the exact field in context
+test.skip("?field= deep links land on the exact field in context", async ({
   page,
 }) => {
   await page.goto("/orders/ord_demo_1/review?field=judgments.1.case_no");
@@ -62,7 +79,8 @@ test("?field= deep links land on the exact field in context", async ({
   );
 });
 
-test("seed correction without context shows the no-menu-entry state", async ({
+// TODO(rebuild): un-skip when this feature lands — rule: seed correction without context shows the no-menu-entry state
+test.skip("seed correction without context shows the no-menu-entry state", async ({
   page,
 }) => {
   await page.goto("/seed-correction");
@@ -73,7 +91,8 @@ test("seed correction without context shows the no-menu-entry state", async ({
   await expect(page.getByTestId("seed-correct-btn")).toHaveCount(0);
 });
 
-test("bench results carries context into seed correction", async ({ page }) => {
+// TODO(rebuild): un-skip when this feature lands — rule: bench results carries context into seed correction
+test.skip("bench results carries context into seed correction", async ({ page }) => {
   await page.goto("/bench/results");
   await page.getByTestId("fail-mortgages.1.amount").click();
   await page.getByText("Investigate seed →").click();
@@ -81,7 +100,8 @@ test("bench results carries context into seed correction", async ({ page }) => {
   await expect(page.getByTestId("seed-value")).toHaveText("$202,224.00");
 });
 
-test("the order spine travels with the order on Review", async ({ page }) => {
+// TODO(rebuild): un-skip when this feature lands — rule: the order spine travels with the order on Review
+test.skip("the order spine travels with the order on Review", async ({ page }) => {
   await page.goto("/orders/ord_demo_1/review");
   const rail = page.getByTestId("order-rail");
   await expect(rail).toContainText("ord_demo_1");

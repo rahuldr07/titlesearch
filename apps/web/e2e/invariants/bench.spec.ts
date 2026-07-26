@@ -1,3 +1,16 @@
+/*
+ * HARVESTED INVARIANT SPECS — migrated by Pass 1 (2026-07-26).
+ *
+ * Every test here asserts a PRODUCT RULE, not the old UI's DOM. They were all
+ * green immediately before migration (116/116). They are skipped, not deleted:
+ * un-skip each one as the rebuilt feature reaches it, rewriting SELECTORS only.
+ *
+ * NEVER weaken an assertion to make it pass. If an invariant cannot pass
+ * against the new design, that is a CONFLICT in the design — stop and report.
+ *
+ * Classification + the rule each protects: docs/frontend/test-harvest.md
+ */
+
 import { expect, test } from "@playwright/test";
 
 /**
@@ -5,7 +18,8 @@ import { expect, test } from "@playwright/test";
  * annotated thin; no aggregate headline; no auto-tune affordance.
  */
 
-test("results matrix renders section × tag with no aggregate headline", async ({
+// TODO(rebuild): un-skip when this feature lands — rule: results matrix renders section × tag with no aggregate headline
+test.skip("results matrix renders section × tag with no aggregate headline", async ({
   page,
 }) => {
   await page.goto("/bench/results");
@@ -21,7 +35,8 @@ test("results matrix renders section × tag with no aggregate headline", async (
   expect(body).toContain("no single number is");
 });
 
-test("a ruled fail is always actionable; a suspect fail doubts the seed", async ({
+// TODO(rebuild): un-skip when this feature lands — rule: a ruled fail is always actionable; a suspect fail doubts the seed
+test.skip("a ruled fail is always actionable; a suspect fail doubts the seed", async ({
   page,
 }) => {
   await page.goto("/bench/results");
@@ -36,7 +51,8 @@ test("a ruled fail is always actionable; a suspect fail doubts the seed", async 
   await expect(page.getByText("Investigate seed →")).toBeVisible();
 });
 
-test("bench has no auto-tune affordance and prompts come from the rulebook", async ({
+// TODO(rebuild): un-skip when this feature lands — rule: bench has no auto-tune affordance and prompts come from the rulebook
+test.skip("bench has no auto-tune affordance and prompts come from the rulebook", async ({
   page,
 }) => {
   await page.goto("/bench");

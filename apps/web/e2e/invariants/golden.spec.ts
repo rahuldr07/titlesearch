@@ -1,3 +1,16 @@
+/*
+ * HARVESTED INVARIANT SPECS — migrated by Pass 1 (2026-07-26).
+ *
+ * Every test here asserts a PRODUCT RULE, not the old UI's DOM. They were all
+ * green immediately before migration (116/116). They are skipped, not deleted:
+ * un-skip each one as the rebuilt feature reaches it, rewriting SELECTORS only.
+ *
+ * NEVER weaken an assertion to make it pass. If an invariant cannot pass
+ * against the new design, that is a CONFLICT in the design — stop and report.
+ *
+ * Classification + the rule each protects: docs/frontend/test-harvest.md
+ */
+
 import { expect, test } from "@playwright/test";
 
 /**
@@ -7,7 +20,8 @@ import { expect, test } from "@playwright/test";
  * never shows the pipeline's draft.
  */
 
-test("capture is blind and structured; don't-know ≠ not-stated", async ({
+// TODO(rebuild): un-skip when this feature lands — rule: capture is blind and structured; don't-know ≠ not-stated
+test.skip("capture is blind and structured; don't-know ≠ not-stated", async ({
   page,
 }) => {
   await page.goto("/golden");
@@ -30,7 +44,8 @@ test("capture is blind and structured; don't-know ≠ not-stated", async ({
   );
 });
 
-test("no timers anywhere on golden capture", async ({ page }) => {
+// TODO(rebuild): un-skip when this feature lands — rule: no timers anywhere on golden capture
+test.skip("no timers anywhere on golden capture", async ({ page }) => {
   await page.goto("/golden");
   await expect(page.getByTestId("fixture-line")).toBeVisible();
   const body = (await page.locator("body").innerText()).toLowerCase();
@@ -39,7 +54,8 @@ test("no timers anywhere on golden capture", async ({ page }) => {
   expect(body).toContain("this is reading, not queue-clearing");
 });
 
-test("seed correction is refused without citation + reason; signer is the session", async ({
+// TODO(rebuild): un-skip when this feature lands — rule: seed correction is refused without citation + reason; signer is the session
+test.skip("seed correction is refused without citation + reason; signer is the session", async ({
   page,
 }) => {
   await page.goto("/seed-correction?fieldId=gf_1");
@@ -59,7 +75,8 @@ test("seed correction is refused without citation + reason; signer is the sessio
   await expect(btn).toBeEnabled();
 });
 
-test("a correction upgrades the tag to ruled and lands in the permanent log", async ({
+// TODO(rebuild): un-skip when this feature lands — rule: a correction upgrades the tag to ruled and lands in the permanent log
+test.skip("a correction upgrades the tag to ruled and lands in the permanent log", async ({
   page,
 }) => {
   await page.goto("/seed-correction?fieldId=gf_1");
@@ -74,7 +91,8 @@ test("a correction upgrades the tag to ruled and lands in the permanent log", as
   await expect(log).toContainText("$202,224.00 → $220,224.00");
 });
 
-test("confirm-seed is refused without a reason, then affirms as-is: value stands, tag → ruled", async ({
+// TODO(rebuild): un-skip when this feature lands — rule: confirm-seed is refused without a reason, then affirms as-is: value stands, tag → ruled
+test.skip("confirm-seed is refused without a reason, then affirms as-is: value stands, tag → ruled", async ({
   page,
 }) => {
   await page.goto("/seed-correction?fieldId=gf_1");
@@ -93,7 +111,8 @@ test("confirm-seed is refused without a reason, then affirms as-is: value stands
   await expect(log).toContainText("value stands");
 });
 
-test("demote-to-suspect flags an ambiguous seed: value stands, tag → suspect", async ({
+// TODO(rebuild): un-skip when this feature lands — rule: demote-to-suspect flags an ambiguous seed: value stands, tag → suspect
+test.skip("demote-to-suspect flags an ambiguous seed: value stands, tag → suspect", async ({
   page,
 }) => {
   await page.goto("/seed-correction?fieldId=gf_4");

@@ -1,3 +1,16 @@
+/*
+ * HARVESTED INVARIANT SPECS — migrated by Pass 1 (2026-07-26).
+ *
+ * Every test here asserts a PRODUCT RULE, not the old UI's DOM. They were all
+ * green immediately before migration (116/116). They are skipped, not deleted:
+ * un-skip each one as the rebuilt feature reaches it, rewriting SELECTORS only.
+ *
+ * NEVER weaken an assertion to make it pass. If an invariant cannot pass
+ * against the new design, that is a CONFLICT in the design — stop and report.
+ *
+ * Classification + the rule each protects: docs/frontend/test-harvest.md
+ */
+
 import { expect, test } from "@playwright/test";
 
 /**
@@ -12,7 +25,8 @@ const ready = async (page: import("@playwright/test").Page) => {
   await expect(page.getByTestId("rule-R13")).toBeVisible();
 };
 
-test("the typist role is refused at EVERY mutation except the blind submit", async ({
+// TODO(rebuild): un-skip when this feature lands — rule: the typist role is refused at EVERY mutation except the blind submit
+test.skip("the typist role is refused at EVERY mutation except the blind submit", async ({
   page,
 }) => {
   await ready(page);
@@ -51,7 +65,8 @@ test("the typist role is refused at EVERY mutation except the blind submit", asy
   expect(results.blind).toBe(422);
 });
 
-test("a forged role header is refused — mutations 403, the projection 400", async ({
+// TODO(rebuild): un-skip when this feature lands — rule: a forged role header is refused — mutations 403, the projection 400
+test.skip("a forged role header is refused — mutations 403, the projection 400", async ({
   page,
 }) => {
   await ready(page);
@@ -75,7 +90,8 @@ test("a forged role header is refused — mutations 403, the projection 400", as
   expect(statuses.caseVariant).toBe(400);
 });
 
-test("the blind submit response carries NOTHING beyond the ack (§0.6 at the wire)", async ({
+// TODO(rebuild): un-skip when this feature lands — rule: the blind submit response carries NOTHING beyond the ack (§0.6 at the wire)
+test.skip("the blind submit response carries NOTHING beyond the ack (§0.6 at the wire)", async ({
   page,
 }) => {
   await ready(page);
@@ -104,7 +120,8 @@ test("the blind submit response carries NOTHING beyond the ack (§0.6 at the wir
   ]);
 });
 
-test("resolving the same escalation twice is refused the second time", async ({
+// TODO(rebuild): un-skip when this feature lands — rule: resolving the same escalation twice is refused the second time
+test.skip("resolving the same escalation twice is refused the second time", async ({
   page,
 }) => {
   await ready(page);
@@ -124,7 +141,8 @@ test("resolving the same escalation twice is refused the second time", async ({
   expect(statuses.replay).toBe(409);
 });
 
-test("chord keys typed inside an input never navigate", async ({ page }) => {
+// TODO(rebuild): un-skip when this feature lands — rule: chord keys typed inside an input never navigate
+test.skip("chord keys typed inside an input never navigate", async ({ page }) => {
   await page.goto("/orders/ord_demo_1/review");
   await expect(page.getByTestId("sel-label")).toHaveText("OWNER ZIP");
   await page.keyboard.press("e");
@@ -140,7 +158,8 @@ test("chord keys typed inside an input never navigate", async ({ page }) => {
   await expect(input).toHaveValue("gd?");
 });
 
-test("the complaint capture list renders pending as 'not yet extracted' (§0.3)", async ({
+// TODO(rebuild): un-skip when this feature lands — rule: the complaint capture list renders pending as 'not yet extracted' (§0.3)
+test.skip("the complaint capture list renders pending as 'not yet extracted' (§0.3)", async ({
   page,
 }) => {
   await page.goto("/complaints");

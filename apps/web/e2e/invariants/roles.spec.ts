@@ -1,3 +1,16 @@
+/*
+ * HARVESTED INVARIANT SPECS — migrated by Pass 1 (2026-07-26).
+ *
+ * Every test here asserts a PRODUCT RULE, not the old UI's DOM. They were all
+ * green immediately before migration (116/116). They are skipped, not deleted:
+ * un-skip each one as the rebuilt feature reaches it, rewriting SELECTORS only.
+ *
+ * NEVER weaken an assertion to make it pass. If an invariant cannot pass
+ * against the new design, that is a CONFLICT in the design — stop and report.
+ *
+ * Classification + the rule each protects: docs/frontend/test-harvest.md
+ */
+
 import { expect, test } from "@playwright/test";
 
 /**
@@ -24,7 +37,8 @@ const chord = async (
   await page.keyboard.press(key);
 };
 
-test("typist world: no doors but capture and account", async ({ page }) => {
+// TODO(rebuild): un-skip when this feature lands — rule: typist world: no doors but capture and account
+test.skip("typist world: no doors but capture and account", async ({ page }) => {
   await become(page, "typist");
   // the map offers only the account door
   await page.keyboard.press("?");
@@ -49,7 +63,8 @@ test("typist world: no doors but capture and account", async ({ page }) => {
   ).toHaveCount(0);
 });
 
-test("senior world: escalations open; queue and readout do not exist", async ({
+// TODO(rebuild): un-skip when this feature lands — rule: senior world: escalations open; queue and readout do not exist
+test.skip("senior world: escalations open; queue and readout do not exist", async ({
   page,
 }) => {
   await become(page, "senior");
@@ -61,7 +76,8 @@ test("senior world: escalations open; queue and readout do not exist", async ({
   await expect(page).toHaveURL(/\/escalations/);
 });
 
-test("ops world: readout opens; the bench does not exist", async ({
+// TODO(rebuild): un-skip when this feature lands — rule: ops world: readout opens; the bench does not exist
+test.skip("ops world: readout opens; the bench does not exist", async ({
   page,
 }) => {
   await become(page, "ops");
@@ -71,7 +87,8 @@ test("ops world: readout opens; the bench does not exist", async ({
   await expect(page).toHaveURL(/\/dashboard/);
 });
 
-test("engineer world: bench opens; the readout does not exist", async ({
+// TODO(rebuild): un-skip when this feature lands — rule: engineer world: bench opens; the readout does not exist
+test.skip("engineer world: bench opens; the readout does not exist", async ({
   page,
 }) => {
   await become(page, "engineer");

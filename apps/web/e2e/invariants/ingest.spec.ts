@@ -1,3 +1,16 @@
+/*
+ * HARVESTED INVARIANT SPECS — migrated by Pass 1 (2026-07-26).
+ *
+ * Every test here asserts a PRODUCT RULE, not the old UI's DOM. They were all
+ * green immediately before migration (116/116). They are skipped, not deleted:
+ * un-skip each one as the rebuilt feature reaches it, rewriting SELECTORS only.
+ *
+ * NEVER weaken an assertion to make it pass. If an invariant cannot pass
+ * against the new design, that is a CONFLICT in the design — stop and report.
+ *
+ * Classification + the rule each protects: docs/frontend/test-harvest.md
+ */
+
 import { expect, test } from "@playwright/test";
 
 /**
@@ -21,7 +34,8 @@ async function fillOrder(page: import("@playwright/test").Page) {
   await page.getByTestId("package-input").setInputFiles(PKG);
 }
 
-test("an incomplete upload is refused with the server's missing fields, verbatim", async ({
+// TODO(rebuild): un-skip when this feature lands — rule: an incomplete upload is refused with the server's missing fields, verbatim
+test.skip("an incomplete upload is refused with the server's missing fields, verbatim", async ({
   page,
 }) => {
   await page.goto("/ingest");
@@ -36,7 +50,8 @@ test("an incomplete upload is refused with the server's missing fields, verbatim
   );
 });
 
-test("acceptance is explicit — upload alone never queues the order", async ({
+// TODO(rebuild): un-skip when this feature lands — rule: acceptance is explicit — upload alone never queues the order
+test.skip("acceptance is explicit — upload alone never queues the order", async ({
   page,
 }) => {
   await page.goto("/ingest");
@@ -51,7 +66,8 @@ test("acceptance is explicit — upload alone never queues the order", async ({
   );
 });
 
-test("a byte-identical re-upload surfaces the server's duplicate notice", async ({
+// TODO(rebuild): un-skip when this feature lands — rule: a byte-identical re-upload surfaces the server's duplicate notice
+test.skip("a byte-identical re-upload surfaces the server's duplicate notice", async ({
   page,
 }) => {
   await page.goto("/ingest");

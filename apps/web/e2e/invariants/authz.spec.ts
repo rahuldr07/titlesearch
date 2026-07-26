@@ -1,3 +1,16 @@
+/*
+ * HARVESTED INVARIANT SPECS — migrated by Pass 1 (2026-07-26).
+ *
+ * Every test here asserts a PRODUCT RULE, not the old UI's DOM. They were all
+ * green immediately before migration (116/116). They are skipped, not deleted:
+ * un-skip each one as the rebuilt feature reaches it, rewriting SELECTORS only.
+ *
+ * NEVER weaken an assertion to make it pass. If an invariant cannot pass
+ * against the new design, that is a CONFLICT in the design — stop and report.
+ *
+ * Classification + the rule each protects: docs/frontend/test-harvest.md
+ */
+
 import { expect, test } from "@playwright/test";
 
 /**
@@ -7,7 +20,8 @@ import { expect, test } from "@playwright/test";
  * enforcement — they are one table.
  */
 
-test("the mock server refuses a mutation the role doesn't hold — before validation", async ({
+// TODO(rebuild): un-skip when this feature lands — rule: the mock server refuses a mutation the role doesn't hold — before validation
+test.skip("the mock server refuses a mutation the role doesn't hold — before validation", async ({
   page,
 }) => {
   await page.goto("/account");
@@ -31,7 +45,8 @@ test("the mock server refuses a mutation the role doesn't hold — before valida
   expect(statuses.engineer).toBe(422);
 });
 
-test("a senior may resolve; an ops role may not — same endpoint, same table", async ({
+// TODO(rebuild): un-skip when this feature lands — rule: a senior may resolve; an ops role may not — same endpoint, same table
+test.skip("a senior may resolve; an ops role may not — same endpoint, same table", async ({
   page,
 }) => {
   await page.goto("/account");
@@ -46,7 +61,8 @@ test("a senior may resolve; an ops role may not — same endpoint, same table", 
   expect(status).toBe(403);
 });
 
-test("the wire serves per-role projections — a typist's payload never mentions other worlds", async ({
+// TODO(rebuild): un-skip when this feature lands — rule: the wire serves per-role projections — a typist's payload never mentions other worlds
+test.skip("the wire serves per-role projections — a typist's payload never mentions other worlds", async ({
   page,
 }) => {
   await page.goto("/account");
@@ -75,7 +91,8 @@ test("the wire serves per-role projections — a typist's payload never mentions
   expect(res.text).not.toContain('"roles"');
 });
 
-test("the Me tab renders the served world and re-fetches on role switch", async ({
+// TODO(rebuild): un-skip when this feature lands — rule: the Me tab renders the served world and re-fetches on role switch
+test.skip("the Me tab renders the served world and re-fetches on role switch", async ({
   page,
 }) => {
   await page.goto("/account");
@@ -92,7 +109,8 @@ test("the Me tab renders the served world and re-fetches on role switch", async 
   await expect(world).not.toContainText("escalation");
 });
 
-test("the engineer gate's confirm affordance exists only for its holders", async ({
+// TODO(rebuild): un-skip when this feature lands — rule: the engineer gate's confirm affordance exists only for its holders
+test.skip("the engineer gate's confirm affordance exists only for its holders", async ({
   page,
 }) => {
   await page.goto("/account");
@@ -114,7 +132,8 @@ test("the engineer gate's confirm affordance exists only for its holders", async
   await expect(page.getByTestId("confirm-DRAFT-HOA-AGE")).toBeVisible();
 });
 
-test("ops arriving at review via a complaint deep link can look, not touch", async ({
+// TODO(rebuild): un-skip when this feature lands — rule: ops arriving at review via a complaint deep link can look, not touch
+test.skip("ops arriving at review via a complaint deep link can look, not touch", async ({
   page,
 }) => {
   await page.goto("/account");

@@ -1,3 +1,16 @@
+/*
+ * HARVESTED INVARIANT SPECS — migrated by Pass 1 (2026-07-26).
+ *
+ * Every test here asserts a PRODUCT RULE, not the old UI's DOM. They were all
+ * green immediately before migration (116/116). They are skipped, not deleted:
+ * un-skip each one as the rebuilt feature reaches it, rewriting SELECTORS only.
+ *
+ * NEVER weaken an assertion to make it pass. If an invariant cannot pass
+ * against the new design, that is a CONFLICT in the design — stop and report.
+ *
+ * Classification + the rule each protects: docs/frontend/test-harvest.md
+ */
+
 import { expect, test } from "@playwright/test";
 
 /**
@@ -10,7 +23,8 @@ const go = async (page: import("@playwright/test").Page) => {
   await expect(page.getByTestId("sel-label")).toBeVisible();
 };
 
-test("both NA states + pending render distinctly", async ({ page }) => {
+// TODO(rebuild): un-skip when this feature lands — rule: both NA states + pending render distinctly
+test.skip("both NA states + pending render distinctly", async ({ page }) => {
   await go(page);
   // NOT_PRESENT — quiet, chip says expected
   const plat = page.getByTestId("row-legal.plat_book_page");
@@ -26,7 +40,8 @@ test("both NA states + pending render distinctly", async ({ page }) => {
   await expect(pending).not.toContainText("Not Available");
 });
 
-test("a confirmed value without provenance renders visibly flagged", async ({
+// TODO(rebuild): un-skip when this feature lands — rule: a confirmed value without provenance renders visibly flagged
+test.skip("a confirmed value without provenance renders visibly flagged", async ({
   page,
 }) => {
   await go(page);
@@ -35,7 +50,8 @@ test("a confirmed value without provenance renders visibly flagged", async ({
   );
 });
 
-test("A≠B disagreement leads: chip on the row, both readings in the panel", async ({
+// TODO(rebuild): un-skip when this feature lands — rule: A≠B disagreement leads: chip on the row, both readings in the panel
+test.skip("A≠B disagreement leads: chip on the row, both readings in the panel", async ({
   page,
 }) => {
   await go(page);
@@ -47,7 +63,8 @@ test("A≠B disagreement leads: chip on the row, both readings in the panel", as
   await expect(page.getByText("llmwhisperer-hq").first()).toBeVisible();
 });
 
-test("correction without a reason never submits", async ({ page }) => {
+// TODO(rebuild): un-skip when this feature lands — rule: correction without a reason never submits
+test.skip("correction without a reason never submits", async ({ page }) => {
   await go(page);
   await page.getByTestId("row-mortgages.1.lender").click();
   await page.keyboard.press("c");
@@ -61,7 +78,8 @@ test("correction without a reason never submits", async ({ page }) => {
   ).toHaveCount(0);
 });
 
-test("correction with value + reason submits and renders the server's state", async ({
+// TODO(rebuild): un-skip when this feature lands — rule: correction with value + reason submits and renders the server's state
+test.skip("correction with value + reason submits and renders the server's state", async ({
   page,
 }) => {
   await go(page);
@@ -76,7 +94,8 @@ test("correction with value + reason submits and renders the server's state", as
   ).toHaveText("✎ corrected");
 });
 
-test("escalation without a question never submits", async ({ page }) => {
+// TODO(rebuild): un-skip when this feature lands — rule: escalation without a question never submits
+test.skip("escalation without a question never submits", async ({ page }) => {
   await go(page);
   await page.getByTestId("row-owner.zip").click();
   await page.keyboard.press("e");
@@ -89,7 +108,8 @@ test("escalation without a question never submits", async ({ page }) => {
   ).toHaveCount(0);
 });
 
-test("escalation with a question records; confirm via ⏎ records", async ({
+// TODO(rebuild): un-skip when this feature lands — rule: escalation with a question records; confirm via ⏎ records
+test.skip("escalation with a question records; confirm via ⏎ records", async ({
   page,
 }) => {
   await go(page);
@@ -106,7 +126,8 @@ test("escalation with a question records; confirm via ⏎ records", async ({
   await expect(page.getByTestId("sel-label")).toHaveText("MTG 1 — LENDER");
 });
 
-test("no approve-all, no throughput, no timers", async ({ page }) => {
+// TODO(rebuild): un-skip when this feature lands — rule: no approve-all, no throughput, no timers
+test.skip("no approve-all, no throughput, no timers", async ({ page }) => {
   await go(page);
   const body = (await page.locator("body").innerText()).toLowerCase();
   expect(body).not.toContain("approve");
@@ -115,7 +136,8 @@ test("no approve-all, no throughput, no timers", async ({ page }) => {
   expect(body).not.toMatch(/\btimer\b/);
 });
 
-test("J/K walk the queued fields only", async ({ page }) => {
+// TODO(rebuild): un-skip when this feature lands — rule: J/K walk the queued fields only
+test.skip("J/K walk the queued fields only", async ({ page }) => {
   await go(page);
   await expect(page.getByTestId("sel-label")).toHaveText("OWNER ZIP");
   await page.keyboard.press("j");
@@ -126,7 +148,8 @@ test("J/K walk the queued fields only", async ({ page }) => {
   await expect(page.getByTestId("sel-label")).toHaveText("MTG 1 — LENDER");
 });
 
-test("reader B line pins on the page from its coordinates", async ({
+// TODO(rebuild): un-skip when this feature lands — rule: reader B line pins on the page from its coordinates
+test.skip("reader B line pins on the page from its coordinates", async ({
   page,
 }) => {
   await go(page);

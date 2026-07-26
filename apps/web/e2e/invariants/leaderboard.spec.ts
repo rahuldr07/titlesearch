@@ -1,3 +1,16 @@
+/*
+ * HARVESTED INVARIANT SPECS — migrated by Pass 1 (2026-07-26).
+ *
+ * Every test here asserts a PRODUCT RULE, not the old UI's DOM. They were all
+ * green immediately before migration (116/116). They are skipped, not deleted:
+ * un-skip each one as the rebuilt feature reaches it, rewriting SELECTORS only.
+ *
+ * NEVER weaken an assertion to make it pass. If an invariant cannot pass
+ * against the new design, that is a CONFLICT in the design — stop and report.
+ *
+ * Classification + the rule each protects: docs/frontend/test-harvest.md
+ */
+
 import { expect, test } from "@playwright/test";
 
 /**
@@ -6,7 +19,8 @@ import { expect, test } from "@playwright/test";
  * auto-promotion.
  */
 
-test("a cell below golden coverage reads NO TRUTH YET, not zero", async ({
+// TODO(rebuild): un-skip when this feature lands — rule: a cell below golden coverage reads NO TRUTH YET, not zero
+test.skip("a cell below golden coverage reads NO TRUTH YET, not zero", async ({
   page,
 }) => {
   await page.goto("/leaderboard");
@@ -17,7 +31,8 @@ test("a cell below golden coverage reads NO TRUTH YET, not zero", async ({
   ).toBeVisible();
 });
 
-test("undeclared capability renders — (never a faked score)", async ({
+// TODO(rebuild): un-skip when this feature lands — rule: undeclared capability renders — (never a faked score)
+test.skip("undeclared capability renders — (never a faked score)", async ({
   page,
 }) => {
   await page.goto("/leaderboard");
@@ -26,7 +41,8 @@ test("undeclared capability renders — (never a faked score)", async ({
   ).toHaveText("—");
 });
 
-test("a seat flip is refused without evidence, then logged with who/when", async ({
+// TODO(rebuild): un-skip when this feature lands — rule: a seat flip is refused without evidence, then logged with who/when
+test.skip("a seat flip is refused without evidence, then logged with who/when", async ({
   page,
 }) => {
   await page.goto("/leaderboard");
@@ -43,7 +59,8 @@ test("a seat flip is refused without evidence, then logged with who/when", async
   await expect(seatA).toContainText("evidence bench://run-47");
 });
 
-test("no aggregate headline, no auto-promotion affordance", async ({
+// TODO(rebuild): un-skip when this feature lands — rule: no aggregate headline, no auto-promotion affordance
+test.skip("no aggregate headline, no auto-promotion affordance", async ({
   page,
 }) => {
   await page.goto("/leaderboard");

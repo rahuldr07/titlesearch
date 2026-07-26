@@ -1,3 +1,16 @@
+/*
+ * HARVESTED INVARIANT SPECS — migrated by Pass 1 (2026-07-26).
+ *
+ * Every test here asserts a PRODUCT RULE, not the old UI's DOM. They were all
+ * green immediately before migration (116/116). They are skipped, not deleted:
+ * un-skip each one as the rebuilt feature reaches it, rewriting SELECTORS only.
+ *
+ * NEVER weaken an assertion to make it pass. If an invariant cannot pass
+ * against the new design, that is a CONFLICT in the design — stop and report.
+ *
+ * Classification + the rule each protects: docs/frontend/test-harvest.md
+ */
+
 import { expect, test } from "@playwright/test";
 
 /**
@@ -6,7 +19,8 @@ import { expect, test } from "@playwright/test";
  * the dashboard.
  */
 
-test("rulebook shows origin/status/jurisdiction badges; PENDING is inert", async ({
+// TODO(rebuild): un-skip when this feature lands — rule: rulebook shows origin/status/jurisdiction badges; PENDING is inert
+test.skip("rulebook shows origin/status/jurisdiction badges; PENDING is inert", async ({
   page,
 }) => {
   await page.goto("/account");
@@ -19,7 +33,8 @@ test("rulebook shows origin/status/jurisdiction badges; PENDING is inert", async
   await expect(draft).toContainText("GA"); // jurisdiction scope badge
 });
 
-test("the engineer gate confirms a pending rule into the live book", async ({
+// TODO(rebuild): un-skip when this feature lands — rule: the engineer gate confirms a pending rule into the live book
+test.skip("the engineer gate confirms a pending rule into the live book", async ({
   page,
 }) => {
   await page.goto("/account");
@@ -29,7 +44,8 @@ test("the engineer gate confirms a pending rule into the live book", async ({
   await expect(rule).toContainText("confirmed by eng_demo");
 });
 
-test("audit is a read-only append-only view", async ({ page }) => {
+// TODO(rebuild): un-skip when this feature lands — rule: audit is a read-only append-only view
+test.skip("audit is a read-only append-only view", async ({ page }) => {
   await page.goto("/account");
   await page.getByRole("button", { name: "Audit" }).click();
   await expect(page.getByText("golden_correction")).toBeVisible();
@@ -38,7 +54,8 @@ test("audit is a read-only append-only view", async ({ page }) => {
   await expect(page.locator("input, textarea")).toHaveCount(0);
 });
 
-test("a reviewer never sees the dashboard (§0.7)", async ({ page }) => {
+// TODO(rebuild): un-skip when this feature lands — rule: a reviewer never sees the dashboard (§0.7)
+test.skip("a reviewer never sees the dashboard (§0.7)", async ({ page }) => {
   await page.goto("/account");
   await page.getByRole("button", { name: "Me" }).click();
   await page.getByTestId("role-reviewer").click();

@@ -51,6 +51,31 @@ export function NotFoundCard() {
 }
 
 /**
+ * PASS 1 SCAFFOLD — delete in Pass 3 as each screen returns.
+ *
+ * The four screens design-mock replaces (queue, review, ingest, escalations)
+ * were removed in the Pass 1 deletion commit. Their ROUTES stay, pointed here,
+ * for two reasons: the surviving screens cross-link to them and those links are
+ * themselves pinned by harvested invariants (a complaint deep-links into
+ * review; a bench cell carries context into seed correction) — and a removed
+ * route would turn every one of those links into a type error, forcing edits to
+ * screens this commit is not supposed to touch.
+ *
+ * It says "being rebuilt", not "nothing lives here", because the address is
+ * real. NotFoundCard would be a lie.
+ */
+export function RebuildingCard({ screen }: { screen: string }) {
+  return (
+    <FallbackFrame
+      testid="rebuilding"
+      heading="— under construction —"
+      title={`${screen} is being rebuilt.`}
+      body="The old screen was removed; its replacement lands in Pass 3. The rules it has to satisfy are parked as skipped specs in e2e/invariants/."
+    />
+  );
+}
+
+/**
  * Shown while a lazily-loaded route chunk resolves. PURE — no fetch, no
  * chrome — so it is safe under /blind/* (a chunk load is a JS asset request,
  * never an /api GET; the blindness floor is unaffected). Kept visually quiet:

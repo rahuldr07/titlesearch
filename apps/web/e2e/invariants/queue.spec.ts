@@ -1,3 +1,16 @@
+/*
+ * HARVESTED INVARIANT SPECS — migrated by Pass 1 (2026-07-26).
+ *
+ * Every test here asserts a PRODUCT RULE, not the old UI's DOM. They were all
+ * green immediately before migration (116/116). They are skipped, not deleted:
+ * un-skip each one as the rebuilt feature reaches it, rewriting SELECTORS only.
+ *
+ * NEVER weaken an assertion to make it pass. If an invariant cannot pass
+ * against the new design, that is a CONFLICT in the design — stop and report.
+ *
+ * Classification + the rule each protects: docs/frontend/test-harvest.md
+ */
+
 import { expect, test } from "@playwright/test";
 
 /**
@@ -6,7 +19,8 @@ import { expect, test } from "@playwright/test";
  * pace. Pass requires a reason.
  */
 
-test("renders the server's next order verbatim — exactly one order, no list", async ({
+// TODO(rebuild): un-skip when this feature lands — rule: renders the server's next order verbatim — exactly one order, no list
+test.skip("renders the server's next order verbatim — exactly one order, no list", async ({
   page,
 }) => {
   await page.goto("/queue");
@@ -17,7 +31,8 @@ test("renders the server's next order verbatim — exactly one order, no list", 
   await expect(page.getByText("DEMO-0002")).toHaveCount(0);
 });
 
-test("no pace indicators or throughput language renders", async ({ page }) => {
+// TODO(rebuild): un-skip when this feature lands — rule: no pace indicators or throughput language renders
+test.skip("no pace indicators or throughput language renders", async ({ page }) => {
   await page.goto("/queue");
   await expect(page.getByTestId("order-ref")).toBeVisible();
   const body = (await page.locator("body").innerText()).toLowerCase();
@@ -29,7 +44,8 @@ test("no pace indicators or throughput language renders", async ({ page }) => {
   expect(body).not.toContain("last one like it");
 });
 
-test("pass without a reason is refused; esc keeps the order", async ({
+// TODO(rebuild): un-skip when this feature lands — rule: pass without a reason is refused; esc keeps the order
+test.skip("pass without a reason is refused; esc keeps the order", async ({
   page,
 }) => {
   await page.goto("/queue");
@@ -44,7 +60,8 @@ test("pass without a reason is refused; esc keeps the order", async ({
   await expect(input).toHaveCount(0);
 });
 
-test("pass with a reason records and advances to the next order", async ({
+// TODO(rebuild): un-skip when this feature lands — rule: pass with a reason records and advances to the next order
+test.skip("pass with a reason records and advances to the next order", async ({
   page,
 }) => {
   await page.goto("/queue");
@@ -59,7 +76,8 @@ test("pass with a reason records and advances to the next order", async ({
   await expect(page.getByTestId("order-ref")).toHaveText("DEMO-0002");
 });
 
-test("enter starts review on the served order", async ({ page }) => {
+// TODO(rebuild): un-skip when this feature lands — rule: enter starts review on the served order
+test.skip("enter starts review on the served order", async ({ page }) => {
   await page.goto("/queue");
   await expect(page.getByTestId("order-ref")).toBeVisible();
   await page.keyboard.press("Enter");

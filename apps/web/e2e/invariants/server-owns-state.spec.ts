@@ -1,5 +1,18 @@
+/*
+ * HARVESTED INVARIANT SPECS — migrated by Pass 1 (2026-07-26).
+ *
+ * Every test here asserts a PRODUCT RULE, not the old UI's DOM. They were all
+ * green immediately before migration (116/116). They are skipped, not deleted:
+ * un-skip each one as the rebuilt feature reaches it, rewriting SELECTORS only.
+ *
+ * NEVER weaken an assertion to make it pass. If an invariant cannot pass
+ * against the new design, that is a CONFLICT in the design — stop and report.
+ *
+ * Classification + the rule each protects: docs/frontend/test-harvest.md
+ */
+
 import { expect, test } from "@playwright/test";
-import { interceptApi } from "./helpers/net";
+import { interceptApi } from "../helpers/net";
 
 /**
  * §0.2 server-owns-state, proven against a crafted payload: the UI renders
@@ -61,7 +74,8 @@ const crafted = {
   ],
 };
 
-test("a null pending field renders 'not yet extracted' — never Not Available, never queued", async ({
+// TODO(rebuild): un-skip when this feature lands — rule: a null pending field renders 'not yet extracted' — never Not Available, never queued
+test.skip("a null pending field renders 'not yet extracted' — never Not Available, never queued", async ({
   page,
 }) => {
   await interceptApi(page, {
@@ -79,7 +93,8 @@ test("a null pending field renders 'not yet extracted' — never Not Available, 
   await expect(page.getByTestId("sel-label")).toHaveText("OWNER ZIP");
 });
 
-test("the state pill renders server state verbatim — confidence never promotes or demotes", async ({
+// TODO(rebuild): un-skip when this feature lands — rule: the state pill renders server state verbatim — confidence never promotes or demotes
+test.skip("the state pill renders server state verbatim — confidence never promotes or demotes", async ({
   page,
 }) => {
   await interceptApi(page, {

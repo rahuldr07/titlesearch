@@ -1,3 +1,16 @@
+/*
+ * HARVESTED INVARIANT SPECS — migrated by Pass 1 (2026-07-26).
+ *
+ * Every test here asserts a PRODUCT RULE, not the old UI's DOM. They were all
+ * green immediately before migration (116/116). They are skipped, not deleted:
+ * un-skip each one as the rebuilt feature reaches it, rewriting SELECTORS only.
+ *
+ * NEVER weaken an assertion to make it pass. If an invariant cannot pass
+ * against the new design, that is a CONFLICT in the design — stop and report.
+ *
+ * Classification + the rule each protects: docs/frontend/test-harvest.md
+ */
+
 import { expect, test } from "@playwright/test";
 
 /**
@@ -5,7 +18,8 @@ import { expect, test } from "@playwright/test";
  * rule (cite existing OR draft new → lands PENDING, visibly inert).
  */
 
-test("resolve stays held without a ruling AND a rule", async ({ page }) => {
+// TODO(rebuild): un-skip when this feature lands — rule: resolve stays held without a ruling AND a rule
+test.skip("resolve stays held without a ruling AND a rule", async ({ page }) => {
   await page.goto("/escalations");
   const btn = page.getByTestId("resolve-btn");
   await expect(btn).toBeDisabled();
@@ -20,7 +34,8 @@ test("resolve stays held without a ruling AND a rule", async ({ page }) => {
   await expect(btn).toBeDisabled();
 });
 
-test("citing an existing rule resolves the cluster", async ({ page }) => {
+// TODO(rebuild): un-skip when this feature lands — rule: citing an existing rule resolves the cluster
+test.skip("citing an existing rule resolves the cluster", async ({ page }) => {
   await page.goto("/escalations");
   await page
     .getByTestId("ruling-input")
@@ -33,7 +48,8 @@ test("citing an existing rule resolves the cluster", async ({ page }) => {
   await expect(page.getByText("LIVE IN PIPELINE — R13").first()).toBeVisible();
 });
 
-test("a drafted rule lands PENDING and renders visibly inert", async ({
+// TODO(rebuild): un-skip when this feature lands — rule: a drafted rule lands PENDING and renders visibly inert
+test.skip("a drafted rule lands PENDING and renders visibly inert", async ({
   page,
 }) => {
   await page.goto("/escalations");
@@ -51,7 +67,8 @@ test("a drafted rule lands PENDING and renders visibly inert", async ({
   ).toBeVisible();
 });
 
-test("no priority, category, or assignee affordances exist", async ({
+// TODO(rebuild): un-skip when this feature lands — rule: no priority, category, or assignee affordances exist
+test.skip("no priority, category, or assignee affordances exist", async ({
   page,
 }) => {
   await page.goto("/escalations");

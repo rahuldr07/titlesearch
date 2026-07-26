@@ -1,3 +1,16 @@
+/*
+ * HARVESTED INVARIANT SPECS — migrated by Pass 1 (2026-07-26).
+ *
+ * Every test here asserts a PRODUCT RULE, not the old UI's DOM. They were all
+ * green immediately before migration (116/116). They are skipped, not deleted:
+ * un-skip each one as the rebuilt feature reaches it, rewriting SELECTORS only.
+ *
+ * NEVER weaken an assertion to make it pass. If an invariant cannot pass
+ * against the new design, that is a CONFLICT in the design — stop and report.
+ *
+ * Classification + the rule each protects: docs/frontend/test-harvest.md
+ */
+
 import { expect, test } from "@playwright/test";
 
 /**
@@ -11,7 +24,8 @@ const go = async (page: import("@playwright/test").Page) => {
   await expect(page.getByTestId("blind-seat")).toBeVisible();
 };
 
-test("the page is structurally blind — no engine, model, or pipeline strings", async ({
+// TODO(rebuild): un-skip when this feature lands — rule: the page is structurally blind — no engine, model, or pipeline strings
+test.skip("the page is structurally blind — no engine, model, or pipeline strings", async ({
   page,
 }) => {
   await go(page);
@@ -38,7 +52,8 @@ test("the page is structurally blind — no engine, model, or pipeline strings",
   expect(html).not.toContain("l. vance");
 });
 
-test("no clock, no rate, no score", async ({ page }) => {
+// TODO(rebuild): un-skip when this feature lands — rule: no clock, no rate, no score
+test.skip("no clock, no rate, no score", async ({ page }) => {
   await go(page);
   const body = (await page.locator("body").innerText()).toLowerCase();
   expect(body).toContain("no clock, no rate, no score");
@@ -46,7 +61,8 @@ test("no clock, no rate, no score", async ({ page }) => {
   expect(body).not.toMatch(/\d+ per hour/);
 });
 
-test("the three-part contract gates Record: value/NA + source + confidence", async ({
+// TODO(rebuild): un-skip when this feature lands — rule: the three-part contract gates Record: value/NA + source + confidence
+test.skip("the three-part contract gates Record: value/NA + source + confidence", async ({
   page,
 }) => {
   await go(page);
@@ -63,7 +79,8 @@ test("the three-part contract gates Record: value/NA + source + confidence", asy
   );
 });
 
-test("unclear with a source is a legitimate, recordable answer", async ({
+// TODO(rebuild): un-skip when this feature lands — rule: unclear with a source is a legitimate, recordable answer
+test.skip("unclear with a source is a legitimate, recordable answer", async ({
   page,
 }) => {
   await go(page);
@@ -77,7 +94,8 @@ test("unclear with a source is a legitimate, recordable answer", async ({
   );
 });
 
-test("judgment TYPE takes a second pass and gates its siblings", async ({
+// TODO(rebuild): un-skip when this feature lands — rule: judgment TYPE takes a second pass and gates its siblings
+test.skip("judgment TYPE takes a second pass and gates its siblings", async ({
   page,
 }) => {
   await go(page);
@@ -96,7 +114,8 @@ test("judgment TYPE takes a second pass and gates its siblings", async ({
   await expect(page.getByTestId("field-judgments.1.plaintiff")).toBeVisible();
 });
 
-test("submit renders only the local confirmation — nothing comes back", async ({
+// TODO(rebuild): un-skip when this feature lands — rule: submit renders only the local confirmation — nothing comes back
+test.skip("submit renders only the local confirmation — nothing comes back", async ({
   page,
 }) => {
   await go(page);

@@ -9,6 +9,7 @@ import {
 } from "@tanstack/react-router";
 import {
   NotFoundCard,
+  RebuildingCard,
   RouteErrorCard,
   RoutePending,
 } from "./components/fallbacks";
@@ -63,40 +64,45 @@ const indexRoute = createRoute({
   component: HomeScreen,
 });
 
+/*
+ * REMOVED IN PASS 1 (2026-07-26) — the four screens design-mock replaces. The
+ * SCREENS are deleted; the ROUTES stay, pointed at RebuildingCard, because the
+ * surviving screens cross-link to them and those links are pinned by harvested
+ * invariants. Restore the real components in Pass 3 and delete the scaffold.
+ *
+ * The order-scoped shape below is worth restoring verbatim: the order is the
+ * resource, review is a view of it, and `?field=` as validated search keeps
+ * deep links first-class — every escalation, complaint, bench cell and bug
+ * report points at the exact field in its exact context.
+ */
 const queueRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/queue",
   beforeLoad: () => requireAccess("/queue"),
-  component: lazyRouteComponent(() => import("./screens/Queue"), "QueueScreen"),
+  component: () => <RebuildingCard screen="The reviewer queue" />,
 });
 
-/**
- * Order-scoped shape (`/orders/$id/review`): the order is the resource, review
- * is a view of it — future order views (timeline, report) share the prefix.
- * Deep links are first-class: every escalation, complaint, bench cell, and
- * bug report can point at the exact field in its exact context via `?field=`.
- */
 const reviewRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/orders/$orderId/review",
   beforeLoad: () => requireAccess("/orders"),
   validateSearch: (search: Record<string, unknown>): { field?: string } =>
     typeof search["field"] === "string" ? { field: search["field"] } : {},
-  component: lazyRouteComponent(() => import("./screens/Review"), "ReviewScreen"),
+  component: () => <RebuildingCard screen="The review workstation" />,
 });
 
 const ingestRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/ingest",
   beforeLoad: () => requireAccess("/ingest"),
-  component: lazyRouteComponent(() => import("./screens/Ingest"), "IngestScreen"),
+  component: () => <RebuildingCard screen="Ingest" />,
 });
 
 const escalationsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/escalations",
   beforeLoad: () => requireAccess("/escalations"),
-  component: lazyRouteComponent(() => import("./screens/EscalationInbox"), "EscalationInboxScreen"),
+  component: () => <RebuildingCard screen="The escalation inbox" />,
 });
 
 const dashboardRoute = createRoute({

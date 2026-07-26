@@ -1,3 +1,16 @@
+/*
+ * HARVESTED INVARIANT SPECS — migrated by Pass 1 (2026-07-26).
+ *
+ * Every test here asserts a PRODUCT RULE, not the old UI's DOM. They were all
+ * green immediately before migration (116/116). They are skipped, not deleted:
+ * un-skip each one as the rebuilt feature reaches it, rewriting SELECTORS only.
+ *
+ * NEVER weaken an assertion to make it pass. If an invariant cannot pass
+ * against the new design, that is a CONFLICT in the design — stop and report.
+ *
+ * Classification + the rule each protects: docs/frontend/test-harvest.md
+ */
+
 import { expect, test } from "@playwright/test";
 
 /**
@@ -6,7 +19,8 @@ import { expect, test } from "@playwright/test";
  * how_it_got_through; auto_confirmed visually distinct.
  */
 
-test("a failed delivery reads as transit, offers retry, and retry delivers", async ({
+// TODO(rebuild): un-skip when this feature lands — rule: a failed delivery reads as transit, offers retry, and retry delivers
+test.skip("a failed delivery reads as transit, offers retry, and retry delivers", async ({
   page,
 }) => {
   await page.goto("/delivery");
@@ -19,7 +33,8 @@ test("a failed delivery reads as transit, offers retry, and retry delivers", asy
   await expect(card.getByTestId("delivery-status")).toHaveText("DELIVERED");
 });
 
-test("both report versions list as the defect record", async ({ page }) => {
+// TODO(rebuild): un-skip when this feature lands — rule: both report versions list as the defect record
+test.skip("both report versions list as the defect record", async ({ page }) => {
   await page.goto("/delivery");
   const card = page.getByTestId("delivery-ord_demo_3");
   await expect(card.getByTestId("delivery-status")).toHaveText(
@@ -30,7 +45,8 @@ test("both report versions list as the defect record", async ({ page }) => {
   await expect(card).toContainText("defect record");
 });
 
-test("complaints group by how it got through; auto-confirmed is distinct", async ({
+// TODO(rebuild): un-skip when this feature lands — rule: complaints group by how it got through; auto-confirmed is distinct
+test.skip("complaints group by how it got through; auto-confirmed is distinct", async ({
   page,
 }) => {
   await page.goto("/complaints");
@@ -46,7 +62,8 @@ test("complaints group by how it got through; auto-confirmed is distinct", async
   ).toBeVisible();
 });
 
-test("per-field capture records into its group", async ({ page }) => {
+// TODO(rebuild): un-skip when this feature lands — rule: per-field capture records into its group
+test.skip("per-field capture records into its group", async ({ page }) => {
   await page.goto("/complaints");
   await page.getByTestId("cap-deed.consideration").click();
   const record = page.getByTestId("cap-record");
@@ -61,7 +78,8 @@ test("per-field capture records into its group", async ({ page }) => {
   ).toContainText("client says");
 });
 
-test("resolving a complaint is refused without a rule; a draft rule files it", async ({
+// TODO(rebuild): un-skip when this feature lands — rule: resolving a complaint is refused without a rule; a draft rule files it
+test.skip("resolving a complaint is refused without a rule; a draft rule files it", async ({
   page,
 }) => {
   await page.goto("/complaints");

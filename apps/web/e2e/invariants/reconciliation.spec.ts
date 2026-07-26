@@ -1,3 +1,16 @@
+/*
+ * HARVESTED INVARIANT SPECS — migrated by Pass 1 (2026-07-26).
+ *
+ * Every test here asserts a PRODUCT RULE, not the old UI's DOM. They were all
+ * green immediately before migration (116/116). They are skipped, not deleted:
+ * un-skip each one as the rebuilt feature reaches it, rewriting SELECTORS only.
+ *
+ * NEVER weaken an assertion to make it pass. If an invariant cannot pass
+ * against the new design, that is a CONFLICT in the design — stop and report.
+ *
+ * Classification + the rule each protects: docs/frontend/test-harvest.md
+ */
+
 import { expect, test } from "@playwright/test";
 
 /**
@@ -9,7 +22,8 @@ import { expect, test } from "@playwright/test";
 
 const PATH = "judgments_liens.1.type";
 
-test("a ruling without a citation is refused", async ({ page }) => {
+// TODO(rebuild): un-skip when this feature lands — rule: a ruling without a citation is refused
+test.skip("a ruling without a citation is refused", async ({ page }) => {
   await page.goto("/reconciliation/ord_demo_1");
   await page.getByTestId(`pick-B-${PATH}`).click();
   const fieldBtn = page.getByTestId(`rule-field-${PATH}`);
@@ -20,7 +34,8 @@ test("a ruling without a citation is refused", async ({ page }) => {
   await expect(fieldBtn).toBeEnabled();
 });
 
-test("neither field-only nor general is pre-selected; the draft starts empty", async ({
+// TODO(rebuild): un-skip when this feature lands — rule: neither field-only nor general is pre-selected; the draft starts empty
+test.skip("neither field-only nor general is pre-selected; the draft starts empty", async ({
   page,
 }) => {
   await page.goto("/reconciliation/ord_demo_1");
@@ -33,7 +48,8 @@ test("neither field-only nor general is pre-selected; the draft starts empty", a
   await expect(page.getByTestId(`draft-${PATH}`)).toHaveValue("");
 });
 
-test("a general-rule ruling files the draft as PENDING", async ({ page }) => {
+// TODO(rebuild): un-skip when this feature lands — rule: a general-rule ruling files the draft as PENDING
+test.skip("a general-rule ruling files the draft as PENDING", async ({ page }) => {
   await page.goto("/reconciliation/ord_demo_1");
   await page.getByTestId(`pick-B-${PATH}`).click();
   await page.getByTestId(`cite-${PATH}`).fill("FiFa p 31, caption — R22");
@@ -47,7 +63,8 @@ test("a general-rule ruling files the draft as PENDING", async ({ page }) => {
   await expect(ruled).toContainText("RULEBOOK DRAFT — PENDING");
 });
 
-test("a third value needs its why; the model appears nowhere", async ({
+// TODO(rebuild): un-skip when this feature lands — rule: a third value needs its why; the model appears nowhere
+test.skip("a third value needs its why; the model appears nowhere", async ({
   page,
 }) => {
   await page.goto("/reconciliation/ord_demo_1");
@@ -67,7 +84,8 @@ test("a third value needs its why; the model appears nowhere", async ({
   }
 });
 
-test("status shows the judgment ≥40 gate and no typist pace data", async ({
+// TODO(rebuild): un-skip when this feature lands — rule: status shows the judgment ≥40 gate and no typist pace data
+test.skip("status shows the judgment ≥40 gate and no typist pace data", async ({
   page,
 }) => {
   await page.goto("/blind-status");

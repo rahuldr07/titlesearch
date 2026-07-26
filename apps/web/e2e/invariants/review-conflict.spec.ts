@@ -1,5 +1,18 @@
+/*
+ * HARVESTED INVARIANT SPECS — migrated by Pass 1 (2026-07-26).
+ *
+ * Every test here asserts a PRODUCT RULE, not the old UI's DOM. They were all
+ * green immediately before migration (116/116). They are skipped, not deleted:
+ * un-skip each one as the rebuilt feature reaches it, rewriting SELECTORS only.
+ *
+ * NEVER weaken an assertion to make it pass. If an invariant cannot pass
+ * against the new design, that is a CONFLICT in the design — stop and report.
+ *
+ * Classification + the rule each protects: docs/frontend/test-harvest.md
+ */
+
 import { expect, test } from "@playwright/test";
-import { interceptApi } from "./helpers/net";
+import { interceptApi } from "../helpers/net";
 
 /**
  * Bug-5 idempotent-confirm surfacing (§4.2): a 409 is an ANSWER, not a dead
@@ -7,7 +20,8 @@ import { interceptApi } from "./helpers/net";
  * selection does not advance, and the field repaints as the server has it.
  */
 
-test("confirm 409 (different value) surfaces the server's message and never advances", async ({
+// TODO(rebuild): un-skip when this feature lands — rule: confirm 409 (different value) surfaces the server's message and never advances
+test.skip("confirm 409 (different value) surfaces the server's message and never advances", async ({
   page,
 }) => {
   await interceptApi(page, {
@@ -30,7 +44,8 @@ test("confirm 409 (different value) surfaces the server's message and never adva
   ).toHaveCount(0);
 });
 
-test("confirm 409 (terminal state) is answered, not a dead no-op", async ({
+// TODO(rebuild): un-skip when this feature lands — rule: confirm 409 (terminal state) is answered, not a dead no-op
+test.skip("confirm 409 (terminal state) is answered, not a dead no-op", async ({
   page,
 }) => {
   await interceptApi(page, {
@@ -48,7 +63,8 @@ test("confirm 409 (terminal state) is answered, not a dead no-op", async ({
   await expect(page.getByTestId("sel-label")).toHaveText("OWNER ZIP");
 });
 
-test("bug-5 mock semantics hold: same value 200/200, different value 409", async ({
+// TODO(rebuild): un-skip when this feature lands — rule: bug-5 mock semantics hold: same value 200/200, different value 409
+test.skip("bug-5 mock semantics hold: same value 200/200, different value 409", async ({
   page,
 }) => {
   // no interception — this pins the MSW contract the UI now depends on
