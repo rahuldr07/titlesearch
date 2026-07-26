@@ -1,0 +1,273 @@
+/*
+ * TitlePipe design tokens — extracted from design-mock/TitlePipe.dc.html (2026-07-26).
+ *
+ * Rules of this file:
+ *   - Names are SEMANTIC (what the colour means), never hue or hex. `--state-halt`
+ *     not `--red`; `--surface-evidence` not `--yellow-50`. A later palette change
+ *     must not require renaming a single token.
+ *   - Components reference tokens only. No raw hex in TSX — enforced by lint.
+ *   - Values are the design's exact colours. Where the design used a raw hex with
+ *     no `--var` behind it, the value is preserved and given a name here; those
+ *     are marked ORPHANED IN SOURCE.
+ *   - Scales (type, radius, space) are IMPOSED. The design used 22 ad-hoc font
+ *     sizes and 12 radii; see docs/frontend/component-inventory.md §5 for the
+ *     rounding table and what moved.
+ *
+ * Register: light, cool grey, violet action. This SUPERSEDES the warm-paper +
+ * action-blue palette in apps/web/src/index.css, which in turn already superseded
+ * the "dark register" of frontend-master-prompt §0.9. Three registers in the
+ * record; this is the live one. See docs/frontend/design-classification.md §2.
+ *
+ * Meaning of the four state colours is inherited and unchanged:
+ *   settled = done, no action   ·  decide = a person must choose
+ *   attend  = look at this      ·  halt   = stopped, actionable
+ */
+
+@theme {
+  /* ── surfaces ─────────────────────────────────────────────────────────── */
+  --color-surface-app: #e6e7ec; /* window background behind panels */
+  --color-surface-panel: #ffffff; /* cards, header, primary panels */
+  --color-surface-sunken: #fbfbfc; /* section sub-headers, table caps */
+  /* Third level, restored. The export collapsed page→panel→card into two; the
+     measurement screens use banded layouts that flatten without it.
+     replatform-mapping.md §4.1 */
+  --color-surface-raised: #f2f3f6; /* header bands, quiet chips, read-state cards */
+  --color-row-hover: #f2f3f6;
+  --color-surface-document: #dcdde3; /* ORPHANED IN SOURCE — document pane backdrop */
+  --color-surface-paper: #faf9f4; /* the scanned page itself */
+
+  /* evidence highlight — the marker drawn over a cited line on the page */
+  --color-surface-evidence: rgb(255 214 53 / 0.5);
+  --color-border-evidence: #d9a400;
+  /* the PIN is a weaker, cooler mark — "this field points here", vs the
+     highlight's "this is the cited line". Two marks, two meanings; the old
+     palette distinguished them and the export did not. */
+  --color-surface-pin: rgb(159 180 212 / 0.28);
+
+  /* ── ink ──────────────────────────────────────────────────────────────── */
+  --color-ink-primary: #16171b;
+  --color-ink-secondary: #565a66;
+  --color-ink-muted: #8a8e99; /* eyebrow labels, meta, "recede" */
+
+  /* ── lines ────────────────────────────────────────────────────────────── */
+  --color-line-strong: #d4d7de; /* card borders, dividers that must read */
+  --color-line-subtle: #e7e9ee; /* row separators inside a card */
+  --color-line-dashed: #b3b7c2; /* dashed borders, scrollbar thumb */
+
+  /* ── action (violet) — the primary affordance, and "your correction" ──── */
+  --color-action: #4a2fae;
+  --color-action-ink: #392291; /* text on action-surface */
+  --color-action-surface: #efeafd;
+  --color-action-border: #dfd6fb;
+  --color-ink-on-action: #ffffff; /* text/key-chips on a filled action button */
+  --color-key-chip-on-action: rgb(255 255 255 / 0.18);
+
+  /* ── state: settled — confirmed, delivered, gate passed ───────────────── */
+  --color-state-settled: #2c7a4b;
+  --color-state-settled-ink: #1f5738; /* ORPHANED IN SOURCE — body text on settled-surface */
+  --color-state-settled-surface: #e6f2ea;
+  --color-state-settled-border: #bfe0cb; /* ORPHANED IN SOURCE */
+
+  /* ── state: decide — a person must answer; the decision queue ─────────── */
+  /* Deliberately the same family as action: "this is yours" and "you may act"
+     are one signal in this design. Kept as separate names so they can diverge. */
+  --color-state-decide: #4a2fae;
+  --color-state-decide-surface: #efeafd;
+  --color-state-decide-border: #dfd6fb;
+
+  /* ── state: attend — escalated, disclosed, narrowed, provisional ──────── */
+  --color-state-attend: #9a6a12;
+  --color-state-attend-ink: #6d4c0c; /* ORPHANED IN SOURCE */
+  --color-state-attend-surface: #f8efd8;
+  --color-state-attend-border: #e6d3a3; /* ORPHANED IN SOURCE */
+
+  /* ── state: halt — package incomplete, failed, unreadable, conflict ───── */
+  --color-state-halt: #b02318;
+  --color-state-halt-ink: #8c1a12;
+  --color-state-halt-surface: #fbe9e7;
+  --color-state-halt-border: #eec6c1; /* ORPHANED IN SOURCE */
+
+  /* ── the four no-value states ─────────────────────────────────────────── */
+  /*
+   * These MUST stay visually distinct (CONTEXT §11; design's own States Gallery
+   * card: "They must never collapse into one grey dash"). Colour alone does not
+   * carry the distinction — each also has a border-style and, for `silent`, a
+   * hatch. See docs/frontend/component-inventory.md → NoValue.
+   *
+   * WARNING: the four-member set is an UNRESOLVED RULING. packages/contract
+   * currently ships two members. Do not treat these tokens as ratification —
+   * see docs/frontend/open-rulings.md Q1.
+   */
+  --color-na-not-present-ink: #8a8e99; /* structurally absent in jurisdiction */
+  --color-na-not-present-border: #d4d7de;
+  --color-na-not-found-ink: #565a66; /* searched, none of record */
+  --color-na-not-found-border: #d4d7de;
+  --color-na-silent-ink: #565a66; /* document does not state it */
+  --color-na-silent-hatch: #e7e9ee; /* diagonal hatch stripe colour */
+  --color-na-unreadable-ink: #8c1a12; /* present but unreadable — reads as halt */
+  --color-na-unreadable-surface: #fbe9e7;
+  --color-na-unreadable-border: #eec6c1;
+
+  /* ── neutral chip (machine/automated badges) ──────────────────────────── */
+  --color-chip-neutral-surface: #eceef2; /* ORPHANED IN SOURCE */
+
+  /* ── idle — "nothing is happening here", distinct from settled ────────── */
+  /* Old palette had --color-neutral* (slate) for idle/abandoned states; the
+     export dropped it. Restored cool. Used by dashboard bar segments, idle
+     delivery/complaint rows. See replatform-mapping.md §4.4. */
+  --color-state-idle: #56607a;
+  --color-state-idle-surface: #f0f1f5;
+  --color-state-idle-border: #b4bacb;
+
+  /* progress track — Blind Fifty Status coverage bar (replatform-mapping §4.2) */
+  --color-track: #dfe1e7;
+
+  /* ── the document pane — DELIBERATELY DARK ────────────────────────────── */
+  /*
+   * DECISION 2026-07-26 (see decisions.md D2). The scanned document is the
+   * dominant visual and everything else recedes — HANDOFF §4, master §0.9, and
+   * the old index.css. The design export inverted this to a light pane; that
+   * is overridden, on measurement rather than taste:
+   *
+   *     page (--color-surface-paper) against dark surround   14.53:1
+   *     page against the export's light surround (#dcdde3)    1.29:1
+   *
+   * At 1.29:1 the page does not separate from its own backdrop. The dark pane
+   * is the only one of the two that makes the scan dominant.
+   *
+   * Hues are shifted COOL from the old warm-dark set, to sit in this register.
+   * Structure and lightness are preserved, so the .dc.html layouts port.
+   * Applies everywhere PdfPane appears: Review, Extraction Bench,
+   * Reconciliation, Seed Correction.
+   */
+  --color-document-bg: #23252b; /* the pane behind the page */
+  --color-document-deep: #1b1d22; /* Seed Correction's deeper terminal register */
+  --color-document-card: #292c33;
+  --color-document-panel: #2f323a;
+  --color-document-line: #383c45;
+  --color-document-line-strong: #474c58;
+  --color-document-ink: #dadde4; /* 11.26:1 on pane */
+  --color-document-ink-soft: #bfc3cc; /* 8.68:1 */
+  --color-document-ink-strong: #eef0f4; /* 13.43:1 */
+  /* state accents on the dark pane — same four semantics, dark-surface variants */
+  --color-document-settled: #93c5ac; /* 7.89:1 */
+  --color-document-attend: #e5c078; /* 8.86:1 */
+  --color-document-halt: #e39a92; /* 6.79:1 */
+  --color-document-ink-on-accent: #16171b;
+
+  /* ── type ─────────────────────────────────────────────────────────────── */
+  --font-sans: "IBM Plex Sans", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  /* Serif is semantic here: it renders HUMAN TESTIMONY — a reviewer's comment,
+     a senior's ruling, a rule citation, an abstractor's stated reason. Never
+     used for machine output. Keep the distinction. */
+  --font-quote: "IBM Plex Serif", Georgia, serif;
+
+  /* Imposed scale. Source used 22 sizes between 8px and 26px; rounded to 12.
+     Rounding table: component-inventory.md §5. */
+  --text-micro: 0.5625rem; /* 9px  — letterspaced uppercase eyebrows */
+  --text-tiny: 0.625rem; /* 10px — badges, chips, page refs */
+  --text-xs: 0.6875rem; /* 11px — meta, secondary detail */
+  --text-sm: 0.75rem; /* 12px — dense body, table cells */
+  --text-base: 0.78125rem; /* 12.5px — default panel body */
+  --text-md: 0.8125rem; /* 13px — emphasised body, card values */
+  --text-lg: 0.875rem; /* 14px — card titles, app default */
+  --text-xl: 1rem; /* 16px — section leads */
+  --text-2xl: 1.125rem; /* 18px */
+  --text-3xl: 1.375rem; /* 22px — screen h1 */
+  --text-4xl: 1.5rem; /* 24px */
+  --text-5xl: 1.625rem; /* 26px — upload h1 */
+
+  /* Tracking — the uppercase eyebrow label is a signature of this design */
+  --tracking-eyebrow: 0.14em;
+  --tracking-badge: 0.1em;
+  --tracking-stamp: 0.16em;
+
+  /* ── radius ───────────────────────────────────────────────────────────── */
+  --radius-xs: 3px; /* evidence marker, inline tags */
+  --radius-sm: 5px; /* small chips, page refs */
+  --radius-md: 7px; /* buttons, inputs */
+  --radius-lg: 10px; /* cards, panels */
+  --radius-xl: 12px; /* drawers, modal panels */
+  --radius-pill: 20px;
+
+  /* ── space ────────────────────────────────────────────────────────────── */
+  --space-1: 2px;
+  --space-2: 4px;
+  --space-3: 6px;
+  --space-4: 8px;
+  --space-5: 10px;
+  --space-6: 12px;
+  --space-7: 14px;
+  --space-8: 16px;
+  --space-9: 18px;
+  --space-10: 22px;
+  --space-11: 28px;
+  --space-12: 32px;
+  --space-13: 40px;
+
+  /* ── elevation ────────────────────────────────────────────────────────── */
+  --shadow-page: 0 4px 22px rgb(20 20 30 / 0.45); /* page lifts off the DARK pane */
+  --shadow-menu: 0 14px 36px rgb(20 20 30 / 0.2);
+  --shadow-drawer: -8px 0 30px rgb(20 20 30 / 0.2);
+  --shadow-scrim: rgb(20 20 30 / 0.34);
+  --shadow-card: 0 1px 3px rgb(20 20 30 / 0.06); /* primary cards only */
+  --shadow-pop: 0 8px 24px rgb(20 20 30 / 0.18);
+
+  /* ── document rendering ───────────────────────────────────────────────── */
+  /* The scan is meant to look scanned, not like a clean render. */
+  --filter-scan: grayscale(0.35) contrast(0.96) brightness(1.01);
+  --filter-scan-degraded: grayscale(0.4) contrast(0.94);
+}
+
+/*
+ * Motion. The design animates exactly one thing — a pulsing dot on a halted
+ * gate — and honours prefers-reduced-motion globally. Keep both properties.
+ */
+@keyframes tp-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+/*
+ * Ported from the old palette — both are semantic, not decoration.
+ * replatform-mapping.md §4.6
+ */
+
+/* Highlight arrival: fires ONCE when click-to-source lands on a cited line. */
+@keyframes tp-highlight-arrive {
+  0% {
+    box-shadow: 0 0 0 0 rgb(217 164 0 / 0.55);
+  }
+  100% {
+    box-shadow: 0 0 0 14px rgb(217 164 0 / 0);
+  }
+}
+
+/*
+ * Rail ACT dot: one slow, low-opacity ring, reserved for the ACT signal (an
+ * unresolved complaint). Amber ATTENTION dots stay still — the distinction is
+ * pinned by sidebar.spec #2 (INVARIANT: red for a complaint, amber for a gap).
+ */
+@keyframes tp-act-ring {
+  0% {
+    box-shadow: 0 0 0 0 rgb(176 35 24 / 0.4);
+  }
+  100% {
+    box-shadow: 0 0 0 5px rgb(176 35 24 / 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
