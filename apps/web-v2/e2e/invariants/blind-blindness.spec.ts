@@ -12,7 +12,7 @@ import { expect, test } from "@playwright/test";
 
 import { apiLog, trackApi } from "../helpers/net";
 // TODO(rebuild) [INVARIANT] — rule: §0.6 proven at the network level — the capture seat issues zero /api GETs; the only call that leaves it is the submit POST. Also: the done card carries a door out.
-test.skip("the typist screen issues zero /api GETs — the only network call is the submit POST", async ({
+test("the typist screen issues zero /api GETs — the only network call is the submit POST", async ({
   page,
 }) => {
   await trackApi(page);
@@ -41,7 +41,7 @@ test.skip("the typist screen issues zero /api GETs — the only network call is 
 });
 
 // TODO(rebuild) [INVARIANT] — rule: the global key layer is dead on /blind/* — no map, no chords. Structural blindness includes the keyboard.
-test.skip("global keys are dead on /blind/*: no map, no chords", async ({
+test("global keys are dead on /blind/*: no map, no chords", async ({
   page,
 }) => {
   await page.goto("/blind/ord_demo_1");

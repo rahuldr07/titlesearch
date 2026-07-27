@@ -2,6 +2,7 @@ import { createRootRoute, createRoute, createRouter, Outlet } from "@tanstack/re
 import { QueueScreen } from "../features/queue/QueueScreen";
 import { AccountScreen } from "../features/account/AccountScreen";
 import { HomeHub } from "../features/home/HomeHub";
+import { BlindSeat } from "../features/blind/BlindSeat";
 import { GlobalKeys } from "./GlobalKeys";
 import { NotBuiltYet, NotFound } from "./Placeholders";
 
@@ -71,8 +72,8 @@ const goldenRoute = createRoute({ getParentRoute: parent, path: "/golden", compo
 const reconciliationRoute = createRoute({ getParentRoute: parent, path: "/reconciliation", component: pending(MEASUREMENT) });
 const blindRoute = createRoute({
   getParentRoute: parent,
-  path: "/blind",
-  component: pending("Not built yet — the capture seat. Structural blindness makes it the one screen that must issue no GETs at all."),
+  path: "/blind/$orderId",
+  component: BlindSeat,
 });
 
 const routeTree = rootRoute.addChildren([

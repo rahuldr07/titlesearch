@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useHotkeys } from "react-hotkeys-hook";
 import { doorsFor, doorForKey } from "../entities/nav/doors";
 import { useSession } from "../shared/session";
@@ -27,6 +27,16 @@ export function GlobalKeys() {
   const [armed, setArmed] = useState(false);
   const [mapOpen, setMapOpen] = useState(false);
 
+  /*
+   * THE GLOBAL KEY LAYER IS DEAD ON THE CAPTURE SEAT. `blind-blindness.spec` #2
+   * asserts `?` shows no map and `g q` does not navigate there. Structural
+   * blindness includes the keyboard: a chord out of the seat is a door out of
+   * it, and the map names worlds a typist must not be shown.
+   */
+  const onCaptureSeat = useRouterState({
+    select: (s) => s.location.pathname.startsWith("/blind"),
+  });
+
   const doors = doorsFor(role);
 
   const openDoor = useCallback(
@@ -37,7 +47,7 @@ export function GlobalKeys() {
     [role, navigate],
   );
 
-  useHotkeys("g", () => setArmed(true), { preventDefault: true }, []);
+  useHotkeys("g", () => setArmed(true), { enabled: !onCaptureSeat, preventDefault: true }, [onCaptureSeat]);
 
   // Every letter, so an armed chord consumes the second key rather than
   // letting it fall through to a screen hotkey.
@@ -49,7 +59,7 @@ export function GlobalKeys() {
       setArmed(false);
       openDoor(handler.keys?.[0] ?? "");
     },
-    { enabled: armed, preventDefault: false },
+    { enabled: armed && !onCaptureSeat, preventDefault: false },
     [armed, openDoor],
   );
 
@@ -64,7 +74,7 @@ export function GlobalKeys() {
    */
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "?") return;
+      if (event.key !== "?" || onCaptureSeat) return;
       const target = event.target as HTMLElement | null;
       if (target?.closest("input, textarea, select, [contenteditable='true']")) return;
       event.preventDefault();
@@ -72,7 +82,7 @@ export function GlobalKeys() {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
+  }, [onCaptureSeat]);
   useHotkeys("escape", () => { setMapOpen(false); setArmed(false); }, { enabled: mapOpen || armed }, [mapOpen, armed]);
 
   if (!mapOpen) return null;
