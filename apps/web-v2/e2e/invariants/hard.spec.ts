@@ -111,7 +111,7 @@ test.skip("the blind submit response carries NOTHING beyond the ack (§0.6 at th
 });
 
 // TODO(rebuild) [INVARIANT] — rule: a replayed resolution is refused (409) — resolution is not idempotent-repeatable.
-test.skip("resolving the same escalation twice is refused the second time", async ({
+test("resolving the same escalation twice is refused the second time", async ({
   page,
 }) => {
   await ready(page);

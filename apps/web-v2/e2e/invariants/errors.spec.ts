@@ -22,7 +22,7 @@ test("an unknown route renders the not-found card, never a blank page", async ({
 });
 
 // TODO(rebuild) [ORPHAN RULE] — rule: a failed list query renders a named unavailable state.
-test.skip("the escalation inbox says unavailable when the list 500s", async ({
+test("the escalation inbox says unavailable when the list 500s", async ({
   page,
 }) => {
   await interceptApi(page, {

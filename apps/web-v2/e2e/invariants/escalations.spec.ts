@@ -11,7 +11,7 @@ import { expect, test } from "@playwright/test";
  */
 
 // TODO(rebuild) [INVARIANT] — rule: §0.5 MANDATORY — escalation resolution is REFUSED without a rule. A ruling alone is not a resolution.
-test.skip("resolve stays held without a ruling AND a rule", async ({ page }) => {
+test("resolve stays held without a ruling AND a rule", async ({ page }) => {
   await page.goto("/escalations");
   const btn = page.getByTestId("resolve-btn");
   await expect(btn).toBeDisabled();
@@ -27,7 +27,7 @@ test.skip("resolve stays held without a ruling AND a rule", async ({ page }) => 
 });
 
 // TODO(rebuild) [INVARIANT] — rule: citing an existing rule is one of exactly two resolution paths.
-test.skip("citing an existing rule resolves the cluster", async ({ page }) => {
+test("citing an existing rule resolves the cluster", async ({ page }) => {
   await page.goto("/escalations");
   await page
     .getByTestId("ruling-input")
@@ -41,7 +41,7 @@ test.skip("citing an existing rule resolves the cluster", async ({ page }) => {
 });
 
 // TODO(rebuild) [INVARIANT] — rule: a drafted rule lands PENDING and renders visibly inert — it cannot affect the pipeline until an engineer confirms.
-test.skip("a drafted rule lands PENDING and renders visibly inert", async ({
+test("a drafted rule lands PENDING and renders visibly inert", async ({
   page,
 }) => {
   await page.goto("/escalations");
@@ -60,7 +60,7 @@ test.skip("a drafted rule lands PENDING and renders visibly inert", async ({
 });
 
 // TODO(rebuild) [ORPHAN RULE] — rule: the escalation inbox has no triage furniture — no category, no priority, no assignee. Just the rule.
-test.skip("no priority, category, or assignee affordances exist", async ({
+test("no priority, category, or assignee affordances exist", async ({
   page,
 }) => {
   await page.goto("/escalations");

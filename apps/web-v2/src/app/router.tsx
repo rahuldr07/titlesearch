@@ -11,6 +11,7 @@ import { GoldenSet } from "../features/golden/GoldenSet";
 import { SeedCorrection } from "../features/seedCorrection/SeedCorrection";
 import { ExtractionBench } from "../features/bench/ExtractionBench";
 import { BenchResults } from "../features/bench/BenchResults";
+import { EscalationsScreen } from "../features/escalations/EscalationsScreen";
 import { GlobalKeys } from "./GlobalKeys";
 import { NotBuiltYet, NotFound } from "./Placeholders";
 
@@ -60,11 +61,7 @@ const reviewRoute = createRoute({
     "Blocked on conflicts C8 and C9 — the export's correction has no reason field, and its escalation fabricates one. Both break passing invariants, and §13 forbids building a screen whose RULE elements are unresolved. See docs/frontend/conflicts.md.",
   ),
 });
-const escalationsRoute = createRoute({
-  getParentRoute: parent,
-  path: "/escalations",
-  component: pending("Not built yet. Ruling D1 settled that resolution requires a rule; the screen is next."),
-});
+const escalationsRoute = createRoute({ getParentRoute: parent, path: "/escalations", component: EscalationsScreen });
 const ingestRoute = createRoute({
   getParentRoute: parent,
   path: "/ingest",

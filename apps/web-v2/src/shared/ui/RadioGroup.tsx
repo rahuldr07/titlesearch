@@ -59,10 +59,13 @@ export function RadioGroup({
 export function Radio({
   value,
   disabled,
+  testId,
   children,
 }: {
   value: string;
   disabled?: boolean;
+  /** Lands on the control itself, not the label — the control is what a test checks. */
+  testId?: string;
   children: ReactNode;
 }) {
   return (
@@ -70,6 +73,7 @@ export function Radio({
       <BaseRadio.Root
         value={value}
         disabled={disabled}
+        data-testid={testId}
         className={cn(
           "inline-flex size-11 shrink-0 items-center justify-center rounded-full",
           "border border-line-strong bg-surface-panel",
