@@ -3,6 +3,8 @@ import { QueueScreen } from "../features/queue/QueueScreen";
 import { AccountScreen } from "../features/account/AccountScreen";
 import { HomeHub } from "../features/home/HomeHub";
 import { BlindSeat } from "../features/blind/BlindSeat";
+import { OpsDashboard } from "../features/dashboard/OpsDashboard";
+import { LeaderboardScreen } from "../features/leaderboard/LeaderboardScreen";
 import { GlobalKeys } from "./GlobalKeys";
 import { NotBuiltYet, NotFound } from "./Placeholders";
 
@@ -62,12 +64,12 @@ const ingestRoute = createRoute({
   path: "/ingest",
   component: pending("Blocked on rulings Q4–Q10 — the intake and config layer has no backend counterpart yet."),
 });
-const dashboardRoute = createRoute({ getParentRoute: parent, path: "/dashboard", component: pending(MEASUREMENT) });
+const dashboardRoute = createRoute({ getParentRoute: parent, path: "/dashboard", component: OpsDashboard });
 const complaintsRoute = createRoute({ getParentRoute: parent, path: "/complaints", component: pending(MEASUREMENT) });
 const deliveryRoute = createRoute({ getParentRoute: parent, path: "/delivery", component: pending(MEASUREMENT) });
 const blindStatusRoute = createRoute({ getParentRoute: parent, path: "/blind-status", component: pending(MEASUREMENT) });
 const benchRoute = createRoute({ getParentRoute: parent, path: "/bench", component: pending(MEASUREMENT) });
-const leaderboardRoute = createRoute({ getParentRoute: parent, path: "/leaderboard", component: pending(MEASUREMENT) });
+const leaderboardRoute = createRoute({ getParentRoute: parent, path: "/leaderboard", component: LeaderboardScreen });
 const goldenRoute = createRoute({ getParentRoute: parent, path: "/golden", component: pending(MEASUREMENT) });
 const reconciliationRoute = createRoute({ getParentRoute: parent, path: "/reconciliation", component: pending(MEASUREMENT) });
 const blindRoute = createRoute({

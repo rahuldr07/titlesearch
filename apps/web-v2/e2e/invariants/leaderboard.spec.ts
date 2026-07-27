@@ -11,7 +11,7 @@ import { expect, test } from "@playwright/test";
  */
 
 // TODO(rebuild) [INVARIANT] — rule: §4.15 — below golden coverage a cell reads NO TRUTH YET. That is not a zero.
-test.skip("a cell below golden coverage reads NO TRUTH YET, not zero", async ({
+test("a cell below golden coverage reads NO TRUTH YET, not zero", async ({
   page,
 }) => {
   await page.goto("/leaderboard");
@@ -23,7 +23,7 @@ test.skip("a cell below golden coverage reads NO TRUTH YET, not zero", async ({
 });
 
 // TODO(rebuild) [INVARIANT] — rule: an undeclared capability renders as — , never as a faked score.
-test.skip("undeclared capability renders — (never a faked score)", async ({
+test("undeclared capability renders — (never a faked score)", async ({
   page,
 }) => {
   await page.goto("/leaderboard");
@@ -33,7 +33,7 @@ test.skip("undeclared capability renders — (never a faked score)", async ({
 });
 
 // TODO(rebuild) [INVARIANT] — rule: an engine seat change is refused without evidence and is logged with who and when.
-test.skip("a seat flip is refused without evidence, then logged with who/when", async ({
+test("a seat flip is refused without evidence, then logged with who/when", async ({
   page,
 }) => {
   await page.goto("/leaderboard");
@@ -51,7 +51,7 @@ test.skip("a seat flip is refused without evidence, then logged with who/when", 
 });
 
 // TODO(rebuild) [INVARIANT] — rule: there is no best engine: no aggregate headline and no auto-promotion affordance.
-test.skip("no aggregate headline, no auto-promotion affordance", async ({
+test("no aggregate headline, no auto-promotion affordance", async ({
   page,
 }) => {
   await page.goto("/leaderboard");
