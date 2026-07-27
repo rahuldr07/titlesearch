@@ -9,6 +9,8 @@ import { DeliveryScreen } from "../features/delivery/DeliveryScreen";
 import { ComplaintsScreen } from "../features/complaints/ComplaintsScreen";
 import { GoldenSet } from "../features/golden/GoldenSet";
 import { SeedCorrection } from "../features/seedCorrection/SeedCorrection";
+import { ExtractionBench } from "../features/bench/ExtractionBench";
+import { BenchResults } from "../features/bench/BenchResults";
 import { GlobalKeys } from "./GlobalKeys";
 import { NotBuiltYet, NotFound } from "./Placeholders";
 
@@ -72,7 +74,8 @@ const dashboardRoute = createRoute({ getParentRoute: parent, path: "/dashboard",
 const complaintsRoute = createRoute({ getParentRoute: parent, path: "/complaints", component: ComplaintsScreen });
 const deliveryRoute = createRoute({ getParentRoute: parent, path: "/delivery", component: DeliveryScreen });
 const blindStatusRoute = createRoute({ getParentRoute: parent, path: "/blind-status", component: pending(MEASUREMENT) });
-const benchRoute = createRoute({ getParentRoute: parent, path: "/bench", component: pending(MEASUREMENT) });
+const benchRoute = createRoute({ getParentRoute: parent, path: "/bench", component: ExtractionBench });
+const benchResultsRoute = createRoute({ getParentRoute: parent, path: "/bench/results", component: BenchResults });
 const leaderboardRoute = createRoute({ getParentRoute: parent, path: "/leaderboard", component: LeaderboardScreen });
 const goldenRoute = createRoute({ getParentRoute: parent, path: "/golden", component: GoldenSet });
 
@@ -100,7 +103,7 @@ const blindRoute = createRoute({
 
 const routeTree = rootRoute.addChildren([
   homeRoute, queueRoute, accountRoute, reviewRoute, escalationsRoute, ingestRoute,
-  dashboardRoute, complaintsRoute, deliveryRoute, blindStatusRoute, benchRoute,
+  dashboardRoute, complaintsRoute, deliveryRoute, blindStatusRoute, benchRoute, benchResultsRoute,
   leaderboardRoute, goldenRoute, reconciliationRoute, blindRoute, seedCorrectionRoute,
 ]);
 

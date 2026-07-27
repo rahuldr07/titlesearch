@@ -82,7 +82,7 @@ test("seed correction without context shows the no-menu-entry state", async ({
 });
 
 // TODO(rebuild) [INVARIANT] — rule: context travels through the link — the destination is never asked to re-derive it.
-test.skip("bench results carries context into seed correction", async ({ page }) => {
+test("bench results carries context into seed correction", async ({ page }) => {
   await page.goto("/bench/results");
   await page.getByTestId("fail-mortgages.1.amount").click();
   await page.getByText("Investigate seed →").click();

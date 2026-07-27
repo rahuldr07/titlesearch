@@ -11,7 +11,7 @@ import { expect, test } from "@playwright/test";
  */
 
 // TODO(rebuild) [INVARIANT] — rule: §4.10 — results render as a section × tag matrix with NO aggregate accuracy headline.
-test.skip("results matrix renders section × tag with no aggregate headline", async ({
+test("results matrix renders section × tag with no aggregate headline", async ({
   page,
 }) => {
   await page.goto("/bench/results");
@@ -28,7 +28,7 @@ test.skip("results matrix renders section × tag with no aggregate headline", as
 });
 
 // TODO(rebuild) [INVARIANT] — rule: a ruled-seed fail is always actionable; a suspect-seed fail may be the seed, not the model.
-test.skip("a ruled fail is always actionable; a suspect fail doubts the seed", async ({
+test("a ruled fail is always actionable; a suspect fail doubts the seed", async ({
   page,
 }) => {
   await page.goto("/bench/results");
@@ -44,7 +44,7 @@ test.skip("a ruled fail is always actionable; a suspect fail doubts the seed", a
 });
 
 // TODO(rebuild) [INVARIANT] — rule: §4.11 — no auto-tune or optimize affordance exists, and prompts come from the rulebook.
-test.skip("bench has no auto-tune affordance and prompts come from the rulebook", async ({
+test("bench has no auto-tune affordance and prompts come from the rulebook", async ({
   page,
 }) => {
   await page.goto("/bench");
