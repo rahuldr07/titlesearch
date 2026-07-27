@@ -1,6 +1,12 @@
 import { expect, test } from "@playwright/test";
 
 /**
+ * SELECTOR REWRITE 2026-07-28: the account tabs are getByRole("tab"), not
+ * ("button"). Base UI Tabs renders role="tab", which is the correct semantics
+ * for a tab set — a screen reader announces position and count. The migration
+ * rule permits rewriting selectors and forbids weakening assertions; every
+ * assertion below is untouched.
+ *
  * HARVESTED INVARIANTS — migrated from apps/web @ ade49af (pre-rebuild).
  * Source: apps/web/e2e/roles.spec.ts
  *
@@ -15,7 +21,7 @@ const become = async (
   role: string,
 ) => {
   await page.goto("/account");
-  await page.getByRole("button", { name: "Me" }).click();
+  await page.getByRole("tab", { name: "Me" }).click();
   await page.getByTestId(`role-${role}`).click();
 };
 
@@ -27,7 +33,7 @@ const chord = async (
   await page.keyboard.press(key);
 };
 // TODO(rebuild) [INVARIANT] — rule: §0.7 — a typist's world is capture + account only; chords to other worlds are refused and out-of-world links are ABSENT.
-test.skip("typist world: no doors but capture and account", async ({ page }) => {
+test("typist world: no doors but capture and account", async ({ page }) => {
   await become(page, "typist");
   // the map offers only the account door
   await page.keyboard.press("?");
@@ -53,7 +59,7 @@ test.skip("typist world: no doors but capture and account", async ({ page }) => 
 });
 
 // TODO(rebuild) [INVARIANT] — rule: §0.7 — a senior holds escalations; queue and readout do not exist for them.
-test.skip("senior world: escalations open; queue and readout do not exist", async ({
+test("senior world: escalations open; queue and readout do not exist", async ({
   page,
 }) => {
   await become(page, "senior");
@@ -66,7 +72,7 @@ test.skip("senior world: escalations open; queue and readout do not exist", asyn
 });
 
 // TODO(rebuild) [INVARIANT] — rule: §0.7 — ops holds the readout; the bench does not exist for them.
-test.skip("ops world: readout opens; the bench does not exist", async ({
+test("ops world: readout opens; the bench does not exist", async ({
   page,
 }) => {
   await become(page, "ops");
@@ -77,7 +83,7 @@ test.skip("ops world: readout opens; the bench does not exist", async ({
 });
 
 // TODO(rebuild) [INVARIANT] — rule: §0.7 — an engineer holds the bench; the readout does not exist for them.
-test.skip("engineer world: bench opens; the readout does not exist", async ({
+test("engineer world: bench opens; the readout does not exist", async ({
   page,
 }) => {
   await become(page, "engineer");

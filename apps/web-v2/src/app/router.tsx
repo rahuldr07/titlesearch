@@ -1,69 +1,85 @@
-import {
-  createRootRoute,
-  createRoute,
-  createRouter,
-  Outlet,
-  redirect,
-} from "@tanstack/react-router";
+import { createRootRoute, createRoute, createRouter, Outlet } from "@tanstack/react-router";
 import { QueueScreen } from "../features/queue/QueueScreen";
-import { Eyebrow } from "../shared/ui/Eyebrow";
+import { AccountScreen } from "../features/account/AccountScreen";
+import { HomeHub } from "../features/home/HomeHub";
+import { GlobalKeys } from "./GlobalKeys";
+import { NotBuiltYet, NotFound } from "./Placeholders";
 
 /**
- * Routes are guards and wiring only — no logic (BRIEF §7). A route's job is to
- * say which feature owns a URL, not to decide anything.
+ * Routes are guards and wiring only — no logic (BRIEF §7).
  *
- * Code-based rather than file-based routing: the generated route tree is a
- * build artefact that has to be committed and kept in sync, and this app has
- * few enough routes that the indirection costs more than it saves.
+ * Declared one by one rather than generated from a list: `addChildren` needs
+ * the literal tuple to infer the route tree, and that inference is what makes
+ * `navigate({ to: "/orders/$orderId/review", params: { orderId } })` a compile
+ * error when the path or the param name is wrong. A loop costs fewer lines and
+ * throws that away.
+ *
+ * THERE IS NO ROUTE-LEVEL ROLE GUARD, deliberately. A role's world is enforced
+ * two ways the harvested specs actually assert: the door is ABSENT from the hub
+ * and the map, and the chord refuses to open it (`roles.spec` ×4). Both read
+ * the same `canAccess` table the server gates with, and the server refuses the
+ * data regardless — which is the layer that matters.
  */
 const rootRoute = createRootRoute({
   component: () => (
-    <main className="mx-auto max-w-320 p-9">
-      <Outlet />
-    </main>
+    <>
+      <GlobalKeys />
+      <main className="mx-auto max-w-320 p-9">
+        <Outlet />
+      </main>
+    </>
+  ),
+  notFoundComponent: NotFound,
+});
+
+const parent = () => rootRoute;
+const pending = (why: string) => () => <NotBuiltYet why={why} />;
+
+const MEASUREMENT =
+  "Not built yet — one of the twelve measurement screens being re-platformed onto the new tokens.";
+
+// ── built ───────────────────────────────────────────────────────────────────
+const homeRoute = createRoute({ getParentRoute: parent, path: "/", component: HomeHub });
+const queueRoute = createRoute({ getParentRoute: parent, path: "/queue", component: QueueScreen });
+const accountRoute = createRoute({ getParentRoute: parent, path: "/account", component: AccountScreen });
+
+// ── not built: each says WHY, rather than rendering an empty shell ───────────
+const reviewRoute = createRoute({
+  getParentRoute: parent,
+  path: "/orders/$orderId/review",
+  component: pending(
+    "Blocked on conflicts C8 and C9 — the export's correction has no reason field, and its escalation fabricates one. Both break passing invariants, and §13 forbids building a screen whose RULE elements are unresolved. See docs/frontend/conflicts.md.",
   ),
 });
-
-/** `/` sends the reviewer to their work rather than to a landing page. */
-const indexRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/",
-  beforeLoad: () => {
-    throw redirect({ to: "/queue" });
-  },
+const escalationsRoute = createRoute({
+  getParentRoute: parent,
+  path: "/escalations",
+  component: pending("Not built yet. Ruling D1 settled that resolution requires a rule; the screen is next."),
+});
+const ingestRoute = createRoute({
+  getParentRoute: parent,
+  path: "/ingest",
+  component: pending("Blocked on rulings Q4–Q10 — the intake and config layer has no backend counterpart yet."),
+});
+const dashboardRoute = createRoute({ getParentRoute: parent, path: "/dashboard", component: pending(MEASUREMENT) });
+const complaintsRoute = createRoute({ getParentRoute: parent, path: "/complaints", component: pending(MEASUREMENT) });
+const deliveryRoute = createRoute({ getParentRoute: parent, path: "/delivery", component: pending(MEASUREMENT) });
+const blindStatusRoute = createRoute({ getParentRoute: parent, path: "/blind-status", component: pending(MEASUREMENT) });
+const benchRoute = createRoute({ getParentRoute: parent, path: "/bench", component: pending(MEASUREMENT) });
+const leaderboardRoute = createRoute({ getParentRoute: parent, path: "/leaderboard", component: pending(MEASUREMENT) });
+const goldenRoute = createRoute({ getParentRoute: parent, path: "/golden", component: pending(MEASUREMENT) });
+const reconciliationRoute = createRoute({ getParentRoute: parent, path: "/reconciliation", component: pending(MEASUREMENT) });
+const blindRoute = createRoute({
+  getParentRoute: parent,
+  path: "/blind",
+  component: pending("Not built yet — the capture seat. Structural blindness makes it the one screen that must issue no GETs at all."),
 });
 
-const queueRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/queue",
-  component: QueueScreen,
-});
-
-/**
- * PLACEHOLDER. The review workstation is BRIEF §5's flagship and cannot be
- * built yet: conflicts C8 and C9 need a design redraw — the export's correction
- * has no reason field, and its escalation fabricates one — and both break
- * passing invariants. §13 forbids implementing a screen whose RULE elements are
- * unresolved, so this route exists only so `queue.spec` #5 can assert that
- * Enter navigates to the served order.
- */
-const reviewRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/orders/$orderId/review",
-  component: function ReviewPlaceholder() {
-    return (
-      <div className="flex flex-col gap-4">
-        <Eyebrow variant="screen">Review</Eyebrow>
-        <p className="text-base text-ink-secondary">
-          Not built yet. Blocked on conflicts C8 and C9 — see
-          docs/frontend/conflicts.md.
-        </p>
-      </div>
-    );
-  },
-});
-
-const routeTree = rootRoute.addChildren([indexRoute, queueRoute, reviewRoute]);
+const routeTree = rootRoute.addChildren([
+  homeRoute, queueRoute, accountRoute, reviewRoute, escalationsRoute, ingestRoute,
+  dashboardRoute, complaintsRoute, deliveryRoute, blindStatusRoute, benchRoute,
+  leaderboardRoute, goldenRoute, reconciliationRoute, blindRoute,
+]);
 
 export function createAppRouter() {
   return createRouter({ routeTree, defaultPreload: "intent" });

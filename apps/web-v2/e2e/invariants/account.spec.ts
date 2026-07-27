@@ -1,6 +1,12 @@
 import { expect, test } from "@playwright/test";
 
 /**
+ * SELECTOR REWRITE 2026-07-28: the account tabs are getByRole("tab"), not
+ * ("button"). Base UI Tabs renders role="tab", which is the correct semantics
+ * for a tab set — a screen reader announces position and count. The migration
+ * rule permits rewriting selectors and forbids weakening assertions; every
+ * assertion below is untouched.
+ *
  * HARVESTED INVARIANTS — migrated from apps/web @ ade49af (pre-rebuild).
  * Source: apps/web/e2e/account.spec.ts
  *
@@ -11,7 +17,7 @@ import { expect, test } from "@playwright/test";
  */
 
 // TODO(rebuild) [INVARIANT] — rule: every rule carries origin, status and jurisdiction; PENDING renders as visibly unable to affect the pipeline.
-test.skip("rulebook shows origin/status/jurisdiction badges; PENDING is inert", async ({
+test("rulebook shows origin/status/jurisdiction badges; PENDING is inert", async ({
   page,
 }) => {
   await page.goto("/account");
@@ -25,7 +31,7 @@ test.skip("rulebook shows origin/status/jurisdiction badges; PENDING is inert", 
 });
 
 // TODO(rebuild) [INVARIANT] — rule: only the engineer gate promotes PENDING into the live book, and it records who confirmed.
-test.skip("the engineer gate confirms a pending rule into the live book", async ({
+test("the engineer gate confirms a pending rule into the live book", async ({
   page,
 }) => {
   await page.goto("/account");
@@ -36,9 +42,9 @@ test.skip("the engineer gate confirms a pending rule into the live book", async 
 });
 
 // TODO(rebuild) [INVARIANT] — rule: audit is read-only and append-only — no write affordances exist on it.
-test.skip("audit is a read-only append-only view", async ({ page }) => {
+test("audit is a read-only append-only view", async ({ page }) => {
   await page.goto("/account");
-  await page.getByRole("button", { name: "Audit" }).click();
+  await page.getByRole("tab", { name: "Audit" }).click();
   await expect(page.getByText("golden_correction")).toBeVisible();
   await expect(page.getByText("engine_seat_change")).toBeVisible();
   // no write affordances: no inputs, no buttons beyond the tab bar + nav
@@ -46,9 +52,9 @@ test.skip("audit is a read-only append-only view", async ({ page }) => {
 });
 
 // TODO(rebuild) [INVARIANT] — rule: §0.7 — role-locked entry is structural: the door is ABSENT and the chord refuses the jump.
-test.skip("a reviewer never sees the dashboard (§0.7)", async ({ page }) => {
+test("a reviewer never sees the dashboard (§0.7)", async ({ page }) => {
   await page.goto("/account");
-  await page.getByRole("button", { name: "Me" }).click();
+  await page.getByRole("tab", { name: "Me" }).click();
   await page.getByTestId("role-reviewer").click();
   // Role-locked entry is structural: the link isn't dimmed, it's ABSENT —
   // the door doesn't exist in the reviewer's world (nav.ts).

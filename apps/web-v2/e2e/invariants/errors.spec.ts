@@ -12,7 +12,7 @@ import { expect, test } from "@playwright/test";
 
 import { interceptApi } from "../helpers/net";
 // TODO(rebuild) [ORPHAN RULE] — rule: an unknown route renders a named not-found state, never a blank page.
-test.skip("an unknown route renders the not-found card, never a blank page", async ({
+test("an unknown route renders the not-found card, never a blank page", async ({
   page,
 }) => {
   await page.goto("/no-such-door");

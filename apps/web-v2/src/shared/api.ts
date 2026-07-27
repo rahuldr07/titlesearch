@@ -1,3 +1,5 @@
+import { currentRole } from "./session";
+
 /**
  * A validator, described STRUCTURALLY rather than by importing Zod's types.
  *
@@ -65,7 +67,14 @@ async function request<T>(
 ): Promise<T> {
   const response = await fetch(path, {
     ...init,
-    headers: { "content-type": "application/json", ...init?.headers },
+    headers: {
+      "content-type": "application/json",
+      // DEV-ONLY (conflict C12). packages/mocks reads this in place of the
+      // Clerk JWT claim so the harvested authz specs can prove the SERVER
+      // refuses. It goes when the real API lands — see shared/session.ts.
+      "x-mock-role": currentRole(),
+      ...init?.headers,
+    },
   });
 
   if (!response.ok) {

@@ -1,6 +1,12 @@
 import { expect, test } from "@playwright/test";
 
 /**
+ * SELECTOR REWRITE 2026-07-28: the account tabs are getByRole("tab"), not
+ * ("button"). Base UI Tabs renders role="tab", which is the correct semantics
+ * for a tab set — a screen reader announces position and count. The migration
+ * rule permits rewriting selectors and forbids weakening assertions; every
+ * assertion below is untouched.
+ *
  * HARVESTED INVARIANTS — migrated from apps/web @ ade49af (pre-rebuild).
  * Source: apps/web/e2e/authz.spec.ts
  *
@@ -11,7 +17,7 @@ import { expect, test } from "@playwright/test";
  */
 
 // TODO(rebuild) [INVARIANT] — rule: the role gate runs BEFORE validation — a role that lacks the action gets 403 even with an invalid body.
-test.skip("the mock server refuses a mutation the role doesn't hold — before validation", async ({
+test("the mock server refuses a mutation the role doesn't hold — before validation", async ({
   page,
 }) => {
   await page.goto("/account");
@@ -36,7 +42,7 @@ test.skip("the mock server refuses a mutation the role doesn't hold — before v
 });
 
 // TODO(rebuild) [INVARIANT] — rule: one permission table gates UI affordances and server mutations alike — they cannot drift.
-test.skip("a senior may resolve; an ops role may not — same endpoint, same table", async ({
+test("a senior may resolve; an ops role may not — same endpoint, same table", async ({
   page,
 }) => {
   await page.goto("/account");
@@ -52,7 +58,7 @@ test.skip("a senior may resolve; an ops role may not — same endpoint, same tab
 });
 
 // TODO(rebuild) [INVARIANT] — rule: the wire serves per-role projections: a typist's payload never NAMES another world, and no holder lists travel.
-test.skip("the wire serves per-role projections — a typist's payload never mentions other worlds", async ({
+test("the wire serves per-role projections — a typist's payload never mentions other worlds", async ({
   page,
 }) => {
   await page.goto("/account");
@@ -82,11 +88,11 @@ test.skip("the wire serves per-role projections — a typist's payload never men
 });
 
 // TODO(rebuild) [INVARIANT] — rule: the Me tab renders the served world and re-fetches on a role switch — it never computes the world locally.
-test.skip("the Me tab renders the served world and re-fetches on role switch", async ({
+test("the Me tab renders the served world and re-fetches on role switch", async ({
   page,
 }) => {
   await page.goto("/account");
-  await page.getByRole("button", { name: "Me" }).click();
+  await page.getByRole("tab", { name: "Me" }).click();
   const world = page.getByTestId("my-world");
   // admin's served world names every door
   await expect(world).toContainText("/queue");
@@ -100,7 +106,7 @@ test.skip("the Me tab renders the served world and re-fetches on role switch", a
 });
 
 // TODO(rebuild) [INVARIANT] — rule: a role-locked affordance is ABSENT, not disabled.
-test.skip("the engineer gate's confirm affordance exists only for its holders", async ({
+test("the engineer gate's confirm affordance exists only for its holders", async ({
   page,
 }) => {
   await page.goto("/account");
@@ -108,17 +114,17 @@ test.skip("the engineer gate's confirm affordance exists only for its holders", 
   await expect(page.getByTestId("confirm-DRAFT-HOA-AGE")).toBeVisible();
   // a reviewer sees the PENDING chip but no confirm button — the affordance
   // is absent, not disabled
-  await page.getByRole("button", { name: "Me" }).click();
+  await page.getByRole("tab", { name: "Me" }).click();
   await page.getByTestId("role-reviewer").click();
-  await page.getByRole("button", { name: "Rulebook" }).click();
+  await page.getByRole("tab", { name: "Rulebook" }).click();
   await expect(page.getByTestId("rule-DRAFT-HOA-AGE")).toContainText(
     "PENDING — CANNOT AFFECT THE PIPELINE",
   );
   await expect(page.getByTestId("confirm-DRAFT-HOA-AGE")).toHaveCount(0);
   // an engineer gets it back
-  await page.getByRole("button", { name: "Me" }).click();
+  await page.getByRole("tab", { name: "Me" }).click();
   await page.getByTestId("role-engineer").click();
-  await page.getByRole("button", { name: "Rulebook" }).click();
+  await page.getByRole("tab", { name: "Rulebook" }).click();
   await expect(page.getByTestId("confirm-DRAFT-HOA-AGE")).toBeVisible();
 });
 
@@ -127,7 +133,7 @@ test.skip("ops arriving at review via a complaint deep link can look, not touch"
   page,
 }) => {
   await page.goto("/account");
-  await page.getByRole("button", { name: "Me" }).click();
+  await page.getByRole("tab", { name: "Me" }).click();
   await page.getByTestId("role-ops").click();
   // travel by chord + context link only — a goto would reset the session
   await page.keyboard.press("g");

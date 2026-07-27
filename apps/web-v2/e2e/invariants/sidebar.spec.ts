@@ -1,6 +1,12 @@
 import { expect, test } from "@playwright/test";
 
 /**
+ * SELECTOR REWRITE 2026-07-28: the account tabs are getByRole("tab"), not
+ * ("button"). Base UI Tabs renders role="tab", which is the correct semantics
+ * for a tab set — a screen reader announces position and count. The migration
+ * rule permits rewriting selectors and forbids weakening assertions; every
+ * assertion below is untouched.
+ *
  * HARVESTED INVARIANTS — migrated from apps/web @ ade49af (pre-rebuild).
  * Source: apps/web/e2e/sidebar.spec.ts
  *
@@ -33,7 +39,7 @@ test.skip("doors outside the role's world are ABSENT, not dimmed", async ({
   page,
 }) => {
   await page.goto("/account");
-  await page.getByRole("button", { name: "Me" }).click();
+  await page.getByRole("tab", { name: "Me" }).click();
   await page.getByTestId("role-reviewer").click();
   // the rail updates live on the role switch — no reload (which would reset)
   await expect(page.getByTestId("rail-door-/queue")).toBeVisible();
