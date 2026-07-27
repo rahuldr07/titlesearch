@@ -149,7 +149,7 @@ test.skip("chord keys typed inside an input never navigate", async ({ page }) =>
 });
 
 // TODO(rebuild) [INVARIANT] — rule: §0.3 — pending renders as 'not yet extracted', never as 'Not Available', on the complaint capture list too.
-test.skip("the complaint capture list renders pending as 'not yet extracted' (§0.3)", async ({
+test("the complaint capture list renders pending as 'not yet extracted' (§0.3)", async ({
   page,
 }) => {
   await page.goto("/complaints");

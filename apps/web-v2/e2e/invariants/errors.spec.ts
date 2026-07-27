@@ -40,7 +40,7 @@ test.skip("the escalation inbox says unavailable when the list 500s", async ({
 });
 
 // TODO(rebuild) [ORPHAN RULE] — rule: a failed deliveries query renders a named unavailable state.
-test.skip("delivery says unavailable when deliveries 500s", async ({ page }) => {
+test("delivery says unavailable when deliveries 500s", async ({ page }) => {
   await interceptApi(page, {
     method: "GET",
     match: "/api/deliveries",
@@ -90,7 +90,7 @@ test.skip("seed correction with a stale fieldId names the stale link", async ({
 });
 
 // TODO(rebuild) [ORPHAN RULE] — rule: a failed mutation surfaces the server's message verbatim.
-test.skip("a delivery retry failure surfaces the server's message", async ({
+test("a delivery retry failure surfaces the server's message", async ({
   page,
 }) => {
   await interceptApi(page, {

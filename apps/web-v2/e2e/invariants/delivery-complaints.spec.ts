@@ -11,7 +11,7 @@ import { expect, test } from "@playwright/test";
  */
 
 // TODO(rebuild) [INVARIANT] — rule: §4.7 — a failed delivery is a TRANSIT problem (attend), never a quality problem (act), and offers retry.
-test.skip("a failed delivery reads as transit, offers retry, and retry delivers", async ({
+test("a failed delivery reads as transit, offers retry, and retry delivers", async ({
   page,
 }) => {
   await page.goto("/delivery");
@@ -25,7 +25,7 @@ test.skip("a failed delivery reads as transit, offers retry, and retry delivers"
 });
 
 // TODO(rebuild) [INVARIANT] — rule: every delivered version stays listed — the version list IS the defect record.
-test.skip("both report versions list as the defect record", async ({ page }) => {
+test("both report versions list as the defect record", async ({ page }) => {
   await page.goto("/delivery");
   const card = page.getByTestId("delivery-ord_demo_3");
   await expect(card.getByTestId("delivery-status")).toHaveText(
@@ -37,7 +37,7 @@ test.skip("both report versions list as the defect record", async ({ page }) => 
 });
 
 // TODO(rebuild) [INVARIANT] — rule: §4.8 — complaints group by how_it_got_through, and auto_confirmed is visually distinct because no human saw it. No per-reviewer complaint counts exist.
-test.skip("complaints group by how it got through; auto-confirmed is distinct", async ({
+test("complaints group by how it got through; auto-confirmed is distinct", async ({
   page,
 }) => {
   await page.goto("/complaints");
@@ -54,7 +54,7 @@ test.skip("complaints group by how it got through; auto-confirmed is distinct", 
 });
 
 // TODO(rebuild) [INVARIANT] — rule: complaint capture is per-field and refused until filled.
-test.skip("per-field capture records into its group", async ({ page }) => {
+test("per-field capture records into its group", async ({ page }) => {
   await page.goto("/complaints");
   await page.getByTestId("cap-deed.consideration").click();
   const record = page.getByTestId("cap-record");
@@ -70,7 +70,7 @@ test.skip("per-field capture records into its group", async ({ page }) => {
 });
 
 // TODO(rebuild) [INVARIANT] — rule: a complaint resolution is refused without a rule — a fix alone is not a resolution.
-test.skip("resolving a complaint is refused without a rule; a draft rule files it", async ({
+test("resolving a complaint is refused without a rule; a draft rule files it", async ({
   page,
 }) => {
   await page.goto("/complaints");
