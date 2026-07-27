@@ -156,3 +156,31 @@ the same substitution applies.
 D3 resolves BRIEF §8's *"which set ships is an unresolved ruling"* — it is now ruled.
 D2 is an owner decision that overrides implementer judgment on a RENDER element.
 These survive a fresh start; they are rulings, not code.
+
+---
+
+## D-9 — Three false attributions in BRIEF §6's enforcement column
+
+Found by an independent audit, 2026-07-27. `BRIEF.md` is kept verbatim, so the corrections
+live here.
+
+| §6 row | Brief says | Actually |
+|---|---|---|
+| No `any`, no `!`, no `@ts-ignore` | **tsc strict** | **eslint.** Proved: tsc strict flags **zero of the three**. `no-explicit-any`, `no-non-null-assertion` and `ban-ts-comment` catch all three. |
+| `features/` never import each other | **AST test** | **A regex** in `scripts/check-rules.mjs`. It has also never fired on real code, because `src/features/` does not exist yet. |
+| Unions handled exhaustively with a `never` guard | **tsc** | **Developer discipline.** tsc errors only once you have already *written* the guard. A new union with a non-exhaustive `switch` compiles clean. Nothing makes you write one. |
+
+The distinction matters because the column is read as a promise. A row that names a tool
+implies someone checked the tool does it.
+
+## D-10 — What the gates do NOT cover, stated plainly
+
+Of §9's 14 hard constraints, **10 have no automated enforcement**: never derive rules from
+pixels (1), never compute review routing (4), confidence as recommendation (5), no
+approve-all (6), no cherry-picking (8), no client state machine (9), no optimistic updates
+(10), no PII in telemetry (12), judgments never auto-confirm (13), and Valibot's server
+counterpart (14).
+
+All ten have harvested e2e coverage. **All 113 of those specs are `test.skip`.** Until Phase 5
+un-skips them, §9 is enforced by review and by nothing else, and the frontend CI job says so
+in its own output rather than letting a green tick imply otherwise.
