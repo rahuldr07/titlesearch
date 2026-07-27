@@ -2,7 +2,7 @@
 
 Sixteen. Each: what the design does, the constraint it breaks, and a suggested redraw.
 
-**Three are release-blocking** — C8, C9, C11 contradict harvested INVARIANT specs that pass today. Building them as drawn would require weakening a test, which the brief forbids.
+**Three were release-blocking** — C8, C9, C11 contradicted harvested INVARIANT specs. All three are now resolved: D1 settled C11, and C8/C9 were built to the suggested redraw (`4267830`…`8412036`). **C17 is the one open blocker.**
 
 ---
 
@@ -138,6 +138,28 @@ value you cannot cite — in addition to `review.spec` #6.
 **Design**: `MARIA L. ESTRADA`, `1147 E Saddlebrook Ln, Mesa AZ 85203`, `SUMMIT VALLEY BANK, N.A.`, `217-44-091`, `r.delacroix@titlepipe.internal`.
 **Breaks** nothing today — these are invented. But `frontend-master-prompt.md` §2 requires demo data be *"clearly synthetic"*, and this reads like a real file.
 **Redraw.** Keep the *shapes* and the weird states; make the values obviously fake in the MSW fixtures. Internal `.internal` emails are already fine.
+
+### C17 — The navigator was deleted; six invariants still depend on one
+**Found** 2026-07-28, building web-v2 (`sidebar.spec`, 6 tests, still skipped — the only unbuilt invariants left).
+
+**Design.** There is no rail. Commit `c2e9011` ("Delete the sidebar and the legacy theme") removed it, and the new export draws no replacement navigator on any screen. The hub plus `g`-chords carry navigation.
+
+**Breaks** — six harvested invariants that outlived the widget they were written against:
+- attention signals are DOTS, never counts — red for an unresolved complaint, amber for a gap (`rail-dot-{path}`)
+- role-locked doors are ABSENT, not dimmed, and update live on a role switch (`rail-door-{path}`)
+- the capture seat gets NO navigator — structural blindness stays whole
+- the navigator folds from the keyboard (`[`), and `[` inside a text field is text
+- the collapse preference persists across a reload and is never a one-way trap
+
+Three of those rules are already honoured elsewhere and only their MECHANISM died: role-locked doors are absent on the hub and refused by chord (`roles.spec` ×4, passing), and the capture seat has no doors at all (`blind-blindness.spec`, passing). The other three — attention dots, the fold, and the persisted preference — have nowhere to live.
+
+**Why it matters.** The dots are the only always-visible signal that a complaint is unresolved. On the hub they are one navigation away, which means they are seen when someone chooses to look — and an unresolved complaint is precisely the thing nobody chooses to look at.
+
+**Blocked on two things, neither of them mine.**
+1. **What the replacement is.** A persistent navigator contradicts a design that deliberately removed one. Options: re-draw a slim rail; put dots on the hub doors and drop the fold entirely (three invariants retire as STRUCTURAL); or carry them in a header strip. This is a design call.
+2. **`GET/PATCH /api/me/preferences` does not exist** — not in `packages/contract`, not in `packages/mocks`. The spec's own migration note directs the persistence at a server preference and rules out localStorage (§9.11, and `check-rules` rejects it). C16 already decided preferences live server-side; the endpoint was never added. Building it from this screen would be generating backend behaviour from the UI, which the root `CLAUDE.md` forbids outright.
+
+**Not built. Reported per BRIEF §5 Phase 5.** Everything else in the harvest is green: 107 of 113.
 
 ---
 

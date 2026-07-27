@@ -163,6 +163,12 @@ Also: *"Open this as a PENDING rule — prefilled"* — prefilling a rule draft 
 ### Q16 — Is MFA-on-privileged-accounts a server gate?
 The People screen renders *"N privileged account without MFA — this is a production gate."* Compliance §14 requires MFA. Is this enforced (blocks the account) or advisory (a banner)? The word "gate" implies enforcement.
 
+### Q17 — What replaces the deleted navigator, and does `/api/me/preferences` land?
+The rail is gone (`c2e9011`) and nothing replaces it, but six `sidebar.spec` invariants still describe one — attention dots, a keyboard fold, and a collapse preference that survives a reload. Three of the six are already satisfied by the hub and the chord layer and could retire as STRUCTURAL; the other three need somewhere to live.
+
+Second half: C16 decided user preferences belong on the server, and `GET/PATCH /api/me/preferences` was never added to the contract or the mocks. Until it exists the persistence assertion cannot be met without browser storage, which §9.11 forbids and `check-rules` rejects. See `conflicts.md` C17.
+
+
 ---
 
 ## Not asked here
