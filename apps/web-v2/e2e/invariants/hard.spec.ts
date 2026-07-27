@@ -16,7 +16,7 @@ const ready = async (page: import("@playwright/test").Page) => {
   await expect(page.getByTestId("rule-R13")).toBeVisible();
 };
 // TODO(rebuild) [INVARIANT] — rule: the role gate refuses a typist at every mutation (403) except the blind submit, where only the schema refuses (422).
-test.skip("the typist role is refused at EVERY mutation except the blind submit", async ({
+test("the typist role is refused at EVERY mutation except the blind submit", async ({
   page,
 }) => {
   await ready(page);
@@ -56,7 +56,7 @@ test.skip("the typist role is refused at EVERY mutation except the blind submit"
 });
 
 // TODO(rebuild) [INVARIANT] — rule: a forged or case-variant role is refused — roles are exact, and garbage never yields the admin world.
-test.skip("a forged role header is refused — mutations 403, the projection 400", async ({
+test("a forged role header is refused — mutations 403, the projection 400", async ({
   page,
 }) => {
   await ready(page);
@@ -81,7 +81,7 @@ test.skip("a forged role header is refused — mutations 403, the projection 400
 });
 
 // TODO(rebuild) [INVARIANT] — rule: the blind submit response is key-exact: any extra key would be a channel INTO blindness.
-test.skip("the blind submit response carries NOTHING beyond the ack (§0.6 at the wire)", async ({
+test("the blind submit response carries NOTHING beyond the ack (§0.6 at the wire)", async ({
   page,
 }) => {
   await ready(page);
