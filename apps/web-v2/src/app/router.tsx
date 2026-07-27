@@ -13,11 +13,12 @@ import { ExtractionBench } from "../features/bench/ExtractionBench";
 import { BenchResults } from "../features/bench/BenchResults";
 import { EscalationsScreen } from "../features/escalations/EscalationsScreen";
 import { ReviewScreen } from "../features/review/ReviewScreen";
+import { IngestScreen } from "../features/ingest/IngestScreen";
 import { ReconciliationScreen } from "../features/reconciliation/ReconciliationScreen";
 import { ReconciliationIndex } from "../features/reconciliation/ReconciliationIndex";
 import { BlindStatus } from "../features/blindStatus/BlindStatus";
 import { GlobalKeys } from "./GlobalKeys";
-import { NotBuiltYet, NotFound } from "./Placeholders";
+import { NotFound } from "./Placeholders";
 
 /**
  * Routes are guards and wiring only — no logic (BRIEF §7).
@@ -47,7 +48,6 @@ const rootRoute = createRootRoute({
 });
 
 const parent = () => rootRoute;
-const pending = (why: string) => () => <NotBuiltYet why={why} />;
 
 // ── built ───────────────────────────────────────────────────────────────────
 const homeRoute = createRoute({ getParentRoute: parent, path: "/", component: HomeHub });
@@ -68,11 +68,7 @@ const reviewRoute = createRoute({
   component: ReviewScreen,
 });
 const escalationsRoute = createRoute({ getParentRoute: parent, path: "/escalations", component: EscalationsScreen });
-const ingestRoute = createRoute({
-  getParentRoute: parent,
-  path: "/ingest",
-  component: pending("Blocked on rulings Q4–Q10 — the intake and config layer has no backend counterpart yet."),
-});
+const ingestRoute = createRoute({ getParentRoute: parent, path: "/ingest", component: IngestScreen });
 const dashboardRoute = createRoute({ getParentRoute: parent, path: "/dashboard", component: OpsDashboard });
 const complaintsRoute = createRoute({ getParentRoute: parent, path: "/complaints", component: ComplaintsScreen });
 const deliveryRoute = createRoute({ getParentRoute: parent, path: "/delivery", component: DeliveryScreen });

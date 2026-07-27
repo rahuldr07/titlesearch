@@ -90,7 +90,7 @@ export function GlobalKeys() {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onCaptureSeat]);
+  }, [onCaptureSeat, setMapOpen]);
   useHotkeys("escape", () => { setMapOpen(false); setArmed(false); }, { enabled: mapOpen || armed }, [mapOpen, armed]);
 
   if (!mapOpen) return null;

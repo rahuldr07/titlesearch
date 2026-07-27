@@ -21,22 +21,3 @@ export function NotFound() {
     </Card>
   );
 }
-
-/**
- * A door that exists in the role's world but whose screen is not built.
- *
- * It states WHY rather than showing an empty shell — the same reasoning as
- * ScreenFailure. Someone landing here should be able to tell "not written yet"
- * from "written, and there is nothing to show you", because only one of those
- * is a reason to go and ask somebody.
- */
-export function NotBuiltYet({ why }: { why: string }) {
-  return (
-    <Card size="emphasis" accent="attend">
-      <CardBody>
-        <Eyebrow variant="screen" tone="attend">Not built yet</Eyebrow>
-        <p className="mt-4 text-base leading-body text-ink-secondary">{why}</p>
-      </CardBody>
-    </Card>
-  );
-}

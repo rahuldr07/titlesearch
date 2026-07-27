@@ -25,7 +25,7 @@ async function fillOrder(page: import("@playwright/test").Page) {
   await page.getByTestId("package-input").setInputFiles(PKG);
 }
 // TODO(rebuild) [INVARIANT] — rule: §4.3 — the server's refusal renders its missing fields verbatim; the client does not author the list.
-test.skip("an incomplete upload is refused with the server's missing fields, verbatim", async ({
+test("an incomplete upload is refused with the server's missing fields, verbatim", async ({
   page,
 }) => {
   await page.goto("/ingest");
@@ -41,7 +41,7 @@ test.skip("an incomplete upload is refused with the server's missing fields, ver
 });
 
 // TODO(rebuild) [INVARIANT] — rule: acceptance is explicit — an upload alone never queues an order.
-test.skip("acceptance is explicit — upload alone never queues the order", async ({
+test("acceptance is explicit — upload alone never queues the order", async ({
   page,
 }) => {
   await page.goto("/ingest");
@@ -57,7 +57,7 @@ test.skip("acceptance is explicit — upload alone never queues the order", asyn
 });
 
 // TODO(rebuild) [INVARIANT] — rule: a duplicate package surfaces the server's sha256-match notice.
-test.skip("a byte-identical re-upload surfaces the server's duplicate notice", async ({
+test("a byte-identical re-upload surfaces the server's duplicate notice", async ({
   page,
 }) => {
   await page.goto("/ingest");
