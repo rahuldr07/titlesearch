@@ -61,10 +61,33 @@ export function toEvidenceBoxes(coords: LineCoords, page: PageBox): EvidenceBox[
   return boxes;
 }
 
+/**
+ * The second shape observed on the wire: `{ page, x0, y0, x1, y1 }` objects,
+ * already expressed as fractions of the page. Recognised here rather than
+ * normalised at the call site — this module is THE one place coordinates are
+ * interpreted, and a second reader elsewhere is how the two forms drift apart.
+ *
+ * Positively recognised or rejected, same as the quad form: an object missing
+ * any edge returns null and draws nothing.
+ */
+function edgesOf(quad: unknown): [number, number, number, number] | null {
+  if (Array.isArray(quad)) {
+    if (quad.length !== 4) return null;
+    const [x0, y0, x1, y1] = quad;
+    return [x0, y0, x1, y1].every(isFiniteNumber) ? [x0, y0, x1, y1] : null;
+  }
+  if (typeof quad !== "object" || quad === null) return null;
+  const box = quad as Record<string, unknown>;
+  const { x0, y0, x1, y1 } = box;
+  if (!isFiniteNumber(x0) || !isFiniteNumber(y0)) return null;
+  if (!isFiniteNumber(x1) || !isFiniteNumber(y1)) return null;
+  return [x0, y0, x1, y1];
+}
+
 function toBox(quad: unknown, page: PageBox): EvidenceBox | null {
-  if (!Array.isArray(quad) || quad.length !== 4) return null;
-  const [x0, y0, x1, y1] = quad;
-  if (![x0, y0, x1, y1].every(isFiniteNumber)) return null;
+  const edges = edgesOf(quad);
+  if (edges === null) return null;
+  const [x0, y0, x1, y1] = edges;
 
   const left = Math.min(x0, x1);
   const top = Math.min(y0, y1);

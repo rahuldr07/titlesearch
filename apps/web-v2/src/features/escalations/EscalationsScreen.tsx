@@ -5,7 +5,7 @@ import { escalationsQuery, rulesQuery } from "./queries";
 import { ClusterRail, type Cluster } from "./ClusterRail";
 import { ResolveCard } from "./ResolveCard";
 import { RuleStamp } from "./RuleStamp";
-import { Eyebrow } from "../../shared/ui/Eyebrow";
+import { ScreenTitle } from "../../app/ScreenTitle";
 
 function clusterBy(escalations: readonly Escalation[]): Cluster[] {
   const byPath = new Map<string, Escalation[]>();
@@ -52,7 +52,7 @@ export function EscalationsScreen() {
   return (
     <div className="flex flex-col gap-8">
       <header className="flex flex-col gap-3">
-        <Eyebrow variant="screen">Escalation inbox</Eyebrow>
+        <ScreenTitle>Escalation inbox</ScreenTitle>
         <p className="max-w-3xl text-base leading-body text-ink-secondary">
           A rules backlog — every item is a reviewer saying &ldquo;I don&rsquo;t
           know the rule&rdquo;. Answering one order is not the job; writing the

@@ -12,6 +12,7 @@ import { SeedCorrection } from "../features/seedCorrection/SeedCorrection";
 import { ExtractionBench } from "../features/bench/ExtractionBench";
 import { BenchResults } from "../features/bench/BenchResults";
 import { EscalationsScreen } from "../features/escalations/EscalationsScreen";
+import { ReviewScreen } from "../features/review/ReviewScreen";
 import { ReconciliationScreen } from "../features/reconciliation/ReconciliationScreen";
 import { ReconciliationIndex } from "../features/reconciliation/ReconciliationIndex";
 import { BlindStatus } from "../features/blindStatus/BlindStatus";
@@ -54,12 +55,17 @@ const queueRoute = createRoute({ getParentRoute: parent, path: "/queue", compone
 const accountRoute = createRoute({ getParentRoute: parent, path: "/account", component: AccountScreen });
 
 // ── not built: each says WHY, rather than rendering an empty shell ───────────
+/**
+ * SELECTION IS URL-OWNED. `?field=` is a first-class deep link (BRIEF §7): a
+ * complaint, an escalation or a colleague's message points at the exact field
+ * in context, and the destination is never asked to re-derive which one.
+ */
 const reviewRoute = createRoute({
   getParentRoute: parent,
   path: "/orders/$orderId/review",
-  component: pending(
-    "Blocked on conflicts C8 and C9 — the export's correction has no reason field, and its escalation fabricates one. Both break passing invariants, and §13 forbids building a screen whose RULE elements are unresolved. See docs/frontend/conflicts.md.",
-  ),
+  validateSearch: (search: Record<string, unknown>): { field?: string } =>
+    typeof search["field"] === "string" ? { field: search["field"] } : {},
+  component: ReviewScreen,
 });
 const escalationsRoute = createRoute({ getParentRoute: parent, path: "/escalations", component: EscalationsScreen });
 const ingestRoute = createRoute({

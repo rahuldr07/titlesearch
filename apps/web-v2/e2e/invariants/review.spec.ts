@@ -15,7 +15,7 @@ const go = async (page: import("@playwright/test").Page) => {
   await expect(page.getByTestId("sel-label")).toBeVisible();
 };
 // TODO(rebuild) [INVARIANT] — rule: the NA states are never collapsed, and `pending` is a distinct third render that never reads as an NA.
-test.skip("both NA states + pending render distinctly", async ({ page }) => {
+test("both NA states + pending render distinctly", async ({ page }) => {
   await go(page);
   // NOT_PRESENT — quiet, chip says expected
   const plat = page.getByTestId("row-legal.plat_book_page");
@@ -32,7 +32,7 @@ test.skip("both NA states + pending render distinctly", async ({ page }) => {
 });
 
 // TODO(rebuild) [INVARIANT] — rule: a value with no provenance renders as a visible hard error — never a blank, never a bare value.
-test.skip("a confirmed value without provenance renders visibly flagged", async ({
+test("a confirmed value without provenance renders visibly flagged", async ({
   page,
 }) => {
   await go(page);
@@ -42,7 +42,7 @@ test.skip("a confirmed value without provenance renders visibly flagged", async 
 });
 
 // TODO(rebuild) [INVARIANT] — rule: engine disagreement is surfaced on the row and both readings are shown attributed in the panel.
-test.skip("A≠B disagreement leads: chip on the row, both readings in the panel", async ({
+test("A≠B disagreement leads: chip on the row, both readings in the panel", async ({
   page,
 }) => {
   await go(page);
@@ -55,7 +55,7 @@ test.skip("A≠B disagreement leads: chip on the row, both readings in the panel
 });
 
 // TODO(rebuild) [INVARIANT] — rule: a correction is refused without its reason.
-test.skip("correction without a reason never submits", async ({ page }) => {
+test("correction without a reason never submits", async ({ page }) => {
   await go(page);
   await page.getByTestId("row-mortgages.1.lender").click();
   await page.keyboard.press("c");
@@ -70,7 +70,7 @@ test.skip("correction without a reason never submits", async ({ page }) => {
 });
 
 // TODO(rebuild) [INVARIANT] — rule: the server's returned state is what renders — never an optimistic local mutation.
-test.skip("correction with value + reason submits and renders the server's state", async ({
+test("correction with value + reason submits and renders the server's state", async ({
   page,
 }) => {
   await go(page);
@@ -86,7 +86,7 @@ test.skip("correction with value + reason submits and renders the server's state
 });
 
 // TODO(rebuild) [INVARIANT] — rule: an escalation is refused without its question.
-test.skip("escalation without a question never submits", async ({ page }) => {
+test("escalation without a question never submits", async ({ page }) => {
   await go(page);
   await page.getByTestId("row-owner.zip").click();
   await page.keyboard.press("e");
@@ -100,7 +100,7 @@ test.skip("escalation without a question never submits", async ({ page }) => {
 });
 
 // TODO(rebuild) [INVARIANT] — rule: a recorded escalation marks the row and advances selection to the next queued field.
-test.skip("escalation with a question records; confirm via ⏎ records", async ({
+test("escalation with a question records; confirm via ⏎ records", async ({
   page,
 }) => {
   await go(page);
@@ -118,7 +118,7 @@ test.skip("escalation with a question records; confirm via ⏎ records", async (
 });
 
 // TODO(rebuild) [INVARIANT] — rule: no approve-all, no throughput language, no timers anywhere on the review workstation.
-test.skip("no approve-all, no throughput, no timers", async ({ page }) => {
+test("no approve-all, no throughput, no timers", async ({ page }) => {
   await go(page);
   const body = (await page.locator("body").innerText()).toLowerCase();
   expect(body).not.toContain("approve");
@@ -128,7 +128,7 @@ test.skip("no approve-all, no throughput, no timers", async ({ page }) => {
 });
 
 // TODO(rebuild) [INVARIANT] — rule: ORPHAN O20 — field navigation visits ONLY server-queued fields. A reviewer cannot walk into auto-confirmed fields. (Promoted to INVARIANT by open-rulings Q3.)
-test.skip("J/K walk the queued fields only", async ({ page }) => {
+test("J/K walk the queued fields only", async ({ page }) => {
   await go(page);
   await expect(page.getByTestId("sel-label")).toHaveText("OWNER ZIP");
   await page.keyboard.press("j");
@@ -140,7 +140,7 @@ test.skip("J/K walk the queued fields only", async ({ page }) => {
 });
 
 // TODO(rebuild) [INVARIANT] — rule: provenance coordinates render as a pin on the source page raster.
-test.skip("reader B line pins on the page from its coordinates", async ({
+test("reader B line pins on the page from its coordinates", async ({
   page,
 }) => {
   await go(page);

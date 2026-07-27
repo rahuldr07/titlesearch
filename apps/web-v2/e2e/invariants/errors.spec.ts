@@ -54,7 +54,7 @@ test("delivery says unavailable when deliveries 500s", async ({ page }) => {
 });
 
 // TODO(rebuild) [ORPHAN RULE] — rule: a partial failure degrades that region only — the order spine still renders its identity.
-test.skip("the order spine survives a timeline failure", async ({ page }) => {
+test("the order spine survives a timeline failure", async ({ page }) => {
   await interceptApi(page, {
     method: "GET",
     match: "/timeline",

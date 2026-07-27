@@ -63,7 +63,7 @@ const crafted = {
   ],
 };
 // TODO(rebuild) [INVARIANT] — rule: pending+null is 'not yet extracted' — never 'Not Available', never queued. needs_review is NEVER derived from value === null.
-test.skip("a null pending field renders 'not yet extracted' — never Not Available, never queued", async ({
+test("a null pending field renders 'not yet extracted' — never Not Available, never queued", async ({
   page,
 }) => {
   await interceptApi(page, {
@@ -82,7 +82,7 @@ test.skip("a null pending field renders 'not yet extracted' — never Not Availa
 });
 
 // TODO(rebuild) [INVARIANT] — rule: the server owns `state`. engine confidence never promotes or demotes a field (0.99 stays queued, 0.01 stays confirmed).
-test.skip("the state pill renders server state verbatim — confidence never promotes or demotes", async ({
+test("the state pill renders server state verbatim — confidence never promotes or demotes", async ({
   page,
 }) => {
   await interceptApi(page, {

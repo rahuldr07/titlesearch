@@ -7,6 +7,7 @@ import { Eyebrow } from "../../shared/ui/Eyebrow";
 import { Chip } from "../../shared/ui/Chip";
 import { Button } from "../../shared/ui/Button";
 import { formatRecordingDate } from "../../shared/date";
+import { ScreenTitle } from "../../app/ScreenTitle";
 
 type Delivery = DeliveryWithReport;
 
@@ -38,7 +39,7 @@ export function DeliveryScreen() {
 
   return (
     <div className="flex flex-col gap-8">
-      <Eyebrow variant="screen">Delivery</Eyebrow>
+      <ScreenTitle>Delivery</ScreenTitle>
 
       {[...byOrder.entries()].map(([orderId, deliveries]) => {
         const failed = deliveries.find((d) => d.status === "failed_transit");

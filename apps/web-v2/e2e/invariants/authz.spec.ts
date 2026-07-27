@@ -129,7 +129,7 @@ test("the engineer gate's confirm affordance exists only for its holders", async
 });
 
 // TODO(rebuild) [INVARIANT] — rule: a non-review role reaching review by deep link can look, not touch — review actions absent, the bug channel open.
-test.skip("ops arriving at review via a complaint deep link can look, not touch", async ({
+test("ops arriving at review via a complaint deep link can look, not touch", async ({
   page,
 }) => {
   await page.goto("/account");

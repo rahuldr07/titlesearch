@@ -11,7 +11,7 @@ import { expect, test } from "@playwright/test";
  */
 
 // TODO(rebuild) [INVARIANT] — rule: ORPHAN — keyboard IS the navigation layer; ? renders the map. (Promoted to INVARIANT by open-rulings Q3.)
-test.skip("g-sequences jump between screens; ? shows the map", async ({ page }) => {
+test("g-sequences jump between screens; ? shows the map", async ({ page }) => {
   await page.goto("/queue");
   await expect(page.getByTestId("order-ref")).toBeVisible();
   await page.keyboard.press("g");
@@ -29,7 +29,7 @@ test.skip("g-sequences jump between screens; ? shows the map", async ({ page }) 
 });
 
 // TODO(rebuild) [ORPHAN RULE] — rule: ORPHAN O15 — a chord's second key must never ALSO fire a screen action. This is what stops a stray keystroke destroying an in-progress correction. (Promoted by Q3.)
-test.skip("a g-sequence's second key never leaks into screen hotkeys", async ({
+test("a g-sequence's second key never leaks into screen hotkeys", async ({
   page,
 }) => {
   await page.goto("/orders/ord_demo_1/review");
@@ -41,7 +41,7 @@ test.skip("a g-sequence's second key never leaks into screen hotkeys", async ({
 });
 
 // TODO(rebuild) [ORPHAN RULE] — rule: ORPHAN — the key map is modal: it swallows screen keys while open and restores them on Escape. (Promoted by Q3.)
-test.skip("the ? overlay swallows screen keys while open", async ({ page }) => {
+test("the ? overlay swallows screen keys while open", async ({ page }) => {
   await page.goto("/orders/ord_demo_1/review");
   await expect(page.getByTestId("sel-label")).toHaveText("OWNER ZIP");
   await page.keyboard.press("?");
@@ -59,7 +59,7 @@ test.skip("the ? overlay swallows screen keys while open", async ({ page }) => {
 });
 
 // TODO(rebuild) [INVARIANT] — rule: deep links are first-class — ?field= lands on the exact field in context. (BRIEF §7 makes this URL-owned selection.)
-test.skip("?field= deep links land on the exact field in context", async ({
+test("?field= deep links land on the exact field in context", async ({
   page,
 }) => {
   await page.goto("/orders/ord_demo_1/review?field=judgments.1.case_no");
@@ -91,7 +91,7 @@ test("bench results carries context into seed correction", async ({ page }) => {
 });
 
 // TODO(rebuild) [INVARIANT] — rule: the order's states travel with it — the spine shows queue, escalation and delivery state together.
-test.skip("the order spine travels with the order on Review", async ({ page }) => {
+test("the order spine travels with the order on Review", async ({ page }) => {
   await page.goto("/orders/ord_demo_1/review");
   const rail = page.getByTestId("order-rail");
   await expect(rail).toContainText("ord_demo_1");

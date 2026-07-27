@@ -6,6 +6,7 @@ import { Card, CardBody } from "../../shared/ui/Card";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
 import { Chip } from "../../shared/ui/Chip";
 import { ApiError } from "../../shared/api";
+import { ScreenTitle } from "../../app/ScreenTitle";
 
 /**
  * RECONCILIATION — two typists read the same package blind, and where they
@@ -30,7 +31,7 @@ export function ReconciliationScreen() {
     return (
       <Card data-testid="recon-empty">
         <CardBody className="flex flex-col gap-4">
-          <Eyebrow variant="screen">Nothing to reconcile</Eyebrow>
+          <ScreenTitle>Nothing to reconcile</ScreenTitle>
           <p className="max-w-2xl text-base leading-body text-ink-secondary">
             No divergences are recorded against{" "}
             <code className="font-mono">{orderId}</code>. Either both passes
@@ -44,7 +45,7 @@ export function ReconciliationScreen() {
   return (
     <div className="flex flex-col gap-8">
       <header className="flex flex-col gap-3">
-        <Eyebrow variant="screen">Reconciliation</Eyebrow>
+        <ScreenTitle>Reconciliation</ScreenTitle>
         <p className="font-mono text-xs text-ink-muted">
           {orderId} · {ruled.length} of {data.divergences.length} ruled
         </p>

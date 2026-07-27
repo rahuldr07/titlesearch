@@ -5,6 +5,7 @@ import { LeaderboardMatrix } from "./LeaderboardMatrix";
 import { SeatFlip } from "./SeatFlip";
 import { Card, CardBody, CardHeader } from "../../shared/ui/Card";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
+import { ScreenTitle } from "../../app/ScreenTitle";
 
 /**
  * Engine performance, per jurisdiction and section. Never one number.
@@ -36,7 +37,7 @@ export function LeaderboardScreen() {
 
   return (
     <div className="flex flex-col gap-8">
-      <Eyebrow variant="screen">Engine leaderboard</Eyebrow>
+      <ScreenTitle>Engine leaderboard</ScreenTitle>
       <p className="text-base leading-body text-ink-secondary">
         THERE IS NO BEST ENGINE — a cell that wins one jurisdiction and section
         loses another, and there is no auto-promotion anywhere in this screen.

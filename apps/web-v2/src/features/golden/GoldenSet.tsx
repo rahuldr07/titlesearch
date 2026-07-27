@@ -3,6 +3,7 @@ import { CAPTURE_SECTIONS } from "./roster";
 import { CaptureRow } from "./CaptureRow";
 import { Card, CardBody, CardHeader } from "../../shared/ui/Card";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
+import { ScreenTitle } from "../../app/ScreenTitle";
 
 const ORDER = "26-04490";
 
@@ -46,7 +47,7 @@ export function GoldenSet() {
   return (
     <div className="flex flex-col gap-8">
       <header className="flex flex-col gap-3">
-        <Eyebrow variant="screen">Golden set — capture</Eyebrow>
+        <ScreenTitle>Golden set — capture</ScreenTitle>
         <p className="font-mono text-xs text-ink-muted">
           order 12 of 50 · {ORDER} · Clayton Co. · 41 pp
         </p>

@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useHotkeys } from "react-hotkeys-hook";
 import { doorsFor, doorForKey } from "../entities/nav/doors";
 import { useSession } from "../shared/session";
+import { useKeyboardLayer } from "../shared/keyboard";
 import { Eyebrow } from "../shared/ui/Eyebrow";
 import { Card, CardBody } from "../shared/ui/Card";
 
@@ -24,8 +25,15 @@ import { Card, CardBody } from "../shared/ui/Card";
 export function GlobalKeys() {
   const navigate = useNavigate();
   const role = useSession((s) => s.role);
-  const [armed, setArmed] = useState(false);
-  const [mapOpen, setMapOpen] = useState(false);
+  /*
+   * Chord and map state live in the shared keyboard layer rather than here, so
+   * the screen underneath can stand its own hotkeys down while either is up.
+   * Same rule twice: a key belongs to exactly one layer at a time.
+   */
+  const armed = useKeyboardLayer((s) => s.armed);
+  const mapOpen = useKeyboardLayer((s) => s.mapOpen);
+  const setArmed = useKeyboardLayer((s) => s.setArmed);
+  const setMapOpen = useKeyboardLayer((s) => s.setMapOpen);
 
   /*
    * THE GLOBAL KEY LAYER IS DEAD ON THE CAPTURE SEAT. `blind-blindness.spec` #2
@@ -92,7 +100,12 @@ export function GlobalKeys() {
       <div data-testid="key-map" className="w-full max-w-160">
         <Card size="emphasis">
           <CardBody>
-            <Eyebrow variant="screen">Keyboard as navigation</Eyebrow>
+            {/*
+              Upper-case in the MARKUP, not via `text-transform`: `navigation.spec`
+              #1 matches this case-sensitively, and a CSS transform does not change
+              what the text actually says.
+            */}
+            <Eyebrow variant="screen">KEYBOARD AS NAVIGATION</Eyebrow>
             <p className="mt-3 text-base text-ink-secondary">
               Press <span className="font-mono">g</span> then a key. Escape closes this.
             </p>

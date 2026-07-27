@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { goldenQuery } from "./queries";
 import { SeedRecord } from "./SeedRecord";
 import { Card, CardBody } from "../../shared/ui/Card";
-import { Eyebrow } from "../../shared/ui/Eyebrow";
+import { ScreenTitle } from "../../app/ScreenTitle";
 
 /**
  * SEED CORRECTION — the only place in the system where ground truth changes.
@@ -26,7 +26,7 @@ export function SeedCorrection() {
     return (
       <Card data-testid="no-context" accent="attend">
         <CardBody className="flex flex-col gap-4">
-          <Eyebrow variant="screen">Seed correction</Eyebrow>
+          <ScreenTitle>Seed correction</ScreenTitle>
           <p className="max-w-2xl text-base leading-body text-ink-secondary">
             This screen has no menu entry. It opens one field, one document, one
             record — and it only opens from the failure that raised the question.
@@ -53,7 +53,7 @@ export function SeedCorrection() {
     return (
       <Card data-testid="stale-link" accent="halt">
         <CardBody className="flex flex-col gap-4">
-          <Eyebrow variant="screen">Stale link</Eyebrow>
+          <ScreenTitle>Stale link</ScreenTitle>
           <p className="max-w-2xl text-base leading-body text-ink-secondary">
             The golden set has no field <code className="font-mono">{fieldId}</code>.
             The link you followed is older than the seed it points at — the field
@@ -71,7 +71,7 @@ export function SeedCorrection() {
   return (
     <div className="flex flex-col gap-8">
       <header className="flex flex-col gap-3">
-        <Eyebrow variant="screen">Seed correction</Eyebrow>
+        <ScreenTitle>Seed correction</ScreenTitle>
         <p className="max-w-3xl text-base leading-body text-ink-secondary">
           The only place in the system where ground truth changes — one field,
           one document, one record. No bulk operations exist.

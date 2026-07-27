@@ -5,6 +5,7 @@ import { DrillDrawer } from "./DrillDrawer";
 import { Card, CardBody, CardHeader } from "../../shared/ui/Card";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
 import { Chip } from "../../shared/ui/Chip";
+import { ScreenTitle } from "../../app/ScreenTitle";
 
 /**
  * The readout.
@@ -39,7 +40,7 @@ export function OpsDashboard() {
 
   return (
     <div className="flex flex-col gap-8">
-      <Eyebrow variant="screen">Readout</Eyebrow>
+      <ScreenTitle>Readout</ScreenTitle>
 
       <Card>
         <CardHeader filled>

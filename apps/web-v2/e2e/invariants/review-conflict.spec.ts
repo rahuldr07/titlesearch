@@ -12,7 +12,7 @@ import { expect, test } from "@playwright/test";
 
 import { interceptApi } from "../helpers/net";
 // TODO(rebuild) [INVARIANT] — rule: a 409 is an ANSWER, not a dead no-op: the server's message surfaces verbatim, selection never advances, and the field repaints as the server has it.
-test.skip("confirm 409 (different value) surfaces the server's message and never advances", async ({
+test("confirm 409 (different value) surfaces the server's message and never advances", async ({
   page,
 }) => {
   await interceptApi(page, {
@@ -36,7 +36,7 @@ test.skip("confirm 409 (different value) surfaces the server's message and never
 });
 
 // TODO(rebuild) [INVARIANT] — rule: a terminal-state 409 is answered the same way — surfaced, not swallowed.
-test.skip("confirm 409 (terminal state) is answered, not a dead no-op", async ({
+test("confirm 409 (terminal state) is answered, not a dead no-op", async ({
   page,
 }) => {
   await interceptApi(page, {
@@ -55,7 +55,7 @@ test.skip("confirm 409 (terminal state) is answered, not a dead no-op", async ({
 });
 
 // TODO(rebuild) [INVARIANT] — rule: confirm is idempotent on an identical value (200/200) and conflicts on a different one (409).
-test.skip("bug-5 mock semantics hold: same value 200/200, different value 409", async ({
+test("bug-5 mock semantics hold: same value 200/200, different value 409", async ({
   page,
 }) => {
   // no interception — this pins the MSW contract the UI now depends on

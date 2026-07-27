@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { Card, CardBody } from "../../shared/ui/Card";
-import { Eyebrow } from "../../shared/ui/Eyebrow";
+import { ScreenTitle } from "../../app/ScreenTitle";
 
 /**
  * RECONCILIATION OPENS PER ORDER, and there is no picker here.
@@ -15,7 +15,7 @@ export function ReconciliationIndex() {
   return (
     <Card>
       <CardBody className="flex flex-col gap-4">
-        <Eyebrow variant="screen">Reconciliation</Eyebrow>
+        <ScreenTitle>Reconciliation</ScreenTitle>
         <p className="max-w-2xl text-base leading-body text-ink-secondary">
           Reconciliation happens one order at a time — it opens from the order,
           not from a list. The orders whose two passes are both in are on{" "}

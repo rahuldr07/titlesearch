@@ -4,6 +4,7 @@ import { metricsQuery } from "./queries";
 import { CoverageList } from "./CoverageList";
 import { Card, CardBody, CardHeader } from "../../shared/ui/Card";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
+import { ScreenTitle } from "../../app/ScreenTitle";
 
 /**
  * BLIND FIFTY — STATUS. Read-only: you see the state, you act elsewhere.
@@ -36,7 +37,7 @@ export function BlindStatus() {
   return (
     <div className="flex flex-col gap-8">
       <header className="flex flex-col gap-2">
-        <Eyebrow variant="screen">Blind fifty — status</Eyebrow>
+        <ScreenTitle>Blind fifty — status</ScreenTitle>
         <p className="text-xs text-ink-muted">
           read-only — you see the state, you act elsewhere
         </p>

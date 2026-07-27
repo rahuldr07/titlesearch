@@ -2,8 +2,8 @@ import { useState } from "react";
 import { RulebookTab } from "./RulebookTab";
 import { MeTab } from "./MeTab";
 import { AuditTab } from "./AuditTab";
-import { Eyebrow } from "../../shared/ui/Eyebrow";
 import { Tabs, TabList, Tab, TabPanel } from "../../shared/ui/Tabs";
+import { ScreenTitle } from "../../app/ScreenTitle";
 
 /**
  * The account layer: the rulebook, your own world, and the audit log.
@@ -20,7 +20,7 @@ export function AccountScreen() {
 
   return (
     <div className="flex flex-col gap-8">
-      <Eyebrow variant="screen">Account</Eyebrow>
+      <ScreenTitle>Account</ScreenTitle>
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabList variant="standalone">

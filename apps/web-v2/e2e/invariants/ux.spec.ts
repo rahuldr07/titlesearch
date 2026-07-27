@@ -15,7 +15,7 @@ const go = async (page: import("@playwright/test").Page) => {
   await expect(page.getByTestId("sel-label")).toBeVisible();
 };
 // TODO(rebuild) [ORPHAN RULE] — rule: ORPHAN — when both engines found a value and disagree, the UI must never claim extraction returned nothing. The draft leads, labelled as a draft.
-test.skip("a both-found disagreement never claims emptiness — draft leads, labeled", async ({
+test("a both-found disagreement never claims emptiness — draft leads, labeled", async ({
   page,
 }) => {
   await go(page);
@@ -33,7 +33,7 @@ test.skip("a both-found disagreement never claims emptiness — draft leads, lab
 });
 
 // TODO(rebuild) [ORPHAN RULE] — rule: ORPHAN — the differing characters between two readings are highlighted, so the reviewer sees WHERE they diverge.
-test.skip("differing characters between readings are highlighted", async ({
+test("differing characters between readings are highlighted", async ({
   page,
 }) => {
   await go(page);
@@ -44,7 +44,7 @@ test.skip("differing characters between readings are highlighted", async ({
 });
 
 // TODO(rebuild) [ORPHAN RULE] — rule: ORPHAN — a reading can be adopted into the correction editor without retyping. Transcription is a defect source.
-test.skip("a reading can be adopted into the correction editor without retyping", async ({
+test("a reading can be adopted into the correction editor without retyping", async ({
   page,
 }) => {
   await go(page);
@@ -63,7 +63,7 @@ test.skip("a reading can be adopted into the correction editor without retyping"
 });
 
 // TODO(rebuild) [ORPHAN RULE] — rule: ORPHAN O9 — Enter never accepts a blank. A missing field demands an explicit click. This is the only keyboard-layer defence against bulk-accepting absences.
-test.skip("⏎ never accepts a blank — missing fields demand a click", async ({
+test("⏎ never accepts a blank — missing fields demand a click", async ({
   page,
 }) => {
   await page.goto("/orders/ord_demo_1/review?field=mortgages.1.lender");
@@ -82,7 +82,7 @@ test.skip("⏎ never accepts a blank — missing fields demand a click", async (
 });
 
 // TODO(rebuild) [ORPHAN RULE] — rule: ORPHAN — every refusal speaks: escalate, correct and pass each nudge with what is missing. A silent no-op is the defect.
-test.skip("refused submits SAY so — escalate, correct, pass all nudge", async ({
+test("refused submits SAY so — escalate, correct, pass all nudge", async ({
   page,
 }) => {
   await go(page);
@@ -122,7 +122,7 @@ test("the queue's pass refusal nudges too", async ({ page }) => {
 // The mechanism (a TopBar title) is old-UI and disposable; the rule is not, and
 // commit c2e9011 deleted the side rail that was the other mouse path home.
 // Re-selector to whatever the new design uses; do not weaken the assertion.
-test.skip("every screen's title is the mouse path home", async ({ page }) => {
+test("every screen's title is the mouse path home", async ({ page }) => {
   await go(page);
   // the screen TITLE, not a rail door, is the mouse path home
   await page.getByTestId("screen-title").click();

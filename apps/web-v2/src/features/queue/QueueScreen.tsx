@@ -3,12 +3,13 @@ import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useHotkeys } from "react-hotkeys-hook";
 import { nextOrderQuery, usePassOrder } from "./queries";
-import { PassControl } from "./PassControl";
+import { PassControl } from "../../entities/order/PassControl";
 import { Card, CardBody, CardHeader } from "../../shared/ui/Card";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
 import { Button } from "../../shared/ui/Button";
 import { ScreenFailure } from "../../shared/ui/ScreenFailure";
 import { OrderStatusChip } from "../../entities/order/OrderStatusChip";
+import { ScreenTitle } from "../../app/ScreenTitle";
 
 /**
  * ONE order, chosen by the server. There is no list, no filter and no sort —
@@ -58,7 +59,7 @@ export function QueueScreen() {
 
   return (
     <div className="flex flex-col gap-6">
-      <Eyebrow variant="screen">Next up</Eyebrow>
+      <ScreenTitle>Next up</ScreenTitle>
 
       {passedRef ? (
         <p data-testid="passed-note" className="text-base text-ink-secondary">

@@ -5,6 +5,10 @@ import { TextField } from "../../shared/ui/TextField";
 /**
  * "Why are you passing?" — the refusal, inline.
  *
+ * Lives in entities/ because BOTH the queue and the review workstation refuse a
+ * pass the same way, and two copies of a refusal drift into two different
+ * refusals. It stays presentational — the caller owns the mutation.
+ *
  * `queue.spec` #3 (ORPHAN RULE) pins three things: the input takes focus when
  * it opens, Enter on an empty value submits NOTHING, and Escape closes it
  * leaving the order where it was. All three are about not losing a reviewer's

@@ -5,6 +5,7 @@ import { RuleContext } from "./RuleContext";
 import { Card, CardBody, CardHeader } from "../../shared/ui/Card";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
 import { Button } from "../../shared/ui/Button";
+import { ScreenTitle } from "../../app/ScreenTitle";
 
 /**
  * EXTRACTION BENCH — the prompt, its rule context, and what it got wrong.
@@ -25,7 +26,7 @@ export function ExtractionBench() {
   return (
     <div className="flex flex-col gap-8">
       <header className="flex flex-wrap items-baseline gap-5">
-        <Eyebrow variant="screen">Extraction bench</Eyebrow>
+        <ScreenTitle>Extraction bench</ScreenTitle>
         <Link to="/bench/results" className="text-xs font-semibold text-action underline">
           bench results →
         </Link>

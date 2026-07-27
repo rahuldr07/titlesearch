@@ -7,6 +7,8 @@ import { Card, CardBody, CardHeader } from "../../shared/ui/Card";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
 import { Chip } from "../../shared/ui/Chip";
 import { Button } from "../../shared/ui/Button";
+import { Link } from "@tanstack/react-router";
+import { ScreenTitle } from "../../app/ScreenTitle";
 
 const GROUP_LABEL: Record<string, string> = {
   auto_confirmed: "AUTO-CONFIRMED — NO HUMAN SAW IT",
@@ -40,7 +42,7 @@ export function ComplaintsScreen() {
 
   return (
     <div className="flex flex-col gap-8">
-      <Eyebrow variant="screen">Complaints</Eyebrow>
+      <ScreenTitle>Complaints</ScreenTitle>
       <p className="text-base text-ink-secondary">
         No per-reviewer complaint counts exist here. A complaint is evidence
         about the pipeline, not about a person.
@@ -72,6 +74,20 @@ export function ComplaintsScreen() {
                         no human ever saw it
                       </Chip>
                     ) : null}
+                    {/*
+                      CONTEXT TRAVELS THROUGH THE LINK. A complaint names an
+                      order and a field; the destination is never asked to
+                      re-derive which field was complained about.
+                    */}
+                    <Link
+                      to="/orders/$orderId/review"
+                      params={{ orderId: c.order_id }}
+                      search={{ field: c.field_path }}
+                      data-testid={`complaint-open-${c.id}`}
+                      className="text-xs font-semibold text-action underline"
+                    >
+                      Open the field
+                    </Link>
                     {c.resolution ? (
                       <Chip tone="settled" size="sm">resolved</Chip>
                     ) : (

@@ -132,7 +132,7 @@ test("resolving the same escalation twice is refused the second time", async ({
 });
 
 // TODO(rebuild) [INVARIANT] — rule: keys typed inside an input are TEXT, never chords. Typing a correction must never trigger navigation.
-test.skip("chord keys typed inside an input never navigate", async ({ page }) => {
+test("chord keys typed inside an input never navigate", async ({ page }) => {
   await page.goto("/orders/ord_demo_1/review");
   await expect(page.getByTestId("sel-label")).toHaveText("OWNER ZIP");
   await page.keyboard.press("e");

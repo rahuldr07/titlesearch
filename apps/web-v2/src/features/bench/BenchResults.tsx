@@ -6,6 +6,7 @@ import { FailRow } from "./FailRow";
 import { Card, CardBody, CardHeader } from "../../shared/ui/Card";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
 import { Chip } from "../../shared/ui/Chip";
+import { ScreenTitle } from "../../app/ScreenTitle";
 
 /**
  * BENCH RESULTS — a matrix and its failures, and NO AGGREGATE HEADLINE
@@ -31,7 +32,7 @@ export function BenchResults() {
   return (
     <div className="flex flex-col gap-8">
       <header className="flex flex-col gap-3">
-        <Eyebrow variant="screen">Bench results</Eyebrow>
+        <ScreenTitle>Bench results</ScreenTitle>
         <p className="font-mono text-xs text-ink-muted">
           {data.run_ref} · {data.seed_version} · {data.total_fields} fields ·{" "}
           {data.orders} real orders
