@@ -35,7 +35,22 @@ Sixteen. Each: what the design does, the constraint it breaks, and a suggested r
 
 **Why it matters.** The escalation screen the same design draws (`:1050–1051`) renders **"Reason"** from `escField.reason` — so the receiving end expects a question the sending end never collects. The two screens disagree with each other.
 
-**Suggested redraw.** Escalate opens a required question input in the card, same treatment as the correction reason. The escalation screen's "Reason" block then has a real source.
+**Worse than "no field" — it fabricates one.** Found during the Phase 2 audit, 2026-07-27
+(`phase2-audit.md` §3.1). `escalateField` at `:2681` does not leave the reason empty:
+
+```js
+reason: (s.signoffComments[fieldId] || 'Escalated from review')
+```
+
+When no comment exists it substitutes the literal string **`'Escalated from review'`**. The
+escalation therefore arrives carrying a reason no human wrote.
+
+That is materially worse than an omission. A missing input is visibly missing; a fabricated
+default is indistinguishable downstream from a real one, and the senior resolving the
+escalation has no way to tell which they are reading. It breaks principle 6 — never emit a
+value you cannot cite — in addition to `review.spec` #6.
+
+**Suggested redraw.** Escalate opens a required question input in the card, same treatment as the correction reason. The escalation screen's "Reason" block then has a real source. **The default must be deleted, not just supplemented** — leaving it in place while adding an input would preserve the fabrication on every path that skips the input.
 
 ---
 

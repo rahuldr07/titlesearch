@@ -1,0 +1,40 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": [
+    ".storybook/{main,preview}.ts",
+    "e2e/**/*.spec.ts",
+    "*.test.ts"
+  ],
+  "project": [
+    "src/**/*.{ts,tsx}",
+    ".storybook/**/*.ts",
+    "scripts/*.mjs"
+  ],
+  "ignoreDependencies": [
+    "@titlepipe/ui-tokens",
+    "tailwindcss",
+    "@tanstack/react-query",
+    "@tanstack/react-router",
+    "@tanstack/react-table",
+    "@tanstack/react-virtual",
+    "@titlepipe/contract",
+    "@titlepipe/mocks",
+    "react-hook-form",
+    "@hookform/resolvers",
+    "valibot",
+    "zustand",
+    "cmdk",
+    "lucide-react",
+    "sonner",
+    "react-hotkeys-hook",
+    "react-pdf",
+    "pdfjs-dist",
+    "msw",
+    "@testing-library/react",
+    "@axe-core/playwright"
+  ],
+  "rules": {
+    "types": "warn",
+    "enumMembers": "warn"
+  }
+}

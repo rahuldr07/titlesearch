@@ -28,6 +28,34 @@ Copied in via CLI, re-themed to `@titlepipe/ui-tokens`. No behavioural changes.
 
 **Not used, deliberately:** `accordion` (decision cards do their own expand), `command`, `popover` for the account menu (`dropdown-menu` is correct), `toast` (the design surfaces every outcome inline, which is the better pattern here — see O10).
 
+### Built 2026-07-27 — Phase 3 outcome, and two departures from this table
+
+Fifteen primitives shipped in `apps/web-v2/src/shared/ui/`, each with a Storybook story
+running as a browser test with axe at `error`: `Button` · `Eyebrow` · `Chip` · `Card` ·
+`Stamp` · `TextField`/`TextArea` · `Switch` · `Tabs` · `Menu` · `Tooltip` · `Checkbox` ·
+`RadioGroup` · `ToggleGroup` · `Select` · `Drawer`.
+
+Two rows above were not implemented as written:
+
+**`alert-dialog` — NOT BUILT.** This table already records the reason: *"Design uses inline
+arm-then-confirm; keep inline, borrow focus semantics."* Building a modal confirm would ship
+a pattern the design does not use, and an abstraction with no caller violates §6's "no
+abstraction until the third use". The inline arm-then-confirm is a **Phase 4 composite**
+(it is domain-shaped — it carries the reason field the refusal rules require), not a Phase 3
+primitive. Deferred there deliberately, not forgotten.
+
+**`sheet` → Base UI `Drawer`, not a hand-rolled Dialog.** Base UI ships a first-class Drawer
+(stable since 1.3.0) with focus trapping, scroll locking, swipe-dismiss and nested-drawer
+handling. Rebuilding those on Dialog is how a drawer ends up trapping focus incorrectly on
+exactly one screen.
+
+**`tooltip` carries a flag.** Its appearance is DERIVED, not drawn — the export has no
+tooltip, only three native `title=` attributes. The styling borrows the menu's floating
+treatment, which is the nearest thing the design does draw. Recorded in the component file
+and in its story per BRIEF §12; if a tooltip ever becomes load-bearing it needs drawing
+properly. Native `title` is not an acceptable fallback: it is not keyboard-reachable, which
+§6 requires.
+
 ---
 
 ## 2. Custom components
@@ -36,16 +64,34 @@ Twelve. These have no shadcn equivalent because they encode product rules.
 
 ### 2.1 `NoValue` — **the most important component in the app**
 
-Renders a field that has no value. **A five-arm discriminated union with an exhaustive switch and a `never` guard.**
+Renders a field that has no value. **A six-arm discriminated union with an exhaustive switch and a `never` guard.**
 
 ```ts
 type NoValueKind =
-  | { kind: "pending" }                 // not yet extracted — NOT an NA state
-  | { kind: "not_present" }             // structurally absent in this jurisdiction
-  | { kind: "not_found" }               // searched, none of record
-  | { kind: "silent" }                  // present, does not state it
+  | { kind: "pending" }                  // not yet extracted — NOT an NA state
+  | { kind: "unsettled" }                // engines read it and DISAGREED — not empty
+  | { kind: "not_present" }              // structurally absent in this jurisdiction
+  | { kind: "not_found" }                // searched, none of record
+  | { kind: "silent" }                   // present, does not state it
   | { kind: "unreadable"; page: number } // present but unreadable
 ```
+
+**Corrected 2026-07-27 from five arms to six** (`phase2-audit.md` §4). `unsettled` was found
+on screen during the in-place Pass 3, not by any test. The contract encodes two different
+situations identically — both arrive as `value: null, na_reason: null`:
+
+1. *not yet extracted* — the pipeline has not reached this field;
+2. *the engines read it and disagreed* — nothing merged, but `readings` holds two candidates.
+
+Only the presence of `readings` separates them. Rendering the second as the first tells a
+reviewer there is nothing to look at while two candidate values sit in the payload — exactly
+the defect orphan **O8** (`ux.spec` "a both-found disagreement never claims emptiness") exists
+to catch. `unsettled` takes the ATTEND treatment — this field is waiting on a person — and
+never the quiet grey of an NA state. Like `pending`, it is a statement about the *pipeline*,
+not the document, so it is not an `NaReason` member.
+
+**CONTRACT GAP:** these two should be distinguishable on the wire, so that a client which
+forgets to consult `readings` cannot silently claim absence.
 
 | Arm | Visual (from design) | Routes |
 |---|---|---|
@@ -234,5 +280,20 @@ Largest single shift: 17px → 16px and 23px → 22px. Both are one-off headings
 | 12 | `--radius-xl` (12px) |
 | 20 | `--radius-pill` |
 
-### Colour — 8 raw hex values had no token
-`#dcdde3`, `#1f5738`, `#bfe0cb`, `#eec6c1`, `#e6d3a3`, `#6d4c0c`, `#fbfbfc`, `#eceef2` were inline literals. All are now named in `tokens.css` and marked `ORPHANED IN SOURCE`. Values preserved exactly.
+### Colour — 12 raw hex values had no token
+
+**Corrected 2026-07-27 from 8 to 12** (`phase2-audit.md` §3.2). The original eight:
+`#dcdde3`, `#1f5738`, `#bfe0cb`, `#eec6c1`, `#e6d3a3`, `#6d4c0c`, `#fbfbfc`, `#eceef2`.
+
+Four more were missed and found during the Phase 1 token audit:
+
+| Literal | Uses | What it is | Now |
+|---|---:|---|---|
+| `#5a3fa0` | 4 | mid-violet border on a violet callout | `--color-action-border-strong` |
+| `#232327` | 4 | ink on a rendered page (Serif, leading 1.95) | `--color-page-ink` |
+| `#2a2a2e` | 2 | ink on a scanned page (Mono, leading 2.1) | `--color-scan-ink` |
+| `#33333a` | 1 | ink on a degraded scan | `--color-scan-ink-degraded` |
+
+The last three mattered: the token set had names for the page's *backgrounds* but none for the
+text printed on them, while the design draws three distinct inks. All twelve are now named in
+`tokens.css` and marked `ORPHANED IN SOURCE`. Values preserved exactly.

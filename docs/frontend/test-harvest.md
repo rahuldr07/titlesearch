@@ -526,3 +526,130 @@ Nothing below has been done.
 **126 un-skipped, green** — replacing the old 116 as the definition of done, plus the one new judgment-auto-confirm spec proposed in §4.4 if approved (→ 127).
 
 That number will move if §4.1 resolves toward keeping keyboard-first (+6) and §4.2 resolves toward narrowing the constraint (+1), giving a ceiling of **134**.
+
+---
+
+# Part II — `apps/web-v2` harvest, executed 2026-07-27
+
+Sections 1–8 above were written for the **in-place** rebuild of `apps/web`. The owner
+has since directed a fresh build at `apps/web-v2` (`apps/web-v2/BRIEF.md`). This part
+records the independent re-harvest run for that package and the migration that was
+actually executed. Sections 1–8 stand as written; nothing above was edited.
+
+## 9. Independent verification
+
+Every one of the 25 pristine files was re-read from `git show ade49af:<path>` — **not**
+from the working tree, which is already a migrated, re-selectored copy produced by the
+in-place pass (see `apps/web-v2/BRIEF-DELTAS.md` D-4). Reading the working tree would
+have measured the previous rebuild's output rather than the rule set.
+
+Counts confirmed independently:
+
+| | Measured | §1 claim | Agrees |
+|---|---:|---:|:--:|
+| e2e tests | 116 | 116 | ✓ |
+| Vitest tests | 22 (21 `authz.test.ts` + 1 `vocabulary.test.ts`) | 22 | ✓ |
+| **Total** | **138** | **138** | ✓ |
+| STRUCTURAL | 5 | 5 | ✓ |
+| CONFLICT | 1 (`sidebar` #8) | 1 | ✓ |
+| AMBIGUOUS | 6 | 6 | ✓ |
+
+The classification in §3 is endorsed. The re-read reached the same five STRUCTURAL
+tests, the same single CONFLICT, and the same six AMBIGUOUS tests without consulting
+§3 first. §1's headline — that this suite is a rulebook that happens to be executable,
+and that its assertions are overwhelmingly negative and therefore selector-independent —
+is confirmed.
+
+## 10. The two blocking items are now resolved
+
+**§4.1 — keyboard-first: RESOLVED YES.** Two independent confirmations. `open-rulings.md`
+Q3 answered yes on the evidence that the design draws keyboard affordances throughout and
+correctly suspends them inside inputs. `BRIEF.md` §4 then independently mandates
+`react-hotkeys-hook` 5.3.x, and §7 specifies one scope per pane activated on focus —
+naming the exact misfire bug that `navigation` #2 and `hard` #5 pin shut. The 6 AMBIGUOUS
+specs are **INVARIANT**.
+
+**§4.2 — the localStorage conflict: RESOLVED, mechanism changed.** `BRIEF.md` settles both
+halves of the question that §4.2 could not decide alone:
+
+- §9.11 — *"Nothing in `localStorage` or `sessionStorage`"* — enforced literally, and §6
+  adds a CI grep for it. So option 2 (narrow the constraint) is closed.
+- §7 — *"User preferences, pane widths → server, `GET/PATCH /api/me/preferences`, persists: yes"*.
+
+So the **rule** in `sidebar` #8 survives intact — a display preference persists across a
+reload and is never a one-way trap — while the **mechanism** moves from `localStorage` to a
+server preference. This is a selector/mechanism rewrite, which BRIEF §5 Phase 5 permits, not
+an assertion weakened, which it forbids. The spec migrates, tagged `INVARIANT (mechanism changed)`.
+
+This is the only test in the suite whose migration note changes its implementation rather
+than just its selectors. It is called out here so it is not quietly rewritten later.
+
+## 11. Migration executed
+
+Written to `apps/web-v2/e2e/invariants/`, one file per source spec, **every test `test.skip`**,
+each preceded by a `TODO(rebuild) [CLASS] — rule:` line stating the rule in prose.
+
+| | Count |
+|---|---:|
+| Migrated, skipped | **111** |
+| Dropped as STRUCTURAL | 5 |
+| **Source total** | **116** |
+
+Composition of the 111: 88 INVARIANT + 16 ORPHAN RULE + 6 promoted by Q3 + 1 with a changed
+mechanism (`sidebar` #8).
+
+**Dropped (5), each recorded in place as a `// DROPPED —` comment naming why:**
+
+| Spec | Test | Why |
+|---|---|---|
+| `home` #1 | renders the hub with live attention signals | hub door copy and layout of the old design |
+| `home` #3 | g h jumps home from anywhere | old-nav keybindings; the chord layer itself survives in `navigation.spec` |
+| `sidebar` #1 | the rail renders the role's doors and navigates | side-rail widget mechanics — old chrome |
+| `sidebar` #5 | doors are grouped by pipeline stage | grouping labels of the old rail |
+| `ux` #7 | every screen's title is the mouse path home | old TopBar mechanic; "never a dead end" is carried by `errors.spec` and `home.spec` |
+
+Nothing was deleted from `apps/web`. The dropped five remain in git at `ade49af` and in the
+working tree.
+
+**Also copied into `apps/web-v2/`:**
+
+- `e2e/helpers/net.ts` — not a spec. The in-page fetch wrapper that makes network-level
+  blindness provable at all; Playwright's `page.route` cannot see MSW-handled fetches.
+  Imports rewritten `./helpers/net` → `../helpers/net` for the new `invariants/` depth.
+- `authz.test.ts` (21) and `vocabulary.test.ts` (1) — the Vitest gates. Neither is a UI test.
+  `authz.test.ts` exercises `packages/contract/src/authz.ts`, a pure module both apps share;
+  `vocabulary.test.ts` walks its own app's `src/`, so web-v2 needs its own copy to be gated
+  at all. **The copies in `apps/web` stay until cutover** — per §8 they are the tripwire for
+  the deletion commit.
+
+Four specs carry helper functions or `helpers/net` imports; all were preserved through the
+rewrite and verified: `roles` (`become`, `chord`), `review`/`ux` (`go`), and
+`blind-blindness`/`errors`/`review-conflict`/`server-owns-state` (net helpers).
+
+## 12. Completion bar for `apps/web-v2`
+
+**113 e2e un-skipped and green, plus 22 Vitest green = 135.**
+
+**REVISED 2026-07-27 after an independent audit.** Two of the five STRUCTURAL drops were wrong:
+
+- `ux` #7 (*"every screen's title is the mouse path home"*) protects a real rule — a mouse user
+  is never stranded. The claim that `errors.spec` and `home.spec` carry it does not hold:
+  `errors.spec` covers error states, not returning home from a working screen, and a grep for
+  `screen-title` across all migrated specs returns nothing. Commit `c2e9011` also deleted the
+  side rail, which was the other mouse path home. **Restored.**
+- `home` #3 lost *"⏎ opens the role's first door"*, which no migrated spec asserts. **Restored.**
+
+Three drops stand: `home` #1, `sidebar` #1 and #5 are genuinely old-chrome layout.
+
+The audit also found **17 of 111 class tags wrong**, including six tagged `[ORPHAN RULE]` whose
+own prose said "promoted to INVARIANT", and the whole `errors` O6 family tagged INVARIANT when
+it is the clearest ORPHAN in the suite. All corrected: **93 INVARIANT + 19 ORPHAN + 1
+mechanism-changed = 113**.
+
+This supersedes §8's 126/132/134 figures, which were computed before Q3 and §4.2 resolved.
+Arithmetic: 116 source e2e − 5 STRUCTURAL = 111. The judgment-auto-confirm spec proposed in
+§4.4 is **not** counted; it is a new spec, not a harvested one, and remains unwritten.
+
+No harvested assertion may be weakened to reach this number. If one cannot pass against the
+new design, BRIEF §5 Phase 5 and §12 both require stopping and reporting it as a design
+CONFLICT instead.

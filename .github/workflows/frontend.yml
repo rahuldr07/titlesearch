@@ -1,0 +1,115 @@
+name: frontend
+
+# Every job here runs real commands. There are no placeholder steps: a workflow
+# that reports green without executing anything is worse than no workflow,
+# because it is quoted as evidence.
+#
+# This exists because an audit found the frontend had FOUR quality gates
+# (check:rules, eslint, tsc, vitest) and nothing that ran any of them. They were
+# green because one person ran them by hand, which is not enforcement — it is a
+# habit, and habits do not survive a hurried afternoon.
+
+on:
+  push:
+    branches: [main]
+    paths: &frontend-paths
+      - "apps/**"
+      - "packages/**"
+      # The enforcement surface. Omitting these would let a change to the token
+      # package, the workspace layout, or this workflow itself merge without
+      # ever running — the exact gap that left apps/** uncovered before.
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "tsconfig.base.json"
+      - "package.json"
+      - ".github/workflows/frontend.yml"
+  pull_request:
+    paths: *frontend-paths
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: frontend-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gates:
+    name: gates (rules · lint · types · tests)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.2
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      # Ordered cheapest-first so a trivial failure reports in seconds rather
+      # than after the browser suite.
+      - name: Rule gate (BRIEF §6)
+        run: pnpm --filter web-v2 check:rules
+
+      - name: Lint
+        run: pnpm --filter web-v2 lint
+
+      - name: Typecheck (all workspace projects)
+        run: pnpm typecheck
+
+      - name: Build
+        run: pnpm --filter web-v2 build
+
+      # Installs only chromium — the browser project pins that one instance.
+      - name: Install Playwright chromium
+        run: pnpm --filter web-v2 exec playwright install --with-deps chromium
+
+      # Static gates + every Storybook story as a browser test with axe at
+      # `error`. This is the step that actually catches accessibility defects.
+      - name: Tests (static gates + Storybook a11y)
+        run: pnpm --filter web-v2 test
+
+      - name: Storybook build
+        run: pnpm --filter web-v2 build-storybook
+
+  invariants:
+    name: harvested invariants (e2e)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter web-v2 exec playwright install --with-deps chromium
+
+      # 111 harvested product rules. ALL ARE CURRENTLY test.skip — this job
+      # passes vacuously today and says so in its own output rather than
+      # letting a green tick imply coverage that does not exist. It becomes a
+      # real gate one feature at a time during BRIEF §5 Phase 5.
+      - name: E2E invariants
+        run: pnpm --filter web-v2 test:e2e
+
+      - name: Report how many invariants are actually enforced
+        if: always()
+        run: |
+          total=$(grep -roh "test\.skip(\|^test(" apps/web-v2/e2e | wc -l)
+          skipped=$(grep -roh "test\.skip(" apps/web-v2/e2e | wc -l)
+          active=$((total - skipped))
+          echo "::notice title=Invariant coverage::${active} of ${total} harvested invariants are enforced; ${skipped} still skipped."
+          if [ "$active" -eq 0 ]; then
+            echo "::warning title=No invariants enforced::All ${total} harvested product rules are skipped. This job's green status proves nothing about §9 compliance."
+          fi

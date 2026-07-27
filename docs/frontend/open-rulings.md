@@ -50,6 +50,18 @@ The design's *question* framing ("Is the vested owner MARIA L. ESTRADA or MARIA 
 
 **What I need:** confirm both readings render with engine ids and provenance, and that neither is pre-selected. I intend to keep the design's question framing and put two attributed readings under it — confirm that is right.
 
+> **BUILT UNDER THIS ASSUMPTION, 2026-07-27.** Owner direction was to proceed rather than
+> wait. `entities/field/DecisionCard.tsx` and `EngineReadings.tsx` implement exactly the
+> above: the design's question framing, both readings attributed by `engineId`, each with its
+> own page chip, **neither pre-selected**, and no confidence anywhere (conflict C10).
+>
+> What is INVARIANT-backed and safe: two attributed readings with provenance, nothing
+> pre-selected — `review.spec` #3 and CONTEXT §8.3 require it, so this holds however Q2 lands.
+>
+> What is MINE and would change if Q2 resolves differently: the visual arrangement — question
+> above, readings beneath, an adopt button per reading. The design drew none of that layout.
+> Recorded per BRIEF §12 so it is a decision on the record rather than a silent one.
+
 ### Q3 — Is keyboard-first still a product requirement?
 
 **Carried over from `test-harvest.md` §4.1, now answerable.** The design draws keyboard affordances throughout: `C` confirm · `E` correct · `N` not-our-party · `↑↓`/`J`/`K` move, plus `Y`/`N`/`A` on sign-off. It correctly suspends hotkeys inside inputs and inside `[data-signoff]`.

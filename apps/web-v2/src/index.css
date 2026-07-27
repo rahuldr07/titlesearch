@@ -1,0 +1,103 @@
+@import "tailwindcss";
+@import "@titlepipe/ui-tokens/tokens.css";
+
+/*
+ * The spacing grid. DELIBERATELY LOCAL to web-v2 — never move this into
+ * packages/ui-tokens.
+ *
+ * Tailwind v4 derives every p-/m-/gap- utility from `--spacing`, NOT from our
+ * `--space-*` tokens (which are not a Tailwind namespace and generate no
+ * utilities). Left at Tailwind's 0.25rem default, expressing this design would
+ * require arbitrary values everywhere, which §6 forbids.
+ *
+ * The design's spacing is entirely on a 2px grid — measured: 2,4,6,8,10,12,14,
+ * 16,18,20,22,24,28,32,40. At `--spacing: 2px` every one of those is a plain
+ * utility: p-1=2px, p-4=8px, p-10=20px, p-20=40px. Read `p-N` as `N x 2px`.
+ *
+ * WHY NOT in ui-tokens: apps/web imports that package and uses mt-2/px-2/gap-3
+ * heavily against Tailwind's 4px default. Setting --spacing there would halve
+ * every one of them. Same class of collision as --leading-relaxed; see
+ * docs/frontend/tokens.md §9.1.
+ */
+@theme {
+  --spacing: 2px;
+}
+
+/*
+ * The only place in apps/web-v2 that may set a bare element's appearance.
+ * Everything else composes tokens through Tailwind utilities.
+ *
+ * `:focus-visible` is global on purpose — the design ships one focus treatment
+ * (2px violet, 2px offset) and BRIEF §6 requires every interactive element to
+ * carry a visible focus ring. Making it global means a primitive cannot
+ * accidentally ship without one.
+ */
+
+html {
+  background-color: var(--color-surface-app);
+  color: var(--color-ink-primary);
+  font-family: var(--font-sans);
+  line-height: var(--leading-body);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-action);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
+}
+
+::selection {
+  background: var(--color-surface-evidence);
+}
+
+/*
+ * Base UI's two setup requirements (Quick start). Both are load-bearing:
+ *
+ * `isolation: isolate` on the app root gives portaled popups — menu, select,
+ * tooltip, drawer, dialog — a stacking context to sit above. Without it they
+ * can render behind page content that happens to create its own context, which
+ * fails intermittently and only on some screens.
+ *
+ * `position: relative` on body is required for backdrops on iOS 26+ Safari.
+ */
+/*
+ * The `silent` no-value state's diagonal hatch. Defined here rather than as an
+ * arbitrary Tailwind value because the gradient carries raw pixel stops, and
+ * §6 keeps those out of TSX. The hatch is not decoration: it is what makes
+ * `silent` distinguishable from `not_found` in greyscale and for colour-blind
+ * readers, which CONTEXT §11 requires.
+ */
+/*
+ * The scan filters. `--filter-*` is NOT a Tailwind theme namespace — verified
+ * against the built CSS, `filter-scan` generated nothing — so the tokens need
+ * explicit utilities or the page renders as a clean scan, which is exactly the
+ * wrong impression: the product exists because most pages are degraded.
+ *
+ * Third instance of this class of gap, after --space-* and --z-*. See
+ * docs/frontend/tokens.md §9.3.
+ */
+@utility filter-scan {
+  filter: var(--filter-scan);
+}
+
+@utility filter-scan-degraded {
+  filter: var(--filter-scan-degraded);
+}
+
+@utility na-hatch {
+  background-image: repeating-linear-gradient(
+    135deg,
+    transparent,
+    transparent 4px,
+    var(--color-na-silent-hatch) 4px,
+    var(--color-na-silent-hatch) 5px
+  );
+}
+
+body {
+  position: relative;
+}
+
+#root {
+  isolation: isolate;
+}

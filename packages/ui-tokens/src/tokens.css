@@ -6,9 +6,13 @@
  *     not `--red`; `--surface-evidence` not `--yellow-50`. A later palette change
  *     must not require renaming a single token.
  *   - Components reference tokens only. No raw hex in TSX — enforced by lint.
- *   - Values are the design's exact colours. Where the design used a raw hex with
- *     no `--var` behind it, the value is preserved and given a name here; those
- *     are marked ORPHANED IN SOURCE.
+ *   - Where a token corresponds to something the design draws, the value is the
+ *     design's exact colour, and a raw hex with no `--var` behind it is marked
+ *     ORPHANED IN SOURCE. But 43 of 93 --color-* tokens have NO counterpart in
+ *     the export — the whole --color-document-* set, the scan/page tokens, idle,
+ *     track, raised, row-hover, line-dashed, surface-pin, and the two AA fixes.
+ *     Each is justified in prose where it is defined. The header used to claim
+ *     'values are the design's exact colours' as an invariant; it never was.
  *   - Scales (type, radius, space) are IMPOSED. The design used 22 ad-hoc font
  *     sizes and 12 radii; see docs/frontend/component-inventory.md §5 for the
  *     rounding table and what moved.
@@ -61,9 +65,16 @@
    * the most-used token in the design (eyebrow labels, meta, the whole "recede"
    * tier). Measured before/after:
    *
-   *              panel  app   raised  sunken
-   *   #8a8e99     3.28  2.65   2.95    3.19   <- fails AA everywhere
-   *   #616673     5.74  4.65   5.18    5.55   <- clears AA everywhere
+   *              panel  app   raised  sunken  document
+   *   #8a8e99     3.28  2.65   2.95    3.19    2.44   <- fails AA everywhere
+   *   #616673     5.74  4.65   5.18    5.55    4.24   <- clears AA on the chrome
+   *
+   * NOT "everywhere" — the original comment said so and was wrong. #616673
+   * measures 4.24:1 on --color-surface-document (#dcdde3), the light document
+   * pane D2's reversal introduced. Darkening further would collapse this tier
+   * into --color-ink-secondary, so instead the muted tier is NOT AVAILABLE on
+   * that surface; the pane uses primary/secondary. Pinned by
+   * apps/web-v2/src/shared/contrast.test.ts.
    *
    * This is the one place the palette is deliberately not as drawn, and it is a
    * correctness fix rather than a taste call: at 2.65:1 the label tier is not
@@ -121,7 +132,19 @@
    * currently ships two members. Do not treat these tokens as ratification —
    * see docs/frontend/open-rulings.md Q1.
    */
-  --color-na-not-present-ink: #8a8e99; /* structurally absent in jurisdiction */
+  /*
+   * DARKENED 2026-07-27 from the design's #8a8e99 for the same reason
+   * --color-ink-muted was: it measures 3.28:1 on panel and fails WCAG AA, and
+   * it carries real text ("n/a — not used in this jurisdiction"). Missed in the
+   * Phase 1 pass because it lives in this block rather than the ink block.
+   * #616673 measures 5.74:1.
+   *
+   * Darkening does not blur the four states into each other: their distinction
+   * is carried by BORDER STYLE and FILL PATTERN as well as colour — dashed vs
+   * solid vs hatch vs tint — which is exactly why CONTEXT §11 insists they
+   * "must never collapse into one grey dash".
+   */
+  --color-na-not-present-ink: #616673; /* structurally absent in jurisdiction */
   --color-na-not-present-border: #d4d7de;
   --color-na-not-found-ink: #565a66; /* searched, none of record */
   --color-na-not-found-border: #d4d7de;
@@ -135,7 +158,11 @@
   --color-chip-neutral-surface: #eceef2; /* ORPHANED IN SOURCE */
 
   /*
-   * Modal scrim. A COLOUR token, not a shadow one: `--shadow-scrim` emits no
+   * Modal scrim. A COLOUR token, not a shadow one — and --shadow-scrim was
+   * DELETED 2026-07-27 because it shipped anyway despite this warning, emitting
+   * `.shadow-scrim { box-shadow: rgb(20 20 30 / .34) }` — a bare colour with no
+   * offsets, which is not a valid box-shadow and renders nothing.
+   * The original reasoning: `--shadow-scrim` emits no
    * `bg-*` utility, so a `bg-[var(--shadow-scrim)]` class silently produces
    * nothing and the modal loses its backdrop while the build stays green.
    */
@@ -152,23 +179,34 @@
   /* progress track — Blind Fifty Status coverage bar (replatform-mapping §4.2) */
   --color-track: #dfe1e7;
 
-  /* ── the document pane — DELIBERATELY DARK ────────────────────────────── */
+  /* ── the document pane — DARK ON THE MEASUREMENT SCREENS ONLY ─────────── */
   /*
-   * DECISION 2026-07-26 (see decisions.md D2). The scanned document is the
-   * dominant visual and everything else recedes — HANDOFF §4, master §0.9, and
-   * the old index.css. The design export inverted this to a light pane; that
-   * is overridden, on measurement rather than taste:
+   * SCOPE CORRECTED 2026-07-27. Read decisions.md D2 in full before editing.
    *
-   *     page (--color-surface-paper) against dark surround   14.53:1
-   *     page against the export's light surround (#dcdde3)    1.29:1
+   * D2 was REVERSED BY THE OWNER on 2026-07-26: "the design-mock pane ships as
+   * drawn." A rendering choice belongs to the design. So:
    *
-   * At 1.29:1 the page does not separate from its own backdrop. The dark pane
-   * is the only one of the two that makes the scan dominant.
+   *   Review                → LIGHT pane (#dcdde3), as the export draws it.
+   *                           Uses --color-surface-document, NOT this block.
+   *   Extraction Bench      ┐  three of the twelve measurement screens, which
+   *   Reconciliation        ├─ keep their own design by earlier owner
+   *   Seed Correction       ┘  direction. These stay DARK and are the ONLY
+   *                           consumers of the tokens below.
+   *
+   * PdfPane therefore takes a `surround: "light" | "dark"` variant rather than
+   * one hard-coded register.
+   *
+   * The measurement that drove the superseded position is still true and is
+   * kept in decisions.md D2 for whoever revisits this — page against a dark
+   * surround is 14.53:1, against the export's light surround 1.29:1. It was
+   * not mine to act on.
    *
    * Hues are shifted COOL from the old warm-dark set, to sit in this register.
    * Structure and lightness are preserved, so the .dc.html layouts port.
-   * Applies everywhere PdfPane appears: Review, Extraction Bench,
-   * Reconciliation, Seed Correction.
+   *
+   * NOTE: --shadow-page WAS tuned for a dark surround (.45). It is now the
+   * export's .22, with --shadow-page-on-dark carrying the deeper value for the
+   * three dark screens. Resolved; this comment used to say otherwise.
    */
   --color-document-bg: #23252b; /* the pane behind the page */
   --color-document-deep: #1b1d22; /* Seed Correction's deeper terminal register */
@@ -248,17 +286,83 @@
   --text-5xl: 1.625rem; /* 26px — upload h1 */
 
   /* Tracking — the uppercase eyebrow label is a signature of this design */
-  --tracking-eyebrow: 0.14em;
-  --tracking-badge: 0.1em;
-  --tracking-stamp: 0.16em;
+  --tracking-eyebrow: 0.14em; /* group heading */
+  --tracking-badge: 0.1em; /* field label, chips — the most common */
+  --tracking-stamp: 0.16em; /* screen eyebrow, rubber stamp */
+  /*
+   * Added 2026-07-27. tokens.md §6.3 originally dismissed .12em as drift on the
+   * eyebrow role. The full primitive extraction shows otherwise: .12em is the
+   * canonical tracking for TWO distinct roles — the card-header band label (9
+   * uses, 11px) and the inline caption (7 uses, 9px). Sixteen uses across two
+   * deliberate tiers is a scale step, not a wobble.
+   */
+  --tracking-label: 0.12em;
 
   /* ── radius ───────────────────────────────────────────────────────────── */
+  /*
+   * LEGACY 6-step scale. apps/web uses rounded-md (56), rounded-sm (53),
+   * rounded-xs (37), rounded-lg (11) — revaluing these restyles it, so they are
+   * frozen and retire with apps/web at cutover. New code uses the numeric scale
+   * below.
+   */
   --radius-xs: 3px; /* evidence marker, inline tags */
   --radius-sm: 5px; /* small chips, page refs */
   --radius-md: 7px; /* buttons, inputs */
   --radius-lg: 10px; /* cards, panels */
   --radius-xl: 12px; /* drawers, modal panels */
-  --radius-pill: 20px;
+
+  /*
+   * The design's ACTUAL radius scale, complete. Added 2026-07-27.
+   *
+   * Radius here is size-coupled and deliberate, not decorative — the design
+   * uses three DIFFERENT radii for three chip tiers (3 micro / 4 standard /
+   * 5 mono) and two for buttons (6 small / 8 large). The legacy 6-step scale
+   * has none of 4, 6, 8 or 9 — 137 uses — so collapsing onto it discards
+   * distinctions the design makes on purpose.
+   *
+   * Numeric rather than t-shirt naming because the design's own logic is
+   * numeric-by-size, and because the t-shirt names are already taken above at
+   * different values. Same convention as --space-*.
+   */
+  --radius-1: 2px; /* inline correction mark */
+  --radius-2: 3px; /* micro chip (8px text) */
+  --radius-3: 4px; /* standard chip (9px text) */
+  --radius-4: 5px; /* mono chip, segmented item, stamp */
+  --radius-5: 6px; /* compact input, small button */
+  --radius-6: 7px; /* standard input, medium button, segmented track */
+  --radius-7: 8px; /* large button, sub-card, tint panel */
+  --radius-8: 9px; /* inline block, option card */
+  --radius-9: 10px; /* card */
+  --radius-10: 12px; /* emphasis panel */
+
+  --radius-pill: 20px; /* pill filter, toggle track */
+
+  /* ── stroke weight — a semantic axis, not decoration ──────────────────── */
+  /*
+   * In this design border WIDTH carries meaning, consistently:
+   *   1px    structure — card edges, row separators, resting controls
+   *   1.5px  load-bearing — selected, required, or "this is the live choice"
+   *   2.5–3px  stamp double-border, accent top edge
+   *   4px    severity — the left edge on a banner
+   * A 1.5px border is therefore a statement, and hard-coding it as an
+   * arbitrary value would let that statement drift silently.
+   */
+  /* ── motion ───────────────────────────────────────────────────────────── */
+  /*
+   * The design's only animation: `tp-pulse 1.4s infinite`, on the dot of a
+   * stage that is halted or waiting on a person. `--animate-*` IS a Tailwind v4
+   * namespace (unlike --space-*, --z-* and --filter-*), so this emits
+   * `animate-tp-pulse` directly. The keyframes are declared below the @theme
+   * block, and the global prefers-reduced-motion rule kills it.
+   */
+  --animate-tp-pulse: tp-pulse 1.4s infinite;
+
+  /* ── stroke weight — a semantic axis, not decoration ──────────────────── */
+  --stroke-structure: 1px;
+  --stroke-emphasis: 1.5px;
+  --stroke-stamp: 2.5px;
+  --stroke-accent: 3px;
+  --stroke-severity: 4px;
 
   /* ── space ────────────────────────────────────────────────────────────── */
   --space-1: 2px;
@@ -270,23 +374,111 @@
   --space-7: 14px;
   --space-8: 16px;
   --space-9: 18px;
-  --space-10: 22px;
-  --space-11: 28px;
-  --space-12: 32px;
-  --space-13: 40px;
+  /* 20 and 24 added 2026-07-27. They were the ONLY off-scale spacing values in
+     the export that shift more than 1px when rounded — 20px has 22 uses and the
+     scale jumped 18→22. Renumbering was safe: apps/web references no --space-*
+     (it spaces via the legacy theme). tokens.md §7. */
+  --space-10: 20px;
+  --space-11: 22px;
+  --space-12: 24px;
+  --space-13: 28px;
+  --space-14: 32px;
+  --space-15: 40px;
 
   /* ── elevation ────────────────────────────────────────────────────────── */
-  --shadow-page: 0 4px 22px rgb(20 20 30 / 0.45); /* page lifts off the DARK pane */
+  /*
+   * The page lifting off its pane. RETUNED 2026-07-27 to the export's own value
+   * (.22). The previous .45 was tuned for a dark surround, and D2's reversal
+   * moved Review to the light pane — so .45 was tuned for a backdrop Review no
+   * longer has. tokens.md §5.2.
+   */
+  --shadow-page: 0 4px 22px rgb(20 20 30 / 0.22);
+  /* The dark measurement screens (Extraction Bench, Reconciliation, Seed
+     Correction) keep the deeper value — .22 disappears against #23252b. */
+  --shadow-page-on-dark: 0 4px 22px rgb(20 20 30 / 0.45);
   --shadow-menu: 0 14px 36px rgb(20 20 30 / 0.2);
   --shadow-drawer: -8px 0 30px rgb(20 20 30 / 0.2);
-  --shadow-scrim: rgb(20 20 30 / 0.34);
-  --shadow-card: 0 1px 3px rgb(20 20 30 / 0.06); /* primary cards only */
+  /*
+   * NOT DRAWN BY THE DESIGN. The export uses no card shadow at all — it
+   * separates cards with `1px solid var(--rule)` (116 uses). This token is
+   * inherited from the old warm-paper palette. Do NOT reach for it on cards in
+   * web-v2; use the border. Retained only for the dark measurement screens,
+   * where a border alone does not separate at those luminances. tokens.md §6.2.
+   */
+  --shadow-card: 0 1px 3px rgb(20 20 30 / 0.06);
   --shadow-pop: 0 8px 24px rgb(20 20 30 / 0.18);
+  /* toggle-switch knob — the export's only other elevation (3 uses) */
+  --shadow-knob: 0 1px 3px rgb(0 0 0 / 0.25);
 
   /* ── document rendering ───────────────────────────────────────────────── */
   /* The scan is meant to look scanned, not like a clean render. */
   --filter-scan: grayscale(0.35) contrast(0.96) brightness(1.01);
   --filter-scan-degraded: grayscale(0.4) contrast(0.94);
+
+  /* ══ added 2026-07-27, Phase 1 audit — see docs/frontend/tokens.md §6 ═══ */
+
+  /* ── ink ON the page, as distinct from ink on the UI ──────────────────── */
+  /*
+   * The set had tokens for the page's BACKGROUNDS (--color-page, --color-scan,
+   * --color-surface-paper) but none for the text printed on them, while the
+   * export draws three distinct inks. Document text is the product's dominant
+   * visual; it needs its own vocabulary.
+   */
+  --color-page-ink: #232327; /* clean rendered page — serif, leading 1.95 */
+  --color-scan-ink: #2a2a2e; /* scanned page — mono, leading 2.1 */
+  --color-scan-ink-degraded: #33333a; /* degraded scan, sits under --filter-scan-degraded */
+
+  /* A heavier action border. The export uses it on a violet callout whose text
+     stays --color-action; it sits between action (#4a2fae) and action-ink. */
+  --color-action-border-strong: #5a3fa0;
+
+  /* ── leading ──────────────────────────────────────────────────────────── */
+  /*
+   * The export used 14 line-heights across 119 uses with no variable behind any
+   * of them. Imposed scale; the two document values are semantic, not
+   * decoration — they are what makes a rendered page read as a typed page.
+   *
+   * NAMED DELIBERATELY OFF TAILWIND'S DEFAULTS. `--leading-*` is a Tailwind v4
+   * theme namespace, so `--leading-relaxed` would REDEFINE the `leading-relaxed`
+   * utility — which apps/web uses at 31 sites, and whose Tailwind default (1.625)
+   * this design never uses. Redefining it would silently retighten 31 places in
+   * an app the brief forbids touching. `-close/-body/-open/-airy` collide with
+   * nothing. `--leading-tight` is kept because its value is Tailwind's anyway.
+   */
+  --leading-flat: 1;
+  --leading-tight: 1.25;
+  --leading-close: 1.35;
+  --leading-body: 1.45; /* the design's default — 39 uses, the most common */
+  --leading-open: 1.5;
+  --leading-airy: 1.7;
+  --leading-document: 1.95; /* rendered page body */
+  --leading-scan: 2.1; /* typed / scanned page body */
+
+  /* ── weight ───────────────────────────────────────────────────────────── */
+  /* The design is almost entirely 600/700 — 400 appears exactly once. */
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600; /* 294 uses — the workhorse */
+  --font-weight-bold: 700;
+
+  /* ── layering ─────────────────────────────────────────────────────────── */
+  /* Four levels observed. Named so a popover is never re-guessed at z-9999. */
+  --z-raised: 3; /* sticky row headers, pinned cells */
+  --z-chrome: 20; /* top chrome */
+  --z-popup: 40; /* menu, select, popover — anchored to a trigger */
+  --z-overlay: 50; /* scrim, drawer, dialog, key map — covers the screen */
+
+  /* ── square control sizes ─────────────────────────────────────────────── */
+  /* Observed as width==height boxes: icon buttons, status dots, segmented
+     control cells, the logo mark. NOT a semantic family — the export reuses
+     26px for three unrelated things — so these are sized, not named by role. */
+  --size-control-xs: 20px;
+  --size-control-sm: 22px;
+  --size-control-md: 24px;
+  --size-control-lg: 26px; /* 20 uses — the most common square */
+  --size-control-xl: 40px;
+  --size-control-2xl: 44px;
+  --size-control-3xl: 52px;
 }
 
 /*
