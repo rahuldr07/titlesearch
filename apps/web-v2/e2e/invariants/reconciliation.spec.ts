@@ -12,7 +12,7 @@ import { expect, test } from "@playwright/test";
 
 const PATH = "judgments_liens.1.type";
 // TODO(rebuild) [INVARIANT] — rule: §4.13 — a ruling is refused without a citation.
-test.skip("a ruling without a citation is refused", async ({ page }) => {
+test("a ruling without a citation is refused", async ({ page }) => {
   await page.goto("/reconciliation/ord_demo_1");
   await page.getByTestId(`pick-B-${PATH}`).click();
   const fieldBtn = page.getByTestId(`rule-field-${PATH}`);
@@ -24,7 +24,7 @@ test.skip("a ruling without a citation is refused", async ({ page }) => {
 });
 
 // TODO(rebuild) [INVARIANT] — rule: neither rule scope is pre-selected and the draft never starts pre-populated — the choice is the human's.
-test.skip("neither field-only nor general is pre-selected; the draft starts empty", async ({
+test("neither field-only nor general is pre-selected; the draft starts empty", async ({
   page,
 }) => {
   await page.goto("/reconciliation/ord_demo_1");
@@ -38,7 +38,7 @@ test.skip("neither field-only nor general is pre-selected; the draft starts empt
 });
 
 // TODO(rebuild) [INVARIANT] — rule: a general-rule ruling files its draft as PENDING.
-test.skip("a general-rule ruling files the draft as PENDING", async ({ page }) => {
+test("a general-rule ruling files the draft as PENDING", async ({ page }) => {
   await page.goto("/reconciliation/ord_demo_1");
   await page.getByTestId(`pick-B-${PATH}`).click();
   await page.getByTestId(`cite-${PATH}`).fill("FiFa p 31, caption — R22");
@@ -53,7 +53,7 @@ test.skip("a general-rule ruling files the draft as PENDING", async ({ page }) =
 });
 
 // TODO(rebuild) [INVARIANT] — rule: a third value needs its why, and the engine identities appear nowhere on the screen.
-test.skip("a third value needs its why; the model appears nowhere", async ({
+test("a third value needs its why; the model appears nowhere", async ({
   page,
 }) => {
   await page.goto("/reconciliation/ord_demo_1");
@@ -74,7 +74,7 @@ test.skip("a third value needs its why; the model appears nowhere", async ({
 });
 
 // TODO(rebuild) [INVARIANT] — rule: §4.14 — coverage is shown against the ≥40 judgment gate, at order level only, with no typist pace data.
-test.skip("status shows the judgment ≥40 gate and no typist pace data", async ({
+test("status shows the judgment ≥40 gate and no typist pace data", async ({
   page,
 }) => {
   await page.goto("/blind-status");

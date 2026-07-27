@@ -70,7 +70,7 @@ test.skip("the order spine survives a timeline failure", async ({ page }) => {
 });
 
 // TODO(rebuild) [ORPHAN RULE] — rule: an unknown order renders the empty state, never a working-looking grid.
-test.skip("reconciliation with an unknown order shows the empty state, not a working grid", async ({
+test("reconciliation with an unknown order shows the empty state, not a working grid", async ({
   page,
 }) => {
   await page.goto("/reconciliation/ord_nope");

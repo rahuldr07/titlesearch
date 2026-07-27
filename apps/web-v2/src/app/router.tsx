@@ -12,6 +12,9 @@ import { SeedCorrection } from "../features/seedCorrection/SeedCorrection";
 import { ExtractionBench } from "../features/bench/ExtractionBench";
 import { BenchResults } from "../features/bench/BenchResults";
 import { EscalationsScreen } from "../features/escalations/EscalationsScreen";
+import { ReconciliationScreen } from "../features/reconciliation/ReconciliationScreen";
+import { ReconciliationIndex } from "../features/reconciliation/ReconciliationIndex";
+import { BlindStatus } from "../features/blindStatus/BlindStatus";
 import { GlobalKeys } from "./GlobalKeys";
 import { NotBuiltYet, NotFound } from "./Placeholders";
 
@@ -45,9 +48,6 @@ const rootRoute = createRootRoute({
 const parent = () => rootRoute;
 const pending = (why: string) => () => <NotBuiltYet why={why} />;
 
-const MEASUREMENT =
-  "Not built yet — one of the twelve measurement screens being re-platformed onto the new tokens.";
-
 // ── built ───────────────────────────────────────────────────────────────────
 const homeRoute = createRoute({ getParentRoute: parent, path: "/", component: HomeHub });
 const queueRoute = createRoute({ getParentRoute: parent, path: "/queue", component: QueueScreen });
@@ -70,7 +70,7 @@ const ingestRoute = createRoute({
 const dashboardRoute = createRoute({ getParentRoute: parent, path: "/dashboard", component: OpsDashboard });
 const complaintsRoute = createRoute({ getParentRoute: parent, path: "/complaints", component: ComplaintsScreen });
 const deliveryRoute = createRoute({ getParentRoute: parent, path: "/delivery", component: DeliveryScreen });
-const blindStatusRoute = createRoute({ getParentRoute: parent, path: "/blind-status", component: pending(MEASUREMENT) });
+const blindStatusRoute = createRoute({ getParentRoute: parent, path: "/blind-status", component: BlindStatus });
 const benchRoute = createRoute({ getParentRoute: parent, path: "/bench", component: ExtractionBench });
 const benchResultsRoute = createRoute({ getParentRoute: parent, path: "/bench/results", component: BenchResults });
 const leaderboardRoute = createRoute({ getParentRoute: parent, path: "/leaderboard", component: LeaderboardScreen });
@@ -91,7 +91,8 @@ const seedCorrectionRoute = createRoute({
   }),
   component: SeedCorrection,
 });
-const reconciliationRoute = createRoute({ getParentRoute: parent, path: "/reconciliation", component: pending(MEASUREMENT) });
+const reconciliationRoute = createRoute({ getParentRoute: parent, path: "/reconciliation", component: ReconciliationIndex });
+const reconciliationOrderRoute = createRoute({ getParentRoute: parent, path: "/reconciliation/$orderId", component: ReconciliationScreen });
 const blindRoute = createRoute({
   getParentRoute: parent,
   path: "/blind/$orderId",
@@ -101,7 +102,7 @@ const blindRoute = createRoute({
 const routeTree = rootRoute.addChildren([
   homeRoute, queueRoute, accountRoute, reviewRoute, escalationsRoute, ingestRoute,
   dashboardRoute, complaintsRoute, deliveryRoute, blindStatusRoute, benchRoute, benchResultsRoute,
-  leaderboardRoute, goldenRoute, reconciliationRoute, blindRoute, seedCorrectionRoute,
+  leaderboardRoute, goldenRoute, reconciliationRoute, reconciliationOrderRoute, blindRoute, seedCorrectionRoute,
 ]);
 
 export function createAppRouter() {
