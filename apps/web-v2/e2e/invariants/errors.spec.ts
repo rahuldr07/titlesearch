@@ -79,7 +79,7 @@ test.skip("reconciliation with an unknown order shows the empty state, not a wor
 });
 
 // TODO(rebuild) [ORPHAN RULE] — rule: a stale deep link names itself as stale and is distinguished from the no-context state.
-test.skip("seed correction with a stale fieldId names the stale link", async ({
+test("seed correction with a stale fieldId names the stale link", async ({
   page,
 }) => {
   await page.goto("/seed-correction?fieldId=gf_nope");

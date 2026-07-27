@@ -1,4 +1,4 @@
-import { currentRole } from "./session";
+import { currentActor, currentRole } from "./session";
 
 /**
  * A validator, described STRUCTURALLY rather than by importing Zod's types.
@@ -73,6 +73,10 @@ async function request<T>(
       // Clerk JWT claim so the harvested authz specs can prove the SERVER
       // refuses. It goes when the real API lands — see shared/session.ts.
       "x-mock-role": currentRole(),
+      // DEV-ONLY, same cutover as the role. The mock signs the append-only
+      // golden log with this rather than letting the client post a name in the
+      // body — a signature the client can type is not a signature.
+      "x-mock-actor": currentActor(),
       ...init?.headers,
     },
   });

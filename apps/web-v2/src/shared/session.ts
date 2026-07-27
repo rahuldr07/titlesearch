@@ -23,12 +23,25 @@ import { isRole, type Role } from "@titlepipe/contract";
  */
 interface SessionState {
   role: Role;
+  /**
+   * The signer's display name, READ-ONLY. `golden.spec` #3 pins the rule it
+   * exists for: *"the signer is not a client field — it's shown read-only from
+   * the session"*. A correction to the golden set is the most consequential
+   * write in the product — it changes what every future measurement is graded
+   * against — so the one thing that must not be typeable is who did it.
+   *
+   * There is no setter. In production this arrives with the session; here it
+   * is fixed, and `x-mock-actor` carries it so the mock records the same name
+   * the screen displays rather than the screen inventing one after the fact.
+   */
+  actor: string;
   actAs: (role: Role) => void;
 }
 
 export const useSession = create<SessionState>((set) => ({
   // The mock server treats a missing header as the dev-default admin session.
   role: "admin",
+  actor: "L. Vance",
   actAs: (role) => set({ role }),
 }));
 
@@ -40,4 +53,14 @@ export const useSession = create<SessionState>((set) => ({
 export function currentRole(): Role {
   const { role } = useSession.getState();
   return isRole(role) ? role : "admin";
+}
+
+/**
+ * The signer, for the fetch layer — same DEV-ONLY caveat as the role above.
+ * The server will derive this from the session; until then the mock reads
+ * `x-mock-actor`, so the append-only golden log is signed with the same name
+ * the correction screen showed the person who signed it.
+ */
+export function currentActor(): string {
+  return useSession.getState().actor;
 }

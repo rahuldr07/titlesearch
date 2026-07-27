@@ -7,6 +7,8 @@ import { OpsDashboard } from "../features/dashboard/OpsDashboard";
 import { LeaderboardScreen } from "../features/leaderboard/LeaderboardScreen";
 import { DeliveryScreen } from "../features/delivery/DeliveryScreen";
 import { ComplaintsScreen } from "../features/complaints/ComplaintsScreen";
+import { GoldenSet } from "../features/golden/GoldenSet";
+import { SeedCorrection } from "../features/seedCorrection/SeedCorrection";
 import { GlobalKeys } from "./GlobalKeys";
 import { NotBuiltYet, NotFound } from "./Placeholders";
 
@@ -72,7 +74,23 @@ const deliveryRoute = createRoute({ getParentRoute: parent, path: "/delivery", c
 const blindStatusRoute = createRoute({ getParentRoute: parent, path: "/blind-status", component: pending(MEASUREMENT) });
 const benchRoute = createRoute({ getParentRoute: parent, path: "/bench", component: pending(MEASUREMENT) });
 const leaderboardRoute = createRoute({ getParentRoute: parent, path: "/leaderboard", component: LeaderboardScreen });
-const goldenRoute = createRoute({ getParentRoute: parent, path: "/golden", component: pending(MEASUREMENT) });
+const goldenRoute = createRoute({ getParentRoute: parent, path: "/golden", component: GoldenSet });
+
+/**
+ * SEED CORRECTION TAKES ITS FIELD FROM THE QUERY STRING, and a missing one is a
+ * first-class state rather than a redirect. `navigation.spec` #5: the screen has
+ * no menu entry, so arriving without context means the LINK is missing — and
+ * bouncing to a picker would answer that by inventing the browsing affordance
+ * the screen exists without.
+ */
+const seedCorrectionRoute = createRoute({
+  getParentRoute: parent,
+  path: "/seed-correction",
+  validateSearch: (search: Record<string, unknown>): { fieldId: string } => ({
+    fieldId: typeof search["fieldId"] === "string" ? search["fieldId"] : "",
+  }),
+  component: SeedCorrection,
+});
 const reconciliationRoute = createRoute({ getParentRoute: parent, path: "/reconciliation", component: pending(MEASUREMENT) });
 const blindRoute = createRoute({
   getParentRoute: parent,
@@ -83,7 +101,7 @@ const blindRoute = createRoute({
 const routeTree = rootRoute.addChildren([
   homeRoute, queueRoute, accountRoute, reviewRoute, escalationsRoute, ingestRoute,
   dashboardRoute, complaintsRoute, deliveryRoute, blindStatusRoute, benchRoute,
-  leaderboardRoute, goldenRoute, reconciliationRoute, blindRoute,
+  leaderboardRoute, goldenRoute, reconciliationRoute, blindRoute, seedCorrectionRoute,
 ]);
 
 export function createAppRouter() {

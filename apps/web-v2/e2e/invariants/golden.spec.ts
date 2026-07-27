@@ -11,7 +11,7 @@ import { expect, test } from "@playwright/test";
  */
 
 // TODO(rebuild) [ORPHAN RULE] — rule: golden capture never shows the pipeline's draft, and DON'T KNOW is a different object from NOT STATED.
-test.skip("capture is blind and structured; don't-know ≠ not-stated", async ({
+test("capture is blind and structured; don't-know ≠ not-stated", async ({
   page,
 }) => {
   await page.goto("/golden");
@@ -35,7 +35,7 @@ test.skip("capture is blind and structured; don't-know ≠ not-stated", async ({
 });
 
 // TODO(rebuild) [INVARIANT] — rule: no timers on golden capture — this is reading, not queue-clearing.
-test.skip("no timers anywhere on golden capture", async ({ page }) => {
+test("no timers anywhere on golden capture", async ({ page }) => {
   await page.goto("/golden");
   await expect(page.getByTestId("fixture-line")).toBeVisible();
   const body = (await page.locator("body").innerText()).toLowerCase();
@@ -45,7 +45,7 @@ test.skip("no timers anywhere on golden capture", async ({ page }) => {
 });
 
 // TODO(rebuild) [INVARIANT] — rule: a golden correction is refused without source + reason, and the signer is derived from the session, never typed by the client.
-test.skip("seed correction is refused without citation + reason; signer is the session", async ({
+test("seed correction is refused without citation + reason; signer is the session", async ({
   page,
 }) => {
   await page.goto("/seed-correction?fieldId=gf_1");
@@ -66,7 +66,7 @@ test.skip("seed correction is refused without citation + reason; signer is the s
 });
 
 // TODO(rebuild) [INVARIANT] — rule: a correction upgrades the tag to `ruled` and lands in a permanent append-only log showing the before→after.
-test.skip("a correction upgrades the tag to ruled and lands in the permanent log", async ({
+test("a correction upgrades the tag to ruled and lands in the permanent log", async ({
   page,
 }) => {
   await page.goto("/seed-correction?fieldId=gf_1");
@@ -82,7 +82,7 @@ test.skip("a correction upgrades the tag to ruled and lands in the permanent log
 });
 
 // TODO(rebuild) [INVARIANT] — rule: confirming a seed as-is still requires a reason; the value stands and the tag becomes `ruled`.
-test.skip("confirm-seed is refused without a reason, then affirms as-is: value stands, tag → ruled", async ({
+test("confirm-seed is refused without a reason, then affirms as-is: value stands, tag → ruled", async ({
   page,
 }) => {
   await page.goto("/seed-correction?fieldId=gf_1");
@@ -102,7 +102,7 @@ test.skip("confirm-seed is refused without a reason, then affirms as-is: value s
 });
 
 // TODO(rebuild) [INVARIANT] — rule: demote-to-suspect requires a reason; the value stands and the tag becomes `suspect`.
-test.skip("demote-to-suspect flags an ambiguous seed: value stands, tag → suspect", async ({
+test("demote-to-suspect flags an ambiguous seed: value stands, tag → suspect", async ({
   page,
 }) => {
   await page.goto("/seed-correction?fieldId=gf_4");

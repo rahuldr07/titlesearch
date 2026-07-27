@@ -70,7 +70,7 @@ test.skip("?field= deep links land on the exact field in context", async ({
 });
 
 // TODO(rebuild) [ORPHAN RULE] — rule: seed correction has no menu entry and no picker — one field, one document, one record.
-test.skip("seed correction without context shows the no-menu-entry state", async ({
+test("seed correction without context shows the no-menu-entry state", async ({
   page,
 }) => {
   await page.goto("/seed-correction");
