@@ -11,7 +11,7 @@ import { expect, test } from "@playwright/test";
  */
 
 // TODO(rebuild) [INVARIANT] — rule: the queue is a single server-chosen next order — no list, no browsing, no cherry-picking.
-test.skip("renders the server's next order verbatim — exactly one order, no list", async ({
+test("renders the server's next order verbatim — exactly one order, no list", async ({
   page,
 }) => {
   await page.goto("/queue");
@@ -23,7 +23,7 @@ test.skip("renders the server's next order verbatim — exactly one order, no li
 });
 
 // TODO(rebuild) [INVARIANT] — rule: no pace indicators, no throughput language, and no time ESTIMATES — an estimate is a pace indicator.
-test.skip("no pace indicators or throughput language renders", async ({ page }) => {
+test("no pace indicators or throughput language renders", async ({ page }) => {
   await page.goto("/queue");
   await expect(page.getByTestId("order-ref")).toBeVisible();
   const body = (await page.locator("body").innerText()).toLowerCase();
@@ -36,7 +36,7 @@ test.skip("no pace indicators or throughput language renders", async ({ page }) 
 });
 
 // TODO(rebuild) [ORPHAN RULE] — rule: a pass is refused without its reason, and escape keeps the order.
-test.skip("pass without a reason is refused; esc keeps the order", async ({
+test("pass without a reason is refused; esc keeps the order", async ({
   page,
 }) => {
   await page.goto("/queue");
@@ -52,7 +52,7 @@ test.skip("pass without a reason is refused; esc keeps the order", async ({
 });
 
 // TODO(rebuild) [INVARIANT] — rule: a reasoned pass records and the server serves the next order.
-test.skip("pass with a reason records and advances to the next order", async ({
+test("pass with a reason records and advances to the next order", async ({
   page,
 }) => {
   await page.goto("/queue");
@@ -68,7 +68,7 @@ test.skip("pass with a reason records and advances to the next order", async ({
 });
 
 // TODO(rebuild) [INVARIANT] — rule: ORPHAN — Enter starts review on the SERVED order. (Promoted to INVARIANT by open-rulings Q3.)
-test.skip("enter starts review on the served order", async ({ page }) => {
+test("enter starts review on the served order", async ({ page }) => {
   await page.goto("/queue");
   await expect(page.getByTestId("order-ref")).toBeVisible();
   await page.keyboard.press("Enter");

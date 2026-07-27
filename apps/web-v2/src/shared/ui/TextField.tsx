@@ -1,5 +1,5 @@
 import { cva, type VariantProps } from "class-variance-authority";
-import type { InputHTMLAttributes, TextareaHTMLAttributes } from "react";
+import type { InputHTMLAttributes, Ref, TextareaHTMLAttributes } from "react";
 import { cn } from "./classNames";
 
 /**
@@ -58,6 +58,12 @@ export interface TextFieldProps
   extends Omit<InputHTMLAttributes<HTMLInputElement>, "className" | "size">,
     FieldVariants {
   className?: string;
+  /**
+   * React 19 passes `ref` as a normal prop. Declared because a control that
+   * opens in response to a keystroke has to take focus — otherwise a keyboard
+   * user presses the key and nothing observable happens to them.
+   */
+  ref?: Ref<HTMLInputElement> | undefined;
 }
 
 export function TextField({ size, tone, emphasis, className, type = "text", ...rest }: TextFieldProps) {
