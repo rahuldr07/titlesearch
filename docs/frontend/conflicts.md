@@ -139,7 +139,7 @@ value you cannot cite — in addition to `review.spec` #6.
 **Breaks** nothing today — these are invented. But `frontend-master-prompt.md` §2 requires demo data be *"clearly synthetic"*, and this reads like a real file.
 **Redraw.** Keep the *shapes* and the weird states; make the values obviously fake in the MSW fixtures. Internal `.internal` emails are already fine.
 
-### C17 — The navigator was deleted; six invariants still depend on one
+### C17 — RESOLVED 2026-07-29. The navigator was deleted; six invariants still depend on one
 **Found** 2026-07-28, building web-v2 (`sidebar.spec`, 6 tests, still skipped — the only unbuilt invariants left).
 
 **Design.** There is no rail. Commit `c2e9011` ("Delete the sidebar and the legacy theme") removed it, and the new export draws no replacement navigator on any screen. The hub plus `g`-chords carry navigation.
@@ -159,13 +159,21 @@ Three of those rules are already honoured elsewhere and only their MECHANISM die
 1. **What the replacement is.** A persistent navigator contradicts a design that deliberately removed one. Options: re-draw a slim rail; put dots on the hub doors and drop the fold entirely (three invariants retire as STRUCTURAL); or carry them in a header strip. This is a design call.
 2. **`GET/PATCH /api/me/preferences` does not exist** — not in `packages/contract`, not in `packages/mocks`. The spec's own migration note directs the persistence at a server preference and rules out localStorage (§9.11, and `check-rules` rejects it). C16 already decided preferences live server-side; the endpoint was never added. Building it from this screen would be generating backend behaviour from the UI, which the root `CLAUDE.md` forbids outright.
 
-**Not built. Reported per BRIEF §5 Phase 5.** Everything else in the harvest is green: 107 of 113.
+**RESOLVED.** The export's own answer was already in the file I had not read: its TOP CHROME carries a horizontal screen menu. That IS the navigator, so the six invariants attach to it — selectors re-targeted, assertions untouched.
 
-### C18 — `✕ Not our party` has no state to land in
+- Dots ride the doors, red for an unresolved complaint and amber for an open escalation; no counts anywhere in the strip.
+- Role-locked doors are absent through the same `canAccess` table the server gates with, and the strip re-renders on a role switch without a reload.
+- The capture seat gets no chrome at all — and, after `blind-blindness.spec` #1 caught it, no preferences fetch either.
+- `[` folds it, and a `[` typed into a field is a bracket.
+- The fold persists through `GET/PATCH /api/me/preferences`, which C16 had already decided and nobody had built.
+
+### C18 — RESOLVED 2026-07-29. `✕ Not our party` has no state to land in
 **Design of record** (`TitlePipe.dc.html:833`, `d.onNotParty`; sheet renders `Excluded — not our party`).
 **Breaks** nothing today — it is simply unbuildable. `FieldState` has no `excluded` member and no endpoint suppresses a field.
 **Why it matters.** It is the screen form of R13 — *"Canceled/satisfied/vacated/released/duplicates suppress with reason"* — and the judgment-hit-identity call the whole `judgments.hit_identity` escalation cluster is about. Without it a reviewer's only exits are to correct a value that was never wrong, or to escalate a question they can already answer.
-**Fix.** Contract addition: an `excluded` field state plus a suppress-with-reason endpoint. Recording it as a `correct` would file a suppression as a value change, which is a different claim. Not built. See `design-fidelity.md`.
+**RESOLVED** by making exactly that contract addition: `FieldState` gains `excluded`, and `POST /api/fields/{id}/exclude` takes a required reason. Both are proposals the backend must honour, not client behaviour — the state machine still lives server-side.
+
+The reason is required for the same argument as a correction's, and it binds harder: a corrected value stays on the sheet where somebody can disagree with it, while an excluded row is GONE. Without the reason on the record, a suppression is indistinguishable afterwards from a row nobody looked at.
 
 ### C19 — The decision card shows one value; the invariant requires two, attributed
 **Design of record** (`:824–831`): a single `{{ d.currentLabel }}` / `{{ d.currentValue }}`.
