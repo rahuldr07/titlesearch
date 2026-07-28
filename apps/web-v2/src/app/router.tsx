@@ -18,6 +18,7 @@ import { ReconciliationScreen } from "../features/reconciliation/ReconciliationS
 import { ReconciliationIndex } from "../features/reconciliation/ReconciliationIndex";
 import { BlindStatus } from "../features/blindStatus/BlindStatus";
 import { GlobalKeys } from "./GlobalKeys";
+import { AppChrome } from "./AppChrome";
 import { NotFound } from "./Placeholders";
 
 /**
@@ -39,7 +40,8 @@ const rootRoute = createRootRoute({
   component: () => (
     <>
       <GlobalKeys />
-      <main className="mx-auto max-w-320 p-9">
+      <AppChrome />
+      <main className="mx-auto max-w-400 p-9">
         <Outlet />
       </main>
     </>

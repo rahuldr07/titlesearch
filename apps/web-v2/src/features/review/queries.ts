@@ -2,6 +2,7 @@ import { queryOptions, useMutation, useQueryClient } from "@tanstack/react-query
 import {
   OrderFieldsResponse,
   OrderTimelineResponse,
+  OrderPagesResponse,
   QueueNextResponse,
 } from "@titlepipe/contract";
 import { get, post, type Validator } from "../../shared/api";
@@ -30,6 +31,14 @@ export function timelineQuery(orderId: string) {
   return queryOptions({
     queryKey: ["orders", orderId, "timeline"],
     queryFn: () => get(`/api/orders/${orderId}/timeline`, OrderTimelineResponse),
+  });
+}
+
+/** The package's pages, as text. The citation on a field indexes into these. */
+export function pagesQuery(orderId: string) {
+  return queryOptions({
+    queryKey: ["orders", orderId, "pages"],
+    queryFn: () => get(`/api/orders/${orderId}/pages`, OrderPagesResponse),
   });
 }
 

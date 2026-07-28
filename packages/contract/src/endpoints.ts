@@ -528,3 +528,32 @@ export const DeliveriesResponse = z.object({
 export const ComplaintsResponse = z.object({ complaints: z.array(Complaint) });
 export const ReportsResponse = z.object({ reports: z.array(Report) });
 export const BugsResponse = z.object({ bugs: z.array(Bug) });
+
+// ---- source pages ----------------------------------------------------------
+/**
+ * GET /api/orders/{id}/pages — the package's pages, as TEXT.
+ *
+ * A page carries the lines that were read off it, not a raster: the review
+ * screen needs to show WHERE a value came from, and the recorded line
+ * coordinates index into this text. `read_in_full` is server-supplied — most
+ * pages of a county package carry no field the report needs, and a page nobody
+ * typed is normal rather than an error.
+ */
+export const SourcePage = z.object({
+  n: z.number().int(),
+  /** Server's classification. A page not read in full is normal, not a gap. */
+  read_in_full: z.boolean(),
+  /** What the page is — "WARRANTY DEED", "TREASURER", used as the header. */
+  kind: z.string(),
+  lines: z.array(z.string()),
+  /** Scan quality finding. Drives the degraded render; never inferred client-side. */
+  degraded: z.boolean(),
+});
+export type SourcePage = z.infer<typeof SourcePage>;
+
+export const OrderPagesResponse = z.object({
+  order_id: z.string(),
+  total_pages: z.number().int(),
+  pages: z.array(SourcePage),
+});
+export type OrderPagesResponse = z.infer<typeof OrderPagesResponse>;

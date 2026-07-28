@@ -13,6 +13,7 @@ import { readingsOf } from "./fieldLabel";
 import { DecisionPanel, type Pinned } from "./DecisionPanel";
 import { FieldList } from "./FieldList";
 import { CallBackSheet } from "./CallBackSheet";
+import { DocumentColumn } from "./DocumentColumn";
 import { ReviewHeader } from "./ReviewHeader";
 import { ReviewEditors, type ReviewMode } from "./ReviewEditors";
 import { OrderRail } from "./OrderRail";
@@ -91,10 +92,19 @@ export function ReviewScreen() {
     <div className="flex flex-col gap-8">
       <ReviewHeader fields={fields} queued={queued.length} />
 
-      <div className="grid gap-8 lg:grid-cols-[18rem_1fr]">
-        <OrderRail orderId={orderId} />
+      {/*
+        THE EXPORT'S THREE PANES: document · decision queue · draft sheet. The
+        reviewer reads on the left, decides in the middle, and watches the
+        deliverable assemble on the right. Splitting those apart is what stops
+        a decision being made without the page it came from in view.
+      */}
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,5fr)_minmax(0,6fr)_minmax(0,5fr)]">
+        <div className="flex flex-col gap-6">
+          <OrderRail orderId={orderId} />
+          <DocumentColumn orderId={orderId} field={selected} pinned={pinned?.reading ?? null} />
+        </div>
 
-        <div className="flex flex-col gap-8">
+        <div className="flex flex-col gap-6">
           <DecisionPanel
             field={selected}
             pinned={pinned}
@@ -130,9 +140,9 @@ export function ReviewScreen() {
           </DecisionPanel>
 
           <FieldList fields={fields} selectedPath={selected.path} onSelect={reselect} />
-
-          <CallBackSheet fields={fields} selectedPath={selected.path} onSelect={reselect} />
         </div>
+
+        <CallBackSheet fields={fields} selectedPath={selected.path} onSelect={reselect} />
       </div>
     </div>
   );

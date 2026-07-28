@@ -36,6 +36,7 @@ import {
   demoGolden,
   demoOrder,
   demoOrder2,
+  demoPages,
   demoRules,
   demoTimelines,
 } from "./data.js";
@@ -59,6 +60,20 @@ import {
  */
 const queue = [demoOrder, demoOrder2];
 let queueHead = 0;
+
+/**
+ * Source pages. Text, not rasters — the review screen shows WHERE a value came
+ * from, and the recorded line coordinates index into this text.
+ */
+const pagesHandler = http.get("/api/orders/:id/pages", ({ params }) => {
+  const id = String(params["id"]);
+  const doc = demoPages[id];
+  return HttpResponse.json({
+    order_id: id,
+    total_pages: doc?.total ?? 0,
+    pages: doc?.pages ?? [],
+  });
+});
 
 const timelineHandler = http.get("/api/orders/:id/timeline", ({ params }) => {
   const id = String(params["id"]);
@@ -260,6 +275,7 @@ const REQUIRED_ORDER_FIELDS = [
 
 export const handlers = [
   timelineHandler,
+  pagesHandler,
   /**
    * Ingest: order create + package upload (multipart). An incomplete package
    * is refused AT THE DOOR with the missing fields named — never silently.

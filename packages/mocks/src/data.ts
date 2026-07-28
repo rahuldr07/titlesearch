@@ -841,3 +841,76 @@ export const demoTimelines: Record<string, OrderTimelineEvent[]> = {
     { at: "2026-07-16T14:30:00Z", kind: "delivered", label: "delivered v2", detail: "v1+v2 retained — defect record", attend: true },
   ],
 };
+
+/**
+ * Source page text for ord_demo_1. Clearly synthetic, and deliberately
+ * consistent with `demoFields`: every page here is one a field cites, so the
+ * provenance on the review screen resolves to real text rather than to a page
+ * that says nothing about the value claiming it.
+ */
+export const demoPages: Record<string, { total: number; pages: { n: number; read_in_full: boolean; kind: string; lines: string[]; degraded: boolean }[] }> = {
+  ord_demo_1: {
+    total: 38,
+    pages: [
+      { n: 6, read_in_full: true, degraded: false, kind: "WARRANTY DEED", lines: [
+        "OFFICIAL RECORDS · CLAYTON CO. GA",
+        "INSTR # 2019-0044821    BK 10944 PG 213",
+        "RECORDED 04/11/2019 10:22",
+        "",
+        "THIS INDENTURE, made this 9th day of April, 2019, between",
+        "HUNTCREST BUILDERS LLC, a Georgia limited liability company,",
+        "hereinafter the Grantor, and",
+        "MARLOWE D. QUENBY AND TESSA R. QUENBY, husband and wife,",
+        "hereinafter the Grantees, WITNESSETH:",
+        "",
+        "That the Grantor does hereby convey unto the Grantees the real",
+        "property described in Exhibit A, situate in Clayton County, Georgia.",
+        "Consideration: $215,000.00",
+        "Property address: 4152 CREEKSTONE DR, DEMOVILLE GA 30296",
+      ] },
+      { n: 7, read_in_full: true, degraded: false, kind: "EXHIBIT A — LEGAL DESCRIPTION", lines: [
+        "The land referred to is situated in the County of Clayton,",
+        "State of Georgia, and is described as follows:",
+        "",
+        "Lot 18, of CREEKSTONE FARMS, according to the metes and",
+        "bounds description of record; no plat of survey is of record",
+        "for this subdivision.",
+      ] },
+      { n: 12, read_in_full: true, degraded: false, kind: "SECURITY DEED", lines: [
+        "OFFICIAL RECORDS · CLAYTON CO. GA",
+        "INSTR # 2019-0044822    BK 10944 PG 218",
+        "",
+        "THIS SECURITY DEED is made on April 9, 2019, between the Grantor,",
+        "MARLOWE D. QUENBY AND TESSA R. QUENBY, and the Grantee,",
+        "SOUTHSTONE MORTGAGE LLC, its successors and assigns.",
+      ] },
+      { n: 14, read_in_full: true, degraded: true, kind: "SECURITY DEED (cont.)", lines: [
+        "Borrower owes Lender the principal sum of",
+        "One Hundred Sixty-Six Thousand Ninety-Seven and 00/100 Dollars",
+        "($1ß6,097.00)",
+        "[ fax artefact over the numerals — the words line above is legible ]",
+        "This debt is evidenced by Borrower's note dated the same date.",
+      ] },
+      { n: 22, read_in_full: true, degraded: false, kind: "CLAYTON COUNTY TAX COMMISSIONER", lines: [
+        "PARCEL ........... 13-0044-0018",
+        "OWNER ............ QUENBY MARLOWE D",
+        "SITUS ............ 4152 CREEKSTONE DR",
+        "                   DEMOVILLE GA 30296",
+        "LAND VALUE ....... 28,000",
+        "BUILDING VALUE ... 158,400",
+        "2025 STATUS ...... (not printed on this card)",
+      ] },
+      { n: 30, read_in_full: true, degraded: true, kind: "FIFA SEARCH — SUPERIOR COURT", lines: [
+        "IN THE SUPERIOR COURT OF CLAYTON COUNTY",
+        "STATE OF GEORGIA · CIVIL DIVISION",
+        "",
+        "MERIDIAN FUNDING LLC, Plaintiff,",
+        "v.",
+        "M. QUENBY, Defendant.",
+        "",
+        "CASE NO. [ microfilm frame degraded — density loss ]",
+        "JUDGMENT entered in the sum of $4,112.83",
+      ] },
+    ],
+  },
+};
