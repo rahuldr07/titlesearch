@@ -3,10 +3,12 @@ import { useQuery } from "@tanstack/react-query";
 import type { Field, FieldReading } from "@titlepipe/contract";
 import { pagesQuery } from "./queries";
 import { PageFacsimile } from "./PageFacsimile";
+import { PageNav } from "./PageNav";
 import { readingsOf } from "./fieldLabel";
 import { toEvidenceBoxes } from "../../entities/document/coordinates";
 import { PageStrip } from "../../entities/document/PageStrip";
 import { Card, CardBody } from "../../shared/ui/Card";
+import { cn } from "../../shared/ui/classNames";
 
 /** The reading whose line is pinned, if the reviewer picked one. */
 function coordsFor(field: Field, pinned: FieldReading | null): unknown {
@@ -38,6 +40,7 @@ export function DocumentColumn({
 }) {
   const { data } = useQuery(pagesQuery(orderId));
   const [override, setOverride] = useState<number | null>(null);
+  const [zoom, setZoom] = useState(1);
 
   const cited = pinned?.page ?? field.source_page ?? readingsOf(field)[0]?.page ?? null;
   const current = override ?? cited;
@@ -56,16 +59,38 @@ export function DocumentColumn({
     );
   }
 
+  const total = data?.total_pages ?? pages.length;
+  const step = (delta: number) => {
+    const at = pages.findIndex((p) => p.n === page.n);
+    const next = pages[Math.min(Math.max(at + delta, 0), pages.length - 1)];
+    if (next) setOverride(next.n);
+  };
+
   return (
-    <Card>
-      <CardBody className="flex flex-col gap-6">
+    <Card className="overflow-hidden p-0">
+      <PageNav
+        page={page.n}
+        totalPages={total}
+        zoom={zoom}
+        onStep={step}
+        onZoom={(next) => setZoom(Math.min(Math.max(next, 0.5), 2))}
+      />
+      {/* Zoom scales the page, never the chrome around it. */}
+      <div
+        className={cn(
+          "origin-top",
+          zoom > 1.2 ? "scale-125" : zoom > 1.05 ? "scale-110" : zoom < 0.8 ? "scale-75" : zoom < 0.95 ? "scale-90" : "scale-100",
+        )}
+      >
         <PageFacsimile
           page={page}
           boxes={toEvidenceBoxes(coordsFor(field, pinned), { width: 1, height: 1 })}
         />
+      </div>
+      <CardBody className="border-t border-line-subtle">
         <PageStrip
           pages={pages.filter((p) => p.read_in_full).map((p) => p.n)}
-          totalPages={data?.total_pages ?? pages.length}
+          totalPages={total}
           currentPage={page.n}
           onSelect={setOverride}
         />

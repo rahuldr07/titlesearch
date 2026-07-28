@@ -103,12 +103,13 @@ export function ReviewScreen() {
     <div className="flex flex-col gap-8">
       <ReviewHeader fields={fields} queued={queued.length} />
 
-      {/* Three panes: read on the left, decide in the middle, watch the
-          deliverable assemble on the right. */}
-      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,5fr)_minmax(0,6fr)_minmax(0,5fr)]">
+      {/* TWO columns. The document is the work; the decision and the sheet
+          stack beside it because they are one conversation. A third column
+          starved both and pushed the sheet's values out of their rows. */}
+      <div className="grid items-start gap-6 xl:grid-cols-2">
         <div className="flex flex-col gap-6">
-          <OrderRail orderId={orderId} />
           <DocumentColumn orderId={orderId} field={selected} pinned={pinned?.reading ?? null} />
+          <OrderRail orderId={orderId} />
         </div>
 
         <div className="flex flex-col gap-6">
@@ -138,9 +139,8 @@ export function ReviewScreen() {
           />
 
           <FieldList fields={fields} selectedPath={selected.path} onSelect={reselect} />
+          <CallBackSheet fields={fields} selectedPath={selected.path} onSelect={reselect} />
         </div>
-
-        <CallBackSheet fields={fields} selectedPath={selected.path} onSelect={reselect} />
       </div>
     </div>
   );

@@ -49,16 +49,34 @@ export function PageFacsimile({
         ) : null}
       </figcaption>
 
-      <div className="relative overflow-hidden rounded-4 border border-line-strong bg-surface-document p-8">
-        <pre
-          className={cn(
-            "font-mono text-xs leading-document whitespace-pre-wrap text-ink-primary",
-            page.degraded && "filter-scan-degraded",
-          )}
-        >
-          {page.lines.join("\n")}
-        </pre>
-        <EvidenceOverlay boxes={boxes ?? []} />
+      {/*
+        IT READS AS PAPER, because that is what it is. A scanned county record
+        rendered as a flush block of terminal text tells a reviewer they are
+        looking at data; the whole point of putting the page on screen is that
+        they are looking at a DOCUMENT — with margins, a recording stamp and its
+        own damage. Serif body, real margins, centred on its surround. The
+        design draws it this way and it is not decoration: a reviewer who reads
+        the page as data stops checking it against the value.
+      */}
+      {/*
+        `surface-document` is the BACKDROP the page sits on, not the page — the
+        grey of a viewer surround. The sheet itself is panel white.
+        Getting these the wrong way round renders the document as a grey slab,
+        which is precisely the "this is data, not paper" reading the facsimile
+        exists to prevent.
+      */}
+      <div className="flex justify-center bg-surface-document px-8 py-9">
+        <div className="relative w-full max-w-160 rounded-2 bg-surface-panel px-12 py-11 shadow-page">
+          <pre
+            className={cn(
+              "font-quote text-sm leading-document whitespace-pre-wrap text-ink-primary",
+              page.degraded && "filter-scan-degraded",
+            )}
+          >
+            {page.lines.join("\n")}
+          </pre>
+          <EvidenceOverlay boxes={boxes ?? []} />
+        </div>
       </div>
     </figure>
   );
