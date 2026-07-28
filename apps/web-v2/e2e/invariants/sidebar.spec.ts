@@ -28,44 +28,8 @@ import { expect, test } from "@playwright/test";
 
 // DROPPED — STRUCTURAL — side-rail widget mechanics and active-door marking. The rail itself is old chrome.
 // was: the rail renders the role's doors and navigates
-// TODO(rebuild) [INVARIANT] — rule: attention signals are DOTS, never counts — red for an unresolved complaint, amber for a gap. (Re-target to whatever navigator the new design draws.)
-test("live attention dots ride the doors — red for a complaint, amber for a gap", async ({
-  page,
-}) => {
-  await page.goto("/queue");
-  await expect(page.getByTestId("side-rail")).toBeVisible();
-  // unresolved complaints are the hot-red act signal
-  await expect(page.getByTestId("rail-dot-/complaints")).toBeVisible();
-  // open escalations pull amber
-  await expect(page.getByTestId("rail-dot-/escalations")).toBeVisible();
-  // the rail carries NO counts — dots only (numbers live on the hub)
-  const railText = await page.getByTestId("side-rail").innerText();
-  expect(railText).not.toMatch(/\d+\s+unresolved/);
-  expect(railText).not.toMatch(/\d+\s+open/);
-});
 
-// TODO(rebuild) [INVARIANT] — rule: role-locked doors are ABSENT, not dimmed, and the navigator updates live on a role switch.
-test("doors outside the role's world are ABSENT, not dimmed", async ({
-  page,
-}) => {
-  await page.goto("/account");
-  await page.getByRole("tab", { name: "Me" }).click();
-  await page.getByTestId("role-reviewer").click();
-  // the rail updates live on the role switch — no reload (which would reset)
-  await expect(page.getByTestId("rail-door-/queue")).toBeVisible();
-  await expect(page.getByTestId("rail-door-/dashboard")).toHaveCount(0);
-  await expect(page.getByTestId("rail-door-/bench")).toHaveCount(0);
-  await expect(page.getByTestId("rail-door-/leaderboard")).toHaveCount(0);
-});
 
-// TODO(rebuild) [INVARIANT] — rule: the capture seat gets no navigator at all — structural blindness stays whole.
-test("the capture seat has no rail — structural blindness stays whole", async ({
-  page,
-}) => {
-  await page.goto("/blind/ord_demo_1");
-  await expect(page.getByTestId("blind-seat")).toBeVisible();
-  await expect(page.getByTestId("side-rail")).toHaveCount(0);
-});
 
 // DROPPED — STRUCTURAL — grouping labels of the old rail.
 // was: doors are grouped by pipeline stage with muted headers

@@ -39,19 +39,6 @@ test("the escalation inbox says unavailable when the list 500s", async ({
   });
 });
 
-// TODO(rebuild) [ORPHAN RULE] — rule: a failed deliveries query renders a named unavailable state.
-test("delivery says unavailable when deliveries 500s", async ({ page }) => {
-  await interceptApi(page, {
-    method: "GET",
-    match: "/api/deliveries",
-    status: 500,
-    body: { error: "boom" },
-  });
-  await page.goto("/delivery");
-  await expect(page.getByText(/Deliveries unavailable/)).toBeVisible({
-    timeout: 20_000,
-  });
-});
 
 // TODO(rebuild) [ORPHAN RULE] — rule: a partial failure degrades that region only — the order spine still renders its identity.
 test("the order spine survives a timeline failure", async ({ page }) => {
@@ -69,39 +56,5 @@ test("the order spine survives a timeline failure", async ({ page }) => {
   });
 });
 
-// TODO(rebuild) [ORPHAN RULE] — rule: an unknown order renders the empty state, never a working-looking grid.
-test("reconciliation with an unknown order shows the empty state, not a working grid", async ({
-  page,
-}) => {
-  await page.goto("/reconciliation/ord_nope");
-  await expect(page.getByTestId("recon-empty")).toBeVisible();
-  await expect(page.getByText("DIVERGENCES OPEN")).toHaveCount(0);
-});
 
-// TODO(rebuild) [ORPHAN RULE] — rule: a stale deep link names itself as stale and is distinguished from the no-context state.
-test("seed correction with a stale fieldId names the stale link", async ({
-  page,
-}) => {
-  await page.goto("/seed-correction?fieldId=gf_nope");
-  const card = page.getByTestId("stale-link");
-  await expect(card).toBeVisible();
-  await expect(card).toContainText("gf_nope");
-  await expect(page.getByTestId("no-context")).toHaveCount(0);
-});
 
-// TODO(rebuild) [ORPHAN RULE] — rule: a failed mutation surfaces the server's message verbatim.
-test("a delivery retry failure surfaces the server's message", async ({
-  page,
-}) => {
-  await interceptApi(page, {
-    method: "POST",
-    match: "/retry",
-    status: 500,
-    body: { error: "smtp refused" },
-  });
-  await page.goto("/delivery");
-  await page.getByTestId("retry-btn").click();
-  await expect(page.getByTestId("retry-note")).toContainText(
-    "server: smtp refused",
-  );
-});

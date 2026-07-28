@@ -18,7 +18,7 @@ import type { RuleStatus } from "@titlepipe/contract";
  */
 const STATUS = {
   live: { tone: "settled", label: "LIVE" },
-  pending: { tone: "attend", label: "PENDING" },
+  pending: { tone: "attend", label: "PENDING — CANNOT AFFECT THE PIPELINE" },
   retired: { tone: "neutral", label: "RETIRED" },
 } as const satisfies Record<RuleStatus, { tone: "settled" | "attend" | "neutral"; label: string }>;
 

@@ -1,47 +1,45 @@
 import { createRoute } from "@tanstack/react-router";
 import { rootRoute } from "./rootRoute";
-import { ClientsScreen } from "../features/clients/ClientsScreen";
-import { AuditScreen } from "../features/audit/AuditScreen";
-import { CompletenessScreen } from "../features/completeness/CompletenessScreen";
-import { DeliveredScreen } from "../features/delivered/DeliveredScreen";
-import { RulebookScreen } from "../features/rulebook/RulebookScreen";
-import { QueueScreen } from "../features/queue/QueueScreen";
-import { AccountScreen } from "../features/account/AccountScreen";
-import { HomeHub } from "../features/home/HomeHub";
-import { BlindSeat } from "../features/blind/BlindSeat";
-import { OpsDashboard } from "../features/dashboard/OpsDashboard";
-import { LeaderboardScreen } from "../features/leaderboard/LeaderboardScreen";
-import { DeliveryScreen } from "../features/delivery/DeliveryScreen";
-import { ComplaintsScreen } from "../features/complaints/ComplaintsScreen";
-import { GoldenSet } from "../features/golden/GoldenSet";
-import { SeedCorrection } from "../features/seedCorrection/SeedCorrection";
-import { ExtractionBench } from "../features/bench/ExtractionBench";
-import { BenchResults } from "../features/bench/BenchResults";
-import { EscalationsScreen } from "../features/escalations/EscalationsScreen";
-import { ReviewScreen } from "../features/review/ReviewScreen";
-import { IngestScreen } from "../features/ingest/IngestScreen";
-import { PeopleScreen } from "../features/people/PeopleScreen";
-import { ProfileScreen } from "../features/profile/ProfileScreen";
-import { ReconciliationScreen } from "../features/reconciliation/ReconciliationScreen";
-import { ReconciliationIndex } from "../features/reconciliation/ReconciliationIndex";
-import { BlindStatus } from "../features/blindStatus/BlindStatus";
-import { OverviewScreen } from "../features/overview/OverviewScreen";
-import { QuestionsScreen } from "../features/questions/QuestionsScreen";
-import { ProcessingScreen } from "../features/processing/ProcessingScreen";
 import { SigninScreen } from "../features/signin/SigninScreen";
 import { SessionEndedScreen } from "../features/session/SessionEndedScreen";
 import { SurfaceFailureScreen } from "../features/surfacefail/SurfaceFailureScreen";
+import { QueueScreen } from "../features/queue/QueueScreen";
+import { OverviewScreen } from "../features/overview/OverviewScreen";
+import { IngestScreen } from "../features/ingest/IngestScreen";
+import { QuestionsScreen } from "../features/questions/QuestionsScreen";
+import { ProcessingScreen } from "../features/processing/ProcessingScreen";
+import { CompletenessScreen } from "../features/completeness/CompletenessScreen";
+import { ReviewScreen } from "../features/review/ReviewScreen";
+import { DeliveredScreen } from "../features/delivered/DeliveredScreen";
+import { EscalationsScreen } from "../features/escalations/EscalationsScreen";
+import { RulebookScreen } from "../features/rulebook/RulebookScreen";
 import { ProductsScreen } from "../features/products/ProductsScreen";
+import { ClientsScreen } from "../features/clients/ClientsScreen";
+import { PeopleScreen } from "../features/people/PeopleScreen";
+import { AuditScreen } from "../features/audit/AuditScreen";
+import { ProfileScreen } from "../features/profile/ProfileScreen";
 import { GalleryScreen } from "../features/gallery/GalleryScreen";
 
 const parent = () => rootRoute;
 
-// ── built ───────────────────────────────────────────────────────────────────
-const homeRoute = createRoute({ getParentRoute: parent, path: "/", component: HomeHub });
-const queueRoute = createRoute({ getParentRoute: parent, path: "/queue", component: QueueScreen });
-const accountRoute = createRoute({ getParentRoute: parent, path: "/account", component: AccountScreen });
+/**
+ * The eighteen screens the approved design draws, and nothing else.
+ *
+ * `/` IS THE QUEUE, not a hub. The export opens on the queue and draws no hub —
+ * work is handed to you, so the first thing you see is the thing you were
+ * handed. A landing page listing where you could go is the browsing affordance
+ * the queue exists to refuse.
+ */
+const queueRoute = createRoute({ getParentRoute: parent, path: "/", component: QueueScreen });
+const queueAliasRoute = createRoute({ getParentRoute: parent, path: "/queue", component: QueueScreen });
+const overviewRoute = createRoute({ getParentRoute: parent, path: "/overview", component: OverviewScreen });
 
-// ── not built: each says WHY, rather than rendering an empty shell ───────────
+// ── the order flow, in the sequence an order moves through ──────────────────
+const ingestRoute = createRoute({ getParentRoute: parent, path: "/ingest", component: IngestScreen });
+const questionsRoute = createRoute({ getParentRoute: parent, path: "/questions", component: QuestionsScreen });
+const processingRoute = createRoute({ getParentRoute: parent, path: "/processing", component: ProcessingScreen });
+const completenessRoute = createRoute({ getParentRoute: parent, path: "/completeness", component: CompletenessScreen });
+
 /** Search-param owned: `?field=` is a first-class deep link (BRIEF §7). */
 const reviewRoute = createRoute({
   getParentRoute: parent,
@@ -50,57 +48,27 @@ const reviewRoute = createRoute({
     typeof search["field"] === "string" ? { field: search["field"] } : {},
   component: ReviewScreen,
 });
+const deliveredRoute = createRoute({ getParentRoute: parent, path: "/delivered", component: DeliveredScreen });
 const escalationsRoute = createRoute({ getParentRoute: parent, path: "/escalations", component: EscalationsScreen });
-const ingestRoute = createRoute({ getParentRoute: parent, path: "/ingest", component: IngestScreen });
-const dashboardRoute = createRoute({ getParentRoute: parent, path: "/dashboard", component: OpsDashboard });
-const complaintsRoute = createRoute({ getParentRoute: parent, path: "/complaints", component: ComplaintsScreen });
-const deliveryRoute = createRoute({ getParentRoute: parent, path: "/delivery", component: DeliveryScreen });
-const blindStatusRoute = createRoute({ getParentRoute: parent, path: "/blind-status", component: BlindStatus });
-const benchRoute = createRoute({ getParentRoute: parent, path: "/bench", component: ExtractionBench });
-const benchResultsRoute = createRoute({ getParentRoute: parent, path: "/bench/results", component: BenchResults });
-const leaderboardRoute = createRoute({ getParentRoute: parent, path: "/leaderboard", component: LeaderboardScreen });
-const goldenRoute = createRoute({ getParentRoute: parent, path: "/golden", component: GoldenSet });
 
-/** Search-param owned: `?fieldId=` carries the field; no context is a first-class state. */
-const seedCorrectionRoute = createRoute({
-  getParentRoute: parent,
-  path: "/seed-correction",
-  validateSearch: (search: Record<string, unknown>): { fieldId: string } => ({
-    fieldId: typeof search["fieldId"] === "string" ? search["fieldId"] : "",
-  }),
-  component: SeedCorrection,
-});
-const reconciliationRoute = createRoute({ getParentRoute: parent, path: "/reconciliation", component: ReconciliationIndex });
-const reconciliationOrderRoute = createRoute({ getParentRoute: parent, path: "/reconciliation/$orderId", component: ReconciliationScreen });
+// ── config and admin, reached from the account menu ─────────────────────────
+const rulebookRoute = createRoute({ getParentRoute: parent, path: "/rulebook", component: RulebookScreen });
+const productsRoute = createRoute({ getParentRoute: parent, path: "/products", component: ProductsScreen });
+const clientsRoute = createRoute({ getParentRoute: parent, path: "/clients", component: ClientsScreen });
 const peopleRoute = createRoute({ getParentRoute: parent, path: "/people", component: PeopleScreen });
+const auditRoute = createRoute({ getParentRoute: parent, path: "/audit", component: AuditScreen });
 const profileRoute = createRoute({ getParentRoute: parent, path: "/profile", component: ProfileScreen });
-const overviewScreenRoute = createRoute({ getParentRoute: parent, path: "/overview", component: OverviewScreen });
-const questionsScreenRoute = createRoute({ getParentRoute: parent, path: "/questions", component: QuestionsScreen });
-const processingScreenRoute = createRoute({ getParentRoute: parent, path: "/processing", component: ProcessingScreen });
-const signinScreenRoute = createRoute({ getParentRoute: parent, path: "/signin", component: SigninScreen });
-const sessionEndedScreenRoute = createRoute({ getParentRoute: parent, path: "/session", component: SessionEndedScreen });
-const surfaceFailureScreenRoute = createRoute({ getParentRoute: parent, path: "/surface-failure", component: SurfaceFailureScreen });
-const productsScreenRoute = createRoute({ getParentRoute: parent, path: "/products", component: ProductsScreen });
-const galleryScreenRoute = createRoute({ getParentRoute: parent, path: "/gallery", component: GalleryScreen });
-const auditScreenRoute = createRoute({ getParentRoute: parent, path: "/audit", component: AuditScreen });
-const completenessScreenRoute = createRoute({ getParentRoute: parent, path: "/completeness", component: CompletenessScreen });
-const deliveredScreenRoute = createRoute({ getParentRoute: parent, path: "/delivered", component: DeliveredScreen });
-const rulebookScreenRoute = createRoute({ getParentRoute: parent, path: "/rulebook", component: RulebookScreen });
-const clientsScreenRoute = createRoute({ getParentRoute: parent, path: "/clients", component: ClientsScreen });
-const blindRoute = createRoute({
-  getParentRoute: parent,
-  path: "/blind/$orderId",
-  component: BlindSeat,
-});
+
+// ── session, and the reference surfaces ─────────────────────────────────────
+const signinRoute = createRoute({ getParentRoute: parent, path: "/signin", component: SigninScreen });
+const sessionRoute = createRoute({ getParentRoute: parent, path: "/session", component: SessionEndedScreen });
+const surfaceFailRoute = createRoute({ getParentRoute: parent, path: "/surface-failure", component: SurfaceFailureScreen });
+const galleryRoute = createRoute({ getParentRoute: parent, path: "/gallery", component: GalleryScreen });
 
 export const routeTree = rootRoute.addChildren([
-  clientsScreenRoute,
-  auditScreenRoute, completenessScreenRoute, deliveredScreenRoute, rulebookScreenRoute,
-  homeRoute, queueRoute, accountRoute, reviewRoute,
-  escalationsRoute, ingestRoute, dashboardRoute, complaintsRoute,
-  deliveryRoute, blindStatusRoute, benchRoute, benchResultsRoute,
-  leaderboardRoute, goldenRoute, reconciliationRoute, reconciliationOrderRoute,
-  blindRoute, seedCorrectionRoute, peopleRoute, profileRoute,
-  productsScreenRoute, galleryScreenRoute, overviewScreenRoute, questionsScreenRoute,
-  processingScreenRoute, signinScreenRoute, sessionEndedScreenRoute, surfaceFailureScreenRoute,
+  queueRoute, queueAliasRoute, overviewRoute, ingestRoute,
+  questionsRoute, processingRoute, completenessRoute, reviewRoute,
+  deliveredRoute, escalationsRoute, rulebookRoute, productsRoute,
+  clientsRoute, peopleRoute, auditRoute, profileRoute,
+  signinRoute, sessionRoute, surfaceFailRoute, galleryRoute,
 ]);

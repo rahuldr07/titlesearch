@@ -1,5 +1,4 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { canAccess } from "@titlepipe/contract";
 import { doorsFor } from "../entities/nav/doors";
 import { useSession } from "../shared/session";
 import { useAttention } from "./attention";
@@ -28,9 +27,6 @@ const FLOW: readonly { path: string; label: string }[] = [
   { path: "/review", label: "Review" },
   { path: "/delivered", label: "Delivered" },
 ];
-
-/** Flow screens with an authorisation row; the rest are unrestricted. */
-const GATED = new Set(["/queue", "/review"]);
 
 function Door({ path, label, collapsed, active, to }: {
   path: string;
@@ -70,7 +66,9 @@ export function ScreenMenu({ orderId, collapsed }: { orderId: string | null; col
   const role = useSession((s) => s.role);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
-  const flow = FLOW.filter((item) => !GATED.has(item.path) || canAccess(role, item.path));
+  // `doorsFor` already applies the authz table; the flow reads from the same list.
+  const held = new Set(doorsFor(role).map((door) => door.path));
+  const flow = FLOW.filter((item) => held.has(item.path) || item.path === "/review");
   /*
    * The measurement screens the export does not draw still need a door, but
    * they do NOT belong in the order flow. Merging both into one strip made it

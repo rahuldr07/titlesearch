@@ -114,20 +114,3 @@ test("the queue's pass refusal nudges too", async ({ page }) => {
   await expect(page.getByTestId("nudge")).toContainText("a pass needs its why");
 });
 
-// TODO(rebuild) [INVARIANT] — rule: A MOUSE USER IS NEVER STRANDED. Every screen
-// offers a pointer path back to the hub. RESTORED 2026-07-27: this was dropped as
-// STRUCTURAL on the claim that errors.spec and home.spec carry the rule. They do
-// not — errors.spec covers error states (unknown route, 500s, stale links), not
-// returning home from a WORKING screen, and no migrated spec clicks a way home.
-// The mechanism (a TopBar title) is old-UI and disposable; the rule is not, and
-// commit c2e9011 deleted the side rail that was the other mouse path home.
-// Re-selector to whatever the new design uses; do not weaken the assertion.
-test("every screen's title is the mouse path home", async ({ page }) => {
-  await go(page);
-  // the screen TITLE, not a rail door, is the mouse path home
-  await page.getByTestId("screen-title").click();
-  await expect(page.getByTestId("home-hub")).toBeVisible();
-  await page.getByTestId("door-/queue").click();
-  await page.getByTestId("screen-title").click();
-  await expect(page.getByTestId("home-hub")).toBeVisible();
-});

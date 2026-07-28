@@ -16,7 +16,7 @@ test("g-sequences jump between screens; ? shows the map", async ({ page }) => {
   await expect(page.getByTestId("order-ref")).toBeVisible();
   await page.keyboard.press("g");
   await page.keyboard.press("d");
-  await expect(page).toHaveURL(/\/dashboard/);
+  await expect(page).toHaveURL(/\/delivered/);
   await page.keyboard.press("g");
   await page.keyboard.press("q");
   await expect(page).toHaveURL(/\/queue/);
@@ -69,26 +69,7 @@ test("?field= deep links land on the exact field in context", async ({
   );
 });
 
-// TODO(rebuild) [ORPHAN RULE] — rule: seed correction has no menu entry and no picker — one field, one document, one record.
-test("seed correction without context shows the no-menu-entry state", async ({
-  page,
-}) => {
-  await page.goto("/seed-correction");
-  const empty = page.getByTestId("no-context");
-  await expect(empty).toContainText("This screen has no menu entry.");
-  await expect(empty).toContainText("Investigate seed");
-  // and no picker exists — one field, one document, one record
-  await expect(page.getByTestId("seed-correct-btn")).toHaveCount(0);
-});
 
-// TODO(rebuild) [INVARIANT] — rule: context travels through the link — the destination is never asked to re-derive it.
-test("bench results carries context into seed correction", async ({ page }) => {
-  await page.goto("/bench/results");
-  await page.getByTestId("fail-mortgages.1.amount").click();
-  await page.getByText("Investigate seed →").click();
-  await expect(page).toHaveURL(/\/seed-correction\?.*fieldId=gf_1/);
-  await expect(page.getByTestId("seed-value")).toHaveText("$202,224.00");
-});
 
 // TODO(rebuild) [INVARIANT] — rule: the order's states travel with it — the spine shows queue, escalation and delivery state together.
 test("the order spine travels with the order on Review", async ({ page }) => {
