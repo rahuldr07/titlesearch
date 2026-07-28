@@ -70,7 +70,8 @@ export function overrideFor(
  * why. Reading the override first would let a "replace" that the server
  * resolved as excluded render as if the line were still being answered.
  */
-export function markFor(
+/** Internal — `markOf` is the exported entry point. */
+function markFor(
   application: LineApplication,
   override: OverrideType | null,
 ): CompareMark {
