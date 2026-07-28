@@ -42,7 +42,7 @@ export function FinalizedNotice({
       <h1 className="mb-3 text-4xl font-semibold text-ink-primary">
         Order {orderId} delivered
       </h1>
-      <p className="mx-auto mb-11 max-w-150 text-md leading-open text-ink-secondary">
+      <p className="mx-auto mb-11 max-w-172 text-md leading-open text-ink-secondary">
         The abstractor sign-off was completed at intake, the completeness gate
         cleared before extraction, and every flagged value was approved by a
         reviewer, field by field.
@@ -51,7 +51,22 @@ export function FinalizedNotice({
       <div className="mb-11 flex flex-wrap items-center justify-center gap-5">
         <Eyebrow variant="field">Product</Eyebrow>
         <span className="text-md font-semibold text-ink-primary">{DEMO_PRODUCT_NAME}</span>
-        <Chip tone="action" size="md" shape="mono" bordered>
+        {/*
+          `normal-case` because `Chip` uppercases and the design does not here.
+          Every other chip in the product is a state word, where caps read as a
+          label; this one is a DATE SPAN, and "07/18/1986 – 07/18/2026" shouted
+          in 9px letterspaced caps stops being a number you can read at a glance.
+          Size and tracking go with it for the same reason, and they are what
+          keep the row on ONE line: `tracking-label` on forty characters spends
+          52px on air alone, which pushed the badge under the product name.
+        */}
+        <Chip
+          tone="action"
+          size="md"
+          shape="mono"
+          bordered
+          className="text-xs tracking-normal normal-case"
+        >
           {DEMO_PERIOD_BADGE}
         </Chip>
       </div>

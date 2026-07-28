@@ -1,16 +1,13 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
-import { useHotkeys } from "react-hotkeys-hook";
-import { nextOrderQuery, usePassOrder } from "./queries";
-import { PassControl } from "../../entities/order/PassControl";
-import { Card, CardBody, CardHeader } from "../../shared/ui/Card";
-import { Eyebrow } from "../../shared/ui/Eyebrow";
-import { Button } from "../../shared/ui/Button";
+import { nextOrderQuery } from "./queries";
+import { Card, CardBody } from "../../shared/ui/Card";
 import { ScreenFailure } from "../../shared/ui/ScreenFailure";
-import { OrderStatusChip } from "../../entities/order/OrderStatusChip";
+import { ToggleGroup, Toggle } from "../../shared/ui/ToggleGroup";
 import { ScreenTitle } from "../../app/ScreenTitle";
-import { QueueSections } from "./QueueSections";
+import { QueueBand } from "./QueueBand";
+import { MineBand, TailBands } from "./QueueSections";
+import { NextOrderCard } from "./NextOrderCard";
 
 /**
  * ONE order, chosen by the server. There is no list, no filter and no sort —
@@ -21,119 +18,74 @@ import { QueueSections } from "./QueueSections";
  * Nothing here counts, times or paces anything (`queue.spec` #2, constraint 7).
  * No "3 orders waiting", no elapsed timer, and no ESTIMATE — an estimate is a
  * pace indicator wearing a helpful hat.
+ *
+ * BAND ORDER IS THE DESIGN'S ARGUMENT, not a layout preference. Mine comes
+ * first because finishing what you already hold beats being handed something
+ * new, and Next up sits second so that taking more work reads as a decision
+ * made after seeing what is already open — not as the top of the page.
+ *
+ * The Reviewer / Senior · Ops switch is a VIEW over bands, never an identity.
+ * It shows and hides In flight exactly as the export does; who you are still
+ * comes from the session, and the server still gates every byte behind it.
  */
 export function QueueScreen() {
-  const navigate = useNavigate();
   const { data, isPending, isError, error } = useQuery(nextOrderQuery);
-  const pass = usePassOrder();
-  const [passing, setPassing] = useState(false);
-  const [passedRef, setPassedRef] = useState<string | null>(null);
-
-  const order = data?.order ?? null;
-
-  // Hotkeys do not fire inside inputs by default, which is what keeps `p` and
-  // Enter from firing while the reviewer is typing a pass reason (§7 scopes,
-  // and `hard.spec` #5 pins the general rule).
-  useHotkeys("p", () => { if (order) setPassing(true); }, { preventDefault: true }, [order]);
-  useHotkeys(
-    "enter",
-    () => { if (order && !passing) void navigate({ to: "/orders/$orderId/review", params: { orderId: order.id } }); },
-    { preventDefault: true },
-    [order, passing],
-  );
+  const [view, setView] = useState<"reviewer" | "senior">("reviewer");
 
   if (isError) return <ScreenFailure reference={error instanceof Error ? error.message : undefined} />;
   if (isPending) return <p className="text-base text-ink-secondary">Loading the next order…</p>;
 
-  if (!order) {
-    return (
-      <Card>
-        <CardBody className="text-center">
-          <p className="font-semibold">Nothing is waiting.</p>
-          <p className="mt-2 text-sm text-ink-secondary">
-            Work comes to you — the system decides which order is next.
-          </p>
-        </CardBody>
-      </Card>
-    );
-  }
+  const order = data.order;
 
   return (
-    <div className="flex flex-col gap-6">
-      <header className="flex flex-col gap-2">
-        <ScreenTitle>Your queue</ScreenTitle>
-        <p className="text-md font-semibold text-ink-primary">Work comes to you</p>
-        <p className="max-w-3xl text-base leading-body text-ink-secondary">
-          The system hands over the next order by age and priority — there is no
-          list to shop through. Every clock here belongs to an order, never to
-          you.
-        </p>
+    /*
+      The queue sets its OWN measure. The shell's cap belongs to the widest
+      screen in the app, and this is one of the narrowest: a single column of
+      bands you read top to bottom. Left at full width it stretched to 1440px
+      and the empty-state sentences ran the whole monitor.
+    */
+    <div className="mx-auto flex max-w-430 flex-col gap-9">
+      <header className="flex flex-wrap items-end justify-between gap-8">
+        <div className="min-w-0 flex-1">
+          <ScreenTitle>Your queue</ScreenTitle>
+          <h1 className="mt-3 text-3xl font-semibold text-ink-primary">Work comes to you</h1>
+          <p className="mt-3 max-w-235 text-base leading-body text-ink-secondary">
+            The system hands over the next order by age and priority —
+            there&rsquo;s no list to shop through. Every clock here belongs to an
+            order, never to you.
+          </p>
+        </div>
+        <ToggleGroup
+          aria-label="Queue view"
+          value={[view]}
+          onValueChange={(next) => {
+            const picked = next.at(0);
+            if (picked === "reviewer" || picked === "senior") setView(picked);
+          }}
+        >
+          <Toggle value="reviewer" className="rounded-6 px-7 py-4 text-sm">Reviewer</Toggle>
+          <Toggle value="senior" className="rounded-6 px-7 py-4 text-sm">Senior · Ops</Toggle>
+        </ToggleGroup>
       </header>
 
-      {passedRef ? (
-        <p data-testid="passed-note" className="text-base text-ink-secondary">
-          You passed {passedRef}. It went back to the queue with your reason.
-        </p>
-      ) : null}
+      <MineBand />
 
-      <Card>
-        <CardHeader filled>
-          <Eyebrow variant="section">Next up — the system decides, no picking</Eyebrow>
-          <span data-testid="order-ref" className="font-mono text-md font-semibold">
-            {order.external_ref}
-          </span>
-          <OrderStatusChip label={order.status} tone="action" />
-        </CardHeader>
+      <QueueBand title="Next up" note="the system decides — no picking">
+        {order === null ? (
+          <Card>
+            <CardBody>
+              <p className="font-semibold">Nothing is waiting.</p>
+              <p className="mt-2 text-sm text-ink-secondary">
+                Work comes to you — the system decides which order is next.
+              </p>
+            </CardBody>
+          </Card>
+        ) : (
+          <NextOrderCard order={order} />
+        )}
+      </QueueBand>
 
-        <CardBody>
-          <dl className="flex flex-wrap gap-10">
-            <Detail label="County">{order.county}, {order.state}</Detail>
-            <Detail label="Jurisdiction">{order.jurisdiction}</Detail>
-            <Detail label="Client">{order.client_id}</Detail>
-          </dl>
-
-          {passing ? (
-            <PassControl
-              pending={pass.isPending}
-              onCancel={() => setPassing(false)}
-              onSubmit={(reason) => {
-                const ref = order.external_ref;
-                pass.mutate(
-                  { orderId: order.id, reason },
-                  { onSuccess: () => { setPassedRef(ref); setPassing(false); } },
-                );
-              }}
-            />
-          ) : (
-            <div className="mt-8 flex flex-wrap gap-4">
-              <Button
-                onClick={() => void navigate({ to: "/orders/$orderId/review", params: { orderId: order.id } })}
-              >
-                Take this order
-              </Button>
-              <Button fill="outlined" tone="neutral" onClick={() => setPassing(true)}>
-                Pass — say why
-              </Button>
-            </div>
-          )}
-
-          <p className="mt-6 text-xs text-ink-secondary">
-            Keys: <span className="font-mono">⏎</span> take it ·{" "}
-            <span className="font-mono">P</span> pass
-          </p>
-        </CardBody>
-      </Card>
-
-      <QueueSections />
-    </div>
-  );
-}
-
-function Detail({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <Eyebrow variant="field" as="dt">{label}</Eyebrow>
-      <dd className="mt-1 text-base text-ink-primary">{children}</dd>
+      <TailBands senior={view === "senior"} />
     </div>
   );
 }

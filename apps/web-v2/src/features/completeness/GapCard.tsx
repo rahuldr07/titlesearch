@@ -16,22 +16,31 @@ import type { GapClosure } from "./useGateState";
  * the package, and a layout that presented the finding as the correction would
  * teach people to amend answers that were true.
  *
- * PROVISIONAL IS LOUDER THAN THE FINDING IT QUALIFIES. A gap raised against an
- * N/A the gate has not accepted says so in a dashed attend block rather than a
- * footnote — a gate that halts a run on evidence it cannot yet vouch for must
- * be the one to admit it.
+ * PROVISIONAL IS LOUDER THAN THE FINDING IT QUALIFIES, AND ONLY THE N/A CARD
+ * CARRIES IT. A gap raised against an N/A the gate has not accepted says so in
+ * a dashed attend block rather than a footnote — a gate that halts a run on
+ * evidence it cannot yet vouch for must be the one to admit it. The other two
+ * kinds do not get one: a caveat printed on every card is wallpaper, and the
+ * card that actually needs reading loses the only mark that distinguishes it.
  *
- * CONTRACT GAP: the wire carries no per-gap provisional text, so the block
- * below is keyed on `kind` alone and states only what the kind itself means.
+ * CONTRACT GAP: the wire carries no per-gap provisional text — the design
+ * quotes the precondition this gate matched on, and nothing on the response
+ * says what it was. The note below is keyed on `kind` alone and states only
+ * what the kind itself means, which is the most that is true without inventing.
  */
 const KIND_LABEL: Record<GapKind, string> = {
-  na_provisional: "Gap · provisional N/A",
+  na_provisional: "Gap · answered N/A",
+  /*
+   * CONTRACT GAP: the design names the answer the gate disputes — "Gap ·
+   * answered YES". `kind` says a claim is disputed and nothing says which
+   * answer it was, so the label stops where the wire does.
+   */
   disagreement: "Gap · claim disputed",
   period_short: "Gap · ordered period",
 };
 
 const PROVISIONAL_NOTE =
-  "The gate raised this against an N/A it has not accepted. It is the disagreement that is recorded here, not a verdict about which side is right.";
+  "The precondition behind this gate is a fixture on the build, not a value segmentation produced. It reads the same on every package, so this card cannot yet be trusted as evidence about THIS order.";
 
 export function GapCard({
   gap,

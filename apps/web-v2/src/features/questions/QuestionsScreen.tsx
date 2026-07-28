@@ -19,6 +19,12 @@ import { orderSignoffQuery, SIGNOFF_ORDER_ID } from "./queries";
  * suggest, only a person can sign — are rendered verbatim so the distinction
  * survives either ruling.
  *
+ * ONE COLUMN, NARROWER THAN THE PAGE. The design holds the thirteen lines to a
+ * measure a person can read down without their eye losing the row it is on —
+ * the question on the left, its three answers always at the same right-hand
+ * stop. Letting the card run to the full page width puts a hand's span of empty
+ * paper between a question and the button that answers it.
+ *
  * CONTRACT GAP: no sign-off submit endpoint and no pipeline-start endpoint.
  * Answers and their required comments are local state over the fetched
  * baseline; "Start pipeline" has nothing to call and stays disabled.
@@ -30,11 +36,11 @@ export function QuestionsScreen() {
   if (isPending) return <p className="text-base text-ink-secondary">Loading sign-off…</p>;
 
   return (
-    <div className="flex flex-col gap-7">
+    <div className="mx-auto flex w-full max-w-320 flex-col gap-7">
       <header className="flex flex-col gap-3">
         <ScreenTitle>Step 2 — Sign-off</ScreenTitle>
         <h1 className="text-4xl font-semibold">Confirm what you did on this search</h1>
-        <p className="max-w-2xl text-md leading-body text-ink-secondary">
+        <p className="max-w-234 text-md leading-body text-ink-secondary">
           You answer these before the pipeline runs — this is you claiming your
           own work at the moment you hand it over, not the QC reviewer vouching
           for it later. All required. Suggested answers come from this

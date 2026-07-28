@@ -18,6 +18,19 @@ import { GapClosureForm } from "./GapClosureForm";
  */
 const CONSEQUENCE = "Needs a reason — it is recorded on the order.";
 
+/**
+ * The design writes the count as a WORD — "close it one of two ways", not "one
+ * of 2 ways". A numeral in a sentence reads as data, and this heading is not
+ * data: it is prose about what you may now do. The one numeral on this card
+ * that IS data — the sign-off line the gap was raised against — would stop
+ * standing out the moment a second digit appeared beside it.
+ *
+ * The count still comes from the server's list. Only its spelling is decided
+ * here, and only up to four; beyond that a numeral reads more easily than a
+ * word and the sentence has bigger problems.
+ */
+const COUNT_WORD: Record<number, string> = { 2: "two", 3: "three", 4: "four" };
+
 export function GapCloseOptions({
   options,
   onClose,
@@ -30,7 +43,9 @@ export function GapCloseOptions({
   return (
     <div>
       <Eyebrow variant="field" as="p" className="mb-4">
-        {options.length === 1 ? "One way to close it" : `Close it one of ${options.length} ways`}
+        {options.length === 1
+          ? "One way to close it"
+          : `Close it one of ${COUNT_WORD[options.length] ?? options.length} ways`}
       </Eyebrow>
 
       <div className="flex flex-wrap gap-5">

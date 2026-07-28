@@ -20,8 +20,13 @@ import type { NoValueKind } from "../../entities/field/noValueStates";
  * that were sketched. A states gallery missing two states is the gap it exists
  * to close.
  *
- * They wrap rather than scroll: each one has to stay legible next to the others,
- * and a horizontal scroller would hide the comparison that is the entire point.
+ * THEY STACK, ONE PER ROW, EACH THE FULL WIDTH OF THE CELL — the design's own
+ * arrangement, and it is load-bearing rather than tidy. Left as inline chips
+ * they wrapped to their content, so the six ended up different widths on
+ * different lines and the eye compared SHAPES. Every one the same rectangle
+ * leaves border style, fill pattern and wording as the only things that differ,
+ * which is the comparison the card exists to make. Nothing scrolls: a
+ * horizontal scroller would hide half the set behind an interaction.
  */
 const EVERY_NO_VALUE: readonly NoValueKind[] = [
   { kind: "not_present" },
@@ -34,7 +39,7 @@ const EVERY_NO_VALUE: readonly NoValueKind[] = [
 
 export function NoValueSample() {
   return (
-    <div data-testid="no-value-gallery" className="flex w-full flex-wrap gap-3">
+    <div data-testid="no-value-gallery" className="flex w-full flex-col gap-3">
       {EVERY_NO_VALUE.map((value) => (
         <NoValue key={value.kind} value={value} />
       ))}

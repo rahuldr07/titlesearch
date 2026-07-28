@@ -1,10 +1,12 @@
 import { useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import type { OrderPipelineResponse } from "@titlepipe/contract";
 import { ScreenTitle } from "../../app/ScreenTitle";
-import { Button } from "../../shared/ui/Button";
+import { buttonClasses } from "../../shared/ui/Button";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
 import { Toggle, ToggleGroup } from "../../shared/ui/ToggleGroup";
+import { cn } from "../../shared/ui/classNames";
 import { PackageStats } from "./PackageStats";
 import { StageRow } from "./StageRow";
 import { orderPipelineQuery, PIPELINE_ORDER_ID } from "./queries";
@@ -40,17 +42,27 @@ export function ProcessingScreen() {
  * The toggle previews the other rendering of the closing call-to-action and
  * writes nothing — the stage rows keep printing the server's phases either way,
  * because the gate's outcome is the server's to state and this control is a
- * local view of it, not an override of it.
+ * local view of it, not an override of it. It sits with the button it changes,
+ * below the run, so the design's reading order — stats, then the run, then the
+ * one thing to do about it — survives the extra control.
  *
- * CONTRACT GAP: the primary button navigates in the product (to the
- * completeness gate, or into review). No pipeline resource accepts a start or a
- * resume, so it is rendered without a destination and disabled.
+ * THE CALL TO ACTION IS A LINK, NOT A SUBMIT. It never starts, resumes or
+ * retries anything; it carries you to whichever screen is holding the run —
+ * the completeness gate while the gate is halted, the order under review once
+ * it is not. Both are registered routes, so drawing it disabled would have been
+ * a lie about a journey the app can actually make.
  */
 function PipelineBody({ pipeline }: { pipeline: OrderPipelineResponse }) {
   const [gateHalted, setGateHalted] = useState(pipeline.gate_halted);
 
   return (
-    <div className="flex flex-col gap-7">
+    /*
+     * THIS SCREEN SETS ITS OWN MEASURE — 700px, centred, as the design draws it.
+     * The shell's cap belongs to the widest board in the app, not to a single
+     * column of stage rows; left uncapped, one row would run the full window and
+     * put the owner caption a screen's width away from the stage it names.
+     */
+    <div className="mx-auto flex max-w-350 flex-col gap-7">
       <header className="flex flex-col gap-2">
         <ScreenTitle>Step 3 — Pipeline</ScreenTitle>
         <h1 className="text-4xl font-semibold">Building the draft report</h1>
@@ -66,6 +78,12 @@ function PipelineBody({ pipeline }: { pipeline: OrderPipelineResponse }) {
         classifierNote={pipeline.classifier_note}
       />
 
+      <ul className="overflow-hidden rounded-9 border border-line-strong bg-surface-panel">
+        {pipeline.stages.map((stage) => (
+          <StageRow key={stage.id} stage={stage} />
+        ))}
+      </ul>
+
       <div className="flex items-center gap-4">
         <Eyebrow variant="caption">Gate outcome · local preview</Eyebrow>
         <ToggleGroup
@@ -78,17 +96,19 @@ function PipelineBody({ pipeline }: { pipeline: OrderPipelineResponse }) {
         </ToggleGroup>
       </div>
 
-      <ul className="overflow-hidden rounded-9 border border-line-strong bg-surface-panel">
-        {pipeline.stages.map((stage) => (
-          <StageRow key={stage.id} stage={stage} />
-        ))}
-      </ul>
-
-      <Button size="xl" tone={gateHalted ? "halt" : "action"} disabled>
-        {gateHalted
-          ? "Resolve completeness gate →"
-          : "Open review — the run is waiting on you →"}
-      </Button>
+      {gateHalted ? (
+        <Link to="/completeness" className={cn(buttonClasses({ size: "xl", tone: "halt" }))}>
+          Resolve completeness gate →
+        </Link>
+      ) : (
+        <Link
+          to="/orders/$orderId/review"
+          params={{ orderId: pipeline.order_id }}
+          className={cn(buttonClasses({ size: "xl" }))}
+        >
+          Open review — the run is waiting on you →
+        </Link>
+      )}
     </div>
   );
 }

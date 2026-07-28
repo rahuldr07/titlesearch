@@ -41,6 +41,15 @@ export function SignoffCard({ signoff }: { signoff: OrderSignoffResponse }) {
 
   const answered = lines.filter((line) => answers[line.line_id] !== undefined).length;
   const remaining = lines.length - answered;
+  /**
+   * How many lines POLICY has an opinion about — not how many are filled in,
+   * which is always none. The banner used to say "some answers are prefilled
+   * from client policy" on every order, including orders where no line carries
+   * the flag at all, and the screen deliberately prefills nothing. A banner
+   * that announces a prefill the rows then refuse to show is the exact
+   * suggestion/signature confusion ruling Q13 is open about.
+   */
+  const suggested = lines.filter((line) => line.prefilled_from_policy).length;
   const ready = lines.every((line) => {
     const answer = answers[line.line_id];
     if (answer === undefined) return false;
@@ -66,10 +75,15 @@ export function SignoffCard({ signoff }: { signoff: OrderSignoffResponse }) {
           </span>
         </CardHeader>
 
-        <p className="border-b border-line-subtle bg-action-surface px-8 py-5 text-xs leading-body text-action-ink">
-          <span className="font-semibold">Not signed — some answers are prefilled from client policy.</span>{" "}
-          Policy can suggest; only a person can sign.
-        </p>
+        {signoff.signed_by === null ? (
+          <p className="border-b border-line-subtle bg-action-surface px-8 py-4 text-xs leading-body text-action-ink">
+            <span className="font-semibold">Not signed.</span>{" "}
+            {suggested === 0
+              ? null
+              : `Client policy has a suggested answer on ${suggested} of these ${lines.length} lines, and none of it is filled in. `}
+            Policy can suggest; only a person can sign.
+          </p>
+        ) : null}
 
         <ul>
           {lines.map((line) => (

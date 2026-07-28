@@ -18,9 +18,11 @@ import { Eyebrow } from "../../shared/ui/Eyebrow";
  *    it. The prefill is visible and still costs a deliberate press, which is the
  *    whole distinction between a policy and a signature (open ruling Q13).
  *
- * CONTRACT GAP: `prefilled_from_policy` is a boolean — the wire says a policy
- * answer exists but never says what it is, so the row cannot name the suggested
- * answer or tint the button it would land on.
+ * CONTRACT GAP: `prefilled_from_policy` is a boolean. The design prints the
+ * suggestion outright — "Policy suggests YES" — and outlines the button that
+ * answer would land on. The wire says only THAT a policy answer exists, never
+ * WHICH, so this row says the same thing without the value. Reading the
+ * suggestion off the button set would be the screen inventing a policy.
  */
 const NA_UNCHECKED_NOTE =
   "An N/A on this line is not verified against the package and raises no gate.";
@@ -38,8 +40,8 @@ export function SignoffRowNotes({
     <>
       {line.period_scoped ? (
         <div className="mt-3 inline-flex items-baseline gap-4 rounded-5 border border-action-border bg-action-surface px-5 py-2">
-          <Eyebrow variant="caption" tone="action">
-            Scope / period
+          <Eyebrow variant="caption" tone="action" className="shrink-0">
+            SCOPE / PERIOD
           </Eyebrow>
           <span className="font-mono text-xs font-semibold text-action-ink">{periodLabel}</span>
         </div>
@@ -48,28 +50,28 @@ export function SignoffRowNotes({
       {line.machine_check === null ? (
         <div className="mt-3 flex max-w-full items-baseline gap-4 rounded-5 border border-dashed border-state-attend-border bg-state-attend-surface px-5 py-2">
           <Eyebrow variant="caption" tone="attend" className="shrink-0">
-            No machine check
+            NO MACHINE CHECK
           </Eyebrow>
           <span className="text-tiny leading-body text-ink-secondary">{NA_UNCHECKED_NOTE}</span>
         </div>
       ) : (
         <div className="mt-3 flex max-w-full items-baseline gap-4">
           <Eyebrow variant="caption" className="shrink-0">
-            Machine check
+            MACHINE CHECK
           </Eyebrow>
           <span className="text-tiny leading-body text-ink-muted">{line.machine_check}</span>
         </div>
       )}
 
       {answered ? null : (
-        <div className="mt-2 flex flex-wrap items-center gap-4">
-          <Eyebrow variant="caption" tone="action">
-            ◇ Not answered
+        <div className="mt-2 flex flex-wrap items-baseline gap-4">
+          <Eyebrow variant="caption" tone="action" className="shrink-0">
+            ◇ NOT ANSWERED
           </Eyebrow>
           {line.prefilled_from_policy ? (
-            <span className="text-tiny text-ink-muted">
-              Client policy holds an answer for this line —{" "}
-              <span className="font-semibold text-action-ink">it is not signed until you answer</span>.
+            <span className="text-tiny leading-body text-ink-muted">
+              Policy suggests an answer —{" "}
+              <span className="font-semibold text-action-ink">only your press signs it</span>.
             </span>
           ) : null}
         </div>

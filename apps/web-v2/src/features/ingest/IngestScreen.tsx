@@ -8,7 +8,6 @@ import { RefusedCard } from "./RefusedCard";
 import { AcceptedCard } from "./AcceptedCard";
 import { ApiError } from "../../shared/api";
 import { ScreenTitle } from "../../app/ScreenTitle";
-import { Card, CardBody, CardHeader } from "../../shared/ui/Card";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
 import { Button } from "../../shared/ui/Button";
 
@@ -20,6 +19,13 @@ interface Refusal {
 /**
  * INGEST — the door.
  *
+ * ONE NARROW COLUMN, CENTRED. The design gives intake half the width it gives a
+ * review screen, and that is the point: this is a single errand done in order,
+ * top to bottom, not a workspace to range around in. Each block — drop the
+ * package, name the order, hand it over — is a sheet standing on the grey
+ * ground rather than a row inside one chrome card, so the sequence reads as
+ * steps instead of as one dense form.
+ *
  * AN UPLOAD ALONE NEVER QUEUES AN ORDER (`ingest.spec` #2). Acceptance is a
  * second, deliberate act, because signing for a package is what makes a missing
  * document somebody's responsibility. Auto-accepting on upload saves one click
@@ -29,11 +35,13 @@ interface Refusal {
  * where the bytes are; the screen surfaces the message and does not attempt to
  * recognise a re-upload on its own.
  *
- * SCOPE: this is the intake path only. The export's product picker, client
- * overrides, completeness-gate configuration and config versioning are NOT
- * built — rulings Q4–Q10 are open and have no backend counterpart, and
- * `decisions.md` records them as owner calls. Building them from the screens
- * would be generating backend behaviour from pixels.
+ * CONTRACT GAP: the design chooses the CLIENT and the PRODUCT ORDERED from card
+ * grids — "resolves the effective sign-off", "sets the questions and the
+ * scope". Nothing lists either, and `POST /api/orders` takes neither; it takes
+ * the five text fields below. Hard-coding two banks and six products would be
+ * inventing a fixture and, worse, would let this screen decide which sign-off
+ * list applies to an order. Rulings Q4–Q10 are open on exactly that and
+ * `decisions.md` records them as owner calls.
  */
 export function IngestScreen() {
   const [values, setValues] = useState<Record<string, string>>({});
@@ -68,24 +76,14 @@ export function IngestScreen() {
     });
   };
 
-  if (accepted !== null) {
-    return (
-      <div className="flex flex-col gap-8">
-        <ScreenTitle>Ingest</ScreenTitle>
-        <AcceptedCard orderRef={accepted.external_ref} onAnother={reset} />
-      </div>
-    );
-  }
-
   return (
-    <div className="flex flex-col gap-8">
+    <div className="mx-auto flex w-full max-w-280 flex-col gap-9">
       <header className="flex flex-col gap-3">
-        <ScreenTitle>Ingest</ScreenTitle>
-        <p className="max-w-3xl text-base leading-body text-ink-secondary">
-          One scanned PDF per order. The order carries what the PDF cannot say
-          — both arrive together, or the door refuses them and names the missing
-          part. Nothing leaves this tool as a deliverable until a reviewer has
-          gone through it field by field.
+        <ScreenTitle>Step 1 — Upload</ScreenTitle>
+        <h1 className="text-5xl font-semibold">New title-search package</h1>
+        <p className="max-w-185 text-base leading-body text-ink-secondary">
+          One scanned PDF per order. Nothing leaves this tool as a deliverable
+          until a reviewer has approved it, field by field.
         </p>
       </header>
 
@@ -99,42 +97,50 @@ export function IngestScreen() {
         <RefusedCard missing={refusal.missing_fields} reason={refusal.reason} />
       )}
 
-      <Card>
-        <CardHeader filled>
-          <Eyebrow variant="section">Step 1 — upload</Eyebrow>
-        </CardHeader>
-        <CardBody className="flex flex-col gap-6">
+      {accepted !== null ? (
+        <AcceptedCard orderRef={accepted.external_ref} onAnother={reset} />
+      ) : (
+        <>
           <DropZone file={file} onFile={setFile} />
-          <OrderForm
-            values={values}
-            onChange={(key, value) => setValues((prev) => ({ ...prev, [key]: value }))}
-          />
-          <div className="flex flex-wrap items-center gap-5">
-            <Button disabled={upload.isPending} onClick={submit}>
+
+          <section className="flex flex-col gap-5">
+            <Eyebrow variant="field" as="h2">
+              THE ORDER &middot; WHAT THE PDF CANNOT SAY &middot; THE DOOR DECIDES WHAT IS COMPLETE
+            </Eyebrow>
+            <OrderForm
+              values={values}
+              onChange={(key, value) => setValues((prev) => ({ ...prev, [key]: value }))}
+            />
+          </section>
+
+          <div className="flex flex-col gap-5">
+            <Button block size="lg" disabled={upload.isPending} onClick={submit}>
               upload the package
             </Button>
             {created === null ? null : (
-              <Button
-                fill="outlined"
-                tone="settled"
-                data-testid="accept-btn"
-                disabled={accept.isPending}
-                onClick={() =>
-                  accept.mutate(created.id, { onSuccess: () => setAccepted(created) })
-                }
-              >
-                Sign for this package
-              </Button>
+              <>
+                <p className="text-xs leading-body text-state-attend-ink">
+                  Uploaded, not accepted. Nothing is queued until somebody signs
+                  for it.
+                </p>
+                <Button
+                  block
+                  size="lg"
+                  fill="outlined"
+                  tone="settled"
+                  data-testid="accept-btn"
+                  disabled={accept.isPending}
+                  onClick={() =>
+                    accept.mutate(created.id, { onSuccess: () => setAccepted(created) })
+                  }
+                >
+                  Sign for this package
+                </Button>
+              </>
             )}
           </div>
-          {created === null ? null : (
-            <p className="text-xs text-state-attend-ink">
-              Uploaded, not accepted. Nothing is queued until somebody signs for
-              it.
-            </p>
-          )}
-        </CardBody>
-      </Card>
+        </>
+      )}
     </div>
   );
 }

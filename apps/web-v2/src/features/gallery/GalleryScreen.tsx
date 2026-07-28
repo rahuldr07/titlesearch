@@ -30,7 +30,12 @@ import { ScreenTitle } from "../../app/ScreenTitle";
  */
 export function GalleryScreen() {
   return (
-    <div className="flex flex-col">
+    // 1120px, centred — the column the design draws, measured off the export.
+    // The cap lives HERE and not on the grid alone, because the eyebrow, the
+    // heading and the subtitle sit on the same left edge as the first card; a
+    // grid-only cap left the prose starting where the shell's padding happened
+    // to end, which drifts every time the shell's own width changes.
+    <div className="mx-auto flex max-w-560 flex-col">
       <ScreenTitle>Reference</ScreenTitle>
 
       <h1 className="mt-2 text-3xl font-semibold text-ink-primary">
@@ -41,7 +46,7 @@ export function GalleryScreen() {
         the catalogue.
       </p>
 
-      <div className="grid max-w-560 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
         {GALLERY_STATES.map((state) => (
           <StateCard key={state.id} tag={state.tag} title={state.title} desc={state.desc}>
             <StateSample accent={state.accent} badge={state.badge} body={state.body} />

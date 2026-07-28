@@ -23,7 +23,18 @@ export const rootRoute = createRootRoute({
     <>
       <GlobalKeys />
       <AppChrome />
-      <main className="mx-auto max-w-400 p-9">
+      {/*
+        THE SHELL DOES NOT IMPOSE A READING COLUMN. It was capped at 800px —
+        `max-w-400` against a 2px spacing base — which starved every wide screen
+        in the app regardless of window size. Overview's seven-stage board
+        overflowed that cap by 426px and hid two whole stages behind a scroll
+        with no affordance, on every monitor. Review's three panes had 764px
+        between them.
+        A screen that wants a narrow measure sets its own; the shell's job is
+        the gutter and the maximum, and the maximum belongs to the widest screen
+        rather than the narrowest.
+      */}
+      <main className="mx-auto max-w-720 p-9">
         <Outlet />
       </main>
     </>

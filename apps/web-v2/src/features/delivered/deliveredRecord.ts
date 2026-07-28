@@ -14,11 +14,16 @@ export interface DeliveredRecord {
  * Pick the delivery this screen is confirming.
  *
  * `GET /api/deliveries` is a LIST across every order, so a per-order screen has
- * to select. Selecting the highest `version` is not the client deciding which
- * report is current — the server assigned those numbers and a higher one exists
- * only because the server issued it. What the client must never do is infer
- * that a v2 EXISTS from anything other than the server saying so, which is why
- * this reads `report.version` and nothing else.
+ * to select. IT SELECTS ON `delivered_at`, NOT ON `version`. Version numbers are
+ * only comparable inside one order — a v2 of order B is not "newer" than a v1 of
+ * order A, it is a different order's second attempt — and ranking the whole list
+ * by version made the order-less route confirm whichever order in the system had
+ * most recently gone wrong. The design's Delivered screen is a receipt for the
+ * last thing that landed, so "last thing that landed" is what this reads.
+ *
+ * Version still decides ties INSIDE an order, where it means what it says, and
+ * the number itself is never computed here: `report.version` is the server's,
+ * and a v2 exists on screen only because the server issued one.
  *
  * `failed_transit` rows are excluded rather than shown as a lesser state: a
  * delivery that never landed has nothing to confirm, and this screen's entire
@@ -29,19 +34,28 @@ export function pickDelivered(
   orderId?: string | undefined,
 ): DeliveredRecord | null {
   let best: DeliveredRecord | null = null;
+  // ISO-8601 UTC sorts lexicographically, so the comparison needs no `Date`.
+  let bestAt = "";
 
   for (const d of deliveries) {
     if (d.status !== "delivered") continue;
     const report = d.report;
     if (!report) continue;
     if (orderId !== undefined && report.order_id !== orderId) continue;
-    if (best !== null && report.version <= best.version) continue;
+
+    // A delivered row with no timestamp sorts oldest rather than being dropped:
+    // it did land, and a missing stamp is the server's gap, not a disqualifier.
+    const at = d.delivered_at ?? "";
+    if (best !== null && (at < bestAt || (at === bestAt && report.version <= best.version))) {
+      continue;
+    }
 
     best = {
       orderId: report.order_id,
       version: report.version,
       deliveredLabel: describeDelivery(d.delivered_at),
     };
+    bestAt = at;
   }
 
   return best;

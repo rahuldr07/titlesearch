@@ -25,11 +25,24 @@
  *   record. The screen must not ship to a client until the server owns it.
  */
 
-/** Marked in the copy itself so a screenshot cannot be mistaken for a real order. */
-export const DEMO_PRODUCT_NAME = "Two-Owner Search (demo)";
+/**
+ * The design's own strings, kept verbatim.
+ *
+ * They were previously replaced with self-labelling stand-ins ("Two-Owner Search
+ * (demo)" / "demo · eff 07/18/2026"), and that lost the point of the pair: the
+ * footnote below the artifact claims the sheet "states the product and period",
+ * and a single effective date is not a period. The screen has to show a SPAN to
+ * demonstrate the claim it makes about itself.
+ *
+ * Nothing is being passed off as real. The order id rendered two lines above is
+ * `ord_demo_1` and the filename carries it, so the fixture is on its face; the
+ * gap that matters is the one recorded above — the wire cannot say either of
+ * these, and no amount of labelling fixes that.
+ */
+export const DEMO_PRODUCT_NAME = "40-Year Search";
 
-/** Mono badge beside the product. Uppercased by `Chip`. */
-export const DEMO_PERIOD_BADGE = "demo · eff 07/18/2026";
+/** Mono badge beside the product — the span the sheet covers, not one date. */
+export const DEMO_PERIOD_BADGE = "40-year period · 07/18/1986 – 07/18/2026";
 
 /** The server names its own artifacts; this convention is a placeholder. */
 export function demoArtifactName(orderId: string): string {

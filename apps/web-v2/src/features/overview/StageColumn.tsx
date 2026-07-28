@@ -32,14 +32,19 @@ export function StageColumn({ stage }: { stage: LifecycleStage }) {
   return (
     <Card>
       <div className={cn("h-1.5", tone.bar)} />
-      <div className="border-b border-line-subtle px-5 pt-5 pb-4">
+      <div className="border-b border-line-subtle px-4 pt-5 pb-4">
+        {/* `break-words` and `shrink-0` are load-bearing, not defensive. Stage
+            labels are SERVER TEXT of unbounded length in a column that is a
+            seventh of the board: "Completeness gate" overflowed its box and
+            printed itself into the count, rendering "gate3". The count must
+            keep its width and the label must break rather than escape. */}
         <div className="flex items-baseline gap-3">
-          <h2 className="min-w-0 flex-1 text-xs leading-tight font-bold text-ink-primary">
+          <h2 className="min-w-0 flex-1 text-xs leading-tight font-bold break-words text-ink-primary">
             {stage.label}
           </h2>
           <span
             className={cn(
-              "font-mono text-lg leading-flat font-semibold",
+              "shrink-0 font-mono text-lg leading-flat font-semibold",
               countInk(stage.kind, stage.count),
             )}
           >

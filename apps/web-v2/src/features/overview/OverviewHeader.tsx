@@ -37,10 +37,17 @@ export function OverviewHeader({
       <div className="flex flex-wrap items-end gap-9">
         <header className="min-w-150 flex-1">
           <h1 className="text-3xl font-semibold text-ink-primary">Where every order sits</h1>
-          <p className="mt-1.5 max-w-4xl text-base leading-body text-ink-secondary">
+          <p className="mt-1.5 max-w-285 text-base leading-body text-ink-secondary">
             One column per stage. The machine advances exactly one of them —
             every other column is an order stopped on a person, which is the
-            design, not a backlog. {scopeNote}
+            design, not a backlog.
+          </p>
+          {/* Its own line, as the design sets it. The scope note answers a
+              different question from the sentence above — "whose orders are
+              these", not "what am I looking at" — and running the two together
+              buries the one figure-changing caveat on the screen mid-paragraph. */}
+          <p className="mt-1.5 max-w-285 text-base leading-body text-ink-secondary">
+            {scopeNote}
           </p>
         </header>
         <div className="flex shrink-0 flex-wrap items-center gap-3">

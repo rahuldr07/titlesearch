@@ -1,5 +1,5 @@
 import type { PipelineStage, StagePhase } from "@titlepipe/contract";
-import { Chip } from "../../shared/ui/Chip";
+import { Eyebrow } from "../../shared/ui/Eyebrow";
 import { cn } from "../../shared/ui/classNames";
 
 /**
@@ -72,14 +72,18 @@ export function StageRow({ stage }: { stage: PipelineStage }) {
         <span className="mt-1 block text-xs text-ink-muted">{stage.detail}</span>
       </span>
 
-      <Chip
-        shape="pill"
-        size="micro"
-        bordered={stage.owner === "LLM agent"}
-        tone={stage.owner === "You" ? "inverse" : stage.owner === "LLM agent" ? "action" : "neutral"}
-      >
+      {/*
+       * THE OWNER IS A CAPTION, NOT A BADGE. The design sets all three owners in
+       * the same uppercase label at the same weight and the same ink — no fill,
+       * no border, no tone. Ranking them by colour would say a stage the machine
+       * runs is a different KIND of thing from one you run, when the column is
+       * only answering "who touches this one". The row's phase already carries
+       * every state signal on this screen; a second coloured object competing
+       * with it at the right edge is what made "waiting" read as a warning.
+       */}
+      <Eyebrow variant="field" as="span" tone="strong" className="shrink-0">
         {stage.owner}
-      </Chip>
+      </Eyebrow>
     </li>
   );
 }
