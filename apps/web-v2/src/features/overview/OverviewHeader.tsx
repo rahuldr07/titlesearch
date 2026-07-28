@@ -1,6 +1,5 @@
 import { ToggleGroup, Toggle } from "../../shared/ui/ToggleGroup";
 import { ScreenTitle } from "../../app/ScreenTitle";
-import { DEMO_SCOPE_NOTE } from "./lifecycle";
 
 export type OverviewView = "board" | "rail";
 
@@ -14,7 +13,8 @@ export type OverviewView = "board" | "rail";
  * difference between a status board and a stick.
  *
  * The scope note follows immediately because "4 stopped" means nothing until
- * you know whether it is the shop or your corner of it.
+ * you know whether it is the shop or your corner of it — and it is the
+ * SERVER'S sentence, because only the server knows what this caller was shown.
  *
  * The view chips DISAPPEAR when the window is too narrow to honour the choice,
  * and the reason takes their place. A control that silently does nothing is
@@ -24,10 +24,12 @@ export function OverviewHeader({
   view,
   onView,
   narrow,
+  scopeNote,
 }: {
   view: OverviewView;
   onView: (view: OverviewView) => void;
   narrow: boolean;
+  scopeNote: string;
 }) {
   return (
     <div className="flex flex-col gap-3">
@@ -38,7 +40,7 @@ export function OverviewHeader({
           <p className="mt-1.5 max-w-4xl text-base leading-body text-ink-secondary">
             One column per stage. The machine advances exactly one of them —
             every other column is an order stopped on a person, which is the
-            design, not a backlog. {DEMO_SCOPE_NOTE}
+            design, not a backlog. {scopeNote}
           </p>
         </header>
         <div className="flex shrink-0 flex-wrap items-center gap-3">

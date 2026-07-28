@@ -77,6 +77,18 @@ export function useEscalateField(orderId: string) {
   return useFieldWrite<{ question: string }>(orderId, "escalate");
 }
 
+/**
+ * SUPPRESS WITH REASON — rulebook R13, and the fourth thing a reviewer can do.
+ *
+ * A judgment hit that is not against our owner is not a wrong value and not a
+ * question: it is a row that must not ship. Correcting it would file a
+ * suppression as a value change, and escalating it would ask a senior a
+ * question the reviewer has already answered.
+ */
+export function useExcludeField(orderId: string) {
+  return useFieldWrite<{ reason: string }>(orderId, "exclude");
+}
+
 export function usePassOrder(orderId: string) {
   const client = useQueryClient();
   return useMutation({

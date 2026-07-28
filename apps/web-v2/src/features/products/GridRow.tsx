@@ -1,9 +1,9 @@
+import type { ConfigLine, ConfigProduct, LineApplication } from "@titlepipe/contract";
+
 import { Eyebrow } from "../../shared/ui/Eyebrow";
 import { TextField } from "../../shared/ui/TextField";
 
-import type { Derivation, ProductRecord } from "./catalogue";
 import { GridCell } from "./GridCell";
-import type { CellMark, SignoffLine } from "./lines";
 
 /**
  * A line across every product, plus the scope text a narrowing owes.
@@ -14,10 +14,9 @@ import type { CellMark, SignoffLine } from "./lines";
  * scope field appears attached to the row the moment a cell goes narrowed,
  * rather than behind a second click somewhere else.
  *
- * Year products share one column value, so setting the 40-Year cell moves 20
- * and 60 with it. That is the model, not a bug: the span differs, the set of
- * applicable lines does not, and three independently-editable copies of one
- * decision drift.
+ * Cells are keyed by PRODUCT ID, which is how the server sends them: one column
+ * per product, and a product with no cell of its own is excluded rather than
+ * quietly inheriting a neighbour's.
  */
 export function GridRow({
   line,
@@ -26,13 +25,13 @@ export function GridRow({
   canAuthor,
   onSet,
 }: {
-  line: SignoffLine;
-  marks: Readonly<Record<Derivation, CellMark>>;
-  columns: readonly ProductRecord[];
+  line: ConfigLine;
+  marks: Readonly<Record<string, LineApplication>>;
+  columns: readonly ConfigProduct[];
   canAuthor: boolean;
-  onSet: (column: Derivation, mark: CellMark) => void;
+  onSet: (productId: string, mark: LineApplication) => void;
 }) {
-  const narrowed = columns.filter((p) => marks[p.gridKey] === "narrowed");
+  const narrowed = columns.filter((p) => marks[p.id] === "narrowed");
 
   return (
     <div data-testid={`grid-row-${line.id}`}>
@@ -46,11 +45,11 @@ export function GridRow({
         {columns.map((p) => (
           <GridCell
             key={p.id}
-            value={marks[p.gridKey]}
+            value={marks[p.id] ?? "excluded"}
             rowLabel={line.label}
             columnName={p.code}
             disabled={!canAuthor}
-            onSet={(mark) => onSet(p.gridKey, mark)}
+            onSet={(mark) => onSet(p.id, mark)}
           />
         ))}
       </div>
@@ -65,7 +64,7 @@ export function GridRow({
               <TextField
                 size="sm"
                 tone="attend"
-                defaultValue={line.scope[p.gridKey] ?? ""}
+                defaultValue={line.scope[p.id] ?? ""}
                 placeholder="Scope text for this product & line"
                 aria-label={`Scope text — ${p.code} · ${line.label}`}
               />

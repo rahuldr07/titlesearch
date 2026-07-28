@@ -4,8 +4,8 @@ import { useHotkeys } from "react-hotkeys-hook";
 import { doorsFor, doorForKey } from "../entities/nav/doors";
 import { useSession } from "../shared/session";
 import { useKeyboardLayer } from "../shared/keyboard";
-import { Eyebrow } from "../shared/ui/Eyebrow";
-import { Card, CardBody } from "../shared/ui/Card";
+import { useNavCollapsed } from "./preferences";
+import { KeyMap } from "./KeyMap";
 
 /**
  * Keyboard as navigation: `g` then a door key, and `?` for the map.
@@ -45,6 +45,7 @@ export function GlobalKeys() {
     select: (s) => s.location.pathname.startsWith("/blind"),
   });
 
+  const [, toggleNav] = useNavCollapsed(!onCaptureSeat);
   const doors = doorsFor(role);
 
   const openDoor = useCallback(
@@ -91,37 +92,30 @@ export function GlobalKeys() {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [onCaptureSeat, setMapOpen]);
+  /*
+   * `[` folds the navigator, matched on the CHARACTER for the same reason `?`
+   * is: react-hotkeys-hook does not recognise bracket keys as hotkey names, so
+   * the binding registered and never fired — an affordance with no proof it
+   * works, which is the worst kind.
+   *
+   * The input guard is by hand because this bypasses the library's. A bracket
+   * typed into a correction is a bracket (`sidebar.spec` #5): a layout change
+   * behind the cursor while somebody is writing a reason is unforgivable.
+   */
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "[" || onCaptureSeat) return;
+      const target = event.target as HTMLElement | null;
+      if (target?.closest("input, textarea, select, [contenteditable='true']")) return;
+      event.preventDefault();
+      toggleNav();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onCaptureSeat, toggleNav]);
+
   useHotkeys("escape", () => { setMapOpen(false); setArmed(false); }, { enabled: mapOpen || armed }, [mapOpen, armed]);
 
   if (!mapOpen) return null;
-
-  return (
-    <div className="fixed inset-0 z-(--z-overlay) flex items-center justify-center bg-scrim p-9">
-      <div data-testid="key-map" className="w-full max-w-160">
-        <Card size="emphasis">
-          <CardBody>
-            {/*
-              Upper-case in the MARKUP, not via `text-transform`: `navigation.spec`
-              #1 matches this case-sensitively, and a CSS transform does not change
-              what the text actually says.
-            */}
-            <Eyebrow variant="screen">KEYBOARD AS NAVIGATION</Eyebrow>
-            <p className="mt-3 text-base text-ink-secondary">
-              Press <span className="font-mono">g</span> then a key. Escape closes this.
-            </p>
-            <ul className="mt-8 flex flex-col gap-3">
-              {doors.map((door) => (
-                <li key={door.path} className="flex items-baseline gap-5">
-                  <span className="w-12 font-mono text-md font-semibold text-action">
-                    g {door.key}
-                  </span>
-                  <span className="text-base text-ink-primary">{door.label}</span>
-                </li>
-              ))}
-            </ul>
-          </CardBody>
-        </Card>
-      </div>
-    </div>
-  );
+  return <KeyMap doors={doors} />;
 }

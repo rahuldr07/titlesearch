@@ -3,7 +3,10 @@ import { Card, CardBody } from "../../shared/ui/Card";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
 import { Switch } from "../../shared/ui/Switch";
 import { ToggleGroup, Toggle } from "../../shared/ui/ToggleGroup";
-import { DEFAULT_ZOOM, ZOOM_CHOICES } from "./demoAccount";
+
+/** The zoom steps the design offers for the document pane. Presentation only. */
+const ZOOM_CHOICES = ["75%", "100%", "125%"] as const;
+const DEFAULT_ZOOM = "100%";
 
 /**
  * Three preferences, and none of them changes what the product decides.

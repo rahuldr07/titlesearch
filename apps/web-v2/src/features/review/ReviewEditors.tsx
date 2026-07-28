@@ -1,8 +1,9 @@
 import { CorrectEditor } from "./CorrectEditor";
 import { EscalateEditor } from "./EscalateEditor";
+import { ExcludeEditor } from "./ExcludeEditor";
 import { PassControl } from "../../entities/order/PassControl";
 
-export type ReviewMode = "idle" | "correct" | "escalate" | "pass";
+export type ReviewMode = "idle" | "correct" | "escalate" | "exclude" | "pass";
 
 interface ReviewEditorsProps {
   mode: ReviewMode;
@@ -15,6 +16,7 @@ interface ReviewEditorsProps {
   onCancel: () => void;
   onCorrect: (value: string, reason: string) => void;
   onEscalate: (question: string) => void;
+  onExclude: (reason: string) => void;
   onPass: (reason: string) => void;
 }
 
@@ -41,6 +43,7 @@ export function ReviewEditors({
   onCancel,
   onCorrect,
   onEscalate,
+  onExclude,
   onPass,
 }: ReviewEditorsProps) {
   return (
@@ -68,6 +71,10 @@ export function ReviewEditors({
 
       {mode === "escalate" ? (
         <EscalateEditor onCancel={onCancel} onSubmit={onEscalate} />
+      ) : null}
+
+      {mode === "exclude" ? (
+        <ExcludeEditor onCancel={onCancel} onSubmit={onExclude} />
       ) : null}
 
       {mode === "pass" ? (

@@ -1,3 +1,4 @@
+import type { ConfigLine } from "@titlepipe/contract";
 import { useState } from "react";
 
 import { Button } from "../../shared/ui/Button";
@@ -5,7 +6,6 @@ import { Eyebrow } from "../../shared/ui/Eyebrow";
 
 import { EmptyState } from "./EmptyState";
 import { LineCard } from "./LineCard";
-import { SIGNOFF_LINES } from "./lines";
 
 /**
  * The line catalogue — one vocabulary, shared by every product and client.
@@ -21,16 +21,18 @@ import { SIGNOFF_LINES } from "./lines";
  * still reference it.
  */
 export function LineCatalogue({
+  lines,
   canAuthor,
   onNew,
   onEdit,
 }: {
+  lines: readonly ConfigLine[];
   canAuthor: boolean;
   onNew: () => void;
   onEdit: () => void;
 }) {
   const [showRetired, setShowRetired] = useState(false);
-  const lines = showRetired ? SIGNOFF_LINES : SIGNOFF_LINES.filter((l) => !l.retired);
+  const shown = showRetired ? lines : lines.filter((l) => !l.retired);
 
   return (
     <section className="flex flex-col gap-6">
@@ -58,7 +60,7 @@ export function LineCatalogue({
         — inert until a product opts in.
       </p>
 
-      {lines.length === 0 ? (
+      {shown.length === 0 ? (
         <EmptyState
           title="No lines yet"
           body="Start from the standard 13 as a starting point, or write your own."
@@ -71,16 +73,16 @@ export function LineCatalogue({
         </EmptyState>
       ) : (
         <div className="flex flex-col gap-4">
-          {lines.map((line) => (
+          {shown.map((line) => (
             <LineCard key={line.id} line={line} canAuthor={canAuthor} onEdit={onEdit} />
           ))}
         </div>
       )}
 
       <p className="text-xs leading-body text-ink-muted">
-        CONTRACT GAP: no sign-off-line endpoint exists. The catalogue is a
-        fixture; editing opens the drawer but cannot save, and no line here has
-        ever been versioned by a server.
+        CONTRACT GAP: the sign-off-line endpoint is READ ONLY. The catalogue is
+        the server's, but editing opens a drawer that cannot save and no version
+        here can be minted from this screen.
       </p>
     </section>
   );

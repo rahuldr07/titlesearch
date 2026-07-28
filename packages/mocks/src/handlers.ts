@@ -1,4 +1,5 @@
 import { http, HttpResponse } from "msw";
+import { workspaceHandlers } from "./workspace.js";
 import {
   BlindEntriesRequest,
   ConfirmFieldRequest,
@@ -8,6 +9,7 @@ import {
   NaReason,
   EngineRoutingRequest,
   EscalateFieldRequest,
+  ExcludeFieldRequest,
   GoldenAffirmRequest,
   GoldenCorrectionRequest,
   PassOrderRequest,
@@ -274,6 +276,7 @@ const REQUIRED_ORDER_FIELDS = [
 ] as const;
 
 export const handlers = [
+  ...workspaceHandlers,
   timelineHandler,
   pagesHandler,
   /**
@@ -410,6 +413,23 @@ export const handlers = [
     // at all. Reading the enum means the next widening cannot repeat it.
     const na = NaReason.safeParse(parsed.data.na_reason);
     field.na_reason = na.success ? na.data : null;
+    field.approved_by = "L. Vance";
+    field.approved_at = new Date().toISOString();
+    return HttpResponse.json(ok);
+  }),
+
+  /** Suppress with reason — R13. Terminal, like correct and escalate. */
+  http.post("/api/fields/:id/exclude", async ({ params, request }) => {
+    const denied = guard(request, "field.correct");
+    if (denied) return denied;
+    const parsed = ExcludeFieldRequest.safeParse(await request.json());
+    if (!parsed.success) return err(parsed.error.message, 422);
+    const field = fieldStore.find((f) => f.id === params["id"]);
+    if (!field) return err("no such field", 404);
+    if (field.state === "corrected" || field.state === "escalated") {
+      return err(`field is terminal (${field.state})`, 409);
+    }
+    field.excluded_reason = parsed.data.reason;
     field.approved_by = "L. Vance";
     field.approved_at = new Date().toISOString();
     return HttpResponse.json(ok);

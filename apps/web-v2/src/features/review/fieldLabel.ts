@@ -70,7 +70,12 @@ export function enginesDisagree(field: Field): boolean {
  * the enum cannot express on its own: which NA state, and the unsettled case
  * where the engines disagreed and nothing was merged.
  */
+export function isExcluded(field: Field): boolean {
+  return (field.excluded_reason ?? null) !== null;
+}
+
 export function stateLabel(field: Field): string {
+  if (isExcluded(field)) return "EXCLUDED — NOT OUR PARTY";
   if (field.na_reason !== null) return naChip(field.na_reason);
   if (field.value === null && enginesDisagree(field)) {
     return "ENGINES DISAGREE — NOTHING SETTLED";
@@ -85,6 +90,7 @@ export function stateLabel(field: Field): string {
  * investigation always asks: did a person see this?
  */
 export function rowMark(field: Field): string | null {
+  if (isExcluded(field)) return "✕ excluded";
   switch (field.state) {
     case "corrected":
       return "✎ corrected";

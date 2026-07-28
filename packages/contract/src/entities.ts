@@ -83,6 +83,22 @@ export const Field = z.object({
   approved_at: z.string().nullable(),
   /** All engines' pre-merge values; review UI shows A and B side by side. */
   readings: z.array(FieldReading).optional(),
+  /**
+   * Set when a reviewer suppressed this row with a reason — rulebook R13,
+   * "canceled/satisfied/vacated/released/duplicates suppress with reason".
+   *
+   * ORTHOGONAL TO `state`, not a member of it. A judgment hit that is not
+   * against our owner may already have been confirmed or corrected before
+   * anybody noticed the party was wrong; folding suppression into the state
+   * machine would lose that history and force every consumer to re-handle an
+   * enum it has already exhausted.
+   *
+   * The reason is required at the endpoint, and it is the whole point: an
+   * excluded row is GONE from the delivered sheet, so the record of why is the
+   * only thing anybody can audit afterwards. A silent suppression is
+   * indistinguishable from a miss.
+   */
+  excluded_reason: z.string().nullable().optional(),
 });
 export type Field = z.infer<typeof Field>;
 

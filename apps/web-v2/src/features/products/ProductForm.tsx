@@ -3,9 +3,19 @@ import { useState } from "react";
 import { Button } from "../../shared/ui/Button";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
 import { TextField } from "../../shared/ui/TextField";
-import { ToggleGroup, Toggle } from "../../shared/ui/ToggleGroup";
 
-import { DERIVATION_CHOICES } from "./catalogue";
+import { ChoiceField } from "./ChoiceField";
+
+/**
+ * FORM VOCABULARY, not config. The served product carries a `derivation` code;
+ * these three are how the form asks the question, and no endpoint accepts the
+ * answer back.
+ */
+const DERIVATION_CHOICES = [
+  { value: "year", label: "Fixed years back" },
+  { value: "owner", label: "Current / owners" },
+  { value: "update", label: "From prior effective date" },
+] as const;
 
 /**
  * Authoring a product.
@@ -35,19 +45,13 @@ export function ProductForm({ isNew, onCancel }: { isNew: boolean; onCancel: () 
         <TextField id="product-code" className="mt-3" placeholder="e.g. 30 Year" />
       </div>
 
-      <div>
-        <Eyebrow variant="field" as="h3">How the period is derived</Eyebrow>
-        <ToggleGroup
-          className="mt-3"
-          aria-label="How the period is derived"
-          value={kind}
-          onValueChange={setKind}
-        >
-          {DERIVATION_CHOICES.map((k) => (
-            <Toggle key={k.value} value={k.value} className="rounded-5">{k.label}</Toggle>
-          ))}
-        </ToggleGroup>
-      </div>
+      <ChoiceField
+        label="How the period is derived"
+        options={DERIVATION_CHOICES}
+        value={kind}
+        onValueChange={setKind}
+        toggleClassName="rounded-5"
+      />
 
       {kind.includes("year") ? (
         <div>
@@ -99,8 +103,8 @@ export function ProductForm({ isNew, onCancel }: { isNew: boolean; onCancel: () 
         </Button>
       </div>
       <p className="text-xs leading-body text-ink-muted">
-        CONTRACT GAP: there is no products endpoint. Save is disabled rather than
-        silently discarding what you typed.
+        CONTRACT GAP: the products endpoint reads only. Save is disabled rather
+        than silently discarding what you typed.
       </p>
     </div>
   );

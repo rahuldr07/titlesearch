@@ -48,7 +48,11 @@ export function GateOpenBanner() {
   );
 }
 
-export function GateClosedBanner({ packagePages }: { packagePages: number }) {
+/**
+ * CONTRACT GAP: the completeness payload carries no page count, so the closed
+ * banner no longer names the size of the package extraction will run on.
+ */
+export function GateClosedBanner() {
   return (
     <section className="flex items-center gap-6 rounded-9 border border-state-settled-border border-l-(length:--stroke-severity) border-l-state-settled bg-state-settled-surface p-8">
       <span
@@ -59,7 +63,7 @@ export function GateClosedBanner({ packagePages }: { packagePages: number }) {
       </span>
       <p className="text-md leading-body text-state-settled-ink">
         Package complete — every gap is closed. Resume to run extraction on the
-        full package ({packagePages} pages).
+        full package.
       </p>
     </section>
   );

@@ -2,6 +2,7 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import { ScreenMenu } from "./ScreenMenu";
 import { OrderCounts } from "./OrderCounts";
 import { AccountMenu } from "./AccountMenu";
+import { useNavCollapsed } from "./preferences";
 import { Eyebrow } from "../shared/ui/Eyebrow";
 
 /** The order in view, taken from the URL. Null on screens that have no order. */
@@ -24,7 +25,9 @@ function orderFromPath(pathname: string): string | null {
  */
 export function AppChrome() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  if (pathname.startsWith("/blind")) return null;
+  const onCaptureSeat = pathname.startsWith("/blind");
+  const [collapsed, toggleCollapsed] = useNavCollapsed(!onCaptureSeat);
+  if (onCaptureSeat) return null;
 
   const orderId = orderFromPath(pathname);
 
@@ -54,7 +57,18 @@ export function AppChrome() {
         </>
       )}
 
-      <ScreenMenu orderId={orderId} />
+      <button
+        type="button"
+        data-testid="rail-toggle"
+        aria-pressed={collapsed}
+        aria-label={collapsed ? "Expand the navigator" : "Fold the navigator"}
+        onClick={toggleCollapsed}
+        className="shrink-0 rounded-3 border border-line-strong px-3 py-2 font-mono text-micro text-ink-secondary"
+      >
+        [
+      </button>
+
+      <ScreenMenu orderId={orderId} collapsed={collapsed} />
 
       <div className="flex shrink-0 items-center gap-6">
         {orderId === null ? null : <OrderCounts orderId={orderId} />}

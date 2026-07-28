@@ -1,7 +1,9 @@
+import type { LineApplication } from "@titlepipe/contract";
+
 import { Button } from "../../shared/ui/Button";
 import { cn } from "../../shared/ui/classNames";
 
-import { CELL_MARKS, type CellMark } from "./lines";
+import { CELL_MARKS } from "./cellMarks";
 
 /**
  * One product × one line, as THREE VISIBLE CHOICES rather than a cycling
@@ -17,16 +19,16 @@ import { CELL_MARKS, type CellMark } from "./lines";
  * and a dash — because this grid is the one place where "applies" and
  * "narrowed" being confused changes what a search is required to cover.
  */
-const SELECTED: Record<CellMark, string> = {
+const SELECTED: Record<LineApplication, string> = {
   applies: "border-state-settled bg-state-settled text-ink-on-action",
   narrowed: "border-state-attend bg-state-attend text-ink-on-action",
-  na: "border-ink-muted bg-ink-muted text-ink-on-action",
+  excluded: "border-ink-muted bg-ink-muted text-ink-on-action",
 };
 
-const RESTING: Record<CellMark, string> = {
+const RESTING: Record<LineApplication, string> = {
   applies: "border-line-strong text-state-settled-ink",
   narrowed: "border-line-strong text-state-attend-ink",
-  na: "border-line-strong text-ink-muted",
+  excluded: "border-line-strong text-ink-muted",
 };
 
 export function GridCell({
@@ -36,11 +38,11 @@ export function GridCell({
   disabled,
   onSet,
 }: {
-  value: CellMark;
+  value: LineApplication;
   rowLabel: string;
   columnName: string;
   disabled: boolean;
-  onSet: (mark: CellMark) => void;
+  onSet: (mark: LineApplication) => void;
 }) {
   return (
     <div className="flex w-42 shrink-0 items-center justify-center gap-1 border-l border-line-subtle px-2 py-3">

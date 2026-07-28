@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { myPermissionsQuery } from "./queries";
+import { myPermissionsQuery, myProfileQuery } from "./queries";
 import { useSession } from "../../shared/session";
 import { IdentityCard } from "./IdentityCard";
 import { CapabilityCard } from "./CapabilityCard";
@@ -18,6 +18,12 @@ import { ScreenTitle } from "../../app/ScreenTitle";
  * to change, which is why nobody comes here expecting to grant themselves a
  * door.
  *
+ * TWO QUERIES, NOT ONE, and neither substitutes for the other: the profile says
+ * who you are, the permissions projection says what you may do. A partial
+ * failure degrades only its own region — losing your identity must not blank
+ * the list of what you are allowed to do, and losing the projection must not
+ * take your account off the screen.
+ *
  * Nothing on this screen counts anything a person did. No orders reviewed, no
  * corrections made, no streak, no pace — a profile that scores you turns every
  * subsequent judgement into a performance, which is the failure mode this
@@ -25,10 +31,11 @@ import { ScreenTitle } from "../../app/ScreenTitle";
  */
 export function ProfileScreen() {
   const role = useSession((s) => s.role);
-  const { data, isPending, isError } = useQuery(myPermissionsQuery(role));
+  const permissions = useQuery(myPermissionsQuery(role));
+  const profile = useQuery(myProfileQuery);
 
-  const actions = data?.rules.map((granted) => granted.action) ?? [];
-  const state = isError ? "failed" : isPending ? "loading" : "ready";
+  const actions = permissions.data?.rules.map((granted) => granted.action) ?? [];
+  const state = permissions.isError ? "failed" : permissions.isPending ? "loading" : "ready";
 
   return (
     <div className="flex flex-col gap-7">
@@ -37,9 +44,20 @@ export function ProfileScreen() {
         <h1 className="text-3xl font-semibold text-ink-primary">Your profile</h1>
       </header>
 
-      <IdentityCard role={data?.role ?? null} />
+      {profile.isError ? (
+        <p className="text-base text-state-halt-ink">Your profile is unavailable.</p>
+      ) : profile.isPending ? (
+        <p className="text-base text-ink-secondary">Loading your profile…</p>
+      ) : (
+        <IdentityCard name={profile.data.name} email={profile.data.email} role={profile.data.role} />
+      )}
+
       <CapabilityCard actions={actions} state={state} />
-      <SecurityCard />
+
+      {profile.isSuccess ? (
+        <SecurityCard sessions={profile.data.sessions} mfa={profile.data.mfa} />
+      ) : null}
+
       <PreferencesCard />
     </div>
   );

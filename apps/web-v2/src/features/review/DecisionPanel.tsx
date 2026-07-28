@@ -7,7 +7,7 @@ import { useSession } from "../../shared/session";
 import { Card, CardBody, CardHeader } from "../../shared/ui/Card";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
 import { Chip } from "../../shared/ui/Chip";
-import { Button } from "../../shared/ui/Button";
+import { DecisionActions } from "./DecisionActions";
 
 export interface Pinned {
   seat: string;
@@ -22,6 +22,7 @@ interface DecisionPanelProps {
   onConfirm: () => void;
   onCorrect: () => void;
   onEscalate: () => void;
+  onExclude: () => void;
   onPass: () => void;
   children: React.ReactNode;
 }
@@ -49,6 +50,7 @@ export function DecisionPanel({
   onConfirm,
   onCorrect,
   onEscalate,
+  onExclude,
   onPass,
   children,
 }: DecisionPanelProps) {
@@ -109,20 +111,14 @@ export function DecisionPanel({
         )}
 
         {mayReview ? (
-          <div className="flex flex-wrap gap-4">
-            <Button size="sm" data-testid="act-confirm" onClick={onConfirm}>
-              Confirm ⏎
-            </Button>
-            <Button size="sm" fill="outlined" tone="neutral" data-testid="act-correct" onClick={onCorrect}>
-              Correct c
-            </Button>
-            <Button size="sm" fill="outlined" tone="attend" data-testid="act-escalate" onClick={onEscalate}>
-              Escalate e
-            </Button>
-            <Button size="sm" fill="ghost" tone="neutral" data-testid="act-pass" onClick={onPass}>
-              Pass — say why
-            </Button>
-          </div>
+          <DecisionActions
+            offerExclude={field.path.startsWith("judgments.")}
+            onConfirm={onConfirm}
+            onCorrect={onCorrect}
+            onEscalate={onEscalate}
+            onExclude={onExclude}
+            onPass={onPass}
+          />
         ) : (
           <p className="text-xs text-ink-muted">
             You are here for context. Review decisions belong to the reviewer on

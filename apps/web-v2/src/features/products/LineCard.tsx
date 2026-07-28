@@ -1,9 +1,10 @@
+import type { ConfigLine } from "@titlepipe/contract";
+
 import { Button } from "../../shared/ui/Button";
 import { Card } from "../../shared/ui/Card";
 import { Chip } from "../../shared/ui/Chip";
 
 import { LineTag } from "./LineTag";
-import type { SignoffLine } from "./lines";
 
 /**
  * One catalogue entry.
@@ -26,7 +27,7 @@ export function LineCard({
   canAuthor,
   onEdit,
 }: {
-  line: SignoffLine;
+  line: ConfigLine;
   canAuthor: boolean;
   onEdit: () => void;
 }) {
@@ -47,13 +48,15 @@ export function LineCard({
         </div>
 
         <div className="mt-4 flex flex-wrap items-center gap-4">
-          <LineTag>{line.answers}</LineTag>
-          <LineTag>{line.commentOnNo}</LineTag>
-          {line.period ? <LineTag tone="action">carries the order period</LineTag> : null}
-          {line.machineCheck === null ? (
+          <LineTag>{line.answers.join(" / ")}</LineTag>
+          <LineTag>
+            {line.comment_on_no ? "Comment required on NO" : "Comment optional on NO"}
+          </LineTag>
+          {line.period_scoped ? <LineTag tone="action">carries the order period</LineTag> : null}
+          {line.machine_check === null ? (
             <LineTag tone="attend">○ human-answered only</LineTag>
           ) : (
-            <LineTag tone="settled">◆ machine-checked: {line.machineCheck}</LineTag>
+            <LineTag tone="settled">◆ machine-checked: {line.machine_check}</LineTag>
           )}
           {canAuthor ? (
             <span className="ml-auto flex gap-3">
@@ -74,9 +77,9 @@ export function LineCard({
           ) : null}
         </div>
 
-        {line.standardText === null ? null : (
+        {line.standard_text === null ? null : (
           <p className="mt-4 border-l-2 border-line-strong pl-5 font-quote text-xs leading-open text-ink-secondary">
-            Standard text: {line.standardText}
+            Standard text: {line.standard_text}
           </p>
         )}
       </div>

@@ -1,9 +1,9 @@
 import type { KeyboardEvent } from "react";
+import type { OrderSignoffLine, SignoffAnswer } from "@titlepipe/contract";
 import { Button } from "../../shared/ui/Button";
 import { TextField } from "../../shared/ui/TextField";
 import { cn } from "../../shared/ui/classNames";
 import { SignoffRowNotes } from "./SignoffRowNotes";
-import type { SignoffAnswer, SignoffLine } from "./signoffLines";
 
 /**
  * One question, one answer, and the reason when the answer is NO.
@@ -21,29 +21,37 @@ import type { SignoffAnswer, SignoffLine } from "./signoffLines";
  * The keys (Y/N/A, arrows) are handled here rather than globally so they only
  * ever apply to the row the person is actually on, and never while they are
  * typing the reason.
+ *
+ * CONTRACT GAP: the wire has no per-line answer set. `SignoffAnswer` is the
+ * whole vocabulary, so every line offers all three; the design offered YES/NO
+ * only on lines that cannot genuinely fail to apply, and that distinction is
+ * not expressible against this schema.
  */
+const OPTIONS: readonly SignoffAnswer[] = ["YES", "NO", "N/A"];
+
 export function SignoffRow({
   line,
+  periodLabel,
   answer,
   comment,
   onAnswer,
   onComment,
 }: {
-  line: SignoffLine;
+  line: OrderSignoffLine;
+  periodLabel: string;
   answer: SignoffAnswer | undefined;
   comment: string;
   onAnswer: (answer: SignoffAnswer) => void;
   onComment: (comment: string) => void;
 }) {
   const answered = answer !== undefined;
-  const commentMissing =
-    answer === "NO" && line.commentOnNo === "required" && comment.trim() === "";
+  const commentMissing = answer === "NO" && line.comment_required && comment.trim() === "";
 
   const handleKey = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.target instanceof HTMLInputElement) return;
     const key = event.key.toLowerCase();
     const chosen = key === "y" ? "YES" : key === "n" ? "NO" : key === "a" ? "N/A" : null;
-    if (chosen !== null && line.answers.includes(chosen)) {
+    if (chosen !== null) {
       event.preventDefault();
       onAnswer(chosen);
       return;
@@ -85,12 +93,15 @@ export function SignoffRow({
                 {line.n}
               </span>
               {line.label}
+              <span className="ml-3 text-micro tracking-badge text-ink-muted uppercase">
+                {line.group}
+              </span>
             </p>
-            <SignoffRowNotes line={line} answered={answered} />
+            <SignoffRowNotes line={line} periodLabel={periodLabel} answered={answered} />
           </div>
 
           <div role="group" aria-label={line.label} className="flex shrink-0 gap-3">
-            {line.answers.map((option) => {
+            {OPTIONS.map((option) => {
               const chosen = answer === option;
               return (
                 <Button
@@ -99,15 +110,7 @@ export function SignoffRow({
                   className="min-w-28"
                   aria-pressed={chosen}
                   fill={chosen ? "solid" : "outlined"}
-                  tone={
-                    chosen
-                      ? option === "NO"
-                        ? "halt"
-                        : "settled"
-                      : !answered && line.suggested === option
-                        ? "action"
-                        : "neutral"
-                  }
+                  tone={chosen ? (option === "NO" ? "halt" : "settled") : "neutral"}
                   onClick={() => onAnswer(option)}
                 >
                   {option}

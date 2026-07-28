@@ -1,35 +1,27 @@
+import type { ConfigLine, ConfigProduct, LineApplication } from "@titlepipe/contract";
 import { useState } from "react";
 
 import { Button } from "../../shared/ui/Button";
 import { Card } from "../../shared/ui/Card";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
 
-import { PRODUCTS, type Derivation } from "./catalogue";
+import { applicationFor, applicationLabel } from "./cellMarks";
 import { GridRow } from "./GridRow";
-import { SIGNOFF_LINES, type CellMark, type SignoffLine } from "./lines";
 
-const COLUMNS = PRODUCTS.filter((p) => !p.retired);
-const ROWS = SIGNOFF_LINES.filter((l) => !l.retired);
-const GRID_KEYS: readonly Derivation[] = ["cos", "tos", "update", "y"];
+type Draft = Readonly<Record<string, LineApplication>>;
 
-const KEY_LABEL: Record<Derivation, string> = {
-  cos: "COS", tos: "TOS", update: "Update", y: "Year products",
-};
-const MARK_LABEL: Record<CellMark, string> = {
-  applies: "applies", narrowed: "narrowed", na: "n/a",
-};
+const cellKey = (lineId: string, productId: string) => `${lineId}:${productId}`;
 
-type Draft = Readonly<Record<string, CellMark>>;
-
-const cellKey = (line: SignoffLine, column: Derivation) => `${line.id}:${column}`;
-
-function marksFor(line: SignoffLine, draft: Draft): Record<Derivation, CellMark> {
-  return {
-    cos: draft[cellKey(line, "cos")] ?? line.cells.cos,
-    tos: draft[cellKey(line, "tos")] ?? line.cells.tos,
-    update: draft[cellKey(line, "update")] ?? line.cells.update,
-    y: draft[cellKey(line, "y")] ?? line.cells.y,
-  };
+function marksFor(
+  line: ConfigLine,
+  columns: readonly ConfigProduct[],
+  draft: Draft,
+): Record<string, LineApplication> {
+  const marks: Record<string, LineApplication> = {};
+  for (const p of columns) {
+    marks[p.id] = draft[cellKey(line.id, p.id)] ?? applicationFor(line.cells, p.id);
+  }
+  return marks;
 }
 
 /**
@@ -46,18 +38,28 @@ function marksFor(line: SignoffLine, draft: Draft): Record<Derivation, CellMark>
  * whether it is what you meant, and this is the last screen before that becomes
  * an obligation on somebody's search.
  */
-export function BaselineGrid({ canAuthor }: { canAuthor: boolean }) {
+export function BaselineGrid({
+  products,
+  lines,
+  canAuthor,
+}: {
+  products: readonly ConfigProduct[];
+  lines: readonly ConfigLine[];
+  canAuthor: boolean;
+}) {
   const [draft, setDraft] = useState<Draft>({});
+  const columns = products.filter((p) => !p.retired);
+  const rows = lines.filter((l) => !l.retired);
 
-  const changes = ROWS.flatMap((line) =>
-    GRID_KEYS.flatMap((column) => {
-      const next = draft[cellKey(line, column)];
-      const was = line.cells[column];
+  const changes = rows.flatMap((line) =>
+    columns.flatMap((p) => {
+      const next = draft[cellKey(line.id, p.id)];
+      const was = applicationFor(line.cells, p.id);
       return next === undefined || next === was
         ? []
         : [{
-            id: cellKey(line, column),
-            text: `Line ${line.n} · ${KEY_LABEL[column]}: ${MARK_LABEL[was]} → ${MARK_LABEL[next]}`,
+            id: cellKey(line.id, p.id),
+            text: `Line ${line.n} · ${p.code}: ${applicationLabel(was)} → ${applicationLabel(next)}`,
           }];
     }),
   );
@@ -67,8 +69,8 @@ export function BaselineGrid({ canAuthor }: { canAuthor: boolean }) {
       <p className="text-xs leading-body text-ink-muted">
         Set each cell directly — <span className="font-bold text-state-settled-ink">●</span>{" "}
         applies · <span className="font-bold text-state-attend-ink">◐</span> narrowed ·{" "}
-        <span className="font-bold text-ink-muted">—</span> n/a. Narrowed reveals
-        the scope text. Edit freely; nothing changes until you{" "}
+        <span className="font-bold text-ink-muted">—</span> excluded. Narrowed
+        reveals the scope text. Edit freely; nothing changes until you{" "}
         <span className="font-semibold">publish</span> — one config version for
         the whole batch.
       </p>
@@ -111,7 +113,7 @@ export function BaselineGrid({ canAuthor }: { canAuthor: boolean }) {
             <Eyebrow variant="field" className="min-w-110 flex-1 px-7 py-5">
               Sign-off line
             </Eyebrow>
-            {COLUMNS.map((p) => (
+            {columns.map((p) => (
               <div
                 key={p.id}
                 className="w-42 shrink-0 border-l border-line-subtle px-2 py-5 text-center text-tiny font-bold text-ink-secondary"
@@ -120,15 +122,15 @@ export function BaselineGrid({ canAuthor }: { canAuthor: boolean }) {
               </div>
             ))}
           </div>
-          {ROWS.map((line) => (
+          {rows.map((line) => (
             <GridRow
               key={line.id}
               line={line}
-              marks={marksFor(line, draft)}
-              columns={COLUMNS}
+              marks={marksFor(line, columns, draft)}
+              columns={columns}
               canAuthor={canAuthor}
-              onSet={(column, mark) =>
-                setDraft((d) => ({ ...d, [cellKey(line, column)]: mark }))
+              onSet={(productId, mark) =>
+                setDraft((d) => ({ ...d, [cellKey(line.id, productId)]: mark }))
               }
             />
           ))}
@@ -136,9 +138,9 @@ export function BaselineGrid({ canAuthor }: { canAuthor: boolean }) {
       </Card>
 
       <p className="text-xs leading-body text-ink-muted">
-        CONTRACT GAP: no baseline-grid endpoint exists. The draft above is local
-        only — it survives nothing, publishes nothing, and the scope fields are
-        not persisted.
+        CONTRACT GAP: the grid is served read-only. The draft above is local only
+        — it survives nothing, publishes nothing, and the scope fields are not
+        persisted.
       </p>
     </section>
   );

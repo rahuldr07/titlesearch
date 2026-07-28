@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import { ScreenTitle } from "../../app/ScreenTitle";
 import { Button } from "../../shared/ui/Button";
 import { Chip } from "../../shared/ui/Chip";
@@ -5,9 +6,8 @@ import { Eyebrow } from "../../shared/ui/Eyebrow";
 import { useSession } from "../../shared/session";
 import { GateClosedBanner, GateOpenBanner } from "./GateBanner";
 import { GapCard } from "./GapCard";
-import { ProductChangeLogCard } from "./ProductChangeLogCard";
 import { useGateState } from "./useGateState";
-import { GAPS, PERIOD_BADGE, PRODUCT_NAME, RECORDED_WHEN } from "./gapFixtures";
+import { COMPLETENESS_ORDER_ID, orderCompletenessQuery } from "./queries";
 
 /**
  * THE COMPLETENESS GATE — the run stops here, between segmentation and
@@ -20,29 +20,32 @@ import { GAPS, PERIOD_BADGE, PRODUCT_NAME, RECORDED_WHEN } from "./gapFixtures";
  * for nothing — the pages are already classified, and nothing has been
  * extracted, so closing a gap and resuming costs one run of the cheap half.
  *
- * THE GATE IS THE SERVER'S. This screen renders gaps and closures; it never
- * decides whether the package is complete. The banner that follows from having
- * no open gaps is a rendering of the fixture set, not a verdict computed here —
- * and when there is a real gate, that state arrives with the gaps.
+ * THE GATE IS THE SERVER'S. `gate_open` decides which banner renders; the count
+ * of gaps still open on this screen never does. Closing every card here records
+ * intent, and the gate re-runs on the server or not at all.
  *
- * CONTRACT GAP: no completeness-gate resource of any kind in
- * `packages/contract` — no gate, gap, closure, supplemental upload, sign-off
- * amendment, root-of-title assertion, product change or order-history write.
- * The gaps are fixtures (`gapFixtures.ts`) and the closures are local state
- * (`useGateState.ts`); nothing survives a reload.
+ * CONTRACT GAP: no closure write of any kind — no supplemental upload, no
+ * sign-off amendment, no root-of-title assertion, no product change, no resume.
+ * Closures are local state and vanish on reload; "Resume processing" is drawn
+ * as the design draws it and disabled.
  *
- * CONTRACT GAP: "Resume processing" has nothing to call. It is rendered
- * enabled/disabled exactly as the design does, without a mutation behind it.
+ * CONTRACT GAP: `close_options` are opaque strings with no kind, so the role
+ * gate the design put on changing the product — the client paid for it, senior
+ * and ops only — cannot be applied without matching on the server's copy. It is
+ * left off rather than faked.
  */
 export function CompletenessScreen() {
-  const role = useSession((session) => session.role);
   const actor = useSession((session) => session.actor);
+  const role = useSession((session) => session.role);
   const gate = useGateState();
+  const { data, isPending, isError } = useQuery(orderCompletenessQuery(COMPLETENESS_ORDER_ID));
 
-  /** The design's rule: the client paid for this product, so senior/ops only. */
-  const canChangeProduct = role === "senior" || role === "ops" || role === "admin";
-  const openGaps = GAPS.filter((gap) => gate.closures[gap.id] === undefined).length;
-  const recordedBy = `${actor} (${role}) · ${RECORDED_WHEN}`;
+  if (isError) return <p className="text-base text-state-halt-ink">Completeness gate unavailable.</p>;
+  if (isPending) return <p className="text-base text-ink-secondary">Loading the gate…</p>;
+
+  const openGaps = data.gaps.filter(
+    (gap) => gap.closed_by === null && gate.closures[gap.id] === undefined,
+  ).length;
 
   return (
     <div className="flex flex-col gap-6">
@@ -57,31 +60,22 @@ export function CompletenessScreen() {
 
       <div className="flex flex-wrap items-center gap-5">
         <Eyebrow variant="caption">Product ordered</Eyebrow>
-        <span className="text-md font-semibold">{PRODUCT_NAME}</span>
+        <span className="text-md font-semibold">{data.product_name}</span>
         <Chip tone="action" size="sm" shape="mono" bordered className="normal-case">
-          {PERIOD_BADGE}
+          {data.period_label}
         </Chip>
       </div>
 
-      {openGaps > 0 ? <GateOpenBanner /> : <GateClosedBanner packagePages={gate.packagePages} />}
+      {data.gate_open ? <GateOpenBanner /> : <GateClosedBanner />}
 
-      {GAPS.filter((gap) => gate.closures[gap.id]?.kind !== "product-changed").map((gap) => (
+      {data.gaps.map((gap) => (
         <GapCard
           key={gap.id}
           gap={gap}
           closure={gate.closures[gap.id]}
-          packagePages={gate.packagePages}
-          canChangeProduct={canChangeProduct}
-          onUpload={() => gate.upload(gap)}
-          onAmend={() => gate.amend(gap)}
-          onRecordRoot={(comment) => gate.recordRoot(gap, comment, recordedBy)}
-          onChangeProduct={(target, reason) => gate.changeProduct(gap, target, reason, recordedBy)}
+          onClose={(option, note) => gate.close(gap.id, { option, note, by: `${actor} (${role})` })}
         />
       ))}
-
-      {gate.productChange === null ? null : (
-        <ProductChangeLogCard record={gate.productChange} />
-      )}
 
       <div className="flex items-center gap-7">
         <p
@@ -91,9 +85,9 @@ export function CompletenessScreen() {
         >
           {openGaps > 0
             ? `${openGaps} gap${openGaps === 1 ? "" : "s"} still open. Close each to resume — nothing has been extracted yet.`
-            : "All gaps closed. Extraction will run on the full package."}
+            : "Every gap has a closure recorded here. Re-running the gate is the server's, and nothing on this screen reopens it."}
         </p>
-        <Button size="lg" disabled={openGaps > 0}>
+        <Button size="lg" disabled>
           Resume processing →
         </Button>
       </div>

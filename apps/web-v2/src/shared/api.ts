@@ -111,3 +111,13 @@ export function post<T>(
     body: JSON.stringify(body ?? {}),
   });
 }
+
+/**
+ * PATCH — a partial update. Used only for preferences today: everything else
+ * that changes state does so through a named POST that means something in the
+ * domain ("confirm", "escalate", "resolve"), because a generic partial update
+ * is a state machine with no vocabulary.
+ */
+export function patch<T>(path: string, schema: Validator<T>, body: unknown): Promise<T> {
+  return request(path, schema, { method: "PATCH", body: JSON.stringify(body) });
+}

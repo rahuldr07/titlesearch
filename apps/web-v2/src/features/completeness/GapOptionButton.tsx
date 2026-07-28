@@ -5,14 +5,13 @@ import { cn } from "../../shared/ui/classNames";
 /**
  * One way out of a gap, stated as a headline and its consequence.
  *
- * THE SECOND LINE IS THE POINT. These four choices are not interchangeable —
- * one adds evidence, one rewrites a signed answer, one makes a fresh claim, one
- * moves money — and the difference is invisible from the headlines alone. Every
- * option therefore carries what it does to the record, at the moment of
- * choosing, rather than in a confirmation afterwards.
+ * THE SECOND LINE IS THE POINT. Every option carries what it does to the
+ * record, at the moment of choosing, rather than in a confirmation afterwards.
  *
- * Tone is the ranking: the tinted options are the ones that cost nothing to be
- * wrong about, the outlined ones are the ones that change the record.
+ * CONTRACT GAP: the design ranked the options by tone — tinted for the ones
+ * that cost nothing to be wrong about, outlined for the ones that change the
+ * record. `close_options` are opaque strings with no kind, so the ranking is
+ * not derivable and the tone now marks only which option is being filled in.
  */
 const TITLE_INK = {
   action: "text-action-ink",

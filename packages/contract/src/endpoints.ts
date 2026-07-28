@@ -557,3 +557,16 @@ export const OrderPagesResponse = z.object({
   pages: z.array(SourcePage),
 });
 export type OrderPagesResponse = z.infer<typeof OrderPagesResponse>;
+
+/**
+ * POST /api/fields/{id}/exclude — suppress a row WITH its reason (R13).
+ *
+ * The reason is required for the same argument as a correction's: a suppressed
+ * row is invisible on the delivered sheet, so the record of why it went is the
+ * only thing anybody can audit later. A silent suppression is indistinguishable
+ * from a miss.
+ */
+export const ExcludeFieldRequest = z.object({
+  reason: z.string().min(1),
+});
+export type ExcludeFieldRequest = z.infer<typeof ExcludeFieldRequest>;

@@ -1,6 +1,6 @@
-import { Toggle, ToggleGroup } from "../../shared/ui/ToggleGroup";
+import type { ConfigProduct } from "@titlepipe/contract";
 
-import { PRODUCT_CHIPS } from "./registry";
+import { Toggle, ToggleGroup } from "../../shared/ui/ToggleGroup";
 
 /**
  * "Resolve against baseline:" — the selector that makes everything below it
@@ -16,9 +16,11 @@ import { PRODUCT_CHIPS } from "./registry";
  * in a sentence and six full names wrap into a paragraph.
  */
 export function ProductChips({
+  products,
   value,
   onChange,
 }: {
+  products: readonly ConfigProduct[];
   value: string;
   onChange: (productId: string) => void;
 }) {
@@ -35,8 +37,8 @@ export function ProductChips({
           if (picked !== undefined) onChange(picked);
         }}
       >
-        {PRODUCT_CHIPS.map((p) => (
-          <Toggle key={p.id} value={p.id} aria-label={p.name}>
+        {products.map((p) => (
+          <Toggle key={p.id} value={p.id} aria-label={p.full}>
             {p.code}
           </Toggle>
         ))}

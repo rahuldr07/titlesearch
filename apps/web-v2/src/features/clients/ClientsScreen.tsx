@@ -1,16 +1,13 @@
+import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { ScreenTitle } from "../../app/ScreenTitle";
 import { useSession } from "../../shared/session";
 import { Tab, TabList, TabPanel, Tabs } from "../../shared/ui/Tabs";
 
+import { clientsQuery, configProductsQuery } from "./queries";
 import { CompareTab } from "./CompareTab";
 import { OneClientTab } from "./OneClientTab";
-import { CLIENTS, DEFAULT_PRODUCT_ID, PRODUCT_CHIPS, type ProductChip } from "./registry";
-
-const FALLBACK_PRODUCT: ProductChip = {
-  id: DEFAULT_PRODUCT_ID, code: "40 Year", name: "40-Year Search", gridKey: "y",
-};
 
 /**
  * Client settings and overrides.
@@ -36,10 +33,26 @@ export function ClientsScreen() {
   const canAuthor = role === "admin" || role === "engineer";
 
   const [tab, setTab] = useState<string>("one");
-  const [clientId, setClientId] = useState<string>(CLIENTS[0]?.id ?? "");
-  const [productId, setProductId] = useState<string>(DEFAULT_PRODUCT_ID);
+  const [clientId, setClientId] = useState<string | null>(null);
+  const [productId, setProductId] = useState<string | null>(null);
 
-  const product = PRODUCT_CHIPS.find((p) => p.id === productId) ?? FALLBACK_PRODUCT;
+  const clients = useQuery(clientsQuery);
+  const config = useQuery(configProductsQuery);
+
+  if (clients.isError || config.isError) {
+    return <p className="text-base text-state-halt-ink">Client settings unavailable.</p>;
+  }
+  if (clients.isPending || config.isPending) {
+    return <p className="text-base text-ink-secondary">Loading client settings…</p>;
+  }
+
+  // Open on a pairing the server has actually resolved. Landing on the "nobody
+  // has told us how this resolves" state by default would read as a broken
+  // screen rather than as the honest gap it is elsewhere.
+  const selectedId = productId ?? clients.data.effective[0]?.product_id ?? "";
+  const product =
+    config.data.products.find((p) => p.id === selectedId) ?? config.data.products[0];
+  const selectedClient = clientId ?? clients.data.clients[0]?.id ?? "";
 
   return (
     <div className="flex flex-col gap-8">
@@ -56,26 +69,40 @@ export function ClientsScreen() {
         </p>
       </header>
 
-      <Tabs value={tab} onValueChange={setTab}>
-        <TabList variant="standalone">
-          <Tab variant="standalone" value="one">One client in depth</Tab>
-          <Tab variant="standalone" value="compare">Compare all clients</Tab>
-        </TabList>
+      {product === undefined ? (
+        <p data-testid="no-products" className="text-base leading-body text-ink-secondary">
+          The configuration carries no products, so there is no baseline to
+          resolve a client against.
+        </p>
+      ) : (
+        <Tabs value={tab} onValueChange={setTab}>
+          <TabList variant="standalone">
+            <Tab variant="standalone" value="one">One client in depth</Tab>
+            <Tab variant="standalone" value="compare">Compare all clients</Tab>
+          </TabList>
 
-        <TabPanel value="one">
-          <OneClientTab
-            canAuthor={canAuthor}
-            clientId={clientId}
-            onSelectClient={setClientId}
-            product={product}
-            onSelectProduct={setProductId}
-          />
-        </TabPanel>
+          <TabPanel value="one">
+            <OneClientTab
+              canAuthor={canAuthor}
+              data={clients.data}
+              config={config.data}
+              clientId={selectedClient}
+              product={product}
+              onSelectClient={setClientId}
+              onSelectProduct={setProductId}
+            />
+          </TabPanel>
 
-        <TabPanel value="compare">
-          <CompareTab product={product} onSelectProduct={setProductId} />
-        </TabPanel>
-      </Tabs>
+          <TabPanel value="compare">
+            <CompareTab
+              data={clients.data}
+              products={config.data.products}
+              product={product}
+              onSelectProduct={setProductId}
+            />
+          </TabPanel>
+        </Tabs>
+      )}
     </div>
   );
 }

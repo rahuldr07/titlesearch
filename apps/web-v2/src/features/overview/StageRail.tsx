@@ -1,7 +1,7 @@
+import type { LifecycleStage } from "@titlepipe/contract";
 import { Card } from "../../shared/ui/Card";
 import { cn } from "../../shared/ui/classNames";
 import { countInk, STAGE_TONE } from "./stageTone";
-import type { LifecycleStage } from "./lifecycle";
 
 /**
  * The same seven stages, stacked — one row each, orders reduced to pills.
@@ -31,16 +31,11 @@ export function StageRail({ stages }: { stages: readonly LifecycleStage[] }) {
                 <span aria-hidden="true" className={cn("w-1.5 shrink-0 rounded-1", tone.bar)} />
                 <div className="min-w-0">
                   <h2 className="text-xs leading-tight font-bold text-ink-primary">{stage.label}</h2>
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    {stage.kind === "halt" ? (
-                      <span className="text-micro font-bold tracking-badge text-action-ink uppercase">
-                        ■ stopped
-                      </span>
-                    ) : null}
-                    <span className="text-micro tracking-badge text-ink-muted uppercase">
-                      on {stage.on}
+                  {stage.kind === "halt" ? (
+                    <span className="mt-2 block text-micro font-bold tracking-badge text-action-ink uppercase">
+                      ■ stopped
                     </span>
-                  </div>
+                  ) : null}
                 </div>
               </div>
 
@@ -59,13 +54,18 @@ export function StageRail({ stages }: { stages: readonly LifecycleStage[] }) {
                 ) : (
                   stage.orders.map((order) => (
                     <span
-                      key={order.order}
-                      className={cn("inline-flex items-baseline gap-4 rounded-pill border px-6 py-2", tone.chip)}
+                      key={order.order_ref}
+                      className={cn(
+                        "inline-flex items-baseline gap-4 rounded-pill border px-6 py-2",
+                        tone.chip,
+                      )}
                     >
                       <span className="font-mono text-xs font-semibold text-ink-primary">
-                        {order.order}
+                        {order.order_ref}
                       </span>
-                      <span className="text-tiny text-ink-muted">{order.waited}</span>
+                      {order.waited === null ? null : (
+                        <span className="text-tiny text-ink-muted">{order.waited}</span>
+                      )}
                     </span>
                   ))
                 )}

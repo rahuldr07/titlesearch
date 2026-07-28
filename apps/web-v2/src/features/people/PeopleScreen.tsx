@@ -1,9 +1,10 @@
+import { useQuery } from "@tanstack/react-query";
 import { Card } from "../../shared/ui/Card";
 import { Button } from "../../shared/ui/Button";
 import { ScreenTitle } from "../../app/ScreenTitle";
 import { MfaGateBanner } from "./MfaGateBanner";
 import { PersonRow } from "./PersonRow";
-import { DEMO_PEOPLE, DEMO_PRIVILEGED_WITHOUT_MFA } from "./roster";
+import { peopleQuery } from "./queries";
 
 /**
  * ADMIN · PEOPLE — the whole roster, one row each, no pagination and no search.
@@ -23,6 +24,8 @@ import { DEMO_PEOPLE, DEMO_PRIVILEGED_WITHOUT_MFA } from "./roster";
  * authorisation register into a scoreboard.
  */
 export function PeopleScreen() {
+  const { data, isPending, isError } = useQuery(peopleQuery);
+
   return (
     <div className="flex flex-col gap-8">
       <div className="flex flex-wrap items-end gap-8">
@@ -36,23 +39,30 @@ export function PeopleScreen() {
             and passwords hand off to the identity provider.
           </p>
         </header>
-        {/* CONTRACT GAP: no invite endpoint. Drawn as designed, wired to
-            nothing — the invitation itself is the provider's to send. */}
-        <Button size="lg">＋ Invite person</Button>
+        {/* CONTRACT GAP: no invite endpoint. Drawn as designed and disabled —
+            the invitation itself is the provider's to send. */}
+        <Button size="lg" disabled>＋ Invite person</Button>
       </div>
 
-      <MfaGateBanner count={DEMO_PRIVILEGED_WITHOUT_MFA} />
-
-      <Card>
-        <ul>
-          {DEMO_PEOPLE.map((person) => (
-            <PersonRow key={person.email} person={person} />
-          ))}
-        </ul>
-      </Card>
+      {isError ? (
+        <p className="text-base text-state-halt-ink">The roster is unavailable.</p>
+      ) : isPending ? (
+        <p className="text-base text-ink-secondary">Loading the roster…</p>
+      ) : (
+        <>
+          <MfaGateBanner count={data.privileged_without_mfa} />
+          <Card>
+            <ul>
+              {data.people.map((person) => (
+                <PersonRow key={person.id} person={person} />
+              ))}
+            </ul>
+          </Card>
+        </>
+      )}
 
       <p className="text-xs text-ink-muted">
-        Role changes and suspensions take effect on the person's next request.
+        Role changes and suspensions take effect on the person&apos;s next request.
       </p>
     </div>
   );

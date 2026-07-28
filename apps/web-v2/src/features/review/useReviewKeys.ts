@@ -7,6 +7,7 @@ export interface ReviewKeyHandlers {
   confirm: () => void;
   correct: () => void;
   escalate: () => void;
+  exclude: () => void;
   pass: () => void;
 }
 
@@ -44,5 +45,6 @@ export function useReviewKeys(handlers: ReviewKeyHandlers, enabled: boolean) {
     handlers.escalate,
     on,
   ]);
+  useHotkeys("x", handlers.exclude, { enabled: on, preventDefault: true }, [handlers.exclude, on]);
   useHotkeys("p", handlers.pass, { enabled: on, preventDefault: true }, [handlers.pass, on]);
 }

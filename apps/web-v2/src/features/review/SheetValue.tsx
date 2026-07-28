@@ -1,5 +1,5 @@
 import type { Field, NaReason } from "@titlepipe/contract";
-import { enginesDisagree } from "./fieldLabel";
+import { enginesDisagree, isExcluded } from "./fieldLabel";
 import { NoValue } from "../../entities/field/NoValue";
 import type { NoValueKind } from "../../entities/field/noValueStates";
 
@@ -37,6 +37,12 @@ export function SheetValue({ field }: { field: Field }) {
     ) : (
       <span className="font-mono text-tiny text-ink-muted">p{page}</span>
     );
+
+  if (isExcluded(field)) {
+    // The row is OFF the sheet, and says so. A suppressed line that simply
+    // vanished would be indistinguishable from one nobody looked at.
+    return <span className="text-base text-ink-muted">Excluded — not our party</span>;
+  }
 
   if (field.state === "escalated") {
     return (

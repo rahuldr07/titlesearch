@@ -1,3 +1,4 @@
+import type { ConfigLine } from "@titlepipe/contract";
 import { useState } from "react";
 
 import { Button } from "../../shared/ui/Button";
@@ -6,8 +7,12 @@ import { Select, SelectItem, SelectPopup, SelectTrigger } from "../../shared/ui/
 import { TextField } from "../../shared/ui/TextField";
 import { Toggle, ToggleGroup } from "../../shared/ui/ToggleGroup";
 
-import { BASELINE_LINES, lineNumber } from "./baseline";
-import { OVERRIDE_ACTIONS } from "./registry";
+const OVERRIDE_ACTIONS = [
+  { value: "waive", label: "Waive" },
+  { value: "narrow", label: "Narrow scope" },
+  { value: "replace", label: "Replace standard" },
+  { value: "add", label: "Add line" },
+] as const;
 
 const PLACEHOLDER: Readonly<Record<string, string>> = {
   waive: "Reason (optional)",
@@ -24,12 +29,18 @@ const PLACEHOLDER: Readonly<Record<string, string>> = {
  * nothing in the baseline to point at. Asking for a line first would make the
  * one case that has no line the awkward exception.
  *
- * The picker offers baseline lines only. An override against a line the product
- * never asks for is not a difference, it is a note nobody will ever read at
- * intake, and letting it be authored would put entries in the delta list that
- * resolve to nothing.
+ * The picker offers catalogue lines only. An override against a line the
+ * product never asks for is not a difference, it is a note nobody will ever
+ * read at intake, and letting it be authored would put entries in the delta
+ * list that resolve to nothing.
  */
-export function AuthorOverride({ productName }: { productName: string }) {
+export function AuthorOverride({
+  productName,
+  lines,
+}: {
+  productName: string;
+  lines: readonly ConfigLine[];
+}) {
   const [action, setAction] = useState<readonly string[]>(["waive"]);
   const [line, setLine] = useState<string | null>(null);
   const current = action[0] ?? "waive";
@@ -62,11 +73,13 @@ export function AuthorOverride({ productName }: { productName: string }) {
               className="rounded-5"
             />
             <SelectPopup>
-              {BASELINE_LINES.map((l) => (
-                <SelectItem key={l.n} value={String(l.n)}>
-                  {`${lineNumber(l.n)} · ${l.label}`}
-                </SelectItem>
-              ))}
+              {lines
+                .filter((l) => !l.retired)
+                .map((l) => (
+                  <SelectItem key={l.id} value={l.id}>
+                    {`${l.id} · ${l.label}`}
+                  </SelectItem>
+                ))}
             </SelectPopup>
           </Select>
         </div>
@@ -89,7 +102,8 @@ export function AuthorOverride({ productName }: { productName: string }) {
         differing,” not “remove the line.”
       </p>
       <p className="mt-2 text-tiny leading-body text-ink-muted">
-        CONTRACT GAP: no overrides endpoint. Nothing typed here is submitted.
+        CONTRACT GAP: overrides are served read-only. Nothing typed here is
+        submitted.
       </p>
     </div>
   );

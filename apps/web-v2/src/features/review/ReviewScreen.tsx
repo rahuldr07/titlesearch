@@ -7,32 +7,31 @@ import {
   useConfirmField,
   useCorrectField,
   useEscalateField,
+  useExcludeField,
   usePassOrder,
 } from "./queries";
 import { readingsOf } from "./fieldLabel";
-import { DecisionPanel, type Pinned } from "./DecisionPanel";
+import { type Pinned } from "./DecisionPanel";
+import { DecisionColumn } from "./DecisionColumn";
 import { FieldList } from "./FieldList";
 import { CallBackSheet } from "./CallBackSheet";
 import { DocumentColumn } from "./DocumentColumn";
 import { ReviewHeader } from "./ReviewHeader";
-import { ReviewEditors, type ReviewMode } from "./ReviewEditors";
+import { type ReviewMode } from "./ReviewEditors";
 import { OrderRail } from "./OrderRail";
 import { useReviewKeys } from "./useReviewKeys";
 import { useReviewSelection } from "./useReviewSelection";
 import { ApiError } from "../../shared/api";
 
 /**
- * The review workstation.
+ * The review workstation — document, decision, draft sheet.
  *
- * FIELD NAVIGATION VISITS ONLY SERVER-QUEUED FIELDS (`review.spec` #9). J and K
- * walk `needs_review` and nothing else — a reviewer cannot walk into an
- * auto-confirmed field and start re-deciding it, because the queue IS the
- * server's judgment about what needs a person, and browsing past it is how
- * throughput pressure gets in.
+ * J AND K WALK ONLY SERVER-QUEUED FIELDS (`review.spec` #9). The queue is the
+ * server's judgment about what needs a person; walking past it by keyboard is
+ * how re-deciding settled fields becomes a habit.
  *
- * SELECTION IS URL-OWNED. `?field=` is a first-class deep link, so a complaint,
- * an escalation or a colleague's message can point at the exact field in
- * context and the destination is never asked to re-derive it.
+ * SELECTION IS URL-OWNED, so `?field=` is a first-class deep link and a
+ * complaint or an escalation can point at the exact field in context.
  */
 export function ReviewScreen() {
   const { orderId } = useParams({ from: "/orders/$orderId/review" });
@@ -46,6 +45,7 @@ export function ReviewScreen() {
   const confirm = useConfirmField(orderId);
   const correct = useCorrectField(orderId);
   const escalate = useEscalateField(orderId);
+  const exclude = useExcludeField(orderId);
   const pass = usePassOrder(orderId);
 
   const fields: Field[] = data?.fields ?? [];
@@ -62,6 +62,17 @@ export function ReviewScreen() {
     select(path);
   };
 
+  /** Adopting a reading opens the editor already holding it — no retyping. */
+  const adopt = (value: string) => {
+    setSeed(value);
+    setMode("correct");
+  };
+
+  const openCorrect = () => {
+    setSeed(null);
+    setMode("correct");
+  };
+
   const submitConfirm = () => {
     if (selected === null) return;
     confirm.mutate({ fieldId: selected.id, value: selected.value }, { onSuccess: advance });
@@ -75,8 +86,9 @@ export function ReviewScreen() {
       // explicit click — the only keyboard-layer defence against bulk-accepting
       // absences by holding Enter down.
       confirm: () => (selected?.value == null ? setBlankNote(true) : submitConfirm()),
-      correct: () => { setSeed(null); setMode("correct"); },
+      correct: openCorrect,
       escalate: () => setMode("escalate"),
+      exclude: () => setMode("exclude"),
       pass: () => setMode("pass"),
     },
     mode === "idle" && selected !== null,
@@ -85,19 +97,14 @@ export function ReviewScreen() {
   if (isError) return <p className="text-base text-state-halt-ink">Order fields unavailable.</p>;
   if (isPending) return <p className="text-base text-ink-secondary">Loading the order…</p>;
   if (selected === null) return <p className="text-base text-ink-secondary">No fields on this order.</p>;
-
   const editorSeed = seed ?? selected.value ?? readingsOf(selected)[0]?.value ?? "";
 
   return (
     <div className="flex flex-col gap-8">
       <ReviewHeader fields={fields} queued={queued.length} />
 
-      {/*
-        THE EXPORT'S THREE PANES: document · decision queue · draft sheet. The
-        reviewer reads on the left, decides in the middle, and watches the
-        deliverable assemble on the right. Splitting those apart is what stops
-        a decision being made without the page it came from in view.
-      */}
+      {/* Three panes: read on the left, decide in the middle, watch the
+          deliverable assemble on the right. */}
       <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,5fr)_minmax(0,6fr)_minmax(0,5fr)]">
         <div className="flex flex-col gap-6">
           <OrderRail orderId={orderId} />
@@ -105,39 +112,30 @@ export function ReviewScreen() {
         </div>
 
         <div className="flex flex-col gap-6">
-          <DecisionPanel
+          <DecisionColumn
             field={selected}
             pinned={pinned}
+            mode={mode}
+            seed={editorSeed}
+            passPending={pass.isPending}
+            serverNote={confirm.error instanceof ApiError ? confirm.error.message : null}
+            blankNote={blankNote}
             onPin={setPinned}
-            onAdopt={(value) => {
-              setSeed(value);
-              setMode("correct");
-            }}
-            onConfirm={() => submitConfirm()}
-            onCorrect={() => {
-              setSeed(null);
-              setMode("correct");
-            }}
-            onEscalate={() => setMode("escalate")}
-            onPass={() => setMode("pass")}
-          >
-            <ReviewEditors
-              mode={mode}
-              editorKey={`${selected.id}:${editorSeed}`}
-              seed={editorSeed}
-              passPending={pass.isPending}
-              serverNote={confirm.error instanceof ApiError ? confirm.error.message : null}
-              blankNote={blankNote}
-              onCancel={() => setMode("idle")}
-              onCorrect={(value, reason) =>
-                correct.mutate({ fieldId: selected.id, value, reason }, { onSuccess: advance })
-              }
-              onEscalate={(question) =>
-                escalate.mutate({ fieldId: selected.id, question }, { onSuccess: advance })
-              }
-              onPass={(reason) => pass.mutate(reason, { onSuccess: () => setMode("idle") })}
-            />
-          </DecisionPanel>
+            onAdopt={adopt}
+            onConfirm={submitConfirm}
+            onCorrect={openCorrect}
+            onMode={setMode}
+            onCorrectSubmit={(value, reason) =>
+              correct.mutate({ fieldId: selected.id, value, reason }, { onSuccess: advance })
+            }
+            onEscalateSubmit={(question) =>
+              escalate.mutate({ fieldId: selected.id, question }, { onSuccess: advance })
+            }
+            onExcludeSubmit={(reason) =>
+              exclude.mutate({ fieldId: selected.id, reason }, { onSuccess: advance })
+            }
+            onPassSubmit={(reason) => pass.mutate(reason, { onSuccess: () => setMode("idle") })}
+          />
 
           <FieldList fields={fields} selectedPath={selected.path} onSelect={reselect} />
         </div>

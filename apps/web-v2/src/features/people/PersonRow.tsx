@@ -1,7 +1,7 @@
+import type { MfaState, Person } from "@titlepipe/contract";
 import { Chip } from "../../shared/ui/Chip";
 import { Button } from "../../shared/ui/Button";
 import { cn } from "../../shared/ui/classNames";
-import { MFA_LABEL, type Person } from "./roster";
 
 /** The design's three account states, mapped to the kit's tones. */
 const STATUS_TONE = {
@@ -9,6 +9,13 @@ const STATUS_TONE = {
   Suspended: "halt",
   Invited: "neutral",
 } as const;
+
+/** The MFA column's text, per state. Presentation only. */
+const MFA_LABEL: Record<MfaState, string> = {
+  enrolled: "MFA ✓",
+  pending: "MFA pending",
+  absent: "MFA ✗",
+};
 
 /**
  * One person, one row, and only two things you may do to them.
@@ -20,12 +27,16 @@ const STATUS_TONE = {
  *
  * The MFA column is a report, not a control: an admin cannot enrol someone
  * else's second factor, so the column states the fact and offers no button.
- * When the account is privileged and unenrolled the row also carries the gate
- * mark — the same fact the banner counts, shown where it applies.
+ *
+ * CONTRACT GAP: the roster carries no per-account gate flag, only `privileged`
+ * and `mfa`. The design stamped a "Gate" mark on the rows the banner counts;
+ * re-deriving it here from `privileged && mfa !== "enrolled"` would put a second
+ * copy of the gate predicate in the browser, free to disagree with the server's
+ * own figure. The mark is left off and the banner keeps the count.
  *
  * CONTRACT GAP: no role-change and no suspend endpoint. Both are drawn as the
- * design draws them and neither is wired; the footnote below the roster already
- * carries the copy about when a change would take effect.
+ * design draws them and disabled; the footnote below the roster already carries
+ * the copy about when a change would take effect.
  */
 export function PersonRow({ person }: { person: Person }) {
   const mfaTone =
@@ -52,13 +63,9 @@ export function PersonRow({ person }: { person: Person }) {
         {MFA_LABEL[person.mfa]}
       </p>
 
-      {person.gated ? (
-        <Chip tone="halt" size="micro" bordered>Gate</Chip>
-      ) : null}
-
       <div className="flex gap-3">
-        <Button size="sm" fill="outlined" tone="neutral">Change role</Button>
-        <Button size="sm" fill="outlined" tone="neutral" className="text-state-halt-ink">
+        <Button size="sm" fill="outlined" tone="neutral" disabled>Change role</Button>
+        <Button size="sm" fill="outlined" tone="neutral" className="text-state-halt-ink" disabled>
           Suspend
         </Button>
       </div>

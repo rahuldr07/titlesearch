@@ -1,6 +1,4 @@
-import { Chip } from "../../shared/ui/Chip";
-import { cn } from "../../shared/ui/classNames";
-import type { LifecycleOrder } from "./lifecycle";
+import type { LifecycleOrder } from "@titlepipe/contract";
 
 /**
  * One order, as it appears inside a stage column.
@@ -13,32 +11,31 @@ import type { LifecycleOrder } from "./lifecycle";
  * `waited` is SERVER TEXT rendered verbatim. There is no clock in this
  * component and nothing here counts up: an elapsed timer on a work item is a
  * pace indicator wearing a helpful hat, and this product does not pace people.
+ * Where the server sends nothing, the row stays silent rather than printing a
+ * zero the screen would have had to invent.
  *
- * The violet edge plus the "yours" stamp is the only emphasis available, and it
- * means exactly one thing — this one is waiting on the person reading it.
- *
- * CONTRACT GAP: no lifecycle endpoint means no real order ids, so the card is
- * not a link. When one lands it becomes the button the design draws.
+ * CONTRACT GAP: the census does not say whether an order is the viewer's own,
+ * so the design's violet edge and "yours" stamp are absent. It also carries no
+ * order id, only a reference, so the card is not a link. When either lands the
+ * card becomes the button the design draws.
  */
 export function OrderCard({ order }: { order: LifecycleOrder }) {
   return (
-    <div
-      className={cn(
-        "rounded-7 border bg-surface-panel p-4",
-        order.yours
-          ? "border-(length:--stroke-emphasis) border-action"
-          : "border-line-strong",
+    <div className="rounded-7 border border-line-strong bg-surface-panel p-4">
+      <span className="font-mono text-xs font-semibold text-ink-primary">{order.order_ref}</span>
+      <p className="mt-2 text-tiny leading-close text-ink-muted">
+        {order.addr} · {order.county}
+      </p>
+      {order.waited === null && order.waiting_on === null ? null : (
+        <div className="mt-3 border-t border-line-subtle pt-3">
+          {order.waited === null ? null : (
+            <p className="font-mono text-tiny text-ink-secondary">{order.waited}</p>
+          )}
+          {order.waiting_on === null ? null : (
+            <p className="mt-1 text-tiny leading-close text-ink-muted">{order.waiting_on}</p>
+          )}
+        </div>
       )}
-    >
-      <div className="flex flex-wrap items-center gap-3">
-        <span className="font-mono text-xs font-semibold text-ink-primary">{order.order}</span>
-        {order.yours ? <Chip tone="inverse" size="micro">yours</Chip> : null}
-      </div>
-      <p className="mt-2 text-tiny leading-close text-ink-muted">{order.addr}</p>
-      <div className="mt-3 border-t border-line-subtle pt-3">
-        <p className="font-mono text-tiny text-ink-secondary">{order.waited}</p>
-        <p className="mt-1 text-tiny leading-close text-ink-muted">{order.waitOn}</p>
-      </div>
     </div>
   );
 }

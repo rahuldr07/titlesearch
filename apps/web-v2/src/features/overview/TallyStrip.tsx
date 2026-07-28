@@ -1,7 +1,6 @@
 import { Card } from "../../shared/ui/Card";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
 import { cn } from "../../shared/ui/classNames";
-import { DEMO_TALLY } from "./lifecycle";
 
 /**
  * Four figures, and every one of them is a CENSUS — how many orders are sitting
@@ -17,13 +16,23 @@ import { DEMO_TALLY } from "./lifecycle";
  *
  * The figures arrive from the server. This component adds nothing up.
  */
-export function TallyStrip() {
+export function TallyStrip({
+  total,
+  halted,
+  moving,
+  failed,
+}: {
+  total: number;
+  halted: number;
+  moving: number;
+  failed: number;
+}) {
   return (
     <Card className="flex flex-wrap">
-      <Tally value={DEMO_TALLY.total} label="Orders in flight" divided />
-      <Tally value={DEMO_TALLY.halted} label="Stopped on a person" ink="text-action" divided />
-      <Tally value={DEMO_TALLY.moving} label="Moving on its own" ink="text-ink-secondary" divided />
-      <Tally value={DEMO_TALLY.failed} label="Off the pipeline" ink="text-state-halt-ink" />
+      <Tally value={total} label="Orders in flight" divided />
+      <Tally value={halted} label="Stopped on a person" ink="text-action" divided />
+      <Tally value={moving} label="Moving on its own" ink="text-ink-secondary" divided />
+      <Tally value={failed} label="Off the pipeline" ink="text-state-halt-ink" />
     </Card>
   );
 }

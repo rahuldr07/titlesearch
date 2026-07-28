@@ -1,4 +1,4 @@
-import type { StageKind } from "./lifecycle";
+import type { StageKind } from "@titlepipe/contract";
 
 /**
  * Colour per stage KIND, never per stage.

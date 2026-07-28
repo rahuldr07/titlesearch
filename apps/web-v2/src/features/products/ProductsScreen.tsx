@@ -1,15 +1,23 @@
+import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { useSession } from "../../shared/session";
 import { Tab, TabList, TabPanel, Tabs } from "../../shared/ui/Tabs";
 
 import { BaselineGrid } from "./BaselineGrid";
-import { CONFIG_TABS } from "./catalogue";
 import { ClientsLink } from "./ClientsLink";
 import { ConfigHeader } from "./ConfigHeader";
 import { EditDrawer, type EditTarget } from "./EditDrawer";
 import { LineCatalogue } from "./LineCatalogue";
 import { ProductList } from "./ProductList";
+import { configQuery } from "./queries";
+
+const CONFIG_TABS = [
+  { value: "products", label: "Products" },
+  { value: "lines", label: "Sign-off lines" },
+  { value: "grid", label: "Baseline grid" },
+  { value: "clients", label: "Clients" },
+] as const;
 
 /**
  * The intake config layer: what a product asks for, and in whose words.
@@ -32,10 +40,23 @@ export function ProductsScreen() {
 
   const [tab, setTab] = useState<string>("products");
   const [editing, setEditing] = useState<EditTarget | null>(null);
+  const { data, isPending, isError } = useQuery(configQuery);
+
+  if (isError) return <p className="text-base text-state-halt-ink">Configuration unavailable.</p>;
+  if (isPending) return <p className="text-base text-ink-secondary">Loading configuration…</p>;
+
+  // The groups a line may belong to are the ones the catalogue already uses.
+  // Offering a fixed list would let the drawer invent a group the server has
+  // never seen, which is a vocabulary fork dressed as a form field.
+  const groups = [...new Set(data.lines.map((l) => l.group))];
 
   return (
     <div className="flex flex-col gap-8">
-      <ConfigHeader canAuthor={canAuthor} />
+      <ConfigHeader
+        canAuthor={canAuthor}
+        configVersion={data.config_version}
+        frozen={data.frozen}
+      />
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabList variant="standalone">
@@ -48,6 +69,7 @@ export function ProductsScreen() {
 
         <TabPanel value="products">
           <ProductList
+            products={data.products}
             canAuthor={canAuthor}
             onNew={() => setEditing({ kind: "product", mode: "new" })}
             onEdit={() => setEditing({ kind: "product", mode: "edit" })}
@@ -56,6 +78,7 @@ export function ProductsScreen() {
 
         <TabPanel value="lines">
           <LineCatalogue
+            lines={data.lines}
             canAuthor={canAuthor}
             onNew={() => setEditing({ kind: "line", mode: "new" })}
             onEdit={() => setEditing({ kind: "line", mode: "edit" })}
@@ -63,7 +86,7 @@ export function ProductsScreen() {
         </TabPanel>
 
         <TabPanel value="grid">
-          <BaselineGrid canAuthor={canAuthor} />
+          <BaselineGrid products={data.products} lines={data.lines} canAuthor={canAuthor} />
         </TabPanel>
 
         <TabPanel value="clients">
@@ -72,7 +95,7 @@ export function ProductsScreen() {
       </Tabs>
 
       {editing === null ? null : (
-        <EditDrawer target={editing} onClose={() => setEditing(null)} />
+        <EditDrawer target={editing} groups={groups} onClose={() => setEditing(null)} />
       )}
     </div>
   );

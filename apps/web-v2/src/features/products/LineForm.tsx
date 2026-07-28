@@ -4,9 +4,25 @@ import { Button } from "../../shared/ui/Button";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
 import { Switch } from "../../shared/ui/Switch";
 import { TextArea, TextField } from "../../shared/ui/TextField";
-import { ToggleGroup, Toggle } from "../../shared/ui/ToggleGroup";
 
-import { ANSWER_CHOICES, COMMENT_CHOICES, LINE_GROUPS } from "./catalogue";
+import { ChoiceField } from "./ChoiceField";
+
+/**
+ * The two answer shapes and the two comment rules the drawer offers.
+ *
+ * These are FORM VOCABULARY, not config: the served line carries `answers` as a
+ * list and `comment_on_no` as a boolean, and no endpoint accepts either back,
+ * so the choices exist to draw the control rather than to describe the server.
+ */
+const ANSWER_CHOICES = [
+  { value: "YN", label: "YES / NO" },
+  { value: "YNA", label: "YES / NO / N/A" },
+] as const;
+
+const COMMENT_CHOICES = [
+  { value: "req", label: "Required on NO" },
+  { value: "opt", label: "Optional on NO" },
+] as const;
 
 /**
  * Authoring a line.
@@ -22,7 +38,15 @@ import { ANSWER_CHOICES, COMMENT_CHOICES, LINE_GROUPS } from "./catalogue";
  * human-answered only, and the form says so rather than offering a default
  * check that would make an unverified line look verified.
  */
-export function LineForm({ editing, onCancel }: { editing: boolean; onCancel: () => void }) {
+export function LineForm({
+  editing,
+  groups: groupChoices,
+  onCancel,
+}: {
+  editing: boolean;
+  groups: readonly string[];
+  onCancel: () => void;
+}) {
   const [group, setGroup] = useState<readonly string[]>([]);
   const [answers, setAnswers] = useState<readonly string[]>(["YN"]);
   const [comment, setComment] = useState<readonly string[]>(["req"]);
@@ -44,45 +68,28 @@ export function LineForm({ editing, onCancel }: { editing: boolean; onCancel: ()
         <TextArea id="line-label" rows={2} className="mt-3" />
       </div>
 
-      <div>
-        <Eyebrow variant="field" as="h3">Group</Eyebrow>
-        <ToggleGroup
-          className="mt-3"
-          aria-label="Group"
-          value={group}
-          onValueChange={setGroup}
-        >
-          {LINE_GROUPS.map((g) => <Toggle key={g} value={g}>{g}</Toggle>)}
-        </ToggleGroup>
-      </div>
+      <ChoiceField
+        label="Group"
+        options={groupChoices.map((g) => ({ value: g, label: g }))}
+        value={group}
+        onValueChange={setGroup}
+      />
 
-      <div>
-        <Eyebrow variant="field" as="h3">Answers</Eyebrow>
-        <ToggleGroup
-          className="mt-3"
-          aria-label="Answers"
-          value={answers}
-          onValueChange={setAnswers}
-        >
-          {ANSWER_CHOICES.map((a) => (
-            <Toggle key={a.value} value={a.value} className="rounded-5">{a.label}</Toggle>
-          ))}
-        </ToggleGroup>
-      </div>
+      <ChoiceField
+        label="Answers"
+        options={ANSWER_CHOICES}
+        value={answers}
+        onValueChange={setAnswers}
+        toggleClassName="rounded-5"
+      />
 
-      <div>
-        <Eyebrow variant="field" as="h3">Comment on NO</Eyebrow>
-        <ToggleGroup
-          className="mt-3"
-          aria-label="Comment on NO"
-          value={comment}
-          onValueChange={setComment}
-        >
-          {COMMENT_CHOICES.map((c) => (
-            <Toggle key={c.value} value={c.value} className="rounded-5">{c.label}</Toggle>
-          ))}
-        </ToggleGroup>
-      </div>
+      <ChoiceField
+        label="Comment on NO"
+        options={COMMENT_CHOICES}
+        value={comment}
+        onValueChange={setComment}
+        toggleClassName="rounded-5"
+      />
 
       <div className="flex items-center gap-5">
         <Switch aria-labelledby="line-period-label" />
@@ -125,8 +132,8 @@ export function LineForm({ editing, onCancel }: { editing: boolean; onCancel: ()
         </Button>
       </div>
       <p className="text-xs leading-body text-ink-muted">
-        CONTRACT GAP: there is no sign-off-line endpoint. Save is disabled rather
-        than silently discarding what you typed.
+        CONTRACT GAP: the sign-off-line endpoint reads only. Save is disabled
+        rather than silently discarding what you typed.
       </p>
     </div>
   );

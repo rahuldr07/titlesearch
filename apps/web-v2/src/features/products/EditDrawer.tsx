@@ -27,9 +27,12 @@ export interface EditTarget {
  */
 export function EditDrawer({
   target,
+  groups,
   onClose,
 }: {
   target: EditTarget;
+  /** The groups the served catalogue already uses — never an invented list. */
+  groups: readonly string[];
   onClose: () => void;
 }) {
   const title = `${target.mode === "edit" ? "Edit" : "New"} ${target.kind}`;
@@ -58,7 +61,7 @@ export function EditDrawer({
         </div>
 
         {target.kind === "line" ? (
-          <LineForm editing={target.mode === "edit"} onCancel={onClose} />
+          <LineForm editing={target.mode === "edit"} groups={groups} onCancel={onClose} />
         ) : null}
         {target.kind === "product" ? (
           <ProductForm isNew={target.mode === "new"} onCancel={onClose} />

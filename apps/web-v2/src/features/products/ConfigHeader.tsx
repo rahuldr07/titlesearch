@@ -1,8 +1,6 @@
 import { ScreenTitle } from "../../app/ScreenTitle";
 import { Chip } from "../../shared/ui/Chip";
 
-import { CONFIG_VERSION } from "./catalogue";
-
 /**
  * The header states the ONE thing that stops this screen being dangerous: what
  * an edit here does, and when.
@@ -15,10 +13,18 @@ import { CONFIG_VERSION } from "./catalogue";
  * every open order", which is the one thing it must never mean.
  *
  * The version chip is therefore not decoration: it is the identifier the order
- * carries. It sits at the top right, read-only, with "applies to new orders
- * only" under it, because the number is only meaningful next to that clause.
+ * carries. It comes from the server and the screen never increments it — only a
+ * publish the server accepted may move it.
  */
-export function ConfigHeader({ canAuthor }: { canAuthor: boolean }) {
+export function ConfigHeader({
+  canAuthor,
+  configVersion,
+  frozen,
+}: {
+  canAuthor: boolean;
+  configVersion: string;
+  frozen: boolean;
+}) {
   return (
     <header className="flex flex-col gap-6">
       <div className="flex flex-wrap items-end gap-8">
@@ -33,9 +39,27 @@ export function ConfigHeader({ canAuthor }: { canAuthor: boolean }) {
           </p>
         </div>
         <div className="text-right">
-          <Chip tone="action" size="md" shape="mono" bordered className="normal-case">
-            {CONFIG_VERSION}
+          <Chip
+            tone="action"
+            size="md"
+            shape="mono"
+            bordered
+            className="normal-case"
+            data-testid="config-version"
+          >
+            {configVersion}
           </Chip>
+          {/*
+            FROZEN IS THE SERVER'S WORD, not a UI mode. It says this version is
+            closed to further change, so the next accepted edit mints a new one
+            — which is exactly what makes the number above safe to stamp on an
+            order.
+          */}
+          {frozen ? (
+            <p className="mt-2 text-tiny font-semibold text-ink-secondary" data-testid="config-frozen">
+              frozen — the next accepted edit mints a new version
+            </p>
+          ) : null}
           <p className="mt-2 text-tiny text-ink-muted">
             current · applies to new orders only
           </p>

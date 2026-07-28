@@ -44,8 +44,8 @@ export function ClientForm({ onCancel }: { onCancel: () => void }) {
         </Button>
       </div>
       <p className="text-xs leading-body text-ink-muted">
-        CONTRACT GAP: there is no clients endpoint. Save is disabled rather than
-        silently discarding what you typed.
+        CONTRACT GAP: the clients endpoint reads only. Save is disabled rather
+        than silently discarding what you typed.
       </p>
     </div>
   );

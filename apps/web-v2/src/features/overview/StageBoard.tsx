@@ -1,5 +1,5 @@
+import type { LifecycleStage } from "@titlepipe/contract";
 import { StageColumn } from "./StageColumn";
-import type { LifecycleStage } from "./lifecycle";
 
 /**
  * Seven columns, equal width, side by side.

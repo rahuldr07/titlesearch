@@ -1,13 +1,10 @@
 import { Card } from "../../shared/ui/Card";
-import { Chip } from "../../shared/ui/Chip";
 import { cn } from "../../shared/ui/classNames";
 
-import { BASELINE_LINES, lineNumber } from "./baseline";
 import {
-  addedFor, deltaCount, markFor, markLabel, markSymbol, stackedCountLabel,
-  type CompareMark,
+  deltasOf, markLabel, markOf, markSymbol, stackedCountLabel,
+  type CompareColumn, type CompareMark,
 } from "./compare";
-import type { ClientRecord } from "./registry";
 
 const MARK: Readonly<Record<CompareMark, string>> = {
   baseline: "bg-surface-app text-ink-muted",
@@ -29,23 +26,27 @@ const MARK: Readonly<Record<CompareMark, string>> = {
  * card. Empty reads as "not loaded"; the sentence reads as "resolved, and there
  * is nothing here", and those are different facts.
  */
-export function CompareStacked({ clients }: { clients: readonly ClientRecord[] }) {
+export function CompareStacked({ columns }: { columns: readonly CompareColumn[] }) {
   return (
     <div className="flex flex-col gap-5">
-      {clients.map((c) => {
-        const deltas = BASELINE_LINES.filter((l) => markFor(c.id, l.n) !== "baseline");
+      {columns.map((c) => {
+        const deltas = deltasOf(c.checklist.lines, c.client.overrides);
         return (
-          <Card key={c.id} data-testid={`stacked-${c.id}`}>
+          <Card key={c.client.id} data-testid={`stacked-${c.client.id}`}>
             <div className="flex flex-wrap items-baseline gap-5 border-b border-line-subtle px-7 py-5">
-              <p className="min-w-0 flex-1 text-md font-bold text-ink-primary">{c.name}</p>
-              <p className="text-xs font-semibold text-action">{stackedCountLabel(c.id)}</p>
+              <p className="min-w-0 flex-1 text-md font-bold text-ink-primary">
+                {c.client.name}
+              </p>
+              <p className="text-xs font-semibold text-action">
+                {stackedCountLabel(deltas.length)}
+              </p>
             </div>
 
-            {deltas.map((l) => {
-              const mark = markFor(c.id, l.n);
+            {deltas.map((line) => {
+              const mark = markOf(line, c.client.overrides);
               return (
                 <div
-                  key={l.n}
+                  key={line.line_id}
                   className="flex items-start gap-5 border-t border-line-subtle px-7 py-5"
                 >
                   <span
@@ -59,46 +60,22 @@ export function CompareStacked({ clients }: { clients: readonly ClientRecord[] }
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-baseline gap-4">
                       <span className="font-mono text-tiny font-semibold text-ink-muted">
-                        {lineNumber(l.n)}
+                        {line.line_id}
                       </span>
                       <span className="min-w-0 flex-1 text-sm leading-close text-ink-primary">
-                        {l.label}
+                        {line.label}
                       </span>
-                      {l.loadBearing ? (
-                        <Chip tone="halt" size="micro" bordered>load-bearing</Chip>
-                      ) : null}
                     </div>
                     <p className="mt-1 text-tiny font-semibold text-ink-secondary">
                       {markLabel(mark)}
+                      {line.scope_note === null ? "" : ` · ${line.scope_note}`}
                     </p>
                   </div>
                 </div>
               );
             })}
 
-            {addedFor(c.id).map((line) => (
-              <div
-                key={line.key}
-                className="flex items-start gap-5 border-t border-line-subtle px-7 py-5"
-              >
-                <span
-                  className={cn(
-                    "flex size-13 shrink-0 items-center justify-center rounded-4 border border-line-strong text-md font-bold",
-                    MARK.added,
-                  )}
-                >
-                  {markSymbol("added")}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm leading-close text-ink-primary">{line.label}</p>
-                  <p className="mt-1 text-tiny font-semibold text-ink-secondary">
-                    {markLabel("added")}
-                  </p>
-                </div>
-              </div>
-            ))}
-
-            {deltaCount(c.id) === 0 ? (
+            {deltas.length === 0 ? (
               <p className="px-7 py-5 text-xs italic text-ink-muted">
                 Nothing special about this client — every line as the baseline
                 states it.

@@ -1,92 +1,60 @@
 import { useState } from "react";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
 import { GapOptionButton } from "./GapOptionButton";
-import { RootOfTitleForm } from "./RootOfTitleForm";
-import { ProductChangeForm } from "./ProductChangeForm";
-import type { Gap } from "./gapFixtures";
+import { GapClosureForm } from "./GapClosureForm";
 
 /**
- * The ways out of one gap, and the two that need something typed first.
+ * The ways out of one gap — THE SERVER'S LIST, rendered in the server's own
+ * words and never extended here.
  *
- * UPLOADING ADDS, IT NEVER REPLACES. The copy says so on the button because the
- * fear it answers is real: people hesitate to send a supplement in case it
- * overwrites the package they already signed for.
+ * Every option carries the same consequence line because every closure costs
+ * the same thing: a sentence saying why. The wire does not say which options
+ * add evidence and which rewrite a signed assertion, and guessing from the copy
+ * would put a second, drifting rulebook in the browser.
  *
- * The forms open in place rather than in a dialog. Both of them ask for a
- * sentence about a claim on the card above; a modal would cover the very
- * evidence the sentence is supposed to answer.
+ * The form opens in place rather than in a dialog. It asks for a sentence about
+ * a claim on the card above; a modal would cover the very evidence the sentence
+ * is supposed to answer.
  */
+const CONSEQUENCE = "Needs a reason — it is recorded on the order.";
+
 export function GapCloseOptions({
-  gap,
-  canChangeProduct,
-  onUpload,
-  onAmend,
-  onRecordRoot,
-  onChangeProduct,
+  options,
+  onClose,
 }: {
-  gap: Gap;
-  canChangeProduct: boolean;
-  onUpload: () => void;
-  onAmend: () => void;
-  onRecordRoot: (comment: string) => void;
-  onChangeProduct: (target: string, reason: string) => void;
+  options: readonly string[];
+  onClose: (option: string, note: string) => void;
 }) {
-  const [form, setForm] = useState<"none" | "root" | "product">("none");
+  const [chosen, setChosen] = useState<string | null>(null);
 
   return (
     <div>
       <Eyebrow variant="field" as="p" className="mb-4">
-        Close it one of two ways
+        {options.length === 1 ? "One way to close it" : `Close it one of ${options.length} ways`}
       </Eyebrow>
 
       <div className="flex flex-wrap gap-5">
-        <GapOptionButton
-          tone="action"
-          title="＋ Upload the missing document"
-          sub={
-            <>
-              Adds <span className="font-mono">{gap.docName}</span> to the package — doesn&apos;t
-              replace it.
-            </>
-          }
-          onClick={onUpload}
-        />
-
-        {gap.amend === null ? null : (
+        {options.map((option) => (
           <GapOptionButton
-            tone="neutral"
-            title={gap.amend.label}
-            sub={gap.amend.sub}
-            onClick={onAmend}
+            key={option}
+            tone={option === chosen ? "action" : "neutral"}
+            title={option}
+            sub={CONSEQUENCE}
+            onClick={() => setChosen(option)}
           />
-        )}
-
-        {gap.periodAlternatives ? (
-          <>
-            <GapOptionButton
-              tone="settled"
-              title="⊢ Root of title reached"
-              sub="Asserts the search is complete and nothing older exists. A claim — needs a comment."
-              onClick={() => setForm("root")}
-            />
-            <GapOptionButton
-              tone="neutral"
-              title="Change the product ordered"
-              sub="The client paid for this product. Senior/ops only, with a reason — recorded."
-              disabled={!canChangeProduct}
-              onClick={() => setForm("product")}
-            />
-          </>
-        ) : null}
+        ))}
       </div>
 
-      {form === "root" ? (
-        <RootOfTitleForm onRecord={onRecordRoot} onCancel={() => setForm("none")} />
-      ) : null}
-
-      {form === "product" ? (
-        <ProductChangeForm onConfirm={onChangeProduct} onCancel={() => setForm("none")} />
-      ) : null}
+      {chosen === null ? null : (
+        <GapClosureForm
+          option={chosen}
+          onRecord={(note) => {
+            setChosen(null);
+            onClose(chosen, note);
+          }}
+          onCancel={() => setChosen(null)}
+        />
+      )}
     </div>
   );
 }

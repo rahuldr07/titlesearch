@@ -1,30 +1,41 @@
+import type { ConfigProduct, Derivation } from "@titlepipe/contract";
+
 import { Button } from "../../shared/ui/Button";
 import { Card } from "../../shared/ui/Card";
 import { Chip } from "../../shared/ui/Chip";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
 import { cn } from "../../shared/ui/classNames";
 
-import { PRODUCTS } from "./catalogue";
 import { EmptyState } from "./EmptyState";
+
+/** The derivation code, in words. The server sends the code; this reads it. */
+const DERIVATION: Readonly<Record<Derivation, string>> = {
+  cos: "current owner",
+  tos: "two owners",
+  update: "since the prior search",
+  y: "fixed years back",
+};
 
 /**
  * Products, as a flat list with the PERIOD DERIVATION printed under each name.
  *
  * The derivation is on the row rather than behind an edit click because it is
  * the thing that distinguishes two products whose names look interchangeable —
- * "Two-Owner Search" and "20-Year Search" answer nearly the same lines and
+ * a two-owner search and a 30-year search answer nearly the same lines and
  * compute completely different windows. Hiding it would make the list look like
- * six labels for one product.
+ * four labels for one product.
  *
  * There is no delete. Retire is the only exit, so an order that was run against
  * a product keeps a product to point at; a deleted product turns every historic
  * order into a dangling reference.
  */
 export function ProductList({
+  products,
   canAuthor,
   onNew,
   onEdit,
 }: {
+  products: readonly ConfigProduct[];
   canAuthor: boolean;
   onNew: () => void;
   onEdit: () => void;
@@ -40,7 +51,7 @@ export function ProductList({
         ) : null}
       </div>
 
-      {PRODUCTS.length === 0 ? (
+      {products.length === 0 ? (
         <EmptyState
           title="No products yet"
           body="A product decides which lines apply and how each period is derived. Add the first one."
@@ -50,7 +61,7 @@ export function ProductList({
       ) : (
         <Card>
           <ul>
-            {PRODUCTS.map((p) => (
+            {products.map((p) => (
               <li
                 key={p.id}
                 data-testid={`product-${p.id}`}
@@ -64,7 +75,10 @@ export function ProductList({
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block text-md font-medium text-ink-primary">{p.full}</span>
-                  <span className="mt-1 block text-xs text-ink-muted">Period: {p.period}</span>
+                  <span className="mt-1 block text-xs text-ink-secondary">{p.sub}</span>
+                  <span className="mt-1 block text-xs text-ink-muted">
+                    Period: {p.period} · derived from {DERIVATION[p.derivation]}
+                  </span>
                 </span>
                 {p.retired ? <Chip tone="neutral" size="micro">Retired</Chip> : null}
                 {canAuthor && !p.retired ? (
@@ -95,9 +109,9 @@ export function ProductList({
       )}
 
       <p className="text-xs leading-body text-ink-muted">
-        CONTRACT GAP: no products endpoint exists. These records are fixtures and
-        nothing here writes — retire is disabled, and the editor opens a form the
-        server cannot yet accept.
+        CONTRACT GAP: the products endpoint is READ ONLY. These records come from
+        the server, but nothing here writes — retire is disabled, and the editor
+        opens a form the server cannot yet accept.
       </p>
     </section>
   );

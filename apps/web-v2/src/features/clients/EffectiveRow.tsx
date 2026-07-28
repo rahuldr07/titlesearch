@@ -1,7 +1,9 @@
+import type { ClientOverride, EffectiveLine, LineApplication } from "@titlepipe/contract";
+
 import { Chip } from "../../shared/ui/Chip";
 import { cn } from "../../shared/ui/classNames";
 
-import { TREATMENT_LABEL, type EffectiveLine, type Treatment } from "./effective";
+import { treatmentLabel } from "./compare";
 
 /**
  * One resolved line, carrying its ORIGIN.
@@ -11,28 +13,30 @@ import { TREATMENT_LABEL, type EffectiveLine, type Treatment } from "./effective
  * a value with no provenance is an extraction defect. It is the same discipline
  * applied one layer up: never emit something you cannot cite.
  *
- * A waived line is STRUCK THROUGH AND STILL PRESENT rather than removed. Absence
- * would be indistinguishable from a line the baseline never had, and the whole
- * point of the panel is that the difference is visible and deliberate.
+ * An excluded line is STRUCK THROUGH AND STILL PRESENT rather than removed.
+ * Absence would be indistinguishable from a line the baseline never had, and
+ * the whole point of the panel is that the difference is visible and deliberate.
  */
-const TONE: Readonly<Record<Treatment, "neutral" | "attend" | "action" | "halt">> = {
-  baseline: "neutral", narrowed: "attend", replaced: "action",
-  waived: "halt", added: "action",
+const TONE: Readonly<Record<LineApplication, "neutral" | "attend" | "halt">> = {
+  applies: "neutral", narrowed: "attend", excluded: "halt",
 };
 
 export function EffectiveRow({
   line,
+  override,
   source,
 }: {
   line: EffectiveLine;
-  /** "40-Year Search baseline", or "added for Cactus Title Partners". */
+  /** The delta that moved this line off the baseline, or null if none did. */
+  override: ClientOverride | null;
+  /** "Two Owner Search baseline", or "added for Sample Client — Riverbend Title". */
   source: string;
 }) {
-  const struck = line.treatment === "waived";
+  const struck = line.application === "excluded";
 
   return (
     <li
-      data-testid={`effective-${line.key}`}
+      data-testid={`effective-${line.line_id}`}
       className="flex items-start gap-6 border-t border-line-subtle py-5 first:border-t-0"
     >
       <span className="w-11 shrink-0 pt-1 font-mono text-xs font-semibold text-ink-muted">
@@ -51,23 +55,30 @@ export function EffectiveRow({
           <span
             className={cn(
               "text-micro font-bold uppercase tracking-label",
-              line.treatment === "added" ? "text-action" : "text-ink-muted",
+              override?.type === "add" ? "text-action" : "text-ink-muted",
             )}
           >
             {source}
           </span>
-          {line.detail === null ? null : (
-            <span className="text-xs leading-close text-ink-secondary">· {line.detail}</span>
-          )}
-          {line.addedScope === null ? null : (
+          {line.scope_note === null ? null : (
             <span className="text-xs leading-close text-ink-secondary">
-              · {line.addedScope}
+              · {line.scope_note}
+            </span>
+          )}
+          {override === null ? null : (
+            <span className="text-xs leading-close text-ink-secondary">
+              · {override.note}
             </span>
           )}
         </div>
       </div>
-      <Chip tone={TONE[line.treatment]} size="micro" bordered className="shrink-0">
-        {TREATMENT_LABEL[line.treatment]}
+      <Chip
+        tone={override?.type === "waive" ? "halt" : TONE[line.application]}
+        size="micro"
+        bordered
+        className="shrink-0"
+      >
+        {treatmentLabel(override)}
       </Chip>
     </li>
   );

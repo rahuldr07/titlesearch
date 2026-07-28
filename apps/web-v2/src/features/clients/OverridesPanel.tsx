@@ -1,10 +1,11 @@
+import type { ClientRecord, ConfigLine, OverrideType } from "@titlepipe/contract";
+
 import { Button } from "../../shared/ui/Button";
 import { Card, CardBody } from "../../shared/ui/Card";
 import { Chip } from "../../shared/ui/Chip";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
 
 import { AuthorOverride } from "./AuthorOverride";
-import type { ClientRecord, OverrideType } from "./registry";
 
 /**
  * The delta list — "holds these deltas only" is the heading, and it is a
@@ -14,6 +15,10 @@ import type { ClientRecord, OverrideType } from "./registry";
  * change how a line is answered while a waive removes the obligation. That is
  * the difference worth seeing from across the room when you are scanning a
  * client for what it has excused itself from.
+ *
+ * Every delta carries WHO AUTHORED IT AND WHEN, verbatim from the record. A
+ * difference in what a search must cover with no name against it is the config
+ * layer's version of a value with no provenance.
  */
 const TONE: Readonly<Record<OverrideType, "halt" | "action">> = {
   waive: "halt", narrow: "action", replace: "action", add: "action",
@@ -22,10 +27,12 @@ const TONE: Readonly<Record<OverrideType, "halt" | "action">> = {
 export function OverridesPanel({
   client,
   productName,
+  lines,
   canAuthor,
 }: {
   client: ClientRecord;
   productName: string;
+  lines: readonly ConfigLine[];
   canAuthor: boolean;
 }) {
   return (
@@ -48,9 +55,12 @@ export function OverridesPanel({
                 className="flex flex-wrap items-baseline gap-5"
               >
                 <Chip tone={TONE[o.type]} size="micro" bordered>{o.type}</Chip>
-                <span className="text-base font-medium text-ink-primary">{o.desc}</span>
+                {o.line_id === null ? null : (
+                  <span className="font-mono text-tiny text-ink-muted">{o.line_id}</span>
+                )}
+                <span className="text-base font-medium text-ink-primary">{o.description}</span>
                 <span className="flex-1 text-xs leading-close text-ink-muted">
-                  — {o.note}
+                  — {o.note} · {o.authored_by}, {o.authored_at}
                 </span>
                 {canAuthor ? (
                   /* CONTRACT GAP: removing an override publishes a config version; no endpoint. */
@@ -69,7 +79,7 @@ export function OverridesPanel({
           </ul>
         )}
 
-        {canAuthor ? <AuthorOverride productName={productName} /> : null}
+        {canAuthor ? <AuthorOverride productName={productName} lines={lines} /> : null}
       </CardBody>
     </Card>
   );
