@@ -8,7 +8,13 @@ actually is, what will bite you, and what you are being asked to build.
 
 ## 1. Your mandate
 
-**New design HTMLs are being supplied.** Build them **faithfully** — the layout,
+**The design of record is `design-export/TitlePipe reviewer flow.zip` →
+`TitlePipe.dc.html` (3,779 lines, 18 screens), revised 2026-07-28.** It is a
+substantial revision of the package the current build was made against — see §11
+for exactly what changed, because several things in this document describe the
+OLD design and are called out there.
+
+Build it **faithfully** — the layout,
 the copy, the proportions, the states. The design is the specification, not a
 mood board. Where the design and this document disagree about *appearance*, the
 design wins. Where they disagree about a *product rule* (§4 below), the rule
@@ -219,8 +225,9 @@ control and ownership*. Two constraints on whatever you pick:
 
 Agreed 2026-07-29: **TitlePipe (light)** and **Catppuccin Mocha (dark)**.
 
-TitlePipe already exists — it is the current `:root`, measured from the export.
-Mocha is the new work. Because all 94 tokens are semantic and every component
+⚠ **The light theme must be REBUILT from the revised palette (§11), not reused.**
+The current `:root` holds the OLD cool/violet register. The new design is warm
+archival. Both themes are new work. Because all 94 tokens are semantic and every component
 reads them by name, a theme is a second block of values under the same names and
 **no component changes**.
 
@@ -296,3 +303,78 @@ It found the draft report rendering every value outside its own row, a lifecycle
 board hiding two stages, and the delivered screen confirming the wrong order —
 none of which a fully green test suite could see. **A passing suite is not
 evidence the UI is right.**
+
+
+---
+
+## 11. What the 2026-07-28 revision changed
+
+The design was revised after most of the current build was written. Same 18
+screens, ~630 changed lines. Anything below overrides what this document says
+elsewhere.
+
+### The palette was replaced — "warm archival"
+
+Paper ground, deep navy primary, oxblood and ochre semantics. **The token names
+are deliberately unchanged** (`--violet` is still the primary accent, it is now
+navy) so the entire app reskins from one block with no per-element edits. Do the
+same: change values, not names.
+
+```
+--ground  #eae7e0   --panel  #fdfcfa   --panel2 #f7f4ee   --paper #fbfaf5
+--ink     #201f1d   --ink2   #585349   --ink3   #8b857a
+--rule    #d9d4c9   --rule2  #eae6de
+--violet  #2e4272   --violet-ink #1f2f57  --violet-tint #e9ecf4  --violet-tint2 #d2dae9
+--green   #2f6d46   --green-tint #e5efe7  --green-edge  #c2d8c6  --green-deep  #22553a
+--red     #9c2b1e   --red-tint   #f8e8e4  --red-edge    #e8cdc5  --red-ink     #7c2016
+--amber   #8a6413   --amber-tint #f6eed6  --amber-edge  #e2d2a6  --amber-deep  #6b4f10
+--marker  rgba(240,201,92,.45)   --marker-edge #c2922b
+```
+
+**Body font is `Libre Franklin`**, not IBM Plex.
+
+### Navigation is a LEFT SIDEBAR again, not a top bar
+
+The current build has a top chrome strip. **That is wrong now.** The revision
+draws a collapsible left sidebar:
+
+- 232px wide, 78px collapsed. Row height 40px wide / 44px collapsed — the
+  collapsed width is sized so the icon target clears 44px after the scrollbar.
+- Collapse is **forced** at narrow widths; labels do not fit and an icon rail
+  beats a modal for navigation you use constantly.
+- It **starts collapsed on Review** — that screen needs every pixel, scan left,
+  decisions right — and an explicit toggle wins from then on. Never override a
+  choice the user actually made.
+- Items carry an initial-letter icon when collapsed and a badge when wide, with
+  red/amber tones. Grouped, plus a lifecycle "flow" rail.
+
+**This vindicates `sidebar.spec`.** Three of its six invariants were deleted on
+2026-07-29 along with the screens they referenced (attention dots on
+`/complaints`, role-absent doors for `/dashboard` `/bench` `/leaderboard`, and
+the capture seat having no rail). The surviving two — `[` folds it, and `[`
+inside a text field is text — now match the design exactly. Recover the deleted
+ones from git if the rules still apply to the new door set.
+
+### Review gains two features
+
+- **A coverage spine over the whole package**, not just the pages a reader
+  typed. It answers "what have I not looked at", which the read-pages chip strip
+  could not. `Coverage · all 64 pages`, with a legend and summary.
+- **A section rail and decision dock** — jump to a report section, decision
+  progress, and `Rest of the queue · N`.
+
+### Correction semantics tightened
+
+- **A correction must actually change something.** Empty, or identical to what
+  the machine read, is **refused** rather than recorded as a correction that
+  changed nothing. The submit is inert until the value differs.
+- **`e` puts you IN the field.** It previously committed immediately, using the
+  machine's own value when the field was untouched.
+- **Enter commits from inside the field, Escape leaves it** — handled above the
+  input guard, so the field needs no handler of its own.
+
+### Smaller
+
+- Rulebook pending chip reads **"PENDING — AFFECTS NOTHING YET"**, with a
+  citation field and a retire preview whose absence is stated rather than hidden.
+- Finalize block restructured; the abstractor-said-NO disclosure cards moved.
