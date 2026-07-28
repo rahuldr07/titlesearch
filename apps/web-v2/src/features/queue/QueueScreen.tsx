@@ -10,6 +10,7 @@ import { Button } from "../../shared/ui/Button";
 import { ScreenFailure } from "../../shared/ui/ScreenFailure";
 import { OrderStatusChip } from "../../entities/order/OrderStatusChip";
 import { ScreenTitle } from "../../app/ScreenTitle";
+import { QueueSections } from "./QueueSections";
 
 /**
  * ONE order, chosen by the server. There is no list, no filter and no sort —
@@ -59,7 +60,15 @@ export function QueueScreen() {
 
   return (
     <div className="flex flex-col gap-6">
-      <ScreenTitle>Next up</ScreenTitle>
+      <header className="flex flex-col gap-2">
+        <ScreenTitle>Your queue</ScreenTitle>
+        <p className="text-md font-semibold text-ink-primary">Work comes to you</p>
+        <p className="max-w-3xl text-base leading-body text-ink-secondary">
+          The system hands over the next order by age and priority — there is no
+          list to shop through. Every clock here belongs to an order, never to
+          you.
+        </p>
+      </header>
 
       {passedRef ? (
         <p data-testid="passed-note" className="text-base text-ink-secondary">
@@ -69,7 +78,7 @@ export function QueueScreen() {
 
       <Card>
         <CardHeader filled>
-          <Eyebrow variant="section">Order</Eyebrow>
+          <Eyebrow variant="section">Next up — the system decides, no picking</Eyebrow>
           <span data-testid="order-ref" className="font-mono text-md font-semibold">
             {order.external_ref}
           </span>
@@ -114,6 +123,8 @@ export function QueueScreen() {
           </p>
         </CardBody>
       </Card>
+
+      <QueueSections />
     </div>
   );
 }
