@@ -32,7 +32,7 @@ export function AppChrome() {
   const orderId = orderFromPath(pathname);
 
   return (
-    <header className="sticky top-0 z-(--z-popup) flex h-18 items-center gap-6 border-b border-line-strong bg-surface-panel px-6">
+    <header className="sticky top-0 z-(--z-popup) flex min-h-18 flex-wrap items-center gap-x-6 gap-y-2 border-b border-line-strong bg-surface-panel px-6 py-2">
       <Link to="/" className="flex shrink-0 items-center gap-4">
         <span aria-hidden className="flex size-8 flex-col justify-center gap-1 rounded-2 border-2 border-action px-1">
           <span className="h-0.5 rounded-pill bg-action" />

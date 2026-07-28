@@ -71,8 +71,19 @@ export function ScreenMenu({ orderId, collapsed }: { orderId: string | null; col
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   const flow = FLOW.filter((item) => !GATED.has(item.path) || canAccess(role, item.path));
-  // The measurement screens the export does not draw still need a door, and
-  // `doorsFor` is the same role table the hub and the chords already read.
+  /*
+   * The measurement screens the export does not draw still need a door, but
+   * they do NOT belong in the order flow. Merging both into one strip made it
+   * overflow its own width and clip the last item — a navigator you cannot read
+   * to the end is worse than one that admits it has two halves.
+   *
+   * So they sit after a divider and the strip WRAPS rather than scrolling: the
+   * flow is the sequence an order moves through and reads left to right, while
+   * the worlds are places you go. A door hidden behind a horizontal scroll is a
+   * door nobody finds, and `sidebar.spec` #1 needs the complaint and escalation
+   * dots visible without anybody hunting for them. `doorsFor` is the same role
+   * table the hub and the chords read.
+   */
   const worlds = doorsFor(role).filter(
     (door) => door.path !== "/" && !FLOW.some((item) => item.path === door.path),
   );
@@ -81,9 +92,9 @@ export function ScreenMenu({ orderId, collapsed }: { orderId: string | null; col
     <nav
       data-testid="side-rail"
       data-collapsed={collapsed ? "1" : "0"}
-      className="flex min-w-0 flex-1 gap-1 overflow-x-auto rounded-4 border border-line-strong bg-surface-app p-1"
+      className="flex min-w-0 flex-1 flex-wrap items-center gap-1 rounded-4 border border-line-strong bg-surface-app p-1"
     >
-      {[...flow, ...worlds].map((item) => {
+      {flow.map((item) => {
         const to =
           item.path === "/review" && orderId !== null ? `/orders/${orderId}/review` : item.path;
         return (
@@ -97,6 +108,24 @@ export function ScreenMenu({ orderId, collapsed }: { orderId: string | null; col
           />
         );
       })}
+
+      {worlds.length === 0 ? null : (
+        <>
+          <span aria-hidden className="mx-1 h-6 w-px shrink-0 bg-line-strong" />
+          <div className="flex flex-wrap gap-1">
+            {worlds.map((door) => (
+              <Door
+                key={door.path}
+                path={door.path}
+                label={door.label}
+                collapsed={collapsed}
+                active={pathname === door.path || pathname.startsWith(`${door.path}/`)}
+                to={door.path}
+              />
+            ))}
+          </div>
+        </>
+      )}
     </nav>
   );
 }
