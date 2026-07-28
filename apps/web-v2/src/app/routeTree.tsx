@@ -1,5 +1,6 @@
 import { createRoute } from "@tanstack/react-router";
 import { rootRoute } from "./rootRoute";
+import { ClientsScreen } from "../features/clients/ClientsScreen";
 import { AuditScreen } from "../features/audit/AuditScreen";
 import { CompletenessScreen } from "../features/completeness/CompletenessScreen";
 import { DeliveredScreen } from "../features/delivered/DeliveredScreen";
@@ -41,11 +42,7 @@ const queueRoute = createRoute({ getParentRoute: parent, path: "/queue", compone
 const accountRoute = createRoute({ getParentRoute: parent, path: "/account", component: AccountScreen });
 
 // ── not built: each says WHY, rather than rendering an empty shell ───────────
-/**
- * SELECTION IS URL-OWNED. `?field=` is a first-class deep link (BRIEF §7): a
- * complaint, an escalation or a colleague's message points at the exact field
- * in context, and the destination is never asked to re-derive which one.
- */
+/** Search-param owned: `?field=` is a first-class deep link (BRIEF §7). */
 const reviewRoute = createRoute({
   getParentRoute: parent,
   path: "/orders/$orderId/review",
@@ -64,13 +61,7 @@ const benchResultsRoute = createRoute({ getParentRoute: parent, path: "/bench/re
 const leaderboardRoute = createRoute({ getParentRoute: parent, path: "/leaderboard", component: LeaderboardScreen });
 const goldenRoute = createRoute({ getParentRoute: parent, path: "/golden", component: GoldenSet });
 
-/**
- * SEED CORRECTION TAKES ITS FIELD FROM THE QUERY STRING, and a missing one is a
- * first-class state rather than a redirect. `navigation.spec` #5: the screen has
- * no menu entry, so arriving without context means the LINK is missing — and
- * bouncing to a picker would answer that by inventing the browsing affordance
- * the screen exists without.
- */
+/** Search-param owned: `?fieldId=` carries the field; no context is a first-class state. */
 const seedCorrectionRoute = createRoute({
   getParentRoute: parent,
   path: "/seed-correction",
@@ -95,6 +86,7 @@ const auditScreenRoute = createRoute({ getParentRoute: parent, path: "/audit", c
 const completenessScreenRoute = createRoute({ getParentRoute: parent, path: "/completeness", component: CompletenessScreen });
 const deliveredScreenRoute = createRoute({ getParentRoute: parent, path: "/delivered", component: DeliveredScreen });
 const rulebookScreenRoute = createRoute({ getParentRoute: parent, path: "/rulebook", component: RulebookScreen });
+const clientsScreenRoute = createRoute({ getParentRoute: parent, path: "/clients", component: ClientsScreen });
 const blindRoute = createRoute({
   getParentRoute: parent,
   path: "/blind/$orderId",
@@ -102,6 +94,7 @@ const blindRoute = createRoute({
 });
 
 export const routeTree = rootRoute.addChildren([
+  clientsScreenRoute,
   auditScreenRoute, completenessScreenRoute, deliveredScreenRoute, rulebookScreenRoute,
   homeRoute, queueRoute, accountRoute, reviewRoute,
   escalationsRoute, ingestRoute, dashboardRoute, complaintsRoute,

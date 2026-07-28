@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { Card, CardBody } from "../../shared/ui/Card";
 import { buttonClasses } from "../../shared/ui/Button";
 
@@ -31,13 +32,13 @@ export function ClientsLink() {
           compile. Swap this for <Link to="/clients"> once the route is wired —
           the anchor costs a full reload, which is the only thing wrong with it.
         */}
-        <a
-          href="/clients"
+        <Link
+          to="/clients"
           data-testid="open-clients"
           className={`${buttonClasses({ size: "lg" })} mt-7`}
         >
           Open Clients →
-        </a>
+        </Link>
       </CardBody>
     </Card>
   );

@@ -2,6 +2,7 @@ import { Button } from "../../shared/ui/Button";
 import { Card } from "../../shared/ui/Card";
 import { Chip } from "../../shared/ui/Chip";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
+import { cn } from "../../shared/ui/classNames";
 
 import { PRODUCTS } from "./catalogue";
 import { EmptyState } from "./EmptyState";
@@ -53,10 +54,10 @@ export function ProductList({
               <li
                 key={p.id}
                 data-testid={`product-${p.id}`}
-                className={[
+                className={cn(
                   "flex flex-wrap items-center gap-7 border-t border-line-subtle px-8 py-6 first:border-t-0",
-                  p.retired ? "opacity-55" : "",
-                ].join(" ")}
+                  p.retired && "opacity-55",
+                )}
               >
                 <span className="w-37 shrink-0 font-mono text-sm font-semibold text-ink-primary">
                   {p.code}
