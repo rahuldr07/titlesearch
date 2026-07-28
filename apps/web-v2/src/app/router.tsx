@@ -1,114 +1,11 @@
-import { createRootRoute, createRoute, createRouter, Outlet } from "@tanstack/react-router";
-import { QueueScreen } from "../features/queue/QueueScreen";
-import { AccountScreen } from "../features/account/AccountScreen";
-import { HomeHub } from "../features/home/HomeHub";
-import { BlindSeat } from "../features/blind/BlindSeat";
-import { OpsDashboard } from "../features/dashboard/OpsDashboard";
-import { LeaderboardScreen } from "../features/leaderboard/LeaderboardScreen";
-import { DeliveryScreen } from "../features/delivery/DeliveryScreen";
-import { ComplaintsScreen } from "../features/complaints/ComplaintsScreen";
-import { GoldenSet } from "../features/golden/GoldenSet";
-import { SeedCorrection } from "../features/seedCorrection/SeedCorrection";
-import { ExtractionBench } from "../features/bench/ExtractionBench";
-import { BenchResults } from "../features/bench/BenchResults";
-import { EscalationsScreen } from "../features/escalations/EscalationsScreen";
-import { ReviewScreen } from "../features/review/ReviewScreen";
-import { IngestScreen } from "../features/ingest/IngestScreen";
-import { ReconciliationScreen } from "../features/reconciliation/ReconciliationScreen";
-import { ReconciliationIndex } from "../features/reconciliation/ReconciliationIndex";
-import { BlindStatus } from "../features/blindStatus/BlindStatus";
-import { GlobalKeys } from "./GlobalKeys";
-import { AppChrome } from "./AppChrome";
-import { NotFound } from "./Placeholders";
+import { createRouter } from "@tanstack/react-router";
+import { routeTree } from "./routeTree";
 
 /**
- * Routes are guards and wiring only — no logic (BRIEF §7).
- *
- * Declared one by one rather than generated from a list: `addChildren` needs
- * the literal tuple to infer the route tree, and that inference is what makes
- * `navigate({ to: "/orders/$orderId/review", params: { orderId } })` a compile
- * error when the path or the param name is wrong. A loop costs fewer lines and
- * throws that away.
- *
- * THERE IS NO ROUTE-LEVEL ROLE GUARD, deliberately. A role's world is enforced
- * two ways the harvested specs actually assert: the door is ABSENT from the hub
- * and the map, and the chord refuses to open it (`roles.spec` ×4). Both read
- * the same `canAccess` table the server gates with, and the server refuses the
- * data regardless — which is the layer that matters.
+ * The router itself. The tree lives next door in `routeTree.tsx` because it is
+ * a flat list of one-line declarations that grows with every screen, and mixing
+ * it with the router's configuration made both harder to scan.
  */
-const rootRoute = createRootRoute({
-  component: () => (
-    <>
-      <GlobalKeys />
-      <AppChrome />
-      <main className="mx-auto max-w-400 p-9">
-        <Outlet />
-      </main>
-    </>
-  ),
-  notFoundComponent: NotFound,
-});
-
-const parent = () => rootRoute;
-
-// ── built ───────────────────────────────────────────────────────────────────
-const homeRoute = createRoute({ getParentRoute: parent, path: "/", component: HomeHub });
-const queueRoute = createRoute({ getParentRoute: parent, path: "/queue", component: QueueScreen });
-const accountRoute = createRoute({ getParentRoute: parent, path: "/account", component: AccountScreen });
-
-// ── not built: each says WHY, rather than rendering an empty shell ───────────
-/**
- * SELECTION IS URL-OWNED. `?field=` is a first-class deep link (BRIEF §7): a
- * complaint, an escalation or a colleague's message points at the exact field
- * in context, and the destination is never asked to re-derive which one.
- */
-const reviewRoute = createRoute({
-  getParentRoute: parent,
-  path: "/orders/$orderId/review",
-  validateSearch: (search: Record<string, unknown>): { field?: string } =>
-    typeof search["field"] === "string" ? { field: search["field"] } : {},
-  component: ReviewScreen,
-});
-const escalationsRoute = createRoute({ getParentRoute: parent, path: "/escalations", component: EscalationsScreen });
-const ingestRoute = createRoute({ getParentRoute: parent, path: "/ingest", component: IngestScreen });
-const dashboardRoute = createRoute({ getParentRoute: parent, path: "/dashboard", component: OpsDashboard });
-const complaintsRoute = createRoute({ getParentRoute: parent, path: "/complaints", component: ComplaintsScreen });
-const deliveryRoute = createRoute({ getParentRoute: parent, path: "/delivery", component: DeliveryScreen });
-const blindStatusRoute = createRoute({ getParentRoute: parent, path: "/blind-status", component: BlindStatus });
-const benchRoute = createRoute({ getParentRoute: parent, path: "/bench", component: ExtractionBench });
-const benchResultsRoute = createRoute({ getParentRoute: parent, path: "/bench/results", component: BenchResults });
-const leaderboardRoute = createRoute({ getParentRoute: parent, path: "/leaderboard", component: LeaderboardScreen });
-const goldenRoute = createRoute({ getParentRoute: parent, path: "/golden", component: GoldenSet });
-
-/**
- * SEED CORRECTION TAKES ITS FIELD FROM THE QUERY STRING, and a missing one is a
- * first-class state rather than a redirect. `navigation.spec` #5: the screen has
- * no menu entry, so arriving without context means the LINK is missing — and
- * bouncing to a picker would answer that by inventing the browsing affordance
- * the screen exists without.
- */
-const seedCorrectionRoute = createRoute({
-  getParentRoute: parent,
-  path: "/seed-correction",
-  validateSearch: (search: Record<string, unknown>): { fieldId: string } => ({
-    fieldId: typeof search["fieldId"] === "string" ? search["fieldId"] : "",
-  }),
-  component: SeedCorrection,
-});
-const reconciliationRoute = createRoute({ getParentRoute: parent, path: "/reconciliation", component: ReconciliationIndex });
-const reconciliationOrderRoute = createRoute({ getParentRoute: parent, path: "/reconciliation/$orderId", component: ReconciliationScreen });
-const blindRoute = createRoute({
-  getParentRoute: parent,
-  path: "/blind/$orderId",
-  component: BlindSeat,
-});
-
-const routeTree = rootRoute.addChildren([
-  homeRoute, queueRoute, accountRoute, reviewRoute, escalationsRoute, ingestRoute,
-  dashboardRoute, complaintsRoute, deliveryRoute, blindStatusRoute, benchRoute, benchResultsRoute,
-  leaderboardRoute, goldenRoute, reconciliationRoute, reconciliationOrderRoute, blindRoute, seedCorrectionRoute,
-]);
-
 export function createAppRouter() {
   return createRouter({ routeTree, defaultPreload: "intent" });
 }

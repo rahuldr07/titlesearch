@@ -1,0 +1,57 @@
+import { Button } from "../../shared/ui/Button";
+import { cn } from "../../shared/ui/classNames";
+
+/**
+ * One way out of a gap, stated as a headline and its consequence.
+ *
+ * THE SECOND LINE IS THE POINT. These four choices are not interchangeable —
+ * one adds evidence, one rewrites a signed answer, one makes a fresh claim, one
+ * moves money — and the difference is invisible from the headlines alone. Every
+ * option therefore carries what it does to the record, at the moment of
+ * choosing, rather than in a confirmation afterwards.
+ *
+ * Tone is the ranking: the tinted options are the ones that cost nothing to be
+ * wrong about, the outlined ones are the ones that change the record.
+ */
+const TITLE_INK = {
+  action: "text-action-ink",
+  settled: "text-state-settled-ink",
+  neutral: "text-ink-primary",
+} as const;
+
+export function GapOptionButton({
+  tone,
+  title,
+  sub,
+  disabled = false,
+  onClick,
+}: {
+  tone: keyof typeof TITLE_INK;
+  title: string;
+  sub: string;
+  disabled?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <Button
+      tone={tone}
+      fill={tone === "neutral" ? "outlined" : "tinted"}
+      disabled={disabled}
+      onClick={onClick}
+      className={cn(
+        "min-w-100 flex-1 flex-col items-start gap-1 rounded-7 px-7 py-6 text-left",
+        "border-(length:--stroke-emphasis)",
+        // Opacity is this codebase's one signal for "you may not do this" —
+        // never a general dimming, so it stays reserved for the role refusal.
+        disabled && "opacity-55",
+      )}
+    >
+      <span className={cn("text-base font-semibold", disabled ? "" : TITLE_INK[tone])}>
+        {title}
+      </span>
+      <span className={cn("text-xs font-normal", disabled ? "" : "text-ink-secondary")}>
+        {sub}
+      </span>
+    </Button>
+  );
+}
