@@ -1,5 +1,9 @@
 import { createRoute } from "@tanstack/react-router";
 import { rootRoute } from "./rootRoute";
+import { AuditScreen } from "../features/audit/AuditScreen";
+import { CompletenessScreen } from "../features/completeness/CompletenessScreen";
+import { DeliveredScreen } from "../features/delivered/DeliveredScreen";
+import { RulebookScreen } from "../features/rulebook/RulebookScreen";
 import { QueueScreen } from "../features/queue/QueueScreen";
 import { AccountScreen } from "../features/account/AccountScreen";
 import { HomeHub } from "../features/home/HomeHub";
@@ -87,6 +91,10 @@ const sessionEndedScreenRoute = createRoute({ getParentRoute: parent, path: "/se
 const surfaceFailureScreenRoute = createRoute({ getParentRoute: parent, path: "/surface-failure", component: SurfaceFailureScreen });
 const productsScreenRoute = createRoute({ getParentRoute: parent, path: "/products", component: ProductsScreen });
 const galleryScreenRoute = createRoute({ getParentRoute: parent, path: "/gallery", component: GalleryScreen });
+const auditScreenRoute = createRoute({ getParentRoute: parent, path: "/audit", component: AuditScreen });
+const completenessScreenRoute = createRoute({ getParentRoute: parent, path: "/completeness", component: CompletenessScreen });
+const deliveredScreenRoute = createRoute({ getParentRoute: parent, path: "/delivered", component: DeliveredScreen });
+const rulebookScreenRoute = createRoute({ getParentRoute: parent, path: "/rulebook", component: RulebookScreen });
 const blindRoute = createRoute({
   getParentRoute: parent,
   path: "/blind/$orderId",
@@ -94,6 +102,7 @@ const blindRoute = createRoute({
 });
 
 export const routeTree = rootRoute.addChildren([
+  auditScreenRoute, completenessScreenRoute, deliveredScreenRoute, rulebookScreenRoute,
   homeRoute, queueRoute, accountRoute, reviewRoute,
   escalationsRoute, ingestRoute, dashboardRoute, complaintsRoute,
   deliveryRoute, blindStatusRoute, benchRoute, benchResultsRoute,

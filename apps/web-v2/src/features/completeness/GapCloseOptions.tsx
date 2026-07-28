@@ -43,7 +43,12 @@ export function GapCloseOptions({
         <GapOptionButton
           tone="action"
           title="＋ Upload the missing document"
-          sub={`Adds ${gap.docName} to the package — doesn't replace it.`}
+          sub={
+            <>
+              Adds <span className="font-mono">{gap.docName}</span> to the package — doesn&apos;t
+              replace it.
+            </>
+          }
           onClick={onUpload}
         />
 

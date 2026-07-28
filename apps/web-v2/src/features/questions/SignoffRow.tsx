@@ -69,7 +69,8 @@ export function SignoffRow({
             ? commentMissing
               ? "border-l-state-halt bg-state-halt-surface"
               : "border-l-state-settled bg-surface-panel"
-            : "border-l-dashed border-l-action bg-action-surface",
+            // Dashed on every side is safe: only the left edge has a width.
+            : "border-dashed border-l-action bg-action-surface",
         )}
       >
         <div className="flex items-center gap-7">

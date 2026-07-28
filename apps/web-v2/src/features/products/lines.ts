@@ -9,9 +9,8 @@ import type { Derivation } from "./catalogue";
  *
  * `version` is on every line because editing the wording MINTS A VERSION, it
  * does not correct history — two orders can be answered against two wordings
- * and each order records which one it used. A catalogue without a version
- * column cannot express that, which is why it is here before there is anything
- * to increment it.
+ * and each records which one it used. A catalogue with no version column
+ * cannot express that, which is why it is here before anything increments it.
  */
 
 /** A baseline cell. Three states, never two — "narrowed" is not a soft yes. */
@@ -144,7 +143,7 @@ export const SIGNOFF_LINES: readonly SignoffLine[] = [
   {
     id: "L13", n: 13, label: "Name search, judgment and UCC indexes provided",
     group: "Name search", answers: YN, commentOnNo: REQ, period: false,
-    machineCheck: "Index images attached", standardText: null,
-    version: 1, retired: false, cells: ALL, scope: {},
+    machineCheck: "Index images attached", standardText: null, version: 1,
+    retired: false, cells: ALL, scope: {},
   },
 ];

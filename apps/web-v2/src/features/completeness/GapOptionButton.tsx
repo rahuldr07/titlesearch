@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Button } from "../../shared/ui/Button";
 import { cn } from "../../shared/ui/classNames";
 
@@ -28,7 +29,7 @@ export function GapOptionButton({
 }: {
   tone: keyof typeof TITLE_INK;
   title: string;
-  sub: string;
+  sub: ReactNode;
   disabled?: boolean;
   onClick: () => void;
 }) {
