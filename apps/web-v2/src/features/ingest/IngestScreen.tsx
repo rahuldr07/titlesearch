@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { Order } from "@titlepipe/contract";
 import { useAcceptOrder, useUploadPackage } from "./queries";
 import { OrderForm } from "./OrderForm";
+import { DropZone } from "./DropZone";
 import { ORDER_FIELDS } from "./orderFields";
 import { RefusedCard } from "./RefusedCard";
 import { AcceptedCard } from "./AcceptedCard";
@@ -81,8 +82,10 @@ export function IngestScreen() {
       <header className="flex flex-col gap-3">
         <ScreenTitle>Ingest</ScreenTitle>
         <p className="max-w-3xl text-base leading-body text-ink-secondary">
-          The order carries what the PDF cannot say. Both arrive together, or
-          the door refuses them and says which part is missing.
+          One scanned PDF per order. The order carries what the PDF cannot say
+          — both arrive together, or the door refuses them and names the missing
+          part. Nothing leaves this tool as a deliverable until a reviewer has
+          gone through it field by field.
         </p>
       </header>
 
@@ -98,13 +101,13 @@ export function IngestScreen() {
 
       <Card>
         <CardHeader filled>
-          <Eyebrow variant="section">The order</Eyebrow>
+          <Eyebrow variant="section">Step 1 — upload</Eyebrow>
         </CardHeader>
         <CardBody className="flex flex-col gap-6">
+          <DropZone file={file} onFile={setFile} />
           <OrderForm
             values={values}
             onChange={(key, value) => setValues((prev) => ({ ...prev, [key]: value }))}
-            onFile={setFile}
           />
           <div className="flex flex-wrap items-center gap-5">
             <Button disabled={upload.isPending} onClick={submit}>

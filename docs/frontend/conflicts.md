@@ -161,6 +161,27 @@ Three of those rules are already honoured elsewhere and only their MECHANISM die
 
 **Not built. Reported per BRIEF §5 Phase 5.** Everything else in the harvest is green: 107 of 113.
 
+### C18 — `✕ Not our party` has no state to land in
+**Design of record** (`TitlePipe.dc.html:833`, `d.onNotParty`; sheet renders `Excluded — not our party`).
+**Breaks** nothing today — it is simply unbuildable. `FieldState` has no `excluded` member and no endpoint suppresses a field.
+**Why it matters.** It is the screen form of R13 — *"Canceled/satisfied/vacated/released/duplicates suppress with reason"* — and the judgment-hit-identity call the whole `judgments.hit_identity` escalation cluster is about. Without it a reviewer's only exits are to correct a value that was never wrong, or to escalate a question they can already answer.
+**Fix.** Contract addition: an `excluded` field state plus a suppress-with-reason endpoint. Recording it as a `correct` would file a suppression as a value change, which is a different claim. Not built. See `design-fidelity.md`.
+
+### C19 — The decision card shows one value; the invariant requires two, attributed
+**Design of record** (`:824–831`): a single `{{ d.currentLabel }}` / `{{ d.currentValue }}`.
+**Breaks** `review.spec` #3 (both readings shown and attributed — INVARIANT) and `ux.spec` #2 (differing characters highlighted).
+**Resolution.** The invariant wins; the A/B panel with the character diff stays. Two engines returning `SOUTHSTONE` and `S0UTHST0NE` is three substituted characters a reader will pass at speed, and a merged single value hides which reader to trust.
+
+### C20 — The upload step collects only the PDF
+**Design of record** (`:255–300`): the drop zone alone; the five order fields live elsewhere in the flow.
+**Breaks** `ingest.spec` #1, which requires all five on this screen — and the mock's `POST /api/orders` refuses a multipart body without them.
+**Resolution.** Invariant and server agree against the design; the fields stay on the upload screen. The drop zone and its copy were adopted.
+
+### C21 — Two designs for escalation: a single-field landing vs a cluster inbox
+**Design of record** (`:1035–1100`): a senior lands on ONE escalated field — *"You land on the field in question, not the top of the order."*
+**Archive** (`Escalation Inbox.dc.html`): a clustered inbox grouped by what is confusing people.
+**Resolution.** The cluster shape stands: `GET /api/escalations` returns `field_path_cluster` on every row and there is no per-field escalation record, so the server sends a cluster. Grouping by it is what turns five people hitting one wall into one missing rule. The design's per-field context (`Escalated by {by} · {when}`, `View on p{page} →`) is unbuildable — `Escalation` has no asker, timestamp, field id or page. Its resolution flow was already overridden by D1.
+
 ---
 
 ## Not conflicts — recorded so they are not "found" again

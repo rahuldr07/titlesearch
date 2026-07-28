@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import type { Escalation } from "@titlepipe/contract";
 import { escalationsQuery, rulesQuery } from "./queries";
 import { ClusterRail, type Cluster } from "./ClusterRail";
@@ -72,8 +73,25 @@ export function EscalationsScreen() {
                 <p className="text-base leading-body text-ink-primary">
                   &ldquo;{item.question}&rdquo;
                 </p>
-                <p className="font-mono text-tiny text-ink-muted">
-                  {item.order_ids.join(" · ")}
+                {/*
+                  YOU LAND ON THE ORDER THE QUESTION CAME FROM. The design of
+                  record's framing is "you land on the field in question, not
+                  the top of the order" — CONTRACT GAP: `Escalation` carries
+                  `order_ids` and a cluster path, but no field id, no asker and
+                  no timestamp, so the order is as close as the data allows and
+                  the field itself cannot be targeted.
+                */}
+                <p className="flex flex-wrap gap-4 font-mono text-tiny text-ink-muted">
+                  {item.order_ids.map((orderId) => (
+                    <Link
+                      key={orderId}
+                      to="/orders/$orderId/review"
+                      params={{ orderId }}
+                      className="text-action underline"
+                    >
+                      {orderId} →
+                    </Link>
+                  ))}
                 </p>
               </li>
             ))}

@@ -12,12 +12,13 @@ import {
 import { readingsOf } from "./fieldLabel";
 import { DecisionPanel, type Pinned } from "./DecisionPanel";
 import { FieldList } from "./FieldList";
+import { CallBackSheet } from "./CallBackSheet";
+import { ReviewHeader } from "./ReviewHeader";
 import { ReviewEditors, type ReviewMode } from "./ReviewEditors";
 import { OrderRail } from "./OrderRail";
 import { useReviewKeys } from "./useReviewKeys";
 import { useReviewSelection } from "./useReviewSelection";
 import { ApiError } from "../../shared/api";
-import { ScreenTitle } from "../../app/ScreenTitle";
 
 /**
  * The review workstation.
@@ -88,10 +89,7 @@ export function ReviewScreen() {
 
   return (
     <div className="flex flex-col gap-8">
-      <header className="flex flex-wrap items-baseline gap-6">
-        <ScreenTitle>Review</ScreenTitle>
-        <span className="font-mono text-xs text-ink-muted">{queued.length} remaining</span>
-      </header>
+      <ReviewHeader fields={fields} queued={queued.length} />
 
       <div className="grid gap-8 lg:grid-cols-[18rem_1fr]">
         <OrderRail orderId={orderId} />
@@ -132,6 +130,8 @@ export function ReviewScreen() {
           </DecisionPanel>
 
           <FieldList fields={fields} selectedPath={selected.path} onSelect={reselect} />
+
+          <CallBackSheet fields={fields} selectedPath={selected.path} onSelect={reselect} />
         </div>
       </div>
     </div>

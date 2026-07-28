@@ -14,11 +14,9 @@ import { ORDER_FIELDS } from "./orderFields";
 export function OrderForm({
   values,
   onChange,
-  onFile,
 }: {
   values: Record<string, string>;
   onChange: (key: string, value: string) => void;
-  onFile: (file: File | null) => void;
 }) {
   return (
     <div className="grid gap-5 sm:grid-cols-2">
@@ -33,16 +31,6 @@ export function OrderForm({
         </label>
       ))}
 
-      <label className="flex flex-col gap-2 sm:col-span-2">
-        <Eyebrow variant="field">The county package</Eyebrow>
-        <input
-          type="file"
-          accept="application/pdf"
-          data-testid="package-input"
-          onChange={(event) => onFile(event.target.files?.[0] ?? null)}
-          className="rounded-5 border border-line-strong bg-surface-panel px-5 py-3 text-base text-ink-primary"
-        />
-      </label>
     </div>
   );
 }
