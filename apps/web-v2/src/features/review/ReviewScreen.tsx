@@ -13,13 +13,12 @@ import {
 import { readingsOf } from "./fieldLabel";
 import { type Pinned } from "./DecisionPanel";
 import { DecisionColumn } from "./DecisionColumn";
+import { DecisionDock } from "./DecisionDock";
+import { EvidenceColumn } from "./EvidenceColumn";
 import { FieldList } from "./FieldList";
-import { CallBackSheet } from "./CallBackSheet";
-import { OrderCoverageSpine } from "./CoverageSpine";
-import { DocumentColumn } from "./DocumentColumn";
+import { ReportPane } from "./ReportPane";
 import { ReviewHeader } from "./ReviewHeader";
 import { type ReviewMode } from "./ReviewEditors";
-import { OrderRail } from "./OrderRail";
 import { useReviewKeys } from "./useReviewKeys";
 import { useReviewSelection } from "./useReviewSelection";
 import { ApiError } from "../../shared/api";
@@ -108,13 +107,10 @@ export function ReviewScreen() {
           stack beside it because they are one conversation. A third column
           starved both and pushed the sheet's values out of their rows. */}
       <div className="grid items-start gap-6 xl:grid-cols-2">
-        <div className="flex flex-col gap-6">
-          <DocumentColumn orderId={orderId} field={selected} pinned={pinned?.reading ?? null} />
-          <OrderCoverageSpine orderId={orderId} />
-          <OrderRail orderId={orderId} />
-        </div>
+        <EvidenceColumn orderId={orderId} field={selected} pinnedReading={pinned?.reading ?? null} />
 
         <div className="flex flex-col gap-6">
+          <DecisionDock fields={fields} selectedPath={selected.path} />
           <DecisionColumn
             field={selected}
             pinned={pinned}
@@ -141,7 +137,7 @@ export function ReviewScreen() {
           />
 
           <FieldList fields={fields} selectedPath={selected.path} onSelect={reselect} />
-          <CallBackSheet fields={fields} selectedPath={selected.path} onSelect={reselect} />
+          <ReportPane fields={fields} selectedPath={selected.path} onSelect={reselect} />
         </div>
       </div>
     </div>

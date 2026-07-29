@@ -160,3 +160,31 @@ test("coverage spine renders one cell per package page, not just read ones", asy
   await expect(page.getByText(/Coverage · all 64 pages/)).toBeVisible();
   await expect(page.getByTestId("coverage-cell")).toHaveCount(64);
 });
+
+// Task 7 — rule: decision progress is DERIVED FROM SERVER `state`, never a
+// throughput number. `ord_demo_1` carries 12 confirmed + 6 needs_review = 18
+// fields the pipeline ever flagged for a person; the dock's denominator must
+// be that 18, not the order's full 21-field count (which would silently
+// count the 2 auto_confirmed + 1 pending fields as somebody's decision).
+test("decision dock shows real answered-of-total progress from field state", async ({
+  page,
+}) => {
+  await go(page);
+  const dock = page.getByTestId("decision-dock");
+  await expect(dock).toContainText("12 of 18 answered");
+  // default selection lands on the first queued field (owner.zip) — one of
+  // the 18 is "open", so the rest of THIS order's queue is 17.
+  await expect(dock).toContainText("Rest of the queue · 17");
+});
+
+// Task 7 — rule: the rail jumps to the SAME section grouping the draft sheet
+// renders (`reportSections.sectionsOf`, shared by both) — a rail link and the
+// sheet section it names must never drift apart into two different splits.
+test("section rail jumps to the matching report section", async ({ page }) => {
+  await go(page);
+  const link = page.getByTestId("section-link-judgments");
+  await expect(link).toBeVisible();
+  await link.click();
+  await expect(page).toHaveURL(/#section-judgments$/);
+  await expect(page.locator("#section-judgments")).toBeInViewport();
+});

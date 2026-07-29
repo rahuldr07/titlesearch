@@ -1,27 +1,9 @@
 import type { Field } from "@titlepipe/contract";
 import { fieldLabel } from "./fieldLabel";
+import { SECTION_HEADING, sectionAnchor, sectionsOf } from "./reportSections";
 import { SheetValue } from "./SheetValue";
 import { Card, CardBody, CardHeader } from "../../shared/ui/Card";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
-
-/** Section order follows the delivered document, not the payload order. */
-const SECTION_HEADING: Record<string, string> = {
-  owner: "Vesting & owner",
-  legal: "Legal description",
-  deed: "Vesting deed",
-  mortgages: "Mortgages & deeds of trust",
-  judgments: "Judgments & liens",
-  assessment: "Assessment & taxes",
-};
-
-function sectionsOf(fields: readonly Field[]): [string, Field[]][] {
-  const groups = new Map<string, Field[]>();
-  for (const field of fields) {
-    const section = field.path.split(".")[0] ?? "other";
-    groups.set(section, [...(groups.get(section) ?? []), field]);
-  }
-  return [...groups.entries()];
-}
 
 /**
  * THE DRAFT CALL BACK SHEET — the deliverable, assembled live.
@@ -62,7 +44,7 @@ export function CallBackSheet({
         </p>
 
         {sectionsOf(fields).map(([section, rows]) => (
-          <section key={section} className="flex flex-col gap-3">
+          <section key={section} id={sectionAnchor(section)} className="flex scroll-mt-16 flex-col gap-3">
             <Eyebrow variant="caption">
               {SECTION_HEADING[section] ?? section.replaceAll("_", " ")}
             </Eyebrow>
