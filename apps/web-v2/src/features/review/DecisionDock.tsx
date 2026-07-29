@@ -1,16 +1,9 @@
 import type { Field } from "@titlepipe/contract";
 import { isExcluded } from "./fieldLabel";
+import { DECISION_STATES } from "./reportSections";
 import { Card, CardBody } from "../../shared/ui/Card";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
 import { cn } from "../../shared/ui/classNames";
-
-/** A field the pipeline ever sent to a person — pending or already decided. */
-const DECISION_STATES = new Set<Field["state"]>([
-  "needs_review",
-  "confirmed",
-  "corrected",
-  "escalated",
-]);
 
 type SegmentTone = "pending" | "confirmed" | "corrected" | "escalated" | "excluded";
 

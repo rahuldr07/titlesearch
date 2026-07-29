@@ -59,7 +59,12 @@ export function RuleDetail({
           <span className="font-mono text-md font-semibold text-ink-primary">
             {rule.code}
           </span>
-          <Chip tone={statusTone(rule.status)} size="sm" bordered>
+          <Chip
+            tone={statusTone(rule.status)}
+            size="sm"
+            bordered
+            data-testid="rule-status-chip"
+          >
             {statusLabel(rule.status)}
           </Chip>
           <Chip tone="neutral" size="sm" bordered>

@@ -515,7 +515,7 @@
  * Catppuccin Mocha — the dark theme. Added 2026-07-29 per HANDOFF-UI §8.
  *
  * Every token the @theme block above defines under `--color-*` gets a value
- * here under the SAME name (91 tokens). Non-colour tokens (type/space/radius/
+ * here under the SAME name (93 tokens). Non-colour tokens (type/space/radius/
  * shadow/etc.) are not theme-scoped — they are structural, not palette, and
  * [data-theme="mocha"] never redefines them.
  *

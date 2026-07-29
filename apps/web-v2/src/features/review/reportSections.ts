@@ -1,5 +1,18 @@
 import type { Field } from "@titlepipe/contract";
 
+/**
+ * A field the pipeline ever sent to a person — pending or already decided.
+ * Shared by `DecisionDock` (the meter) and `FinalizeBar` (the gate) so the two
+ * surfaces count the exact same set of fields; each used to redeclare this
+ * verbatim.
+ */
+export const DECISION_STATES = new Set<Field["state"]>([
+  "needs_review",
+  "confirmed",
+  "corrected",
+  "escalated",
+]);
+
 /** Section order follows the delivered document, not the payload order. */
 export const SECTION_HEADING: Record<string, string> = {
   owner: "Vesting & owner",

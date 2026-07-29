@@ -1,13 +1,7 @@
 import type { Field, OrderSignoffLine } from "@titlepipe/contract";
+import { DECISION_STATES } from "./reportSections";
 import { Card, CardBody } from "../../shared/ui/Card";
 import { Button } from "../../shared/ui/Button";
-
-const DECISION_STATES = new Set<Field["state"]>([
-  "needs_review",
-  "confirmed",
-  "corrected",
-  "escalated",
-]);
 
 /**
  * THE BAR BETWEEN DECIDING AND READING — the design's `:908-914`, the last

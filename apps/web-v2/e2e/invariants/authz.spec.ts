@@ -82,7 +82,7 @@ test("the engineer gate's confirm affordance exists only for its holders", async
   await page.getByTestId("account-menu").click();
   await page.getByTestId("role-reviewer").click();
   await page.keyboard.press("Escape");
-  await expect(page.getByTestId("rule-detail-DRAFT-HOA-AGE")).toContainText("PENDING");
+  await expect(page.getByTestId("rule-status-chip")).toHaveText("PENDING");
   await expect(page.getByTestId("rule-confirm-btn")).toHaveCount(0);
   // an engineer gets it back
   await page.getByTestId("account-menu").click();
