@@ -25,9 +25,42 @@ const TOKENS = readFileSync(
   "utf8",
 );
 
-function token(name: string): string {
-  const m = new RegExp(`--${name}:\\s*(#[0-9a-fA-F]{6})`).exec(TOKENS);
-  if (!m?.[1]) throw new Error(`token --${name} not found or not a 6-digit hex`);
+/**
+ * Two themes, same token names (HANDOFF-UI §8): `@theme { … }` is TitlePipe
+ * light, `[data-theme="mocha"] { … }` is Catppuccin Mocha dark. Both blocks
+ * declare every `--color-*` name once, so extracting each block's own text
+ * before running the per-token regex is what keeps `token(name, "mocha")`
+ * from accidentally matching the light value that happens to come first in
+ * the file.
+ */
+const THEMES = ["light", "mocha"] as const;
+type Theme = (typeof THEMES)[number];
+
+/** Slice out the `{ … }` body that follows the first match of `header` in `css`. */
+function extractBlock(css: string, header: RegExp): string {
+  const start = header.exec(css);
+  if (!start) throw new Error(`block header ${header} not found in tokens.css`);
+  const openBrace = css.indexOf("{", start.index);
+  if (openBrace === -1) throw new Error(`no { after ${header} in tokens.css`);
+  let depth = 0;
+  for (let i = openBrace; i < css.length; i++) {
+    if (css[i] === "{") depth++;
+    else if (css[i] === "}") {
+      depth--;
+      if (depth === 0) return css.slice(openBrace + 1, i);
+    }
+  }
+  throw new Error(`unbalanced braces after ${header} in tokens.css`);
+}
+
+const THEME_BLOCKS: Record<Theme, string> = {
+  light: extractBlock(TOKENS, /@theme\s*\{/),
+  mocha: extractBlock(TOKENS, /\[data-theme="mocha"\]\s*\{/),
+};
+
+function token(name: string, theme: Theme = "light"): string {
+  const m = new RegExp(`--${name}:\\s*(#[0-9a-fA-F]{6})`).exec(THEME_BLOCKS[theme]);
+  if (!m?.[1]) throw new Error(`token --${name} not found for theme "${theme}" or not a 6-digit hex`);
   return m[1];
 }
 
@@ -96,48 +129,72 @@ const ON_TINT: ReadonlyArray<readonly [string, string]> = [
 const AA_NORMAL = 4.5;
 
 describe("every ink clears AA on every surface it can sit on", () => {
-  for (const ink of INKS) {
-    for (const surface of SURFACES) {
-      test(`${ink} on ${surface}`, () => {
-        const r = ratio(token(ink), token(surface));
+  for (const theme of THEMES) {
+    for (const ink of INKS) {
+      for (const surface of SURFACES) {
+        test(`${ink} on ${surface} — ${theme}`, () => {
+          const r = ratio(token(ink, theme), token(surface, theme));
+          expect(
+            r,
+            `${ink} on ${surface} is ${r.toFixed(2)}:1 in ${theme}, below AA ${AA_NORMAL}:1`,
+          ).toBeGreaterThanOrEqual(AA_NORMAL);
+        });
+      }
+    }
+  }
+});
+
+describe("the document pane has its own ink vocabulary", () => {
+  for (const theme of THEMES) {
+    for (const ink of PERMITTED_ON_DOCUMENT) {
+      test(`${ink} clears AA on the document pane — ${theme}`, () => {
+        const r = ratio(token(ink, theme), token("color-surface-document", theme));
+        expect(r, `${r.toFixed(2)}:1`).toBeGreaterThanOrEqual(AA_NORMAL);
+      });
+    }
+  }
+
+  test("light: --color-ink-muted is NOT permitted there — it measures below AA", () => {
+    // Not an oversight. Darkening muted to clear this surface would collapse it
+    // into --color-ink-secondary and destroy a tier the design uses heavily.
+    const r = ratio(token("color-ink-muted", "light"), token("color-surface-document", "light"));
+    expect(r, `${r.toFixed(2)}:1`).toBeLessThan(AA_NORMAL);
+  });
+
+  /*
+   * NOT the same claim in Mocha, and this is not an oversight either — it is
+   * the mirror image, provably. In light, --color-surface-document (#dcdde3)
+   * is darker than the chrome, which is what makes light-on-... no: muted
+   * ink is a DARK colour there, and the document pane being darker-than-chrome
+   * shrinks the gap. In Mocha, ink is a LIGHT colour (subtext0) and
+   * --color-surface-document is a dark pane surround (rule 1: the surround
+   * darkens, the page doesn't) — darkening the surface only widens the gap
+   * for light-coloured ink. Measured: 6.89:1, comfortably above AA. Asserting
+   * "NOT permitted" here would encode a false claim about this palette, not
+   * document a real constraint — see task-2-report.md for the fuller
+   * argument.
+   */
+  test("mocha: --color-ink-muted DOES clear AA there — the light-theme restriction does not carry over", () => {
+    const r = ratio(token("color-ink-muted", "mocha"), token("color-surface-document", "mocha"));
+    expect(r, `${r.toFixed(2)}:1`).toBeGreaterThanOrEqual(AA_NORMAL);
+  });
+});
+
+describe("every state ink clears AA on its own tint", () => {
+  for (const theme of THEMES) {
+    for (const [ink, surface] of ON_TINT) {
+      test(`${ink} on ${surface} — ${theme}`, () => {
+        const r = ratio(token(ink, theme), token(surface, theme));
         expect(
           r,
-          `${ink} on ${surface} is ${r.toFixed(2)}:1, below AA ${AA_NORMAL}:1`,
+          `${ink} on ${surface} is ${r.toFixed(2)}:1 in ${theme}, below AA ${AA_NORMAL}:1`,
         ).toBeGreaterThanOrEqual(AA_NORMAL);
       });
     }
   }
 });
 
-describe("the light document pane has its own ink vocabulary", () => {
-  for (const ink of PERMITTED_ON_DOCUMENT) {
-    test(`${ink} clears AA on the document pane`, () => {
-      const r = ratio(token(ink), token("color-surface-document"));
-      expect(r, `${r.toFixed(2)}:1`).toBeGreaterThanOrEqual(AA_NORMAL);
-    });
-  }
-
-  test("--color-ink-muted is NOT permitted there — it measures below AA", () => {
-    // Not an oversight. Darkening muted to clear this surface would collapse it
-    // into --color-ink-secondary and destroy a tier the design uses heavily.
-    const r = ratio(token("color-ink-muted"), token("color-surface-document"));
-    expect(r).toBeLessThan(AA_NORMAL);
-  });
-});
-
-describe("every state ink clears AA on its own tint", () => {
-  for (const [ink, surface] of ON_TINT) {
-    test(`${ink} on ${surface}`, () => {
-      const r = ratio(token(ink), token(surface));
-      expect(
-        r,
-        `${ink} on ${surface} is ${r.toFixed(2)}:1, below AA ${AA_NORMAL}:1`,
-      ).toBeGreaterThanOrEqual(AA_NORMAL);
-    });
-  }
-});
-
-describe("base state colours: AA legibility is no longer why -ink is used everywhere", () => {
+describe("base state colours (light palette history — not extended to Mocha, see comment)", () => {
   /**
    * REWRITTEN 2026-07-28 for the warm-archival palette. The old cool/violet
    * palette made this block's premise literally true everywhere it checked:
@@ -159,6 +216,19 @@ describe("base state colours: AA legibility is no longer why -ink is used everyw
    * floor. This block pins the new, mixed reality instead of a blanket "base
    * is never safe" claim that would now be false for two of these three
    * pairings.
+   *
+   * NOT looped across THEMES 2026-07-29. This block documents a specific
+   * empirical fact about the LIGHT palette's dark-ink-on-light-surface
+   * arithmetic, and the fact inverts in Mocha rather than generalising: base
+   * state colours there (mauve/green/peach/red) are light/pastel and the
+   * surfaces they'd sit against (app/tint) are dark, so "base accent on app
+   * background" is high-contrast by construction, not marginal. Measured for
+   * confirmation: --color-state-attend (peach #fab387) on
+   * --color-surface-app (base #1e1e2e) in Mocha is 9.27:1 — nowhere near the
+   * light palette's still-fails 4.35:1, because the roles of ink and surface
+   * swap which one is the "light" quantity. Mechanically duplicating this
+   * block's `toBeLessThan(AA_NORMAL)` assertion under a theme loop would
+   * assert something false about Mocha; see task-2-report.md.
    */
   test("base attend on attend-surface now clears AA — -ink there is a hierarchy choice, not a legibility floor", () => {
     const r = ratio(token("color-state-attend"), token("color-state-attend-surface"));
@@ -176,11 +246,13 @@ describe("base state colours: AA legibility is no longer why -ink is used everyw
   });
 });
 
-describe("white on a filled control clears AA", () => {
-  for (const fill of ["color-action", "color-state-settled", "color-state-halt"] as const) {
-    test(`--color-ink-on-action on ${fill}`, () => {
-      const r = ratio(token("color-ink-on-action"), token(fill));
-      expect(r, `${r.toFixed(2)}:1`).toBeGreaterThanOrEqual(AA_NORMAL);
-    });
+describe("ink-on-action clears AA on every filled control", () => {
+  for (const theme of THEMES) {
+    for (const fill of ["color-action", "color-state-settled", "color-state-halt"] as const) {
+      test(`--color-ink-on-action on ${fill} — ${theme}`, () => {
+        const r = ratio(token("color-ink-on-action", theme), token(fill, theme));
+        expect(r, `${r.toFixed(2)}:1`).toBeGreaterThanOrEqual(AA_NORMAL);
+      });
+    }
   }
 });

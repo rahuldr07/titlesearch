@@ -512,6 +512,252 @@
 }
 
 /*
+ * Catppuccin Mocha — the dark theme. Added 2026-07-29 per HANDOFF-UI §8.
+ *
+ * Every token the @theme block above defines under `--color-*` gets a value
+ * here under the SAME name (91 tokens). Non-colour tokens (type/space/radius/
+ * shadow/etc.) are not theme-scoped — they are structural, not palette, and
+ * [data-theme="mocha"] never redefines them.
+ *
+ * Two rules bind every value below:
+ *   1. The document does not invert. A scan is a photograph of paper — the
+ *      surround darkens, the page stays light. `--color-surface-paper` and
+ *      the whole scanned-page/document-ink set are PINNED to their @theme
+ *      values, marked PINNED below. `--color-surface-evidence`,
+ *      `--color-border-evidence` and `--color-surface-pin` are markers drawn
+ *      ON that same pinned page, not part of the UI chrome, so the same
+ *      pin logic is extended to them here — a deviation from the brief's
+ *      explicit pin list, flagged for review, not silently made.
+ *   2. Strict AA applies to both themes. apps/web-v2/src/shared/contrast.test.ts
+ *      runs its generic ink/surface invariants against this block exactly as
+ *      it does against @theme. Where stock Catppuccin's own "muted" swatch
+ *      fails, this file deviates and cites the measured ratio (see
+ *      --color-ink-muted below) — never by loosening the test threshold.
+ *
+ * Stock Catppuccin Mocha reference (github.com/catppuccin/catppuccin):
+ *   rosewater #f5e0dc  flamingo #f2cdcd  pink   #f5c2e7  mauve #cba6f7
+ *   red       #f38ba8  maroon   #eba0ac  peach  #fab387  yellow #f9e2af
+ *   green     #a6e3a1  teal     #94e2d5  sky    #89dceb  sapphire #74c7ec
+ *   blue      #89b4fa  lavender #b4befe  text   #cdd6f4
+ *   subtext1  #bac2de  subtext0 #a6adc8
+ *   overlay2  #9399b2  overlay1 #7f849c  overlay0 #6c7086
+ *   surface2  #585b70  surface1 #45475a  surface0 #313244
+ *   base      #1e1e2e  mantle   #181825  crust    #11111b
+ *
+ * Surfaces layer UPWARD from base (panels lighter than the app background) —
+ * the opposite of the light register, where panel is the lightest surface
+ * and app is a step darker. `surface-sunken` is the one deliberate exception:
+ * "sunken" means recessed, so it stays darker than base (mantle), exactly as
+ * `surface-panel` stays lighter (surface0). Ordering, darkest to lightest:
+ * sunken (mantle) < app (base) < raised (derived) < panel (surface0).
+ */
+[data-theme="mocha"] {
+  /* ── surfaces ─────────────────────────────────────────────────────────── */
+  --color-surface-app: #1e1e2e; /* base */
+  --color-surface-panel: #313244; /* surface0 */
+  --color-surface-sunken: #181825; /* mantle — deliberately DARKER than base; see header */
+  /*
+   * DERIVED — no stock Catppuccin swatch sits between base (#1e1e2e) and
+   * surface0 (#313244), and the light register needs a third level here too
+   * (header bands, quiet chips, read-state cards — same role as the light
+   * @theme block's --color-surface-raised). Linear midpoint of base/surface0
+   * in RGB: (30,30,46)+(49,50,68) / 2 = (40,40,57) = #282839.
+   */
+  --color-surface-raised: #282839;
+  --color-row-hover: #282839; /* = raised, mirrors the @theme relationship */
+  /*
+   * NOT pinned — this is the pane SURROUND behind the document, not the
+   * document itself (rule 1 in the header: "the surround darkens"). Reuses
+   * the file's existing dark-pane value (--color-document-bg) rather than a
+   * fresh Catppuccin swatch, so a page floats against the same dark surround
+   * whether it's the Mocha-only Review pane or the always-dark measurement
+   * screens (D2). Judgment call, not AA-gated (surface-document is excluded
+   * from contrast.test.ts's SURFACES set in both themes — see that file).
+   */
+  --color-surface-document: #23252b;
+  --color-surface-paper: #fbfaf5; /* PINNED — @theme value, unchanged. Rule 1. */
+
+  /* page-reference chip — same family as --color-action in @theme (both were
+     #2e4272 there); kept identical here too. */
+  --color-page-ref: #cba6f7; /* mauve, = action */
+  --color-page-ref-ink: #cba6f7; /* = action-ink */
+  --color-page-ref-surface: #302d45; /* = action-surface */
+  --color-page-ref-border: #453f66; /* = action-border */
+
+  /*
+   * PINNED, extending rule 1 — see header comment. Both are markers drawn ON
+   * the page (the evidence highlight over a cited line; the weaker "pin"
+   * mark), not UI chrome. Not in the brief's literal pin list; flagged as a
+   * deviation in the task report.
+   */
+  --color-surface-evidence: rgb(240 201 92 / 0.45); /* PINNED */
+  --color-border-evidence: #c2922b; /* PINNED */
+  --color-surface-pin: rgb(148 165 199 / 0.28); /* PINNED */
+
+  /* ── ink ──────────────────────────────────────────────────────────────── */
+  --color-ink-primary: #cdd6f4; /* text */
+  --color-ink-secondary: #bac2de; /* subtext1 */
+  /*
+   * DEVIATION from stock Catppuccin. The obvious pick for the "recede" tier
+   * is overlay0 (#6c7086) — but measured against this file's own chrome
+   * surfaces it is 2.58:1 on --color-surface-panel and 3.36:1 on
+   * --color-surface-app, both well below the 4.5:1 AA floor (not the "≈4:1"
+   * ballpark sometimes quoted for overlay0 in the abstract — these are the
+   * actual numbers on THESE surfaces). Deviated to subtext0 (#a6adc8), which
+   * measures 5.66:1 on --color-surface-panel (the lightest of the four
+   * SURFACES, so the hardest case) and clears AA on all four. Pinned by
+   * contrast.test.ts.
+   */
+  --color-ink-muted: #a6adc8; /* subtext0 — DEVIATION, see above */
+
+  /* ── lines ────────────────────────────────────────────────────────────── */
+  --color-line-strong: #585b70; /* surface2 */
+  --color-line-subtle: #45475a; /* surface1 */
+  /*
+   * "Heavier than the ordinary rule", same relationship @theme's
+   * --color-line-dashed has to --color-line-strong — but on a dark surface,
+   * heavier means LIGHTER (more contrast from the background), not darker.
+   * overlay1 sits one step above surface2 in the Catppuccin scale.
+   */
+  --color-line-dashed: #7f849c; /* overlay1 */
+
+  /* ── action (mauve) — the primary affordance, and "your correction" ───── */
+  --color-action: #cba6f7; /* mauve */
+  --color-action-ink: #cba6f7; /* mauve itself, used as text on the dark tint below */
+  /*
+   * DERIVED — no stock swatch for "mauve, darkened toward crust". Built the
+   * same way --color-document-accent-surface was: a dark, low-chroma tint in
+   * the accent's hue family, dark enough that mauve text sits at high
+   * contrast on it (measured by contrast.test.ts's ON_TINT sweep).
+   */
+  --color-action-surface: #302d45;
+  --color-action-border: #453f66;
+  /*
+   * Filled buttons need DARK text here, not white. Mocha's accent colours
+   * (mauve/green/red) are themselves light/pastel — white-on-mauve is close
+   * to white-on-white. Catppuccin's own convention is base/crust text on an
+   * accent fill; crust gives the largest margin. Reused unchanged across all
+   * three filled fills (action/settled/halt) exactly as @theme's single
+   * --color-ink-on-action is reused across all three there.
+   */
+  --color-ink-on-action: #11111b; /* crust */
+  --color-key-chip-on-action: rgb(17 17 27 / 0.18); /* crust-based, mirrors the ink-on-action flip; not hex-testable */
+
+  /* ── state: settled — confirmed, delivered, gate passed ───────────────── */
+  --color-state-settled: #a6e3a1; /* green */
+  --color-state-settled-ink: #a6e3a1; /* green itself, text on the dark tint below */
+  --color-state-settled-surface: #24312b; /* DERIVED — dark green tint, same method as action-surface */
+  --color-state-settled-border: #3d5245; /* DERIVED */
+
+  /* ── state: decide — a person must answer; the decision queue ─────────── */
+  /* Same family as action, exactly as in @theme. */
+  --color-state-decide: #cba6f7;
+  --color-state-decide-surface: #302d45;
+  --color-state-decide-border: #453f66;
+
+  /* ── state: attend — escalated, disclosed, narrowed, provisional ──────── */
+  --color-state-attend: #fab387; /* peach */
+  --color-state-attend-ink: #fab387; /* peach itself, text on the dark tint below */
+  --color-state-attend-surface: #3a2f28; /* DERIVED — dark peach tint */
+  --color-state-attend-border: #5c4a3a; /* DERIVED */
+
+  /* ── state: halt — package incomplete, failed, unreadable, conflict ───── */
+  --color-state-halt: #f38ba8; /* red */
+  --color-state-halt-ink: #f38ba8; /* red itself, text on the dark tint below */
+  --color-state-halt-surface: #3a262b; /* DERIVED — dark red tint */
+  --color-state-halt-border: #5c3640; /* DERIVED */
+
+  /* ── the four no-value states ─────────────────────────────────────────── */
+  /* Same "reuse a measured-AA tier" relationships as @theme, see that block. */
+  --color-na-not-present-ink: #a6adc8; /* = ink-muted */
+  --color-na-not-present-border: #585b70; /* = line-strong */
+  --color-na-not-found-ink: #bac2de; /* = ink-secondary */
+  --color-na-not-found-border: #585b70; /* = line-strong */
+  --color-na-silent-ink: #bac2de; /* = ink-secondary */
+  --color-na-silent-hatch: #45475a; /* = line-subtle */
+  --color-na-unreadable-ink: #f38ba8; /* = state-halt-ink */
+  --color-na-unreadable-surface: #3a262b; /* = state-halt-surface */
+  --color-na-unreadable-border: #5c3640; /* = state-halt-border */
+
+  /* ── neutral chip (machine/automated badges) ──────────────────────────── */
+  --color-chip-neutral-surface: #45475a; /* surface1 */
+
+  /* Modal scrim. Same colour family as @theme's near-black scrim (crust here
+     instead of an unrelated navy-black), heavier alpha since it is dimming
+     an already-dark background. Not hex-testable (rgba). */
+  --color-scrim: rgb(17 17 27 / 0.6);
+
+  /* ── idle — "nothing is happening here", distinct from settled ────────── */
+  --color-state-idle: #7f849c; /* overlay1 — quiet, cool, not a state accent */
+  --color-state-idle-surface: #2c2e3a; /* DERIVED — dark neutral tint */
+  --color-state-idle-border: #585b70; /* surface2 */
+
+  /* progress track */
+  --color-track: #45475a; /* surface1 */
+
+  /* ── the document pane — DARK ON THE MEASUREMENT SCREENS ONLY ─────────── */
+  /*
+   * UNCHANGED from @theme. This is an independent register (D2: Extraction
+   * Bench / Reconciliation / Seed Correction render dark regardless of the
+   * app's light/dark theme choice; Review is the only screen where the
+   * theme's own surface-document applies, handled above). Not gated by
+   * contrast.test.ts's SURFACES/INKS sweep in either theme. Left as-is
+   * rather than retuned to a Mocha-specific palette — it is already dark,
+   * already legible (ratios documented in the @theme block above), and
+   * retuning would introduce untested drift for no behavioural gain. Flagged
+   * for design-owner confirm per progress.md's Task 1 rollup note.
+   */
+  --color-document-bg: #23252b;
+  --color-document-deep: #1b1d22;
+  --color-document-card: #292c33;
+  --color-document-panel: #2f323a;
+  --color-document-line: #383c45;
+  --color-document-line-strong: #474c58;
+  --color-document-ink: #dadde4;
+  --color-document-ink-soft: #bfc3cc;
+  --color-document-ink-strong: #eef0f4;
+  --color-document-settled: #93c5ac;
+  --color-document-attend: #e5c078;
+  --color-document-halt: #e39a92;
+  --color-document-ink-on-accent: #16171b;
+  --color-document-settled-border: #4a6b5b;
+  --color-document-attend-border: #7d6a3a;
+  --color-document-halt-border: #7a4a44;
+  --color-document-halt-surface: #2b2429;
+  --color-document-accent: #a595e0;
+  --color-document-accent-border: #6b5aa8;
+  --color-document-accent-surface: #2e2a40;
+  --color-document-kbd-surface: #3a3543;
+  --color-document-note-ink: #cdc6b4;
+  --color-document-note-surface: #33313c;
+  --color-document-note-border: #4d4a5a;
+  --color-document-info: #a9b2c9;
+  --color-document-info-surface: #2a2d36;
+  --color-document-info-row: #2b3140;
+
+  /* ── the scanned page itself — PINNED, rule 1 ─────────────────────────── */
+  --color-scan: #cfc9b8;
+  --color-scan-line: #d5d0c0;
+  --color-scan-line-soft: #dedace;
+  --color-page: #fdfdfb;
+  --color-page-bar: #d6d2c8;
+  --color-page-line: #e9e6de;
+
+  /* ── ink ON the page — PINNED, rule 1 ─────────────────────────────────── */
+  --color-page-ink: #232327;
+  --color-scan-ink: #2a2a2e;
+  --color-scan-ink-degraded: #33333a;
+
+  /*
+   * "Between action and action-ink" in @theme's navy family. Mocha's
+   * action/action-ink are already the same value (mauve), so this is a
+   * visually deeper, more saturated mauve for the one callout border that
+   * needs to read heavier than the fill. Not AA-gated (not in ON_TINT).
+   */
+  --color-action-border-strong: #b389e8;
+}
+
+/*
  * Motion. The design animates exactly one thing — a pulsing dot on a halted
  * gate — and honours prefers-reduced-motion globally. Keep both properties.
  */
