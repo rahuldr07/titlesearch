@@ -474,3 +474,51 @@ git commit -m "Fix the Queue screen against the revised design"
 **Placeholder scan:** none — every code step shows code; every command shows expected result. The one deliberately procedural task is Task 10 (fidelity pass), whose specifics are produced by `compare.mjs` at execution by design (§10), not fabricated here.
 
 **Type consistency:** testids (`side-rail`, `rail-toggle`, `rail-door-<path>`, `data-collapsed`, `edit-value`, `coverage-cell`, `retire-preview`) are used identically across tasks and match `sidebar.spec.ts`. `MePreferences.theme` enum `"titlepipe"|"mocha"` is consistent across Tasks 3/4/5.
+
+---
+
+## Task 11: Top order-context strip
+
+**Files:**
+- Create: `apps/web-v2/src/app/OrderStrip.tsx` (the top bar; < 150 lines)
+- Modify: `apps/web-v2/src/app/rootRoute.tsx` (content column gains a header row above `<Outlet/>`), `apps/web-v2/src/app/AppChrome.tsx` (render the strip; STOP rendering `OrderCounts` + `AccountMenu` in the sidebar foot — they move into the strip)
+- Modify: `apps/web-v2/src/app/OrderCounts.tsx` only if its layout must change from a stacked foot block to an inline row (keep its query + the 4 counts + provenance/NO-SOURCE semantics intact)
+- Test: a Storybook `OrderStrip.stories.tsx` play function + a smoke assertion in the review e2e that the strip renders the order ref + counts
+
+**Design target** (from `design-export/TitlePipe.dc.html`, verified rendered): a full-width bar at the TOP of the content column (right of the sidebar), on every screen. Left: `ORDER {order_ref}`. Center-right: the four counts `{n} FIELDS · {n} AUTO-CONFIRMED · {n} NEED YOU · {n} NO SOURCE` (these ARE `OrderCounts`). A lifecycle/sign-off STAMP (e.g. `SIGN-OFF OPEN`) in a bordered stamp style. Far right: identity `{name} · {ROLE}` as the account-menu trigger.
+
+**Interfaces / data (all server-owned — never derive client-side):**
+- Order ref + the 4 counts: from the URL order via `OrderCounts`'s existing `OrderFieldsResponse` query (`/api/orders/{id}/fields`). Counts stay derived from server `Field.state` only (the sanctioned pattern), never from confidence/`value===null`.
+- The stamp text: from `OrderSignoffResponse` / the order's lifecycle state (`GET /api/orders/{id}/signoff` — `signed`/lifecycle). Render the server's state verbatim; if no single contract field gives the exact stamp word, render what the contract gives and add a `CONTRACT GAP:` note rather than computing a lifecycle label client-side.
+- Identity: `useSession` (name/role), and the existing `AccountMenu` component is the trigger.
+
+**Order principle (keep it):** order comes from the URL (`/orders/{id}/...`), NOT a remembered global current order (multi-tab safety — documented in `AppChrome.tsx`). So: on order screens the strip shows ref + counts + stamp; on non-order screens (Queue, Overview, admin) the strip shows the brand-neutral left + identity right, with NO fabricated order. Do not invent a global current-order.
+
+- [ ] **Step 1:** Write the failing test — `OrderStrip` given an order renders `ORDER {ref}`, the four count labels, the stamp, and the account trigger; given no order renders identity but no `ORDER` label. RED.
+- [ ] **Step 2:** Build `OrderStrip.tsx` (tokens only, no raw hex; literal capitals in markup; `data-testid="order-strip"`). It composes `OrderCounts` (inline variant) + a stamp + `AccountMenu`.
+- [ ] **Step 3:** Rework the layout: in `rootRoute.tsx`, the content side becomes a column — `<div class="flex-1 flex flex-col min-w-0"><OrderStrip.../><main>…Outlet…</main></div>` beside the `<Sidebar/>`. In `AppChrome.tsx`, remove `OrderCounts` + `AccountMenu` from the sidebar `foot` and render them via `OrderStrip` at the top. (Decide the cleanest split: AppChrome may need to expose the strip; keep the capture-seat `return null` behavior — no strip on `/blind/*`.)
+- [ ] **Step 4:** GREEN — run the story + review e2e; confirm the sidebar foot no longer duplicates counts/identity, and the strip shows them.
+- [ ] **Step 5:** Full gate incl. e2e. Do NOT break `sidebar.spec`/`authz.spec` (the account menu still opens, now from the strip; keep its testid and a11y). Commit.
+
+---
+
+## Task 12: Sidebar groups + numbered lifecycle rail + per-item icons
+
+**Files:**
+- Modify: `apps/web-v2/src/entities/nav/doors.ts` (add a `group` + a display `icon` letter per door — do NOT change the door SET, paths, keys, or `label`s that `roles.spec`/`?`-map assert)
+- Modify: `apps/web-v2/src/entities/nav/Sidebar.tsx` (render grouped sections with headers), `SidebarDoor.tsx` (letter-icon square shown when EXPANDED too, not only collapsed), `LifecycleRail.tsx` (numbered stages + checkmark for `done` + per-stage badge)
+- Modify: `apps/web-v2/src/app/AppChrome.tsx` (pass the door groups + the active order's pipeline stages)
+- Test: extend `sidebar.spec` / a Storybook story for the grouped structure + numbered rail; keep every existing `sidebar.spec`/`roles.spec`/`authz.spec` assertion GREEN (never weaken)
+
+**Design target:** the sidebar is grouped with uppercase headers `WORK / THIS ORDER / ADMIN / REFERENCE`. WORK = Queue, Overview. THIS ORDER = the numbered pipeline lifecycle (Upload ①…✓, Questions ②, Processing ③, Completeness ④, Review ⑤, Delivered ⑥) with a stage NUMBER, a CHECKMARK when the stage is `done`, and a per-stage BADGE (e.g. Completeness `1`, Review `7`, Questions `open`). ADMIN = Rulebook, Products & sign-off, Clients, People, Audit. REFERENCE = States. Every item shows a small letter-icon square even when the rail is EXPANDED (Q, O, U, …). The `[`/collapse toggle stays at the top by the wordmark.
+
+**Interfaces / data (server-owned):**
+- Lifecycle stage state (done/current/badge): from `OrderPipelineResponse` (`GET /api/orders/{id}/pipeline`) — `PipelineStage.phase` (`done`/`running`/`halted`/`waiting`) drives the checkmark/current mark; NEVER infer a stage's state from counts or confidence (rule §3). The per-stage badge count (e.g. Completeness gaps, Review needs-you) comes from server data, not client derivation. If the badge number for a stage has no contract source, omit it rather than computing it, and note the gap.
+- The active order for THIS ORDER: the URL order (same principle as Task 11). With no active order, render the THIS ORDER group's stages without per-order badges/checkmarks (plain nav), or hide the group — match what the design does when no order is active; if unclear, keep the stages visible as plain nav and record the choice.
+- Escalation Inbox + Profile: the design's sidebar does not draw them as separate labeled items, but `roles.spec` and the escalation attention-dot depend on the `/escalations` door existing. DO NOT delete doors. Place `/escalations` in WORK and keep `/profile` reachable (account menu already has it); if leaving `/profile` in the sidebar is needed to keep a test green, place it in REFERENCE and record the divergence. Preserve the escalation red/amber attention dot and its `sidebar.spec` invariant (red complaint pulses, amber gap still).
+
+- [ ] **Step 1:** Write the failing test/story — the sidebar renders the four group headers in order; THIS ORDER shows numbered stages with a checkmark on a `done` stage and a badge on a stage with a server count; each door shows its letter-icon when expanded. RED.
+- [ ] **Step 2:** Add `group` + `icon` to `doors.ts` (metadata only — paths/keys/labels unchanged). Group the render in `Sidebar.tsx` with `Eyebrow`-style headers. Keep `data-testid="side-rail"`, `rail-door-<path>`, `rail-toggle`, `data-collapsed` exactly.
+- [ ] **Step 3:** Update `SidebarDoor.tsx` to show the letter-icon square in the expanded state too. Update `LifecycleRail.tsx` to take richer stages (number, `done` checkmark, badge) sourced from `OrderPipelineResponse`; wire it in `AppChrome.tsx`.
+- [ ] **Step 4:** GREEN — run the story + `sidebar.spec` + `roles.spec` + `authz.spec`. Every prior assertion intact.
+- [ ] **Step 5:** Full gate incl. e2e. Colour via tokens; 150 lines/file. Commit.
