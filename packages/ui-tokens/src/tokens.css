@@ -29,97 +29,119 @@
 
 @theme {
   /* ── surfaces ─────────────────────────────────────────────────────────── */
-  --color-surface-app: #e6e7ec; /* window background behind panels */
-  --color-surface-panel: #ffffff; /* cards, header, primary panels */
-  --color-surface-sunken: #fbfbfc; /* section sub-headers, table caps */
+  --color-surface-app: #eae7e0; /* window background behind panels */
+  --color-surface-panel: #fdfcfa; /* cards, header, primary panels */
+  --color-surface-sunken: #fbfaf5; /* section sub-headers, table caps */
   /* Third level, restored. The export collapsed page→panel→card into two; the
      measurement screens use banded layouts that flatten without it.
      replatform-mapping.md §4.1 */
-  --color-surface-raised: #f2f3f6; /* header bands, quiet chips, read-state cards */
-  --color-row-hover: #f2f3f6;
-  --color-surface-document: #dcdde3; /* ORPHANED IN SOURCE — document pane backdrop */
-  --color-surface-paper: #faf9f4; /* the scanned page itself */
+  --color-surface-raised: #f7f4ee; /* header bands, quiet chips, read-state cards */
+  --color-row-hover: #f7f4ee;
+  /*
+   * RE-DERIVED for the 2026-07-28 warm-archival revision. No design
+   * counterpart — the mapping table gives --color-surface-app and
+   * --color-surface-paper but not this one. Proportionally shifted the same
+   * way the old value related to the old --color-surface-app (a step darker,
+   * same hue family), so the backdrop still reads as "behind" both the app
+   * chrome and the page. It MUST stay distinguishable from
+   * --color-surface-paper (#fbfaf5) — rule trap §6: this is the backdrop, not
+   * the page. Pinned by contrast.test.ts: --color-ink-muted must FAIL AA here
+   * (4.33:1 — the pane is deliberately darker than chrome, muted text is not
+   * available on it), --color-ink-primary/-secondary must pass (12.15:1 /
+   * 5.64:1).
+   */
+  --color-surface-document: #e0ddd7; /* document pane backdrop */
+  --color-surface-paper: #fbfaf5; /* the scanned page itself */
 
   /* page-reference chip — "this value was read from page N". Its own token
      rather than reusing --color-action, because during the transition
      --color-action collides with the legacy palette (see index.css). */
-  --color-page-ref: #4a2fae;
-  --color-page-ref-ink: #392291; /* text sitting ON page-ref-surface */
-  --color-page-ref-surface: #efeafd;
-  --color-page-ref-border: #dfd6fb;
+  --color-page-ref: #2e4272;
+  --color-page-ref-ink: #1f2f57; /* text sitting ON page-ref-surface */
+  --color-page-ref-surface: #e9ecf4;
+  --color-page-ref-border: #d2dae9;
 
   /* evidence highlight — the marker drawn over a cited line on the page */
-  --color-surface-evidence: rgb(255 214 53 / 0.5);
-  --color-border-evidence: #d9a400;
-  /* the PIN is a weaker, cooler mark — "this field points here", vs the
-     highlight's "this is the cited line". Two marks, two meanings; the old
-     palette distinguished them and the export did not. */
-  --color-surface-pin: rgb(159 180 212 / 0.28);
+  --color-surface-evidence: rgb(240 201 92 / 0.45);
+  --color-border-evidence: #c2922b;
+  /*
+   * RE-DERIVED for the warm-archival revision. The PIN is a weaker, cooler
+   * mark — "this field points here", vs the highlight's "this is the cited
+   * line". Kept in the navy family (the new --color-action hue) rather than
+   * the old unrelated cool-blue, so "cooler mark" now reads as "the action
+   * hue, diluted" instead of an orphaned third colour. Not hex-testable (rgba
+   * token; contrast.test.ts only parses 6-digit hex), so this is a visual
+   * judgment call, not a gate-verified one.
+   */
+  --color-surface-pin: rgb(148 165 199 / 0.28);
 
   /* ── ink ──────────────────────────────────────────────────────────────── */
-  --color-ink-primary: #16171b;
-  --color-ink-secondary: #565a66;
+  --color-ink-primary: #201f1d;
+  --color-ink-secondary: #585349;
   /*
-   * DARKENED from the design's #8a8e99, which failed WCAG AA on every surface
-   * it is used on — 3.28:1 on panel, 2.65:1 on the app background, and it is
-   * the most-used token in the design (eyebrow labels, meta, the whole "recede"
-   * tier). Measured before/after:
+   * RE-DERIVED 2026-07-28 for the warm-archival revision. Same AA-fix intent
+   * as before: pick the warmest ink off --ink3 #8b857a that clears 4.5:1 on
+   * both --color-surface-panel and --color-surface-app. #8b857a itself fails
+   * everywhere (2.70–3.57:1). Measured before/after:
    *
    *              panel  app   raised  sunken  document
-   *   #8a8e99     3.28  2.65   2.95    3.19    2.44   <- fails AA everywhere
-   *   #616673     5.74  4.65   5.18    5.55    4.24   <- clears AA on the chrome
+   *   #8b857a     3.57  2.97   3.34    3.50    2.70   <- fails AA everywhere
+   *   #69645c     5.72  4.75   5.35    5.62    4.33   <- clears AA on the chrome
    *
-   * NOT "everywhere" — the original comment said so and was wrong. #616673
-   * measures 4.24:1 on --color-surface-document (#dcdde3), the light document
-   * pane D2's reversal introduced. Darkening further would collapse this tier
-   * into --color-ink-secondary, so instead the muted tier is NOT AVAILABLE on
-   * that surface; the pane uses primary/secondary. Pinned by
+   * NOT "everywhere" — as before, #69645c measures 4.33:1 on
+   * --color-surface-document (#e0ddd7), which stays deliberately darker than
+   * chrome. Darkening further to clear the document pane too would collapse
+   * this tier into --color-ink-secondary, so the muted tier is still NOT
+   * AVAILABLE on that surface; the pane uses primary/secondary. Pinned by
    * apps/web-v2/src/shared/contrast.test.ts.
    *
-   * This is the one place the palette is deliberately not as drawn, and it is a
-   * correctness fix rather than a taste call: at 2.65:1 the label tier is not
-   * legible to a substantial share of readers. The hue and the recede INTENT are
-   * preserved — it still reads as the quietest tier, just legibly.
+   * This is the one place the palette is deliberately not as drawn, and it is
+   * a correctness fix rather than a taste call — the hue and the recede
+   * INTENT are preserved, it still reads as the quietest tier, just legibly.
    */
-  --color-ink-muted: #616673; /* eyebrow labels, meta, "recede" */
+  --color-ink-muted: #69645c; /* eyebrow labels, meta, "recede" */
 
   /* ── lines ────────────────────────────────────────────────────────────── */
-  --color-line-strong: #d4d7de; /* card borders, dividers that must read */
-  --color-line-subtle: #e7e9ee; /* row separators inside a card */
-  --color-line-dashed: #b3b7c2; /* dashed borders, scrollbar thumb */
+  --color-line-strong: #d9d4c9; /* card borders, dividers that must read */
+  --color-line-subtle: #eae6de; /* row separators inside a card */
+  /* RE-DERIVED for the warm-archival revision — no design counterpart.
+     Proportionally darker than --color-line-strong by the same offset the old
+     value held from the old --color-line-strong, so dashes still read as "a
+     step heavier than the ordinary rule" rather than a new unrelated grey. */
+  --color-line-dashed: #b9b4ad; /* dashed borders, scrollbar thumb */
 
-  /* ── action (violet) — the primary affordance, and "your correction" ──── */
-  --color-action: #4a2fae;
-  --color-action-ink: #392291; /* text on action-surface */
-  --color-action-surface: #efeafd;
-  --color-action-border: #dfd6fb;
+  /* ── action (navy) — the primary affordance, and "your correction" ────── */
+  --color-action: #2e4272;
+  --color-action-ink: #1f2f57; /* text on action-surface */
+  --color-action-surface: #e9ecf4;
+  --color-action-border: #d2dae9;
   --color-ink-on-action: #ffffff; /* text/key-chips on a filled action button */
   --color-key-chip-on-action: rgb(255 255 255 / 0.18);
 
   /* ── state: settled — confirmed, delivered, gate passed ───────────────── */
-  --color-state-settled: #2c7a4b;
-  --color-state-settled-ink: #1f5738; /* ORPHANED IN SOURCE — body text on settled-surface */
-  --color-state-settled-surface: #e6f2ea;
-  --color-state-settled-border: #bfe0cb; /* ORPHANED IN SOURCE */
+  --color-state-settled: #2f6d46;
+  --color-state-settled-ink: #22553a; /* ORPHANED IN SOURCE — body text on settled-surface */
+  --color-state-settled-surface: #e5efe7;
+  --color-state-settled-border: #c2d8c6; /* ORPHANED IN SOURCE */
 
   /* ── state: decide — a person must answer; the decision queue ─────────── */
   /* Deliberately the same family as action: "this is yours" and "you may act"
      are one signal in this design. Kept as separate names so they can diverge. */
-  --color-state-decide: #4a2fae;
-  --color-state-decide-surface: #efeafd;
-  --color-state-decide-border: #dfd6fb;
+  --color-state-decide: #2e4272;
+  --color-state-decide-surface: #e9ecf4;
+  --color-state-decide-border: #d2dae9;
 
   /* ── state: attend — escalated, disclosed, narrowed, provisional ──────── */
-  --color-state-attend: #9a6a12;
-  --color-state-attend-ink: #6d4c0c; /* ORPHANED IN SOURCE */
-  --color-state-attend-surface: #f8efd8;
-  --color-state-attend-border: #e6d3a3; /* ORPHANED IN SOURCE */
+  --color-state-attend: #8a6413;
+  --color-state-attend-ink: #6b4f10; /* ORPHANED IN SOURCE */
+  --color-state-attend-surface: #f6eed6;
+  --color-state-attend-border: #e2d2a6; /* ORPHANED IN SOURCE */
 
   /* ── state: halt — package incomplete, failed, unreadable, conflict ───── */
-  --color-state-halt: #b02318;
-  --color-state-halt-ink: #8c1a12;
-  --color-state-halt-surface: #fbe9e7;
-  --color-state-halt-border: #eec6c1; /* ORPHANED IN SOURCE */
+  --color-state-halt: #9c2b1e;
+  --color-state-halt-ink: #7c2016;
+  --color-state-halt-surface: #f8e8e4;
+  --color-state-halt-border: #e8cdc5; /* ORPHANED IN SOURCE */
 
   /* ── the four no-value states ─────────────────────────────────────────── */
   /*
@@ -133,29 +155,32 @@
    * see docs/frontend/open-rulings.md Q1.
    */
   /*
-   * DARKENED 2026-07-27 from the design's #8a8e99 for the same reason
-   * --color-ink-muted was: it measures 3.28:1 on panel and fails WCAG AA, and
-   * it carries real text ("n/a — not used in this jurisdiction"). Missed in the
-   * Phase 1 pass because it lives in this block rather than the ink block.
-   * #616673 measures 5.74:1.
+   * RE-DERIVED 2026-07-28 for the warm-archival revision, same reason
+   * --color-ink-muted was: it carries real text ("n/a — not used in this
+   * jurisdiction") and must clear AA independently of that tier. Reuses the
+   * same measured value as --color-ink-muted (#69645c — 5.72:1 panel, 4.75:1
+   * app, see the ink block above) exactly as the prior palette did (both were
+   * #616673 there too) — one AA-fixed "recede" hue, referenced from two
+   * semantic slots.
    *
    * Darkening does not blur the four states into each other: their distinction
    * is carried by BORDER STYLE and FILL PATTERN as well as colour — dashed vs
    * solid vs hatch vs tint — which is exactly why CONTEXT §11 insists they
    * "must never collapse into one grey dash".
    */
-  --color-na-not-present-ink: #616673; /* structurally absent in jurisdiction */
-  --color-na-not-present-border: #d4d7de;
-  --color-na-not-found-ink: #565a66; /* searched, none of record */
-  --color-na-not-found-border: #d4d7de;
-  --color-na-silent-ink: #565a66; /* document does not state it */
-  --color-na-silent-hatch: #e7e9ee; /* diagonal hatch stripe colour */
-  --color-na-unreadable-ink: #8c1a12; /* present but unreadable — reads as halt */
-  --color-na-unreadable-surface: #fbe9e7;
-  --color-na-unreadable-border: #eec6c1;
+  --color-na-not-present-ink: #69645c; /* structurally absent in jurisdiction */
+  --color-na-not-present-border: #d9d4c9; /* = --color-line-strong */
+  --color-na-not-found-ink: #585349; /* searched, none of record — = --color-ink-secondary, already clears AA */
+  --color-na-not-found-border: #d9d4c9; /* = --color-line-strong */
+  --color-na-silent-ink: #585349; /* document does not state it — = --color-ink-secondary */
+  --color-na-silent-hatch: #eae6de; /* diagonal hatch stripe colour — = --color-line-subtle */
+  --color-na-unreadable-ink: #7c2016; /* present but unreadable — reads as halt — = --color-state-halt-ink */
+  --color-na-unreadable-surface: #f8e8e4; /* = --color-state-halt-surface */
+  --color-na-unreadable-border: #e8cdc5; /* = --color-state-halt-border */
 
   /* ── neutral chip (machine/automated badges) ──────────────────────────── */
-  --color-chip-neutral-surface: #eceef2; /* ORPHANED IN SOURCE */
+  /* RE-DERIVED for the warm-archival revision — no design counterpart. */
+  --color-chip-neutral-surface: #efece5; /* ORPHANED IN SOURCE */
 
   /*
    * Modal scrim. A COLOUR token, not a shadow one — and --shadow-scrim was
@@ -170,14 +195,17 @@
 
   /* ── idle — "nothing is happening here", distinct from settled ────────── */
   /* Old palette had --color-neutral* (slate) for idle/abandoned states; the
-     export dropped it. Restored cool. Used by dashboard bar segments, idle
-     delivery/complaint rows. See replatform-mapping.md §4.4. */
-  --color-state-idle: #56607a;
-  --color-state-idle-surface: #f0f1f5;
-  --color-state-idle-border: #b4bacb;
+     export dropped it. Restored, now warm rather than cool so it sits in the
+     archival register instead of reading as a leftover cool accent. Used by
+     dashboard bar segments, idle delivery/complaint rows. See
+     replatform-mapping.md §4.4. RE-DERIVED 2026-07-28, no design counterpart. */
+  --color-state-idle: #6b6459;
+  --color-state-idle-surface: #f2efe6;
+  --color-state-idle-border: #cfc7b8;
 
-  /* progress track — Blind Fifty Status coverage bar (replatform-mapping §4.2) */
-  --color-track: #dfe1e7;
+  /* progress track — Blind Fifty Status coverage bar (replatform-mapping §4.2).
+     RE-DERIVED 2026-07-28, no design counterpart. */
+  --color-track: #e2ddd0;
 
   /* ── the document pane — DARK ON THE MEASUREMENT SCREENS ONLY ─────────── */
   /*
@@ -263,7 +291,7 @@
   --color-page-line: #e9e6de;
 
   /* ── type ─────────────────────────────────────────────────────────────── */
-  --font-sans: "IBM Plex Sans", system-ui, sans-serif;
+  --font-sans: "Libre Franklin", system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, monospace;
   /* Serif is semantic here: it renders HUMAN TESTIMONY — a reviewer's comment,
      a senior's ruling, a rule citation, an abstractor's stated reason. Never
@@ -428,9 +456,11 @@
   --color-scan-ink: #2a2a2e; /* scanned page — mono, leading 2.1 */
   --color-scan-ink-degraded: #33333a; /* degraded scan, sits under --filter-scan-degraded */
 
-  /* A heavier action border. The export uses it on a violet callout whose text
-     stays --color-action; it sits between action (#4a2fae) and action-ink. */
-  --color-action-border-strong: #5a3fa0;
+  /* A heavier action border. The export uses it on a navy callout whose text
+     stays --color-action; it sits between action (#2e4272) and action-ink.
+     RE-DERIVED 2026-07-28 for the warm-archival revision — same "between the
+     two" relationship, no design counterpart. */
+  --color-action-border-strong: #273965;
 
   /* ── leading ──────────────────────────────────────────────────────────── */
   /*

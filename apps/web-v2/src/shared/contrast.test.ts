@@ -137,25 +137,42 @@ describe("every state ink clears AA on its own tint", () => {
   }
 });
 
-describe("the base state colours are NOT safe as text on their own tints", () => {
+describe("base state colours: AA legibility is no longer why -ink is used everywhere", () => {
   /**
-   * Pins the reason `Chip` and `Eyebrow` use `-ink` rather than the base. If a
-   * future edit "simplifies" them back to `text-state-attend`, this test states
-   * plainly why that is wrong — it is a note that executes.
+   * REWRITTEN 2026-07-28 for the warm-archival palette. The old cool/violet
+   * palette made this block's premise literally true everywhere it checked:
+   * every base state colour failed AA as text on its own tint / the app
+   * background, so `Chip`/`Eyebrow` used the `-ink` variant purely to stay
+   * legible. The new navy/oxblood/ochre family is not uniformly less legible
+   * — `--color-state-attend` (#8a6413) now clears AA on its own tint
+   * (`--color-state-attend-surface`), and `--color-state-settled` (#2f6d46)
+   * now clears AA on the app background. Measured:
+   *
+   *   attend  on attend-surface  4.63:1  <- now clears AA (was a failure)
+   *   attend  on app background  4.35:1  <- still fails AA (unchanged)
+   *   settled on app background  5.01:1  <- now clears AA (was a failure)
+   *
+   * `Chip` and `Eyebrow` still use `-ink` for every state, and that is
+   * correct — but it is now a DELIBERATE STATE-TEXT HIERARCHY choice (one
+   * consistent "text tone" per state, distinct from the "accent tone" used
+   * for borders/icons, across all four states alike) rather than a legibility
+   * floor. This block pins the new, mixed reality instead of a blanket "base
+   * is never safe" claim that would now be false for two of these three
+   * pairings.
    */
-  test("base attend on attend-surface is below AA — use --color-state-attend-ink", () => {
-    expect(ratio(token("color-state-attend"), token("color-state-attend-surface")))
-      .toBeLessThan(AA_NORMAL);
+  test("base attend on attend-surface now clears AA — -ink there is a hierarchy choice, not a legibility floor", () => {
+    const r = ratio(token("color-state-attend"), token("color-state-attend-surface"));
+    expect(r, `${r.toFixed(2)}:1`).toBeGreaterThanOrEqual(AA_NORMAL);
   });
 
-  test("base attend on the app background is below AA", () => {
-    expect(ratio(token("color-state-attend"), token("color-surface-app")))
-      .toBeLessThan(AA_NORMAL);
+  test("base attend on the app background is still below AA", () => {
+    const r = ratio(token("color-state-attend"), token("color-surface-app"));
+    expect(r, `${r.toFixed(2)}:1`).toBeLessThan(AA_NORMAL);
   });
 
-  test("base settled on the app background is below AA", () => {
-    expect(ratio(token("color-state-settled"), token("color-surface-app")))
-      .toBeLessThan(AA_NORMAL);
+  test("base settled on the app background now clears AA — -ink there is a hierarchy choice, not a legibility floor", () => {
+    const r = ratio(token("color-state-settled"), token("color-surface-app"));
+    expect(r, `${r.toFixed(2)}:1`).toBeGreaterThanOrEqual(AA_NORMAL);
   });
 });
 
