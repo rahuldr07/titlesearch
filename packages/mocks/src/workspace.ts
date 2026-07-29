@@ -202,7 +202,12 @@ const profile: MeProfileResponse = {
  * unchanged.
  */
 const PREFS_KEY = "titlepipe.mock.preferences";
-const DEFAULT_PREFS: Preferences = { nav_collapsed: false, reduced_motion: false, default_zoom: 1 };
+const DEFAULT_PREFS: Preferences = {
+  nav_collapsed: false,
+  reduced_motion: false,
+  default_zoom: 1,
+  theme: "titlepipe",
+};
 
 function loadPrefs(): Preferences {
   try {

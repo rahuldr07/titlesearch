@@ -52,6 +52,7 @@ export function useNavCollapsed(enabled: boolean): [boolean, () => void] {
             nav_collapsed: body.nav_collapsed ?? previous.preferences.nav_collapsed,
             reduced_motion: body.reduced_motion ?? previous.preferences.reduced_motion,
             default_zoom: body.default_zoom ?? previous.preferences.default_zoom,
+            theme: body.theme ?? previous.preferences.theme,
           },
         });
       }

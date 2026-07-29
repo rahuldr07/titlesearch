@@ -222,6 +222,8 @@ export const Preferences = z.object({
   nav_collapsed: z.boolean(),
   reduced_motion: z.boolean(),
   default_zoom: z.number(),
+  /** Colour theme. Server-side for the same reason as every other preference here. */
+  theme: z.enum(["titlepipe", "mocha"]).default("titlepipe"),
 });
 export type Preferences = z.infer<typeof Preferences>;
 
