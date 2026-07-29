@@ -22,21 +22,26 @@ export const rootRoute = createRootRoute({
   component: () => (
     <>
       <GlobalKeys />
-      <AppChrome />
       {/*
+        THE RAIL SITS BESIDE THE CONTENT, not above it (§11). AppChrome renders
+        the left sidebar, or nothing on the capture seat — where a null sibling
+        just leaves `main` as the sole flex child at full width, which is the
+        structural-blindness rule made layout.
+
         THE SHELL DOES NOT IMPOSE A READING COLUMN. It was capped at 800px —
         `max-w-400` against a 2px spacing base — which starved every wide screen
         in the app regardless of window size. Overview's seven-stage board
         overflowed that cap by 426px and hid two whole stages behind a scroll
-        with no affordance, on every monitor. Review's three panes had 764px
-        between them.
-        A screen that wants a narrow measure sets its own; the shell's job is
-        the gutter and the maximum, and the maximum belongs to the widest screen
-        rather than the narrowest.
+        with no affordance. A screen that wants a narrow measure sets its own;
+        the shell's job is the gutter and the maximum, and the maximum belongs
+        to the widest screen rather than the narrowest.
       */}
-      <main className="mx-auto max-w-720 p-9">
-        <Outlet />
-      </main>
+      <div className="flex min-h-screen">
+        <AppChrome />
+        <main className="mx-auto min-w-0 max-w-720 flex-1 p-9">
+          <Outlet />
+        </main>
+      </div>
     </>
   ),
   notFoundComponent: NotFound,

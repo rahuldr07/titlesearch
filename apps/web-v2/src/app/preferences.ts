@@ -26,7 +26,17 @@ const preferencesQuery = queryOptions({
  * never happened. A fold is not a decision — it is a view, the local one is
  * already correct, and waiting a round trip to move a panel is just latency.
  */
-export function useNavCollapsed(enabled: boolean): [boolean, () => void] {
+export function useNavCollapsed(
+  enabled: boolean,
+  /*
+   * The value shown BEFORE the preference has loaded — the first-mount default.
+   * The Review screen passes `true` so the rail starts collapsed there (that
+   * screen needs every pixel, §11). Once the preference resolves it wins, and
+   * an explicit toggle wins from then on: the route default only ever governs
+   * the very first paint, never overriding a choice the user actually made.
+   */
+  routeDefault = false,
+): [boolean, () => void] {
   const client = useQueryClient();
   /*
    * DISABLED ON THE CAPTURE SEAT. `blind-blindness.spec` #1 asserts the typist
@@ -37,7 +47,7 @@ export function useNavCollapsed(enabled: boolean): [boolean, () => void] {
    * the screen draws.
    */
   const { data } = useQuery({ ...preferencesQuery, enabled });
-  const collapsed = data?.preferences.nav_collapsed ?? false;
+  const collapsed = data?.preferences.nav_collapsed ?? routeDefault;
 
   const save = useMutation({
     mutationFn: (body: UpdatePreferencesRequest) =>
