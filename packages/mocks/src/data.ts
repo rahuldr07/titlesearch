@@ -844,13 +844,20 @@ export const demoTimelines: Record<string, OrderTimelineEvent[]> = {
 
 /**
  * Source page text for ord_demo_1. Clearly synthetic, and deliberately
- * consistent with `demoFields`: every page here is one a field cites, so the
- * provenance on the review screen resolves to real text rather than to a page
- * that says nothing about the value claiming it.
+ * consistent with `demoFields`: every CITED page here is one a field cites, so
+ * the provenance on the review screen resolves to real text rather than to a
+ * page that says nothing about the value claiming it.
+ *
+ * `total: 64` and the ONE extra entry (n:18, `read_in_full: false`) exist for
+ * the coverage spine (`CoverageSpine.tsx`): a fixture that only ever contained
+ * cited, fully-read pages could not exercise "present but not fully read" as
+ * distinct from "absent from the array entirely" — the spine's whole reason
+ * for existing is telling those two apart. 64 also matches the design's own
+ * demo package size (design-export "PAGES READ IN FULL · 11 OF 64").
  */
 export const demoPages: Record<string, { total: number; pages: { n: number; read_in_full: boolean; kind: string; lines: string[]; degraded: boolean }[] }> = {
   ord_demo_1: {
-    total: 38,
+    total: 64,
     pages: [
       { n: 6, read_in_full: true, degraded: false, kind: "WARRANTY DEED", lines: [
         "OFFICIAL RECORDS · CLAYTON CO. GA",
@@ -890,6 +897,10 @@ export const demoPages: Record<string, { total: number; pages: { n: number; read
         "($1ß6,097.00)",
         "[ fax artefact over the numerals — the words line above is legible ]",
         "This debt is evidenced by Borrower's note dated the same date.",
+      ] },
+      { n: 18, read_in_full: false, degraded: false, kind: "PLAT REFERENCE — COVER SHEET", lines: [
+        "Cover sheet for the plat referenced in Exhibit A. The classifier",
+        "found nothing here the report needs, so no reader read it in full.",
       ] },
       { n: 22, read_in_full: true, degraded: false, kind: "CLAYTON COUNTY TAX COMMISSIONER", lines: [
         "PARCEL ........... 13-0044-0018",

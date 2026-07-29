@@ -15,6 +15,7 @@ import { type Pinned } from "./DecisionPanel";
 import { DecisionColumn } from "./DecisionColumn";
 import { FieldList } from "./FieldList";
 import { CallBackSheet } from "./CallBackSheet";
+import { OrderCoverageSpine } from "./CoverageSpine";
 import { DocumentColumn } from "./DocumentColumn";
 import { ReviewHeader } from "./ReviewHeader";
 import { type ReviewMode } from "./ReviewEditors";
@@ -109,6 +110,7 @@ export function ReviewScreen() {
       <div className="grid items-start gap-6 xl:grid-cols-2">
         <div className="flex flex-col gap-6">
           <DocumentColumn orderId={orderId} field={selected} pinned={pinned?.reading ?? null} />
+          <OrderCoverageSpine orderId={orderId} />
           <OrderRail orderId={orderId} />
         </div>
 

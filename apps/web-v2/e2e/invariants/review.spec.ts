@@ -148,3 +148,15 @@ test("reader B line pins on the page from its coordinates", async ({
   await page.getByText("llmwhisperer-hq").first().click();
   await expect(page.getByText(/READER B LINE — llmwhisperer-hq/)).toBeVisible();
 });
+
+// Task 6 — rule: the coverage spine covers the WHOLE package (`total_pages`),
+// never just the pages a reader typed. `ord_demo_1`'s fixture ships 64 total
+// pages and served text for only a handful of them; the spine must still
+// draw a cell for every package page, and the summary must cite the total.
+test("coverage spine renders one cell per package page, not just read ones", async ({
+  page,
+}) => {
+  await go(page);
+  await expect(page.getByText(/Coverage · all 64 pages/)).toBeVisible();
+  await expect(page.getByTestId("coverage-cell")).toHaveCount(64);
+});
