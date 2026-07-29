@@ -80,7 +80,7 @@ export function FieldsColumn({
       />
 
       <FieldList fields={fields} selectedPath={selected.path} onSelect={onSelect} />
-      <FinalizeBar fields={fields} />
+      <FinalizeBar fields={fields} signoffLines={signoffLines} />
       <ReportPane
         fields={fields}
         signoffLines={signoffLines}

@@ -24,8 +24,8 @@ import { Eyebrow } from "../../shared/ui/Eyebrow";
  * own refusal to build a hard gate: blocking retirement on a preview would
  * mean a broken rule cannot be pulled when the preview service is down.
  * Instead the screen says the effect is unknown and the record shows it went
- * out without one — the operator keeps the power and the audit keeps the
- * receipt.
+ * out without a preview — the operator keeps the power and the audit keeps
+ * the receipt.
  *
  * FORWARD-ONLY, SAME AS CONFIRMATION. Delivered reports and in-flight orders
  * are untouched. Symmetry matters here: if retirement were retroactive and
@@ -46,7 +46,7 @@ export function RetireConfirm({ onCancel }: { onCancel: () => void }) {
       <p data-testid="retire-preview" className="mt-4 text-sm leading-open text-ink-primary">
         No retire preview has been run for this rule, so what reverts is
         unknown. Retiring is still permitted — the record will show it went
-        out without one.
+        out without a preview.
       </p>
 
       <p className="mt-5 text-xs leading-body text-ink-muted">

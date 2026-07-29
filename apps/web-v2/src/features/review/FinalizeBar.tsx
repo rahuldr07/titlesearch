@@ -1,4 +1,4 @@
-import type { Field } from "@titlepipe/contract";
+import type { Field, OrderSignoffLine } from "@titlepipe/contract";
 import { Card, CardBody } from "../../shared/ui/Card";
 import { Button } from "../../shared/ui/Button";
 
@@ -16,35 +16,52 @@ const DECISION_STATES = new Set<Field["state"]>([
  * because finalizing is an order-level act that follows every field decision
  * rather than belonging to any one of them.
  *
- * THE NOTE NAMES WHAT IS LEFT, NEVER A READINESS VERDICT. `needTotal` and
- * `answered` are the same tally `DecisionDock` already shows — filtered
- * straight off `Field.state`, nothing re-derived — because the two surfaces
- * would drift apart if this one invented its own count of "done".
+ * THE GATE IS TWO THINGS, NOT ONE — `finalizeEnabled = allAnswered && openNo
+ * === 0` (design `:3227`). Watching only `Field.state` let this bar read "All
+ * decisions answered" while an unresolved NO-disclosure card sat right above
+ * the report; the design blocks on both counts for the same reason, and the
+ * note names both when either is nonzero, never just the decisions.
+ *
+ * EVERY NO LINE COUNTS AS OPEN. `NoDisclosureCards` has no "resolved" render —
+ * the design's accept/escalate resolution has no server-side counterpart, so
+ * every NO line this screen can ever show is, honestly, still open. `pendingCount`
+ * is the same tally `DecisionDock` shows, filtered straight off `Field.state`,
+ * nothing re-derived — the two surfaces would drift apart if this one invented
+ * its own count of "done".
  *
  * CONTRACT GAP: no finalize or deliver endpoint exists — `GET /api/deliveries`
  * is the only delivery resource in the contract, and there is no
  * `POST /api/orders/{id}/finalize`. The button is drawn as the design draws
- * it and stays disabled; this is not a decision to withhold finalize, it is
- * the absence of anywhere to send it.
+ * it and stays disabled regardless of readiness; this is not a decision to
+ * withhold finalize, it is the absence of anywhere to send it.
  */
-export function FinalizeBar({ fields }: { fields: readonly Field[] }) {
+export function FinalizeBar({
+  fields,
+  signoffLines,
+}: {
+  fields: readonly Field[];
+  signoffLines: readonly OrderSignoffLine[];
+}) {
   const decisions = fields.filter((field) => DECISION_STATES.has(field.state));
-  const needTotal = decisions.length;
-  const answered = decisions.filter((field) => field.state !== "needs_review").length;
-  const remaining = needTotal - answered;
+  const pendingCount = decisions.filter((field) => field.state === "needs_review").length;
+  const openNo = signoffLines.filter((line) => line.answer === "NO").length;
+  const ready = pendingCount === 0 && openNo === 0;
 
-  const note =
-    needTotal === 0
-      ? "No decisions on this order."
-      : remaining === 0
-        ? `All ${needTotal} decisions answered. The report reflects your calls.`
-        : `${remaining} of ${needTotal} decisions still open.`;
+  const parts: string[] = [];
+  if (pendingCount > 0) parts.push(`${pendingCount} decision${pendingCount === 1 ? "" : "s"}`);
+  if (openNo > 0) parts.push(`${openNo} NO disclosure${openNo === 1 ? "" : "s"}`);
+
+  const note = ready
+    ? "All decisions and disclosures resolved. Ready to render and deliver."
+    : `${parts.join(" and ")} still need you. Finalize stays disabled until each is resolved.`;
 
   return (
     <Card data-testid="finalize-bar">
       <CardBody className="flex flex-wrap items-center gap-6">
         <span className="text-sm font-semibold text-ink-primary">Finalize</span>
-        <span className="flex-1 text-xs text-ink-secondary">{note}</span>
+        <span data-testid="finalize-note" className="flex-1 text-xs text-ink-secondary">
+          {note}
+        </span>
         <Button size="md" data-testid="finalize-order-btn" disabled>
           Finalize order
         </Button>
