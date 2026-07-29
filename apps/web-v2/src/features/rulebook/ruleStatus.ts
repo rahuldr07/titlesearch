@@ -15,10 +15,20 @@ import type { RuleStatus } from "@titlepipe/contract";
  * RETIRED IS NEUTRAL, NOT HALT. Retirement is the correct, ordinary end of a
  * rule's life, not a failure; colouring it red would make the book's own
  * archive read as a wall of problems.
+ *
+ * THE CHIP READS BARE "PENDING" — THE LONG SENTENCE LIVES ELSEWHERE. Every
+ * status badge the 2026-07-28 design draws (the row chip, the detail header,
+ * the lifecycle rail) binds the same one-word status a live/retired rule gets.
+ * The explanatory sentence — "PENDING — AFFECTS NOTHING YET" — belongs to a
+ * different element the design draws once: the amber banner on the new-rule
+ * form (`NewRuleForm.tsx`), which already carries it verbatim as a literal
+ * string, not through this label. Putting the long sentence here as well would
+ * put it on the lifecycle rail and the row chip too, which the design never
+ * does — this module's job is the chip, not the banner.
  */
 const STATUS = {
   live: { tone: "settled", label: "LIVE" },
-  pending: { tone: "attend", label: "PENDING — CANNOT AFFECT THE PIPELINE" },
+  pending: { tone: "attend", label: "PENDING" },
   retired: { tone: "neutral", label: "RETIRED" },
 } as const satisfies Record<RuleStatus, { tone: "settled" | "attend" | "neutral"; label: string }>;
 

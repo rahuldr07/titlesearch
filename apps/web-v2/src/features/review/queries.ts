@@ -3,6 +3,7 @@ import {
   OrderFieldsResponse,
   OrderTimelineResponse,
   OrderPagesResponse,
+  OrderSignoffResponse,
   QueueNextResponse,
 } from "@titlepipe/contract";
 import { get, post, type Validator } from "../../shared/api";
@@ -39,6 +40,22 @@ export function pagesQuery(orderId: string) {
   return queryOptions({
     queryKey: ["orders", orderId, "pages"],
     queryFn: () => get(`/api/orders/${orderId}/pages`, OrderPagesResponse),
+  });
+}
+
+/**
+ * The sign-off record for THIS order — read here for the "abstractor said NO"
+ * disclosure cards (`NoDisclosureCards`). `features/questions` reads the same
+ * endpoint for the intake screen; §7 forbids importing across features, so
+ * this is a second small `queryOptions` wrapper over the same contract shape
+ * and the same URL rather than a shared import — the duplication is the
+ * escape hatch the rule intends, not a drift risk, since both wrappers parse
+ * through one contract schema.
+ */
+export function orderSignoffQuery(orderId: string) {
+  return queryOptions({
+    queryKey: ["orders", orderId, "signoff"],
+    queryFn: () => get(`/api/orders/${orderId}/signoff`, OrderSignoffResponse),
   });
 }
 

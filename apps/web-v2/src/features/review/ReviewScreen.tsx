@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { Field } from "@titlepipe/contract";
 import {
   orderFieldsQuery,
+  orderSignoffQuery,
   useConfirmField,
   useCorrectField,
   useEscalateField,
@@ -12,11 +13,8 @@ import {
 } from "./queries";
 import { readingsOf } from "./fieldLabel";
 import { type Pinned } from "./DecisionPanel";
-import { DecisionColumn } from "./DecisionColumn";
-import { DecisionDock } from "./DecisionDock";
 import { EvidenceColumn } from "./EvidenceColumn";
-import { FieldList } from "./FieldList";
-import { ReportPane } from "./ReportPane";
+import { FieldsColumn } from "./FieldsColumn";
 import { ReviewHeader } from "./ReviewHeader";
 import { type ReviewMode } from "./ReviewEditors";
 import { useReviewKeys } from "./useReviewKeys";
@@ -37,6 +35,10 @@ export function ReviewScreen() {
   const { orderId } = useParams({ from: "/orders/$orderId/review" });
   const { field: fieldParam } = useSearch({ from: "/orders/$orderId/review" });
   const { data, isPending, isError } = useQuery(orderFieldsQuery(orderId));
+  // Supplementary to the fields above — a pending or failed fetch just means
+  // no disclosure cards render yet, never a false claim about what the
+  // abstractor answered.
+  const signoff = useQuery(orderSignoffQuery(orderId));
   const [mode, setMode] = useState<ReviewMode>("idle");
   const [pinned, setPinned] = useState<Pinned | null>(null);
   const [seed, setSeed] = useState<string | null>(null);
@@ -112,37 +114,33 @@ export function ReviewScreen() {
       <div className="grid items-start gap-6 xl:grid-cols-2">
         <EvidenceColumn orderId={orderId} field={selected} pinnedReading={pinned?.reading ?? null} />
 
-        <div className="flex flex-col gap-6">
-          <DecisionDock fields={fields} selectedPath={selected.path} />
-          <DecisionColumn
-            field={selected}
-            pinned={pinned}
-            mode={mode}
-            seed={editorSeed}
-            machineValue={selected.value ?? ""}
-            passPending={pass.isPending}
-            serverNote={confirm.error instanceof ApiError ? confirm.error.message : null}
-            blankNote={blankNote}
-            onPin={setPinned}
-            onAdopt={adopt}
-            onConfirm={submitConfirm}
-            onCorrect={openCorrect}
-            onMode={setMode}
-            onCorrectSubmit={(value, reason) =>
-              correct.mutate({ fieldId: selected.id, value, reason }, { onSuccess: advance })
-            }
-            onEscalateSubmit={(question) =>
-              escalate.mutate({ fieldId: selected.id, question }, { onSuccess: advance })
-            }
-            onExcludeSubmit={(reason) =>
-              exclude.mutate({ fieldId: selected.id, reason }, { onSuccess: advance })
-            }
-            onPassSubmit={(reason) => pass.mutate(reason, { onSuccess: () => setMode("idle") })}
-          />
-
-          <FieldList fields={fields} selectedPath={selected.path} onSelect={reselect} />
-          <ReportPane fields={fields} selectedPath={selected.path} onSelect={reselect} />
-        </div>
+        <FieldsColumn
+          fields={fields}
+          signoffLines={signoff.data?.lines ?? []}
+          selected={selected}
+          pinned={pinned}
+          mode={mode}
+          seed={editorSeed}
+          passPending={pass.isPending}
+          serverNote={confirm.error instanceof ApiError ? confirm.error.message : null}
+          blankNote={blankNote}
+          onPin={setPinned}
+          onAdopt={adopt}
+          onConfirm={submitConfirm}
+          onCorrect={openCorrect}
+          onMode={setMode}
+          onCorrectSubmit={(value, reason) =>
+            correct.mutate({ fieldId: selected.id, value, reason }, { onSuccess: advance })
+          }
+          onEscalateSubmit={(question) =>
+            escalate.mutate({ fieldId: selected.id, question }, { onSuccess: advance })
+          }
+          onExcludeSubmit={(reason) =>
+            exclude.mutate({ fieldId: selected.id, reason }, { onSuccess: advance })
+          }
+          onPassSubmit={(reason) => pass.mutate(reason, { onSuccess: () => setMode("idle") })}
+          onSelect={reselect}
+        />
       </div>
     </div>
   );

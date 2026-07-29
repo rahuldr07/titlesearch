@@ -230,6 +230,18 @@ function savePrefs(): void {
   }
 }
 
+/**
+ * Line 11 ships answered NO with its comment — the one real example of a
+ * disclosure the review screen's "abstractor said NO" cards
+ * (`features/review/NoDisclosureCards.tsx`) read. Every other line stays
+ * unanswered; a NO with no counterpart YES/N/A on the same order would be an
+ * odd fixture, but the sign-off endpoint has no submit yet (Q13), so this is
+ * the only way any consumer of `GET /api/orders/{id}/signoff` ever sees a NO.
+ */
+const NO_LINE = 11;
+const NO_COMMENT =
+  "No plat or survey was in the package — only prior deed exhibits could be checked for easement language.";
+
 function signoffFor(orderId: string): OrderSignoffResponse {
   return {
     order_id: orderId,
@@ -242,8 +254,8 @@ function signoffFor(orderId: string): OrderSignoffResponse {
       n,
       label,
       group,
-      answer: null,
-      comment: null,
+      answer: n === NO_LINE ? "NO" : null,
+      comment: n === NO_LINE ? NO_COMMENT : null,
       comment_required: true,
       machine_check: check,
       period_scoped: n === 1 || n === 2,

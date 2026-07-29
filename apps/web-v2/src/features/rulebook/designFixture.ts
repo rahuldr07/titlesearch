@@ -3,10 +3,10 @@
  *
  * CONTRACT GAP: `Rule` in @titlepipe/contract carries id, code, text, origin,
  * status, jurisdiction_scope, version, confirmed_by, source_doc_ref — and
- * nothing else. The design draws five things around a rule that no endpoint
- * returns: the golden-set impact preview, the retire-impact preview, the list
- * of delivered reports that used the rule, the immutable version log, and the
- * id of a conflicting counterpart. There is no endpoint for any of them.
+ * nothing else. The design draws four things around a rule that no endpoint
+ * returns: the golden-set impact preview, the list of delivered reports that
+ * used the rule, the immutable version log, and the id of a conflicting
+ * counterpart. There is no endpoint for any of them.
  *
  * They are rendered from these constants so the panels have their real shape,
  * and every one of them ships the design's own "not wired" caption on screen.
@@ -14,6 +14,13 @@
  * from `usedByCaption`, and it exists so nobody reads a fixture as a query.
  * A screen that shows an invented count without saying so is how an invented
  * count reaches a delivered report (principle 6).
+ *
+ * NO EQUIVALENT FIXTURE FOR THE RETIRE-IMPACT PREVIEW: the design draws a
+ * `hasRetireImpact` state (numbers) beside a `noRetireImpact` one ("no preview
+ * has been run"), but nothing on the wire can ever put a real rule in the
+ * first branch — there is no run-preview endpoint and no impact field on
+ * `Rule`. `RetireConfirm.tsx` renders the absence state unconditionally rather
+ * than carry a fixture for a branch no real rule can reach.
  */
 
 /** The caption every unwired panel carries. Design copy, one source. */
@@ -36,14 +43,6 @@ export const IMPACT = {
     { order: "gold-047", detail: "Life estate, not a fractional fee — rule mis-fires." },
     { order: "gold-052", detail: "Full 100% conveyance wrongly flagged as partial." },
   ] as const satisfies readonly ImpactCase[],
-} as const;
-
-/** Retire impact preview · what reverts — the design's R-0142 numbers. */
-export const RETIRE_IMPACT = {
-  total: 50,
-  reverts: 41,
-  detail:
-    "41 of 50 golden orders currently list an unreconveyed deed of trust as an open mortgage. Retiring this reverts them to silent on that instrument.",
 } as const;
 
 /** Delivered reports that used this rule. Three illustrative order numbers. */

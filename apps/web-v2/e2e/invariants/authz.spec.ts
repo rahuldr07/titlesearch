@@ -70,12 +70,19 @@ test("the engineer gate's confirm affordance exists only for its holders", async
   await expect(page.getByTestId("rule-confirm-btn")).toBeVisible();
   // a reviewer sees the PENDING chip but no confirm button — the affordance
   // is absent, not disabled
+  //
+  // COPY FIX 2026-07-29: the design's chip is the bare word "PENDING" — every
+  // status badge it draws (row, detail header, lifecycle rail) is one word.
+  // The old assertion here (`PENDING — CANNOT AFFECT THE PIPELINE`) checked
+  // ruleStatus.ts's stale pre-revision label; that sentence belongs only to
+  // the new-rule-form banner (`NewRuleForm.tsx`, "PENDING — AFFECTS NOTHING
+  // YET"), a different element entirely. This is a copy correction against the
+  // design, not a weakened assertion — the chip and the absent confirm button
+  // are still both checked.
   await page.getByTestId("account-menu").click();
   await page.getByTestId("role-reviewer").click();
   await page.keyboard.press("Escape");
-  await expect(page.getByTestId("rule-detail-DRAFT-HOA-AGE")).toContainText(
-    "PENDING — CANNOT AFFECT THE PIPELINE",
-  );
+  await expect(page.getByTestId("rule-detail-DRAFT-HOA-AGE")).toContainText("PENDING");
   await expect(page.getByTestId("rule-confirm-btn")).toHaveCount(0);
   // an engineer gets it back
   await page.getByTestId("account-menu").click();
