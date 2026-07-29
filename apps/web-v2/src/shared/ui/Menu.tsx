@@ -67,11 +67,13 @@ export function MenuItem({
   onClick,
   className,
   children,
+  ...rest
 }: {
   tone?: "neutral" | "halt";
   onClick?: () => void;
   className?: string;
   children: ReactNode;
+  "data-testid"?: string;
 }) {
   return (
     <BaseMenu.Item
@@ -83,6 +85,7 @@ export function MenuItem({
           "font-semibold text-state-halt-ink data-highlighted:bg-state-halt-surface",
         className,
       )}
+      {...rest}
     >
       {children}
     </BaseMenu.Item>
@@ -91,6 +94,19 @@ export function MenuItem({
 
 export function MenuSeparator() {
   return <BaseMenu.Separator className="mx-3 my-2 h-px bg-line-subtle" />;
+}
+
+/**
+ * Groups a `MenuGroupLabel` with the items it labels. Base UI's `Menu.GroupLabel`
+ * reads its id out of `Menu.Group`'s context (`useMenuGroupRootContext`) and
+ * THROWS synchronously if that context is missing — not a warning, a render
+ * throw with no ancestor error boundary to catch it here, which unmounts the
+ * whole chrome the instant the popup opens. `Menu.Group` is what supplies the
+ * context; every `MenuGroupLabel` below must be wrapped in one, never used as a
+ * bare section heading.
+ */
+export function MenuGroup({ children }: { children: ReactNode }) {
+  return <BaseMenu.Group>{children}</BaseMenu.Group>;
 }
 
 export function MenuGroupLabel({ children }: { children: ReactNode }) {

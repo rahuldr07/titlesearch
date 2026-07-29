@@ -59,15 +59,7 @@ test("a senior may resolve; an ops role may not — same endpoint, same table", 
 
 
 // TODO(rebuild) [INVARIANT] — rule: a role-locked affordance is ABSENT, not disabled.
-// FIXME(shadcn-migration): the RULE holds and the assertions below are correct.
-// The role switch runs through the chrome's account menu, and that menu is
-// broken: clicking its Base UI `Menu.Trigger` unmounts the whole chrome — the
-// trigger is wired (`aria-haspopup="menu"`, `aria-expanded="false"`) and no
-// page error surfaces, so a render throw is being swallowed. The menu is
-// replaced by shadcn's DropdownMenu in the kit migration; un-fixme this then.
-// There is no other UI for switching the previewed role, so the test cannot be
-// re-pointed around it.
-test.fixme("the engineer gate's confirm affordance exists only for its holders", async ({
+test("the engineer gate's confirm affordance exists only for its holders", async ({
   page,
 }) => {
   await page.goto("/rulebook");

@@ -1,6 +1,7 @@
 import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   PreferencesResponse,
+  type Preferences,
   type UpdatePreferencesRequest,
 } from "@titlepipe/contract";
 import { get, patch } from "../shared/api";
@@ -79,4 +80,48 @@ export function useNavCollapsed(
   });
 
   return [collapsed, () => save.mutate({ nav_collapsed: !collapsed })];
+}
+
+/**
+ * THE THEME PREFERENCE — same server-side rule as the collapse (C16, §9.11),
+ * same optimistic justification: which of two token blocks paints is a VIEW,
+ * not a field decision, so there is no "decision that never happened" to show
+ * early. `enabled` mirrors `useNavCollapsed`'s: the capture seat gets no theme
+ * fetch either, because the zero-GET rule (`blind-blindness.spec`) doesn't
+ * carve out an exception for preferences that happen to be cosmetic.
+ */
+export function useTheme(enabled: boolean): [Preferences["theme"], () => void] {
+  const client = useQueryClient();
+  const { data } = useQuery({ ...preferencesQuery, enabled });
+  const theme = data?.preferences.theme ?? "titlepipe";
+
+  const save = useMutation({
+    mutationFn: (body: UpdatePreferencesRequest) =>
+      patch("/api/me/preferences", PreferencesResponse, body),
+    onMutate: (body) => {
+      const previous = client.getQueryData(preferencesQuery.queryKey);
+      if (previous !== undefined) {
+        client.setQueryData(preferencesQuery.queryKey, {
+          preferences: {
+            nav_collapsed: body.nav_collapsed ?? previous.preferences.nav_collapsed,
+            reduced_motion: body.reduced_motion ?? previous.preferences.reduced_motion,
+            default_zoom: body.default_zoom ?? previous.preferences.default_zoom,
+            theme: body.theme ?? previous.preferences.theme,
+          },
+        });
+      }
+      return { previous };
+    },
+    onError: (_error, _body, context) => {
+      if (context?.previous !== undefined) {
+        client.setQueryData(preferencesQuery.queryKey, context.previous);
+      }
+    },
+    onSettled: () => client.invalidateQueries({ queryKey: preferencesQuery.queryKey }),
+  });
+
+  return [
+    theme,
+    () => save.mutate({ theme: theme === "titlepipe" ? "mocha" : "titlepipe" }),
+  ];
 }

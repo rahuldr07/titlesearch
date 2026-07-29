@@ -170,11 +170,16 @@ screens whose access is *restricted*, not every screen that exists. Reading a
 missing row as a refusal hides the entire order flow from everyone and silently
 kills the keyboard chords.
 
-**The account menu is broken.** Clicking Base UI's `Menu.Trigger` unmounts the
-whole chrome. The trigger is wired correctly (`aria-haspopup="menu"`,
-`aria-expanded="false"`) and no page error surfaces, so a render throw is being
-swallowed. One test is `fixme`'d on it — `authz.spec.ts`, the engineer gate.
-**Fix this when you replace the menu component.**
+**FIXED (task 5): the account menu's `MenuGroupLabel` needs a `MenuGroup`
+ancestor.** Clicking Base UI's `Menu.Trigger` used to unmount the whole chrome.
+The actual throw (invisible until the console was checked) was `Base UI:
+MenuGroupContext is missing` — `Menu.GroupLabel` reads its id off
+`Menu.Group`'s context and throws synchronously without it, and nothing here
+had an error boundary to catch it. `AccountMenu.tsx` used `MenuGroupLabel` as a
+bare section heading; the fix wraps each label with its items in the kit's new
+`MenuGroup` (`src/shared/ui/Menu.tsx`), fixed in place — no library swap
+needed. Both tests that were `fixme`'d on it (`authz.spec.ts`'s engineer gate,
+`sidebar.spec.ts`'s door-absence test) are un-`fixme`'d and pass.
 
 **`compare.mjs` and Git Bash.** Git Bash rewrites a leading-slash argument into a
 Windows path (`/queue` → `C:/Program Files/Git/queue`). The helper recovers from

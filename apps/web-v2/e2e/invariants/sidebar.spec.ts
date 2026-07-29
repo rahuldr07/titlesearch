@@ -53,16 +53,7 @@ test("attention rides the doors as dots, never counts", async ({ page }) => {
 // Phase-0-deleted — so it is re-pointed at doors a reviewer genuinely lacks and
 // that still exist as routes: `/ingest` (ops+admin) and `/escalations`
 // (senior+admin). The rule and its assertions are untouched.
-//
-// FIXME(task-5): the only UI for switching the previewed role is the chrome's
-// account menu, and that Base UI menu is broken — clicking its trigger unmounts
-// the chrome (a swallowed render throw). This is the SAME dependency that keeps
-// authz.spec's twin invariant (line 70) `test.fixme`; there is no other way to
-// change the client role, so this cannot be re-pointed around it. Un-fixme this
-// together with authz.spec once Task 5 replaces the menu. The rail already
-// implements absence correctly (`doorsFor` filters by role); only the driver is
-// blocked. NOT weakened — deferred exactly as its authz.spec twin is.
-test.fixme("doors outside the role's world are ABSENT, not dimmed", async ({ page }) => {
+test("doors outside the role's world are ABSENT, not dimmed", async ({ page }) => {
   await page.goto("/queue");
   await page.getByTestId("account-menu").click();
   await page.getByTestId("role-reviewer").click();

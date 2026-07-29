@@ -1,7 +1,15 @@
 import { useNavigate } from "@tanstack/react-router";
-import { ROLES, type Role } from "@titlepipe/contract";
+import { ROLES, type Preferences, type Role } from "@titlepipe/contract";
 import { useSession } from "../shared/session";
-import { Menu, MenuGroupLabel, MenuItem, MenuPopup, MenuSeparator, MenuTrigger } from "../shared/ui/Menu";
+import {
+  Menu,
+  MenuGroup,
+  MenuGroupLabel,
+  MenuItem,
+  MenuPopup,
+  MenuSeparator,
+  MenuTrigger,
+} from "../shared/ui/Menu";
 import { cn } from "../shared/ui/classNames";
 
 const ADMIN = [
@@ -24,7 +32,13 @@ const ADMIN = [
  * The signer's name is READ-ONLY, from the session. Every consequential write
  * in this product is signed, and a name the client can type is not a signature.
  */
-export function AccountMenu() {
+export function AccountMenu({
+  theme,
+  onToggleTheme,
+}: {
+  theme: Preferences["theme"];
+  onToggleTheme: () => void;
+}) {
   const navigate = useNavigate();
   const role = useSession((s) => s.role);
   const actor = useSession((s) => s.actor);
@@ -60,39 +74,48 @@ export function AccountMenu() {
         }
       />
       <MenuPopup className="w-72">
-        <MenuGroupLabel>Account</MenuGroupLabel>
-        <MenuItem onClick={go("/profile")}>Profile</MenuItem>
-        <MenuSeparator />
-        <MenuGroupLabel>Admin</MenuGroupLabel>
-        {ADMIN.map((item) => (
-          <MenuItem key={item.path} onClick={go(item.path)}>
-            {item.label}
+        <MenuGroup>
+          <MenuGroupLabel>Account</MenuGroupLabel>
+          <MenuItem onClick={go("/profile")}>Profile</MenuItem>
+          <MenuItem data-testid="theme-toggle" onClick={onToggleTheme}>
+            {theme === "mocha" ? "Switch to TitlePipe theme" : "Switch to Mocha theme"}
           </MenuItem>
-        ))}
+        </MenuGroup>
         <MenuSeparator />
-        <MenuGroupLabel>Acting as</MenuGroupLabel>
-        <p className="mx-3 mb-3 rounded-3 border border-state-attend-border bg-state-attend-surface px-4 py-2 text-micro leading-body text-state-attend-ink">
-          Preview control — not in production. The server enforces authorization
-          independently; this only previews the gates.
-        </p>
-        <div className="flex flex-wrap gap-2 px-3 pb-3">
-          {ROLES.map((candidate: Role) => (
-            <button
-              key={candidate}
-              type="button"
-              data-testid={`role-${candidate}`}
-              onClick={() => actAs(candidate)}
-              className={cn(
-                "rounded-3 border px-3 py-1 text-micro font-semibold",
-                candidate === role
-                  ? "border-action bg-action-surface text-action-ink"
-                  : "border-line-strong text-ink-secondary",
-              )}
-            >
-              {candidate}
-            </button>
+        <MenuGroup>
+          <MenuGroupLabel>Admin</MenuGroupLabel>
+          {ADMIN.map((item) => (
+            <MenuItem key={item.path} onClick={go(item.path)}>
+              {item.label}
+            </MenuItem>
           ))}
-        </div>
+        </MenuGroup>
+        <MenuSeparator />
+        <MenuGroup>
+          <MenuGroupLabel>Acting as</MenuGroupLabel>
+          <p className="mx-3 mb-3 rounded-3 border border-state-attend-border bg-state-attend-surface px-4 py-2 text-micro leading-body text-state-attend-ink">
+            Preview control — not in production. The server enforces authorization
+            independently; this only previews the gates.
+          </p>
+          <div className="flex flex-wrap gap-2 px-3 pb-3">
+            {ROLES.map((candidate: Role) => (
+              <button
+                key={candidate}
+                type="button"
+                data-testid={`role-${candidate}`}
+                onClick={() => actAs(candidate)}
+                className={cn(
+                  "rounded-3 border px-3 py-1 text-micro font-semibold",
+                  candidate === role
+                    ? "border-action bg-action-surface text-action-ink"
+                    : "border-line-strong text-ink-secondary",
+                )}
+              >
+                {candidate}
+              </button>
+            ))}
+          </div>
+        </MenuGroup>
         <MenuSeparator />
         <MenuItem onClick={go("/session")}>Session ended · demo</MenuItem>
         <MenuItem tone="halt" onClick={go("/signin")}>

@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Menu, MenuTrigger, MenuPopup, MenuItem, MenuSeparator, MenuGroupLabel } from "./Menu";
+import { Menu, MenuTrigger, MenuPopup, MenuItem, MenuSeparator, MenuGroup, MenuGroupLabel } from "./Menu";
 import { Button } from "./Button";
 
 const meta = {
@@ -23,14 +23,18 @@ export const AccountMenu: Story = {
     <Menu>
       <MenuTrigger render={<Button fill="outlined" tone="neutral">R. Delacroix</Button>} />
       <MenuPopup>
-        <MenuGroupLabel>Account</MenuGroupLabel>
-        <MenuItem>Profile</MenuItem>
-        <MenuItem>People</MenuItem>
-        <MenuItem>Clients</MenuItem>
+        <MenuGroup>
+          <MenuGroupLabel>Account</MenuGroupLabel>
+          <MenuItem>Profile</MenuItem>
+          <MenuItem>People</MenuItem>
+          <MenuItem>Clients</MenuItem>
+        </MenuGroup>
         <MenuSeparator />
-        <MenuGroupLabel>Record</MenuGroupLabel>
-        <MenuItem>Audit</MenuItem>
-        <MenuItem>Rulebook</MenuItem>
+        <MenuGroup>
+          <MenuGroupLabel>Record</MenuGroupLabel>
+          <MenuItem>Audit</MenuItem>
+          <MenuItem>Rulebook</MenuItem>
+        </MenuGroup>
         <MenuSeparator />
         <MenuItem tone="halt">Sign out</MenuItem>
       </MenuPopup>

@@ -1,10 +1,11 @@
+import { useEffect } from "react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { doorsFor } from "../entities/nav/doors";
 import { Sidebar, type SidebarDoorItem } from "../entities/nav/Sidebar";
 import type { LifecycleStage } from "../entities/nav/LifecycleRail";
 import { useSession } from "../shared/session";
 import { useAttention, type Attention } from "./attention";
-import { useNavCollapsed } from "./preferences";
+import { useNavCollapsed, useTheme } from "./preferences";
 import { AccountMenu } from "./AccountMenu";
 import { OrderCounts } from "./OrderCounts";
 import { Eyebrow } from "../shared/ui/Eyebrow";
@@ -49,6 +50,18 @@ export function AppChrome() {
   const onReview = /^\/orders\/[^/]+\/review/.test(pathname);
   // Review starts collapsed on first mount; the preference wins once loaded.
   const [collapsed, toggleCollapsed] = useNavCollapsed(!onCaptureSeat, onReview);
+  // Same zero-GET rule as the collapse: no theme fetch on the capture seat.
+  const [theme, toggleTheme] = useTheme(!onCaptureSeat);
+  // `:root` IS TitlePipe; `[data-theme="mocha"]` is the only value that means
+  // anything else, so the attribute is set only for the non-default theme
+  // rather than toggled between two literal values (`tokens.css` §8).
+  useEffect(() => {
+    if (theme === "mocha") {
+      document.documentElement.dataset.theme = "mocha";
+    } else {
+      delete document.documentElement.dataset.theme;
+    }
+  }, [theme]);
   // One escalations query, disabled on the capture seat (the zero-GET rule).
   const escalationAttention = useAttention(onCaptureSeat ? "" : "/escalations");
 
@@ -106,7 +119,7 @@ export function AppChrome() {
       foot={
         <div className="flex flex-col gap-3">
           {orderId === null ? null : <OrderCounts orderId={orderId} />}
-          <AccountMenu />
+          <AccountMenu theme={theme} onToggleTheme={toggleTheme} />
         </div>
       }
     />
