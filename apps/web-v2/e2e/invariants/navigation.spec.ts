@@ -34,7 +34,8 @@ test("a g-sequence's second key never leaks into screen hotkeys", async ({
 }) => {
   await page.goto("/orders/ord_demo_1/review");
   await expect(page.getByTestId("sel-label")).toHaveText("OWNER ZIP");
-  // g then e must navigate to escalations, NOT open the escalate input
+  // g then e must navigate to escalations, NOT open the correction editor
+  // (`e` is the correct hotkey on the review screen)
   await page.keyboard.press("g");
   await page.keyboard.press("e");
   await expect(page).toHaveURL(/\/escalations/);
@@ -46,8 +47,8 @@ test("the ? overlay swallows screen keys while open", async ({ page }) => {
   await expect(page.getByTestId("sel-label")).toHaveText("OWNER ZIP");
   await page.keyboard.press("?");
   await expect(page.getByTestId("key-map")).toBeVisible();
-  // c must not open the editor, j must not move — the map is modal
-  await page.keyboard.press("c");
+  // `e` (correct) must not open the editor, j must not move — the map is modal
+  await page.keyboard.press("e");
   await expect(page.getByTestId("edit-value")).toHaveCount(0);
   await page.keyboard.press("j");
   await expect(page.getByTestId("sel-label")).toHaveText("OWNER ZIP");

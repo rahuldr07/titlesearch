@@ -22,6 +22,12 @@ interface DecisionActionsProps {
  *
  * They are ABSENT for roles that cannot act, never disabled. A greyed decision
  * is an invitation to ask for permission; an absent one is an answer.
+ *
+ * THE KEY HINTS ARE THE DESIGN'S LEGEND — `C confirm · E correct` (2026-07-28).
+ * The letters are literal capitals in the markup, never a CSS transform, so a
+ * screen reader announces "C" and not "see". Escalate carries NO key: an
+ * accidental keystroke must never send a senior a question, so it is a button
+ * only (`useReviewKeys` binds no `e`-to-escalate).
  */
 export function DecisionActions({
   offerExclude,
@@ -34,13 +40,13 @@ export function DecisionActions({
   return (
     <div className="flex flex-wrap gap-4">
       <Button size="sm" data-testid="act-confirm" onClick={onConfirm}>
-        Confirm ⏎
+        Confirm C
       </Button>
       <Button size="sm" fill="outlined" tone="neutral" data-testid="act-correct" onClick={onCorrect}>
-        Correct c
+        Correct E
       </Button>
       <Button size="sm" fill="outlined" tone="attend" data-testid="act-escalate" onClick={onEscalate}>
-        Escalate e
+        ↗ Can&rsquo;t decide — escalate
       </Button>
       {offerExclude ? (
         <Button size="sm" fill="outlined" tone="halt" data-testid="act-exclude" onClick={onExclude}>

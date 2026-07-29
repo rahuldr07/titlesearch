@@ -6,17 +6,20 @@ export interface ReviewKeyHandlers {
   previous: () => void;
   confirm: () => void;
   correct: () => void;
-  escalate: () => void;
   exclude: () => void;
   pass: () => void;
 }
 
 /**
- * The review workstation's keys.
+ * The review workstation's keys — the design's decision legend, `C confirm ·
+ * E correct` (2026-07-28 revision). `c` confirms; `e` OPENS the correction
+ * field (it does not commit — Enter inside the field does that, see
+ * `CorrectEditor`). Escalate has NO hotkey: it is a button (`act-escalate`),
+ * because an accidental keystroke must never send a senior a question.
  *
  * THEY STAND DOWN WHILE THE GLOBAL LAYER HAS THE KEYBOARD. An armed `g` chord
- * must reach escalations without also opening the escalate editor
- * (`navigation.spec` #2), and the key map is modal — `c` must not open an
+ * must reach escalations without also opening the correction editor
+ * (`navigation.spec` #2), and the key map is modal — `e` must not open an
  * editor underneath it (`navigation.spec` #3). One flag, both cases, because
  * they are the same rule: a key belongs to exactly one layer at a time.
  *
@@ -33,16 +36,12 @@ export function useReviewKeys(handlers: ReviewKeyHandlers, enabled: boolean) {
     handlers.previous,
     on,
   ]);
-  useHotkeys("enter", handlers.confirm, { enabled: on, preventDefault: true }, [
+  useHotkeys("c", handlers.confirm, { enabled: on, preventDefault: true }, [
     handlers.confirm,
     on,
   ]);
-  useHotkeys("c", handlers.correct, { enabled: on, preventDefault: true }, [
+  useHotkeys("e", handlers.correct, { enabled: on, preventDefault: true }, [
     handlers.correct,
-    on,
-  ]);
-  useHotkeys("e", handlers.escalate, { enabled: on, preventDefault: true }, [
-    handlers.escalate,
     on,
   ]);
   useHotkeys("x", handlers.exclude, { enabled: on, preventDefault: true }, [handlers.exclude, on]);

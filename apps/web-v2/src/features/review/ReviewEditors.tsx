@@ -10,6 +10,8 @@ interface ReviewEditorsProps {
   /** Keyed so adopting a different reading re-seeds the editor rather than keeping the old text. */
   editorKey: string;
   seed: string;
+  /** The machine-read value a correction must differ from (§11.1). */
+  machineValue: string;
   passPending: boolean;
   serverNote: string | null;
   blankNote: boolean;
@@ -37,6 +39,7 @@ export function ReviewEditors({
   mode,
   editorKey,
   seed,
+  machineValue,
   passPending,
   serverNote,
   blankNote,
@@ -66,7 +69,13 @@ export function ReviewEditors({
       ) : null}
 
       {mode === "correct" ? (
-        <CorrectEditor key={editorKey} seed={seed} onCancel={onCancel} onSubmit={onCorrect} />
+        <CorrectEditor
+          key={editorKey}
+          seed={seed}
+          machineValue={machineValue}
+          onCancel={onCancel}
+          onSubmit={onCorrect}
+        />
       ) : null}
 
       {mode === "escalate" ? (

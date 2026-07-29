@@ -82,12 +82,15 @@ export function ReviewScreen() {
     {
       next: () => step(1),
       previous: () => step(-1),
-      // ⏎ NEVER ACCEPTS A BLANK (`ux.spec` #4). A missing field demands an
+      // `c` NEVER ACCEPTS A BLANK (`ux.spec` O9). Confirm moved off ⏎ onto `c`
+      // in the design remap; the rule moved with it. A missing field demands an
       // explicit click — the only keyboard-layer defence against bulk-accepting
-      // absences by holding Enter down.
+      // absences by holding the confirm key down. The button (`act-confirm`)
+      // calls `submitConfirm` directly, so the explicit click still accepts N/A.
       confirm: () => (selected?.value == null ? setBlankNote(true) : submitConfirm()),
+      // `e` OPENS the correction field; it never commits (that is Enter, inside
+      // the field). Escalate has no hotkey — it is `act-escalate`, a button.
       correct: openCorrect,
-      escalate: () => setMode("escalate"),
       exclude: () => setMode("exclude"),
       pass: () => setMode("pass"),
     },
@@ -116,6 +119,7 @@ export function ReviewScreen() {
             pinned={pinned}
             mode={mode}
             seed={editorSeed}
+            machineValue={selected.value ?? ""}
             passPending={pass.isPending}
             serverNote={confirm.error instanceof ApiError ? confirm.error.message : null}
             blankNote={blankNote}

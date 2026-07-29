@@ -94,7 +94,8 @@ test("[ folds the rail from the keyboard", async ({ page }) => {
 test("[ inside a text field is text, not a fold", async ({ page }) => {
   await page.goto("/orders/ord_demo_1/review?field=owner.zip");
   await expect(page.getByTestId("sel-label")).toBeVisible();
-  await page.keyboard.press("c");
+  // `e` opens the correction editor (C confirm · E correct)
+  await page.keyboard.press("e");
   const editor = page.getByTestId("edit-value");
   await editor.click();
   await editor.fill("");

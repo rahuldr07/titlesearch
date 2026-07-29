@@ -58,10 +58,11 @@ test("A≠B disagreement leads: chip on the row, both readings in the panel", as
 test("correction without a reason never submits", async ({ page }) => {
   await go(page);
   await page.getByTestId("row-mortgages.1.lender").click();
-  await page.keyboard.press("c");
+  await page.keyboard.press("e");
   const value = page.getByTestId("edit-value");
   await expect(value).toBeFocused();
-  // value present (seeded from Reader A), reason empty → Enter must do nothing
+  // value present (seeded from Reader A, differs from the null machine read),
+  // reason empty → Enter must do nothing
   await value.press("Enter");
   await expect(page.getByTestId("edit-reason")).toBeVisible();
   await expect(
@@ -75,7 +76,7 @@ test("correction with value + reason submits and renders the server's state", as
 }) => {
   await go(page);
   await page.getByTestId("row-mortgages.1.lender").click();
-  await page.keyboard.press("c");
+  await page.keyboard.press("e");
   await page.getByTestId("edit-value").fill("SOUTHSTONE MORTGAGE LLC");
   const reason = page.getByTestId("edit-reason");
   await reason.fill("page reads SOUTHSTONE; B's zeros are the OCR failure mode");
@@ -89,7 +90,8 @@ test("correction with value + reason submits and renders the server's state", as
 test("escalation without a question never submits", async ({ page }) => {
   await go(page);
   await page.getByTestId("row-owner.zip").click();
-  await page.keyboard.press("e");
+  // escalate is a BUTTON now (no hotkey) — `e` opens the correction editor.
+  await page.getByTestId("act-escalate").click();
   const input = page.getByTestId("escalate-input");
   await expect(input).toBeFocused();
   await input.press("Enter");
@@ -100,12 +102,13 @@ test("escalation without a question never submits", async ({ page }) => {
 });
 
 // TODO(rebuild) [INVARIANT] — rule: a recorded escalation marks the row and advances selection to the next queued field.
-test("escalation with a question records; confirm via ⏎ records", async ({
+test("escalation with a question records and advances selection", async ({
   page,
 }) => {
   await go(page);
   await page.getByTestId("row-owner.zip").click();
-  await page.keyboard.press("e");
+  // escalate is a BUTTON now (no hotkey).
+  await page.getByTestId("act-escalate").click();
   await page
     .getByTestId("escalate-input")
     .fill("order sheet says 03029 — which source wins?");
@@ -113,7 +116,7 @@ test("escalation with a question records; confirm via ⏎ records", async ({
   await expect(
     page.getByTestId("row-owner.zip").getByTestId("row-mark"),
   ).toHaveText("↗ escalated");
-  // selection advanced to the next queued field; ⏎ confirms it
+  // selection advanced to the next queued field
   await expect(page.getByTestId("sel-label")).toHaveText("MTG 1 — LENDER");
 });
 

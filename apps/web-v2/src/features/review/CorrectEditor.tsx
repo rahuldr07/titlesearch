@@ -1,26 +1,37 @@
 import { useEffect, useRef, useState } from "react";
+import { Button } from "../../shared/ui/Button";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
 import { TextField } from "../../shared/ui/TextField";
 
 /**
- * A CORRECTION IS REFUSED WITHOUT ITS REASON (`review.spec` #4; conflict C8).
+ * A CORRECTION MUST ACTUALLY CHANGE SOMETHING (§11.1). Empty, or identical to
+ * the machine read, is refused: the submit is INERT (disabled) until the value
+ * differs, and a bare Enter on an unchanged value records nothing. A no-op
+ * correction filed against the corrections table produces no rule and forces
+ * every value change to be re-derived by hand. The disabled control is the
+ * courtesy; the contract's `min(1)`/diff is the enforcement.
  *
+ * A CORRECTION IS REFUSED WITHOUT ITS REASON (`review.spec` #4; conflict C8).
  * The design draws a "Correct to" box and a submit, with no reason field at
  * all. That is overridden. The reason is not paperwork: it is what makes the
- * correction reviewable later and what feeds the rule channel. A corrections
- * table full of value changes with no stated why cannot produce a single rule,
- * and every one of them has to be re-derived by hand from the document.
+ * correction reviewable later and what feeds the rule channel. Once the value
+ * has changed the submit is ENABLED even with the reason empty — the reason is
+ * a gate that SPEAKS on submit (`ux.spec` #5), never a silent no-op.
  *
- * THE REFUSAL SPEAKS (`ux.spec` #5). A silent no-op on Enter is the defect —
- * the reviewer presses the key, nothing moves, and they cannot tell whether
- * the app is broken or they are.
+ * ENTER COMMITS FROM INSIDE THE FIELD, ESCAPE LEAVES IT — handled on the editor
+ * container, above react-hotkeys-hook's input guard, so neither text input
+ * carries its own key handler. The container sees the event whichever field has
+ * focus, and a bracket or a chord key still reaches the input as text
+ * (`sidebar.spec` #5, `hard.spec` #5).
  */
 export function CorrectEditor({
   seed,
+  machineValue,
   onSubmit,
   onCancel,
 }: {
   seed: string;
+  machineValue: string;
   onSubmit: (value: string, reason: string) => void;
   onCancel: () => void;
 }) {
@@ -29,12 +40,18 @@ export function CorrectEditor({
   const [refused, setRefused] = useState(false);
   const valueRef = useRef<HTMLInputElement>(null);
 
-  // Focus follows the editor opening: `c` must land the cursor where the typing
-  // goes, or a keyboard user has pressed a key and been given nothing.
-  useEffect(() => valueRef.current?.focus(), []);
+  // `e` lands the caret in the value and SELECTS it, so typing replaces the
+  // machine read rather than appending to it (the design's `el.select()`).
+  useEffect(() => {
+    valueRef.current?.focus();
+    valueRef.current?.select();
+  }, []);
+
+  const changed = value.trim() !== "" && value.trim() !== machineValue.trim();
 
   const attempt = () => {
-    if (value.trim() === "" || reason.trim() === "") {
+    if (!changed) return; // inert: a correction must differ from the machine read
+    if (reason.trim() === "") {
       setRefused(true);
       return;
     }
@@ -53,7 +70,10 @@ export function CorrectEditor({
   };
 
   return (
-    <div className="flex flex-col gap-3 rounded-5 border border-action-border bg-action-surface p-5">
+    <div
+      onKeyDown={keys}
+      className="flex flex-col gap-3 rounded-5 border border-action-border bg-action-surface p-5"
+    >
       <Eyebrow variant="field">Correct to</Eyebrow>
       <TextField
         ref={valueRef}
@@ -64,7 +84,6 @@ export function CorrectEditor({
           setValue(event.target.value);
           if (refused) setRefused(false);
         }}
-        onKeyDown={keys}
       />
       <Eyebrow variant="field">Why — what the document says</Eyebrow>
       <TextField
@@ -75,8 +94,16 @@ export function CorrectEditor({
           setReason(event.target.value);
           if (refused) setRefused(false);
         }}
-        onKeyDown={keys}
       />
+      <Button
+        size="sm"
+        data-testid="edit-submit"
+        tone="action"
+        disabled={!changed}
+        onClick={attempt}
+      >
+        ✎ Save correction
+      </Button>
       {refused ? (
         <p data-testid="nudge" role="alert" className="text-xs font-semibold text-state-halt-ink">
           a correction needs both the value and its why — the why is what makes

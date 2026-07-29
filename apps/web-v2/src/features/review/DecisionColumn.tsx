@@ -7,6 +7,8 @@ interface DecisionColumnProps {
   pinned: Pinned | null;
   mode: ReviewMode;
   seed: string;
+  /** The machine-read value a correction must differ from (§11.1). */
+  machineValue: string;
   passPending: boolean;
   serverNote: string | null;
   blankNote: boolean;
@@ -34,6 +36,7 @@ export function DecisionColumn({
   pinned,
   mode,
   seed,
+  machineValue,
   passPending,
   serverNote,
   blankNote,
@@ -63,6 +66,7 @@ export function DecisionColumn({
         mode={mode}
         editorKey={`${field.id}:${seed}`}
         seed={seed}
+        machineValue={machineValue}
         passPending={passPending}
         serverNote={serverNote}
         blankNote={blankNote}

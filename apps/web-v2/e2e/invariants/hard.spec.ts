@@ -67,9 +67,12 @@ test("resolving the same escalation twice is refused the second time", async ({
 test("chord keys typed inside an input never navigate", async ({ page }) => {
   await page.goto("/orders/ord_demo_1/review");
   await expect(page.getByTestId("sel-label")).toHaveText("OWNER ZIP");
+  // `e` opens the correction editor (C confirm · E correct); its field is the
+  // input a reviewer types into.
   await page.keyboard.press("e");
-  const input = page.getByTestId("escalate-input");
+  const input = page.getByTestId("edit-value");
   await expect(input).toBeFocused();
+  await input.fill("");
   // "g" then "d" inside the input is TEXT, not a chord to the readout
   await input.pressSequentially("gd");
   await expect(page).toHaveURL(/\/orders\/ord_demo_1\/review/);

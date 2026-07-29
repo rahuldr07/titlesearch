@@ -50,10 +50,10 @@ const SEGMENT_CLASS: Record<SegmentTone, string> = {
  * NOT the global next-order count and carries no CONTRACT GAP.
  *
  * THE KEY HINT NAMES THE KEYS THIS SCREEN ACTUALLY BINDS (`useReviewKeys`) —
- * ⏎ confirm, c correct, e escalate, j/k move — not the design's copy ("C
- * confirm · E correct"), which describes a different key map than the one
- * `ReviewScreen` wires up. Recorded as a design/reality conflict rather than
- * shipping a hint that lies about what pressing "c" does.
+ * `C confirm · E correct · j/k move`, the design's 2026-07-28 legend, now that
+ * the screen adopts it. Escalate is absent from the hint because it has no
+ * hotkey: it is a button (`act-escalate`). The letters are literal capitals in
+ * the markup, not a CSS transform.
  */
 export function DecisionDock({
   fields,
@@ -80,9 +80,8 @@ export function DecisionDock({
             {answered} of {needTotal} answered
           </span>
           <span className="ml-auto whitespace-nowrap text-tiny text-ink-muted">
-            Confirm <span className="font-mono">⏎</span> · Correct{" "}
-            <span className="font-mono">c</span> · Escalate{" "}
-            <span className="font-mono">e</span> · Move{" "}
+            Confirm <span className="font-mono">C</span> · Correct{" "}
+            <span className="font-mono">E</span> · Move{" "}
             <span className="font-mono">j</span>/<span className="font-mono">k</span>
           </span>
         </div>

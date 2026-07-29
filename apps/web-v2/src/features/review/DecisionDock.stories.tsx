@@ -45,10 +45,12 @@ export const NoFieldSelected: Story = {
 };
 
 /**
- * The key hint names the keys this screen actually binds, not the design's
- * copy ("C confirm · E correct") — checked against the dock's own text
- * rather than `getByText`, since the hint's key letters sit in nested spans
- * and a substring query over the tree matches every ancestor, not one node.
+ * The key hint names the keys this screen actually binds — the design's
+ * 2026-07-28 legend, `C confirm · E correct`, now that the screen adopts it.
+ * Checked against the dock's own text rather than `getByText`, since the hint's
+ * key letters sit in nested spans and a substring query over the tree matches
+ * every ancestor, not one node. Escalate is ABSENT — it has no hotkey (button
+ * only), and ⏎ no longer confirms.
  */
 export const KeyHintMatchesLiveBindings: Story = {
   args: { fields: demoFields, selectedPath: "owner.zip" },
@@ -56,9 +58,11 @@ export const KeyHintMatchesLiveBindings: Story = {
     const canvas = within(canvasElement);
     const text = canvas.getByTestId("decision-dock").textContent ?? "";
     await expect(text).toContain("Confirm");
-    await expect(text).toContain("⏎");
+    await expect(text).toContain("C");
     await expect(text).toContain("Correct");
-    await expect(text).toContain("Escalate");
+    await expect(text).toContain("E");
+    await expect(text).not.toContain("⏎");
+    await expect(text).not.toContain("Escalate");
   },
 };
 

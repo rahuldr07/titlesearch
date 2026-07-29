@@ -23,7 +23,8 @@ test("confirm 409 (different value) surfaces the server's message and never adva
   });
   await page.goto("/orders/ord_demo_1/review");
   await expect(page.getByTestId("sel-label")).toHaveText("OWNER ZIP");
-  await page.keyboard.press("Enter");
+  // confirm is `c` now (C confirm · E correct), not ⏎
+  await page.keyboard.press("c");
   await expect(page.getByTestId("confirm-note")).toContainText(
     "already confirmed with a different value",
   );
@@ -47,7 +48,8 @@ test("confirm 409 (terminal state) is answered, not a dead no-op", async ({
   });
   await page.goto("/orders/ord_demo_1/review");
   await expect(page.getByTestId("sel-label")).toHaveText("OWNER ZIP");
-  await page.keyboard.press("Enter");
+  // confirm is `c` now (C confirm · E correct), not ⏎
+  await page.keyboard.press("c");
   await expect(page.getByTestId("confirm-note")).toContainText(
     "field is terminal (corrected)",
   );
