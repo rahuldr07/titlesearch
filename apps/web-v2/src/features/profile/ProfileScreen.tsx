@@ -6,6 +6,7 @@ import { CapabilityCard } from "./CapabilityCard";
 import { SecurityCard } from "./SecurityCard";
 import { PreferencesCard } from "./PreferencesCard";
 import { ScreenTitle } from "../../app/ScreenTitle";
+import { Screen } from "../../shared/ui/Screen";
 
 /**
  * YOUR PROFILE — four cards, in descending order of how little you control.
@@ -38,27 +39,29 @@ export function ProfileScreen() {
   const state = permissions.isError ? "failed" : permissions.isPending ? "loading" : "ready";
 
   return (
-    <div className="flex flex-col gap-7">
-      <header className="flex flex-col gap-3">
-        <ScreenTitle>Account</ScreenTitle>
-        <h1 className="text-3xl font-semibold text-ink-primary">Your profile</h1>
-      </header>
+    <Screen measure="720">
+      <div className="flex flex-col gap-7">
+        <header className="flex flex-col gap-3">
+          <ScreenTitle>Account</ScreenTitle>
+          <h1 className="text-3xl font-semibold text-ink-primary">Your profile</h1>
+        </header>
 
-      {profile.isError ? (
-        <p className="text-base text-state-halt-ink">Your profile is unavailable.</p>
-      ) : profile.isPending ? (
-        <p className="text-base text-ink-secondary">Loading your profile…</p>
-      ) : (
-        <IdentityCard name={profile.data.name} email={profile.data.email} role={profile.data.role} />
-      )}
+        {profile.isError ? (
+          <p className="text-base text-state-halt-ink">Your profile is unavailable.</p>
+        ) : profile.isPending ? (
+          <p className="text-base text-ink-secondary">Loading your profile…</p>
+        ) : (
+          <IdentityCard name={profile.data.name} email={profile.data.email} role={profile.data.role} />
+        )}
 
-      <CapabilityCard actions={actions} state={state} />
+        <CapabilityCard actions={actions} state={state} />
 
-      {profile.isSuccess ? (
-        <SecurityCard sessions={profile.data.sessions} mfa={profile.data.mfa} />
-      ) : null}
+        {profile.isSuccess ? (
+          <SecurityCard sessions={profile.data.sessions} mfa={profile.data.mfa} />
+        ) : null}
 
-      <PreferencesCard />
-    </div>
+        <PreferencesCard />
+      </div>
+    </Screen>
   );
 }

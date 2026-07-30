@@ -2,6 +2,7 @@ import { GALLERY_STATES } from "./galleryStates";
 import { StateCard } from "./StateCard";
 import { StateSample } from "./StateSample";
 import { NoValueSample } from "./NoValueSample";
+import { Screen } from "../../shared/ui/Screen";
 import { ScreenTitle } from "../../app/ScreenTitle";
 
 /**
@@ -30,37 +31,34 @@ import { ScreenTitle } from "../../app/ScreenTitle";
  */
 export function GalleryScreen() {
   return (
-    // 1120px, centred — the column the design draws, measured off the export.
-    // The cap lives HERE and not on the grid alone, because the eyebrow, the
-    // heading and the subtitle sit on the same left edge as the first card; a
-    // grid-only cap left the prose starting where the shell's padding happened
-    // to end, which drifts every time the shell's own width changes.
-    <div className="mx-auto flex max-w-560 flex-col">
-      <ScreenTitle>Reference</ScreenTitle>
+    <Screen measure="1120">
+      <div className="flex flex-col">
+        <ScreenTitle>Reference</ScreenTitle>
 
-      <h1 className="mt-2 text-3xl font-semibold text-ink-primary">
-        States, not just the happy path
-      </h1>
-      <p className="mt-1 mb-11 text-md text-ink-secondary">
-        Every one of these has to stay visually distinct in production. This is
-        the catalogue.
-      </p>
+        <h1 className="mt-2 text-3xl font-semibold text-ink-primary">
+          States, not just the happy path
+        </h1>
+        <p className="mt-1 mb-11 text-md text-ink-secondary">
+          Every one of these has to stay visually distinct in production. This is
+          the catalogue.
+        </p>
 
-      <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-        {GALLERY_STATES.map((state) => (
-          <StateCard key={state.id} tag={state.tag} title={state.title} desc={state.desc}>
-            <StateSample accent={state.accent} badge={state.badge} body={state.body} />
+        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+          {GALLERY_STATES.map((state) => (
+            <StateCard key={state.id} tag={state.tag} title={state.title} desc={state.desc}>
+              <StateSample accent={state.accent} badge={state.badge} body={state.body} />
+            </StateCard>
+          ))}
+
+          <StateCard
+            tag="Report"
+            title="Six distinct no-value states"
+            desc="They must never collapse into one grey dash."
+          >
+            <NoValueSample />
           </StateCard>
-        ))}
-
-        <StateCard
-          tag="Report"
-          title="Six distinct no-value states"
-          desc="They must never collapse into one grey dash."
-        >
-          <NoValueSample />
-        </StateCard>
+        </div>
       </div>
-    </div>
+    </Screen>
   );
 }

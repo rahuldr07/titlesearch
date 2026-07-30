@@ -3,6 +3,7 @@ import { useRouterState } from "@tanstack/react-router";
 import { OrderSignoffResponse } from "@titlepipe/contract";
 import { get } from "../shared/api";
 import { orderFromPath } from "./orderFromPath";
+import { chromeFor } from "./chromeFor";
 import { useTheme } from "./preferences";
 import { AccountMenu } from "./AccountMenu";
 import { OrderCounts } from "./OrderCounts";
@@ -49,17 +50,20 @@ function signoffQuery(orderId: string) {
  */
 export function OrderStrip() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const onCaptureSeat = pathname.startsWith("/blind");
-  const orderId = orderFromPath(pathname);
+  // Same predicate as `AppChrome`, read independently rather than passed down —
+  // neither gates the other. Gating on `/blind` alone put an identity chip
+  // reading "L. Vance · ADMIN" on the sign-in screen.
+  const { chrome, fetches } = chromeFor(pathname);
+  const orderId = fetches ? orderFromPath(pathname) : null;
   // Own `useTheme` call — dedupes with `AppChrome`'s by shared query key, so
   // this is not a second network request, just a second subscriber.
-  const [theme, toggleTheme] = useTheme(!onCaptureSeat);
+  const [theme, toggleTheme] = useTheme(fetches);
   const { data: signoff } = useQuery({
     ...signoffQuery(orderId ?? ""),
     enabled: orderId !== null,
   });
 
-  if (onCaptureSeat) return null;
+  if (!chrome) return null;
 
   const stamp =
     signoff === undefined

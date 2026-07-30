@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useParams, useSearch } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import type { Field } from "@titlepipe/contract";
@@ -12,14 +11,15 @@ import {
   usePassOrder,
 } from "./queries";
 import { readingsOf } from "./fieldLabel";
-import { type Pinned } from "./DecisionPanel";
 import { EvidenceColumn } from "./EvidenceColumn";
 import { FieldsColumn } from "./FieldsColumn";
 import { ReviewHeader } from "./ReviewHeader";
-import { type ReviewMode } from "./ReviewEditors";
+import { useReviewEditor } from "./useReviewEditor";
 import { useReviewKeys } from "./useReviewKeys";
 import { useReviewSelection } from "./useReviewSelection";
 import { ApiError } from "../../shared/api";
+import { Screen } from "../../shared/ui/Screen";
+import { ScreenMessage } from "../../shared/ui/ScreenMessage";
 
 /**
  * The review workstation — document, decision, draft sheet.
@@ -39,10 +39,6 @@ export function ReviewScreen() {
   // no disclosure cards render yet, never a false claim about what the
   // abstractor answered.
   const signoff = useQuery(orderSignoffQuery(orderId));
-  const [mode, setMode] = useState<ReviewMode>("idle");
-  const [pinned, setPinned] = useState<Pinned | null>(null);
-  const [seed, setSeed] = useState<string | null>(null);
-  const [blankNote, setBlankNote] = useState(false);
 
   const confirm = useConfirmField(orderId);
   const correct = useCorrectField(orderId);
@@ -57,23 +53,8 @@ export function ReviewScreen() {
     fieldParam,
   );
 
-  const reselect = (path: string) => {
-    setMode("idle");
-    setPinned(null);
-    setBlankNote(false);
-    select(path);
-  };
-
-  /** Adopting a reading opens the editor already holding it — no retyping. */
-  const adopt = (value: string) => {
-    setSeed(value);
-    setMode("correct");
-  };
-
-  const openCorrect = () => {
-    setSeed(null);
-    setMode("correct");
-  };
+  const { mode, setMode, pinned, setPinned, seed, blankNote, setBlankNote, reselect, adopt, openCorrect } =
+    useReviewEditor(select);
 
   const submitConfirm = () => {
     if (selected === null) return;
@@ -99,49 +80,51 @@ export function ReviewScreen() {
     mode === "idle" && selected !== null,
   );
 
-  if (isError) return <p className="text-base text-state-halt-ink">Order fields unavailable.</p>;
-  if (isPending) return <p className="text-base text-ink-secondary">Loading the order…</p>;
-  if (selected === null) return <p className="text-base text-ink-secondary">No fields on this order.</p>;
+  if (isError) return <ScreenMessage tone="halt" measure="1340">Order fields unavailable.</ScreenMessage>;
+  if (isPending) return <ScreenMessage measure="1340">Loading the order…</ScreenMessage>;
+  if (selected === null) return <ScreenMessage measure="1340">No fields on this order.</ScreenMessage>;
   const editorSeed = seed ?? selected.value ?? readingsOf(selected)[0]?.value ?? "";
 
   return (
-    <div className="flex flex-col gap-8">
-      <ReviewHeader fields={fields} queued={queued.length} />
+    <Screen placement="bleed">
+      <div className="flex h-full flex-col gap-8">
+        <ReviewHeader fields={fields} queued={queued.length} />
 
-      {/* TWO columns. The document is the work; the decision and the sheet
-          stack beside it because they are one conversation. A third column
-          starved both and pushed the sheet's values out of their rows. */}
-      <div className="grid items-start gap-6 xl:grid-cols-2">
-        <EvidenceColumn orderId={orderId} field={selected} pinnedReading={pinned?.reading ?? null} />
+        {/* TWO columns. The document is the work; the decision and the sheet
+            stack beside it because they are one conversation. A third column
+            starved both and pushed the sheet's values out of their rows. */}
+        <div className="grid min-h-0 items-start gap-6 xl:grid-cols-2">
+          <EvidenceColumn orderId={orderId} field={selected} pinnedReading={pinned?.reading ?? null} />
 
-        <FieldsColumn
-          fields={fields}
-          signoffLines={signoff.data?.lines ?? []}
-          selected={selected}
-          pinned={pinned}
-          mode={mode}
-          seed={editorSeed}
-          passPending={pass.isPending}
-          serverNote={confirm.error instanceof ApiError ? confirm.error.message : null}
-          blankNote={blankNote}
-          onPin={setPinned}
-          onAdopt={adopt}
-          onConfirm={submitConfirm}
-          onCorrect={openCorrect}
-          onMode={setMode}
-          onCorrectSubmit={(value, reason) =>
-            correct.mutate({ fieldId: selected.id, value, reason }, { onSuccess: advance })
-          }
-          onEscalateSubmit={(question) =>
-            escalate.mutate({ fieldId: selected.id, question }, { onSuccess: advance })
-          }
-          onExcludeSubmit={(reason) =>
-            exclude.mutate({ fieldId: selected.id, reason }, { onSuccess: advance })
-          }
-          onPassSubmit={(reason) => pass.mutate(reason, { onSuccess: () => setMode("idle") })}
-          onSelect={reselect}
-        />
+          <FieldsColumn
+            fields={fields}
+            signoffLines={signoff.data?.lines ?? []}
+            selected={selected}
+            pinned={pinned}
+            mode={mode}
+            seed={editorSeed}
+            passPending={pass.isPending}
+            serverNote={confirm.error instanceof ApiError ? confirm.error.message : null}
+            blankNote={blankNote}
+            onPin={setPinned}
+            onAdopt={adopt}
+            onConfirm={submitConfirm}
+            onCorrect={openCorrect}
+            onMode={setMode}
+            onCorrectSubmit={(value, reason) =>
+              correct.mutate({ fieldId: selected.id, value, reason }, { onSuccess: advance })
+            }
+            onEscalateSubmit={(question) =>
+              escalate.mutate({ fieldId: selected.id, question }, { onSuccess: advance })
+            }
+            onExcludeSubmit={(reason) =>
+              exclude.mutate({ fieldId: selected.id, reason }, { onSuccess: advance })
+            }
+            onPassSubmit={(reason) => pass.mutate(reason, { onSuccess: () => setMode("idle") })}
+            onSelect={reselect}
+          />
+        </div>
       </div>
-    </div>
+    </Screen>
   );
 }

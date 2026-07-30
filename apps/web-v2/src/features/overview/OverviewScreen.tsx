@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Screen } from "../../shared/ui/Screen";
+import { ScreenMessage } from "../../shared/ui/ScreenMessage";
 import { OverviewHeader, type OverviewView } from "./OverviewHeader";
 import { TallyStrip } from "./TallyStrip";
 import { StageBoard } from "./StageBoard";
@@ -42,8 +44,8 @@ export function OverviewScreen() {
   const { data, isPending, isError } = useQuery(lifecycleQuery);
   const view: OverviewView = narrow ? "rail" : chosen;
 
-  if (isError) return <p className="text-base text-state-halt-ink">Overview unavailable.</p>;
-  if (isPending) return <p className="text-base text-ink-secondary">Loading the board…</p>;
+  if (isError) return <ScreenMessage tone="halt" measure="1340">Overview unavailable.</ScreenMessage>;
+  if (isPending) return <ScreenMessage measure="1340">Loading the board…</ScreenMessage>;
 
   const stages = data.stages.map((stage) => ({
     ...stage,
@@ -52,16 +54,18 @@ export function OverviewScreen() {
   const failed = data.stages.flatMap((stage) => stage.orders).filter((order) => order.failed);
 
   return (
-    <div className="flex flex-col gap-8">
-      <OverviewHeader view={view} onView={setChosen} narrow={narrow} scopeNote={data.scope_note} />
-      <TallyStrip
-        total={data.total}
-        halted={data.halted}
-        moving={data.moving}
-        failed={data.failed}
-      />
-      {view === "board" ? <StageBoard stages={stages} /> : <StageRail stages={stages} />}
-      <FailedBanner orders={failed} />
-    </div>
+    <Screen measure="1340" pad="26x30">
+      <div className="flex flex-col gap-8">
+        <OverviewHeader view={view} onView={setChosen} narrow={narrow} scopeNote={data.scope_note} />
+        <TallyStrip
+          total={data.total}
+          halted={data.halted}
+          moving={data.moving}
+          failed={data.failed}
+        />
+        {view === "board" ? <StageBoard stages={stages} /> : <StageRail stages={stages} />}
+        <FailedBanner orders={failed} />
+      </div>
+    </Screen>
   );
 }

@@ -10,6 +10,7 @@ import { ApiError } from "../../shared/api";
 import { ScreenTitle } from "../../app/ScreenTitle";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
 import { Button } from "../../shared/ui/Button";
+import { Screen } from "../../shared/ui/Screen";
 
 interface Refusal {
   missing_fields: string[];
@@ -77,70 +78,72 @@ export function IngestScreen() {
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-280 flex-col gap-9">
-      <header className="flex flex-col gap-3">
-        <ScreenTitle>Step 1 — Upload</ScreenTitle>
-        <h1 className="text-5xl font-semibold">New title-search package</h1>
-        <p className="max-w-185 text-base leading-body text-ink-secondary">
-          One scanned PDF per order. Nothing leaves this tool as a deliverable
-          until a reviewer has approved it, field by field.
-        </p>
-      </header>
+    <Screen measure="560" pad="40" placement="centre">
+      <div className="flex flex-col gap-9">
+        <header className="flex flex-col gap-3">
+          <ScreenTitle>Step 1 — Upload</ScreenTitle>
+          <h1 className="text-5xl font-semibold">New title-search package</h1>
+          <p className="max-w-185 text-base leading-body text-ink-secondary">
+            One scanned PDF per order. Nothing leaves this tool as a deliverable
+            until a reviewer has approved it, field by field.
+          </p>
+        </header>
 
-      {upload.error instanceof ApiError ? (
-        <p data-testid="ingest-banner" role="alert" className="text-xs font-semibold text-state-halt-ink">
-          {upload.error.message}
-        </p>
-      ) : null}
+        {upload.error instanceof ApiError ? (
+          <p data-testid="ingest-banner" role="alert" className="text-xs font-semibold text-state-halt-ink">
+            {upload.error.message}
+          </p>
+        ) : null}
 
-      {refusal === null ? null : (
-        <RefusedCard missing={refusal.missing_fields} reason={refusal.reason} />
-      )}
+        {refusal === null ? null : (
+          <RefusedCard missing={refusal.missing_fields} reason={refusal.reason} />
+        )}
 
-      {accepted !== null ? (
-        <AcceptedCard orderRef={accepted.external_ref} onAnother={reset} />
-      ) : (
-        <>
-          <DropZone file={file} onFile={setFile} />
+        {accepted !== null ? (
+          <AcceptedCard orderRef={accepted.external_ref} onAnother={reset} />
+        ) : (
+          <>
+            <DropZone file={file} onFile={setFile} />
 
-          <section className="flex flex-col gap-5">
-            <Eyebrow variant="field" as="h2">
-              THE ORDER &middot; WHAT THE PDF CANNOT SAY &middot; THE DOOR DECIDES WHAT IS COMPLETE
-            </Eyebrow>
-            <OrderForm
-              values={values}
-              onChange={(key, value) => setValues((prev) => ({ ...prev, [key]: value }))}
-            />
-          </section>
+            <section className="flex flex-col gap-5">
+              <Eyebrow variant="field" as="h2">
+                THE ORDER &middot; WHAT THE PDF CANNOT SAY &middot; THE DOOR DECIDES WHAT IS COMPLETE
+              </Eyebrow>
+              <OrderForm
+                values={values}
+                onChange={(key, value) => setValues((prev) => ({ ...prev, [key]: value }))}
+              />
+            </section>
 
-          <div className="flex flex-col gap-5">
-            <Button block size="lg" disabled={upload.isPending} onClick={submit}>
-              upload the package
-            </Button>
-            {created === null ? null : (
-              <>
-                <p className="text-xs leading-body text-state-attend-ink">
-                  Uploaded, not accepted. Nothing is queued until somebody signs
-                  for it.
-                </p>
-                <Button
-                  block
-                  size="lg"
-                  fill="outlined"
-                  tone="settled"
-                  data-testid="accept-btn"
-                  disabled={accept.isPending}
-                  onClick={() =>
-                    accept.mutate(created.id, { onSuccess: () => setAccepted(created) })
-                  }
-                >
-                  Sign for this package
-                </Button>
-              </>
-            )}
-          </div>
-        </>
-      )}
-    </div>
+            <div className="flex flex-col gap-5">
+              <Button block size="lg" disabled={upload.isPending} onClick={submit}>
+                upload the package
+              </Button>
+              {created === null ? null : (
+                <>
+                  <p className="text-xs leading-body text-state-attend-ink">
+                    Uploaded, not accepted. Nothing is queued until somebody signs
+                    for it.
+                  </p>
+                  <Button
+                    block
+                    size="lg"
+                    fill="outlined"
+                    tone="settled"
+                    data-testid="accept-btn"
+                    disabled={accept.isPending}
+                    onClick={() =>
+                      accept.mutate(created.id, { onSuccess: () => setAccepted(created) })
+                    }
+                  >
+                    Sign for this package
+                  </Button>
+                </>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+    </Screen>
   );
 }

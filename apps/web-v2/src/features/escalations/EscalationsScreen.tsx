@@ -6,6 +6,7 @@ import { escalationsQuery, rulesQuery } from "./queries";
 import { ClusterRail, type Cluster } from "./ClusterRail";
 import { ResolveCard } from "./ResolveCard";
 import { RuleStamp } from "./RuleStamp";
+import { Screen } from "../../shared/ui/Screen";
 import { ScreenTitle } from "../../app/ScreenTitle";
 
 function clusterBy(escalations: readonly Escalation[]): Cluster[] {
@@ -51,79 +52,81 @@ export function EscalationsScreen() {
   const answered = current.items.find((item) => item.resolution !== null);
 
   return (
-    <div className="flex flex-col gap-8">
-      <header className="flex flex-col gap-3">
-        <ScreenTitle>Escalation inbox</ScreenTitle>
-        <p className="max-w-3xl text-base leading-body text-ink-secondary">
-          A rules backlog — every item is a reviewer saying &ldquo;I don&rsquo;t
-          know the rule&rdquo;. Answering one order is not the job; writing the
-          rule that answers the next fifty is.
-        </p>
-      </header>
+    <Screen measure="700">
+      <div className="flex flex-col gap-8">
+        <header className="flex flex-col gap-3">
+          <ScreenTitle>Escalation inbox</ScreenTitle>
+          <p className="text-base leading-body text-ink-secondary">
+            A rules backlog — every item is a reviewer saying &ldquo;I don&rsquo;t
+            know the rule&rdquo;. Answering one order is not the job; writing the
+            rule that answers the next fifty is.
+          </p>
+        </header>
 
-      <div className="grid gap-8 lg:grid-cols-[20rem_1fr]">
-        <ClusterRail clusters={clusters} selected={current.path} onSelect={setSelected} />
+        <div className="grid gap-8 lg:grid-cols-[20rem_1fr]">
+          <ClusterRail clusters={clusters} selected={current.path} onSelect={setSelected} />
 
-        <section className="flex flex-col gap-6">
-          <h2 className="font-mono text-md font-semibold text-ink-primary">{current.path}</h2>
+          <section className="flex flex-col gap-6">
+            <h2 className="font-mono text-md font-semibold text-ink-primary">{current.path}</h2>
 
-          <ul className="flex flex-col gap-3">
-            {current.items.map((item) => (
-              <li key={item.id} className="flex flex-col gap-1">
-                <p className="text-base leading-body text-ink-primary">
-                  &ldquo;{item.question}&rdquo;
-                </p>
-                {/*
-                  YOU LAND ON THE ORDER THE QUESTION CAME FROM. The design of
-                  record's framing is "you land on the field in question, not
-                  the top of the order" — CONTRACT GAP: `Escalation` carries
-                  `order_ids` and a cluster path, but no field id, no asker and
-                  no timestamp, so the order is as close as the data allows and
-                  the field itself cannot be targeted.
-                */}
-                <p className="flex flex-wrap gap-4 font-mono text-tiny text-ink-muted">
-                  {item.order_ids.map((orderId) => (
-                    <Link
-                      key={orderId}
-                      to="/orders/$orderId/review"
-                      params={{ orderId }}
-                      className="text-action underline"
-                    >
-                      {orderId} →
-                    </Link>
-                  ))}
-                </p>
-              </li>
-            ))}
-          </ul>
-
-          {current.open.length > 0 ? (
-            <ResolveCard
-              ids={current.open.map((item) => item.id)}
-              rules={rules.data?.rules ?? []}
-              onResolved={() => setSelected(current.path)}
-            />
-          ) : (
-            <div className="flex flex-col gap-4 rounded-6 border border-state-settled-border bg-state-settled-surface p-8">
-              <p className="text-md font-semibold text-state-settled-ink">
-                ✓ Rule written — cluster cleared.
-              </p>
-              {answered === undefined ? null : (
-                <>
-                  <p className="text-base leading-body text-ink-secondary">
-                    &ldquo;{answered.resolution}&rdquo; — {answered.resolved_by}
+            <ul className="flex flex-col gap-3">
+              {current.items.map((item) => (
+                <li key={item.id} className="flex flex-col gap-1">
+                  <p className="text-base leading-body text-ink-primary">
+                    &ldquo;{item.question}&rdquo;
                   </p>
-                  <div>
-                    <RuleStamp
-                      rule={rules.data?.rules.find((rule) => rule.id === answered.rule_id)}
-                    />
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-        </section>
+                  {/*
+                    YOU LAND ON THE ORDER THE QUESTION CAME FROM. The design of
+                    record's framing is "you land on the field in question, not
+                    the top of the order" — CONTRACT GAP: `Escalation` carries
+                    `order_ids` and a cluster path, but no field id, no asker and
+                    no timestamp, so the order is as close as the data allows and
+                    the field itself cannot be targeted.
+                  */}
+                  <p className="flex flex-wrap gap-4 font-mono text-tiny text-ink-muted">
+                    {item.order_ids.map((orderId) => (
+                      <Link
+                        key={orderId}
+                        to="/orders/$orderId/review"
+                        params={{ orderId }}
+                        className="text-action underline"
+                      >
+                        {orderId} →
+                      </Link>
+                    ))}
+                  </p>
+                </li>
+              ))}
+            </ul>
+
+            {current.open.length > 0 ? (
+              <ResolveCard
+                ids={current.open.map((item) => item.id)}
+                rules={rules.data?.rules ?? []}
+                onResolved={() => setSelected(current.path)}
+              />
+            ) : (
+              <div className="flex flex-col gap-4 rounded-6 border border-state-settled-border bg-state-settled-surface p-8">
+                <p className="text-md font-semibold text-state-settled-ink">
+                  ✓ Rule written — cluster cleared.
+                </p>
+                {answered === undefined ? null : (
+                  <>
+                    <p className="text-base leading-body text-ink-secondary">
+                      &ldquo;{answered.resolution}&rdquo; — {answered.resolved_by}
+                    </p>
+                    <div>
+                      <RuleStamp
+                        rule={rules.data?.rules.find((rule) => rule.id === answered.rule_id)}
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </section>
+        </div>
       </div>
-    </div>
+    </Screen>
   );
 }

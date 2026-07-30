@@ -2,6 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { useSession } from "../../shared/session";
+import { Screen } from "../../shared/ui/Screen";
+import { ScreenMessage } from "../../shared/ui/ScreenMessage";
 import { Tab, TabList, TabPanel, Tabs } from "../../shared/ui/Tabs";
 
 import { BaselineGrid } from "./BaselineGrid";
@@ -42,8 +44,8 @@ export function ProductsScreen() {
   const [editing, setEditing] = useState<EditTarget | null>(null);
   const { data, isPending, isError } = useQuery(configQuery);
 
-  if (isError) return <p className="text-base text-state-halt-ink">Configuration unavailable.</p>;
-  if (isPending) return <p className="text-base text-ink-secondary">Loading configuration…</p>;
+  if (isError) return <ScreenMessage tone="halt" measure="1040">Configuration unavailable.</ScreenMessage>;
+  if (isPending) return <ScreenMessage measure="1040">Loading configuration…</ScreenMessage>;
 
   // The groups a line may belong to are the ones the catalogue already uses.
   // Offering a fixed list would let the drawer invent a group the server has
@@ -51,52 +53,54 @@ export function ProductsScreen() {
   const groups = [...new Set(data.lines.map((l) => l.group))];
 
   return (
-    <div className="flex flex-col gap-8">
-      <ConfigHeader
-        canAuthor={canAuthor}
-        configVersion={data.config_version}
-        frozen={data.frozen}
-      />
+    <Screen measure="1040">
+      <div className="flex flex-col gap-8">
+        <ConfigHeader
+          canAuthor={canAuthor}
+          configVersion={data.config_version}
+          frozen={data.frozen}
+        />
 
-      <Tabs value={tab} onValueChange={setTab}>
-        <TabList variant="standalone">
-          {CONFIG_TABS.map((t) => (
-            <Tab key={t.value} variant="standalone" value={t.value}>
-              {t.label}
-            </Tab>
-          ))}
-        </TabList>
+        <Tabs value={tab} onValueChange={setTab}>
+          <TabList variant="standalone">
+            {CONFIG_TABS.map((t) => (
+              <Tab key={t.value} variant="standalone" value={t.value}>
+                {t.label}
+              </Tab>
+            ))}
+          </TabList>
 
-        <TabPanel value="products">
-          <ProductList
-            products={data.products}
-            canAuthor={canAuthor}
-            onNew={() => setEditing({ kind: "product", mode: "new" })}
-            onEdit={() => setEditing({ kind: "product", mode: "edit" })}
-          />
-        </TabPanel>
+          <TabPanel value="products">
+            <ProductList
+              products={data.products}
+              canAuthor={canAuthor}
+              onNew={() => setEditing({ kind: "product", mode: "new" })}
+              onEdit={() => setEditing({ kind: "product", mode: "edit" })}
+            />
+          </TabPanel>
 
-        <TabPanel value="lines">
-          <LineCatalogue
-            lines={data.lines}
-            canAuthor={canAuthor}
-            onNew={() => setEditing({ kind: "line", mode: "new" })}
-            onEdit={() => setEditing({ kind: "line", mode: "edit" })}
-          />
-        </TabPanel>
+          <TabPanel value="lines">
+            <LineCatalogue
+              lines={data.lines}
+              canAuthor={canAuthor}
+              onNew={() => setEditing({ kind: "line", mode: "new" })}
+              onEdit={() => setEditing({ kind: "line", mode: "edit" })}
+            />
+          </TabPanel>
 
-        <TabPanel value="grid">
-          <BaselineGrid products={data.products} lines={data.lines} canAuthor={canAuthor} />
-        </TabPanel>
+          <TabPanel value="grid">
+            <BaselineGrid products={data.products} lines={data.lines} canAuthor={canAuthor} />
+          </TabPanel>
 
-        <TabPanel value="clients">
-          <ClientsLink />
-        </TabPanel>
-      </Tabs>
+          <TabPanel value="clients">
+            <ClientsLink />
+          </TabPanel>
+        </Tabs>
 
-      {editing === null ? null : (
-        <EditDrawer target={editing} groups={groups} onClose={() => setEditing(null)} />
-      )}
-    </div>
+        {editing === null ? null : (
+          <EditDrawer target={editing} groups={groups} onClose={() => setEditing(null)} />
+        )}
+      </div>
+    </Screen>
   );
 }

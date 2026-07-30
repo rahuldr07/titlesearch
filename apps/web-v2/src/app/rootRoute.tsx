@@ -36,19 +36,28 @@ export const rootRoute = createRootRoute({
         same way `AppChrome` is, both reading `/blind/*` from the URL
         independently rather than one gating the other.
 
-        THE SHELL DOES NOT IMPOSE A READING COLUMN. It was capped at 800px —
-        `max-w-400` against a 2px spacing base — which starved every wide screen
-        in the app regardless of window size. Overview's seven-stage board
-        overflowed that cap by 426px and hid two whole stages behind a scroll
-        with no affordance. A screen that wants a narrow measure sets its own;
-        the shell's job is the gutter and the maximum, and the maximum belongs
-        to the widest screen rather than the narrowest.
+        THE PAGE DOES NOT SCROLL — the export roots at `height:100vh;
+        overflow:hidden` and gives each screen body its own `height:100%;
+        overflow:auto`, so every region scrolls inside its own box. Page-scrolling
+        instead is what rendered Review 3,276px tall against the export's single
+        1,000px frame, left the sidebar terminating over blank ground, and
+        scrolled the order counts away from the order they count.
+
+        THE SHELL IMPOSES NO MEASURE AND NO PADDING. It used to do both, badly:
+        one 1,440px cap (`max-w-720` on a 2px base) and `p-9` — 18px against the
+        export's 28–40px. Worse, `mx-auto` on a `flex-1` flex item CANCELS
+        `align-self:stretch`, so `main` sized shrink-to-fit and every screen came
+        out narrower than drawn: Queue asked for 860px and got 670px, Profile
+        collapsed to its content's 421px where the export draws 720px. No
+        viewport-width guard catches that — the binding constraint is the
+        container. Measure, padding and placement now belong to `Screen`, which
+        each screen picks from the export's own table.
       */}
-      <div className="flex min-h-screen">
+      <div className="flex h-screen overflow-hidden">
         <AppChrome />
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <OrderStrip />
-          <main className="mx-auto min-w-0 max-w-720 flex-1 p-9">
+          <main className="flex min-h-0 min-w-0 flex-1 flex-col">
             <Outlet />
           </main>
         </div>

@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card } from "../../shared/ui/Card";
 import { Button } from "../../shared/ui/Button";
 import { ScreenTitle } from "../../app/ScreenTitle";
+import { Screen } from "../../shared/ui/Screen";
 import { MfaGateBanner } from "./MfaGateBanner";
 import { PersonRow } from "./PersonRow";
 import { peopleQuery } from "./queries";
@@ -27,43 +28,45 @@ export function PeopleScreen() {
   const { data, isPending, isError } = useQuery(peopleQuery);
 
   return (
-    <div className="flex flex-col gap-8">
-      <div className="flex flex-wrap items-end gap-8">
-        <header className="min-w-120 flex-1 flex flex-col gap-3">
-          <ScreenTitle>Admin · People</ScreenTitle>
-          <h1 className="text-3xl font-semibold text-ink-primary">
-            Everyone in this organisation
-          </h1>
-          <p className="max-w-3xl text-base leading-body text-ink-secondary">
-            This screen changes authorisation, never credentials. Invitations
-            and passwords hand off to the identity provider.
-          </p>
-        </header>
-        {/* CONTRACT GAP: no invite endpoint. Drawn as designed and disabled —
-            the invitation itself is the provider's to send. */}
-        <Button size="lg" disabled>＋ Invite person</Button>
+    <Screen measure="900">
+      <div className="flex flex-col gap-8">
+        <div className="flex flex-wrap items-end gap-8">
+          <header className="min-w-120 flex-1 flex flex-col gap-3">
+            <ScreenTitle>Admin · People</ScreenTitle>
+            <h1 className="text-3xl font-semibold text-ink-primary">
+              Everyone in this organisation
+            </h1>
+            <p className="max-w-3xl text-base leading-body text-ink-secondary">
+              This screen changes authorisation, never credentials. Invitations
+              and passwords hand off to the identity provider.
+            </p>
+          </header>
+          {/* CONTRACT GAP: no invite endpoint. Drawn as designed and disabled —
+              the invitation itself is the provider's to send. */}
+          <Button size="lg" disabled>＋ Invite person</Button>
+        </div>
+
+        {isError ? (
+          <p className="text-base text-state-halt-ink">The roster is unavailable.</p>
+        ) : isPending ? (
+          <p className="text-base text-ink-secondary">Loading the roster…</p>
+        ) : (
+          <>
+            <MfaGateBanner count={data.privileged_without_mfa} />
+            <Card>
+              <ul>
+                {data.people.map((person) => (
+                  <PersonRow key={person.id} person={person} />
+                ))}
+              </ul>
+            </Card>
+          </>
+        )}
+
+        <p className="text-xs text-ink-muted">
+          Role changes and suspensions take effect on the person&apos;s next request.
+        </p>
       </div>
-
-      {isError ? (
-        <p className="text-base text-state-halt-ink">The roster is unavailable.</p>
-      ) : isPending ? (
-        <p className="text-base text-ink-secondary">Loading the roster…</p>
-      ) : (
-        <>
-          <MfaGateBanner count={data.privileged_without_mfa} />
-          <Card>
-            <ul>
-              {data.people.map((person) => (
-                <PersonRow key={person.id} person={person} />
-              ))}
-            </ul>
-          </Card>
-        </>
-      )}
-
-      <p className="text-xs text-ink-muted">
-        Role changes and suspensions take effect on the person&apos;s next request.
-      </p>
-    </div>
+    </Screen>
   );
 }

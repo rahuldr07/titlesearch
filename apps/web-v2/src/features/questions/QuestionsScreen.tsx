@@ -1,4 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
+import { Screen } from "../../shared/ui/Screen";
+import { ScreenMessage } from "../../shared/ui/ScreenMessage";
 import { ScreenTitle } from "../../app/ScreenTitle";
 import { OrderIdentityStrip } from "./OrderIdentityStrip";
 import { SignoffCard } from "./SignoffCard";
@@ -32,30 +34,32 @@ import { orderSignoffQuery, SIGNOFF_ORDER_ID } from "./queries";
 export function QuestionsScreen() {
   const { data, isPending, isError } = useQuery(orderSignoffQuery(SIGNOFF_ORDER_ID));
 
-  if (isError) return <p className="text-base text-state-halt-ink">Sign-off unavailable.</p>;
-  if (isPending) return <p className="text-base text-ink-secondary">Loading sign-off…</p>;
+  if (isError) return <ScreenMessage tone="halt" measure="640">Sign-off unavailable.</ScreenMessage>;
+  if (isPending) return <ScreenMessage measure="640">Loading sign-off…</ScreenMessage>;
 
   return (
-    <div className="mx-auto flex w-full max-w-320 flex-col gap-7">
-      <header className="flex flex-col gap-3">
-        <ScreenTitle>Step 2 — Sign-off</ScreenTitle>
-        <h1 className="text-4xl font-semibold">Confirm what you did on this search</h1>
-        <p className="max-w-234 text-md leading-body text-ink-secondary">
-          You answer these before the pipeline runs — this is you claiming your
-          own work at the moment you hand it over, not the QC reviewer vouching
-          for it later. All required. Suggested answers come from this
-          client&apos;s reviewed policy; you still answer each line.
-        </p>
-      </header>
+    <Screen measure="640" pad="36x40">
+      <div className="flex flex-col gap-7">
+        <header className="flex flex-col gap-3">
+          <ScreenTitle>Step 2 — Sign-off</ScreenTitle>
+          <h1 className="text-4xl font-semibold">Confirm what you did on this search</h1>
+          <p className="max-w-234 text-md leading-body text-ink-secondary">
+            You answer these before the pipeline runs — this is you claiming your
+            own work at the moment you hand it over, not the QC reviewer vouching
+            for it later. All required. Suggested answers come from this
+            client&apos;s reviewed policy; you still answer each line.
+          </p>
+        </header>
 
-      <OrderIdentityStrip
-        productName={data.product_name}
-        periodLabel={data.period_label}
-        signedBy={data.signed_by}
-        signedAt={data.signed_at}
-      />
+        <OrderIdentityStrip
+          productName={data.product_name}
+          periodLabel={data.period_label}
+          signedBy={data.signed_by}
+          signedAt={data.signed_at}
+        />
 
-      <SignoffCard signoff={data} />
-    </div>
+        <SignoffCard signoff={data} />
+      </div>
+    </Screen>
   );
 }

@@ -4,6 +4,8 @@ import { canDo } from "@titlepipe/contract";
 import { rulesQuery, useConfirmRule } from "./queries";
 import { useSession } from "../../shared/session";
 import { ApiError } from "../../shared/api";
+import { Screen } from "../../shared/ui/Screen";
+import { ScreenMessage } from "../../shared/ui/ScreenMessage";
 import { RulebookHeader } from "./RulebookHeader";
 import { RuleFilters, type RuleFilterKey } from "./RuleFilters";
 import { RuleList } from "./RuleList";
@@ -41,8 +43,8 @@ export function RulebookScreen() {
   const [selected, setSelected] = useState<string | null>(null);
   const [drafting, setDrafting] = useState(false);
 
-  if (isError) return <p className="text-base text-state-halt-ink">Rulebook unavailable.</p>;
-  if (isPending) return <p className="text-base text-ink-secondary">Loading the rulebook…</p>;
+  if (isError) return <ScreenMessage tone="halt" measure="1160">Rulebook unavailable.</ScreenMessage>;
+  if (isPending) return <ScreenMessage measure="1160">Loading the rulebook…</ScreenMessage>;
 
   const rules = data.rules;
   const visible = filter === "all" ? rules : rules.filter((r) => r.status === filter);
@@ -55,56 +57,58 @@ export function RulebookScreen() {
   };
 
   return (
-    <div className="flex flex-col gap-7">
-      <RulebookHeader counts={counts} onNewRule={() => setDrafting(true)} />
+    <Screen measure="1160" pad="24x28">
+      <div className="flex flex-col gap-7">
+        <RulebookHeader counts={counts} onNewRule={() => setDrafting(true)} />
 
-      <RuleFilters
-        value={filter}
-        counts={counts}
-        total={rules.length}
-        onChange={(next) => {
-          setFilter(next);
-          // Drop the stale selection so the fallback picks the first rule the
-          // new filter actually shows.
-          setSelected(null);
-        }}
-      />
-
-      <div className="grid items-start gap-8 xl:grid-cols-[1fr_1.4fr]">
-        <RuleList
-          rules={visible}
-          selected={current?.id ?? null}
-          onSelect={(id) => {
-            setSelected(id);
-            setDrafting(false);
+        <RuleFilters
+          value={filter}
+          counts={counts}
+          total={rules.length}
+          onChange={(next) => {
+            setFilter(next);
+            // Drop the stale selection so the fallback picks the first rule the
+            // new filter actually shows.
+            setSelected(null);
           }}
         />
 
-        {drafting ? (
-          <NewRuleForm onCancel={() => setDrafting(false)} />
-        ) : current === undefined ? (
-          <p className="text-base text-ink-secondary">
-            Nothing under this filter to read.
-          </p>
-        ) : (
-          <RuleDetail
-            rule={current}
-            mayConfirm={canDo(role, "rule.confirm", { status: current.status })}
-            /*
-             * The coarse role gate, with no resource: "is this an engineer or
-             * an admin". Retiring and withdrawing are their acts too, and the
-             * status-gated check above would refuse them on every non-pending
-             * rule — which is every rule that can be retired.
-             */
-            mayAdminister={canDo(role, "rule.confirm")}
-            confirmPending={confirm.isPending}
-            confirmError={
-              confirm.error instanceof ApiError ? confirm.error.message : null
-            }
-            onConfirm={() => confirm.mutate(current.id)}
+        <div className="grid items-start gap-8 xl:grid-cols-[1fr_1.4fr]">
+          <RuleList
+            rules={visible}
+            selected={current?.id ?? null}
+            onSelect={(id) => {
+              setSelected(id);
+              setDrafting(false);
+            }}
           />
-        )}
+
+          {drafting ? (
+            <NewRuleForm onCancel={() => setDrafting(false)} />
+          ) : current === undefined ? (
+            <p className="text-base text-ink-secondary">
+              Nothing under this filter to read.
+            </p>
+          ) : (
+            <RuleDetail
+              rule={current}
+              mayConfirm={canDo(role, "rule.confirm", { status: current.status })}
+              /*
+               * The coarse role gate, with no resource: "is this an engineer or
+               * an admin". Retiring and withdrawing are their acts too, and the
+               * status-gated check above would refuse them on every non-pending
+               * rule — which is every rule that can be retired.
+               */
+              mayAdminister={canDo(role, "rule.confirm")}
+              confirmPending={confirm.isPending}
+              confirmError={
+                confirm.error instanceof ApiError ? confirm.error.message : null
+              }
+              onConfirm={() => confirm.mutate(current.id)}
+            />
+          )}
+        </div>
       </div>
-    </div>
+    </Screen>
   );
 }

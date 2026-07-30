@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { PipeMark } from "./PipeMark";
 import { buttonClasses } from "../../shared/ui/Button";
+import { Screen } from "../../shared/ui/Screen";
 import { cn } from "../../shared/ui/classNames";
 
 /**
@@ -27,8 +28,8 @@ import { cn } from "../../shared/ui/classNames";
  */
 export function SigninScreen() {
   return (
-    <div className="flex min-h-full items-center justify-center py-20">
-      <div className="w-full max-w-190 text-center">
+    <Screen measure="380" pad="40" placement="centre">
+      <div className="text-center">
         <PipeMark />
 
         <div className="text-2xl font-bold tracking-stamp text-ink-primary">
@@ -47,6 +48,6 @@ export function SigninScreen() {
           its own page. This tool never sees your credentials.
         </p>
       </div>
-    </div>
+    </Screen>
   );
 }

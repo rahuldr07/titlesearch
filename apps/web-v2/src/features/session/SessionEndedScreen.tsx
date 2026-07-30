@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { Card } from "../../shared/ui/Card";
 import { Stamp } from "../../shared/ui/Stamp";
 import { buttonClasses } from "../../shared/ui/Button";
+import { Screen } from "../../shared/ui/Screen";
 import { cn } from "../../shared/ui/classNames";
 
 /**
@@ -26,8 +27,8 @@ import { cn } from "../../shared/ui/classNames";
  */
 export function SessionEndedScreen({ orderId = DEMO_HELD_ORDER }: { orderId?: string }) {
   return (
-    <div className="flex min-h-full items-center justify-center py-20">
-      <div className="w-full max-w-210 text-center">
+    <Screen measure="420" pad="40" placement="centre">
+      <div className="text-center">
         <div className="mb-11">
           <Stamp tone="attend" size="md">
             Session ended
@@ -62,7 +63,7 @@ export function SessionEndedScreen({ orderId = DEMO_HELD_ORDER }: { orderId?: st
           Sign in again
         </Link>
       </div>
-    </div>
+    </Screen>
   );
 }
 

@@ -5,6 +5,7 @@ import { pickDelivered } from "./deliveredRecord";
 import { FinalizedNotice } from "./FinalizedNotice";
 import { ReissuedSheet } from "./ReissuedSheet";
 import { ReopenPanel } from "./ReopenPanel";
+import { Screen } from "../../shared/ui/Screen";
 
 /**
  * The per-order delivery confirmation — the last screen an order has.
@@ -25,14 +26,6 @@ import { ReopenPanel } from "./ReopenPanel";
  * and nothing to compare, so the layout should not offer the scanning posture
  * every working screen in this product does. It reads as a document, which is
  * what it is.
- *
- * The design also centres it VERTICALLY, and `min-h-full` here is currently
- * inert: `<main>` in `app/rootRoute` has no height, so a percentage min-height
- * resolves to nothing and the block sits at the top of the flow. Left as it is
- * rather than faked with `100dvh` — the shell already spends the chrome's height
- * above this element, so a viewport-tall child buys the centring at the price of
- * a scrollbar on the one screen in the product that has nothing to scroll to.
- * The line becomes true the moment the shell gives `main` a height.
  */
 export function DeliveredScreen({
   orderId,
@@ -59,17 +52,19 @@ export function DeliveredScreen({
   // failure `ScreenFailure` exists to prevent. Say which order and say why.
   if (record === null) {
     return (
-      <p data-testid="nothing-delivered" className="text-base text-ink-secondary">
-        {orderId === undefined
-          ? "No delivered report yet."
-          : `Order ${orderId} has no delivered report yet.`}
-      </p>
+      <Screen measure="460" pad="40" placement="centre">
+        <p data-testid="nothing-delivered" className="text-base text-ink-secondary">
+          {orderId === undefined
+            ? "No delivered report yet."
+            : `Order ${orderId} has no delivered report yet.`}
+        </p>
+      </Screen>
     );
   }
 
   return (
-    <div className="flex min-h-full items-center justify-center py-20">
-      <div className="w-full max-w-230 text-center">
+    <Screen measure="460" pad="40" placement="centre">
+      <div className="text-center">
         {reopenOpen ? (
           <ReopenPanel orderId={record.orderId} onCancel={() => setReopenOpen(false)} />
         ) : null}
@@ -83,6 +78,6 @@ export function DeliveredScreen({
           />
         )}
       </div>
-    </div>
+    </Screen>
   );
 }

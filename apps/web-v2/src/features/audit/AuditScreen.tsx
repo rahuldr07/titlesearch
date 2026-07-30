@@ -3,6 +3,7 @@ import { auditQuery } from "./queries";
 import { AuditRow } from "./AuditRow";
 import { AuditFilters } from "./AuditFilters";
 import { ScreenTitle } from "../../app/ScreenTitle";
+import { Screen } from "../../shared/ui/Screen";
 
 /**
  * THE RECORD. Append-only: who did what, to which order, when, and on what
@@ -29,41 +30,51 @@ export function AuditScreen() {
   const { data, isPending, isError } = useQuery(auditQuery);
 
   if (isError) {
-    return <p className="text-base text-state-halt-ink">The record is unavailable.</p>;
+    return (
+      <Screen measure="940">
+        <p className="text-base text-state-halt-ink">The record is unavailable.</p>
+      </Screen>
+    );
   }
   if (isPending) {
-    return <p className="text-base text-ink-secondary">Loading the record…</p>;
+    return (
+      <Screen measure="940">
+        <p className="text-base text-ink-secondary">Loading the record…</p>
+      </Screen>
+    );
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <header className="flex flex-col gap-2">
-        <ScreenTitle>Admin · Audit</ScreenTitle>
-        <h1 className="text-3xl font-semibold text-ink-primary">The record</h1>
-        <p className="max-w-3xl text-base leading-body text-ink-secondary">
-          Append-only: who did what, to which order, when, and on what evidence.
-          Read-only — no edit, no delete. This is how &ldquo;who amended that
-          claim&rdquo; has an answer.
-        </p>
-      </header>
+    <Screen measure="940">
+      <div className="flex flex-col gap-6">
+        <header className="flex flex-col gap-2">
+          <ScreenTitle>Admin · Audit</ScreenTitle>
+          <h1 className="text-3xl font-semibold text-ink-primary">The record</h1>
+          <p className="max-w-3xl text-base leading-body text-ink-secondary">
+            Append-only: who did what, to which order, when, and on what evidence.
+            Read-only — no edit, no delete. This is how &ldquo;who amended that
+            claim&rdquo; has an answer.
+          </p>
+        </header>
 
-      <AuditFilters />
+        <AuditFilters />
 
-      {data.entries.length === 0 ? (
-        <p className="text-base text-ink-secondary">
-          Nothing recorded yet. An empty record is a young system, not a clean
-          one.
-        </p>
-      ) : (
-        <ul
-          data-testid="audit-list"
-          className="overflow-hidden rounded-9 border border-line-strong bg-surface-panel"
-        >
-          {data.entries.map((entry) => (
-            <AuditRow key={entry.id} entry={entry} />
-          ))}
-        </ul>
-      )}
-    </div>
+        {data.entries.length === 0 ? (
+          <p className="text-base text-ink-secondary">
+            Nothing recorded yet. An empty record is a young system, not a clean
+            one.
+          </p>
+        ) : (
+          <ul
+            data-testid="audit-list"
+            className="overflow-hidden rounded-9 border border-line-strong bg-surface-panel"
+          >
+            {data.entries.map((entry) => (
+              <AuditRow key={entry.id} entry={entry} />
+            ))}
+          </ul>
+        )}
+      </div>
+    </Screen>
   );
 }

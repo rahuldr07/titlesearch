@@ -5,6 +5,8 @@ import { ScreenTitle } from "../../app/ScreenTitle";
 import { Button } from "../../shared/ui/Button";
 import { Chip } from "../../shared/ui/Chip";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
+import { Screen } from "../../shared/ui/Screen";
+import { ScreenMessage } from "../../shared/ui/ScreenMessage";
 import { Toggle, ToggleGroup } from "../../shared/ui/ToggleGroup";
 import { useSession } from "../../shared/session";
 import { GateClosedBanner, GateOpenBanner } from "./GateBanner";
@@ -40,8 +42,8 @@ import { COMPLETENESS_ORDER_ID, orderCompletenessQuery } from "./queries";
 export function CompletenessScreen() {
   const { data, isPending, isError } = useQuery(orderCompletenessQuery(COMPLETENESS_ORDER_ID));
 
-  if (isError) return <p className="text-base text-state-halt-ink">Completeness gate unavailable.</p>;
-  if (isPending) return <p className="text-base text-ink-secondary">Loading the gate…</p>;
+  if (isError) return <ScreenMessage tone="halt" measure="720">Completeness gate unavailable.</ScreenMessage>;
+  if (isPending) return <ScreenMessage measure="720">Loading the gate…</ScreenMessage>;
 
   return <GateBody gate={data} />;
 }
@@ -68,67 +70,63 @@ function GateBody({ gate: data }: { gate: OrderCompletenessResponse }) {
   ).length;
 
   return (
-    /*
-     * THIS SCREEN SETS ITS OWN MEASURE — 720px, centred, as the design draws it.
-     * A gap card is a paragraph of claim against evidence; run to a full window
-     * the two lines it exists to hold side by side stop being comparable, which
-     * is the one thing this screen is for.
-     */
-    <div className="mx-auto flex max-w-360 flex-col gap-6">
-      <header className="flex flex-col gap-2">
-        <ScreenTitle>Between segment &amp; extract</ScreenTitle>
-        <h1 className="text-3xl font-semibold">Completeness gate</h1>
-        <p className="text-md leading-body text-ink-secondary">
-          Your intake claims, checked against what was actually segmented —
-          before a single field is extracted.
-        </p>
-      </header>
+    <Screen measure="720" pad="32x40">
+      <div className="flex flex-col gap-6">
+        <header className="flex flex-col gap-2">
+          <ScreenTitle>Between segment &amp; extract</ScreenTitle>
+          <h1 className="text-3xl font-semibold">Completeness gate</h1>
+          <p className="text-md leading-body text-ink-secondary">
+            Your intake claims, checked against what was actually segmented —
+            before a single field is extracted.
+          </p>
+        </header>
 
-      <div className="flex flex-wrap items-center gap-5">
-        <Eyebrow variant="caption">Product ordered</Eyebrow>
-        <span className="text-md font-semibold">{data.product_name}</span>
-        <Chip tone="action" size="sm" shape="mono" bordered className="normal-case">
-          {data.period_label}
-        </Chip>
+        <div className="flex flex-wrap items-center gap-5">
+          <Eyebrow variant="caption">Product ordered</Eyebrow>
+          <span className="text-md font-semibold">{data.product_name}</span>
+          <Chip tone="action" size="sm" shape="mono" bordered className="normal-case">
+            {data.period_label}
+          </Chip>
 
-        <div className="ml-auto flex items-center gap-4">
-          <Eyebrow variant="caption">Gate verdict · local preview</Eyebrow>
-          <ToggleGroup
-            aria-label="Gate verdict (local preview)"
-            value={[gateOpen ? "open" : "closed"]}
-            onValueChange={(value) => setGateOpen(value[0] !== "closed")}
+          <div className="ml-auto flex items-center gap-4">
+            <Eyebrow variant="caption">Gate verdict · local preview</Eyebrow>
+            <ToggleGroup
+              aria-label="Gate verdict (local preview)"
+              value={[gateOpen ? "open" : "closed"]}
+              onValueChange={(value) => setGateOpen(value[0] !== "closed")}
+            >
+              <Toggle value="open">Open</Toggle>
+              <Toggle value="closed">Closed</Toggle>
+            </ToggleGroup>
+          </div>
+        </div>
+
+        {gateOpen ? <GateOpenBanner /> : <GateClosedBanner />}
+
+        {data.gaps.map((gap) => (
+          <GapCard
+            key={gap.id}
+            gap={gap}
+            closure={gate.closures[gap.id]}
+            onClose={(option, note) => gate.close(gap.id, { option, note, by: `${actor} (${role})` })}
+          />
+        ))}
+
+        <div className="flex items-center gap-7">
+          <p
+            className={
+              openGaps > 0 ? "flex-1 text-sm text-ink-secondary" : "flex-1 text-sm text-state-settled-ink"
+            }
           >
-            <Toggle value="open">Open</Toggle>
-            <Toggle value="closed">Closed</Toggle>
-          </ToggleGroup>
+            {openGaps > 0
+              ? `${openGaps} gap${openGaps === 1 ? "" : "s"} still open. Close each to resume — nothing has been extracted yet.`
+              : "Every gap has a closure recorded here. Re-running the gate is the server's, and nothing on this screen reopens it."}
+          </p>
+          <Button size="lg" disabled>
+            Resume processing →
+          </Button>
         </div>
       </div>
-
-      {gateOpen ? <GateOpenBanner /> : <GateClosedBanner />}
-
-      {data.gaps.map((gap) => (
-        <GapCard
-          key={gap.id}
-          gap={gap}
-          closure={gate.closures[gap.id]}
-          onClose={(option, note) => gate.close(gap.id, { option, note, by: `${actor} (${role})` })}
-        />
-      ))}
-
-      <div className="flex items-center gap-7">
-        <p
-          className={
-            openGaps > 0 ? "flex-1 text-sm text-ink-secondary" : "flex-1 text-sm text-state-settled-ink"
-          }
-        >
-          {openGaps > 0
-            ? `${openGaps} gap${openGaps === 1 ? "" : "s"} still open. Close each to resume — nothing has been extracted yet.`
-            : "Every gap has a closure recorded here. Re-running the gate is the server's, and nothing on this screen reopens it."}
-        </p>
-        <Button size="lg" disabled>
-          Resume processing →
-        </Button>
-      </div>
-    </div>
+    </Screen>
   );
 }

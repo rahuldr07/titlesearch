@@ -6,6 +6,7 @@ import { Sidebar, type SidebarDoorItem, type SidebarSection } from "../entities/
 import type { LifecycleStage } from "../entities/nav/LifecycleRail";
 import { useSession } from "../shared/session";
 import { useAttention, type Attention } from "./attention";
+import { chromeFor } from "./chromeFor";
 import { useNavCollapsed, useTheme } from "./preferences";
 import { orderFromPath } from "./orderFromPath";
 import { SidebarBrand } from "./SidebarBrand";
@@ -60,14 +61,17 @@ export function AppChrome() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
   const role = useSession((s) => s.role);
-  const onCaptureSeat = pathname.startsWith("/blind");
+  // `chromeFor` owns which surfaces draw chrome and which may fetch. They are
+  // separate claims: gating on `/blind` alone drew the whole rail — every ADMIN
+  // door, and an identity chip — on `/signin`, to somebody not signed in.
+  const { chrome, fetches } = chromeFor(pathname);
   const onReview = /^\/orders\/[^/]+\/review/.test(pathname);
   // Review starts collapsed on first mount; the preference wins once loaded.
-  const [collapsed, toggleCollapsed] = useNavCollapsed(!onCaptureSeat, onReview);
-  // Same zero-GET rule as the collapse: no theme fetch on the capture seat.
-  // Only the VALUE is needed here now (the toggle moved to `OrderStrip` with
-  // `AccountMenu`) — this call still owns the `data-theme` effect below.
-  const [theme] = useTheme(!onCaptureSeat);
+  const [collapsed, toggleCollapsed] = useNavCollapsed(fetches, onReview);
+  // Same zero-GET rule as the collapse. Only the VALUE is needed here now (the
+  // toggle moved to `OrderStrip` with `AccountMenu`) — this call still owns the
+  // `data-theme` effect below.
+  const [theme] = useTheme(fetches);
   // `:root` IS TitlePipe; `[data-theme="mocha"]` is the only value that means
   // anything else, so the attribute is set only for the non-default theme
   // rather than toggled between two literal values (`tokens.css` §8).
@@ -79,19 +83,19 @@ export function AppChrome() {
     }
   }, [theme]);
   // One escalations query, disabled on the capture seat (the zero-GET rule).
-  const escalationAttention = useAttention(onCaptureSeat ? "" : "/escalations");
+  const escalationAttention = useAttention(fetches ? "/escalations" : "");
 
   // THIS ORDER's live state — the URL order, same as `OrderStrip` (Task 11's
   // principle). All four disabled together off an order screen and on the
   // capture seat, so neither adds a GET the zero-GET rule forbids.
-  const orderId = onCaptureSeat ? null : orderFromPath(pathname);
+  const orderId = fetches ? orderFromPath(pathname) : null;
   const enabled = orderId !== null;
   const { data: pipeline } = useQuery({ ...orderPipelineQuery(orderId ?? ""), enabled });
   const { data: signoff } = useQuery({ ...orderSignoffQuery(orderId ?? ""), enabled });
   const { data: completeness } = useQuery({ ...orderCompletenessQuery(orderId ?? ""), enabled });
   const { data: fields } = useQuery({ ...orderFieldsQuery(orderId ?? ""), enabled });
 
-  if (onCaptureSeat) return null;
+  if (!chrome) return null;
 
   const heldDoors = doorsFor(role);
   const held = new Set(heldDoors.map((door) => door.path));

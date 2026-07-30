@@ -3,6 +3,7 @@ import { useState } from "react";
 
 import { ScreenTitle } from "../../app/ScreenTitle";
 import { useSession } from "../../shared/session";
+import { Screen } from "../../shared/ui/Screen";
 import { Tab, TabList, TabPanel, Tabs } from "../../shared/ui/Tabs";
 
 import { clientsQuery, configProductsQuery } from "./queries";
@@ -40,10 +41,18 @@ export function ClientsScreen() {
   const config = useQuery(configProductsQuery);
 
   if (clients.isError || config.isError) {
-    return <p className="text-base text-state-halt-ink">Client settings unavailable.</p>;
+    return (
+      <Screen measure="880">
+        <p className="text-base text-state-halt-ink">Client settings unavailable.</p>
+      </Screen>
+    );
   }
   if (clients.isPending || config.isPending) {
-    return <p className="text-base text-ink-secondary">Loading client settings…</p>;
+    return (
+      <Screen measure="880">
+        <p className="text-base text-ink-secondary">Loading client settings…</p>
+      </Screen>
+    );
   }
 
   // Open on a pairing the server has actually resolved. Landing on the "nobody
@@ -55,54 +64,56 @@ export function ClientsScreen() {
   const selectedClient = clientId ?? clients.data.clients[0]?.id ?? "";
 
   return (
-    <div className="flex flex-col gap-8">
-      <header>
-        <ScreenTitle>Admin · Clients</ScreenTitle>
-        <h1 className="mt-4 text-3xl font-semibold text-ink-primary">
-          Client settings &amp; overrides
-        </h1>
-        <p className="mt-2 max-w-prose text-base leading-body text-ink-secondary">
-          A client holds only <span className="font-semibold">deltas</span>{" "}
-          against the product baseline — never a copy of the list. That way a
-          baseline change keeps reaching every client, and each difference stays
-          visibly deliberate.
-        </p>
-      </header>
+    <Screen measure="880">
+      <div className="flex flex-col gap-8">
+        <header>
+          <ScreenTitle>Admin · Clients</ScreenTitle>
+          <h1 className="mt-4 text-3xl font-semibold text-ink-primary">
+            Client settings &amp; overrides
+          </h1>
+          <p className="mt-2 max-w-prose text-base leading-body text-ink-secondary">
+            A client holds only <span className="font-semibold">deltas</span>{" "}
+            against the product baseline — never a copy of the list. That way a
+            baseline change keeps reaching every client, and each difference stays
+            visibly deliberate.
+          </p>
+        </header>
 
-      {product === undefined ? (
-        <p data-testid="no-products" className="text-base leading-body text-ink-secondary">
-          The configuration carries no products, so there is no baseline to
-          resolve a client against.
-        </p>
-      ) : (
-        <Tabs value={tab} onValueChange={setTab}>
-          <TabList variant="standalone">
-            <Tab variant="standalone" value="one">One client in depth</Tab>
-            <Tab variant="standalone" value="compare">Compare all clients</Tab>
-          </TabList>
+        {product === undefined ? (
+          <p data-testid="no-products" className="text-base leading-body text-ink-secondary">
+            The configuration carries no products, so there is no baseline to
+            resolve a client against.
+          </p>
+        ) : (
+          <Tabs value={tab} onValueChange={setTab}>
+            <TabList variant="standalone">
+              <Tab variant="standalone" value="one">One client in depth</Tab>
+              <Tab variant="standalone" value="compare">Compare all clients</Tab>
+            </TabList>
 
-          <TabPanel value="one">
-            <OneClientTab
-              canAuthor={canAuthor}
-              data={clients.data}
-              config={config.data}
-              clientId={selectedClient}
-              product={product}
-              onSelectClient={setClientId}
-              onSelectProduct={setProductId}
-            />
-          </TabPanel>
+            <TabPanel value="one">
+              <OneClientTab
+                canAuthor={canAuthor}
+                data={clients.data}
+                config={config.data}
+                clientId={selectedClient}
+                product={product}
+                onSelectClient={setClientId}
+                onSelectProduct={setProductId}
+              />
+            </TabPanel>
 
-          <TabPanel value="compare">
-            <CompareTab
-              data={clients.data}
-              products={config.data.products}
-              product={product}
-              onSelectProduct={setProductId}
-            />
-          </TabPanel>
-        </Tabs>
-      )}
-    </div>
+            <TabPanel value="compare">
+              <CompareTab
+                data={clients.data}
+                products={config.data.products}
+                product={product}
+                onSelectProduct={setProductId}
+              />
+            </TabPanel>
+          </Tabs>
+        )}
+      </div>
+    </Screen>
   );
 }

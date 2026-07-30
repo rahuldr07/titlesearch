@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { ScreenFailure } from "../../shared/ui/ScreenFailure";
 import { buttonClasses } from "../../shared/ui/Button";
+import { Screen } from "../../shared/ui/Screen";
 import { cn } from "../../shared/ui/classNames";
 
 /**
@@ -27,8 +28,8 @@ import { cn } from "../../shared/ui/classNames";
  */
 export function SurfaceFailureScreen({ reference }: { reference?: string | undefined }) {
   return (
-    <div className="flex min-h-full items-center justify-center py-20">
-      <div data-testid="surface-failure" className="flex w-full max-w-220 flex-col gap-6">
+    <Screen measure="440" pad="40" placement="centre">
+      <div data-testid="surface-failure" className="flex flex-col gap-6">
         <ScreenFailure reference={reference} />
 
         <p className="text-xs leading-open text-ink-muted">
@@ -42,6 +43,6 @@ export function SurfaceFailureScreen({ reference }: { reference?: string | undef
           </Link>
         </div>
       </div>
-    </div>
+    </Screen>
   );
 }

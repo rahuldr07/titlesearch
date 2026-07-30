@@ -6,6 +6,8 @@ import { ScreenTitle } from "../../app/ScreenTitle";
 import { buttonClasses } from "../../shared/ui/Button";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
 import { Toggle, ToggleGroup } from "../../shared/ui/ToggleGroup";
+import { Screen } from "../../shared/ui/Screen";
+import { ScreenMessage } from "../../shared/ui/ScreenMessage";
 import { cn } from "../../shared/ui/classNames";
 import { PackageStats } from "./PackageStats";
 import { StageRow } from "./StageRow";
@@ -28,8 +30,8 @@ import { orderPipelineQuery, PIPELINE_ORDER_ID } from "./queries";
 export function ProcessingScreen() {
   const { data, isPending, isError } = useQuery(orderPipelineQuery(PIPELINE_ORDER_ID));
 
-  if (isError) return <p className="text-base text-state-halt-ink">Pipeline unavailable.</p>;
-  if (isPending) return <p className="text-base text-ink-secondary">Loading the run…</p>;
+  if (isError) return <ScreenMessage tone="halt" measure="700">Pipeline unavailable.</ScreenMessage>;
+  if (isPending) return <ScreenMessage measure="700">Loading the run…</ScreenMessage>;
 
   return <PipelineBody pipeline={data} />;
 }
@@ -56,59 +58,55 @@ function PipelineBody({ pipeline }: { pipeline: OrderPipelineResponse }) {
   const [gateHalted, setGateHalted] = useState(pipeline.gate_halted);
 
   return (
-    /*
-     * THIS SCREEN SETS ITS OWN MEASURE — 700px, centred, as the design draws it.
-     * The shell's cap belongs to the widest board in the app, not to a single
-     * column of stage rows; left uncapped, one row would run the full window and
-     * put the owner caption a screen's width away from the stage it names.
-     */
-    <div className="mx-auto flex max-w-350 flex-col gap-7">
-      <header className="flex flex-col gap-2">
-        <ScreenTitle>Step 3 — Pipeline</ScreenTitle>
-        <h1 className="text-4xl font-semibold">Building the draft report</h1>
-        <p className="text-md leading-body text-ink-secondary">
-          Two halts by design: the completeness gate protects the spend, the
-          human QC gate protects the client.
-        </p>
-      </header>
+    <Screen measure="700" pad="40" placement="centre">
+      <div className="flex flex-col gap-7">
+        <header className="flex flex-col gap-2">
+          <ScreenTitle>Step 3 — Pipeline</ScreenTitle>
+          <h1 className="text-4xl font-semibold">Building the draft report</h1>
+          <p className="text-md leading-body text-ink-secondary">
+            Two halts by design: the completeness gate protects the spend, the
+            human QC gate protects the client.
+          </p>
+        </header>
 
-      <PackageStats
-        totalPages={pipeline.total_pages}
-        pagesRelevant={pipeline.pages_relevant}
-        classifierNote={pipeline.classifier_note}
-      />
+        <PackageStats
+          totalPages={pipeline.total_pages}
+          pagesRelevant={pipeline.pages_relevant}
+          classifierNote={pipeline.classifier_note}
+        />
 
-      <ul className="overflow-hidden rounded-9 border border-line-strong bg-surface-panel">
-        {pipeline.stages.map((stage) => (
-          <StageRow key={stage.id} stage={stage} />
-        ))}
-      </ul>
+        <ul className="overflow-hidden rounded-9 border border-line-strong bg-surface-panel">
+          {pipeline.stages.map((stage) => (
+            <StageRow key={stage.id} stage={stage} />
+          ))}
+        </ul>
 
-      <div className="flex items-center gap-4">
-        <Eyebrow variant="caption">Gate outcome · local preview</Eyebrow>
-        <ToggleGroup
-          aria-label="Gate outcome (local preview)"
-          value={[gateHalted ? "halted" : "passed"]}
-          onValueChange={(value) => setGateHalted(value[0] !== "passed")}
-        >
-          <Toggle value="halted">Halted</Toggle>
-          <Toggle value="passed">Passed</Toggle>
-        </ToggleGroup>
+        <div className="flex items-center gap-4">
+          <Eyebrow variant="caption">Gate outcome · local preview</Eyebrow>
+          <ToggleGroup
+            aria-label="Gate outcome (local preview)"
+            value={[gateHalted ? "halted" : "passed"]}
+            onValueChange={(value) => setGateHalted(value[0] !== "passed")}
+          >
+            <Toggle value="halted">Halted</Toggle>
+            <Toggle value="passed">Passed</Toggle>
+          </ToggleGroup>
+        </div>
+
+        {gateHalted ? (
+          <Link to="/completeness" className={cn(buttonClasses({ size: "xl", tone: "halt" }))}>
+            Resolve completeness gate →
+          </Link>
+        ) : (
+          <Link
+            to="/orders/$orderId/review"
+            params={{ orderId: pipeline.order_id }}
+            className={cn(buttonClasses({ size: "xl" }))}
+          >
+            Open review — the run is waiting on you →
+          </Link>
+        )}
       </div>
-
-      {gateHalted ? (
-        <Link to="/completeness" className={cn(buttonClasses({ size: "xl", tone: "halt" }))}>
-          Resolve completeness gate →
-        </Link>
-      ) : (
-        <Link
-          to="/orders/$orderId/review"
-          params={{ orderId: pipeline.order_id }}
-          className={cn(buttonClasses({ size: "xl" }))}
-        >
-          Open review — the run is waiting on you →
-        </Link>
-      )}
-    </div>
+    </Screen>
   );
 }
