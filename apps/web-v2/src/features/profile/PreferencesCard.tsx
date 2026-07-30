@@ -17,10 +17,15 @@ const DEFAULT_ZOOM = "100%";
  * alter an outcome it stops being a preference and becomes a client-side rule,
  * which the server owns.
  *
- * CONTRACT GAP: there is no preferences endpoint, and browser storage is
- * forbidden here, so these hold for the life of the mount only. Left visibly
- * non-persistent rather than faked — a toggle that quietly forgets is worse
- * than one that never claimed to remember.
+ * NOT A CONTRACT GAP — A WIRING ONE, and the note that said otherwise was
+ * wrong. `GET`/`PATCH /api/me/preferences` exists and `Preferences` already
+ * carries `default_zoom` and `reduced_motion` (`app/preferences.ts` reads the
+ * same endpoint for the fold and the theme). These three controls are local
+ * state and hold for the life of the mount; browser storage is forbidden here,
+ * so they are left visibly non-persistent rather than faked — a toggle that
+ * quietly forgets is worse than one that never claimed to remember. The
+ * shortcuts switch is the one with no carrier: nothing on `Preferences` says
+ * whether the chord layer is live.
  */
 export function PreferencesCard() {
   const [zoom, setZoom] = useState<string>(DEFAULT_ZOOM);

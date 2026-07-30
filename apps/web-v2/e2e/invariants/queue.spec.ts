@@ -8,6 +8,11 @@ import { expect, test } from "@playwright/test";
  * Un-skip as each feature lands. Rewrite selectors freely.
  * NEVER weaken an assertion — if one cannot pass against the new design,
  * that is a CONFLICT in the design: stop and report (BRIEF §5 Phase 5).
+ *
+ * The refs became the export's own numbers on 2026-07-30 (`DEMO-0001` →
+ * `4176034-1`, `DEMO-0002` → `4176052-7`) when the two hand-maintained order
+ * lists became one shared set. The served order and its position are unchanged
+ * and not one assertion moved — only the string each names.
  */
 
 // TODO(rebuild) [INVARIANT] — rule: the queue is a single server-chosen next order — no list, no browsing, no cherry-picking.
@@ -17,9 +22,9 @@ test("renders the server's next order verbatim — exactly one order, no list", 
   await page.goto("/queue");
   const refs = page.getByTestId("order-ref");
   await expect(refs).toHaveCount(1);
-  await expect(refs).toHaveText("DEMO-0001");
+  await expect(refs).toHaveText("4176034-1");
   // No queue browsing: the second queued order is not on the page anywhere.
-  await expect(page.getByText("DEMO-0002")).toHaveCount(0);
+  await expect(page.getByText("4176052-7")).toHaveCount(0);
 });
 
 // TODO(rebuild) [INVARIANT] — rule: no pace indicators, no throughput language, and no time ESTIMATES — an estimate is a pace indicator.
@@ -40,13 +45,13 @@ test("pass without a reason is refused; esc keeps the order", async ({
   page,
 }) => {
   await page.goto("/queue");
-  await expect(page.getByTestId("order-ref")).toHaveText("DEMO-0001");
+  await expect(page.getByTestId("order-ref")).toHaveText("4176034-1");
   await page.keyboard.press("p");
   const input = page.getByPlaceholder(/why are you passing/);
   await expect(input).toBeFocused();
   await input.press("Enter"); // empty — must not submit
   await expect(page.getByTestId("passed-note")).toHaveCount(0);
-  await expect(page.getByTestId("order-ref")).toHaveText("DEMO-0001");
+  await expect(page.getByTestId("order-ref")).toHaveText("4176034-1");
   await input.press("Escape");
   await expect(input).toHaveCount(0);
 });
@@ -56,15 +61,15 @@ test("pass with a reason records and advances to the next order", async ({
   page,
 }) => {
   await page.goto("/queue");
-  await expect(page.getByTestId("order-ref")).toHaveText("DEMO-0001");
+  await expect(page.getByTestId("order-ref")).toHaveText("4176034-1");
   await page.keyboard.press("p");
   const input = page.getByPlaceholder(/why are you passing/);
   await input.fill("never done a Cobb Co. tax card");
   await input.press("Enter");
   await expect(page.getByTestId("passed-note")).toContainText(
-    "passed DEMO-0001",
+    "passed 4176034-1",
   );
-  await expect(page.getByTestId("order-ref")).toHaveText("DEMO-0002");
+  await expect(page.getByTestId("order-ref")).toHaveText("4176052-7");
 });
 
 // TODO(rebuild) [INVARIANT] — rule: ORPHAN — Enter starts review on the SERVED order. (Promoted to INVARIANT by open-rulings Q3.)

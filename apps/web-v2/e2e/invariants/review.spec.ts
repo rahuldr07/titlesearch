@@ -202,12 +202,19 @@ test("the order strip shows the ref, the four counts, and the sign-off stamp", a
 }) => {
   await go(page);
   const strip = page.getByTestId("order-strip");
-  await expect(strip).toContainText("ORDER ord_demo_1");
+  // The HUMAN ref, from `GET /api/orders/{id}/context`. This asserted
+  // "ORDER ord_demo_1" while no endpoint carried the ref; it does now, and the
+  // URL id must not appear at all — a strip that prints the id is the defect.
+  await expect(strip).toContainText("ORDER 4176034-1");
+  await expect(strip).not.toContainText("ord_demo_1");
   const counts = page.getByTestId("order-counts");
   await expect(counts).toContainText("21");
   for (const label of ["Fields", "Auto-confirmed", "Need you", "No source"]) {
     await expect(counts).toContainText(label);
   }
-  await expect(strip).toContainText("Not signed");
+  // The SERVER'S stamp, taken whole. "Not signed" was composed in the browser
+  // from `signed_by === null` because nothing on the wire said where the order
+  // stood; `stamp.label` does, and the screen may not second-guess it.
+  await expect(strip).toContainText("Package incomplete");
   await expect(strip.getByTestId("account-menu")).toBeVisible();
 });

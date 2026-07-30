@@ -22,10 +22,13 @@ import { Card } from "../../shared/ui/Card";
  * Where the server sends nothing, the row stays silent rather than printing a
  * zero the screen would have had to invent.
  *
- * CONTRACT GAP: the census does not say whether an order is the viewer's own,
- * so the design's violet edge and "yours" stamp are absent. It also carries no
- * order id, only a reference, so the card is not a link. When either lands the
- * card becomes the button the design draws.
+ * BOTH GAPS ARE CLOSED ON THE WIRE (2026-07-30, Wave 2) AND NEITHER IS DRAWN
+ * HERE YET. `LifecycleOrder` now carries `id`, `mine` and `state_label`, so the
+ * design's violet edge, its "yours" mark and the card-as-link are all
+ * expressible — and none of them is a text render: they are the board's
+ * appearance, which Wave 4 rebuilds. This note stays as the record of what is
+ * available rather than as a claim that it is missing, because a stale gap note
+ * is how a field lands and nothing ever reads it.
  */
 export function OrderCard({ order }: { order: LifecycleOrder }) {
   return (

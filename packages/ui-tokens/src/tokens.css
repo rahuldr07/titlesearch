@@ -307,6 +307,7 @@
   --text-base: 0.78125rem; /* 12.5px — default panel body */
   --text-md: 0.8125rem; /* 13px — emphasised body, card values */
   --text-lg: 0.875rem; /* 14px — card titles, app default */
+  --text-census: 0.9375rem; /* 15px — the chrome strip's census numeral (D10) */
   --text-xl: 1rem; /* 16px — section leads */
   --text-2xl: 1.125rem; /* 18px */
   --text-3xl: 1.375rem; /* 22px — screen h1 */
@@ -370,8 +371,12 @@
    * In this design border WIDTH carries meaning, consistently:
    *   1px    structure — card edges, row separators, resting controls
    *   1.5px  load-bearing — selected, required, or "this is the live choice"
-   *   2.5–3px  stamp double-border, accent top edge
+   *   2px    accent — the inset top stripe on the block you are working
+   *   2.5px  stamp double-border
    *   4px    severity — the left edge on a banner
+   * Accent and severity are DIFFERENT axes and must not converge: the top
+   * stripe says "this is live", the left edge says "this is a problem". At 3px
+   * the accent read as a weak severity edge, so Card wore the wrong one.
    * A 1.5px border is therefore a statement, and hard-coding it as an
    * arbitrary value would let that statement drift silently.
    */
@@ -389,7 +394,7 @@
   --stroke-structure: 1px;
   --stroke-emphasis: 1.5px;
   --stroke-stamp: 2.5px;
-  --stroke-accent: 3px;
+  --stroke-accent: 2px;
   --stroke-severity: 4px;
 
   /* ── space ────────────────────────────────────────────────────────────── */

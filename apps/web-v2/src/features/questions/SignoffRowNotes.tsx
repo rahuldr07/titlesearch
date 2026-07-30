@@ -18,11 +18,13 @@ import { Eyebrow } from "../../shared/ui/Eyebrow";
  *    it. The prefill is visible and still costs a deliberate press, which is the
  *    whole distinction between a policy and a signature (open ruling Q13).
  *
- * CONTRACT GAP: `prefilled_from_policy` is a boolean. The design prints the
- * suggestion outright — "Policy suggests YES" — and outlines the button that
- * answer would land on. The wire says only THAT a policy answer exists, never
- * WHICH, so this row says the same thing without the value. Reading the
- * suggestion off the button set would be the screen inventing a policy.
+ * THE SUGGESTION IS NAMED NOW (2026-07-30, Wave 2). `prefilled_from_policy`
+ * says THAT policy suggested; `policy_suggestion` says WHAT it suggested, and
+ * the design prints it outright — "Policy suggests YES". Both are read, and
+ * neither is read as an answer: the line is unanswered until a person presses,
+ * which is the whole of ruling Q13. A row that carries the flag and no value
+ * still says so without naming one — the flag and the value are two claims and
+ * the screen may not invent the second from the first.
  */
 const NA_UNCHECKED_NOTE =
   "An N/A on this line is not verified against the package and raises no gate.";
@@ -70,8 +72,15 @@ export function SignoffRowNotes({
           </Eyebrow>
           {line.prefilled_from_policy ? (
             <span className="text-tiny leading-body text-ink-muted">
-              Policy suggests an answer —{" "}
-              <span className="font-semibold text-action-ink">only your press signs it</span>.
+              {line.policy_suggestion === null ? (
+                "Policy suggests an answer"
+              ) : (
+                <>
+                  Policy suggests{" "}
+                  <span className="font-mono font-semibold">{line.policy_suggestion}</span>
+                </>
+              )}{" "}
+              — <span className="font-semibold text-action-ink">only your press signs it</span>.
             </span>
           ) : null}
         </div>

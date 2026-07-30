@@ -7,8 +7,14 @@ import { get } from "../../shared/api";
  * reached from the chrome menu with nothing in the URL, so there is no id to
  * read — the demo order stands in until intake gets `/orders/:id/questions`.
  * Adding that route is a routing change and is deliberately not made here.
+ *
+ * THE INTAKE-STAGE ORDER, NOT THE LIVE ONE. `/questions` is where a sign-off is
+ * ANSWERED, and the live order's has been signed. Pointing both screens at one
+ * order forced the fixture to be signed and unsigned at once — and a signed
+ * sign-off carries no policy suggestion, so the one screen whose job is
+ * answering had nothing left to answer.
  */
-export const SIGNOFF_ORDER_ID = "ord_demo_1";
+export const SIGNOFF_ORDER_ID = "ord_demo_4";
 
 /**
  * The effective sign-off list for one order.

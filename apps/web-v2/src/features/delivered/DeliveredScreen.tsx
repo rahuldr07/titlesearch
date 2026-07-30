@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { deliveriesQuery } from "./queries";
+import { deliveriesQuery, orderContextQuery } from "./queries";
 import { pickDelivered } from "./deliveredRecord";
 import { FinalizedNotice } from "./FinalizedNotice";
 import { ReissuedSheet } from "./ReissuedSheet";
@@ -38,6 +38,14 @@ export function DeliveredScreen({
   reopen?: boolean;
 }) {
   const { data, isPending, isError } = useQuery(deliveriesQuery);
+  // Resolved BEFORE the early returns so the context query below is an
+  // unconditional hook. `pickDelivered` is pure and returns null until the
+  // list arrives, which is also the "no delivery for this order" answer.
+  const record = data === undefined ? null : pickDelivered(data.deliveries, orderId);
+  const { data: context } = useQuery({
+    ...orderContextQuery(record?.orderId ?? ""),
+    enabled: record !== null,
+  });
   const [reopenOpen, setReopenOpen] = useState(reopen);
 
   if (isError) {
@@ -46,8 +54,6 @@ export function DeliveredScreen({
   if (isPending) {
     return <p className="text-base text-ink-secondary">Loading the delivery record…</p>;
   }
-
-  const record = pickDelivered(data.deliveries, orderId);
 
   // A blank would read as "delivered, nothing to show" — the same silent-blank
   // failure `ScreenFailure` exists to prevent. Say which order and say why.
@@ -82,11 +88,19 @@ export function DeliveredScreen({
           <ReopenPanel orderId={record.orderId} onCancel={() => setReopenOpen(false)} />
         ) : null}
 
+        {/*
+          THE ORDER IS NAMED THE WAY A PERSON NAMES IT — `context.order_ref`,
+          falling back to the id only while the context is still out. The id is
+          how the app addresses an order, not what anyone calls it, and the
+          sheet the client holds carries the ref.
+        */}
         {record.version > 1 ? (
-          <ReissuedSheet orderId={record.orderId} />
+          <ReissuedSheet orderId={context?.order_ref ?? record.orderId} />
         ) : (
           <FinalizedNotice
-            orderId={record.orderId}
+            orderId={context?.order_ref ?? record.orderId}
+            product={context?.product ?? null}
+            periodLabel={context?.period_label ?? null}
             deliveredLabel={record.deliveredLabel}
           />
         )}

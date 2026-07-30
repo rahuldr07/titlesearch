@@ -34,10 +34,10 @@ import { COMPLETENESS_ORDER_ID, orderCompletenessQuery } from "./queries";
  * Closures are local state and vanish on reload; "Resume processing" is drawn
  * as the design draws it and disabled.
  *
- * CONTRACT GAP: `close_options` are opaque strings with no kind, so the role
- * gate the design put on changing the product — the client paid for it, senior
- * and ops only — cannot be applied without matching on the server's copy. It is
- * left off rather than faked.
+ * Since 2026-07-30 `close_options` carry their kind, their consequence, whether
+ * they require a comment and the `min_role` the server requires — so the role
+ * gate the design put on changing the product is the server's fact rather than
+ * a match on its copy. Applying it to the control is Wave 4's; the wire is here.
  */
 export function CompletenessScreen() {
   const { data, isPending, isError } = useQuery(orderCompletenessQuery(COMPLETENESS_ORDER_ID));

@@ -79,5 +79,20 @@ test("the order spine travels with the order on Review", async ({ page }) => {
   await expect(rail).toContainText("ord_demo_1");
   await expect(rail).toContainText("still queued");
   await expect(rail).toContainText("escalations open"); // esc cluster spans this order
+});
+
+// The DELIVERY half of the same rule, moved onto an order that HAS a delivery.
+// Until 2026-07-30 this was asserted on ord_demo_1, whose fixture carried a
+// "delivered v1" event while the order sat at the completeness gate — an order
+// cannot be both, and the shared order set stopped saying it was. The rule is
+// unchanged and now fully covered: queue and escalation state above, delivery
+// state here, each on an order it is actually true of.
+test("delivery state travels with the order too", async ({ page }) => {
+  await page.goto("/orders/ord_demo_13/review");
+  const rail = page.getByTestId("order-rail");
+  await expect(rail).toContainText("ord_demo_13");
   await expect(rail).toContainText("delivered v1");
+  await expect(rail).toContainText("delivered v2");
+  // …and it is NOT the served order, so the queue chip must be absent.
+  await expect(rail).not.toContainText("still queued");
 });

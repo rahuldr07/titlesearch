@@ -7,7 +7,7 @@ import {
   createRouter,
   RouterProvider,
 } from "@tanstack/react-router";
-import type { Field, OrderSignoffResponse, PreferencesResponse } from "@titlepipe/contract";
+import type { Field, OrderContextResponse, PreferencesResponse } from "@titlepipe/contract";
 import { OrderStrip } from "./OrderStrip";
 
 const ORDER_ID = "ord_demo_1";
@@ -31,13 +31,25 @@ const FIELDS: Field[] = [
   },
 ];
 
-const SIGNOFF: OrderSignoffResponse = {
-  order_id: ORDER_ID, signed_by: null, signed_at: null,
-  product_name: "Two Owner Search", period_label: "two owners", lines: [],
+/**
+ * The order's own context, as `GET /api/orders/{id}/context` serves it. The
+ * ref is the export's own number for this order and the stamp arrives
+ * DECIDED — label and tone — which is the point of the story: the strip
+ * prints what it was handed and composes no lifecycle word of its own.
+ */
+const CONTEXT: OrderContextResponse = {
+  order_id: ORDER_ID,
+  order_ref: "4176034-1",
+  product: "40-Year Search",
+  period_label: "40-year period · 07/18/1986 – 07/18/2026",
+  pages: 64,
+  stamp: { label: "Package incomplete", tone: "halt" },
 };
 
 const PREFERENCES: PreferencesResponse = {
-  preferences: { nav_collapsed: false, reduced_motion: false, default_zoom: 1, theme: "titlepipe" },
+  // `null` is the untouched preference — see `preferences.ts`. The strip does
+  // not read it, but the story seeds the real shape rather than a chosen one.
+  preferences: { nav_collapsed: null, reduced_motion: false, default_zoom: 1, theme: "titlepipe" },
 };
 
 /**
@@ -52,7 +64,7 @@ const PREFERENCES: PreferencesResponse = {
 function renderAt(path: string) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
   queryClient.setQueryData(["orders", ORDER_ID, "fields"], { order_id: ORDER_ID, fields: FIELDS });
-  queryClient.setQueryData(["orders", ORDER_ID, "signoff"], SIGNOFF);
+  queryClient.setQueryData(["orders", ORDER_ID, "context"], CONTEXT);
   queryClient.setQueryData(["me", "preferences"], PREFERENCES);
   const rootRoute = createRootRoute({ component: OrderStrip });
   const router = createRouter({
@@ -80,12 +92,16 @@ export const OnAnOrderScreen: Story = {
   render: () => renderAt(`/orders/${ORDER_ID}/review`),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(await canvas.findByTestId("order-strip")).toHaveTextContent(`ORDER ${ORDER_ID}`);
+    const strip = await canvas.findByTestId("order-strip");
+    // The HUMAN ref, and the URL id nowhere on the strip — the assertion is
+    // both halves, because printing the id was the defect.
+    await expect(strip).toHaveTextContent(`ORDER ${CONTEXT.order_ref}`);
+    expect(strip).not.toHaveTextContent(ORDER_ID);
     const counts = await canvas.findByTestId("order-counts");
     for (const label of ["Fields", "Auto-confirmed", "Need you", "No source"]) {
       expect(counts).toHaveTextContent(label);
     }
-    await expect(canvas.findByText("Not signed")).resolves.toBeInTheDocument();
+    await expect(canvas.findByText(CONTEXT.stamp.label)).resolves.toBeInTheDocument();
     await expect(canvas.findByTestId("account-menu")).resolves.toBeInTheDocument();
   },
 };

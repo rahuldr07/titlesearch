@@ -12,12 +12,18 @@ import { QueueBand } from "./QueueBand";
  * is history. None of them offers a choice of what to take next — that decision
  * belongs to the server, and `queue.spec` #1 pins it.
  *
- * ALL OF THEM RENDER THEIR EMPTY STATE, because that is the truthful render.
- * CONTRACT GAP: there is no assigned-work endpoint, no held-orders endpoint and
- * no in-flight projection. `GET /api/queue/next` returns exactly one order and
- * has no browse counterpart. Populating these bands would mean inventing four
- * server behaviours from a screen, so they show what the design draws when
- * there is nothing in them — which is also what is true.
+ * ALL OF THEM RENDER THEIR EMPTY STATE, AND THE REASON HAS CHANGED. Until
+ * 2026-07-30 there was no assigned-work endpoint, no held-orders endpoint and
+ * no in-flight projection, so populating a band meant inventing four server
+ * behaviours from a screen. `GET /api/queue/bands` now serves all four —
+ * titles, notes, a server-owned per-band `count` that is deliberately NOT
+ * `orders.length`, and rows that carry no way to take the work. The bands are
+ * still drawn empty here because reading that endpoint is the queue's Wave 4
+ * rebuild; what is no longer true is that the data does not exist.
+ *
+ * `GET /api/queue/next` remains the ONLY hand-over. No band row offers a claim,
+ * an assign or a priority, which is what keeps a census from becoming a list to
+ * shop through.
  *
  * IN FLIGHT IS THE SENIOR/OPS BAND ONLY. That is the design's own split, not a
  * guess: the export's Reviewer view draws four bands and its Senior · Ops view

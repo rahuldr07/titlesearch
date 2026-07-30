@@ -66,7 +66,8 @@ export function AppChrome() {
   // door, and an identity chip — on `/signin`, to somebody not signed in.
   const { chrome, fetches } = chromeFor(pathname);
   const onReview = /^\/orders\/[^/]+\/review/.test(pathname);
-  // Review starts collapsed on first mount; the preference wins once loaded.
+  // Review starts collapsed UNTIL SOMEBODY CHOOSES OTHERWISE, not merely on the
+  // first paint — `nav_collapsed` is null until a press writes one (§preferences).
   const [collapsed, toggleCollapsed] = useNavCollapsed(fetches, onReview);
   // Same zero-GET rule as the collapse. Only the VALUE is needed here now (the
   // toggle moved to `OrderStrip` with `AccountMenu`) — this call still owns the

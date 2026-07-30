@@ -36,6 +36,11 @@ interface DecisionPanelProps {
  * tell the reviewer there is nothing to look at while two candidates sit in the
  * payload, which is the exact defect the orphan rule was written against.
  *
+ * THE QUESTION LEADS, and it is SERVER-AUTHORED (2026-07-30, Wave 2).
+ * `Field.asking` is what the reviewer is asked, `Field.why` is why the router
+ * sent it; composing either here would narrate a routing decision only the
+ * router can claim. Both nullable — the block draws where one was authored.
+ *
  * ACTIONS BELONG TO REVIEW ROLES. An ops user arriving by a complaint deep link
  * can look at the field in context but not act on it, and the actions are
  * ABSENT rather than disabled — a greyed button is an invitation to ask for
@@ -76,6 +81,15 @@ export function DecisionPanel({
       </CardHeader>
 
       <CardBody className="flex flex-col gap-6">
+        {field.asking === null || field.asking === undefined ? null : (
+          <div data-testid="sel-asking" className="flex flex-col gap-2">
+            <p className="text-md font-semibold text-ink-primary">{field.asking}</p>
+            {field.why === null || field.why === undefined ? null : (
+              <p className="text-base leading-body text-ink-secondary">{field.why}</p>
+            )}
+          </div>
+        )}
+
         <div className="flex flex-col gap-2">
           <Eyebrow variant="caption">The value</Eyebrow>
           {field.value !== null ? (

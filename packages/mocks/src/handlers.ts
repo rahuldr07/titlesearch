@@ -25,8 +25,12 @@ import {
   type Escalation,
   type Reconciliation,
   type Field,
+  type OrderContextResponse,
   type OrderFieldsResponse,
   type PassOrderResponse,
+  type QueueBandId,
+  type QueueBandOrder,
+  type QueueBandsResponse,
   type QueueNextResponse,
   type Rule,
 } from "@titlepipe/contract";
@@ -36,11 +40,14 @@ import {
   demoEscalations,
   demoFields,
   demoGolden,
-  demoOrder,
-  demoOrder2,
+  demoOrderEntity,
+  demoOrderRow,
+  demoOrders,
   demoPages,
+  demoQueue,
   demoRules,
   demoTimelines,
+  type DemoOrderRow,
 } from "./data.js";
 
 /**
@@ -59,9 +66,113 @@ import {
  * The queue is SERVER-ordered (no cherry-pick). A recorded pass advances the
  * head, exactly like the real queue serving the next order. Pass counts and
  * 4th-pass auto-escalation stay server-side — nothing about them is exposed.
+ *
+ * PROJECTED FROM THE ONE SHARED ORDER SET, never restated. The order of service
+ * is `demoQueue`'s (`queue_position` ascending), which is data on the row rather
+ * than an accident of this array's literal order — this file used to name two
+ * singletons and the lifecycle board named its own, and the two disagreed about
+ * what state 4176034-1 was in.
  */
-const queue = [demoOrder, demoOrder2];
+const queue = demoQueue.map(demoOrderEntity);
 let queueHead = 0;
+
+/**
+ * The band headings and their sub-lines, the 2026-07-28 export's own
+ * (`TitlePipe.dc.html:219-220`, `:268-269`, `:298-299`, `:319-320`). Served
+ * rather than held in the browser for the same reason `LifecycleStamp.label`
+ * is: a client-side `Record<QueueBandId, string>` is a second copy of product
+ * copy, and a second copy drifts silently from the first.
+ *
+ * The export's sub-line interpolates the count into the sentence
+ * (`{{ queueHeldCount }} stopped · needs someone`). It does not here: `count`
+ * is its own served field, and a number baked into a string is a number no
+ * consumer can read without parsing prose.
+ */
+const BAND_COPY: Record<QueueBandId, { title: string; note: string }> = {
+  mine: { title: "Mine", note: "in progress" },
+  held: { title: "Held", note: "stopped · needs someone" },
+  in_flight: { title: "In flight", note: "processing · senior · ops view" },
+  delivered: { title: "Recently delivered", note: "get back to a recent one" },
+};
+
+/**
+ * A row as the band lists it. Deliberately NARROWER than the order: no claim
+ * token, no assignment, no priority, no ordering the caller can influence.
+ * `/api/queue/next` stays the only hand-over, so §4.4's "no queue
+ * cherry-picking" holds by construction rather than by the screen's restraint.
+ */
+function bandRow(row: DemoOrderRow): QueueBandOrder {
+  return {
+    id: row.id,
+    order_ref: row.order_ref,
+    addr: row.addr,
+    place: row.place,
+    waited: row.waited,
+    waiting_on: row.waiting_on,
+    state_label: row.state_label,
+    mine: row.mine,
+  };
+}
+
+/**
+ * The role gate is the SHOP'S, not the screen's: a reviewer's Held list is
+ * narrowed to their own orders and the In flight band is absent entirely —
+ * absent, not dimmed, because an absent band and an empty band are different
+ * statements and only the server can tell them apart.
+ *
+ * `count` is the census of the whole band and stays what it is when the row
+ * list narrows. That is the whole reason it is served rather than derived: a
+ * count that shrank with your permissions would read as work disappearing
+ * rather than as work you are not allowed to look at. It is a count of what is
+ * left and never a rate — there is no per-hour, per-person or per-period figure
+ * in this shape and §4.5 means there never may be.
+ */
+export function queueBandsFor(role: string): QueueBandsResponse {
+  const senior = role !== "reviewer";
+  const ids: QueueBandId[] = senior
+    ? ["mine", "held", "in_flight", "delivered"]
+    : ["mine", "held", "delivered"];
+  return {
+    bands: ids.map((id) => {
+      const all = demoOrders.filter((r) => r.band === id);
+      const visible = id === "held" && !senior ? all.filter((r) => r.mine) : all;
+      return {
+        id,
+        ...BAND_COPY[id],
+        count: all.length,
+        orders: visible.map(bandRow),
+      };
+    }),
+  };
+}
+
+/**
+ * The order-scoped lookup every screen below `/orders/{id}` needed and no
+ * endpoint offered: the human reference for an order you hold only the URL id
+ * of, plus what was ordered, over what span, in how many pages, and the
+ * SERVER'S WORD for where it stands.
+ *
+ * The stamp arrives already decided. The export computes that word from a
+ * five-branch `if/else` in the browser (`TitlePipe.dc.html:2888-2893`); that is
+ * a client-side lifecycle state machine and hard rule 3 puts state machines on
+ * the server.
+ *
+ * An unknown order THROWS rather than returning a placeholder — a context
+ * response that quietly names nothing is how a screen ends up printing a ref
+ * that belongs to no order. The route turns that into a 404.
+ */
+export function orderContextFor(orderId: string): OrderContextResponse {
+  const row = demoOrderRow(orderId);
+  if (row === undefined) throw new Error(`no such order: ${orderId}`);
+  return {
+    order_id: row.id,
+    order_ref: row.order_ref,
+    product: row.product,
+    period_label: row.period,
+    pages: row.pages,
+    stamp: { label: row.stamp_label, tone: row.stamp_tone },
+  };
+}
 
 /**
  * Source pages. Text, not rasters — the review screen shows WHERE a value came
@@ -325,6 +436,12 @@ export const handlers = [
       jurisdiction: String(form.get("jurisdiction")),
       state: String(form.get("state")),
       county: String(form.get("county")),
+      // A freshly ingested package has none of these resolved yet, and `null`
+      // is that statement — `0` pages would assert somebody counted. Required
+      // on `Order` since 2026-07-30; see the ratification note in the contract.
+      product: null,
+      period_label: null,
+      pages: null,
       status: "ingested",
       arrived_at: new Date().toISOString(),
       accepted_at: null,
@@ -344,6 +461,26 @@ export const handlers = [
       order: queue[queueHead % queue.length] ?? null,
     };
     return HttpResponse.json(body);
+  }),
+
+  /**
+   * READ ONLY. No band row carries a way to take the work — see `bandRow`.
+   * The x-mock-role header is the mock's JWT role claim, the same convention
+   * `guard` reads below; a missing header is the dev-default admin session.
+   */
+  http.get("/api/queue/bands", ({ request }) => {
+    const raw = request.headers.get("x-mock-role");
+    return HttpResponse.json(queueBandsFor(raw === null ? "admin" : raw));
+  }),
+
+  /**
+   * The order-scoped read the top strip needs. An id that names no order is a
+   * 404 — never an invented context. See `orderContextFor`.
+   */
+  http.get("/api/orders/:id/context", ({ params }) => {
+    const row = demoOrderRow(String(params["id"]));
+    if (row === undefined) return err("no such order", 404);
+    return HttpResponse.json(orderContextFor(row.id));
   }),
 
   http.post("/api/orders/:id/pass", async ({ request }) => {

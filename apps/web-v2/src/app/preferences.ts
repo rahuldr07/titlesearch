@@ -30,11 +30,17 @@ const preferencesQuery = queryOptions({
 export function useNavCollapsed(
   enabled: boolean,
   /*
-   * The value shown BEFORE the preference has loaded — the first-mount default.
-   * The Review screen passes `true` so the rail starts collapsed there (that
-   * screen needs every pixel, §11). Once the preference resolves it wins, and
-   * an explicit toggle wins from then on: the route default only ever governs
-   * the very first paint, never overriding a choice the user actually made.
+   * The value shown while the preference is UNRESOLVED — before it has loaded,
+   * and after it loads as `null`. The Review screen passes `true` so the rail
+   * starts collapsed there (that screen needs every pixel, §11).
+   *
+   * A NULL PREFERENCE IS THE "NEVER CHOSEN" CASE THIS DEFAULT EXISTS FOR
+   * (2026-07-30, Wave 2). While `nav_collapsed` was a plain boolean it could
+   * not say "untouched": the served `false` resolved and immediately beat the
+   * route default, so "Review starts collapsed" was unreachable however the
+   * sidebar was written. Three states express the two rules — folded, unfolded,
+   * and never asked — and an explicit toggle still wins from then on, because
+   * a toggle writes a boolean and a boolean is no longer null.
    */
   routeDefault = false,
 ): [boolean, () => void] {
@@ -58,9 +64,17 @@ export function useNavCollapsed(
       if (previous !== undefined) {
         // `exactOptionalPropertyTypes`: spreading a partial would widen every
         // field to `| undefined`. Only the fields actually sent are replaced.
+        //
+        // `=== undefined`, NOT `??`: `null` is a legal value for
+        // `nav_collapsed` now, and `??` would read a deliberately sent null as
+        // an omission and quietly keep the old boolean — the one merge bug that
+        // makes "never chosen" unwritable.
         client.setQueryData(preferencesQuery.queryKey, {
           preferences: {
-            nav_collapsed: body.nav_collapsed ?? previous.preferences.nav_collapsed,
+            nav_collapsed:
+              body.nav_collapsed === undefined
+                ? previous.preferences.nav_collapsed
+                : body.nav_collapsed,
             reduced_motion: body.reduced_motion ?? previous.preferences.reduced_motion,
             default_zoom: body.default_zoom ?? previous.preferences.default_zoom,
             theme: body.theme ?? previous.preferences.theme,
@@ -103,7 +117,12 @@ export function useTheme(enabled: boolean): [Preferences["theme"], () => void] {
       if (previous !== undefined) {
         client.setQueryData(preferencesQuery.queryKey, {
           preferences: {
-            nav_collapsed: body.nav_collapsed ?? previous.preferences.nav_collapsed,
+            // Same `=== undefined` rule as `useNavCollapsed` above, and for the
+            // same reason: this merge also carries `nav_collapsed` through.
+            nav_collapsed:
+              body.nav_collapsed === undefined
+                ? previous.preferences.nav_collapsed
+                : body.nav_collapsed,
             reduced_motion: body.reduced_motion ?? previous.preferences.reduced_motion,
             default_zoom: body.default_zoom ?? previous.preferences.default_zoom,
             theme: body.theme ?? previous.preferences.theme,

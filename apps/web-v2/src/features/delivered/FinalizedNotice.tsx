@@ -1,5 +1,5 @@
 import { ArtifactCard } from "./ArtifactCard";
-import { DEMO_PERIOD_BADGE, DEMO_PRODUCT_NAME, demoArtifactName } from "./demoContent";
+import { demoArtifactName } from "./demoContent";
 import { Chip } from "../../shared/ui/Chip";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
 import { Stamp } from "../../shared/ui/Stamp";
@@ -22,12 +22,26 @@ import { Stamp } from "../../shared/ui/Stamp";
  * footnote about the 13 operational lines is the one caveat that has to travel
  * with the file: the sheet a client reads is not the QC checklist, and someone
  * who assumes it is will look for lines that were never meant to be printed.
+ *
+ * THE PRODUCT AND THE PERIOD ARE THE ORDER'S NOW (2026-07-30, Wave 2), read
+ * from `GET /api/orders/{id}/context` instead of from two constants this
+ * feature kept for want of a carrier. They are nullable and the row is dropped
+ * whole when the product is unknown: the footnote below claims the sheet
+ * "states the product and period", and a half-empty row under that sentence
+ * would be the screen contradicting itself.
  */
 export function FinalizedNotice({
   orderId,
+  product,
+  periodLabel,
   deliveredLabel,
 }: {
+  /** The order's HUMAN reference — what the sheet the client holds carries. */
   orderId: string;
+  /** Server-supplied. Null when no product is resolved on the order. */
+  product: string | null;
+  /** Server-composed label, never a span this screen assembles from dates. */
+  periodLabel: string | null;
   /** Server-formatted where possible; omitted entirely rather than guessed. */
   deliveredLabel: string | null;
 }) {
@@ -48,9 +62,10 @@ export function FinalizedNotice({
         reviewer, field by field.
       </p>
 
+      {product === null ? null : (
       <div className="mb-11 flex flex-wrap items-center justify-center gap-5">
         <Eyebrow variant="field">Product</Eyebrow>
-        <span className="text-md font-semibold text-ink-primary">{DEMO_PRODUCT_NAME}</span>
+        <span className="text-md font-semibold text-ink-primary">{product}</span>
         {/*
           `normal-case` because `Chip` uppercases and the design does not here.
           Every other chip in the product is a state word, where caps read as a
@@ -60,18 +75,21 @@ export function FinalizedNotice({
           keep the row on ONE line: `tracking-label` on forty characters spends
           52px on air alone, which pushed the badge under the product name.
         */}
-        <Chip
-          tone="action"
-          size="md"
-          shape="mono"
-          bordered
-          className="text-xs tracking-normal normal-case"
-        >
-          {DEMO_PERIOD_BADGE}
-        </Chip>
+        {periodLabel === null ? null : (
+          <Chip
+            tone="action"
+            size="md"
+            shape="mono"
+            bordered
+            className="text-xs tracking-normal normal-case"
+          >
+            {periodLabel}
+          </Chip>
+        )}
       </div>
+      )}
 
-      <ArtifactCard filename={demoArtifactName(orderId)} productName={DEMO_PRODUCT_NAME} />
+      <ArtifactCard filename={demoArtifactName(orderId)} productName={product} />
 
       <p className="mx-auto mt-7 max-w-145 text-xs leading-open text-ink-muted">
         The sheet declares the sign-off was completed and states the product and

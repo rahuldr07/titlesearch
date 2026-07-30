@@ -8,10 +8,11 @@ import { cn } from "../../shared/ui/classNames";
  * THE SECOND LINE IS THE POINT. Every option carries what it does to the
  * record, at the moment of choosing, rather than in a confirmation afterwards.
  *
- * CONTRACT GAP: the design ranked the options by tone — tinted for the ones
- * that cost nothing to be wrong about, outlined for the ones that change the
- * record. `close_options` are opaque strings with no kind, so the ranking is
- * not derivable and the tone now marks only which option is being filled in.
+ * The design ranks the options by tone — tinted for the ones that cost nothing
+ * to be wrong about, outlined for the ones that change the record. Since
+ * 2026-07-30 the wire carries each option's kind, whether it requires a
+ * comment and the role it requires, so the ranking is the server's fact rather
+ * than a guess from the copy.
  */
 const TITLE_INK = {
   action: "text-action-ink",

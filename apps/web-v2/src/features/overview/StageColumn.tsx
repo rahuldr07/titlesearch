@@ -30,9 +30,11 @@ import { countInk, STAGE_TONE } from "./stageTone";
  * and reusing it here would attach a second meaning to a mark whose whole job
  * is to survive greyscale with exactly one.
  *
- * CONTRACT GAP: the wire carries no per-stage subtitle and no "on abstractor /
- * on a person" line. The design named who each stage waits on; the census does
- * not, and naming it here would be the board asserting a routing rule.
+ * THE SUBTITLE AND THE WAITING-ON LINE ARE ON THE WIRE NOW (2026-07-30, Wave
+ * 2): `LifecycleStage.sub` and `LifecycleStage.waiting_on`, server-authored, so
+ * naming who a stage waits on is no longer the board asserting a routing rule.
+ * They are not drawn here — the column's header is Wave 4's rebuild — and this
+ * note records that they exist rather than that they are missing.
  */
 export function StageColumn({ stage }: { stage: LifecycleStage }) {
   const tone = STAGE_TONE[stage.kind];

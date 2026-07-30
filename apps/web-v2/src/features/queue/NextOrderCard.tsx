@@ -22,10 +22,17 @@ import { Button } from "../../shared/ui/Button";
  * query and a different order arrives underneath; the note has to stay long
  * enough to say which one went back, so this component is never keyed by order.
  *
- * CONTRACT GAP: the design's product chip ("60-year search") and its size line
- * ("92 pages · 14 read in full") have no carrier — `Order` has no product,
- * period or page count. The status chip and the jurisdiction/client line are
- * what this endpoint actually supplies, rendered in the design's slots.
+ * THE PRODUCT AND THE PACKAGE SIZE ARE THE ORDER'S OWN (2026-07-30, Wave 2).
+ * `Order.product`, `Order.period_label` and `Order.pages` carry what the design
+ * put in its product chip and its size line, so neither is composed here and
+ * neither is a constant. Both are NULLABLE and the card stays silent rather
+ * than printing a placeholder: an order that failed validation has no resolved
+ * product, and a package nobody could read has no page count — `null` says
+ * that, and a `0` would claim somebody counted.
+ *
+ * CONTRACT GAP: the design's size line also reads "· 14 read in full". Nothing
+ * on this response says how much of the package was carried forward, so the
+ * card states the size and stops where the wire does.
  */
 export function NextOrderCard({ order }: { order: Order }) {
   const navigate = useNavigate();
@@ -69,9 +76,15 @@ export function NextOrderCard({ order }: { order: Order }) {
                   {order.county} · {order.state}
                 </span>
                 <OrderStatusChip label={order.status} tone="action" />
+                {order.product === null ? null : (
+                  <span data-testid="order-product" className="text-sm text-ink-secondary">
+                    {order.product}
+                  </span>
+                )}
               </div>
               <p className="mt-3 text-sm text-ink-secondary">
                 {order.jurisdiction} · {order.client_id}
+                {order.pages === null ? null : ` · ${order.pages} pages`}
               </p>
             </div>
 

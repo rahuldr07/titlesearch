@@ -1,5 +1,5 @@
 import { queryOptions } from "@tanstack/react-query";
-import { DeliveriesResponse } from "@titlepipe/contract";
+import { DeliveriesResponse, OrderContextResponse } from "@titlepipe/contract";
 import { get } from "../../shared/api";
 
 /**
@@ -17,3 +17,23 @@ export const deliveriesQuery = queryOptions({
   queryKey: ["deliveries"],
   queryFn: () => get("/api/deliveries", DeliveriesResponse),
 });
+
+/**
+ * WHAT WAS ORDERED, from the order rather than from this file (2026-07-30,
+ * Wave 2). A delivery record carries id / method / status / timestamps and the
+ * report's order id and version — nothing about the product or the period the
+ * sheet itself claims to state. Both were private constants here for want of a
+ * carrier, and a delivery confirmation that cannot name the product is
+ * confirming an unnamed thing. `GET /api/orders/{id}/context` names it, and
+ * the human ref with it.
+ *
+ * Same `["orders", id, "context"]` key the top strip reads, deliberately: two
+ * keys for one resource is how two parts of a screen end up naming one order
+ * two different ways.
+ */
+export function orderContextQuery(orderId: string) {
+  return queryOptions({
+    queryKey: ["orders", orderId, "context"],
+    queryFn: () => get(`/api/orders/${orderId}/context`, OrderContextResponse),
+  });
+}

@@ -69,7 +69,17 @@ export function GapCard({
       )}
     >
       <CardHeader>
-        <h2 className="text-md font-semibold">{gap.line_label}</h2>
+        {/*
+          "Sign-off line N · label", the design's own heading. The NUMBER is
+          `gap.line_number` and never a lookup from the label: two lines may
+          share wording across product versions, and matching on prose is a
+          join the browser has no business making. Until 2026-07-30 the wire
+          carried no N and the card printed the label alone, which left no way
+          back to the line that was actually answered.
+        */}
+        <h2 className="text-md font-semibold">
+          Sign-off line {gap.line_number} · {gap.line_label}
+        </h2>
         <Chip className="ml-auto" shape="pill" size="micro" tone={open ? "halt" : "settled"}>
           {open ? KIND_LABEL[gap.kind] : "Closed"}
         </Chip>

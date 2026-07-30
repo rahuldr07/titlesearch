@@ -12,6 +12,8 @@ const NO_LINE: OrderSignoffLine = {
   answer: "NO",
   comment: "No plat or survey was in the package.",
   comment_required: true,
+  answers: ["YES", "NO", "N/A"],
+  policy_suggestion: null,
   machine_check: null,
   period_scoped: false,
   prefilled_from_policy: false,

@@ -72,6 +72,70 @@ export const QueueNextResponse = z.object({
 });
 export type QueueNextResponse = z.infer<typeof QueueNextResponse>;
 
+/**
+ * ⚠ UI-DRIVEN REQUEST — AWAITING RATIFICATION (2026-07-30, fidelity Wave 2).
+ * GET /api/queue/bands — READ SHAPES ONLY, and deliberately NOT a browse
+ * endpoint. None of these rows carries a way to TAKE the work: there is no
+ * claim token, no assignment field, no ordering the caller can influence.
+ * `/api/queue/next` remains the only hand-over, so §4.4's "no queue
+ * cherry-picking" holds by construction rather than by the screen's restraint.
+ *
+ * Mine is work already assigned to the caller; Held is work that stopped; In
+ * flight is a senior/ops read; Recently delivered is history.
+ *
+ * `count` is the SERVER'S census and is NOT `orders.length`. The row list is
+ * scoped to what the caller may open; the census is not. A count that shrank
+ * with your permissions would read as work disappearing rather than as work
+ * you are not allowed to look at — the same rule `LifecycleStage.count`
+ * already states, and the reason neither may be re-derived in a browser
+ * (hard rule 3). It is a count of what is left, never a rate: there is no
+ * per-hour, per-person or per-period figure anywhere in this shape and §4.5
+ * means there never may be.
+ *
+ * `title` and `note` are the server's words for the same reason
+ * `LifecycleStamp.label` is: a client-side `Record<QueueBandId, string>` is a
+ * second copy of product copy that drifts silently from the first.
+ *
+ * Whether the Mine band may be DRAWN at all is open ruling Q11 — it sits
+ * against "exactly one order, no list". This shape does not decide that; it
+ * makes the data expressible so the ruling can be about the screen.
+ */
+export const QueueBandId = z.enum(["mine", "held", "in_flight", "delivered"]);
+export type QueueBandId = z.infer<typeof QueueBandId>;
+
+export const QueueBandOrder = z.object({
+  id: z.string(),
+  order_ref: z.string(),
+  addr: z.string(),
+  place: z.string(),
+  /** How long it has sat. A duration already elapsed, never a countdown or a rate. */
+  waited: z.string().nullable(),
+  waiting_on: z.string(),
+  /** The server's word for why it stopped. Null when it has not. Never an enum. */
+  state_label: z.string().nullable(),
+  mine: z.boolean(),
+});
+export type QueueBandOrder = z.infer<typeof QueueBandOrder>;
+
+export const QueueBand = z.object({
+  id: QueueBandId,
+  title: z.string(),
+  note: z.string(),
+  /** SERVER-SUPPLIED. Never `orders.length` — see the block comment above. */
+  count: z.number().int(),
+  orders: z.array(QueueBandOrder),
+});
+export type QueueBand = z.infer<typeof QueueBand>;
+
+/**
+ * Which bands appear, and in what order, is the SERVER'S answer to "what may
+ * this caller see" — a reviewer is served no `in_flight` band at all rather
+ * than an empty or dimmed one. An absent band and an empty band are different
+ * statements, and only the server can tell them apart.
+ */
+export const QueueBandsResponse = z.object({ bands: z.array(QueueBand) });
+export type QueueBandsResponse = z.infer<typeof QueueBandsResponse>;
+
 export const OrderFieldsResponse = z.object({
   order_id: z.string(),
   fields: z.array(Field),

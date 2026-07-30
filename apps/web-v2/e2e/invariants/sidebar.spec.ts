@@ -94,6 +94,7 @@ test("[ folds the rail from the keyboard", async ({ page }) => {
 test("[ inside a text field is text, not a fold", async ({ page }) => {
   await page.goto("/orders/ord_demo_1/review?field=owner.zip");
   await expect(page.getByTestId("sel-label")).toBeVisible();
+  await expect(page.getByTestId("side-rail")).toHaveAttribute("data-collapsed", "1");
   // `e` opens the correction editor (C confirm · E correct)
   await page.keyboard.press("e");
   const editor = page.getByTestId("edit-value");
@@ -102,9 +103,15 @@ test("[ inside a text field is text, not a fold", async ({ page }) => {
   await editor.press("[");
   // the bracket lands in the field; the rail does not move
   await expect(editor).toHaveValue("[");
+  // "1" and not "0" since 2026-07-30: REVIEW STARTS COLLAPSED (§11) and the
+  // preference can finally say "never chosen" (`nav_collapsed: null`), so the
+  // route default governs instead of being beaten by a served `false`. The
+  // rule this test exists for is unchanged — the rail did not MOVE — and the
+  // state it did not move from is now the one the screen is specified to open
+  // in. Nothing was weakened: both this and the pre-press state are pinned.
   await expect(page.getByTestId("side-rail")).toHaveAttribute(
     "data-collapsed",
-    "0",
+    "1",
   );
 });
 

@@ -2,13 +2,11 @@
  * ⚠ NONE OF THIS IS SERVER DATA. Every constant below is a stand-in kept in one
  * place so it is obvious what the screen invents and what it receives.
  *
- * CONTRACT GAP — the ordered PRODUCT and the search PERIOD.
- *   `DeliveriesResponse` carries id / method / status / timestamps plus the
- *   report's order id and version. It carries nothing about WHAT WAS ORDERED,
- *   and the delivered sheet's own copy says the product and period are printed
- *   on it. A delivery confirmation that cannot name the product is confirming
- *   an unnamed thing. Needs `product` and `period` on the report, or an order
- *   endpoint the screen can join against.
+ * CLOSED 2026-07-30 — the ordered PRODUCT and the search PERIOD. They were the
+ *   first two constants in this file and they are gone: `DeliveriesResponse`
+ *   still says nothing about what was ordered, but `Order.product` /
+ *   `Order.period_label` now exist and `GET /api/orders/{id}/context` is the
+ *   order endpoint this note asked for. `DeliveredScreen` joins against it.
  *
  * CONTRACT GAP — the rendered ARTIFACT.
  *   There is no endpoint that returns, names, or serves the .docx. The filename
@@ -24,25 +22,6 @@
  *   what was got wrong, and inventing it client-side would be inventing that
  *   record. The screen must not ship to a client until the server owns it.
  */
-
-/**
- * The design's own strings, kept verbatim.
- *
- * They were previously replaced with self-labelling stand-ins ("Two-Owner Search
- * (demo)" / "demo · eff 07/18/2026"), and that lost the point of the pair: the
- * footnote below the artifact claims the sheet "states the product and period",
- * and a single effective date is not a period. The screen has to show a SPAN to
- * demonstrate the claim it makes about itself.
- *
- * Nothing is being passed off as real. The order id rendered two lines above is
- * `ord_demo_1` and the filename carries it, so the fixture is on its face; the
- * gap that matters is the one recorded above — the wire cannot say either of
- * these, and no amount of labelling fixes that.
- */
-export const DEMO_PRODUCT_NAME = "40-Year Search";
-
-/** Mono badge beside the product — the span the sheet covers, not one date. */
-export const DEMO_PERIOD_BADGE = "40-year period · 07/18/1986 – 07/18/2026";
 
 /** The server names its own artifacts; this convention is a placeholder. */
 export function demoArtifactName(orderId: string): string {

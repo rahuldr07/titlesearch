@@ -23,13 +23,11 @@ import { SignoffRowNotes } from "./SignoffRowNotes";
  * ever apply to the row the person is actually on, and never while they are
  * typing the reason.
  *
- * CONTRACT GAP: the wire has no per-line answer set. `SignoffAnswer` is the
- * whole vocabulary, so every line offers all three; the design offered YES/NO
- * only on lines that cannot genuinely fail to apply, and that distinction is
- * not expressible against this schema.
+ * THE ANSWER SET IS THE LINE'S, NOT THE VOCABULARY'S (2026-07-30, Wave 2).
+ * `line.answers` says what THIS line may be answered — six of the thirteen
+ * admit N/A, seven do not — so the row draws exactly those buttons and `a` is
+ * inert where there is no N/A. Deriving the set here is a second rulebook.
  */
-const OPTIONS: readonly SignoffAnswer[] = ["YES", "NO", "N/A"];
-
 export function SignoffRow({
   line,
   periodLabel,
@@ -51,7 +49,10 @@ export function SignoffRow({
   const handleKey = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.target instanceof HTMLInputElement) return;
     const key = event.key.toLowerCase();
-    const chosen = key === "y" ? "YES" : key === "n" ? "NO" : key === "a" ? "N/A" : null;
+    const pressed: SignoffAnswer | null =
+      key === "y" ? "YES" : key === "n" ? "NO" : key === "a" ? "N/A" : null;
+    // A key may only reach an answer the LINE offers.
+    const chosen = pressed !== null && line.answers.includes(pressed) ? pressed : null;
     if (chosen !== null) {
       event.preventDefault();
       onAnswer(chosen);
@@ -110,7 +111,7 @@ export function SignoffRow({
           </div>
 
           <div role="group" aria-label={line.label} className="flex shrink-0 gap-3">
-            {OPTIONS.map((option) => {
+            {line.answers.map((option) => {
               const chosen = answer === option;
               return (
                 <Button

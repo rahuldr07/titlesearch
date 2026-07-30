@@ -43,6 +43,36 @@ describe("Preferences schema carries a theme", () => {
 });
 
 /**
+ * `nav_collapsed` became nullable on 2026-07-30. A plain boolean could not say
+ * "the user has never chosen", so a stored `false` resolved and beat the route
+ * default every time — which made "Review starts collapsed" unreachable however
+ * the sidebar was written. Two rules need three states.
+ */
+describe("nav_collapsed can say the user never chose", () => {
+  const base = { reduced_motion: false, default_zoom: 1 };
+
+  test("null parses, and means untouched", () => {
+    expect(Preferences.parse({ ...base, nav_collapsed: null }).nav_collapsed).toBeNull();
+  });
+
+  test("both booleans still parse — a real choice stays expressible", () => {
+    for (const value of [true, false]) {
+      expect(Preferences.parse({ ...base, nav_collapsed: value }).nav_collapsed).toBe(value);
+    }
+  });
+
+  test("a missing key is still refused — absent is not the same claim as null", () => {
+    expect(() => Preferences.parse(base)).toThrow();
+  });
+
+  test("a PATCH may set it, and an omitted key is not a null", () => {
+    expect(UpdatePreferencesRequest.parse({ nav_collapsed: true }).nav_collapsed).toBe(true);
+    expect(UpdatePreferencesRequest.parse({ nav_collapsed: null }).nav_collapsed).toBeNull();
+    expect(UpdatePreferencesRequest.parse({}).nav_collapsed).toBeUndefined();
+  });
+});
+
+/**
  * The mock's handlers carry RELATIVE paths ("/api/me/preferences") for the
  * browser Service Worker (`@titlepipe/mocks/browser`), which resolves them
  * against the page's own `location`. Node has no such global, so `msw/node`

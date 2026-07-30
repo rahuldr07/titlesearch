@@ -12,7 +12,9 @@ import { Button } from "../../shared/ui/Button";
  *
  * The subtitle states what the sheet ASSERTS (sign-off completed) and for which
  * product. That pairing is the point: a Call Back Sheet is a declaration, and a
- * declaration whose scope is not stated on its face is not checkable.
+ * declaration whose scope is not stated on its face is not checkable — which is
+ * why an unresolved product DROPS the clause rather than printing an empty one.
+ * The product is the order's (`Order.product`, 2026-07-30), not this feature's.
  *
  * DOWNLOAD IS DISABLED, and it is disabled honestly. No endpoint returns or
  * serves the artifact (see `demoContent.ts`), so there is nothing to fetch —
@@ -25,7 +27,8 @@ export function ArtifactCard({
   productName,
 }: {
   filename: string;
-  productName: string;
+  /** Server-supplied; null when the order has no resolved product. */
+  productName: string | null;
 }) {
   return (
     <Card className="flex items-center gap-7 p-8 text-left">
@@ -41,7 +44,8 @@ export function ArtifactCard({
           {filename}
         </div>
         <p className="mt-1.5 text-xs text-ink-muted">
-          Call Back Sheet · sign-off completed · {productName}
+          Call Back Sheet · sign-off completed
+          {productName === null ? null : ` · ${productName}`}
         </p>
       </div>
 

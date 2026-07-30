@@ -1,6 +1,6 @@
 import { queryOptions, useQuery } from "@tanstack/react-query";
 import { useRouterState } from "@tanstack/react-router";
-import { OrderSignoffResponse } from "@titlepipe/contract";
+import { OrderContextResponse } from "@titlepipe/contract";
 import { get } from "../shared/api";
 import { orderFromPath } from "./orderFromPath";
 import { chromeFor } from "./chromeFor";
@@ -11,15 +11,15 @@ import { Stamp } from "../shared/ui/Stamp";
 import { Eyebrow } from "../shared/ui/Eyebrow";
 
 /**
- * Same duplication convention `features/review/queries.ts` documents for its
- * own copy of this query: `app/` is not a feature, but the shape and the URL
- * are the same one contract schema parses, so a second small wrapper beats
- * reaching into a feature's internals for one query.
+ * THE ORDER-SCOPED LOOKUP THIS STRIP EXISTS TO READ (2026-07-30, Wave 2). It
+ * returns the human reference for an order you have only the URL id of, and
+ * the SERVER'S OWN lifecycle stamp — label and tone already decided, so no
+ * screen composes that word from `signed_by === null` or from anything else.
  */
-function signoffQuery(orderId: string) {
+function contextQuery(orderId: string) {
   return queryOptions({
-    queryKey: ["orders", orderId, "signoff"],
-    queryFn: () => get(`/api/orders/${orderId}/signoff`, OrderSignoffResponse),
+    queryKey: ["orders", orderId, "context"],
+    queryFn: () => get(`/api/orders/${orderId}/context`, OrderContextResponse),
   });
 }
 
@@ -29,24 +29,20 @@ function signoffQuery(orderId: string) {
  * own rather than being handed them. It replaces what used to sit in the
  * sidebar foot: the order's counts and the account menu.
  *
- * CONTRACT GAP: the design's left label is `ORDER {order_ref}`, the
- * human-readable reference (e.g. "4176034-1"). No endpoint scoped by the URL
- * order id returns that ref — `LifecycleOrder.order_ref` exists only in the
- * census list and carries no id to join back on (`OrderCard.tsx`'s own gap
- * note), and `Order.external_ref` comes only from `/api/queue/next`, not from
- * an id lookup. What IS available and citable here is the URL id itself,
- * which `OrderFieldsResponse.order_id` echoes back — so that is what renders.
+ * The left label is the design's `ORDER {order_ref}` — the human reference,
+ * read from `GET /api/orders/{id}/context`. It is never the URL id: an id is
+ * how the app addresses an order, not what anyone calls it, and the two are
+ * not interchangeable in a sentence spoken to a client.
  *
- * CONTRACT GAP: the design's stamp reads an exact word like `SIGN-OFF OPEN`.
- * `OrderSignoffResponse` carries no lifecycle-label field, only `signed_by` /
- * `signed_at` (both null until a person signs — `intake.ts`). Composing the
- * design's exact word from that would be inventing client-side lifecycle text
- * hard rule 9 forbids; the strip instead states the two facts the contract
- * actually distinguishes, same wording `OrderIdentityStrip` already uses for
- * the same null check.
+ * THE STAMP IS THE SERVER'S WORD, taken whole. `OrderContextResponse.stamp`
+ * arrives as `{label, tone}` already decided, so the strip neither composes
+ * lifecycle text nor picks a tone for it — hard rule 9, and the reason the
+ * strip does not read `signed_by === null` and call the result a state.
  *
  * NO ORDER, NO FABRICATION: off an order screen this shows identity and a
- * brand-neutral left, never an invented order.
+ * brand-neutral left, never an invented order. On an order screen BEFORE the
+ * context resolves it shows nothing rather than a placeholder ref — a wrong
+ * order number read aloud is worse than a blank that lasts one paint.
  */
 export function OrderStrip() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -58,19 +54,12 @@ export function OrderStrip() {
   // Own `useTheme` call — dedupes with `AppChrome`'s by shared query key, so
   // this is not a second network request, just a second subscriber.
   const [theme, toggleTheme] = useTheme(fetches);
-  const { data: signoff } = useQuery({
-    ...signoffQuery(orderId ?? ""),
+  const { data: context } = useQuery({
+    ...contextQuery(orderId ?? ""),
     enabled: orderId !== null,
   });
 
   if (!chrome) return null;
-
-  const stamp =
-    signoff === undefined
-      ? null
-      : signoff.signed_by === null
-        ? { label: "Not signed", tone: "attend" as const }
-        : { label: `Signed · ${signoff.signed_by}`, tone: "settled" as const };
 
   return (
     <div
@@ -80,9 +69,9 @@ export function OrderStrip() {
       <div className="min-w-0">
         {orderId === null ? (
           <Eyebrow variant="section">TitlePipe</Eyebrow>
-        ) : (
+        ) : context === undefined ? null : (
           <span className="font-mono text-md font-semibold text-ink-primary">
-            ORDER {orderId}
+            ORDER {context.order_ref}
           </span>
         )}
       </div>
@@ -90,9 +79,9 @@ export function OrderStrip() {
       {orderId === null ? null : (
         <div className="flex flex-1 items-center justify-end gap-6">
           <OrderCounts orderId={orderId} />
-          {stamp === null ? null : (
-            <Stamp tone={stamp.tone} size="sm">
-              {stamp.label}
+          {context === undefined ? null : (
+            <Stamp tone={context.stamp.tone} size="sm">
+              {context.stamp.label}
             </Stamp>
           )}
         </div>
