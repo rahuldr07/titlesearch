@@ -1,9 +1,9 @@
 import type { KeyboardEvent } from "react";
 import type { OrderSignoffLine, SignoffAnswer } from "@titlepipe/contract";
-import { Button } from "../../shared/ui/Button";
 import { ListRow } from "../../shared/ui/ListRow";
 import { TextField } from "../../shared/ui/TextField";
 import { cn } from "../../shared/ui/classNames";
+import { SignoffRowAnswers } from "./SignoffRowAnswers";
 import { SignoffRowNotes } from "./SignoffRowNotes";
 
 /**
@@ -21,12 +21,8 @@ import { SignoffRowNotes } from "./SignoffRowNotes";
  *
  * The keys (Y/N/A, arrows) are handled here rather than globally so they only
  * ever apply to the row the person is actually on, and never while they are
- * typing the reason.
- *
- * THE ANSWER SET IS THE LINE'S, NOT THE VOCABULARY'S (2026-07-30, Wave 2).
- * `line.answers` says what THIS line may be answered — six of the thirteen
- * admit N/A, seven do not — so the row draws exactly those buttons and `a` is
- * inert where there is no N/A. Deriving the set here is a second rulebook.
+ * typing the reason. A key may only reach an answer the LINE offers, which is
+ * the same rule `SignoffRowAnswers` draws: `a` is inert where there is no N/A.
  */
 export function SignoffRow({
   line,
@@ -102,32 +98,21 @@ export function SignoffRow({
               <span className="mr-3 font-mono text-tiny font-semibold text-ink-muted">
                 {line.n}
               </span>
+              {/*
+                NO GROUP TAG. `line.group` is how the RULEBOOK organises the
+                thirteen — Taxes, Vesting, Mortgages — and the design prints it
+                on the products screen, where a person is reading the list as a
+                catalogue. Here they are answering it, one line at a time, and
+                an uppercase tag after every label added a second thing to read
+                on all thirteen rows to say something none of the answers turn
+                on.
+              */}
               {line.label}
-              <span className="ml-3 text-micro tracking-badge text-ink-muted uppercase">
-                {line.group}
-              </span>
             </p>
             <SignoffRowNotes line={line} periodLabel={periodLabel} answered={answered} />
           </div>
 
-          <div role="group" aria-label={line.label} className="flex shrink-0 gap-3">
-            {line.answers.map((option) => {
-              const chosen = answer === option;
-              return (
-                <Button
-                  key={option}
-                  size="sm"
-                  className="min-w-28"
-                  aria-pressed={chosen}
-                  fill={chosen ? "solid" : "outlined"}
-                  tone={chosen ? (option === "NO" ? "halt" : "settled") : "neutral"}
-                  onClick={() => onAnswer(option)}
-                >
-                  {option}
-                </Button>
-              );
-            })}
-          </div>
+          <SignoffRowAnswers line={line} answer={answer} onAnswer={onAnswer} />
         </div>
 
         {answer === "NO" ? (

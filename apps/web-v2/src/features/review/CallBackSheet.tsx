@@ -1,18 +1,23 @@
 import type { Field } from "@titlepipe/contract";
-import { fieldLabel } from "../../entities/field/fieldLabel";
 import { SECTION_HEADING, sectionAnchor, sectionsOf } from "./reportSections";
-import { FieldValue } from "../../entities/field/FieldValue";
-import { Card, CardBody, CardHeader } from "../../shared/ui/Card";
+import { SheetRow } from "./SheetRow";
+import { Card, CardHeader } from "../../shared/ui/Card";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
 
 /**
  * THE DRAFT CALL BACK SHEET — the deliverable, assembled live.
  *
- * This is the third pane of the approved design and the reason the review
- * screen is shaped the way it is: the reviewer is not filling in a form, they
- * are watching a document take shape and deciding whether it can ship. A
- * decision queue with no visible draft asks somebody to approve values one at a
- * time with no sense of what the client will actually receive.
+ * This is what the review screen is shaped around: the reviewer is not filling
+ * in a form, they are watching a document take shape and deciding whether it
+ * can ship. A decision queue with no visible draft asks somebody to approve
+ * values one at a time with no sense of what the client will actually receive.
+ *
+ * IT IS THE ONLY PLACE A SETTLED VALUE APPEARS. There used to be a second,
+ * full-width list of the same fields a screen-height above this one — headed
+ * `SETTLED 15 — look, do not re-decide` — so every value on the order was
+ * printed twice and the six decisions that needed a person sat between the two
+ * copies. Deleting it is the point of this rework: settled work belongs in the
+ * document it is going into, not in a ledger beside it.
  *
  * SECTION HEADINGS MATCH THE DELIVERED WORD DOCUMENT, and every value cites the
  * page it was read from. The citation is not decoration: a sheet whose values
@@ -20,7 +25,11 @@ import { Eyebrow } from "../../shared/ui/Eyebrow";
  * prevent, and seeing the cites here is how a missing one gets noticed before
  * delivery rather than after a complaint.
  *
- * IT IS READ-ONLY. Decisions happen in the queue, on one field, with a reason.
+ * EACH SECTION IS THE ANCHOR THE RAIL POINTS AT (`sectionAnchor`), and the
+ * grouping is `sectionsOf` — the same function the rail walks, so a link and
+ * the section it names can never drift into two different splits.
+ *
+ * IT IS READ-ONLY. Decisions happen in the dock, on one field, with a reason.
  * An editable draft is a bulk-edit surface wearing a document's clothes.
  */
 export function CallBackSheet({
@@ -33,50 +42,32 @@ export function CallBackSheet({
   onSelect: (path: string) => void;
 }) {
   return (
-    <Card data-testid="call-back-sheet">
-      <CardHeader filled>
-        <Eyebrow variant="section">Draft — Abstractor Call Back Sheet</Eyebrow>
-      </CardHeader>
-      <CardBody className="flex flex-col gap-8">
-        <p className="max-w-2xl text-xs leading-body text-ink-muted">
-          Section headings match the delivered Word document exactly. Every
-          value cites the page it was read from.
-        </p>
+    <section data-testid="call-back-sheet" className="flex flex-col gap-5">
+      <Eyebrow variant="section">Draft — Abstractor Call Back Sheet</Eyebrow>
+      <p className="max-w-2xl text-xs leading-body text-ink-secondary">
+        Section headings match the delivered Word document exactly. Every value
+        cites the page it was read from.
+      </p>
 
-        {sectionsOf(fields).map(([section, rows]) => (
-          <section key={section} id={sectionAnchor(section)} className="flex scroll-mt-16 flex-col gap-3">
-            <Eyebrow variant="caption">
+      {sectionsOf(fields).map(([section, rows]) => (
+        <Card key={section} id={sectionAnchor(section)} className="scroll-mt-16">
+          <CardHeader filled>
+            <Eyebrow variant="section">
               {SECTION_HEADING[section] ?? section.replaceAll("_", " ")}
             </Eyebrow>
-            <dl className="flex flex-col">
-              {rows.map((field) => (
-                <div
-                  key={field.id}
-                  className="grid gap-2 border-t border-line-subtle py-3 first:border-t-0 sm:grid-cols-[13rem_1fr]"
-                >
-                  <dt>
-                    <button
-                      type="button"
-                      data-testid={`sheet-${field.path}`}
-                      onClick={() => onSelect(field.path)}
-                      className={
-                        field.path === selectedPath
-                          ? "text-left font-mono text-xs font-semibold text-action underline"
-                          : "text-left font-mono text-xs text-ink-secondary"
-                      }
-                    >
-                      {fieldLabel(field.path)}
-                    </button>
-                  </dt>
-                  <dd>
-                    <FieldValue field={field} />
-                  </dd>
-                </div>
-              ))}
-            </dl>
-          </section>
-        ))}
-      </CardBody>
-    </Card>
+          </CardHeader>
+          <div>
+            {rows.map((field) => (
+              <SheetRow
+                key={field.id}
+                field={field}
+                selected={field.path === selectedPath}
+                onSelect={() => onSelect(field.path)}
+              />
+            ))}
+          </div>
+        </Card>
+      ))}
+    </section>
   );
 }

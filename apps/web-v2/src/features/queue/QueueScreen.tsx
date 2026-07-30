@@ -8,10 +8,11 @@ import { Screen } from "../../shared/ui/Screen";
 import { ScreenFailure } from "../../shared/ui/ScreenFailure";
 import { ScreenHeading } from "../../shared/ui/ScreenHeading";
 import { ScreenMessage } from "../../shared/ui/ScreenMessage";
-import { ToggleGroup, Toggle } from "../../shared/ui/ToggleGroup";
 import { QueueBand } from "./QueueBand";
 import { MineBand, TailBands } from "./QueueSections";
 import { NextOrderCard } from "./NextOrderCard";
+import { QueueViewToggle, type QueueView } from "./QueueViewToggle";
+import { QuietState } from "./QuietState";
 
 /**
  * ONE order, chosen by the server. There is no list, no filter and no sort —
@@ -51,7 +52,7 @@ export function QueueScreen() {
   const role = useSession((session) => session.role);
   const next = useQuery(nextOrderQuery);
   const bands = useQuery(queueBandsQuery(role));
-  const [view, setView] = useState<"reviewer" | "senior">("reviewer");
+  const [view, setView] = useState<QueueView>("reviewer");
 
   if (next.isError || bands.isError) {
     const failure = next.error ?? bands.error;
@@ -69,6 +70,14 @@ export function QueueScreen() {
   // screen only knows where "Next up" is spliced in. A band it did not send is
   // absent here, never an empty one — `Band` renders nothing for `undefined`.
   const bandOf = (id: QueueBandId) => bands.data.bands.find((band) => band.id === id);
+  /*
+   * THE SERVER'S TWO CENSUSES, read — not `orders.length` on either. A reviewer
+   * who cannot see the held work would otherwise be told nothing is waiting on
+   * anyone, which is the one sentence on this screen that must never be wrong.
+   * A band the server did not send is not a zero, so `?? 0` is deliberately
+   * absent: both counts have to be present AND zero for the card to appear.
+   */
+  const quiet = bandOf("mine")?.count === 0 && bandOf("held")?.count === 0;
 
   return (
     <Screen measure="860">
@@ -83,24 +92,14 @@ export function QueueScreen() {
               order, never to you.
             </p>
           }
-          actions={
-            <ToggleGroup
-              aria-label="Queue view"
-              value={[view]}
-              onValueChange={(values) => {
-                const picked = values.at(0);
-                if (picked === "reviewer" || picked === "senior") setView(picked);
-              }}
-            >
-              <Toggle value="reviewer" className="rounded-6 px-7 py-4 text-sm">Reviewer</Toggle>
-              <Toggle value="senior" className="rounded-6 px-7 py-4 text-sm">Senior · Ops</Toggle>
-            </ToggleGroup>
-          }
+          actions={<QueueViewToggle view={view} onView={setView} />}
         />
+
+        {quiet ? <QuietState /> : null}
 
         <MineBand band={bandOf("mine")} />
 
-        <QueueBand title="Next up" note="the system decides — no picking">
+        <QueueBand title="Next up" note="the system decides — no picking" tone="action">
           {order === null ? (
             <EmptyPanel
               title="Nothing is waiting."

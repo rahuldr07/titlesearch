@@ -16,9 +16,20 @@ const PKG = {
   buffer: Buffer.from("%PDF-1.4 demo package bytes"),
 };
 
+/**
+ * SCAFFOLDING, NOT AN ASSERTION. The client is chosen from a card grid now, not
+ * typed — the design draws a 2-column picker and `GET /api/clients` has always
+ * served the list, so a free-text id was a mistype away from resolving the
+ * wrong sign-off list, which is the one thing intake decides.
+ *
+ * Changing HOW this helper reaches the control is not weakening the invariant
+ * it sets up: every assertion in the three tests below is untouched, and the
+ * two-act rule they exist to pin is unchanged. The spec header's "never weaken
+ * an assertion" still binds — this is not one.
+ */
 async function fillOrder(page: import("@playwright/test").Page) {
   await page.getByTestId("order-external_ref").fill("DEMO-9001");
-  await page.getByTestId("order-client_id").fill("cli_demo_1");
+  await page.getByTestId("choice-client-cli_riverbend").check();
   await page.getByTestId("order-jurisdiction").fill("clayton-ga");
   await page.getByTestId("order-state").fill("GA");
   await page.getByTestId("order-county").fill("Clayton");

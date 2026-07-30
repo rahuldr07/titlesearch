@@ -393,7 +393,16 @@
   /* ── stroke weight — a semantic axis, not decoration ──────────────────── */
   --stroke-structure: 1px;
   --stroke-emphasis: 1.5px;
-  --stroke-stamp: 2.5px;
+  /*
+   * 3px, NOT 2.5px, AND THE VALUE IS LOAD-BEARING. `border-style: double`
+   * paints three parts — line, gap, line — and a browser cannot divide fewer
+   * than 3px into three, so at 2.5px it silently falls back to a single solid
+   * line. Every stamp in the app rendered as a plain rounded rectangle for that
+   * one reason: the export draws `border:3px double`, and the doubled edge is
+   * the whole of the rubber-stamp metaphor. Lowering this token again would
+   * flatten four stamps with nothing failing.
+   */
+  --stroke-stamp: 3px;
   --stroke-accent: 2px;
   --stroke-severity: 4px;
 

@@ -1,6 +1,5 @@
 import type { Field, OrderSignoffLine } from "@titlepipe/contract";
 import { DECISION_STATES } from "./reportSections";
-import { Card, CardBody } from "../../shared/ui/Card";
 import { Button } from "../../shared/ui/Button";
 
 /**
@@ -9,6 +8,11 @@ import { Button } from "../../shared/ui/Button";
  * here, not inside the expanded decision card and not inside the report pane,
  * because finalizing is an order-level act that follows every field decision
  * rather than belonging to any one of them.
+ *
+ * IT IS A DOCKED BAR, NOT A CARD. `flex:0 0 auto` on the pane's own column with
+ * a single rule above and below it, so it never scrolls away from the queue
+ * whose state it reports. A card here would float a bordered box between two
+ * bands of the same pane and read as a third piece of content.
  *
  * THE GATE IS TWO THINGS, NOT ONE — `finalizeEnabled = allAnswered && openNo
  * === 0` (design `:3227`). Watching only `Field.state` let this bar read "All
@@ -50,16 +54,17 @@ export function FinalizeBar({
     : `${parts.join(" and ")} still need you. Finalize stays disabled until each is resolved.`;
 
   return (
-    <Card data-testid="finalize-bar">
-      <CardBody className="flex flex-wrap items-center gap-6">
-        <span className="text-sm font-semibold text-ink-primary">Finalize</span>
-        <span data-testid="finalize-note" className="flex-1 text-xs text-ink-secondary">
-          {note}
-        </span>
-        <Button size="md" data-testid="finalize-order-btn" disabled>
-          Finalize order
-        </Button>
-      </CardBody>
-    </Card>
+    <div
+      data-testid="finalize-bar"
+      className="flex flex-none flex-wrap items-center gap-6 border-b border-line-strong bg-surface-raised px-9 py-5"
+    >
+      <span className="text-sm font-semibold text-ink-primary">Finalize</span>
+      <span data-testid="finalize-note" className="min-w-0 flex-1 text-xs text-ink-secondary">
+        {note}
+      </span>
+      <Button size="md" data-testid="finalize-order-btn" disabled>
+        Finalize order
+      </Button>
+    </div>
   );
 }

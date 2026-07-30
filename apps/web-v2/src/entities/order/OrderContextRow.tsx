@@ -13,9 +13,17 @@ import { Eyebrow } from "../../shared/ui/Eyebrow";
  * same defect seen from two sides, and one component makes the gap visible in
  * one place instead of disguising it at three call sites.
  *
- * "ORDERED" IS WRITTEN IN CAPITALS, not transformed into them. A CSS
- * `text-transform` does not change what the text says, and the export's own
- * strip (`:836`) is the word this row prints.
+ * THE HEADING IS CAPITALS IN THE MARKUP, not a CSS `text-transform` — that
+ * changes how text looks and not what it says, and a screen reader is then
+ * given a word the design never wrote.
+ *
+ * IT IS A PROP BECAUSE THE EXPORT WRITES THREE WORDS, one per surface: Review's
+ * strip (`:836`) says ORDERED, the completeness gate says PRODUCT ORDERED, and
+ * the delivered receipt says PRODUCT. Defaulting to ORDERED keeps the common
+ * case at the call site's silence, and the alternative — a call site that wants
+ * the export's word forking the component to get it — is exactly how this row
+ * came to exist three ways with no two agreeing. A label is a caption, never a
+ * state word: nothing here may be derived from server state.
  *
  * THE PERIOD IS A DATE SPAN, not a state word, so it is not shouted:
  * "07/18/1986 – 07/18/2026" in 9px letterspaced caps stops being a number a
@@ -33,6 +41,8 @@ import { Eyebrow } from "../../shared/ui/Eyebrow";
  * that cannot name what was ordered is the fabrication in a quieter form.
  */
 export interface OrderContextRowProps {
+  /** The export's caption for this surface. Defaults to Review's `ORDERED`. */
+  label?: string;
   /** Server-supplied. A caller with no resolved product renders no row. */
   productName: string;
   /** The dated span, e.g. "40-year period · 07/18/1986 – 07/18/2026". */
@@ -44,6 +54,7 @@ export interface OrderContextRowProps {
 }
 
 export function OrderContextRow({
+  label = "ORDERED",
   productName,
   periodLabel,
   configVersion,
@@ -51,7 +62,7 @@ export function OrderContextRow({
 }: OrderContextRowProps) {
   return (
     <div className="flex flex-wrap items-center gap-5">
-      <Eyebrow variant="caption">ORDERED</Eyebrow>
+      <Eyebrow variant="caption">{label}</Eyebrow>
       <span className="text-md font-semibold text-ink-primary">{productName}</span>
 
       {periodLabel === null ? null : (

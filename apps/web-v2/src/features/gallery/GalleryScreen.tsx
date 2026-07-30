@@ -2,6 +2,7 @@ import { GALLERY_STATES } from "./galleryStates";
 import { StateCard } from "./StateCard";
 import { StateSample } from "./StateSample";
 import { NoValueSample } from "./NoValueSample";
+import { VerdictSamples } from "./VerdictSamples";
 import { Screen } from "../../shared/ui/Screen";
 import { ScreenHeading } from "../../shared/ui/ScreenHeading";
 
@@ -34,6 +35,20 @@ import { ScreenHeading } from "../../shared/ui/ScreenHeading";
  * screen whose chrome no longer matches what it documents — the drift it exists
  * to catch, arriving through its own frontispiece. It carries the hub link
  * (`ux.spec` #7) with it, which the three loose elements only had by habit.
+ *
+ * THE VERDICT SAMPLES COME FIRST, and they are the reason this screen earns its
+ * keep rather than merely illustrating. They are the LIVE gate banner and the
+ * LIVE pipeline button, which /completeness and /processing each used to expose
+ * through a "local preview" toggle so their unreachable rendering could be seen
+ * at all. A toggle on a production screen lets a person repaint a server verdict
+ * (hard rule 3); a catalogue entry cannot, because there is no order on this
+ * page to be lied about. The cards below them are descriptions of states; these
+ * four are the states.
+ *
+ * THE GRID FOLLOWS THE CARD, NOT THE VIEWPORT — `repeat(auto-fill, minmax(320px,
+ * 1fr))`, the export's own rule (:2211). Breakpoint columns forced three 241px
+ * cards into a 756px content box at a 1024px viewport, 79px under the floor the
+ * design sets; auto-fill drops to two and keeps the card legible.
  */
 export function GalleryScreen() {
   return (
@@ -45,7 +60,9 @@ export function GalleryScreen() {
           lede="Every one of these has to stay visually distinct in production. This is the catalogue."
         />
 
-        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(20rem,1fr))] gap-8">
+          <VerdictSamples />
+
           {GALLERY_STATES.map((state) => (
             <StateCard key={state.id} tag={state.tag} title={state.title} desc={state.desc}>
               <StateSample accent={state.accent} badge={state.badge} body={state.body} />
@@ -56,6 +73,7 @@ export function GalleryScreen() {
             tag="Report"
             title="Six distinct no-value states"
             desc="They must never collapse into one grey dash."
+            surface="panel"
           >
             <NoValueSample />
           </StateCard>

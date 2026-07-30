@@ -136,9 +136,45 @@ export type QueueBand = z.infer<typeof QueueBand>;
 export const QueueBandsResponse = z.object({ bands: z.array(QueueBand) });
 export type QueueBandsResponse = z.infer<typeof QueueBandsResponse>;
 
+/**
+ * ⚠ UI-DRIVEN REQUEST — AWAITING RATIFICATION (2026-07-31, fidelity Wave 2).
+ * READ SHAPE ONLY: no endpoint accepts these, and none may be written.
+ *
+ * The four figures the order strip prints, DECIDED ON THE SERVER. They were
+ * being computed in the browser from the `fields` array, and `no_source` was
+ * the reason this shape had to exist: the strip filtered for
+ * `value !== null && source_doc_id === null && source_page === null &&
+ * readings.length === 0` and printed the result as a headline number. That is
+ * the browser ruling on provenance — a server judgement (hard rule 3) and one
+ * the screen could not cite (principle 6). A count whose definition lives in a
+ * component is a count nobody can audit against the pipeline.
+ *
+ * NONE of these is `fields.length` or a tally of `fields[].state`, for the same
+ * reason `QueueBand.count` and `LifecycleStage.count` are not `orders.length`:
+ * the array is scoped to what the caller may see, the census is not. A total
+ * that shrank with your permissions reads as work vanishing.
+ *
+ * A CENSUS, NEVER A RATE (§4.5) — how many sit here now. There is no per-hour,
+ * per-person or per-period figure in this shape and there never may be.
+ */
+export const OrderCensus = z.object({
+  fields: z.number().int(),
+  auto_confirmed: z.number().int(),
+  needs_review: z.number().int(),
+  /** Values the pipeline produced with no document, page or reading behind them. */
+  no_source: z.number().int(),
+});
+export type OrderCensus = z.infer<typeof OrderCensus>;
+
 export const OrderFieldsResponse = z.object({
   order_id: z.string(),
   fields: z.array(Field),
+  /**
+   * OPTIONAL, and absent is not zero — it is "the server did not say". The
+   * strip must print the silence rather than fill it in, which is the whole
+   * point of moving these numbers off the client.
+   */
+  census: OrderCensus.optional(),
 });
 export type OrderFieldsResponse = z.infer<typeof OrderFieldsResponse>;
 

@@ -11,9 +11,8 @@ import {
   usePassOrder,
 } from "./queries";
 import { readingsOf } from "../../entities/field/fieldLabel";
-import { EvidenceColumn } from "./EvidenceColumn";
-import { FieldsColumn } from "./FieldsColumn";
-import { ReviewHeader } from "./ReviewHeader";
+import { DocumentPane } from "./DocumentPane";
+import { FieldsPane } from "./FieldsPane";
 import { useReviewEditor } from "./useReviewEditor";
 import { useReviewKeys } from "./useReviewKeys";
 import { useReviewSelection } from "./useReviewSelection";
@@ -22,7 +21,21 @@ import { Screen } from "../../shared/ui/Screen";
 import { ScreenMessage } from "../../shared/ui/ScreenMessage";
 
 /**
- * The review workstation — document, decision, draft sheet.
+ * The review workstation — TWO PANES, edge to edge, in one frame that does not
+ * scroll (export `:664-1082`).
+ *
+ * LEFT `1 1 52%` is the document: pinned header, one scroller, coverage docked
+ * at the foot. RIGHT `1 1 48%` is the fields column: what was ordered, the one
+ * decision you are on, the finalize gate, then the draft report beside its
+ * section rail. The rail is INSIDE the right pane — a third top-level column
+ * starved both halves and pushed the sheet's values out of their rows.
+ *
+ * THERE IS NO SCREEN HEADER. It used to carry a `Review` title, a second
+ * answered-of-needed count and a third "remaining" one, directly under an order
+ * strip that already names the order and its four counts. The export draws none
+ * of it: the left pane says DOCUMENT and the right pane opens on ORDERED, and
+ * the counts belong to the queue that owns them. `{n} remaining` moved onto the
+ * decision dock with the two numbers it is arithmetic on.
  *
  * J AND K WALK ONLY SERVER-QUEUED FIELDS (`review.spec` #9). The queue is the
  * server's judgment about what needs a person; walking past it by keyboard is
@@ -47,11 +60,7 @@ export function ReviewScreen() {
   const pass = usePassOrder(orderId);
 
   const fields: Field[] = data?.fields ?? [];
-  const { queued, selected, select, step, advance } = useReviewSelection(
-    orderId,
-    fields,
-    fieldParam,
-  );
+  const { selected, select, step, advance } = useReviewSelection(orderId, fields, fieldParam);
 
   const { mode, setMode, pinned, setPinned, seed, blankNote, setBlankNote, reselect, adopt, openCorrect } =
     useReviewEditor(select);
@@ -87,43 +96,37 @@ export function ReviewScreen() {
 
   return (
     <Screen placement="bleed">
-      <div className="flex h-full flex-col gap-8">
-        <ReviewHeader fields={fields} queued={queued.length} />
+      <div className="flex h-full min-h-0">
+        <DocumentPane orderId={orderId} field={selected} pinned={pinned?.reading ?? null} />
 
-        {/* TWO columns. The document is the work; the decision and the sheet
-            stack beside it because they are one conversation. A third column
-            starved both and pushed the sheet's values out of their rows. */}
-        <div className="grid min-h-0 items-start gap-6 xl:grid-cols-2">
-          <EvidenceColumn orderId={orderId} field={selected} pinnedReading={pinned?.reading ?? null} />
-
-          <FieldsColumn
-            fields={fields}
-            signoffLines={signoff.data?.lines ?? []}
-            selected={selected}
-            pinned={pinned}
-            mode={mode}
-            seed={editorSeed}
-            passPending={pass.isPending}
-            serverNote={confirm.error instanceof ApiError ? confirm.error.message : null}
-            blankNote={blankNote}
-            onPin={setPinned}
-            onAdopt={adopt}
-            onConfirm={submitConfirm}
-            onCorrect={openCorrect}
-            onMode={setMode}
-            onCorrectSubmit={(value, reason) =>
-              correct.mutate({ fieldId: selected.id, value, reason }, { onSuccess: advance })
-            }
-            onEscalateSubmit={(question) =>
-              escalate.mutate({ fieldId: selected.id, question }, { onSuccess: advance })
-            }
-            onExcludeSubmit={(reason) =>
-              exclude.mutate({ fieldId: selected.id, reason }, { onSuccess: advance })
-            }
-            onPassSubmit={(reason) => pass.mutate(reason, { onSuccess: () => setMode("idle") })}
-            onSelect={reselect}
-          />
-        </div>
+        <FieldsPane
+          orderId={orderId}
+          fields={fields}
+          signoffLines={signoff.data?.lines ?? []}
+          selected={selected}
+          pinned={pinned}
+          mode={mode}
+          seed={editorSeed}
+          passPending={pass.isPending}
+          serverNote={confirm.error instanceof ApiError ? confirm.error.message : null}
+          blankNote={blankNote}
+          onPin={setPinned}
+          onAdopt={adopt}
+          onConfirm={submitConfirm}
+          onCorrect={openCorrect}
+          onMode={setMode}
+          onCorrectSubmit={(value, reason) =>
+            correct.mutate({ fieldId: selected.id, value, reason }, { onSuccess: advance })
+          }
+          onEscalateSubmit={(question) =>
+            escalate.mutate({ fieldId: selected.id, question }, { onSuccess: advance })
+          }
+          onExcludeSubmit={(reason) =>
+            exclude.mutate({ fieldId: selected.id, reason }, { onSuccess: advance })
+          }
+          onPassSubmit={(reason) => pass.mutate(reason, { onSuccess: () => setMode("idle") })}
+          onSelect={reselect}
+        />
       </div>
     </Screen>
   );

@@ -1,8 +1,6 @@
 import { Button } from "../../shared/ui/Button";
 import { Card } from "../../shared/ui/Card";
-
-const RESTRICTED =
-  "Confirmation is restricted to engineer and admin. A senior rules on the domain question; someone else enables it.";
+import { CONFIRM_RESTRICTED } from "./refusalCopy";
 
 /**
  * CONFIRM → MAKE LIVE. The act that turns a written rule into an applied one.
@@ -54,7 +52,7 @@ export function ConfirmBlock({
           tone="halt"
           className="mb-5 px-6 py-5 text-sm leading-body text-state-halt-ink"
         >
-          {RESTRICTED}
+          {CONFIRM_RESTRICTED}
         </Card>
       )}
 

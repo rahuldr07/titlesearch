@@ -1,15 +1,12 @@
-import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { OrderCompletenessResponse } from "@titlepipe/contract";
+import { GateClosedBanner, GateOpenBanner } from "../../entities/order/GateBanner";
 import { OrderContextRow } from "../../entities/order/OrderContextRow";
 import { Button } from "../../shared/ui/Button";
-import { Eyebrow } from "../../shared/ui/Eyebrow";
 import { Screen } from "../../shared/ui/Screen";
 import { ScreenHeading } from "../../shared/ui/ScreenHeading";
 import { ScreenMessage } from "../../shared/ui/ScreenMessage";
-import { Toggle, ToggleGroup } from "../../shared/ui/ToggleGroup";
 import { useSession } from "../../shared/session";
-import { GateClosedBanner, GateOpenBanner } from "./GateBanner";
 import { GapCard } from "./GapCard";
 import { useGateState } from "./useGateState";
 import { COMPLETENESS_ORDER_ID, orderCompletenessQuery } from "./queries";
@@ -25,19 +22,26 @@ import { COMPLETENESS_ORDER_ID, orderCompletenessQuery } from "./queries";
  * for nothing — the pages are already classified, and nothing has been
  * extracted, so closing a gap and resuming costs one run of the cheap half.
  *
- * THE GATE IS THE SERVER'S. `gate_open` decides which banner renders; the count
- * of gaps still open on this screen never does. Closing every card here records
- * intent, and the gate re-runs on the server or not at all.
+ * RULE: `gate_open` IS THE VERDICT and this screen only renders it. FAILURE
+ * PREVENTED: a "Gate verdict · local preview" toggle used to ride in the order
+ * row, and switching it to Closed drew "Package complete — every gap is closed"
+ * directly above three cards still stamped GAP with their close buttons live —
+ * a screen stating the opposite of what it shows. The banner pair now lives in
+ * `entities/order/GateBanner`; the rendering no fixture reaches is catalogued
+ * on `features/gallery`, which exists for exactly that.
+ *
+ * Closing every card here records intent, and the gate re-runs on the server or
+ * not at all.
  *
  * CONTRACT GAP: no closure write of any kind — no supplemental upload, no
  * sign-off amendment, no root-of-title assertion, no product change, no resume.
  * Closures are local state and vanish on reload; "Resume processing" is drawn
  * as the design draws it and disabled.
  *
- * Since 2026-07-30 `close_options` carry their kind, their consequence, whether
- * they require a comment and the `min_role` the server requires — so the role
- * gate the design put on changing the product is the server's fact rather than
- * a match on its copy. Applying it to the control is Wave 4's; the wire is here.
+ * CONTRACT GAP: the response carries no open-gap count, so the footer sentence
+ * counts the cards this screen is holding. It is a statement about this screen,
+ * not the gate's own tally, and it must never be read as one — which is why it
+ * never touches the banner above it.
  */
 export function CompletenessScreen() {
   const { data, isPending, isError } = useQuery(orderCompletenessQuery(COMPLETENESS_ORDER_ID));
@@ -48,22 +52,10 @@ export function CompletenessScreen() {
   return <GateBody gate={data} />;
 }
 
-/**
- * Mounted only once the gate has arrived, so the banner preview can be SEEDED
- * FROM THE SERVER'S `gate_open` instead of guessing and correcting itself.
- *
- * THE PREVIEW IS NOT A SECOND GATE. Closing every card on this screen still
- * does not flip the banner, and neither does an empty gap list — the verdict
- * arrives as its own field precisely so no screen can reach it by counting.
- * This control is labelled as what it is, a local view of the other rendering,
- * because the closed state is otherwise unreachable and an unreachable state
- * is one nobody can check.
- */
 function GateBody({ gate: data }: { gate: OrderCompletenessResponse }) {
   const actor = useSession((session) => session.actor);
   const role = useSession((session) => session.role);
   const gate = useGateState();
-  const [gateOpen, setGateOpen] = useState(data.gate_open);
 
   const openGaps = data.gaps.filter(
     (gap) => gap.closed_by === null && gate.closures[gap.id] === undefined,
@@ -79,28 +71,23 @@ function GateBody({ gate: data }: { gate: OrderCompletenessResponse }) {
         />
 
         {/* One row, shared with the delivered screen and Review, so the three
-            cannot disagree about what was ordered. The local-preview toggle
-            rides in the trailing slot exactly as it stood; moving it to
-            features/gallery is Wave 4's, not this row's. */}
+            cannot disagree about what was ordered. Its trailing slot is empty
+            here on purpose: the design's product row is eyebrow, product and
+            period badge and nothing else.
+
+            THE GATE'S CAPTION IS `PRODUCT ORDERED`, which is what the export
+            writes here — Review's strip says `ORDERED` for the same pair, and
+            this screen was printing Review's word. The difference is carried by
+            a prop rather than a second copy of the row: forking the component
+            over one caption is how the row came to exist three ways, one of
+            them fabricated. */}
         <OrderContextRow
+          label="PRODUCT ORDERED"
           productName={data.product_name}
           periodLabel={data.period_label}
-          trailing={
-            <div className="flex items-center gap-4">
-              <Eyebrow variant="caption">Gate verdict · local preview</Eyebrow>
-              <ToggleGroup
-                aria-label="Gate verdict (local preview)"
-                value={[gateOpen ? "open" : "closed"]}
-                onValueChange={(value) => setGateOpen(value[0] !== "closed")}
-              >
-                <Toggle value="open">Open</Toggle>
-                <Toggle value="closed">Closed</Toggle>
-              </ToggleGroup>
-            </div>
-          }
         />
 
-        {gateOpen ? <GateOpenBanner /> : <GateClosedBanner />}
+        {data.gate_open ? <GateOpenBanner /> : <GateClosedBanner />}
 
         {data.gaps.map((gap) => (
           <GapCard
@@ -111,10 +98,17 @@ function GateBody({ gate: data }: { gate: OrderCompletenessResponse }) {
           />
         ))}
 
+        {/*
+          THE BLOCKED CASE IS SET IN HALT INK, the resolved case in settled ink
+          (design :3753, `resumeNoteColor`). Drawn in the secondary grey it used
+          to wear, the one sentence saying the run is still stopped was the
+          quietest text in the footer — beside a disabled button, which reads as
+          a control that is merely unavailable rather than a run that is held.
+        */}
         <div className="flex items-center gap-7">
           <p
             className={
-              openGaps > 0 ? "flex-1 text-sm text-ink-secondary" : "flex-1 text-sm text-state-settled-ink"
+              openGaps > 0 ? "flex-1 text-sm text-state-halt-ink" : "flex-1 text-sm text-state-settled-ink"
             }
           >
             {openGaps > 0

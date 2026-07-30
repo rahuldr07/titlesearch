@@ -86,6 +86,23 @@ html {
   filter: var(--filter-scan-degraded);
 }
 
+/*
+ * The export's chip grids: `repeat(auto-fill, minmax(230px, 1fr))`. A FIXED
+ * column count is the bug this replaces — `sm:grid-cols-2` gave the sign-off
+ * defaults two ~430px chips at the 880px measure, so each YES/N-A value was
+ * stranded hundreds of pixels from the label it belongs to and the eye had to
+ * track across a blank gap to pair them. Auto-fill makes the count follow the
+ * measure, which is what the design specifies and what keeps a value beside
+ * its line at every width.
+ *
+ * A utility rather than an arbitrary Tailwind value because §6 keeps raw pixel
+ * numbers out of TSX; fourth instance of the missing-namespace gap after
+ * --space-*, --z-* and --filter-*.
+ */
+@utility grid-autofill-230 {
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+}
+
 @utility na-hatch {
   background-image: repeating-linear-gradient(
     135deg,

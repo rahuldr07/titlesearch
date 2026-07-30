@@ -14,6 +14,13 @@ import { Toggle, ToggleGroup } from "../../shared/ui/ToggleGroup";
  *
  * The chips carry product CODES rather than full names because they sit inline
  * in a sentence and six full names wrap into a paragraph.
+ *
+ * A RETIRED PRODUCT IS NOT A BASELINE ANYBODY CAN RESOLVE AGAINST. The export
+ * builds this row from its ACTIVE products, and it has to: retirement is the
+ * only exit a product has, so a retired one still exists for every historic
+ * order that points at it — but offering it here would invite authoring a
+ * client delta against a baseline no new order can ever be placed under. The
+ * same filter already guards the line picker in `AuthorOverride`.
  */
 export function ProductChips({
   products,
@@ -37,11 +44,13 @@ export function ProductChips({
           if (picked !== undefined) onChange(picked);
         }}
       >
-        {products.map((p) => (
-          <Toggle key={p.id} value={p.id} aria-label={p.full}>
-            {p.code}
-          </Toggle>
-        ))}
+        {products
+          .filter((p) => !p.retired)
+          .map((p) => (
+            <Toggle key={p.id} value={p.id} aria-label={p.full}>
+              {p.code}
+            </Toggle>
+          ))}
       </ToggleGroup>
     </div>
   );

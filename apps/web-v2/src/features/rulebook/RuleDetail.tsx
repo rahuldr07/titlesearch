@@ -70,7 +70,15 @@ export function RuleDetail({
           <Chip tone="neutral" size="sm" bordered>
             {rule.origin}
           </Chip>
-          <span className="ml-auto font-mono text-tiny text-ink-muted">v{rule.version}</span>
+          {/*
+            THE BARE INTEGER, as the export draws it (`{{ ruleDetail.version }}`
+            → "2"). The "v" prefix belongs to the VERSION LOG, where several
+            versions are listed together and each needs to read as an entry;
+            here there is one number in the corner of the header the rule's
+            code already labels. Prefixing it made the header and the log two
+            spellings of one field on the same card.
+          */}
+          <span className="ml-auto font-mono text-tiny text-ink-muted">{rule.version}</span>
         </div>
 
         <p className="mt-4 text-lg leading-close font-semibold text-ink-primary">

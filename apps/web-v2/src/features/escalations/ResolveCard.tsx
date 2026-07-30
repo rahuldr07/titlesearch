@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { Rule } from "@titlepipe/contract";
 import { useResolveCluster, type RuleChoice } from "./queries";
+import { RuleChoiceFields } from "./RuleChoiceFields";
 import { ApiError } from "../../shared/api";
 import { Card } from "../../shared/ui/Card";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
@@ -48,7 +49,6 @@ export function ResolveCard({ ids, rules, onResolved }: ResolveCardProps) {
   const [draft, setDraft] = useState("");
   const resolve = useResolveCluster();
 
-  const citable = rules.filter((rule) => rule.status === "live");
   const hasRule = mode === "cite" ? ruleId !== "" : draft.trim() !== "";
   const ready = ruling.trim() !== "" && hasRule;
 
@@ -60,15 +60,28 @@ export function ResolveCard({ ids, rules, onResolved }: ResolveCardProps) {
 
   return (
     <Card className="flex flex-col gap-5 p-8">
-      <Eyebrow variant="section">
-        The rule — one sentence, your words. This is what the screen is for; the
-        per-order answer is incidental.
-      </Eyebrow>
+      <div className="flex flex-col gap-2">
+        {/* Violet and SHORT, as the archive sets it. Carrying the whole
+            sentence, this was twenty words of letterspaced uppercase ruling one
+            unbroken line across the screen — the register the design reserves
+            for labels of five words or fewer, spent on a paragraph. */}
+        <Eyebrow variant="section" tone="action">
+          The rule — one sentence, your words
+        </Eyebrow>
+        <p className="text-xs leading-body text-ink-muted">
+          This is what the screen is for; the per-order answer is incidental.
+        </p>
+      </div>
 
       <label className="flex flex-col gap-2">
         <Eyebrow variant="field">The ruling for these orders</Eyebrow>
+        {/* A WORKED EXAMPLE, as the design writes it. Every other form in this
+            app carries a design-sourced placeholder; this one — the screen whose
+            entire claim is "write the rule, one sentence" — shipped an empty box
+            under an uppercase instruction. */}
         <TextArea
           data-testid="ruling-input"
+          placeholder="One sentence — the rule as you'd say it out loud."
           value={ruling}
           onChange={(event) => setRuling(event.target.value)}
         />
@@ -83,33 +96,14 @@ export function ResolveCard({ ids, rules, onResolved }: ResolveCardProps) {
         </Radio>
       </RadioGroup>
 
-      {mode === "cite" ? (
-        <label className="flex flex-col gap-2">
-          <Eyebrow variant="field">Which rule</Eyebrow>
-          <select
-            data-testid="cite-select"
-            value={ruleId}
-            onChange={(event) => setRuleId(event.target.value)}
-            className="rounded-5 border border-line-strong bg-surface-panel px-5 py-3 text-base text-ink-primary"
-          >
-            <option value="">— cite a live rule —</option>
-            {citable.map((rule) => (
-              <option key={rule.id} value={rule.id}>
-                {rule.code} — {rule.text.slice(0, 70)}
-              </option>
-            ))}
-          </select>
-        </label>
-      ) : (
-        <label className="flex flex-col gap-2">
-          <Eyebrow variant="field">The new rule, in one sentence</Eyebrow>
-          <TextArea
-            data-testid="draft-input"
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-          />
-        </label>
-      )}
+      <RuleChoiceFields
+        mode={mode}
+        rules={rules}
+        ruleId={ruleId}
+        onRuleId={setRuleId}
+        draft={draft}
+        onDraft={setDraft}
+      />
 
       <div className="flex flex-wrap items-center gap-5">
         <Button

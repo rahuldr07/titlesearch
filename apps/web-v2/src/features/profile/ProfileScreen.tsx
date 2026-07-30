@@ -40,9 +40,15 @@ export function ProfileScreen() {
 
   return (
     <Screen measure="720">
-      <div className="flex flex-col gap-7">
-        <ScreenHeading eyebrow="Account" title="Your profile" />
-
+      {/*
+        THE MASTHEAD IS NOT ONE OF THE CARDS. Sharing the stack's 14px gap set
+        the title the same distance from the first card as the cards are from
+        each other, so "Your profile" read as a label on the identity card
+        rather than as the screen's title. The export draws 18px there and 14px
+        between cards; two values, so two elements.
+      */}
+      <ScreenHeading eyebrow="Account" title="Your profile" />
+      <div className="mt-9 flex flex-col gap-7">
         {profile.isError ? (
           <p className="text-base text-state-halt-ink">Your profile is unavailable.</p>
         ) : profile.isPending ? (

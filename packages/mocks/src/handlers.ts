@@ -500,6 +500,25 @@ export const handlers = [
     const body: OrderFieldsResponse = {
       order_id: String(params["id"]),
       fields: fieldStore,
+      // The census is the SERVER'S, and this is where it is decided. It used to
+      // be computed in `OrderCounts.tsx` — including `no_source`, which is a
+      // ruling on provenance the browser has no standing to make (hard rule 3).
+      // It is written out here rather than tallied so that this file states the
+      // definition the real backend will have to match.
+      census: {
+        fields: fieldStore.length,
+        auto_confirmed: fieldStore.filter((f) => f.state === "auto_confirmed")
+          .length,
+        needs_review: fieldStore.filter((f) => f.state === "needs_review")
+          .length,
+        no_source: fieldStore.filter(
+          (f) =>
+            f.value !== null &&
+            f.source_doc_id === null &&
+            f.source_page === null &&
+            (f.readings ?? []).length === 0,
+        ).length,
+      },
     };
     return HttpResponse.json(body);
   }),

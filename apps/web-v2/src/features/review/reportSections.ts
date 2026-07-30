@@ -13,6 +13,29 @@ export const DECISION_STATES = new Set<Field["state"]>([
   "escalated",
 ]);
 
+/**
+ * A field that is still WAITING on a person — queued, or sent up and not yet
+ * answered. The subset of `DECISION_STATES` that has not been decided.
+ *
+ * The two sets are not interchangeable. `DECISION_STATES` is how much work this
+ * order ever contained — the meter's denominator, and the set "rest of the
+ * queue" is drawn from (`QueueRest`, matching the export's `decRest`). This one
+ * is what is still WAITING, and it feeds the per-section "needs you" badge and
+ * nothing that is labelled a queue total.
+ *
+ * The distinction used to be spent the other way, and that is what produced the
+ * release blocker: `QueueRest` filtered on this set while `DecisionDock`
+ * printed a count over the wider one, under the same three words, on the same
+ * screen. Whichever set the phrase means, ONE surface must own it.
+ */
+/*
+ * NOT EXPORTED, and that is the point. It was, and a second surface imported it
+ * to headline a count under the same three words the wider set already owned.
+ * Keeping it module-private makes the rule structural: `needsYouCountOf` below
+ * is the only way out, so nothing can label this set a queue total again.
+ */
+const OPEN_STATES = new Set<Field["state"]>(["needs_review", "escalated"]);
+
 /** Section order follows the delivered document, not the payload order. */
 export const SECTION_HEADING: Record<string, string> = {
   owner: "Vesting & owner",
@@ -47,7 +70,7 @@ export function sectionsOf(fields: readonly Field[]): [string, Field[]][] {
  * from this count: nobody is waiting on those.
  */
 export function needsYouCountOf(fields: readonly Field[]): number {
-  return fields.filter((f) => f.state === "needs_review" || f.state === "escalated").length;
+  return fields.filter((f) => OPEN_STATES.has(f.state)).length;
 }
 
 /** The anchor id a section's container renders, and the href a rail link points at. */

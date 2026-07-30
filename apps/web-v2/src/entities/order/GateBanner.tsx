@@ -1,15 +1,24 @@
 import { Card } from "../../shared/ui/Card";
 
 /**
- * The gate's own verdict, in the two states it has.
+ * The completeness gate's own verdict, in the two states it has.
  *
- * BOTH BANNERS TAKE THEIR GROUND FROM `Card tone`, AND THEIR LEFT EDGE STAYS.
- * `--stroke-severity` is the 4px left edge that means "this is a problem"; it is
- * a different claim from `Card accent`, the 2px top stripe that means "this is
- * the live block", and a verdict about a halted run is the first one. Spelling
- * the ground and hairline by hand is what let the same meaning drift to three
- * strengths across the app, so the pair comes from the one axis that cannot be
- * mismatched.
+ * RULE: the verdict is the SERVER'S (`gate_open`), and every surface that draws
+ * it draws the same two blocks. FAILURE PREVENTED: /completeness carried a
+ * "Gate verdict · local preview" toggle so the closed banner could be seen at
+ * all — and flipping it printed "Package complete — every gap is closed" above
+ * three cards still stamped GAP with their close buttons live. A screen that can
+ * repaint a verdict is a screen that can state the opposite of what it shows.
+ * The banners live here, in `entities/`, so the production screen renders ONLY
+ * what arrived on the wire and the unreachable rendering has a home that is
+ * honestly labelled a catalogue (`features/gallery`). `features/gallery` may not
+ * import `features/completeness`; `entities/` is the promotion that lets one
+ * component serve both without a cross-feature edge.
+ *
+ * NEITHER BANNER WEARS A SEVERITY EDGE. The export draws both as a plain tinted
+ * box — `background:var(--red-tint);border:1px solid var(--red-edge)` (:529) —
+ * and contains no 4px left border anywhere. The 4px bar this used to draw made
+ * the banner shout one step louder than the design's loudest object.
  *
  * THE OPEN BANNER'S JOB IS TO REMOVE THE PANIC. A halted run reads as damage
  * until you know where it stopped, so the banner says it plainly: the stop is
@@ -22,10 +31,7 @@ import { Card } from "../../shared/ui/Card";
  */
 export function GateOpenBanner() {
   return (
-    <Card
-      tone="halt"
-      className="border-l-(length:--stroke-severity) border-l-state-halt p-8"
-    >
+    <Card tone="halt" className="p-8">
       <div className="mb-4 flex items-center gap-5">
         <span
           aria-hidden
@@ -67,10 +73,7 @@ export function GateOpenBanner() {
  */
 export function GateClosedBanner() {
   return (
-    <Card
-      tone="settled"
-      className="flex items-center gap-6 border-l-(length:--stroke-severity) border-l-state-settled p-8"
-    >
+    <Card tone="settled" className="flex items-center gap-6 p-8">
       <span
         aria-hidden
         className="flex size-12 shrink-0 items-center justify-center rounded-full bg-state-settled text-lg text-ink-on-action"

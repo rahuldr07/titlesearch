@@ -49,7 +49,21 @@ export function ArtifactCard({
         </p>
       </div>
 
-      <Button fill="tinted" size="md" disabled>
+      {/*
+        THE DESIGN'S STEP SITS BETWEEN TWO RUNGS. Download is drawn at 12px with
+        8px/14px padding and a 7px radius — larger than `sm` (11px, 6px/10px),
+        smaller than `md` (12.5px, 10px/16px). At `md` the control ran ~8px wide
+        of the drawing, and that width is exactly what pushed the subtitle onto
+        a second line and grew the card. The size prop still carries the rung;
+        only the three measured values are restated.
+      */}
+      <Button
+        fill="tinted"
+        size="sm"
+        className="rounded-7 px-7 py-4 text-sm"
+        disabled
+        title="No endpoint names or serves the .docx yet — the file cannot be fetched from here."
+      >
         Download
       </Button>
     </Card>

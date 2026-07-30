@@ -19,6 +19,14 @@ import { Eyebrow } from "../../shared/ui/Eyebrow";
  * of what contradicts what, and paraphrasing it here would make the screen and
  * the record disagree about a decision somebody is being asked to sign.
  *
+ * WHICH IS WHY THE HEADING NAMES THE CATEGORY, NOT THE FINDING. It used to
+ * interpolate the product — "Conflict — 40-Year Search and this client cannot
+ * both be satisfied" — which is this client's own summary of the server's
+ * detection, sitting one line above the server's actual words and louder than
+ * them. The export's heading says what KIND of thing follows ("a waive the
+ * product's meaning depends on") and leaves the finding to the sentence
+ * underneath, so there is exactly one account of the conflict on screen.
+ *
  * GROUND AND HAIRLINE COME FROM ONE PROP. Spelled by hand the pair drifts — the
  * saturated base colour instead of the pale `-border`, or no edge at all — and
  * this banner sits inside a card that already has a hairline, so a wrong one
@@ -27,18 +35,16 @@ import { Eyebrow } from "../../shared/ui/Eyebrow";
  */
 export function ConflictBanner({
   conflict,
-  productName,
   acknowledged,
 }: {
   conflict: string;
-  productName: string;
   acknowledged: boolean;
 }) {
   return (
     <Card tone="halt" accent="halt" data-testid="conflict">
       <CardBody className="px-7 py-6">
         <Eyebrow variant="caption" tone="halt" as="h3">
-          Conflict — {productName} and this client cannot both be satisfied
+          Conflict — a waive the product&rsquo;s meaning depends on
         </Eyebrow>
         <p className="mt-3 text-base leading-body text-ink-primary">{conflict}</p>
         <div className="mt-4 flex flex-wrap items-center gap-5">

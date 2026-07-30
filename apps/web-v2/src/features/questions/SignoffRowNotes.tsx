@@ -12,8 +12,8 @@ import { Eyebrow } from "../../shared/ui/Eyebrow";
  *    span itself is the order's, which is why it arrives as a prop.
  *  - NO MACHINE CHECK says this line has no signal behind it at all, so an N/A
  *    here will never be contradicted later. Silence from a check that was never
- *    run reads identically to a check that passed unless the row says so — and
- *    where a check DOES exist the row names it rather than implying one.
+ *    run reads identically to a check that passed unless the row says so. Only
+ *    the absence is drawn; see the branch below for why the present case is not.
  *  - NOT ANSWERED carries the fact that policy has a prefill WITHOUT applying
  *    it. The prefill is visible and still costs a deliberate press, which is the
  *    whole distinction between a policy and a signature (open ruling Q13).
@@ -49,6 +49,16 @@ export function SignoffRowNotes({
         </div>
       ) : null}
 
+      {/*
+        ONLY THE ABSENCE IS DRAWN. The chip fires when `machine_check` is null
+        and there is no positive twin, because the two say different-sized
+        things: "nothing will ever contradict this answer" changes how the line
+        should be answered, and "something will" does not — the abstractor
+        answers what they did either way, and the check runs whether or not the
+        row mentions it. Captioning the present case put a third line on all
+        thirteen rows and made the one row that mattered harder to find, which
+        is the opposite of what the chip is for.
+      */}
       {line.machine_check === null ? (
         <div className="mt-3 flex max-w-full items-baseline gap-4 rounded-5 border border-dashed border-state-attend-border bg-state-attend-surface px-5 py-2">
           <Eyebrow variant="caption" tone="attend" className="shrink-0">
@@ -56,14 +66,7 @@ export function SignoffRowNotes({
           </Eyebrow>
           <span className="text-tiny leading-body text-ink-secondary">{NA_UNCHECKED_NOTE}</span>
         </div>
-      ) : (
-        <div className="mt-3 flex max-w-full items-baseline gap-4">
-          <Eyebrow variant="caption" className="shrink-0">
-            MACHINE CHECK
-          </Eyebrow>
-          <span className="text-tiny leading-body text-ink-muted">{line.machine_check}</span>
-        </div>
-      )}
+      ) : null}
 
       {answered ? null : (
         <div className="mt-2 flex flex-wrap items-baseline gap-4">

@@ -9,11 +9,13 @@ import { useState } from "react";
  * fresh claim, a product change moves money — and a single "closed" flag would
  * erase exactly the distinction the order's history is supposed to carry.
  *
- * EVERY CLOSURE NEEDS A REASON, without exception. The wire offers the options
- * as plain strings and says nothing about which of them are consequential, so
- * the screen cannot single out the dangerous ones; requiring the sentence
- * everywhere is the only version of that rule this schema can support, and a
- * gap closed with no stated reason is unreadable six months later anyway.
+ * WHICH CLOSURES NEED A REASON IS THE SERVER'S CALL. Each `close_option` now
+ * carries `requires_comment`, so the two that add a CLAIM — root of title, and
+ * the product change with money attached — demand the sentence and the two that
+ * add EVIDENCE do not. The screen used to demand one everywhere, not because
+ * the rule said so but because opaque option strings gave it no way to tell the
+ * dangerous ones apart; `note` is nullable for that reason and the closed card
+ * omits the quote rather than printing an empty pair of quotation marks.
  *
  * CONTRACT GAP: nothing accepts any of this. `GET /api/orders/:id/completeness`
  * is a read; there is no closure write, no supplemental upload, no sign-off
@@ -24,7 +26,8 @@ import { useState } from "react";
 export interface GapClosure {
   /** One of the server's own `close_options` strings, chosen verbatim. */
   readonly option: string;
-  readonly note: string;
+  /** Null when the server's option did not require one — never an empty string. */
+  readonly note: string | null;
   readonly by: string;
 }
 

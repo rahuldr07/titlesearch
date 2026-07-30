@@ -17,10 +17,21 @@ import { cn } from "./classNames";
  * rectangle here reads as a chip and loses the "this was stamped by someone"
  * signal entirely.
  */
+/**
+ * TWO CONCENTRIC LINES, NOT ONE. The export draws `border:3px double` PLUS an
+ * inset ring (`box-shadow:0 0 0 1.5px currentColor inset`), and both halves were
+ * missing on screen: `--stroke-stamp` was 2.5px, below the 3px `border-style:
+ * double` needs to paint its three parts, so every browser fell back to a solid
+ * line and the ring was never spelled at all. The result read as a chip with a
+ * thick edge. `opacity-90` is gone with them — the export stamps at full
+ * strength, and dimming an ink colour to soften it is the one thing the tone
+ * tokens exist to make unnecessary.
+ */
 const stamp = cva(
   [
     "inline-block -rotate-6 border-double uppercase font-mono font-semibold",
-    "border-(length:--stroke-stamp) leading-flat whitespace-nowrap opacity-90",
+    "border-(length:--stroke-stamp) leading-flat whitespace-nowrap",
+    "inset-ring-(length:--stroke-emphasis) inset-ring-current",
   ],
   {
     variants: {

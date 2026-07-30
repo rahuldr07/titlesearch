@@ -73,7 +73,6 @@ export function EffectivePanel({
             <div className="flex flex-col gap-4 px-8 pt-6">
               <ConflictBanner
                 conflict={checklist.conflict}
-                productName={product.full}
                 acknowledged={checklist.conflict_acknowledged}
               />
             </div>

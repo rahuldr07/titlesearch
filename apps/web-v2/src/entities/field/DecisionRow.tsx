@@ -41,22 +41,35 @@ const DOT: Record<string, string> = {
  * auto-confirmed field carries none, because marking it would make the screen
  * unable to answer the question a complaint investigation always asks: did a
  * person see this?
+ *
+ * ONE SURFACE OWNS `row-{path}`, AND IT IS THE ONE THAT SHOWS EVERY FIELD.
+ * Review draws two lists of fields — the draft sheet (all 21) and the rest of
+ * the queue (the flagged ones you are not currently on) — and the harvested
+ * invariants reach for `row-{path}` on fields of BOTH kinds, including
+ * `auto_confirmed` and `pending` ones no queue can ever contain. So the sheet
+ * emits `row-{path}` and a caller that draws a second, partial list passes its
+ * own `testId`. Two producers of one testid is a strict-mode failure on the
+ * duplicate rather than on the regression — the same trap `PageSpine` documents
+ * for `coverage-cell`.
  */
 export function DecisionRow({
   field,
   onActivate,
   selected = false,
+  testId,
 }: {
   field: Field;
   onActivate: () => void;
   selected?: boolean;
+  /** Defaults to `row-{path}`. Override on a list that is not the full sheet. */
+  testId?: string | undefined;
 }) {
   const mark = rowMark(field);
 
   return (
     <button
       type="button"
-      data-testid={`row-${field.path}`}
+      data-testid={testId ?? `row-${field.path}`}
       aria-current={selected}
       onClick={onActivate}
       className={cn(

@@ -4,8 +4,8 @@ import { useHotkeys } from "react-hotkeys-hook";
 import type { Order } from "@titlepipe/contract";
 import { usePassOrder } from "./queries";
 import { PassControl } from "../../entities/order/PassControl";
-import { OrderStatusChip } from "../../entities/order/OrderStatusChip";
 import { Card, CardBody } from "../../shared/ui/Card";
+import { Chip } from "../../shared/ui/Chip";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
 import { Button } from "../../shared/ui/Button";
 
@@ -33,6 +33,20 @@ import { Button } from "../../shared/ui/Button";
  * CONTRACT GAP: the design's size line also reads "· 14 read in full". Nothing
  * on this response says how much of the package was carried forward, so the
  * card states the size and stops where the wire does.
+ *
+ * THE ONE ACCENTED CARD ON THE PAGE. The export gives this card a 1.5px
+ * violet-tint edge and 18px of padding while every band row keeps a 1px rule,
+ * so the card you are meant to act on is visibly the hero. Drawn on the kit's
+ * default `Card` it wore the same edge as the "Nothing held." panel beside it.
+ * It is an EDGE and not `Card`'s `accent` stripe on purpose: the stripe marks
+ * "this block is the live one" inside a stack of peers, and this card has no
+ * peers — its whole band is one card.
+ *
+ * NEITHER THE JURISDICTION SLUG NOR THE CLIENT ID IS INFORMATION. `clayton-ga`
+ * and `cli_riverbend` are internal keys printed at a reviewer in the slot the
+ * export spends on the package size; the county and state above already say
+ * where the work is. The line now carries what the design puts there and
+ * nothing else.
  */
 export function NextOrderCard({ order }: { order: Order }) {
   const navigate = useNavigate();
@@ -57,8 +71,8 @@ export function NextOrderCard({ order }: { order: Order }) {
         </p>
       )}
 
-      <Card>
-        <CardBody>
+      <Card className="border-(length:--stroke-emphasis) border-action-border">
+        <CardBody className="p-9">
           <div className="flex flex-wrap items-center justify-between gap-8">
             <div className="min-w-0">
               <Eyebrow variant="field" tone="action">Next order in line</Eyebrow>
@@ -75,17 +89,25 @@ export function NextOrderCard({ order }: { order: Order }) {
                 <span className="text-sm text-ink-secondary">
                   {order.county} · {order.state}
                 </span>
-                <OrderStatusChip label={order.status} tone="action" />
+                {/* The product is the SERVER'S word, only cased by the chip —
+                    the export draws this slot as a violet-tint chip and the app
+                    previously spent it on the order's status, which the design
+                    does not draw here at all. Nothing else on the page tells a
+                    reviewer what search they are about to be handed. */}
                 {order.product === null ? null : (
-                  <span data-testid="order-product" className="text-sm text-ink-secondary">
+                  <Chip data-testid="order-product" tone="action" size="sm" bordered>
                     {order.product}
-                  </span>
+                  </Chip>
                 )}
               </div>
-              <p className="mt-3 text-sm text-ink-secondary">
-                {order.jurisdiction} · {order.client_id}
-                {order.pages === null ? null : ` · ${order.pages} pages`}
-              </p>
+              {order.pages === null ? null : (
+                <p className="mt-4 text-sm text-ink-secondary">
+                  <span className="font-mono font-semibold text-ink-primary">
+                    {order.pages}
+                  </span>{" "}
+                  pages
+                </p>
+              )}
             </div>
 
             {passing ? null : (

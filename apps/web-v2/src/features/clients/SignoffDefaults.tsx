@@ -18,6 +18,15 @@ import { Eyebrow } from "../../shared/ui/Eyebrow";
  *
  * Values are printed in the MONO face and in the action colour: they are
  * machine-set, not written by the person whose name goes on the sign-off.
+ *
+ * THE CHIP TRACK IS SIZED, NOT COUNTED (`grid-autofill-230`, the export's
+ * `repeat(auto-fill,minmax(230px,1fr))`). A chip is a label and its value, and
+ * the pair only reads as a pair while the two stay close together. At a fixed
+ * two columns the 880px measure gave each chip ~430px and stranded the mono
+ * value at the far edge, so pairing "L08 · Mortgage covering additional
+ * property" with its "N/A" became a tracking exercise across white space —
+ * and a prefill read against the wrong line is a prefill nobody checked.
+ * Auto-fill lets the column count follow the measure, as designed.
  */
 export function SignoffDefaults({
   clientName,
@@ -53,7 +62,7 @@ export function SignoffDefaults({
             unanswered.
           </p>
         ) : (
-          <ul className="grid gap-4 sm:grid-cols-2">
+          <ul className="grid grid-autofill-230 gap-4">
             {entries.map((d) => (
               <li
                 key={d.key}

@@ -1,7 +1,6 @@
 import { ArtifactCard } from "./ArtifactCard";
 import { demoArtifactName } from "./demoContent";
-import { Chip } from "../../shared/ui/Chip";
-import { Eyebrow } from "../../shared/ui/Eyebrow";
+import { OrderContextRow } from "../../entities/order/OrderContextRow";
 import { Stamp } from "../../shared/ui/Stamp";
 
 /**
@@ -23,12 +22,19 @@ import { Stamp } from "../../shared/ui/Stamp";
  * with the file: the sheet a client reads is not the QC checklist, and someone
  * who assumes it is will look for lines that were never meant to be printed.
  *
- * THE PRODUCT AND THE PERIOD ARE THE ORDER'S NOW (2026-07-30, Wave 2), read
- * from `GET /api/orders/{id}/context` instead of from two constants this
- * feature kept for want of a carrier. They are nullable and the row is dropped
- * whole when the product is unknown: the footnote below claims the sheet
- * "states the product and period", and a half-empty row under that sentence
- * would be the screen contradicting itself.
+ * THE PRODUCT AND THE PERIOD ARE THE ORDER'S, read from
+ * `GET /api/orders/{id}/context` and drawn by `entities/order/OrderContextRow`
+ * — the one component that owns that row anywhere in the app. They are nullable
+ * and the row is dropped WHOLE when the product is unknown: the footnote below
+ * claims the sheet "states the product and period", and a half-empty row under
+ * that sentence would be the screen contradicting itself.
+ *
+ * THE RECEIPT'S CAPTION IS `PRODUCT`, the export's word on this screen. The
+ * entity used to hard-code Review's `ORDERED` and this call site accepted it,
+ * on the reasoning that one row cannot carry two words and forking the
+ * component over a caption was the worse trade. It carries a `label` now, so
+ * the trade is gone and all three surfaces print what the export prints:
+ * ORDERED on Review, PRODUCT ORDERED at the gate, PRODUCT here.
  */
 export function FinalizedNotice({
   orderId,
@@ -62,31 +68,25 @@ export function FinalizedNotice({
         reviewer, field by field.
       </p>
 
+      {/*
+        ONE ROW, ONE SOURCE. This screen drew the ordered product and period
+        itself — first from two hardcoded constants, then from the order context
+        but still in markup copied from `OrderContextRow`, down to the comment
+        explaining the chip's tracking. Two renderers of one row is how the
+        fabrication survived as long as it did: the completeness screen read the
+        server while this one printed a constant, and nothing on either screen
+        said so. The row is the entity's now, and the receipt only decides
+        whether to show it and where to put it.
+
+        The wrapper centres it, because a receipt is read down the middle and
+        every other block on this screen is centred. The row itself is left to
+        the entity — a `justify-*` reaching inside a shared component is how two
+        call sites start disagreeing about what the component is.
+      */}
       {product === null ? null : (
-      <div className="mb-11 flex flex-wrap items-center justify-center gap-5">
-        <Eyebrow variant="field">Product</Eyebrow>
-        <span className="text-md font-semibold text-ink-primary">{product}</span>
-        {/*
-          `normal-case` because `Chip` uppercases and the design does not here.
-          Every other chip in the product is a state word, where caps read as a
-          label; this one is a DATE SPAN, and "07/18/1986 – 07/18/2026" shouted
-          in 9px letterspaced caps stops being a number you can read at a glance.
-          Size and tracking go with it for the same reason, and they are what
-          keep the row on ONE line: `tracking-label` on forty characters spends
-          52px on air alone, which pushed the badge under the product name.
-        */}
-        {periodLabel === null ? null : (
-          <Chip
-            tone="action"
-            size="md"
-            shape="mono"
-            bordered
-            className="text-xs tracking-normal normal-case"
-          >
-            {periodLabel}
-          </Chip>
-        )}
-      </div>
+        <div className="mb-11 flex justify-center">
+          <OrderContextRow label="PRODUCT" productName={product} periodLabel={periodLabel} />
+        </div>
       )}
 
       <ArtifactCard filename={demoArtifactName(orderId)} productName={product} />

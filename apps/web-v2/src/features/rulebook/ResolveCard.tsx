@@ -1,6 +1,7 @@
 import { Button } from "../../shared/ui/Button";
 import { Card } from "../../shared/ui/Card";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
+import { WITHDRAW_RESTRICTED } from "./refusalCopy";
 
 const WHY =
   "No authority has been found for this question. Recording a ruling writes a new RULED rule citing the authority, which can then be confirmed; this entry stays as the record of the question.";
@@ -54,8 +55,7 @@ export function ResolveCard({ mayWithdraw }: { mayWithdraw: boolean }) {
 
       {mayWithdraw ? null : (
         <p className="mt-4 text-xs leading-body text-ink-muted">
-          Withdrawing is restricted to engineer and admin — a senior records the
-          ruling instead.
+          {WITHDRAW_RESTRICTED}
         </p>
       )}
     </Card>

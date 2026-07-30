@@ -37,6 +37,22 @@ const eyebrow = cva("uppercase", {
       group: "text-xs tracking-eyebrow font-bold text-ink-primary",
       /** inline caption beside a value (7 uses) */
       caption: "text-micro tracking-label font-bold text-ink-muted",
+      /**
+       * A heading INSIDE a card, one step up from the 9px row labels beneath
+       * it — "Close it one of two ways", the review dock's block headings
+       * (10px/.08em/700/ink3). Drawn at `field` it flattened into the label
+       * column it is supposed to head. `.08em` has no token; `tracking-badge`
+       * (.1em) is the nearest and the 0.02em is below the perceptual floor at
+       * this size — the SIZE STEP is what carried the hierarchy.
+       */
+      cardHeading: "text-tiny tracking-badge font-bold text-ink-muted",
+      /**
+       * The catalogue card's tag (10px/.12em/700/violet, export :2214). It is
+       * its own canonical combination and was previously reached by taking
+       * `screen` and overriding two of its three axes at the call site — which
+       * is how eight canonical combinations drift back into twenty-two.
+       */
+      cardTag: "text-tiny tracking-label font-bold text-action",
       /** caption under a mono numeral — deliberately unweighted (6 uses) */
       stat: "text-micro tracking-badge text-ink-muted",
     },

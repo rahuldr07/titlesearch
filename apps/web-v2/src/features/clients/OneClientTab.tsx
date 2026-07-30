@@ -4,6 +4,7 @@ import { Button } from "../../shared/ui/Button";
 import { EmptyPanel } from "../../shared/ui/EmptyPanel";
 import { Toggle, ToggleGroup } from "../../shared/ui/ToggleGroup";
 
+import { ClientIdentity } from "./ClientIdentity";
 import { EffectivePanel } from "./EffectivePanel";
 import { OverridesPanel } from "./OverridesPanel";
 import { SignoffDefaults } from "./SignoffDefaults";
@@ -82,35 +83,7 @@ export function OneClientTab({
         />
       ) : (
         <>
-          <div className="flex flex-wrap items-center gap-5">
-            {/*
-              CONTRACT GAP: `ClientRecord` carries no contact and no retired
-              flag. The code stands in for the contact — it is the identifier
-              orders actually arrive under — and nothing here claims a client
-              is retired, because the schema cannot say so either way.
-            */}
-            <p className="text-md">
-              <span className="font-semibold text-ink-primary">{client.name}</span>{" "}
-              <span className="font-mono text-ink-muted">· {client.code}</span>
-            </p>
-            {canAuthor ? (
-              /* CONTRACT GAP: editing and retiring a client are server writes with no endpoint. */
-              <span className="ml-auto flex gap-3">
-                <Button size="sm" fill="outlined" tone="neutral" disabled>
-                  Edit client
-                </Button>
-                <Button
-                  size="sm"
-                  fill="outlined"
-                  tone="neutral"
-                  className="text-state-halt-ink"
-                  disabled
-                >
-                  Retire
-                </Button>
-              </span>
-            ) : null}
-          </div>
+          <ClientIdentity client={client} canAuthor={canAuthor} />
 
           <SignoffDefaults
             clientName={client.name}

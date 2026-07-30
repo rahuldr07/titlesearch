@@ -65,8 +65,14 @@ export function PageFacsimile({
         which is precisely the "this is data, not paper" reading the facsimile
         exists to prevent.
       */}
-      <div className="flex justify-center bg-surface-document px-8 py-9">
-        <div className="relative w-full max-w-160 rounded-2 bg-surface-panel px-12 py-11 shadow-page">
+      {/*
+        No second backdrop band: the pane this sits in already carries
+        `surface-document`, and painting it again here fenced the page inside a
+        box of its own colour. `max-w-230` is the export's ~460px page width —
+        at 320px the paper read as a note card floating in a large grey field.
+      */}
+      <div className="flex justify-center">
+        <div className="relative w-full max-w-230 rounded-2 bg-surface-panel px-12 py-11 shadow-page">
           <pre
             className={cn(
               "font-quote text-sm leading-document whitespace-pre-wrap text-ink-primary",

@@ -58,31 +58,43 @@ export function OverridesPanel({
         ) : (
           <ul className="mt-5 flex flex-col gap-4">
             {client.overrides.map((o) => (
-              <li
-                key={o.id}
-                data-testid={`override-${o.id}`}
-                className="flex flex-wrap items-baseline gap-5"
-              >
-                <Chip tone={TONE[o.type]} size="micro" bordered>{o.type}</Chip>
-                {o.line_id === null ? null : (
-                  <span className="font-mono text-tiny text-ink-muted">{o.line_id}</span>
-                )}
-                <span className="text-base font-medium text-ink-primary">{o.description}</span>
-                <span className="flex-1 text-xs leading-close text-ink-muted">
+              <li key={o.id} data-testid={`override-${o.id}`} className="flex flex-col gap-2">
+                {/*
+                  TWO LINES, BECAUSE THE ROW CARRIES MORE THAN THE EXPORT'S DOES.
+                  The design draws one flex row — chip, description, note,
+                  Remove — and this row adds the line id and the authoring
+                  signature, which the config layer owes for the same reason a
+                  field owes provenance. As one wrapping row at the 880px
+                  measure the note pushed Remove onto a line of its own, where a
+                  destructive control sits under a sentence with nothing saying
+                  which delta it removes. WHAT the delta is stays on the first
+                  line with its control; WHO decided it and WHY drops to the
+                  second.
+                */}
+                <div className="flex flex-wrap items-baseline gap-5">
+                  <Chip tone={TONE[o.type]} size="micro" bordered>{o.type}</Chip>
+                  {o.line_id === null ? null : (
+                    <span className="font-mono text-tiny text-ink-muted">{o.line_id}</span>
+                  )}
+                  <span className="min-w-0 flex-1 text-base font-medium text-ink-primary">
+                    {o.description}
+                  </span>
+                  {canAuthor ? (
+                    /* CONTRACT GAP: removing an override publishes a config version; no endpoint. */
+                    <Button
+                      size="sm"
+                      fill="outlined"
+                      tone="neutral"
+                      className="shrink-0 text-state-halt-ink"
+                      disabled
+                    >
+                      Remove
+                    </Button>
+                  ) : null}
+                </div>
+                <p className="text-xs leading-close text-ink-muted">
                   — {o.note} · {o.authored_by}, {o.authored_at}
-                </span>
-                {canAuthor ? (
-                  /* CONTRACT GAP: removing an override publishes a config version; no endpoint. */
-                  <Button
-                    size="sm"
-                    fill="outlined"
-                    tone="neutral"
-                    className="text-state-halt-ink"
-                    disabled
-                  >
-                    Remove
-                  </Button>
-                ) : null}
+                </p>
               </li>
             ))}
           </ul>

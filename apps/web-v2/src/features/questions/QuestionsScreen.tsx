@@ -50,15 +50,27 @@ export function QuestionsScreen() {
         <OrderIdentityStrip
           productName={data.product_name}
           periodLabel={data.period_label}
-          signedBy={data.signed_by}
-          signedAt={data.signed_at}
         />
 
         {/* SIGNED IS A DIFFERENT SCREEN, NOT A DISABLED ONE. `signed_by` is the
             server's, and once it is set the answers are a record: there is no
             amendment endpoint, and an append-only signature is not edited in
             place. Drawing live answer buttons over it offered an act nothing
-            accepts, on a record the person reading it did not make. */}
+            accepts, on a record the person reading it did not make.
+
+            THE READ-ONLY BRANCH IS A GUARD HERE, NOT THIS SCREEN'S SUBJECT, and
+            that is why it does not render in the demo. `/questions` is where a
+            sign-off is ANSWERED, so it is pointed at an order at intake and the
+            server correctly serves that order unsigned — `signoffFor` derives
+            `signed_by` from the order's stage, so the branch can only fire on an
+            order that moved past intake while this screen was open. The design
+            puts the read-only block on the REVIEW screen, where a reviewer reads
+            a signature somebody else made; making it appear here instead would
+            mean pointing the answering screen at an order with nothing left to
+            answer. The block is exercised as a story
+            (`entities/signoff/SignoffReadonly.stories.tsx`) and reaches the app
+            when either intake gets an order-scoped route (`queries.ts`) or
+            Review composes it. */}
         {data.signed_by === null ? (
           <SignoffCard signoff={data} />
         ) : (

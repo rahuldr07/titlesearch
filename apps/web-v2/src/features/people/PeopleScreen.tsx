@@ -41,9 +41,17 @@ export function PeopleScreen() {
             </p>
           }
           /* CONTRACT GAP: no invite endpoint. Drawn as designed and disabled —
-             the invitation itself is the provider's to send. */
+             the invitation itself is the provider's to send. The reason rides
+             on the control rather than living only here: a dead primary with
+             nothing saying why reads as a broken screen, and the lede's claim
+             that invitations "hand off to the identity provider" is the general
+             statement, not this button's. */
           actions={
-            <Button size="lg" disabled>
+            <Button
+              size="lg"
+              disabled
+              title="No invite endpoint — the invitation is the identity provider's to send."
+            >
               ＋ Invite person
             </Button>
           }
@@ -69,12 +77,19 @@ export function PeopleScreen() {
                 ))}
               </DividedSection>
             </Card>
+            {/*
+              THE FOOTNOTE BELONGS TO THE ROSTER, so it renders only when the
+              roster does. Outside this branch it survived both the pending and
+              the failed states, and "Role changes and suspensions take effect on
+              the person's next request" printed under "The roster is
+              unavailable." — copy about controls that are not on screen, sitting
+              directly beneath the sentence saying nothing loaded.
+            */}
+            <p className="text-xs text-ink-muted">
+              Role changes and suspensions take effect on the person&apos;s next request.
+            </p>
           </>
         )}
-
-        <p className="text-xs text-ink-muted">
-          Role changes and suspensions take effect on the person&apos;s next request.
-        </p>
       </div>
     </Screen>
   );

@@ -1,5 +1,6 @@
 import { queryOptions, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
+  OrderContextResponse,
   OrderFieldsResponse,
   OrderTimelineResponse,
   OrderPagesResponse,
@@ -56,6 +57,24 @@ export function orderSignoffQuery(orderId: string) {
   return queryOptions({
     queryKey: ["orders", orderId, "signoff"],
     queryFn: () => get(`/api/orders/${orderId}/signoff`, OrderSignoffResponse),
+  });
+}
+
+/**
+ * WHAT WAS ORDERED — the pane's `ORDERED` row (`:835-839`). Same endpoint the
+ * shell's `OrderStrip` reads for the order ref, wrapped a second time here: the
+ * strip lives in `app/` and this screen may not reach into it, and React Query
+ * dedupes by key so the two subscribers cost one request.
+ *
+ * CONTRACT GAP: the export's row ends in a `config v4 · frozen` badge and
+ * `OrderContextResponse` carries no config version. The badge is therefore
+ * absent rather than filled with a guess — "config v?" would be a value with
+ * nothing behind it.
+ */
+export function orderContextQuery(orderId: string) {
+  return queryOptions({
+    queryKey: ["orders", orderId, "context"],
+    queryFn: () => get(`/api/orders/${orderId}/context`, OrderContextResponse),
   });
 }
 

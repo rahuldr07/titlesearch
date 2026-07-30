@@ -27,7 +27,7 @@ export function PageNav({
   const step = "rounded-3 border border-line-strong px-3 py-1 font-mono text-xs text-ink-secondary";
 
   return (
-    <div className="flex items-center gap-4 border-b border-line-subtle px-6 py-3">
+    <div className="flex items-center gap-4 border-b border-line-strong px-7 py-4">
       <Eyebrow variant="caption">Document</Eyebrow>
       <button type="button" aria-label="Previous page" className={step} onClick={() => onStep(-1)}>
         ‹

@@ -1,14 +1,15 @@
 import { useState } from "react";
 import type { Order } from "@titlepipe/contract";
 import { useAcceptOrder, useUploadPackage } from "./queries";
+import { ClientPicker } from "./ClientPicker";
+import { ProductPicker } from "./ProductPicker";
 import { OrderForm } from "./OrderForm";
 import { DropZone } from "./DropZone";
 import { ORDER_FIELDS } from "./orderFields";
 import { RefusedCard } from "./RefusedCard";
 import { AcceptedCard } from "./AcceptedCard";
+import { IngestActs } from "./IngestActs";
 import { ApiError } from "../../shared/api";
-import { Eyebrow } from "../../shared/ui/Eyebrow";
-import { Button } from "../../shared/ui/Button";
 import { Screen } from "../../shared/ui/Screen";
 import { ScreenHeading } from "../../shared/ui/ScreenHeading";
 
@@ -22,30 +23,25 @@ interface Refusal {
  *
  * ONE NARROW COLUMN, CENTRED. The design gives intake half the width it gives a
  * review screen, and that is the point: this is a single errand done in order,
- * top to bottom, not a workspace to range around in. Each block — drop the
- * package, name the order, hand it over — is a sheet standing on the grey
- * ground rather than a row inside one chrome card, so the sequence reads as
- * steps instead of as one dense form.
+ * top to bottom, not a workspace to range around in. Below the drop zone the
+ * body is the design's four blocks — the receipt for the file in hand, the
+ * CLIENT picker, the PRODUCT ORDERED picker, and the press that advances.
  *
- * AN UPLOAD ALONE NEVER QUEUES AN ORDER (`ingest.spec` #2). Acceptance is a
- * second, deliberate act, because signing for a package is what makes a missing
- * document somebody's responsibility. Auto-accepting on upload saves one click
- * and loses the only moment where a person looked at what arrived.
+ * ALMOST NOTHING HERE IS TYPED. The two decisions intake makes are chosen from
+ * lists the server serves, because both of them resolve something: the client
+ * resolves the effective sign-off, the product sets the scope. Only the fields
+ * no endpoint can offer as a list are still text.
+ *
+ * AN UPLOAD ALONE NEVER QUEUES AN ORDER (`ingest.spec` #2) — the two presses
+ * and why they are two live in `IngestActs`.
  *
  * A DUPLICATE IS THE SERVER'S FINDING, not the client's. The sha256 match lives
  * where the bytes are; the screen surfaces the message and does not attempt to
  * recognise a re-upload on its own.
- *
- * CONTRACT GAP: the design chooses the CLIENT and the PRODUCT ORDERED from card
- * grids — "resolves the effective sign-off", "sets the questions and the
- * scope". Nothing lists either, and `POST /api/orders` takes neither; it takes
- * the five text fields below. Hard-coding two banks and six products would be
- * inventing a fixture and, worse, would let this screen decide which sign-off
- * list applies to an order. Rulings Q4–Q10 are open on exactly that and
- * `decisions.md` records them as owner calls.
  */
 export function IngestScreen() {
   const [values, setValues] = useState<Record<string, string>>({});
+  const [clientId, setClientId] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [refusal, setRefusal] = useState<Refusal | null>(null);
   const [created, setCreated] = useState<Order | null>(null);
@@ -55,6 +51,7 @@ export function IngestScreen() {
 
   const reset = () => {
     setValues({});
+    setClientId(null);
     setFile(null);
     setRefusal(null);
     setCreated(null);
@@ -68,6 +65,9 @@ export function IngestScreen() {
       const value = values[field.key];
       if (value !== undefined && value.trim() !== "") form.append(field.key, value.trim());
     }
+    // Unchosen means UNSENT, never an empty string: the door's refusal names
+    // the field it did not receive, and a blank one would be a value.
+    if (clientId !== null) form.append("client_id", clientId);
     if (file !== null) form.append("package", file);
     upload.mutate(form, {
       onSuccess: (result) => {
@@ -104,43 +104,23 @@ export function IngestScreen() {
         ) : (
           <>
             <DropZone file={file} onFile={setFile} />
+            <ClientPicker value={clientId} onSelect={setClientId} />
+            <ProductPicker />
+            <OrderForm
+              values={values}
+              onChange={(key, value) => setValues((prev) => ({ ...prev, [key]: value }))}
+            />
 
-            <section className="flex flex-col gap-5">
-              <Eyebrow variant="field" as="h2">
-                THE ORDER &middot; WHAT THE PDF CANNOT SAY &middot; THE DOOR DECIDES WHAT IS COMPLETE
-              </Eyebrow>
-              <OrderForm
-                values={values}
-                onChange={(key, value) => setValues((prev) => ({ ...prev, [key]: value }))}
-              />
-            </section>
-
-            <div className="flex flex-col gap-5">
-              <Button block size="lg" disabled={upload.isPending} onClick={submit}>
-                upload the package
-              </Button>
-              {created === null ? null : (
-                <>
-                  <p className="text-xs leading-body text-state-attend-ink">
-                    Uploaded, not accepted. Nothing is queued until somebody signs
-                    for it.
-                  </p>
-                  <Button
-                    block
-                    size="lg"
-                    fill="outlined"
-                    tone="settled"
-                    data-testid="accept-btn"
-                    disabled={accept.isPending}
-                    onClick={() =>
-                      accept.mutate(created.id, { onSuccess: () => setAccepted(created) })
-                    }
-                  >
-                    Sign for this package
-                  </Button>
-                </>
-              )}
-            </div>
+            <IngestActs
+              uploading={upload.isPending}
+              uploaded={created !== null}
+              accepting={accept.isPending}
+              onUpload={submit}
+              onAccept={() => {
+                if (created === null) return;
+                accept.mutate(created.id, { onSuccess: () => setAccepted(created) });
+              }}
+            />
           </>
         )}
       </div>

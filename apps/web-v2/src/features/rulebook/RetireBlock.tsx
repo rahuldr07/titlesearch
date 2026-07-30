@@ -4,6 +4,7 @@ import { Card } from "../../shared/ui/Card";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
 import { RetireConfirm } from "./RetireConfirm";
 import { USED_BY, USED_BY_CAPTION } from "./designFixture";
+import { RETIRE_RESTRICTED } from "./refusalCopy";
 
 /**
  * RETIREMENT — the only way a live rule stops applying. Nothing is deleted.
@@ -32,8 +33,20 @@ export function RetireBlock({ mayRetire }: { mayRetire: boolean }) {
   return (
     <section data-testid="rule-retire" className="border-t border-line-subtle pt-7">
       <div className="mb-5 flex flex-wrap items-center gap-6">
+        {/*
+          THE SENTENCE IS TRUE WITHOUT A COUNT. The export reads "Used by 1284
+          delivered reports"; the numeral was struck and the claim left standing,
+          which produced "Used by delivered reports" — not a sentence, and still
+          an assertion that some unnamed number of reports used this rule. There
+          is no usage field on `Rule` and no endpoint that counts one (see the
+          gap above), so 1284 cannot be rendered and cannot be invented either —
+          an invented count on a retirement screen is a number someone decides
+          against. This states what retirement does, which is knowable, instead
+          of how much of it there is, which is not.
+        */}
         <p className="flex-1 text-sm text-ink-secondary">
-          Used by delivered reports.{" "}
+          Reports that already used this rule keep it — retirement is
+          forward-only.{" "}
           <button
             type="button"
             data-testid="used-by-toggle"
@@ -77,11 +90,13 @@ export function RetireBlock({ mayRetire }: { mayRetire: boolean }) {
       ) : null}
 
       {/*
-        THE SAME REFUSAL AS `ConfirmBlock`'S, DRAWN THE SAME WAY. Both say a
-        write is restricted to engineer and admin, and they were spelled by
-        hand independently — the moment the two drift, a reader learns that
-        being refused a retire and being refused a confirm are different
-        things. `tone="halt"` binds ground and hairline so they cannot.
+        THE SAME REFUSAL AS `ConfirmBlock`'S, DRAWN THE SAME WAY AND SPELLED IN
+        ONE PLACE. Both say a write is restricted to engineer and admin, and
+        while they were spelled by hand independently this one had already
+        drifted from the export — a trailing "does" the design's own string
+        (`retireBlock`) does not carry. `refusalCopy` holds both so the wording
+        cannot fork again; `tone="halt"` binds ground and hairline so the
+        drawing cannot either.
       */}
       {mayRetire ? null : (
         <Card
@@ -89,8 +104,7 @@ export function RetireBlock({ mayRetire }: { mayRetire: boolean }) {
           tone="halt"
           className="px-6 py-5 text-sm leading-body text-state-halt-ink"
         >
-          Retiring is restricted to engineer and admin — it changes extraction as
-          much as confirming does.
+          {RETIRE_RESTRICTED}
         </Card>
       )}
 

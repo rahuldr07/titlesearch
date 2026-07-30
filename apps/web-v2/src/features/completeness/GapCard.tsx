@@ -2,7 +2,6 @@ import type { CompletenessGap, GapKind } from "@titlepipe/contract";
 import { Card, CardBody, CardHeader } from "../../shared/ui/Card";
 import { Chip } from "../../shared/ui/Chip";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
-import { cn } from "../../shared/ui/classNames";
 import { GapCloseOptions } from "./GapCloseOptions";
 import { GapClosedNote } from "./GapClosedNote";
 import type { GapClosure } from "./useGateState";
@@ -49,25 +48,21 @@ export function GapCard({
 }: {
   gap: CompletenessGap;
   closure: GapClosure | undefined;
-  onClose: (option: string, note: string) => void;
+  onClose: (option: string, note: string | null) => void;
 }) {
   const closedByServer = gap.closed_by !== null;
   const open = !closedByServer && closure === undefined;
 
   return (
     /*
-     * THE LEFT EDGE HERE IS SEVERITY, NOT `accent`. `--stroke-severity` is 4px
-     * and says "this is a problem"; `Card accent` is a 2px TOP stripe and says
-     * "this is the live block". An open gap holds the most expensive step in
-     * the product back, so it is the first claim and not the second — moving it
-     * to the stripe would put it in the same voice as a merely-current panel.
+     * THE SEVERITY MARK IS A 2px INSET TOP STRIPE — `box-shadow: inset 0 2px 0`
+     * (:553), red while the gap is open and green once it is closed. The export
+     * carries five of these and not one 4px left border. This card drew the
+     * left bar, which put it in a heavier voice than the gate banner above it
+     * and squared its own top-left corner against three neighbours that were
+     * round. `Card accent` is that stripe; nothing here spells an edge by hand.
      */
-    <Card
-      className={cn(
-        "border-l-(length:--stroke-severity)",
-        open ? "border-l-state-halt" : "border-l-state-settled",
-      )}
-    >
+    <Card accent={open ? "halt" : "settled"}>
       <CardHeader>
         {/*
           "Sign-off line N · label", the design's own heading. The NUMBER is
@@ -85,15 +80,22 @@ export function GapCard({
         </Chip>
       </CardHeader>
 
-      <CardBody className="flex flex-col gap-6">
-        <div className="flex gap-5">
+      {/*
+        THE RHYTHM IS UNEVEN ON PURPOSE (:528-540): 8px between the claim and
+        the evidence, because they are ONE comparison, then 14px before each
+        block that follows. A blanket 12px gap set all four apart equally and
+        the pair stopped reading as a pair — which is the only thing the two
+        symmetrical rows are arranged to say.
+      */}
+      <CardBody>
+        <div className="mb-4 flex gap-5">
           <Eyebrow variant="field" as="p" className="basis-42 shrink-0">
             You said
           </Eyebrow>
           <p className="text-base leading-body text-ink-primary">{gap.claim}</p>
         </div>
 
-        <div className="flex gap-5">
+        <div className="mb-7 flex gap-5">
           <Eyebrow variant="field" as="p" tone="halt" className="basis-42 shrink-0">
             We found
           </Eyebrow>
@@ -109,7 +111,7 @@ export function GapCard({
           on which card you opened.
         */}
         {open && gap.kind === "na_provisional" ? (
-          <Card size="nested" tone="attend" dashed className="flex gap-5 px-6 py-5">
+          <Card size="nested" tone="attend" dashed className="mb-7 flex gap-5 px-6 py-5">
             <Eyebrow variant="field" as="p" tone="attend" className="basis-42 shrink-0">
               Provisional
             </Eyebrow>
@@ -120,10 +122,17 @@ export function GapCard({
         {open ? (
           <GapCloseOptions options={gap.close_options} onClose={onClose} />
         ) : (
+          /*
+           * THE LOCAL CLOSURE WINS WHOLE, or the server's record does — never a
+           * mix. `closure?.note ?? gap.closed_note` would have reached past a
+           * comment-free closure (the server now says which options need no
+           * comment) and printed the SERVER's sentence under a person's
+           * closure, attributing words to the wrong act.
+           */
           <GapClosedNote
-            option={closure?.option ?? "Closed on the order"}
-            note={closure?.note ?? gap.closed_note}
-            by={closure?.by ?? gap.closed_by}
+            option={closure ? closure.option : "Closed on the order"}
+            note={closure ? closure.note : gap.closed_note}
+            by={closure ? closure.by : gap.closed_by}
           />
         )}
       </CardBody>

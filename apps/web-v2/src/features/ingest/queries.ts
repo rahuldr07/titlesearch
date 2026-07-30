@@ -1,7 +1,37 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { CreateOrderResponse, IngestRejection } from "@titlepipe/contract";
-import { post, type Validator } from "../../shared/api";
+import { queryOptions, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  ClientsResponse,
+  ConfigResponse,
+  CreateOrderResponse,
+  IngestRejection,
+} from "@titlepipe/contract";
+import { get, post, type Validator } from "../../shared/api";
 import { postForm } from "../../shared/apiForm";
+
+/**
+ * THE CLIENTS ARE ON THE WIRE — this screen does not get to invent them.
+ *
+ * `client_id` is the one field on the order that decides something: it resolves
+ * the effective sign-off list. Typed free-hand, a transposed id is accepted by
+ * the door and the wrong checklist is frozen onto the order, which nobody
+ * discovers until a line that should have applied is missing from a delivered
+ * search. A picker fed by the server cannot produce an id the server does not
+ * have.
+ *
+ * Same query key as the clients screen uses, so the two share one cache entry
+ * and can never show two different client lists. Declared again rather than
+ * imported: features do not reach into each other (§7).
+ */
+export const clientsQuery = queryOptions({
+  queryKey: ["clients"],
+  queryFn: () => get("/api/clients", ClientsResponse),
+});
+
+/** The product catalogue, for the PRODUCT ORDERED grid. Same key, same reason. */
+export const configProductsQuery = queryOptions({
+  queryKey: ["config", "products"],
+  queryFn: () => get("/api/config/products", ConfigResponse),
+});
 
 const Ack: Validator<{ ok: true }> = {
   safeParse: (input) =>

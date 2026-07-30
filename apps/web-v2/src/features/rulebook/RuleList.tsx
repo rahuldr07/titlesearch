@@ -57,11 +57,21 @@ export function RuleList({
             data-testid={`rule-row-${rule.code}`}
             aria-current={rule.id === selected}
             onClick={() => onSelect(rule.id)}
+            /*
+              SELECTION IS A FILL, NEVER A SECOND BORDER. The export sets the
+              row's border once and then overrides the colour back to the
+              neutral hairline (`border:1.5px solid {{ r.selected }}` followed
+              by `border-color:var(--rule)`), so every row in the rail keeps
+              exactly the same edge and only the ground moves. Colouring the
+              border too made the selected row a heavier object than its
+              neighbours — the rail then reads as "this rule is different"
+              rather than "this is the one you are reading", which on a book
+              where half the entries are not yet policy is a claim about the
+              rule instead of about the cursor.
+            */
             className={cn(
-              "flex w-full flex-col gap-2 rounded-9 border-(length:--stroke-emphasis) p-7 text-left",
-              rule.id === selected
-                ? "border-action bg-action-surface"
-                : "border-line-strong bg-surface-panel",
+              "flex w-full flex-col gap-2 rounded-9 border-(length:--stroke-emphasis) border-line-strong p-7 text-left",
+              rule.id === selected ? "bg-action-surface" : "bg-surface-panel",
             )}
           >
             <span className="flex flex-wrap items-center gap-4">

@@ -48,7 +48,8 @@ export function LineCatalogue({
           {showRetired ? "Hide retired" : "Show retired"}
         </Button>
         {canAuthor ? (
-          <Button className="ml-auto" data-testid="new-line" onClick={onNew}>
+          /* Section-level, so `sm` — the same ladder `ProductList` explains. */
+          <Button size="sm" className="ml-auto" data-testid="new-line" onClick={onNew}>
             ＋ New line
           </Button>
         ) : null}

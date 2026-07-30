@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "@tanstack/react-router";
 import { deliveriesQuery, orderContextQuery } from "./queries";
 import { pickDelivered } from "./deliveredRecord";
 import { FinalizedNotice } from "./FinalizedNotice";
@@ -27,6 +28,14 @@ import { Screen } from "../../shared/ui/Screen";
  * and nothing to compare, so the layout should not offer the scanning posture
  * every working screen in this product does. It reads as a document, which is
  * what it is.
+ *
+ * `?order=` KEEPS THE AMENDED SHEET REACHABLE. The route is not order-scoped
+ * (`entities/nav/flow`), so the screen confirms the last thing that landed and
+ * nothing in the app passes it an id — which is why the reissue branch used to
+ * be visible only by being the default, and why fixing the default would
+ * otherwise have made it dead code. The id is a passthrough to a query that
+ * already answers an unknown order with a named empty state, so an unrecognised
+ * value fails out loud and needs no validator to be safe.
  */
 export function DeliveredScreen({
   orderId,
@@ -37,11 +46,14 @@ export function DeliveredScreen({
   /** Entered from a dispute elsewhere — the screen never opens this itself. */
   reopen?: boolean;
 }) {
+  const searchStr = useLocation({ select: (location) => location.searchStr });
+  const asked = orderId ?? new URLSearchParams(searchStr).get("order") ?? undefined;
+
   const { data, isPending, isError } = useQuery(deliveriesQuery);
   // Resolved BEFORE the early returns so the context query below is an
   // unconditional hook. `pickDelivered` is pure and returns null until the
   // list arrives, which is also the "no delivery for this order" answer.
-  const record = data === undefined ? null : pickDelivered(data.deliveries, orderId);
+  const record = data === undefined ? null : pickDelivered(data.deliveries, asked);
   const { data: context } = useQuery({
     ...orderContextQuery(record?.orderId ?? ""),
     enabled: record !== null,
@@ -71,9 +83,9 @@ export function DeliveredScreen({
         <div data-testid="nothing-delivered">
           <EmptyPanel
             title={
-              orderId === undefined
+              asked === undefined
                 ? "No delivered report yet."
-                : `Order ${orderId} has no delivered report yet.`
+                : `Order ${asked} has no delivered report yet.`
             }
           />
         </div>

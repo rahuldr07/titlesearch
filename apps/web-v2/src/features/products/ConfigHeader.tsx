@@ -1,5 +1,6 @@
 import { Card } from "../../shared/ui/Card";
 import { Chip } from "../../shared/ui/Chip";
+import { Eyebrow } from "../../shared/ui/Eyebrow";
 import { ScreenHeading } from "../../shared/ui/ScreenHeading";
 
 /**
@@ -89,16 +90,29 @@ function VersionStamp({
 }) {
   return (
     <div className="text-right">
-      <Chip
-        tone="action"
-        size="md"
-        shape="mono"
-        bordered
-        className="normal-case"
-        data-testid="config-version"
-      >
-        {configVersion}
-      </Chip>
+      {/*
+        THE LABEL IS OURS; THE IDENTIFIER IS THE SERVER'S. The export puts the
+        word inside the chip ("config v4"), which it can afford because its one
+        demo version is a string it also minted. This screen must never mint or
+        decorate a version — an order is stamped with exactly what the server
+        sent — so the chip prints `cfg-2026.07-3` verbatim and the eyebrow says
+        what kind of string it is. Without the label the header's only opaque
+        token sat between "frozen…" and "applies to new orders only" with
+        nothing naming it, and an unlabelled identifier is read as a build tag.
+      */}
+      <span className="flex items-center justify-end gap-4">
+        <Eyebrow variant="field">Config</Eyebrow>
+        <Chip
+          tone="action"
+          size="md"
+          shape="mono"
+          bordered
+          className="normal-case"
+          data-testid="config-version"
+        >
+          {configVersion}
+        </Chip>
+      </span>
       {frozen ? (
         <p className="mt-2 text-tiny font-semibold text-ink-secondary" data-testid="config-frozen">
           frozen — the next accepted edit mints a new version

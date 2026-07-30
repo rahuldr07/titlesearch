@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { queryOptions } from "@tanstack/react-query";
+import type { OrderCensus } from "@titlepipe/contract";
 import { OrderFieldsResponse } from "@titlepipe/contract";
 import { get } from "../shared/api";
 import { cn } from "../shared/ui/classNames";
@@ -25,30 +26,48 @@ function fieldsQuery(orderId: string) {
  * shape of the work; a count per hour is a target, and a target is how a
  * reviewer learns to stop reading carefully.
  *
- * The counts are DERIVED FROM SERVER STATE ONLY — never from confidence, never
- * from `value === null`. The server owns which fields need a person.
+ * EVERY FIGURE IS READ FROM `census`, NEVER COMPUTED HERE. This component used
+ * to derive all four from the `fields` array while its own docstring claimed
+ * they were "derived from server state only" — untrue of NO SOURCE, the one
+ * that mattered. It filtered for `value !== null && source_doc_id === null &&
+ * source_page === null && readings.length === 0` and printed the result as a
+ * headline number: the browser ruling on provenance, which is a server
+ * judgement (hard rule 3) and one no screen can cite (principle 6).
+ * `Field.state` cannot stand in for it — the enum is pending/auto_confirmed/
+ * needs_review/confirmed/corrected/escalated and carries no no-source member,
+ * so nothing server-authored was left to count. Hence `OrderCensus`.
+ *
+ * `fields.length` was the same defect, quietly: the array is scoped to what the
+ * caller may see, the census is not.
  */
+const TILES = [
+  { key: "fields", label: "Fields", tone: "text-ink-primary", muteAtZero: false },
+  {
+    key: "auto_confirmed",
+    label: "Auto-confirmed",
+    tone: "text-state-settled-ink",
+    muteAtZero: false,
+  },
+  { key: "needs_review", label: "Need you", tone: "text-action", muteAtZero: false },
+  // Zero no-source is the good outcome, so it recedes; any other figure is the
+  // loudest thing on the strip.
+  {
+    key: "no_source",
+    label: "No source",
+    tone: "text-state-halt-ink",
+    muteAtZero: true,
+  },
+] as const satisfies readonly {
+  key: keyof OrderCensus;
+  label: string;
+  tone: string;
+  muteAtZero: boolean;
+}[];
+
 export function OrderCounts({ orderId }: { orderId: string }) {
   const { data } = useQuery(fieldsQuery(orderId));
-  const fields = data?.fields ?? [];
-  if (fields.length === 0) return null;
-
-  const auto = fields.filter((f) => f.state === "auto_confirmed").length;
-  const need = fields.filter((f) => f.state === "needs_review").length;
-  const noSource = fields.filter(
-    (f) =>
-      f.value !== null &&
-      f.source_doc_id === null &&
-      f.source_page === null &&
-      (f.readings ?? []).length === 0,
-  ).length;
-
-  const cell = (value: number, label: string, tone?: string) => (
-    <div className="text-right">
-      <div className={cn("text-md font-semibold leading-flat", tone)}>{value}</div>
-      <div className="text-micro tracking-label uppercase text-ink-muted">{label}</div>
-    </div>
-  );
+  if (data === undefined) return null;
+  const census = data.census;
 
   return (
     // Always visible, never breakpoint-hidden: this used to live in the
@@ -56,10 +75,30 @@ export function OrderCounts({ orderId }: { orderId: string }) {
     // narrow column. It now sits in the full-width top strip (§11
     // 2026-07-30 revision), which has room at every width the app supports.
     <div data-testid="order-counts" className="flex flex-wrap gap-6">
-      {cell(fields.length, "Fields")}
-      {cell(auto, "Auto-confirmed", "text-state-settled-ink")}
-      {cell(need, "Need you", "text-action")}
-      {cell(noSource, "No source", noSource > 0 ? "text-state-halt-ink" : "text-ink-muted")}
+      {TILES.map(({ key, label, tone, muteAtZero }) => {
+        // An ABSENT census prints an em dash — not a zero, and not a number
+        // this component worked out for itself. "The server did not say" and
+        // "there are none" are different statements, and collapsing them is how
+        // a screen reports a clean order while the figure that would have
+        // flagged it was never sent at all.
+        const value = census?.[key];
+        const muted = value === undefined || (muteAtZero && value === 0);
+        return (
+          <div key={key} className="text-right">
+            <div
+              className={cn(
+                "text-md font-semibold leading-flat",
+                muted ? "text-ink-muted" : tone,
+              )}
+            >
+              {value ?? "—"}
+            </div>
+            <div className="text-micro tracking-label uppercase text-ink-muted">
+              {label}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

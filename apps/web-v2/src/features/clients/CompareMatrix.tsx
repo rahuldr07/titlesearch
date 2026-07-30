@@ -50,9 +50,19 @@ export function CompareMatrix({
   productName: string;
 }) {
   return (
-    <Card className="overflow-x-auto">
+    <Card className="relative overflow-x-auto">
       <div className="min-w-300">
-        <div className="flex border-b border-line-strong">
+        {/*
+          THE COLUMN HEADS STAY WITH THE ROWS. Thirteen sign-off lines run
+          past the top of the pane, and this grid's cells are single glyphs
+          whose only meaning is which CLIENT column they sit in — scroll the
+          header away and a "◐" three rows down is unreadable, or worse,
+          read against the wrong client. The export pins it (`position:sticky;
+          top:0;z-index:3`) with a hairline shadow beneath; the panel ground is
+          repeated here because a transparent sticky header lets the rows show
+          through it as they pass.
+        */}
+        <div className="sticky top-0 z-(--z-raised) flex rounded-t-8 border-b border-line-strong bg-surface-panel">
           <Eyebrow variant="field" className="min-w-105 flex-1 px-7 py-5">
             Sign-off line · {productName} baseline
           </Eyebrow>

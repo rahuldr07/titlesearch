@@ -99,9 +99,14 @@ export const AgreementFolds: Story = {
 
 /**
  * ACTIONS ARE ABSENT FOR A ROLE THAT CANNOT ACT, never disabled. A greyed
- * decision is an invitation to ask for permission; an absent one is an answer.
- * The bug channel stays open, because "this input is broken" is not a review
- * decision.
+ * decision is an invitation to ask for permission; an absent one is an answer —
+ * and the card says WHY the buttons are missing rather than leaving a gap.
+ *
+ * The `Report pipeline bug` line this used to assert is gone (2026-07-30): the
+ * export draws no such control and no product rule asks for one, so it was an
+ * inert affordance pointing at nowhere. Its removal is the reason the assertion
+ * below changed; the rule this story exists for — absent, not disabled — is
+ * unchanged and still pinned.
  */
 export const NoReviewRole: Story = {
   args: { ...Disagreement.args, actions: null },
@@ -113,6 +118,8 @@ export const NoReviewRole: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(canvas.queryByTestId("act-confirm")).not.toBeInTheDocument();
-    await expect(canvas.getByText("Report pipeline bug")).toBeVisible();
+    await expect(
+      canvas.getByText(/Review decisions belong to the reviewer on this order/),
+    ).toBeVisible();
   },
 };

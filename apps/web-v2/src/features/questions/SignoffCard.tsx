@@ -49,23 +49,19 @@ export function SignoffCard({ signoff }: { signoff: OrderSignoffResponse }) {
 
   const answered = lines.filter((line) => answers[line.line_id] !== undefined).length;
   const remaining = lines.length - answered;
-  /**
-   * How many lines POLICY has an opinion about — not how many are filled in,
-   * which is always none. The banner used to say "some answers are prefilled
-   * from client policy" on every order, including orders where no line carries
-   * the flag at all, and the screen deliberately prefills nothing. A banner
-   * that announces a prefill the rows then refuse to show is the exact
-   * suggestion/signature confusion ruling Q13 is open about.
-   */
-  const suggested = lines.filter((line) => line.prefilled_from_policy).length;
   const ready = lines.every((line) => {
     const answer = answers[line.line_id];
     if (answer === undefined) return false;
     return !(answer === "NO" && line.comment_required && (comments[line.line_id] ?? "").trim() === "");
   });
 
+  /*
+   * THE DESIGN'S SENTENCE, WHOLE. The dropped clause — "this signs your work" —
+   * is the one that tells the abstractor the press is a SIGNATURE and not a
+   * submit, which is the entire point of the screen and of open ruling Q13.
+   */
   const startNote = ready
-    ? `All ${lines.length} sign-off lines answered — signing starts the pipeline.`
+    ? `All ${lines.length} sign-off lines answered — this signs your work and starts the pipeline.`
     : remaining > 0
       ? `${remaining} of ${lines.length} still to answer. All are required to start.`
       : "Every NO needs a comment before you can start.";
@@ -83,16 +79,16 @@ export function SignoffCard({ signoff }: { signoff: OrderSignoffResponse }) {
           </span>
         </CardHeader>
 
-        {signoff.signed_by === null ? (
-          <p className="border-b border-line-subtle bg-action-surface px-8 py-4 text-xs leading-body text-action-ink">
-            <span className="font-semibold">Not signed.</span>{" "}
-            {suggested === 0
-              ? null
-              : `Client policy has a suggested answer on ${suggested} of these ${lines.length} lines, and none of it is filled in. `}
-            Policy can suggest; only a person can sign.
-          </p>
-        ) : null}
-
+        {/*
+          NO "NOT SIGNED" BANNER. The design's card goes from its header band
+          straight to line 1, and the claim the banner carried — policy can
+          suggest, only a person can sign — is stated per row by "◇ NOT ANSWERED
+          · Policy suggests YES · only your press signs it", where it applies to
+          a line somebody is about to press. As a banner it stated the same fact
+          a third time (the strip and the header already say it), and it pushed
+          all thirteen rows down by a band on every unsigned order — which is
+          every order this card ever draws.
+        */}
         <DividedSection>
           {lines.map((line) => (
             <SignoffRow
@@ -118,8 +114,16 @@ export function SignoffCard({ signoff }: { signoff: OrderSignoffResponse }) {
         </p>
         {/* CONTRACT GAP: no sign-off submit and no pipeline-start endpoint.
             Drawn as the design draws it and disabled, because signing is an
-            append-only server record and this screen cannot make one. */}
-        <Button size="lg" disabled>
+            append-only server record and this screen cannot make one. The
+            reason is on the control itself rather than only in this comment: a
+            disabled primary with nothing saying why reads as a bug to the
+            person looking at it, and §5's visible-and-disabled affordance is
+            only honest if it carries its note. */}
+        <Button
+          size="lg"
+          disabled
+          title="No sign-off submit endpoint yet — signing is an append-only server record and this screen cannot make one."
+        >
           Start pipeline →
         </Button>
       </div>

@@ -25,6 +25,16 @@ export interface DeliveredRecord {
  * the number itself is never computed here: `report.version` is the server's,
  * and a v2 exists on screen only because the server issued one.
  *
+ * A TIE BETWEEN TWO DIFFERENT ORDERS IS NOT BROKEN BY VERSION. Ranking by
+ * `delivered_at` fixed the ordering but left the tie-break comparing v2-of-B
+ * against v1-of-A — the same incomparable pair, one line further down — and the
+ * fixture delivers both demo orders on the same stamp, so the order-less route
+ * opened on the amended sheet every time. Anyone reaching `/delivered` met the
+ * exception (REISSUED · v2, a disputed field struck through) instead of the
+ * case, which is the screen arguing that reissues are what delivery looks like.
+ * On a cross-order tie the incumbent stands, so the server's own list order
+ * decides — an arbitrary rule the server owns beats a wrong one we invent.
+ *
  * `failed_transit` rows are excluded rather than shown as a lesser state: a
  * delivery that never landed has nothing to confirm, and this screen's entire
  * claim is that something arrived.
@@ -46,8 +56,11 @@ export function pickDelivered(
     // A delivered row with no timestamp sorts oldest rather than being dropped:
     // it did land, and a missing stamp is the server's gap, not a disqualifier.
     const at = d.delivered_at ?? "";
-    if (best !== null && (at < bestAt || (at === bestAt && report.version <= best.version))) {
-      continue;
+    if (best !== null && at < bestAt) continue;
+    if (best !== null && at === bestAt) {
+      // Same instant: only a later version OF THE SAME ORDER supersedes.
+      if (report.order_id !== best.orderId) continue;
+      if (report.version <= best.version) continue;
     }
 
     best = {

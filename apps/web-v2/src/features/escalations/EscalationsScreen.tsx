@@ -1,15 +1,13 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
 import type { Escalation } from "@titlepipe/contract";
 import { escalationsQuery, rulesQuery } from "./queries";
 import { ClusterRail, type Cluster } from "./ClusterRail";
-import { ResolveCard } from "./ResolveCard";
-import { RuleStamp } from "./RuleStamp";
-import { Card } from "../../shared/ui/Card";
+import { ClusterDetail } from "./ClusterDetail";
 import { EmptyPanel } from "../../shared/ui/EmptyPanel";
 import { Screen } from "../../shared/ui/Screen";
-import { ScreenTitle } from "../../app/ScreenTitle";
+import { ScreenHeading } from "../../shared/ui/ScreenHeading";
+import { ScreenMessage } from "../../shared/ui/ScreenMessage";
 
 function clusterBy(escalations: readonly Escalation[]): Cluster[] {
   const byPath = new Map<string, Escalation[]>();
@@ -37,6 +35,20 @@ function clusterBy(escalations: readonly Escalation[]): Cluster[] {
  * empty-state panel drawn while the request is still out would tell a reviewer
  * that nobody is stuck at the one moment the app has no idea, and once the two
  * look alike there is no reading that tells them apart again.
+ *
+ * THIS IS A HELD SCREEN AND SAYS SO IN AMBER. The design of record's register
+ * is unmistakable — an amber kicker over the h1 and an amber edge on the card
+ * in question — and this screen carried none of it: navy on paper, with nothing
+ * stating that escalated work is stopped. The kicker is the design's, the shape
+ * beneath it is the inbox (conflict C21: `GET /api/escalations` returns a
+ * `field_path_cluster` on every row and the contract has no per-field
+ * escalation record, so the per-field screen the export draws is unbuildable).
+ *
+ * IT HAS AN `<h1>` NOW. `ScreenTitle` renders the kicker alone, so the largest
+ * heading on the page was a 10px caption and the next thing under it was a
+ * dotted machine path — a screen that read as a caption followed by an
+ * identifier. `ScreenHeading` draws the export's pair and keeps the hub link
+ * and `data-testid="screen-title"` that `ux.spec` asserts.
  */
 export function EscalationsScreen() {
   const escalations = useQuery(escalationsQuery);
@@ -44,101 +56,53 @@ export function EscalationsScreen() {
   const [selected, setSelected] = useState<string | null>(null);
 
   if (escalations.isError) {
-    return <p className="text-base text-state-halt-ink">Inbox unavailable.</p>;
+    return <ScreenMessage tone="halt" measure="1340">Inbox unavailable.</ScreenMessage>;
   }
   if (escalations.isPending) {
-    return <p className="text-base text-ink-secondary">Loading the inbox…</p>;
+    return <ScreenMessage measure="1340">Loading the inbox…</ScreenMessage>;
   }
 
   const clusters = clusterBy(escalations.data.escalations);
   const fallback = clusters.find((c) => c.open.length > 0) ?? clusters[0];
   const current = clusters.find((c) => c.path === selected) ?? fallback;
 
-  if (current === undefined) {
-    return (
-      <Screen measure="700">
-        <EmptyPanel title="No escalations. Nobody is stuck." />
-      </Screen>
-    );
-  }
-
-  const answered = current.items.find((item) => item.resolution !== null);
-
   return (
-    <Screen measure="700">
+    <Screen measure="1340">
       <div className="flex flex-col gap-8">
-        <header className="flex flex-col gap-3">
-          <ScreenTitle>Escalation inbox</ScreenTitle>
-          <p className="text-base leading-body text-ink-secondary">
-            A rules backlog — every item is a reviewer saying &ldquo;I don&rsquo;t
-            know the rule&rdquo;. Answering one order is not the job; writing the
-            rule that answers the next fifty is.
-          </p>
-        </header>
+        <ScreenHeading
+          /*
+           * The colour rides on a child rather than on `Eyebrow`'s own `tone`
+           * because the kicker is also the hub link and `ScreenHeading` owns
+           * that arrangement (ux.spec #7) — the alternative was a second copy
+           * of the masthead here, which is the failure the component exists to
+           * prevent. Amber because this screen is HELD work, not a live step.
+           */
+          eyebrow={<span className="text-state-attend-ink">Held · escalated · senior review</span>}
+          title="Escalation inbox"
+          lede={
+            <p>
+              A rules backlog — every item is a reviewer saying &ldquo;I
+              don&rsquo;t know the rule&rdquo;. Answering one order is not the
+              job; writing the rule that answers the next fifty is.
+            </p>
+          }
+        />
 
-        <div className="grid gap-8 lg:grid-cols-[20rem_1fr]">
-          <ClusterRail clusters={clusters} selected={current.path} onSelect={setSelected} />
-
-          <section className="flex flex-col gap-6">
-            <h2 className="font-mono text-md font-semibold text-ink-primary">{current.path}</h2>
-
-            <ul className="flex flex-col gap-3">
-              {current.items.map((item) => (
-                <li key={item.id} className="flex flex-col gap-1">
-                  <p className="text-base leading-body text-ink-primary">
-                    &ldquo;{item.question}&rdquo;
-                  </p>
-                  {/*
-                    YOU LAND ON THE ORDER THE QUESTION CAME FROM. The design of
-                    record's framing is "you land on the field in question, not
-                    the top of the order" — CONTRACT GAP: `Escalation` carries
-                    `order_ids` and a cluster path, but no field id, no asker and
-                    no timestamp, so the order is as close as the data allows and
-                    the field itself cannot be targeted.
-                  */}
-                  <p className="flex flex-wrap gap-4 font-mono text-tiny text-ink-muted">
-                    {item.order_ids.map((orderId) => (
-                      <Link
-                        key={orderId}
-                        to="/orders/$orderId/review"
-                        params={{ orderId }}
-                        className="text-action underline"
-                      >
-                        {orderId} →
-                      </Link>
-                    ))}
-                  </p>
-                </li>
-              ))}
-            </ul>
-
-            {current.open.length > 0 ? (
-              <ResolveCard
-                ids={current.open.map((item) => item.id)}
-                rules={rules.data?.rules ?? []}
-                onResolved={() => setSelected(current.path)}
-              />
-            ) : (
-              <Card tone="settled" className="flex flex-col gap-4 p-8">
-                <p className="text-md font-semibold text-state-settled-ink">
-                  ✓ Rule written — cluster cleared.
-                </p>
-                {answered === undefined ? null : (
-                  <>
-                    <p className="text-base leading-body text-ink-secondary">
-                      &ldquo;{answered.resolution}&rdquo; — {answered.resolved_by}
-                    </p>
-                    <div>
-                      <RuleStamp
-                        rule={rules.data?.rules.find((rule) => rule.id === answered.rule_id)}
-                      />
-                    </div>
-                  </>
-                )}
-              </Card>
-            )}
-          </section>
-        </div>
+        {current === undefined ? (
+          <EmptyPanel title="No escalations. Nobody is stuck." />
+        ) : (
+          /* The archive's two columns: a 380px rail and a detail column capped
+             at 880px. Unmeasured, the resolve card ran to ~840px and its
+             instruction ruled one unbroken line across the window. */
+          <div className="grid gap-8 lg:grid-cols-[23.75rem_1fr]">
+            <ClusterRail clusters={clusters} selected={current.path} onSelect={setSelected} />
+            <ClusterDetail
+              cluster={current}
+              rules={rules.data?.rules ?? []}
+              onResolved={() => setSelected(current.path)}
+            />
+          </div>
+        )}
       </div>
     </Screen>
   );

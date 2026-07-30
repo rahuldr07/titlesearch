@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { GapCloseOption } from "@titlepipe/contract";
+import type { GapCloseKind, GapCloseOption } from "@titlepipe/contract";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
 import { GapOptionButton } from "./GapOptionButton";
 import { GapClosureForm } from "./GapClosureForm";
@@ -11,13 +11,36 @@ import { GapClosureForm } from "./GapClosureForm";
  * THE SECOND LINE IS THE SERVER'S TOO (since 2026-07-30). Each option arrives
  * with what it does to the record, so the screen states that consequence
  * rather than applying one sentence to every option because it could not tell
- * them apart. `settled` marks the options that require a comment — the ones
- * that add a claim rather than add evidence.
+ * them apart.
  *
- * The form opens in place rather than in a dialog. It asks for a sentence about
- * a claim on the card above; a modal would cover the very evidence the sentence
- * is supposed to answer.
+ * THE RANKING IS KEYED ON `kind`, WHICH IS THE ONLY FACT THAT CARRIES IT. The
+ * design tints uploading violet, root-of-title green, and leaves the two that
+ * rewrite a signed record plain (:573-591) — adding EVIDENCE, making a CLAIM
+ * and CHANGING WHAT WAS SOLD are three different acts and the design says so in
+ * three tones. Ranking off `requires_comment` looked close and was wrong at the
+ * one place it mattered: it drew "Change the product ordered" in settled green,
+ * the reassuring tone, on the option with money attached.
+ *
+ * NO CHOSEN-TONE. Choosing opens the form directly beneath, headed with the
+ * option's own words — the design's own arrangement. Recolouring the button as
+ * well would have made the violet upload option and a violet "selected" state
+ * the same mark meaning two things on one row.
+ *
+ * POLICY GAP — the role refusal is NOT drawn, deliberately. `min_role` arrives
+ * as a bare role name ("senior") with no entry in `packages/contract/authz.ts`
+ * and no ordering over `ROLES`, so deciding whether the current actor satisfies
+ * it means inventing a hierarchy in the browser — a second, silently drifting
+ * rulebook, which is the thing `GapCloseOption` was widened to prevent. The
+ * design dims that option to .55; `GapOptionButton` already carries the
+ * `disabled` path for it, and it stays unused until the requirement is a rule.
+ * The consequence line states the restriction verbatim in the meantime.
  */
+const OPTION_TONE: Record<GapCloseKind, "action" | "settled" | "neutral"> = {
+  upload: "action",
+  amend: "neutral",
+  root_of_title: "settled",
+  change_product: "neutral",
+};
 
 /**
  * The design writes the count as a WORD — "close it one of two ways", not "one
@@ -37,13 +60,18 @@ export function GapCloseOptions({
   onClose,
 }: {
   options: readonly GapCloseOption[];
-  onClose: (option: string, note: string) => void;
+  onClose: (option: string, note: string | null) => void;
 }) {
-  const [chosen, setChosen] = useState<string | null>(null);
+  const [chosen, setChosen] = useState<GapCloseOption | null>(null);
 
   return (
     <div>
-      <Eyebrow variant="field" as="p" className="mb-4">
+      {/*
+        A HEADING OVER THE OPTIONS, not another row label — 10px against the
+        9px "You said" / "We found" above it (:572). Drawn at the same size it
+        flattened into the label column and the options lost their opening.
+      */}
+      <Eyebrow variant="cardHeading" as="p" className="mb-4">
         {options.length === 1
           ? "One way to close it"
           : `Close it one of ${COUNT_WORD[options.length] ?? options.length} ways`}
@@ -53,16 +81,11 @@ export function GapCloseOptions({
         {options.map((option) => (
           <GapOptionButton
             key={option.kind}
-            tone={
-              option.label === chosen
-                ? "action"
-                : option.requires_comment
-                  ? "settled"
-                  : "neutral"
-            }
+            tone={OPTION_TONE[option.kind]}
             title={option.label}
             sub={option.consequence}
-            onClick={() => setChosen(option.label)}
+            expanded={option.kind === chosen?.kind}
+            onClick={() => setChosen(option)}
           />
         ))}
       </div>
@@ -72,7 +95,7 @@ export function GapCloseOptions({
           option={chosen}
           onRecord={(note) => {
             setChosen(null);
-            onClose(chosen, note);
+            onClose(chosen.label, note);
           }}
           onCancel={() => setChosen(null)}
         />

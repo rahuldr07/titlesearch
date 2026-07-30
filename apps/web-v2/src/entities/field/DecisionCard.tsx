@@ -116,9 +116,14 @@ export function DecisionCard({
           <DecisionBar {...actions} />
         )}
 
+        {/*
+          `Report pipeline bug` used to sit here as a bare, inert line. It is
+          gone: the export draws no such control on Review, and no product rule
+          asks for one (the 2026-07-30 ruling). A dead affordance on the
+          decision surface is worse than none — it invites a reviewer to file
+          somewhere that does not exist while the field stays queued.
+        */}
         {children}
-
-        <p className="text-xs text-ink-muted">Report pipeline bug</p>
       </CardBody>
     </Card>
   );

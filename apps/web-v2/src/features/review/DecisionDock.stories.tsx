@@ -18,29 +18,16 @@ type Story = StoryObj<typeof meta>;
  * excluded from both numbers — nobody is deciding those). 12 of the 18 are
  * already answered.
  *
- * `selectedPath` names one of the 18 (`owner.zip`, currently `needs_review`),
- * so "rest of the queue" is 17 — the other flagged fields, not the 18 minus
- * some global reviewer queue. Tracing the design's own mock
- * (`decRest = decisions.filter(d => !d.expanded)`, scoped to the current
- * order's `D.decisions`) confirms this is a per-order count, sourced entirely
- * from `Field.state` — not the cross-order `/api/queue/next` count, so no
- * CONTRACT GAP applies here.
+ * THE REST-OF-QUEUE COUNT IS NOT ASSERTED HERE ANY MORE, because this band no
+ * longer prints it. It belongs to `QueueRest`, on the rows it counts; a heading
+ * here and rows elsewhere is the defect this component was carrying half of.
  */
 export const AnsweredOfTotal: Story = {
-  args: { fields: demoFields, selectedPath: "owner.zip" },
+  args: { fields: demoFields },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(canvas.getByText(/12 of 18 answered/)).toBeInTheDocument();
-    await expect(canvas.getByText(/Rest of the queue · 17/)).toBeInTheDocument();
-  },
-};
-
-/** No selection at all still counts correctly — nothing is excluded from the rest-of-queue tally. */
-export const NoFieldSelected: Story = {
-  args: { fields: demoFields, selectedPath: null },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await expect(canvas.getByText(/Rest of the queue · 18/)).toBeInTheDocument();
+    await expect(canvas.queryByText(/Rest of the queue/)).not.toBeInTheDocument();
   },
 };
 
@@ -53,10 +40,10 @@ export const NoFieldSelected: Story = {
  * only), and ⏎ no longer confirms.
  */
 export const KeyHintMatchesLiveBindings: Story = {
-  args: { fields: demoFields, selectedPath: "owner.zip" },
+  args: { fields: demoFields },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const text = canvas.getByTestId("decision-dock").textContent ?? "";
+    const text = canvas.getByTestId("decision-meter").textContent ?? "";
     await expect(text).toContain("Confirm");
     await expect(text).toContain("C");
     await expect(text).toContain("Correct");
@@ -66,14 +53,11 @@ export const KeyHintMatchesLiveBindings: Story = {
   },
 };
 
-/** No fields ever flagged for a person — the dock has nothing to show. */
+/** No fields ever flagged for a person — the meter has nothing to show. */
 export const NoDecisionsRendersNothing: Story = {
-  args: {
-    fields: demoFields.filter((f) => f.state === "auto_confirmed"),
-    selectedPath: null,
-  },
+  args: { fields: demoFields.filter((f) => f.state === "auto_confirmed") },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(canvas.queryByTestId("decision-dock")).not.toBeInTheDocument();
+    await expect(canvas.queryByTestId("decision-meter")).not.toBeInTheDocument();
   },
 };
