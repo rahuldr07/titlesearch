@@ -1,6 +1,7 @@
 import { createRootRoute, Outlet } from "@tanstack/react-router";
 import { GlobalKeys } from "./GlobalKeys";
 import { AppChrome } from "./AppChrome";
+import { OrderStrip } from "./OrderStrip";
 import { NotFound } from "./Placeholders";
 
 /**
@@ -25,8 +26,15 @@ export const rootRoute = createRootRoute({
       {/*
         THE RAIL SITS BESIDE THE CONTENT, not above it (§11). AppChrome renders
         the left sidebar, or nothing on the capture seat — where a null sibling
-        just leaves `main` as the sole flex child at full width, which is the
-        structural-blindness rule made layout.
+        just leaves the content column as the sole flex child at full width,
+        which is the structural-blindness rule made layout.
+
+        THE CONTENT SIDE IS A COLUMN, not just `main`: `OrderStrip` — the
+        full-width order-context bar (§11 2026-07-30 revision) — sits above
+        `main` inside its own flex column, beside the sidebar rather than a
+        third row-level sibling. `OrderStrip` is absent on the capture seat the
+        same way `AppChrome` is, both reading `/blind/*` from the URL
+        independently rather than one gating the other.
 
         THE SHELL DOES NOT IMPOSE A READING COLUMN. It was capped at 800px —
         `max-w-400` against a 2px spacing base — which starved every wide screen
@@ -38,9 +46,12 @@ export const rootRoute = createRootRoute({
       */}
       <div className="flex min-h-screen">
         <AppChrome />
-        <main className="mx-auto min-w-0 max-w-720 flex-1 p-9">
-          <Outlet />
-        </main>
+        <div className="flex min-w-0 flex-1 flex-col">
+          <OrderStrip />
+          <main className="mx-auto min-w-0 max-w-720 flex-1 p-9">
+            <Outlet />
+          </main>
+        </div>
       </div>
     </>
   ),

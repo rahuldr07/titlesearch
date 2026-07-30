@@ -30,7 +30,8 @@ interface SidebarProps {
   brand: ReactNode;
   lifecycle: readonly LifecycleStage[];
   worlds: readonly SidebarDoorItem[];
-  foot: ReactNode;
+  /** Optional — the account menu moved to `OrderStrip` (§11 2026-07-30 revision). */
+  foot?: ReactNode;
 }
 
 /** Below this rail-container width the labels no longer fit and collapse is FORCED. */
@@ -87,7 +88,9 @@ export function Sidebar({ collapsed, onToggle, onNavigate, brand, lifecycle, wor
         </div>
       )}
 
-      <div className="mt-auto border-t border-line-subtle pt-4">{foot}</div>
+      {foot === undefined ? null : (
+        <div className="mt-auto border-t border-line-subtle pt-4">{foot}</div>
+      )}
     </aside>
   );
 }

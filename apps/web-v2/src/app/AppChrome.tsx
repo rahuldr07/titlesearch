@@ -6,14 +6,8 @@ import type { LifecycleStage } from "../entities/nav/LifecycleRail";
 import { useSession } from "../shared/session";
 import { useAttention, type Attention } from "./attention";
 import { useNavCollapsed, useTheme } from "./preferences";
-import { AccountMenu } from "./AccountMenu";
-import { OrderCounts } from "./OrderCounts";
+import { orderFromPath } from "./orderFromPath";
 import { Eyebrow } from "../shared/ui/Eyebrow";
-
-/** The order in view, taken from the URL. Null on screens that have no order. */
-function orderFromPath(pathname: string): string | null {
-  return /^\/orders\/([^/]+)\//.exec(pathname)?.[1] ?? null;
-}
 
 /** The order lifecycle, in the sequence an order moves through. */
 const FLOW: readonly { path: string; label: string }[] = [
@@ -29,8 +23,15 @@ const FLOW: readonly { path: string; label: string }[] = [
 /**
  * The chrome — the SMART wrapper around the presentational left rail. It owns
  * the concerns entities may not touch (§6): the router, the preference fetch,
- * the acting role and the attention query. It hands the rail a plain door set,
- * the persisted collapse, and the account menu as its foot.
+ * the acting role and the attention query. It hands the rail a plain door set
+ * and the persisted collapse.
+ *
+ * THE ACCOUNT MENU AND THE ORDER COUNTS LIVE IN `OrderStrip` NOW, not here —
+ * the full-width top bar the design draws on every screen (§11 2026-07-30
+ * revision). `AppChrome` keeps the theme fetch and the `data-theme` effect
+ * (still needed for the whole document, capture seat aside) but no longer
+ * renders `AccountMenu`; `OrderStrip` is `AppChrome`'s sibling in `rootRoute`,
+ * not its child, and reads the same URL and the same preference independently.
  *
  * IT IS ABSENT ON THE CAPTURE SEAT, structurally, not cosmetically. A typist on
  * a blind pass must not see the pipeline's world — the doors name screens that
@@ -51,7 +52,9 @@ export function AppChrome() {
   // Review starts collapsed on first mount; the preference wins once loaded.
   const [collapsed, toggleCollapsed] = useNavCollapsed(!onCaptureSeat, onReview);
   // Same zero-GET rule as the collapse: no theme fetch on the capture seat.
-  const [theme, toggleTheme] = useTheme(!onCaptureSeat);
+  // Only the VALUE is needed here now (the toggle moved to `OrderStrip` with
+  // `AccountMenu`) — this call still owns the `data-theme` effect below.
+  const [theme] = useTheme(!onCaptureSeat);
   // `:root` IS TitlePipe; `[data-theme="mocha"]` is the only value that means
   // anything else, so the attribute is set only for the non-default theme
   // rather than toggled between two literal values (`tokens.css` §8).
@@ -116,12 +119,6 @@ export function AppChrome() {
       brand={brand}
       lifecycle={lifecycle}
       worlds={worlds}
-      foot={
-        <div className="flex flex-col gap-3">
-          {orderId === null ? null : <OrderCounts orderId={orderId} />}
-          <AccountMenu theme={theme} onToggleTheme={toggleTheme} />
-        </div>
-      }
     />
   );
 }

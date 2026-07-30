@@ -191,3 +191,23 @@ test("section rail jumps to the matching report section", async ({ page }) => {
   await expect(page).toHaveURL(/#section-judgments$/);
   await expect(page.locator("#section-judgments")).toBeInViewport();
 });
+
+// Task 11 — rule: the full-width top strip carries the order's context on
+// every order screen — ref, the four counts, a sign-off stamp, and the
+// account trigger. `ord_demo_1`'s field fixture is 21 fields (2 auto-confirmed
+// + 12 confirmed + 6 needs_review + 1 pending), so "21" pins the total the
+// same way the decision-dock test above pins "18" for the queued subset.
+test("the order strip shows the ref, the four counts, and the sign-off stamp", async ({
+  page,
+}) => {
+  await go(page);
+  const strip = page.getByTestId("order-strip");
+  await expect(strip).toContainText("ORDER ord_demo_1");
+  const counts = page.getByTestId("order-counts");
+  await expect(counts).toContainText("21");
+  for (const label of ["Fields", "Auto-confirmed", "Need you", "No source"]) {
+    await expect(counts).toContainText(label);
+  }
+  await expect(strip).toContainText("Not signed");
+  await expect(strip.getByTestId("account-menu")).toBeVisible();
+});

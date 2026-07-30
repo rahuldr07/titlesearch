@@ -51,7 +51,11 @@ export function OrderCounts({ orderId }: { orderId: string }) {
   );
 
   return (
-    <div data-testid="order-counts" className="hidden gap-6 lg:flex">
+    // Always visible, never breakpoint-hidden: this used to live in the
+    // 232px sidebar foot, where `hidden ... lg:flex` kept it from cramming a
+    // narrow column. It now sits in the full-width top strip (§11
+    // 2026-07-30 revision), which has room at every width the app supports.
+    <div data-testid="order-counts" className="flex flex-wrap gap-6">
       {cell(fields.length, "Fields")}
       {cell(auto, "Auto-confirmed", "text-state-settled-ink")}
       {cell(need, "Need you", "text-action")}
