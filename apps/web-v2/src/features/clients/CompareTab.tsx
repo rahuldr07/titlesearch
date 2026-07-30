@@ -1,5 +1,6 @@
 import type { ClientsResponse, ConfigProduct } from "@titlepipe/contract";
 
+import { EmptyPanel } from "../../shared/ui/EmptyPanel";
 import { cn } from "../../shared/ui/classNames";
 
 import { COMPARE_LEGEND, type CompareColumn, type CompareMark } from "./compare";
@@ -72,15 +73,19 @@ export function CompareTab({
         ))}
       </ul>
 
+      {/*
+        The testid rides a wrapper because the panel is now the shared one and
+        takes no attributes. It has to keep its name: this is the state the
+        screen's whole claim rests on — a matrix that is absent because the
+        SERVER resolved nothing, not because the client filtered it away.
+      */}
       {columns.length === 0 ? (
-        <p
-          data-testid="no-comparison"
-          className="rounded-9 border border-dashed border-line-strong bg-surface-panel p-13 text-base leading-body text-ink-secondary"
-        >
-          No resolved comparison against {product.full}. The matrix must come
-          from the same resolver intake uses, and the server has resolved no
-          client against this product — so nothing is guessed here.
-        </p>
+        <div data-testid="no-comparison">
+          <EmptyPanel
+            title={`No resolved comparison against ${product.full}.`}
+            body="The matrix must come from the same resolver intake uses, and the server has resolved no client against this product — so nothing is guessed here."
+          />
+        </div>
       ) : (
         <>
           <div className="sm:hidden">

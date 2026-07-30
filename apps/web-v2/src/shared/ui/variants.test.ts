@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { buttonClasses } from "./Button";
+import { cardClasses, type CardTone } from "./Card";
 import { noValueClasses } from "../../entities/field/NoValue";
 
 /**
@@ -104,5 +105,84 @@ describe("Button's disabled treatment is a surface swap, never opacity", () => {
 
   test("the design's transition-free rule holds", () => {
     expect(buttonClasses({})).toContain("transition-none");
+  });
+});
+
+const CARD_TONES = ["none", "action", "attend", "halt", "settled"] as const;
+
+/** The token family each tone draws from — the ground and hairline must agree. */
+const FAMILY: Record<Exclude<CardTone, "none">, string> = {
+  action: "action",
+  attend: "state-attend",
+  halt: "state-halt",
+  settled: "state-settled",
+};
+
+describe("Card's ground and its stripe are separate axes", () => {
+  test("every tone produces a DIFFERENT class list", () => {
+    const seen = new Map<string, string>();
+    for (const tone of CARD_TONES) {
+      const classes = cardClasses({ tone });
+      const clash = seen.get(classes);
+      expect(clash, `tone=${tone} renders identically to ${clash}`).toBeUndefined();
+      seen.set(classes, tone);
+    }
+    expect(seen.size).toBe(CARD_TONES.length);
+  });
+
+  test("a tone's ground and hairline come from the same family", () => {
+    // The failure this catches is the one the export already has 34 times:
+    // a pale `-surface` ground fenced by the SATURATED base colour, so the
+    // same meaning is drawn at two hairline strengths.
+    for (const [tone, family] of Object.entries(FAMILY)) {
+      const classes = cardClasses({ tone: tone as CardTone });
+      expect(classes, `${tone} lost its ground`).toContain(`bg-${family}-surface`);
+      expect(classes, `${tone} lost its hairline`).toContain(`border-${family}-border`);
+      expect(classes, `${tone} kept the neutral panel`).not.toContain("bg-surface-panel");
+    }
+    expect(cardClasses({ tone: "none" })).toContain("bg-surface-panel");
+    expect(cardClasses({ tone: "none" })).toContain("border-line-strong");
+  });
+
+  test("accent draws a TOP stripe and never a left edge", () => {
+    // The whole point of the correction: the left edge is the SEVERITY axis
+    // (4px, banners). A card wearing it competes for alarm with real banners.
+    for (const accent of CARD_TONES) {
+      const classes = cardClasses({ accent });
+      if (accent === "none") {
+        expect(classes).not.toContain("border-t-(length:--stroke-accent)");
+        continue;
+      }
+      expect(classes, `${accent} lost the top stripe`).toContain(
+        "border-t-(length:--stroke-accent)",
+      );
+      expect(classes, `${accent} drew a left edge`).not.toMatch(/border-l-[a-z(]/);
+      expect(classes, `${accent} used the severity stroke`).not.toContain(
+        "--stroke-severity",
+      );
+    }
+  });
+
+  test("settled takes a stripe — live and alarming are different claims", () => {
+    expect(cardClasses({ accent: "settled" })).toContain("border-t-state-settled");
+  });
+
+  test("tone and accent stay independent — a tinted card can carry any stripe", () => {
+    const seen = new Set<string>();
+    for (const tone of CARD_TONES) {
+      for (const accent of CARD_TONES) {
+        const c = cardClasses({ tone, accent });
+        expect(seen.has(c), `tone=${tone}/accent=${accent} duplicates another pair`).toBe(
+          false,
+        );
+        seen.add(c);
+      }
+    }
+  });
+
+  test("dashed swaps the hairline to dashed — provisional is not evidence", () => {
+    expect(cardClasses({ dashed: true })).toContain("border-dashed");
+    expect(cardClasses({ dashed: false })).not.toContain("border-dashed");
+    expect(cardClasses({})).not.toContain("border-dashed");
   });
 });

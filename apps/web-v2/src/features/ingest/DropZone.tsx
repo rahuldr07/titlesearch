@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { cn } from "../../shared/ui/classNames";
+import { Card } from "../../shared/ui/Card";
 import { PackageChip } from "./PackageChip";
 
 /**
@@ -20,6 +20,17 @@ import { PackageChip } from "./PackageChip";
  * to it, never a replacement — a drop-only target is unusable by keyboard and
  * invisible to a test harness, and `ingest.spec` sets the file directly on the
  * input.
+ *
+ * NOT AN `EmptyPanel`, though it is drawn from the same dashed ground. An empty
+ * panel means the server answered and there is nothing there; this zone is an
+ * input that has not been used yet, and the app has been told nothing either
+ * way. Reusing the resolved-and-empty component for a waiting control is how a
+ * loading state ends up shipped as a design.
+ *
+ * The drag-over tint comes from `Card tone="action"`, whose hairline is the
+ * family's pale `-border`. Hand-spelled it reached for the saturated
+ * `border-action`, so the one meaning "you are over the target" was drawn
+ * heavier here than anywhere else it appears.
  */
 export function DropZone({ file, onFile }: { file: File | null; onFile: (file: File | null) => void }) {
   const [over, setOver] = useState(false);
@@ -27,7 +38,10 @@ export function DropZone({ file, onFile }: { file: File | null; onFile: (file: F
 
   return (
     <div className="flex flex-col gap-7">
-      <div
+      <Card
+        dashed
+        tone={over ? "action" : "none"}
+        className="flex flex-col items-center gap-7 p-14 text-center"
         onDragOver={(event) => {
           event.preventDefault();
           setOver(true);
@@ -38,10 +52,6 @@ export function DropZone({ file, onFile }: { file: File | null; onFile: (file: F
           setOver(false);
           onFile(event.dataTransfer.files[0] ?? null);
         }}
-        className={cn(
-          "flex flex-col items-center gap-7 rounded-9 border border-dashed p-14 text-center",
-          over ? "border-action bg-action-surface" : "border-line-strong bg-surface-panel",
-        )}
       >
         <span className="flex size-22 items-center justify-center rounded-7 border border-action-border font-mono text-micro tracking-badge font-bold text-action">
           PDF
@@ -66,7 +76,7 @@ export function DropZone({ file, onFile }: { file: File | null; onFile: (file: F
           onChange={(event) => onFile(event.target.files?.[0] ?? null)}
           className="sr-only"
         />
-      </div>
+      </Card>
 
       {file === null ? null : <PackageChip file={file} />}
     </div>

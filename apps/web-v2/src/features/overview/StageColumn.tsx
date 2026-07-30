@@ -1,6 +1,7 @@
 import type { LifecycleStage } from "@titlepipe/contract";
 import { Card } from "../../shared/ui/Card";
 import { Chip } from "../../shared/ui/Chip";
+import { EmptyNote } from "../../shared/ui/EmptyPanel";
 import { cn } from "../../shared/ui/classNames";
 import { OrderCard } from "./OrderCard";
 import { countInk, STAGE_TONE } from "./stageTone";
@@ -16,6 +17,13 @@ import { countInk, STAGE_TONE } from "./stageTone";
  * An empty column says "Nothing here" rather than collapsing, so the shape of
  * the pipeline stays constant between glances. A board whose columns appear and
  * vanish cannot be read at speed.
+ *
+ * That line is an `EmptyNote` — RESOLVED AND EMPTY, never *not loaded*. The
+ * screen returns `ScreenMessage` above this component while the census is in
+ * flight, so by the time a column renders the server has answered and "nothing
+ * here" is a fact rather than a guess. The italic is what carries it: a collapsed
+ * column and a column that never arrived draw identically, and the italic marks
+ * the line as the board talking ABOUT an absence rather than as a row of data.
  *
  * The design tints the machine column with a diagonal hatch. Not reproduced:
  * the only hatch in this codebase means "the document is silent on this field",
@@ -59,7 +67,11 @@ export function StageColumn({ stage }: { stage: LifecycleStage }) {
       </div>
       <div className="flex min-h-33 flex-col gap-3 p-4">
         {stage.orders.length === 0 ? (
-          <p className="px-1 py-4 text-tiny text-ink-muted italic">Nothing here</p>
+          /* The note carries the voice; the column keeps the spacing — which is
+             why `EmptyNote` has no padding of its own to fight with. */
+          <div className="px-1 py-4">
+            <EmptyNote>Nothing here</EmptyNote>
+          </div>
         ) : (
           stage.orders.map((order) => <OrderCard key={order.order_ref} order={order} />)
         )}

@@ -5,6 +5,7 @@ import type {
   SignoffAnswer,
 } from "@titlepipe/contract";
 import { Card, CardFooter, CardHeader } from "../../shared/ui/Card";
+import { DividedSection } from "../../shared/ui/ListRow";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
 import { Button } from "../../shared/ui/Button";
 import { SignoffRow } from "./SignoffRow";
@@ -17,6 +18,13 @@ import { SignoffRow } from "./SignoffRow";
  * everything typed after that lives here until a submit endpoint exists. The
  * seed is taken once, on mount, because re-seeding from a refetch would wipe
  * what the person had typed under them.
+ *
+ * THE ROWS SIT IN A `DividedSection` AND NOTHING ELSE DOES. Each row drops its
+ * top hairline when it is `:first-child`, and that exemption is a fact about the
+ * DOM rather than about the data: the "Not signed" strip above renders only
+ * while nobody has signed, so sharing a parent with it would move the exemption
+ * onto the strip the moment an order WAS signed, and the list would open with a
+ * hairline hanging off nothing on exactly those orders.
  */
 function seedAnswers(lines: readonly OrderSignoffLine[]): Record<string, SignoffAnswer> {
   const seed: Record<string, SignoffAnswer> = {};
@@ -64,7 +72,7 @@ export function SignoffCard({ signoff }: { signoff: OrderSignoffResponse }) {
 
   return (
     <>
-      <Card className="border-t-(length:--stroke-accent) border-t-action">
+      <Card accent="action">
         <CardHeader>
           <Eyebrow variant="section" tone="action">
             Abstractor Sign-off
@@ -85,7 +93,7 @@ export function SignoffCard({ signoff }: { signoff: OrderSignoffResponse }) {
           </p>
         ) : null}
 
-        <ul>
+        <DividedSection>
           {lines.map((line) => (
             <SignoffRow
               key={line.line_id}
@@ -97,7 +105,7 @@ export function SignoffCard({ signoff }: { signoff: OrderSignoffResponse }) {
               onComment={(comment) => setComments((prev) => ({ ...prev, [line.line_id]: comment }))}
             />
           ))}
-        </ul>
+        </DividedSection>
 
         <CardFooter className="text-xs font-medium text-ink-secondary">
           {answered} of {lines.length} answered.

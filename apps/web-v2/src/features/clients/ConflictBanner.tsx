@@ -18,6 +18,12 @@ import { Eyebrow } from "../../shared/ui/Eyebrow";
  * THE SERVER'S SENTENCE IS PRINTED VERBATIM. It is the detector's own account
  * of what contradicts what, and paraphrasing it here would make the screen and
  * the record disagree about a decision somebody is being asked to sign.
+ *
+ * GROUND AND HAIRLINE COME FROM ONE PROP. Spelled by hand the pair drifts — the
+ * saturated base colour instead of the pale `-border`, or no edge at all — and
+ * this banner sits inside a card that already has a hairline, so a wrong one
+ * here reads as the card's own edge and the conflict stops looking like a block
+ * of its own.
  */
 export function ConflictBanner({
   conflict,
@@ -29,11 +35,7 @@ export function ConflictBanner({
   acknowledged: boolean;
 }) {
   return (
-    <Card
-      accent="halt"
-      data-testid="conflict"
-      className="border-state-halt-border bg-state-halt-surface"
-    >
+    <Card tone="halt" accent="halt" data-testid="conflict">
       <CardBody className="px-7 py-6">
         <Eyebrow variant="caption" tone="halt" as="h3">
           Conflict — {productName} and this client cannot both be satisfied

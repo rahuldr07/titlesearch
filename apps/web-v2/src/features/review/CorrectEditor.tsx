@@ -1,6 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Button } from "../../shared/ui/Button";
+import { Card } from "../../shared/ui/Card";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
+import { RefusalNudge } from "../../shared/ui/RefusalNudge";
 import { TextField } from "../../shared/ui/TextField";
 
 /**
@@ -23,6 +25,13 @@ import { TextField } from "../../shared/ui/TextField";
  * carries its own key handler. The container sees the event whichever field has
  * focus, and a bracket or a chord key still reaches the input as text
  * (`sidebar.spec` #5, `hard.spec` #5).
+ *
+ * THE REFUSAL IS ANNOUNCED, NOT MERELY DRAWN. This file used to spell the nudge
+ * as a bare `role="alert"` paragraph with no id and no `aria-describedby` back
+ * to the reason field, so a sighted reviewer met the blocker and a screen-reader
+ * one met an unexplained disabled form. Omitting the link had no visible
+ * consequence, which is why it stayed missing; `RefusalNudge` performs the
+ * wiring itself, and the id on the reason input is what it wires to.
  */
 export function CorrectEditor({
   seed,
@@ -39,6 +48,7 @@ export function CorrectEditor({
   const [reason, setReason] = useState("");
   const [refused, setRefused] = useState(false);
   const valueRef = useRef<HTMLInputElement>(null);
+  const reasonId = useId();
 
   // `e` lands the caret in the value and SELECTS it, so typing replaces the
   // machine read rather than appending to it (the design's `el.select()`).
@@ -70,9 +80,11 @@ export function CorrectEditor({
   };
 
   return (
-    <div
+    <Card
+      size="nested"
+      tone="action"
       onKeyDown={keys}
-      className="flex flex-col gap-3 rounded-5 border border-action-border bg-action-surface p-5"
+      className="flex flex-col gap-3 p-5"
     >
       <Eyebrow variant="field">Correct to</Eyebrow>
       <TextField
@@ -87,6 +99,7 @@ export function CorrectEditor({
       />
       <Eyebrow variant="field">Why — what the document says</Eyebrow>
       <TextField
+        id={reasonId}
         data-testid="edit-reason"
         value={reason}
         tone={refused ? "halt" : "neutral"}
@@ -105,11 +118,11 @@ export function CorrectEditor({
         ✎ Save correction
       </Button>
       {refused ? (
-        <p data-testid="nudge" role="alert" className="text-xs font-semibold text-state-halt-ink">
-          a correction needs both the value and its why — the why is what makes
-          it a rule later
-        </p>
+        <RefusalNudge
+          controlId={reasonId}
+          message="a correction needs both the value and its why — the why is what makes it a rule later"
+        />
       ) : null}
-    </div>
+    </Card>
   );
 }

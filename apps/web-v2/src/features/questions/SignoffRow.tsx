@@ -1,6 +1,7 @@
 import type { KeyboardEvent } from "react";
 import type { OrderSignoffLine, SignoffAnswer } from "@titlepipe/contract";
 import { Button } from "../../shared/ui/Button";
+import { ListRow } from "../../shared/ui/ListRow";
 import { TextField } from "../../shared/ui/TextField";
 import { cn } from "../../shared/ui/classNames";
 import { SignoffRowNotes } from "./SignoffRowNotes";
@@ -67,7 +68,15 @@ export function SignoffRow({
   };
 
   return (
-    <li className="border-t border-line-subtle first:border-t-0">
+    /*
+     * `p-0` MOVES THE PADDING INWARDS, IT DOES NOT DELETE IT — same 16/12, on
+     * the tinted element, because the tint is a full-width state band and not a
+     * highlight around the text. The tint cannot move out onto the row either:
+     * an unanswered line is `border-dashed`, and on the row that style would
+     * reach the top hairline, breaking the list's rule into dashes on exactly
+     * the lines still owing an answer.
+     */
+    <ListRow className="p-0">
       {/* Delegation container: the keys belong to the buttons inside it. */}
       <div
         onKeyDown={handleKey}
@@ -134,6 +143,6 @@ export function SignoffRow({
           </div>
         ) : null}
       </div>
-    </li>
+    </ListRow>
   );
 }

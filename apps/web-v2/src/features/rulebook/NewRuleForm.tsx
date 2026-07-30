@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { Button } from "../../shared/ui/Button";
+import { Card } from "../../shared/ui/Card";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
 import { TextArea, TextField } from "../../shared/ui/TextField";
+import { PendingBanner } from "./PendingBanner";
 import { TagChoice, type AuthorableTag } from "./TagChoice";
 
 const NO_ENDPOINT =
@@ -24,6 +26,13 @@ const NO_ENDPOINT =
  * SAVING REFUSES AND NAMES WHAT IS MISSING, in one message listing every empty
  * required field. Marking each field individually makes the author fix them one
  * at a time; one sentence lets them fix all four and press once.
+ *
+ * THAT MESSAGE IS NOT A `RefusalNudge`, and the reason is the same sentence:
+ * the nudge wires itself to ONE control's `aria-describedby`, and a refusal
+ * naming four fields pointed at one input would describe the citation box with
+ * a complaint about the scope box. It keeps `role="alert"` and its own testid,
+ * and takes only `Card`'s halt tone so it is drawn as the two restricted-act
+ * refusals in the detail pane are.
  */
 export function NewRuleForm({ onCancel }: { onCancel: () => void }) {
   const [scope, setScope] = useState("");
@@ -55,23 +64,7 @@ export function NewRuleForm({ onCancel }: { onCancel: () => void }) {
       data-testid="new-rule-form"
       className="overflow-hidden rounded-10 border-(length:--stroke-emphasis) border-state-attend border-dashed bg-surface-panel"
     >
-      <div className="flex items-center gap-6 border-b border-state-attend-border bg-state-attend-surface px-8 py-7">
-        <span
-          aria-hidden
-          className="flex size-13 shrink-0 items-center justify-center rounded-pill bg-state-attend font-bold text-ink-on-action"
-        >
-          ◷
-        </span>
-        <div>
-          <p className="text-md font-bold tracking-badge text-state-attend-ink">
-            PENDING — AFFECTS NOTHING YET
-          </p>
-          <p className="mt-1 text-xs leading-body text-state-attend-ink">
-            Saving records this rule. It cannot change a report — confirmation is
-            a separate act by an engineer or admin.
-          </p>
-        </div>
-      </div>
+      <PendingBanner />
 
       <div className="flex flex-col gap-3 p-8">
         <Eyebrow variant="field" as="label" htmlFor="rule-scope">
@@ -126,13 +119,15 @@ export function NewRuleForm({ onCancel }: { onCancel: () => void }) {
         <TagChoice value={tag} onChange={setTag} />
 
         {error === null ? null : (
-          <p
+          <Card
+            size="nested"
+            tone="halt"
             role="alert"
             data-testid="new-rule-error"
-            className="rounded-7 border border-state-halt-border bg-state-halt-surface px-6 py-5 text-sm leading-body text-state-halt-ink"
+            className="px-6 py-5 text-sm leading-body text-state-halt-ink"
           >
             {error}
-          </p>
+          </Card>
         )}
 
         <div className="mt-2 flex gap-4">

@@ -5,6 +5,7 @@ import { pickDelivered } from "./deliveredRecord";
 import { FinalizedNotice } from "./FinalizedNotice";
 import { ReissuedSheet } from "./ReissuedSheet";
 import { ReopenPanel } from "./ReopenPanel";
+import { EmptyPanel } from "../../shared/ui/EmptyPanel";
 import { Screen } from "../../shared/ui/Screen";
 
 /**
@@ -50,14 +51,26 @@ export function DeliveredScreen({
 
   // A blank would read as "delivered, nothing to show" — the same silent-blank
   // failure `ScreenFailure` exists to prevent. Say which order and say why.
+  //
+  // `EmptyPanel` and not a bare line, because this branch is RESOLVED AND EMPTY:
+  // the list arrived and holds no delivery for this order. The two branches
+  // above are the *not loaded* cases and stay a different component on purpose —
+  // once "no report yet" and "the request is still out" draw alike, nobody can
+  // tell an unfinished order from a broken fetch. The testid moves to the
+  // wrapper rather than onto a prop so the assertion still selects the whole
+  // statement, text unchanged.
   if (record === null) {
     return (
       <Screen measure="460" pad="40" placement="centre">
-        <p data-testid="nothing-delivered" className="text-base text-ink-secondary">
-          {orderId === undefined
-            ? "No delivered report yet."
-            : `Order ${orderId} has no delivered report yet.`}
-        </p>
+        <div data-testid="nothing-delivered">
+          <EmptyPanel
+            title={
+              orderId === undefined
+                ? "No delivered report yet."
+                : `Order ${orderId} has no delivered report yet.`
+            }
+          />
+        </div>
       </Screen>
     );
   }

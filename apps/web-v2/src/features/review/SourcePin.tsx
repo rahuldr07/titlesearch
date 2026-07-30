@@ -1,5 +1,6 @@
 import { toEvidenceBoxes } from "../../entities/document/coordinates";
 import { EvidenceOverlay } from "../../entities/document/EvidenceOverlay";
+import { EmptyNote } from "../../shared/ui/EmptyPanel";
 
 /**
  * PROVENANCE COORDINATES RENDER AS A PIN ON THE PAGE (`review.spec` #10).
@@ -15,6 +16,11 @@ import { EvidenceOverlay } from "../../entities/document/EvidenceOverlay";
  *
  * CONTRACT GAP: there is no page-image endpoint, so the frame is the page
  * geometry with the recorded line in place — it does not pretend to be a scan.
+ *
+ * "NO COORDINATES" IS AN ANSWER, NOT A WAIT — `EmptyNote`, whose italic marks
+ * the line as the app talking ABOUT an absence. The reading is already in hand
+ * when this renders; the reader simply declared no line. Drawing it in the same
+ * voice as ordinary body copy invites the reading that the pin is still coming.
  */
 export function SourcePin({
   seat,
@@ -43,10 +49,10 @@ export function SourcePin({
         {page === null ? "" : ` · page ${page}`}
       </p>
       {boxes === null ? (
-        <p className="text-xs text-ink-muted">
+        <EmptyNote>
           This reader declared no line coordinates, so nothing is drawn. The
           snippet above is the citation.
-        </p>
+        </EmptyNote>
       ) : (
         <div className="relative aspect-[17/22] w-full max-w-96 border border-line-strong bg-surface-document">
           <EvidenceOverlay boxes={boxes} />

@@ -3,6 +3,7 @@ import { enginesDisagree, hasNoProvenance, naChip, rowMark } from "./fieldLabel"
 import { fieldLabel } from "./fieldLabel";
 import { NoValue } from "../../entities/field/NoValue";
 import { Chip } from "../../shared/ui/Chip";
+import { ListRow } from "../../shared/ui/ListRow";
 import { cn } from "../../shared/ui/classNames";
 
 /**
@@ -16,6 +17,12 @@ import { cn } from "../../shared/ui/classNames";
  * A PENDING FIELD IS NEITHER (§0.3). It renders "not yet extracted" and never
  * "Not Available", because the pipeline has not looked yet — saying the value
  * is unavailable would be reporting a conclusion nobody reached.
+ *
+ * THE ROW IS THE BUTTON, so the row carries no padding of its own (`p-0` over
+ * `ListRow`'s measured step). Padding on the `li` would turn the gutter into
+ * dead space that looks clickable and is not, and would leave the selected tint
+ * stopping short of the row edge. `ListRow` is here for the hairline and its
+ * `first:` exemption — the triple this file used to spell by hand.
  */
 export function FieldRow({
   field,
@@ -30,7 +37,7 @@ export function FieldRow({
   const queued = field.state === "needs_review";
 
   return (
-    <li className="border-t border-line-subtle first:border-t-0">
+    <ListRow className="p-0">
       <button
         type="button"
         data-testid={`row-${field.path}`}
@@ -84,6 +91,6 @@ export function FieldRow({
           </span>
         )}
       </button>
-    </li>
+    </ListRow>
   );
 }

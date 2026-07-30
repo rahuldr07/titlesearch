@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { Rule } from "@titlepipe/contract";
 import { useResolveCluster, type RuleChoice } from "./queries";
 import { ApiError } from "../../shared/api";
+import { Card } from "../../shared/ui/Card";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
 import { TextArea } from "../../shared/ui/TextField";
 import { Button } from "../../shared/ui/Button";
@@ -33,6 +34,12 @@ interface ResolveCardProps {
  * ONLY LIVE RULES ARE CITABLE — citing a pending rule would resolve an
  * escalation into something that cannot act. CONTRACT GAP: the server accepts
  * any existing rule id here, so this refusal currently lives only in the client.
+ *
+ * THE SERVER'S REJECTION STAYS A HAND-SPELLED LINE, not a `RefusalNudge`. That
+ * component IS the client's own §4.6 refusal and stamps `data-testid="nudge"`
+ * on what it draws; a 500 from the resolve endpoint is a different claim about
+ * a different actor, and filing it under the same testid would let a screen
+ * that never refused anything satisfy a refusal assertion.
  */
 export function ResolveCard({ ids, rules, onResolved }: ResolveCardProps) {
   const [ruling, setRuling] = useState("");
@@ -52,7 +59,7 @@ export function ResolveCard({ ids, rules, onResolved }: ResolveCardProps) {
       : "Resolve — held until the rule is drafted";
 
   return (
-    <div className="flex flex-col gap-5 rounded-6 border border-line-strong bg-surface-panel p-8">
+    <Card className="flex flex-col gap-5 p-8">
       <Eyebrow variant="section">
         The rule — one sentence, your words. This is what the screen is for; the
         per-order answer is incidental.
@@ -126,6 +133,6 @@ export function ResolveCard({ ids, rules, onResolved }: ResolveCardProps) {
           server: {resolve.error.message}
         </p>
       ) : null}
-    </div>
+    </Card>
   );
 }

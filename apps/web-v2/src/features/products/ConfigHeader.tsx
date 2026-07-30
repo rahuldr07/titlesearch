@@ -1,5 +1,6 @@
-import { ScreenTitle } from "../../app/ScreenTitle";
+import { Card } from "../../shared/ui/Card";
 import { Chip } from "../../shared/ui/Chip";
+import { ScreenHeading } from "../../shared/ui/ScreenHeading";
 
 /**
  * The header states the ONE thing that stops this screen being dangerous: what
@@ -15,6 +16,12 @@ import { Chip } from "../../shared/ui/Chip";
  * The version chip is therefore not decoration: it is the identifier the order
  * carries. It comes from the server and the screen never increments it — only a
  * publish the server accepted may move it.
+ *
+ * THE CHIP RIDES ON THE HEADING ROW, not under the lede. Bottom-aligned against
+ * the whole block it drifted further from the title the longer that sentence
+ * ran, until the identifier an order is stamped with read as a footnote to a
+ * paragraph about saving. `ScreenHeading`'s `actions` pairs it with the h1,
+ * where it belongs whatever the copy does.
  */
 export function ConfigHeader({
   canAuthor,
@@ -26,62 +33,78 @@ export function ConfigHeader({
   frozen: boolean;
 }) {
   return (
-    <header className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-end gap-8">
-        <div className="min-w-130 flex-1">
-          <ScreenTitle>Admin · Products &amp; sign-off</ScreenTitle>
-          <h1 className="mt-4 text-3xl font-semibold text-ink-primary">Configuration</h1>
-          <p className="mt-2 max-w-prose text-base leading-body text-ink-secondary">
+    <div className="flex flex-col gap-6">
+      <ScreenHeading
+        eyebrow="Admin · Products & sign-off"
+        title="Configuration"
+        lede={
+          <p>
             Editable without a release. Records (products, clients) create
             directly; behaviour config (line wording, baseline cells, overrides)
             publishes a new config version on save. Nothing is deleted — things
             retire. Never reaches an order already in flight.
           </p>
-        </div>
-        <div className="text-right">
-          <Chip
-            tone="action"
-            size="md"
-            shape="mono"
-            bordered
-            className="normal-case"
-            data-testid="config-version"
-          >
-            {configVersion}
-          </Chip>
-          {/*
-            FROZEN IS THE SERVER'S WORD, not a UI mode. It says this version is
-            closed to further change, so the next accepted edit mints a new one
-            — which is exactly what makes the number above safe to stamp on an
-            order.
-          */}
-          {frozen ? (
-            <p className="mt-2 text-tiny font-semibold text-ink-secondary" data-testid="config-frozen">
-              frozen — the next accepted edit mints a new version
-            </p>
-          ) : null}
-          <p className="mt-2 text-tiny text-ink-muted">
-            current · applies to new orders only
-          </p>
-        </div>
-      </div>
+        }
+        actions={<VersionStamp configVersion={configVersion} frozen={frozen} />}
+      />
 
       {/*
         The banner is a COURTESY, never the control. The server refuses an
         unauthorised write on its own; this only explains why the authoring
         controls are absent, so a reviewer does not read a missing button as a
-        broken screen.
+        broken screen. `tone="attend"` binds its ground to its hairline — the
+        same pair the line-editor's version warning wears, because both say
+        "this is a caution, not a failure" and a reader should not have to
+        decide whether two amber tints mean two different things.
       */}
       {canAuthor ? null : (
-        <p
+        <Card
+          size="nested"
+          tone="attend"
           data-testid="config-read-only"
-          className="rounded-7 border border-state-attend-border bg-state-attend-surface px-7 py-5 text-xs leading-body text-state-attend-ink"
+          className="px-7 py-5 text-xs leading-body text-state-attend-ink"
         >
           Viewing only. Authoring is limited to admin and engineer — the server
           enforces this independently. Switch role via the account menu to
           preview editing.
-        </p>
+        </Card>
       )}
-    </header>
+    </div>
+  );
+}
+
+/**
+ * The version an order gets stamped with, plus what the server says about it.
+ *
+ * FROZEN IS THE SERVER'S WORD, not a UI mode. It says this version is closed to
+ * further change, so the next accepted edit mints a new one — which is exactly
+ * what makes the number above it safe to stamp on an order.
+ */
+function VersionStamp({
+  configVersion,
+  frozen,
+}: {
+  configVersion: string;
+  frozen: boolean;
+}) {
+  return (
+    <div className="text-right">
+      <Chip
+        tone="action"
+        size="md"
+        shape="mono"
+        bordered
+        className="normal-case"
+        data-testid="config-version"
+      >
+        {configVersion}
+      </Chip>
+      {frozen ? (
+        <p className="mt-2 text-tiny font-semibold text-ink-secondary" data-testid="config-frozen">
+          frozen — the next accepted edit mints a new version
+        </p>
+      ) : null}
+      <p className="mt-2 text-tiny text-ink-muted">current · applies to new orders only</p>
+    </div>
   );
 }

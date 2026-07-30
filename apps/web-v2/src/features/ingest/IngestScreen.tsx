@@ -7,10 +7,10 @@ import { ORDER_FIELDS } from "./orderFields";
 import { RefusedCard } from "./RefusedCard";
 import { AcceptedCard } from "./AcceptedCard";
 import { ApiError } from "../../shared/api";
-import { ScreenTitle } from "../../app/ScreenTitle";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
 import { Button } from "../../shared/ui/Button";
 import { Screen } from "../../shared/ui/Screen";
+import { ScreenHeading } from "../../shared/ui/ScreenHeading";
 
 interface Refusal {
   missing_fields: string[];
@@ -80,15 +80,15 @@ export function IngestScreen() {
   return (
     <Screen measure="560" pad="40" placement="centre">
       <div className="flex flex-col gap-9">
-        <header className="flex flex-col gap-3">
-          <ScreenTitle>Step 1 — Upload</ScreenTitle>
-          <h1 className="text-5xl font-semibold">New title-search package</h1>
-          <p className="max-w-185 text-base leading-body text-ink-secondary">
-            One scanned PDF per order. Nothing leaves this tool as a deliverable
-            until a reviewer has approved it, field by field.
-          </p>
-        </header>
+        <ScreenHeading
+          size="26"
+          eyebrow="Step 1 — Upload"
+          title="New title-search package"
+          lede="One scanned PDF per order. Nothing leaves this tool as a deliverable until a reviewer has approved it, field by field."
+        />
 
+        {/* NOT a `RefusalNudge`: the server's verdict on the whole request, not a
+            control naming what it lacks — there is no control id to describe, and the nudge's own fixed testid would rename the `ingest-banner` gate. */}
         {upload.error instanceof ApiError ? (
           <p data-testid="ingest-banner" role="alert" className="text-xs font-semibold text-state-halt-ink">
             {upload.error.message}

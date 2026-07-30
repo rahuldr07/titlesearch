@@ -5,8 +5,8 @@ import { IdentityCard } from "./IdentityCard";
 import { CapabilityCard } from "./CapabilityCard";
 import { SecurityCard } from "./SecurityCard";
 import { PreferencesCard } from "./PreferencesCard";
-import { ScreenTitle } from "../../app/ScreenTitle";
 import { Screen } from "../../shared/ui/Screen";
+import { ScreenHeading } from "../../shared/ui/ScreenHeading";
 
 /**
  * YOUR PROFILE — four cards, in descending order of how little you control.
@@ -41,10 +41,7 @@ export function ProfileScreen() {
   return (
     <Screen measure="720">
       <div className="flex flex-col gap-7">
-        <header className="flex flex-col gap-3">
-          <ScreenTitle>Account</ScreenTitle>
-          <h1 className="text-3xl font-semibold text-ink-primary">Your profile</h1>
-        </header>
+        <ScreenHeading eyebrow="Account" title="Your profile" />
 
         {profile.isError ? (
           <p className="text-base text-state-halt-ink">Your profile is unavailable.</p>

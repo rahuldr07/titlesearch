@@ -1,5 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
+import { Card } from "../../shared/ui/Card";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
+import { RefusalNudge } from "../../shared/ui/RefusalNudge";
 import { TextField } from "../../shared/ui/TextField";
 
 /**
@@ -11,6 +13,12 @@ import { TextField } from "../../shared/ui/TextField";
  * while a fabricated default is indistinguishable downstream from a real
  * question, and the senior resolving it has no way to tell which they are
  * reading. Overridden — the question is typed or nothing is sent.
+ *
+ * THE REFUSAL IS ANNOUNCED, NOT MERELY DRAWN. The nudge was a bare
+ * `role="alert"` paragraph with no id and nothing pointing the input at it, so
+ * the same release blocker was spoken on the screens that remembered the link
+ * and silent here. `RefusalNudge` does that wiring itself; the id on the
+ * question input exists for it to bind to.
  */
 export function EscalateEditor({
   onSubmit,
@@ -22,14 +30,16 @@ export function EscalateEditor({
   const [question, setQuestion] = useState("");
   const [refused, setRefused] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const questionId = useId();
 
   useEffect(() => inputRef.current?.focus(), []);
 
   return (
-    <div className="flex flex-col gap-3 rounded-5 border border-state-attend-border bg-state-attend-surface p-5">
+    <Card size="nested" tone="attend" className="flex flex-col gap-3 p-5">
       <Eyebrow variant="field">What do you not know?</Eyebrow>
       <TextField
         ref={inputRef}
+        id={questionId}
         data-testid="escalate-input"
         value={question}
         tone={refused ? "halt" : "neutral"}
@@ -54,11 +64,11 @@ export function EscalateEditor({
         }}
       />
       {refused ? (
-        <p data-testid="nudge" role="alert" className="text-xs font-semibold text-state-halt-ink">
-          an escalation needs its question — the senior answers questions, not
-          flags
-        </p>
+        <RefusalNudge
+          controlId={questionId}
+          message="an escalation needs its question — the senior answers questions, not flags"
+        />
       ) : null}
-    </div>
+    </Card>
   );
 }

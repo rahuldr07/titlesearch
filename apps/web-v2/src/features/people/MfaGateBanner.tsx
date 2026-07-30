@@ -14,14 +14,23 @@ import { Card, CardBody } from "../../shared/ui/Card";
  * those gets added here on purpose rather than being discovered in the code.
  *
  * The count arrives as a server figure; this component never counts rows.
+ *
+ * THE 4px LEFT EDGE IS THE SEVERITY AXIS AND STAYS HAND-SPELLED. `Card.accent`
+ * is a 2px inset TOP stripe meaning "this is the live block", which is a
+ * different claim: an unmet production gate is a problem, not the step you are
+ * currently on. Taking the accent prop here would quietly demote the banner to
+ * the same weight as an ordinary highlighted card on a screen it is supposed to
+ * out-rank. The tinted GROUND does come from `tone`, because ground and
+ * hairline drifting apart is the failure that prop exists to stop.
  */
 export function MfaGateBanner({ count }: { count: number }) {
   if (count === 0) return null;
 
   return (
     <Card
+      tone="halt"
       role="status"
-      className="border-state-halt-border bg-state-halt-surface border-l-(length:--stroke-severity) border-l-state-halt"
+      className="border-l-(length:--stroke-severity) border-l-state-halt"
     >
       <CardBody className="flex items-center gap-6 px-8 py-6">
         <span

@@ -1,5 +1,6 @@
 import { DEMO_AMENDED_FIELD, DEMO_ORDER_HISTORY } from "./demoContent";
 import { Card } from "../../shared/ui/Card";
+import { DividedSection, ListRow } from "../../shared/ui/ListRow";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
 import { Stamp } from "../../shared/ui/Stamp";
 
@@ -48,22 +49,39 @@ export function ReissuedSheet({ orderId }: { orderId: string }) {
           </Eyebrow>
         </div>
 
-        <div className="grid grid-cols-3 items-baseline px-7 py-5">
-          <span className="text-sm text-ink-secondary">{DEMO_AMENDED_FIELD.label}</span>
-          <span className="font-mono text-sm text-ink-muted line-through">
-            {DEMO_AMENDED_FIELD.v1}
-          </span>
-          <span data-testid="amended-v2" className="font-mono text-sm font-semibold text-action-ink">
-            {DEMO_AMENDED_FIELD.v2}
-          </span>
-        </div>
+        {/*
+          The hairline between the two rows used to be spelled by OMISSION — the
+          first row simply had no `border-t`, the second did. That is a fact
+          about the source order, not about the DOM: adding a row above, or
+          rendering the diff from a list once the server owns it, doubles the
+          hairline under the header and nobody notices until it ships.
+          `DividedSection` names the boundary the `first:` exemption is measured
+          against, so the rule survives the row set changing. The padding is the
+          sheet's own 14/10 and is kept — `ListRow`'s two measured steps are the
+          card row and the rail row, and a third variant for this would ratify a
+          scale nobody designed.
+        */}
+        <DividedSection as="div">
+          <ListRow as="div" className="grid grid-cols-3 items-baseline px-7 py-5">
+            <span className="text-sm text-ink-secondary">{DEMO_AMENDED_FIELD.label}</span>
+            <span className="font-mono text-sm text-ink-muted line-through">
+              {DEMO_AMENDED_FIELD.v1}
+            </span>
+            <span
+              data-testid="amended-v2"
+              className="font-mono text-sm font-semibold text-action-ink"
+            >
+              {DEMO_AMENDED_FIELD.v2}
+            </span>
+          </ListRow>
 
-        <div className="grid grid-cols-3 items-baseline border-t border-line-subtle px-7 py-5">
-          <span className="text-sm text-ink-muted">All other fields</span>
-          <span className="col-span-2 text-xs text-ink-muted">
-            unchanged — carried forward from v1
-          </span>
-        </div>
+          <ListRow as="div" className="grid grid-cols-3 items-baseline px-7 py-5">
+            <span className="text-sm text-ink-muted">All other fields</span>
+            <span className="col-span-2 text-xs text-ink-muted">
+              unchanged — carried forward from v1
+            </span>
+          </ListRow>
+        </DividedSection>
       </Card>
 
       <p className="text-xs text-ink-muted">{DEMO_ORDER_HISTORY}</p>

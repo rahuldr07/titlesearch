@@ -1,5 +1,6 @@
 import type { PipelineStage, StagePhase } from "@titlepipe/contract";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
+import { ListRow } from "../../shared/ui/ListRow";
 import { cn } from "../../shared/ui/classNames";
 
 /**
@@ -50,12 +51,13 @@ const MARK: Record<StagePhase, string> = {
 
 export function StageRow({ stage }: { stage: PipelineStage }) {
   return (
-    <li
-      className={cn(
-        "flex items-center gap-7 border-t border-line-subtle px-8 py-6 first:border-t-0",
-        ROW[stage.phase],
-      )}
-    >
+    /*
+     * `interactive` is deliberately off. A stage is a statement about the run,
+     * not a control — nothing here opens, and a hover tint would promise a
+     * click that does not exist on the row a person is most likely to try it
+     * on, the halted one.
+     */
+    <ListRow className={cn("flex items-center gap-7", ROW[stage.phase])}>
       <span
         aria-hidden
         className={cn(
@@ -84,6 +86,6 @@ export function StageRow({ stage }: { stage: PipelineStage }) {
       <Eyebrow variant="field" as="span" tone="strong" className="shrink-0">
         {stage.owner}
       </Eyebrow>
-    </li>
+    </ListRow>
   );
 }

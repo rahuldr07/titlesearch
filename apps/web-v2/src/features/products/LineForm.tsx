@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import { Button } from "../../shared/ui/Button";
+import { Card } from "../../shared/ui/Card";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
 import { Switch } from "../../shared/ui/Switch";
 import { TextArea, TextField } from "../../shared/ui/TextField";
@@ -37,6 +38,10 @@ const COMMENT_CHOICES = [
  * Machine check is left BLANK-ABLE on purpose. A line with no check is
  * human-answered only, and the form says so rather than offering a default
  * check that would make an unverified line look verified.
+ *
+ * The banner is `Card tone="attend"`, not a hand-spelled block: the screen's
+ * read-only notice makes the same kind of claim and was spelled separately, and
+ * two amber blocks with different hairlines read as two severities of one idea.
  */
 export function LineForm({
   editing,
@@ -54,11 +59,15 @@ export function LineForm({
   return (
     <div className="flex flex-col gap-6">
       {editing ? (
-        <p className="rounded-7 border border-state-attend-border bg-state-attend-surface px-6 py-5 text-xs leading-body text-state-attend-ink">
+        <Card
+          size="nested"
+          tone="attend"
+          className="px-6 py-5 text-xs leading-body text-state-attend-ink"
+        >
           Editing the text creates a <span className="font-bold">new version</span>{" "}
           — it does not correct history. Two orders can be answered against two
           wordings; each order records which version it used.
-        </p>
+        </Card>
       ) : null}
 
       <div>

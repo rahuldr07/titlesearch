@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Button } from "../../shared/ui/Button";
+import { Card } from "../../shared/ui/Card";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
 import { RetireConfirm } from "./RetireConfirm";
 import { USED_BY, USED_BY_CAPTION } from "./designFixture";
@@ -75,11 +76,22 @@ export function RetireBlock({ mayRetire }: { mayRetire: boolean }) {
         </div>
       ) : null}
 
+      {/*
+        THE SAME REFUSAL AS `ConfirmBlock`'S, DRAWN THE SAME WAY. Both say a
+        write is restricted to engineer and admin, and they were spelled by
+        hand independently — the moment the two drift, a reader learns that
+        being refused a retire and being refused a confirm are different
+        things. `tone="halt"` binds ground and hairline so they cannot.
+      */}
       {mayRetire ? null : (
-        <p className="rounded-7 border border-state-halt-border bg-state-halt-surface px-6 py-5 text-sm leading-body text-state-halt-ink">
+        <Card
+          size="nested"
+          tone="halt"
+          className="px-6 py-5 text-sm leading-body text-state-halt-ink"
+        >
           Retiring is restricted to engineer and admin — it changes extraction as
           much as confirming does.
-        </p>
+        </Card>
       )}
 
       {armed ? <RetireConfirm onCancel={() => setArmed(false)} /> : null}

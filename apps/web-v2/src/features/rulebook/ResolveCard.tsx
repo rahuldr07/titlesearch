@@ -1,4 +1,5 @@
 import { Button } from "../../shared/ui/Button";
+import { Card } from "../../shared/ui/Card";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
 
 const WHY =
@@ -26,13 +27,16 @@ const WHY =
  * CONTRACT GAP: `Rule` carries no provenance tag, so OPEN cannot be detected
  * from the wire; this panel is shown against the design's pending stage. There
  * is no ruling endpoint and no withdraw endpoint, so both controls are inert.
+ *
+ * ATTEND, NOT HALT, AND AS ONE PAIR. An unresolved question is the pipeline
+ * waiting on a person — the product working correctly — and drawing it in halt
+ * would put it beside the conflict card at equal alarm. `Card`'s tone axis is
+ * what stops the ground and the hairline drifting apart into two strengths of
+ * the same claim, which is what happened while both were spelled by hand.
  */
 export function ResolveCard({ mayWithdraw }: { mayWithdraw: boolean }) {
   return (
-    <section
-      data-testid="rule-resolve"
-      className="rounded-9 border border-state-attend-border bg-state-attend-surface p-7"
-    >
+    <Card tone="attend" data-testid="rule-resolve" className="p-7">
       <Eyebrow variant="caption" tone="attend" as="h3">
         OPEN · how this gets resolved
       </Eyebrow>
@@ -54,6 +58,6 @@ export function ResolveCard({ mayWithdraw }: { mayWithdraw: boolean }) {
           ruling instead.
         </p>
       )}
-    </section>
+    </Card>
   );
 }

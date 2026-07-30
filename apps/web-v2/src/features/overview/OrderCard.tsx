@@ -1,7 +1,15 @@
 import type { LifecycleOrder } from "@titlepipe/contract";
+import { Card } from "../../shared/ui/Card";
 
 /**
  * One order, as it appears inside a stage column.
+ *
+ * `size="nested"` is the 8px radius the design gives a card INSIDE a card, and
+ * the reason to take it from `Card` rather than respell it is that the two greys
+ * are respelled with it: this drew `border-line-strong` on `surface-panel` by
+ * hand, which is the right pair, but nothing here was holding it to that. A card
+ * banded with the inner `line-subtle` reads as one row of a table, and seven
+ * columns of table rows is a different board.
  *
  * FOUR FACTS AND NO MORE: which order, where, how long it has sat, and what it
  * is stopped on. The last one is the card's whole reason to exist — a board
@@ -21,7 +29,7 @@ import type { LifecycleOrder } from "@titlepipe/contract";
  */
 export function OrderCard({ order }: { order: LifecycleOrder }) {
   return (
-    <div className="rounded-7 border border-line-strong bg-surface-panel p-4">
+    <Card size="nested" className="p-4">
       <span className="font-mono text-xs font-semibold text-ink-primary">{order.order_ref}</span>
       <p className="mt-2 text-tiny leading-close text-ink-muted">
         {order.addr} · {order.county}
@@ -36,6 +44,6 @@ export function OrderCard({ order }: { order: LifecycleOrder }) {
           )}
         </div>
       )}
-    </div>
+    </Card>
   );
 }

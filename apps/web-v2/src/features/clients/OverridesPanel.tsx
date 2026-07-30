@@ -3,6 +3,7 @@ import type { ClientRecord, ConfigLine, OverrideType } from "@titlepipe/contract
 import { Button } from "../../shared/ui/Button";
 import { Card, CardBody } from "../../shared/ui/Card";
 import { Chip } from "../../shared/ui/Chip";
+import { EmptyNote } from "../../shared/ui/EmptyPanel";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
 
 import { AuthorOverride } from "./AuthorOverride";
@@ -42,10 +43,18 @@ export function OverridesPanel({
           Sign-off overrides · {client.name} holds these deltas only
         </Eyebrow>
 
+        {/*
+          "No deltas" is an ANSWER, not a blank. The record came back and it
+          carries nothing, which is the mildest possible state a client can be
+          in — the shared note's italic is what marks the line as the app
+          speaking about an absence rather than as a delta that lost its text.
+        */}
         {client.overrides.length === 0 ? (
-          <p className="mt-5 text-xs leading-body text-ink-muted">
-            No deltas. This client takes the baseline exactly as written.
-          </p>
+          <div className="mt-5">
+            <EmptyNote>
+              No deltas. This client takes the baseline exactly as written.
+            </EmptyNote>
+          </div>
         ) : (
           <ul className="mt-5 flex flex-col gap-4">
             {client.overrides.map((o) => (

@@ -6,6 +6,7 @@ import type {
 
 import { Card, CardBody, CardFooter, CardHeader } from "../../shared/ui/Card";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
+import { DividedSection } from "../../shared/ui/ListRow";
 
 import { ConflictBanner } from "./ConflictBanner";
 import { EffectiveRow } from "./EffectiveRow";
@@ -78,25 +79,28 @@ export function EffectivePanel({
             </div>
           )}
 
-          <CardBody className="py-4">
-            <ul>
-              {checklist.lines.map((line) => {
-                const override = overrideFor(line, client.overrides);
-                return (
-                  <EffectiveRow
-                    key={line.line_id}
-                    line={line}
-                    override={override}
-                    source={
-                      override?.type === "add"
-                        ? `added for ${client.name}`
-                        : `${product.full} baseline`
-                    }
-                  />
-                );
-              })}
-            </ul>
-          </CardBody>
+          {/*
+            The rows carry their own gutter now, so the list runs edge to edge
+            between the header band and the footer — the junction at each band
+            is one hairline instead of the row's stacked on the band's.
+          */}
+          <DividedSection>
+            {checklist.lines.map((line) => {
+              const override = overrideFor(line, client.overrides);
+              return (
+                <EffectiveRow
+                  key={line.line_id}
+                  line={line}
+                  override={override}
+                  source={
+                    override?.type === "add"
+                      ? `added for ${client.name}`
+                      : `${product.full} baseline`
+                  }
+                />
+              );
+            })}
+          </DividedSection>
 
           <CardFooter className="leading-body">
             Every effective line carries its origin — a line with no traceable

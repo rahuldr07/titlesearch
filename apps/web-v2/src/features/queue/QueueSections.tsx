@@ -1,4 +1,4 @@
-import { Card, CardBody } from "../../shared/ui/Card";
+import { EmptyPanel } from "../../shared/ui/EmptyPanel";
 import { QueueBand } from "./QueueBand";
 
 /**
@@ -27,11 +27,22 @@ import { QueueBand } from "./QueueBand";
  *
  * EVERY CLOCK HERE BELONGS TO AN ORDER, NEVER TO A PERSON. That is why no band
  * carries a rate, a rank or an estimate.
+ *
+ * `EmptyPanel` — RESOLVED AND EMPTY — is the honest primitive for all four, and
+ * `ScreenMessage` would be the dishonest one. Nothing is in flight here: no band
+ * issues a request that could still be open or could fail, so "not loaded" is
+ * not a state any of them can be in. The dashed outline states the same thing
+ * the copy does, which is what stops a reader taking a blank band for a fetch
+ * that never came back. These four previously shared a private `Empty` that was
+ * a solid Card — the mark the design reserves for "here is a thing" — so an
+ * absence was drawn with the one border style that asserts presence.
  */
 export function MineBand() {
   return (
     <QueueBand title="Mine" note="in progress">
-      <Empty>Nothing in progress — you&rsquo;re clear.</Empty>
+      {/* A fragment, not an attribute string: `&rsquo;` decodes reliably in JSX
+          TEXT, and this file's copy is written with entities throughout. */}
+      <EmptyPanel title={<>Nothing in progress — you&rsquo;re clear.</>} />
     </QueueBand>
   );
 }
@@ -40,29 +51,21 @@ export function TailBands({ senior }: { senior: boolean }) {
   return (
     <>
       <QueueBand title="Held" note="stopped · needs someone">
-        <Empty>Nothing held.</Empty>
+        <EmptyPanel title="Nothing held." />
       </QueueBand>
 
       {senior ? (
         <QueueBand title="In flight" note="processing · senior · ops view">
-          <Empty>
-            Nothing in flight. This band is a read, not a worklist — seeing an
-            order here is not an invitation to take it.
-          </Empty>
+          <EmptyPanel
+            title="Nothing in flight."
+            body="This band is a read, not a worklist — seeing an order here is not an invitation to take it."
+          />
         </QueueBand>
       ) : null}
 
       <QueueBand title="Recently delivered" note="get back to a recent one">
-        <Empty>Nothing delivered recently on your account.</Empty>
+        <EmptyPanel title="Nothing delivered recently on your account." />
       </QueueBand>
     </>
-  );
-}
-
-function Empty({ children }: { children: React.ReactNode }) {
-  return (
-    <Card>
-      <CardBody className="text-base text-ink-secondary">{children}</CardBody>
-    </Card>
   );
 }

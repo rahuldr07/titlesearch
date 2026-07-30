@@ -1,3 +1,5 @@
+import { Card } from "../../shared/ui/Card";
+
 /**
  * The file the person just chose, drawn as its own sheet under the drop zone.
  *
@@ -6,6 +8,11 @@
  * something now in hand. The design gives it the page glyph, the filename in
  * mono, and one line of detail underneath — mono because a filename is a string
  * people compare character by character against a request.
+ *
+ * SOLID, WHERE THE ZONE ABOVE IS DASHED. Both are `Card` now, and the whole
+ * difference is that one prop. Dashed means nothing is here yet; solid means
+ * something is. Drawing the receipt dashed as well would leave the two
+ * indistinguishable at the only moment they are ever on screen together.
  *
  * CONTRACT GAP: the design also prints a page count, a readability verdict and
  * a READY stamp on this card. All three are findings about the FILE, produced
@@ -17,7 +24,7 @@
  */
 export function PackageChip({ file }: { file: File }) {
   return (
-    <div className="flex items-center gap-7 rounded-9 border border-line-strong bg-surface-panel px-8 py-7">
+    <Card className="flex items-center gap-7 px-8 py-7">
       <span
         aria-hidden
         className="flex h-21 w-17 shrink-0 flex-col justify-end gap-1 rounded-3 border border-action-border bg-action-surface p-3"
@@ -33,6 +40,6 @@ export function PackageChip({ file }: { file: File }) {
           server&rsquo;s findings, after upload
         </span>
       </span>
-    </div>
+    </Card>
   );
 }

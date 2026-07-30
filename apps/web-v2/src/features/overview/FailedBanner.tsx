@@ -19,6 +19,15 @@ import { Eyebrow } from "../../shared/ui/Eyebrow";
  * because being stopped on a person is the design; this is red because being
  * off the pipeline is not.
  *
+ * `tone="halt"` and the left stroke are DIFFERENT CLAIMS, which is why only the
+ * first moves onto the primitive. The tone is the ground-and-hairline pair the
+ * export hand-spells 84 times at three different strengths; taking it from
+ * `Card` is what stops this banner drifting from the other halt blocks. The 4px
+ * LEFT edge is the severity mark (`--stroke-severity`) that this banner shares
+ * with GateBanner and the failure banners, and it stays spelled here — `accent`
+ * is a 2px TOP stripe meaning "this is the live block", which is not what a
+ * failed order is.
+ *
  * No control on it. Requeueing a failed order is a real decision with a real
  * reason attached, and a button here would invite it to be made from a summary.
  */
@@ -26,7 +35,7 @@ export function FailedBanner({ orders }: { orders: readonly LifecycleOrder[] }) 
   if (orders.length === 0) return null;
 
   return (
-    <Card className="border-state-halt-border bg-state-halt-surface border-l-(length:--stroke-severity) border-l-state-halt">
+    <Card tone="halt" className="border-l-(length:--stroke-severity) border-l-state-halt">
       <div className="px-7 py-6">
         <Eyebrow variant="caption" tone="halt" as="h2">
           Off the pipeline — no stage to sit in

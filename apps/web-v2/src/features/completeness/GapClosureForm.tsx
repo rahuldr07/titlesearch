@@ -1,5 +1,6 @@
 import { useId, useState } from "react";
 import { Button } from "../../shared/ui/Button";
+import { Card } from "../../shared/ui/Card";
 import { TextArea } from "../../shared/ui/TextField";
 
 /**
@@ -15,6 +16,11 @@ import { TextArea } from "../../shared/ui/TextField";
  * `packages/contract`; in the product it would be an append-only record
  * carrying the option, the comment, the person and the moment. The button below
  * records into this screen's own state and no further.
+ *
+ * The form wears the SETTLED ground the closed note wears, at the same nested
+ * radius, because it is the same block in its unfilled state. Drawn as a plain
+ * panel it would read as a form that appeared next to the gap rather than as
+ * the record about to be written onto it.
  */
 export function GapClosureForm({
   option,
@@ -30,7 +36,7 @@ export function GapClosureForm({
   const ready = note.trim() !== "";
 
   return (
-    <div className="mt-6 rounded-7 border border-state-settled-border bg-state-settled-surface px-7 py-6">
+    <Card size="nested" tone="settled" className="mt-6 px-7 py-6">
       <label htmlFor={fieldId} className="mb-3 block text-xs font-semibold text-state-settled-ink">
         {option} — required reason
       </label>
@@ -51,6 +57,6 @@ export function GapClosureForm({
           Cancel
         </Button>
       </div>
-    </div>
+    </Card>
   );
 }

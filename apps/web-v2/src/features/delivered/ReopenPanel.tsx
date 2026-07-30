@@ -26,6 +26,12 @@ import { TextArea } from "../../shared/ui/TextField";
  * machines). Rather than wire a click that silently does nothing, the missing
  * capability is expressed in the type: pass the mutation when it exists, and the
  * control turns on with no other change.
+ *
+ * THE ATTEND STRIPE IS `Card`'s ACCENT AXIS, not a severity edge. This panel is
+ * the live block on a screen that is otherwise a receipt — "act here" — and the
+ * 4px LEFT edge the design reserves for severity would put a reopen prompt in
+ * the same visual class as a package that failed its gate. Spelling the stripe
+ * by hand is how the two axes get confused, so it comes from the prop.
  */
 export function ReopenPanel({
   orderId,
@@ -41,10 +47,7 @@ export function ReopenPanel({
   const ready = trimmed.length > 0 && onSubmit !== undefined;
 
   return (
-    <Card
-      data-testid="reopen-panel"
-      className="mb-10 border-t-(length:--stroke-accent) border-t-state-attend text-left"
-    >
+    <Card data-testid="reopen-panel" accent="attend" className="mb-10 text-left">
       <CardBody className="p-9">
         <Eyebrow variant="field" tone="attend" className="block text-tiny tracking-eyebrow">
           Reopen for correction — creates v2

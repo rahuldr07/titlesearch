@@ -1,9 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
-import { ScreenTitle } from "../../app/ScreenTitle";
 import { useSession } from "../../shared/session";
 import { Screen } from "../../shared/ui/Screen";
+import { ScreenHeading } from "../../shared/ui/ScreenHeading";
+import { ScreenMessage } from "../../shared/ui/ScreenMessage";
 import { Tab, TabList, TabPanel, Tabs } from "../../shared/ui/Tabs";
 
 import { clientsQuery, configProductsQuery } from "./queries";
@@ -40,19 +41,22 @@ export function ClientsScreen() {
   const clients = useQuery(clientsQuery);
   const config = useQuery(configProductsQuery);
 
+  /*
+   * NOT LOADED IS NOT EMPTY. Both branches go through `ScreenMessage`, which
+   * carries this screen's own 880px measure — a status line drawn outside it
+   * sits flush to the pane and then jumps inward when the data lands, which
+   * reads as a layout bug in both frames. `EmptyPanel` is never reachable from
+   * here: nothing below has been answered yet.
+   */
   if (clients.isError || config.isError) {
     return (
-      <Screen measure="880">
-        <p className="text-base text-state-halt-ink">Client settings unavailable.</p>
-      </Screen>
+      <ScreenMessage tone="halt" measure="880">
+        Client settings unavailable.
+      </ScreenMessage>
     );
   }
   if (clients.isPending || config.isPending) {
-    return (
-      <Screen measure="880">
-        <p className="text-base text-ink-secondary">Loading client settings…</p>
-      </Screen>
-    );
+    return <ScreenMessage measure="880">Loading client settings…</ScreenMessage>;
   }
 
   // Open on a pairing the server has actually resolved. Landing on the "nobody
@@ -66,18 +70,18 @@ export function ClientsScreen() {
   return (
     <Screen measure="880">
       <div className="flex flex-col gap-8">
-        <header>
-          <ScreenTitle>Admin · Clients</ScreenTitle>
-          <h1 className="mt-4 text-3xl font-semibold text-ink-primary">
-            Client settings &amp; overrides
-          </h1>
-          <p className="mt-2 max-w-prose text-base leading-body text-ink-secondary">
-            A client holds only <span className="font-semibold">deltas</span>{" "}
-            against the product baseline — never a copy of the list. That way a
-            baseline change keeps reaching every client, and each difference stays
-            visibly deliberate.
-          </p>
-        </header>
+        <ScreenHeading
+          eyebrow="Admin · Clients"
+          title="Client settings & overrides"
+          lede={
+            <p>
+              A client holds only <span className="font-semibold">deltas</span>{" "}
+              against the product baseline — never a copy of the list. That way a
+              baseline change keeps reaching every client, and each difference stays
+              visibly deliberate.
+            </p>
+          }
+        />
 
         {product === undefined ? (
           <p data-testid="no-products" className="text-base leading-body text-ink-secondary">

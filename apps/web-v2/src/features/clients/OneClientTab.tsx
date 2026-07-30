@@ -1,6 +1,7 @@
 import type { ClientsResponse, ConfigProduct, ConfigResponse } from "@titlepipe/contract";
 
 import { Button } from "../../shared/ui/Button";
+import { EmptyPanel } from "../../shared/ui/EmptyPanel";
 import { Toggle, ToggleGroup } from "../../shared/ui/ToggleGroup";
 
 import { EffectivePanel } from "./EffectivePanel";
@@ -63,14 +64,22 @@ export function OneClientTab({
         ) : null}
       </div>
 
+      {/*
+        RESOLVED AND EMPTY, never *not loaded*: the roster query has already
+        answered by the time this tab renders, so stating "no clients yet" is a
+        fact rather than a guess. The dashed panel is what carries that — a
+        solid card would say "here is a thing" about a hole.
+      */}
       {client === undefined ? (
-        <div className="rounded-9 border border-dashed border-line-strong bg-surface-panel p-15 text-center">
-          <p className="font-semibold text-ink-primary">No clients yet</p>
-          <p className="mt-2 text-sm leading-body text-ink-secondary">
-            Add the first client to set its sign-off defaults and overrides.
-          </p>
-          <Button size="lg" className="mt-7" disabled>＋ Add a client</Button>
-        </div>
+        <EmptyPanel
+          title="No clients yet"
+          body="Add the first client to set its sign-off defaults and overrides."
+          actions={
+            <Button size="lg" disabled>
+              ＋ Add a client
+            </Button>
+          }
+        />
       ) : (
         <>
           <div className="flex flex-wrap items-center gap-5">

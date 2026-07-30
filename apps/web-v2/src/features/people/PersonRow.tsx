@@ -1,6 +1,7 @@
 import type { MfaState, Person } from "@titlepipe/contract";
 import { Chip } from "../../shared/ui/Chip";
 import { Button } from "../../shared/ui/Button";
+import { ListRow } from "../../shared/ui/ListRow";
 import { cn } from "../../shared/ui/classNames";
 
 /** The design's three account states, mapped to the kit's tones. */
@@ -47,7 +48,7 @@ export function PersonRow({ person }: { person: Person }) {
         : "text-ink-muted";
 
   return (
-    <li className="flex flex-wrap items-center gap-7 border-t border-line-subtle px-8 py-6 first:border-t-0">
+    <ListRow className="flex flex-wrap items-center gap-7">
       <div className="min-w-100 flex-1">
         <p className="text-md font-semibold text-ink-primary">{person.name}</p>
         <p className="mt-1 font-mono text-xs text-ink-muted">{person.email}</p>
@@ -69,6 +70,6 @@ export function PersonRow({ person }: { person: Person }) {
           Suspend
         </Button>
       </div>
-    </li>
+    </ListRow>
   );
 }

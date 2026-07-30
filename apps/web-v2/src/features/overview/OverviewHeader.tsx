@@ -1,5 +1,5 @@
+import { ScreenHeading } from "../../shared/ui/ScreenHeading";
 import { ToggleGroup, Toggle } from "../../shared/ui/ToggleGroup";
-import { ScreenTitle } from "../../app/ScreenTitle";
 
 export type OverviewView = "board" | "rail";
 
@@ -19,6 +19,12 @@ export type OverviewView = "board" | "rail";
  * The view chips DISAPPEAR when the window is too narrow to honour the choice,
  * and the reason takes their place. A control that silently does nothing is
  * worse than no control.
+ *
+ * They ride in `ScreenHeading`'s `actions` slot, which pins them to the HEADING
+ * ROW. Bottom-aligned against the whole block — as this drew them — the chips
+ * sank further from the title the longer the scope note ran, and the scope note
+ * is server text of unbounded length. At two long sentences the layout control
+ * read as belonging to the paragraph it happened to end beside.
  */
 export function OverviewHeader({
   view,
@@ -32,12 +38,12 @@ export function OverviewHeader({
   scopeNote: string;
 }) {
   return (
-    <div className="flex flex-col gap-3">
-      <ScreenTitle>Overview</ScreenTitle>
-      <div className="flex flex-wrap items-end gap-9">
-        <header className="min-w-150 flex-1">
-          <h1 className="text-3xl font-semibold text-ink-primary">Where every order sits</h1>
-          <p className="mt-1.5 max-w-285 text-base leading-body text-ink-secondary">
+    <ScreenHeading
+      eyebrow="Overview"
+      title="Where every order sits"
+      lede={
+        <>
+          <p>
             One column per stage. The machine advances exactly one of them —
             every other column is an order stopped on a person, which is the
             design, not a backlog.
@@ -46,30 +52,28 @@ export function OverviewHeader({
               different question from the sentence above — "whose orders are
               these", not "what am I looking at" — and running the two together
               buries the one figure-changing caveat on the screen mid-paragraph. */}
-          <p className="mt-1.5 max-w-285 text-base leading-body text-ink-secondary">
-            {scopeNote}
-          </p>
-        </header>
-        <div className="flex shrink-0 flex-wrap items-center gap-3">
-          {narrow ? (
-            <span className="max-w-68 text-tiny leading-close text-ink-muted">
-              Stacked for this width — the seven-column board needs a wider window.
-            </span>
-          ) : (
-            <ToggleGroup
-              aria-label="Overview layout"
-              value={[view]}
-              onValueChange={(next) => {
-                const picked = next.at(0);
-                if (picked === "board" || picked === "rail") onView(picked);
-              }}
-            >
-              <Toggle value="board" className="rounded-6 px-7 py-4 text-sm">Board</Toggle>
-              <Toggle value="rail" className="rounded-6 px-7 py-4 text-sm">Rail</Toggle>
-            </ToggleGroup>
-          )}
-        </div>
-      </div>
-    </div>
+          <p>{scopeNote}</p>
+        </>
+      }
+      actions={
+        narrow ? (
+          <span className="max-w-68 text-tiny leading-close text-ink-muted">
+            Stacked for this width — the seven-column board needs a wider window.
+          </span>
+        ) : (
+          <ToggleGroup
+            aria-label="Overview layout"
+            value={[view]}
+            onValueChange={(next) => {
+              const picked = next.at(0);
+              if (picked === "board" || picked === "rail") onView(picked);
+            }}
+          >
+            <Toggle value="board" className="rounded-6 px-7 py-4 text-sm">Board</Toggle>
+            <Toggle value="rail" className="rounded-6 px-7 py-4 text-sm">Rail</Toggle>
+          </ToggleGroup>
+        )
+      }
+    />
   );
 }

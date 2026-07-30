@@ -1,7 +1,9 @@
 import { CorrectEditor } from "./CorrectEditor";
+import { CONFIRM_CONTROL_ID } from "./DecisionActions";
 import { EscalateEditor } from "./EscalateEditor";
 import { ExcludeEditor } from "./ExcludeEditor";
 import { PassControl } from "../../entities/order/PassControl";
+import { RefusalNudge } from "../../shared/ui/RefusalNudge";
 
 export type ReviewMode = "idle" | "correct" | "escalate" | "exclude" | "pass";
 
@@ -33,7 +35,17 @@ interface ReviewEditorsProps {
  * THE SERVER'S MESSAGE IS SURFACED VERBATIM (`review-conflict.spec` ×2). A 409
  * is an ANSWER — "already confirmed with a different value" tells the reviewer
  * something true that they must act on — and paraphrasing it into "could not
- * save" would throw away the only part that matters.
+ * save" would throw away the only part that matters. It stays a hand-spelled
+ * line rather than a `RefusalNudge`: the server refusing a submission and the
+ * client refusing to send one are different claims, and `confirm-note` is the
+ * testid the conflict specs select on.
+ *
+ * THE BLANK REFUSAL IS ABOUT THE CONFIRM BUTTON, and now says so — it is raised
+ * by the `c` key and answered only by clicking that control, so the description
+ * belongs on it. `RefusalNudge` binds `aria-describedby` to
+ * `CONFIRM_CONTROL_ID` on mount; a keyboard user who presses `c` on an empty
+ * field previously got a line that never reached the control they had to reach
+ * for next.
  */
 export function ReviewEditors({
   mode,
@@ -62,10 +74,10 @@ export function ReviewEditors({
       )}
 
       {blankNote ? (
-        <p data-testid="nudge" role="alert" className="text-xs font-semibold text-state-halt-ink">
-          nothing was extracted here — accepting an absence takes an explicit
-          click, never a keystroke
-        </p>
+        <RefusalNudge
+          controlId={CONFIRM_CONTROL_ID}
+          message="nothing was extracted here — accepting an absence takes an explicit click, never a keystroke"
+        />
       ) : null}
 
       {mode === "correct" ? (

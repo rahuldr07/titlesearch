@@ -1,4 +1,5 @@
 import { Button } from "../../shared/ui/Button";
+import { Card } from "../../shared/ui/Card";
 
 const RESTRICTED =
   "Confirmation is restricted to engineer and admin. A senior rules on the domain question; someone else enables it.";
@@ -40,10 +41,21 @@ export function ConfirmBlock({
 }) {
   return (
     <section data-testid="rule-confirm" className="border-t border-line-subtle pt-7">
+      {/*
+        The reason wears the halt GROUND and the halt HAIRLINE as one pair,
+        which is what `Card`'s tone axis is for: this block was hand-spelled,
+        and the sibling that says the same thing about retiring was spelled a
+        third way. Two drawings of one refusal teach a reader that the two
+        refusals differ.
+      */}
       {mayConfirm ? null : (
-        <p className="mb-5 rounded-7 border border-state-halt-border bg-state-halt-surface px-6 py-5 text-sm leading-body text-state-halt-ink">
+        <Card
+          size="nested"
+          tone="halt"
+          className="mb-5 px-6 py-5 text-sm leading-body text-state-halt-ink"
+        >
           {RESTRICTED}
-        </p>
+        </Card>
       )}
 
       <p className="mb-5 text-xs leading-body text-ink-muted">

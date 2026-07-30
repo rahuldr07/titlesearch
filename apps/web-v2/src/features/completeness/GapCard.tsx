@@ -55,6 +55,13 @@ export function GapCard({
   const open = !closedByServer && closure === undefined;
 
   return (
+    /*
+     * THE LEFT EDGE HERE IS SEVERITY, NOT `accent`. `--stroke-severity` is 4px
+     * and says "this is a problem"; `Card accent` is a 2px TOP stripe and says
+     * "this is the live block". An open gap holds the most expensive step in
+     * the product back, so it is the first claim and not the second — moving it
+     * to the stripe would put it in the same voice as a merely-current panel.
+     */
     <Card
       className={cn(
         "border-l-(length:--stroke-severity)",
@@ -83,13 +90,21 @@ export function GapCard({
           <p className="text-base leading-body text-state-halt-ink">{gap.evidence}</p>
         </div>
 
+        {/*
+          `dashed` is the claim, not the decoration: this block is a proposal
+          with no document behind it, and Card draws that in STYLE so it
+          survives greyscale (§4.2). The hairline is the family's own
+          `-border`, which the hand-rolled version spelled as the saturated
+          `border-state-attend` — one meaning drawn at two strengths depending
+          on which card you opened.
+        */}
         {open && gap.kind === "na_provisional" ? (
-          <div className="flex gap-5 rounded-7 border border-dashed border-state-attend bg-state-attend-surface px-6 py-5">
+          <Card size="nested" tone="attend" dashed className="flex gap-5 px-6 py-5">
             <Eyebrow variant="field" as="p" tone="attend" className="basis-42 shrink-0">
               Provisional
             </Eyebrow>
             <p className="text-xs leading-open text-ink-secondary">{PROVISIONAL_NOTE}</p>
-          </div>
+          </Card>
         ) : null}
 
         {open ? (

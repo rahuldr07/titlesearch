@@ -34,7 +34,7 @@ const twMerge = extendTailwindMerge({
     theme: {
       text: [
         "micro", "tiny", "xs", "sm", "base", "md",
-        "lg", "xl", "2xl", "3xl", "4xl", "5xl",
+        "lg", "census", "xl", "2xl", "3xl", "4xl", "5xl",
       ],
       radius: [
         "1", "2", "3", "4", "5", "6", "7", "8", "9", "10",

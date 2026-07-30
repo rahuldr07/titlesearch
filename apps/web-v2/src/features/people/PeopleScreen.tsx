@@ -1,8 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card } from "../../shared/ui/Card";
 import { Button } from "../../shared/ui/Button";
-import { ScreenTitle } from "../../app/ScreenTitle";
+import { DividedSection } from "../../shared/ui/ListRow";
 import { Screen } from "../../shared/ui/Screen";
+import { ScreenHeading } from "../../shared/ui/ScreenHeading";
 import { MfaGateBanner } from "./MfaGateBanner";
 import { PersonRow } from "./PersonRow";
 import { peopleQuery } from "./queries";
@@ -30,21 +31,23 @@ export function PeopleScreen() {
   return (
     <Screen measure="900">
       <div className="flex flex-col gap-8">
-        <div className="flex flex-wrap items-end gap-8">
-          <header className="min-w-120 flex-1 flex flex-col gap-3">
-            <ScreenTitle>Admin · People</ScreenTitle>
-            <h1 className="text-3xl font-semibold text-ink-primary">
-              Everyone in this organisation
-            </h1>
-            <p className="max-w-3xl text-base leading-body text-ink-secondary">
+        <ScreenHeading
+          eyebrow="Admin · People"
+          title="Everyone in this organisation"
+          lede={
+            <p>
               This screen changes authorisation, never credentials. Invitations
               and passwords hand off to the identity provider.
             </p>
-          </header>
-          {/* CONTRACT GAP: no invite endpoint. Drawn as designed and disabled —
-              the invitation itself is the provider's to send. */}
-          <Button size="lg" disabled>＋ Invite person</Button>
-        </div>
+          }
+          /* CONTRACT GAP: no invite endpoint. Drawn as designed and disabled —
+             the invitation itself is the provider's to send. */
+          actions={
+            <Button size="lg" disabled>
+              ＋ Invite person
+            </Button>
+          }
+        />
 
         {isError ? (
           <p className="text-base text-state-halt-ink">The roster is unavailable.</p>
@@ -53,12 +56,18 @@ export function PeopleScreen() {
         ) : (
           <>
             <MfaGateBanner count={data.privileged_without_mfa} />
+            {/*
+              The roster is the only child of the card, so the first-row
+              exemption is safe to name here: a banner rendered beside these
+              rows would otherwise inherit it and open the list with a hairline
+              hanging off nothing.
+            */}
             <Card>
-              <ul>
+              <DividedSection>
                 {data.people.map((person) => (
                   <PersonRow key={person.id} person={person} />
                 ))}
-              </ul>
+              </DividedSection>
             </Card>
           </>
         )}

@@ -1,5 +1,7 @@
 import type { LifecycleStage } from "@titlepipe/contract";
 import { Card } from "../../shared/ui/Card";
+import { EmptyNote } from "../../shared/ui/EmptyPanel";
+import { DividedSection, ListRow } from "../../shared/ui/ListRow";
 import { cn } from "../../shared/ui/classNames";
 import { countInk, STAGE_TONE } from "./stageTone";
 
@@ -15,18 +17,22 @@ import { countInk, STAGE_TONE } from "./stageTone";
  *
  * The spine keeps its stage colour so the two views stay learnable as one
  * language: violet is still "stopped on a person" here.
+ *
+ * `DividedSection` NAMES the boundary the `first:` exemption is measured
+ * against. The rail draws seven rows and nothing else inside its list today, but
+ * the exemption is a fact about the DOM, not about the stages: the moment a
+ * scope banner or a filter is rendered as a sibling of the rows, the opening
+ * hairline silently moves onto it and the rail starts with a rule hanging off
+ * nothing — and only while that banner's condition happens to be true.
  */
 export function StageRail({ stages }: { stages: readonly LifecycleStage[] }) {
   return (
     <Card>
-      <ul>
+      <DividedSection>
         {stages.map((stage) => {
           const tone = STAGE_TONE[stage.kind];
           return (
-            <li
-              key={stage.id}
-              className="flex flex-wrap items-start gap-7 border-t border-line-subtle px-7 py-6 first:border-t-0"
-            >
+            <ListRow key={stage.id} className="flex flex-wrap items-start gap-7">
               <div className="flex min-w-0 shrink-0 basis-95 items-stretch gap-5">
                 <span aria-hidden="true" className={cn("w-1.5 shrink-0 rounded-1", tone.bar)} />
                 <div className="min-w-0">
@@ -50,7 +56,9 @@ export function StageRail({ stages }: { stages: readonly LifecycleStage[] }) {
 
               <div className="flex min-w-0 flex-1 flex-wrap gap-3">
                 {stage.orders.length === 0 ? (
-                  <span className="self-center text-tiny text-ink-muted italic">Nothing here</span>
+                  <div className="self-center">
+                    <EmptyNote>Nothing here</EmptyNote>
+                  </div>
                 ) : (
                   stage.orders.map((order) => (
                     <span
@@ -70,10 +78,10 @@ export function StageRail({ stages }: { stages: readonly LifecycleStage[] }) {
                   ))
                 )}
               </div>
-            </li>
+            </ListRow>
           );
         })}
-      </ul>
+      </DividedSection>
     </Card>
   );
 }

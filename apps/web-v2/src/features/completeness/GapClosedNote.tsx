@@ -1,3 +1,5 @@
+import { Card } from "../../shared/ui/Card";
+
 /**
  * What closing this gap actually did — kept on the card afterwards.
  *
@@ -9,6 +11,10 @@
  * The reason is set in the serif face — this codebase's marker for human
  * testimony as against machine output. It is somebody's word, and it should not
  * look like a field value.
+ *
+ * `size="nested"` because this sits INSIDE the gap card. The 8px radius is what
+ * says so: repeating the parent's 10px would draw a second card of equal
+ * standing, and the record of a closure is subordinate to the gap it closed.
  */
 export function GapClosedNote({
   option,
@@ -20,7 +26,7 @@ export function GapClosedNote({
   by: string | null;
 }) {
   return (
-    <div className="rounded-7 border border-state-settled-border bg-state-settled-surface px-7 py-5">
+    <Card size="nested" tone="settled" className="px-7 py-5">
       <div className="flex items-center gap-5">
         <span
           aria-hidden
@@ -41,6 +47,6 @@ export function GapClosedNote({
       )}
 
       {by === null ? null : <p className="mt-2 text-tiny text-ink-muted">Recorded by {by}</p>}
-    </div>
+    </Card>
   );
 }

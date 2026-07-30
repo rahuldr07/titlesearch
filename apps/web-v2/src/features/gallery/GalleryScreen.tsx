@@ -3,7 +3,7 @@ import { StateCard } from "./StateCard";
 import { StateSample } from "./StateSample";
 import { NoValueSample } from "./NoValueSample";
 import { Screen } from "../../shared/ui/Screen";
-import { ScreenTitle } from "../../app/ScreenTitle";
+import { ScreenHeading } from "../../shared/ui/ScreenHeading";
 
 /**
  * THE STATES GALLERY — every edge state the UI can be in, side by side.
@@ -28,20 +28,22 @@ import { ScreenTitle } from "../../app/ScreenTitle";
  * the two halt cards together, which is the one arrangement that makes their
  * difference easy and their difference from the settled cards hard — the
  * opposite of the comparison worth making.
+ *
+ * THE MASTHEAD IS THE SHARED ONE, and on this screen more than any other it has
+ * to be. A catalogue that drew its own kicker, heading and lede would be the one
+ * screen whose chrome no longer matches what it documents — the drift it exists
+ * to catch, arriving through its own frontispiece. It carries the hub link
+ * (`ux.spec` #7) with it, which the three loose elements only had by habit.
  */
 export function GalleryScreen() {
   return (
     <Screen measure="1120">
-      <div className="flex flex-col">
-        <ScreenTitle>Reference</ScreenTitle>
-
-        <h1 className="mt-2 text-3xl font-semibold text-ink-primary">
-          States, not just the happy path
-        </h1>
-        <p className="mt-1 mb-11 text-md text-ink-secondary">
-          Every one of these has to stay visually distinct in production. This is
-          the catalogue.
-        </p>
+      <div className="flex flex-col gap-11">
+        <ScreenHeading
+          eyebrow="Reference"
+          title="States, not just the happy path"
+          lede="Every one of these has to stay visually distinct in production. This is the catalogue."
+        />
 
         <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
           {GALLERY_STATES.map((state) => (

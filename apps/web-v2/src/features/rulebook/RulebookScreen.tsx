@@ -4,6 +4,7 @@ import { canDo } from "@titlepipe/contract";
 import { rulesQuery, useConfirmRule } from "./queries";
 import { useSession } from "../../shared/session";
 import { ApiError } from "../../shared/api";
+import { EmptyNote } from "../../shared/ui/EmptyPanel";
 import { Screen } from "../../shared/ui/Screen";
 import { ScreenMessage } from "../../shared/ui/ScreenMessage";
 import { RulebookHeader } from "./RulebookHeader";
@@ -86,9 +87,15 @@ export function RulebookScreen() {
           {drafting ? (
             <NewRuleForm onCancel={() => setDrafting(false)} />
           ) : current === undefined ? (
-            <p className="text-base text-ink-secondary">
-              Nothing under this filter to read.
-            </p>
+            /*
+             * RESOLVED AND EMPTY, never *not loaded* — the two branches above
+             * already returned for pending and error, so reaching here means
+             * the server answered and this filter holds nothing. It is the
+             * quiet register rather than a second dashed panel: the rail beside
+             * it is already stating the same absence at panel weight, and two
+             * panels saying one thing reads as two problems.
+             */
+            <EmptyNote>Nothing under this filter to read.</EmptyNote>
           ) : (
             <RuleDetail
               rule={current}

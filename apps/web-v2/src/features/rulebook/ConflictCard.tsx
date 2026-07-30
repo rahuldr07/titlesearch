@@ -1,4 +1,5 @@
 import { Button } from "../../shared/ui/Button";
+import { Card } from "../../shared/ui/Card";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
 import { CONFLICT_COUNTERPART, CONFLICT_NOTE } from "./designFixture";
 
@@ -27,10 +28,7 @@ import { CONFLICT_COUNTERPART, CONFLICT_NOTE } from "./designFixture";
  */
 export function ConflictCard({ code, outcome }: { code: string; outcome: string }) {
   return (
-    <section
-      data-testid="rule-conflict"
-      className="rounded-9 border border-state-halt-border bg-state-halt-surface p-7"
-    >
+    <Card tone="halt" data-testid="rule-conflict" className="p-7">
       <Eyebrow variant="caption" tone="halt" as="h3">
         Conflict — neither wins silently
       </Eyebrow>
@@ -56,16 +54,23 @@ export function ConflictCard({ code, outcome }: { code: string; outcome: string 
       <p className="mt-5 rounded-6 border border-line-strong bg-surface-panel px-5 py-4 text-xs leading-body text-ink-secondary">
         {CONFLICT_NOTE}
       </p>
-    </section>
+    </Card>
   );
 }
 
-/** One side of the collision. Both sides use the same component, on purpose. */
+/**
+ * One side of the collision. Both sides use the same component, on purpose.
+ *
+ * NEUTRAL GROUND INSIDE A HALT ONE, and `tone="none"` is what fixes that as a
+ * pair: the two rules are not themselves alarming, the collision between them
+ * is. A side drawn in halt would say each rule is a problem, which is the
+ * default this card refuses to pick.
+ */
 function Side({ code, outcome }: { code: string; outcome: string }) {
   return (
-    <div className="min-w-75 flex-1 rounded-7 border border-line-strong bg-surface-panel p-5">
+    <Card size="nested" className="min-w-75 flex-1 p-5">
       <p className="font-mono text-xs font-semibold text-ink-primary">{code}</p>
       <p className="mt-2 text-xs leading-close text-ink-secondary">{outcome}</p>
-    </div>
+    </Card>
   );
 }

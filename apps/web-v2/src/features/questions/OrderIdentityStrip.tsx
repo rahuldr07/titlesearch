@@ -1,3 +1,4 @@
+import { Card } from "../../shared/ui/Card";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
 import { Chip } from "../../shared/ui/Chip";
 
@@ -10,9 +11,14 @@ import { Chip } from "../../shared/ui/Chip";
  * against a 30 Year Search are two different claims, and a person who has lost
  * track of which order this is will sign the wrong one without noticing.
  *
- * The action-coloured left edge is the design's marker for "this is the live
- * context", not decoration. The period is a mono chip because it is a span a
- * person compares character by character against what they searched.
+ * The action-coloured stripe is the design's marker for "this is the live
+ * context", not decoration — and it is a 2px stripe along the TOP, which is the
+ * axis `Card accent` draws. Spelled by hand it sat on the LEFT edge, where a
+ * 4px `--stroke-severity` rule means "this is a problem": the strip was
+ * competing for alarm with the gate banners on the neighbouring screen while
+ * only ever meaning "this is the order you are signing". The period is a mono
+ * chip because it is a span a person compares character by character against
+ * what they searched.
  *
  * SIGNED IS A SERVER FACT, and null until a person signs — policy prefill never
  * fills it in. The strip prints the server's answer and never infers one from
@@ -34,7 +40,7 @@ export function OrderIdentityStrip({
   signedAt: string | null;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-5 rounded-8 border border-line-strong border-l-(length:--stroke-accent) border-l-action bg-surface-panel px-7 py-5">
+    <Card accent="action" className="flex flex-wrap items-center gap-5 px-7 py-5">
       <Eyebrow variant="caption">Product</Eyebrow>
       <span className="text-md font-semibold">{productName}</span>
       <Chip tone="action" size="sm" shape="mono" bordered className="normal-case">
@@ -50,6 +56,6 @@ export function OrderIdentityStrip({
           {signedAt === null ? "" : ` · ${signedAt}`}
         </span>
       )}
-    </div>
+    </Card>
   );
 }

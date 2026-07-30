@@ -1,4 +1,5 @@
 import type { GalleryAccent } from "./galleryStates";
+import { Card } from "../../shared/ui/Card";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
 import { cn } from "../../shared/ui/classNames";
 
@@ -12,9 +13,19 @@ import { cn } from "../../shared/ui/classNames";
  * own composition would make the four states harder to tell apart, not easier,
  * because the eye would be comparing arrangements instead of a single signal.
  *
- * The 4px left edge is the severity axis (`--stroke-severity`), the same one
- * `Card`'s accent uses. Keeping it identical is what lets a banner inside a
- * card and a banner on its own read as the same statement.
+ * THE GROUND AND ITS HAIRLINE COME FROM `Card`'s `tone`, and no longer from a
+ * local map. A tint and the pale edge that fences it are one decision — the
+ * gallery is the surface every other screen is checked against, so a state
+ * drawn here at a hairline strength no `Card` can produce would make the
+ * catalogue disagree with the product it catalogues, in the exact direction
+ * nobody thinks to check.
+ *
+ * THE 4px LEFT EDGE STAYS LOCAL, and that is the point of the split. It is the
+ * SEVERITY axis (`--stroke-severity`) — the same edge `GateBanner` and the
+ * failure banners wear — and `Card`'s `accent` is deliberately the other axis: a
+ * 2px stripe on the TOP, meaning "this is the live block". Passing severity
+ * through `accent` would redraw every banner in the catalogue on the wrong edge
+ * and quietly redefine what the wrong edge means.
  *
  * BADGE AND BODY BOTH TAKE THE `-ink` VALUE, never the base state colour. This
  * is 9px bold uppercase text on a tint — the exact case where the design's own
@@ -23,11 +34,11 @@ import { cn } from "../../shared/ui/classNames";
  * text, so contrast ratios do not apply to it and the louder hue is what makes
  * severity readable at a glance down a column of cards.
  */
-const BLOCK: Record<GalleryAccent, string> = {
-  settled: "bg-state-settled-surface border-state-settled-border border-l-state-settled",
-  halt: "bg-state-halt-surface border-state-halt-border border-l-state-halt",
-  action: "bg-action-surface border-action-border border-l-action",
-  attend: "bg-state-attend-surface border-state-attend-border border-l-state-attend",
+const SEVERITY_EDGE: Record<GalleryAccent, string> = {
+  settled: "border-l-state-settled",
+  halt: "border-l-state-halt",
+  action: "border-l-action",
+  attend: "border-l-state-attend",
 };
 
 const BODY_INK: Record<GalleryAccent, string> = {
@@ -47,16 +58,18 @@ export function StateSample({
   body: string;
 }) {
   return (
-    <div
+    <Card
+      size="nested"
+      tone={accent}
       className={cn(
-        "w-full rounded-7 border border-l-(length:--stroke-severity) p-6",
-        BLOCK[accent],
+        "w-full border-l-(length:--stroke-severity) p-6",
+        SEVERITY_EDGE[accent],
       )}
     >
       <Eyebrow variant="field" tone={accent} className="block">
         {badge}
       </Eyebrow>
       <p className={cn("mt-2 text-xs leading-body", BODY_INK[accent])}>{body}</p>
-    </div>
+    </Card>
   );
 }

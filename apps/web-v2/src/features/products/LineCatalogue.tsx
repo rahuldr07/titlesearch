@@ -2,9 +2,9 @@ import type { ConfigLine } from "@titlepipe/contract";
 import { useState } from "react";
 
 import { Button } from "../../shared/ui/Button";
+import { EmptyPanel } from "../../shared/ui/EmptyPanel";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
 
-import { EmptyState } from "./EmptyState";
 import { LineCard } from "./LineCard";
 
 /**
@@ -60,17 +60,31 @@ export function LineCatalogue({
         — inert until a product opts in.
       </p>
 
+      {/*
+        RESOLVED AND EMPTY, WITH A CAVEAT WORTH NAMING: this branch is also
+        reached when every line is retired and the filter is hiding them. Both
+        are "the server answered and there is nothing to show under what you
+        asked for" — which is the panel's meaning — and neither is "not
+        loaded", which stays `ScreenMessage`'s job upstream.
+
+        TWO ACTIONS, WHICH IS WHY THEY ARE A PROP AND NOT A FIXED BUTTON. The
+        products panel offers one way in; this one offers a seed and a blank
+        page, and that choice is the panel's content rather than its trim.
+      */}
       {shown.length === 0 ? (
-        <EmptyState
+        <EmptyPanel
           title="No lines yet"
           body="Start from the standard 13 as a starting point, or write your own."
-        >
-          {/* CONTRACT GAP: seeding the standard 13 is a server write with no endpoint. */}
-          <Button size="lg" fill="tinted" tone="action" disabled>
-            Start from the standard 13
-          </Button>
-          <Button size="lg" onClick={onNew}>＋ Write a line</Button>
-        </EmptyState>
+          actions={
+            <>
+              {/* CONTRACT GAP: seeding the standard 13 is a server write with no endpoint. */}
+              <Button size="lg" fill="tinted" tone="action" disabled>
+                Start from the standard 13
+              </Button>
+              <Button size="lg" onClick={onNew}>＋ Write a line</Button>
+            </>
+          }
+        />
       ) : (
         <div className="flex flex-col gap-4">
           {shown.map((line) => (

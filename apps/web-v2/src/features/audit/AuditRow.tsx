@@ -1,4 +1,5 @@
 import type { AuditEntry } from "@titlepipe/contract";
+import { ListRow } from "../../shared/ui/ListRow";
 import { formatRecordingDate } from "../../shared/date";
 
 /**
@@ -24,9 +25,9 @@ import { formatRecordingDate } from "../../shared/date";
  */
 export function AuditRow({ entry }: { entry: AuditEntry }) {
   return (
-    <li
+    <ListRow
       data-testid={`audit-${entry.id}`}
-      className="flex flex-wrap items-start gap-7 border-t border-line-subtle px-8 py-6"
+      className="flex flex-wrap items-start gap-7"
     >
       <span className="min-w-75 font-mono text-xs text-ink-muted">{whenOf(entry.at)}</span>
 
@@ -39,7 +40,7 @@ export function AuditRow({ entry }: { entry: AuditEntry }) {
           {entry.entity} {entry.entity_id}
         </span>
       </span>
-    </li>
+    </ListRow>
   );
 }
 

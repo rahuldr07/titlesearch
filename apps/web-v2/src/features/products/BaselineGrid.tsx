@@ -37,6 +37,11 @@ function marksFor(
  * count. A number tells you something changed; only the sentence tells you
  * whether it is what you meant, and this is the last screen before that becomes
  * an obligation on somebody's search.
+ *
+ * THE DRAFT BLOCK IS `tone="action"`, NOT ATTEND. An unpublished draft is not a
+ * warning — it is the live thing on this screen. Amber would file it beside the
+ * read-only caution and the version notice, and a screen where everything is
+ * amber has told you nothing.
  */
 export function BaselineGrid({
   products,
@@ -76,10 +81,7 @@ export function BaselineGrid({
       </p>
 
       {changes.length === 0 ? null : (
-        <div
-          data-testid="grid-pending"
-          className="rounded-9 border border-action-border bg-action-surface px-8 py-6"
-        >
+        <Card tone="action" data-testid="grid-pending" className="px-8 py-6">
           <div className="flex flex-wrap items-center gap-5">
             <p className="text-sm font-semibold text-action-ink">
               {changes.length} unpublished cell change(s)
@@ -104,7 +106,7 @@ export function BaselineGrid({
               <li key={c.id} className="font-mono text-xs text-ink-secondary">{c.text}</li>
             ))}
           </ul>
-        </div>
+        </Card>
       )}
 
       <Card className="overflow-x-auto">

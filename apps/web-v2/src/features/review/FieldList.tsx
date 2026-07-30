@@ -1,7 +1,9 @@
 import type { Field } from "@titlepipe/contract";
 import { FieldRow } from "./FieldRow";
 import { Card, CardBody, CardHeader } from "../../shared/ui/Card";
+import { EmptyNote } from "../../shared/ui/EmptyPanel";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
+import { DividedSection } from "../../shared/ui/ListRow";
 
 /**
  * THE DECISION QUEUE LEADS; everything already settled sits under it.
@@ -16,6 +18,12 @@ import { Eyebrow } from "../../shared/ui/Eyebrow";
  * an auto-confirmed value, because that is how a bad threshold gets noticed.
  * Only the queued rows are walkable by keyboard (`review.spec` #9), so looking
  * stays looking rather than turning into re-deciding.
+ *
+ * AN EMPTY QUEUE IS RESOLVED, NOT UNLOADED — `EmptyNote`, never a bare
+ * sentence styled like a row. `fields` has already come back from the server by
+ * the time this renders (`ReviewScreen` stands `ScreenMessage` in its place
+ * until then), so "every decision is answered" is a statement about the work
+ * rather than a guess about the request.
  */
 export function FieldList({
   fields,
@@ -30,7 +38,7 @@ export function FieldList({
   const settled = fields.filter((field) => field.state !== "needs_review");
 
   const rows = (group: readonly Field[]) => (
-    <ul>
+    <DividedSection>
       {group.map((field) => (
         <FieldRow
           key={field.id}
@@ -39,7 +47,7 @@ export function FieldList({
           onSelect={() => onSelect(field.path)}
         />
       ))}
-    </ul>
+    </DividedSection>
   );
 
   return (
@@ -51,9 +59,9 @@ export function FieldList({
         </CardHeader>
         <CardBody className="p-0">
           {queued.length === 0 ? (
-            <p className="px-8 py-5 text-base text-ink-secondary">
-              Every decision on this order is answered.
-            </p>
+            <div className="px-8 py-5">
+              <EmptyNote>Every decision on this order is answered.</EmptyNote>
+            </div>
           ) : (
             rows(queued)
           )}

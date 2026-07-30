@@ -1,4 +1,5 @@
 import { Button } from "../../shared/ui/Button";
+import { Card } from "../../shared/ui/Card";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
 
 /**
@@ -32,13 +33,15 @@ import { Eyebrow } from "../../shared/ui/Eyebrow";
  * confirmation were not, nobody could hold both rules in their head.
  *
  * CONTRACT GAP: no retire endpoint exists, so the confirm control is inert.
+ *
+ * HALT AS A TONE, NOT AS AN ALARM STRIPE. This is the last thing between a
+ * person and an irreversible-in-practice act, so the whole block is tinted;
+ * it is not `accent`, which marks the live block on a screen and would put
+ * this card in the same visual class as a step someone is merely on.
  */
 export function RetireConfirm({ onCancel }: { onCancel: () => void }) {
   return (
-    <div
-      data-testid="retire-confirm"
-      className="rounded-9 border border-state-halt-border bg-state-halt-surface p-7"
-    >
+    <Card tone="halt" data-testid="retire-confirm" className="p-7">
       <Eyebrow variant="caption" tone="halt" as="h3">
         Retire impact preview · what reverts
       </Eyebrow>
@@ -63,6 +66,6 @@ export function RetireConfirm({ onCancel }: { onCancel: () => void }) {
           Cancel
         </Button>
       </div>
-    </div>
+    </Card>
   );
 }

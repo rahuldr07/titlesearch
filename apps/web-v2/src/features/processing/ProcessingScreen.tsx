@@ -2,11 +2,13 @@ import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import type { OrderPipelineResponse } from "@titlepipe/contract";
-import { ScreenTitle } from "../../app/ScreenTitle";
 import { buttonClasses } from "../../shared/ui/Button";
+import { Card } from "../../shared/ui/Card";
+import { DividedSection } from "../../shared/ui/ListRow";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
 import { Toggle, ToggleGroup } from "../../shared/ui/ToggleGroup";
 import { Screen } from "../../shared/ui/Screen";
+import { ScreenHeading } from "../../shared/ui/ScreenHeading";
 import { ScreenMessage } from "../../shared/ui/ScreenMessage";
 import { cn } from "../../shared/ui/classNames";
 import { PackageStats } from "./PackageStats";
@@ -60,14 +62,11 @@ function PipelineBody({ pipeline }: { pipeline: OrderPipelineResponse }) {
   return (
     <Screen measure="700" pad="40" placement="centre">
       <div className="flex flex-col gap-7">
-        <header className="flex flex-col gap-2">
-          <ScreenTitle>Step 3 — Pipeline</ScreenTitle>
-          <h1 className="text-4xl font-semibold">Building the draft report</h1>
-          <p className="text-md leading-body text-ink-secondary">
-            Two halts by design: the completeness gate protects the spend, the
-            human QC gate protects the client.
-          </p>
-        </header>
+        <ScreenHeading
+          eyebrow="Step 3 — Pipeline"
+          title="Building the draft report"
+          lede="Two halts by design: the completeness gate protects the spend, the human QC gate protects the client."
+        />
 
         <PackageStats
           totalPages={pipeline.total_pages}
@@ -75,11 +74,21 @@ function PipelineBody({ pipeline }: { pipeline: OrderPipelineResponse }) {
           classifierNote={pipeline.classifier_note}
         />
 
-        <ul className="overflow-hidden rounded-9 border border-line-strong bg-surface-panel">
-          {pipeline.stages.map((stage) => (
-            <StageRow key={stage.id} stage={stage} />
-          ))}
-        </ul>
+        {/*
+          The card is the OUTER edge (`line-strong`), the rows are the INNER
+          separators (`line-subtle`) — two greys that are not interchangeable.
+          The list is its own `DividedSection` so the first row's dropped
+          hairline is measured against the rows and nothing else; hung on the
+          card, a banner rendered above the stages would silently take the
+          exemption and the run would open with a rule attached to nothing.
+        */}
+        <Card>
+          <DividedSection>
+            {pipeline.stages.map((stage) => (
+              <StageRow key={stage.id} stage={stage} />
+            ))}
+          </DividedSection>
+        </Card>
 
         <div className="flex items-center gap-4">
           <Eyebrow variant="caption">Gate outcome · local preview</Eyebrow>

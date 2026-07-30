@@ -6,6 +6,8 @@ import { escalationsQuery, rulesQuery } from "./queries";
 import { ClusterRail, type Cluster } from "./ClusterRail";
 import { ResolveCard } from "./ResolveCard";
 import { RuleStamp } from "./RuleStamp";
+import { Card } from "../../shared/ui/Card";
+import { EmptyPanel } from "../../shared/ui/EmptyPanel";
 import { Screen } from "../../shared/ui/Screen";
 import { ScreenTitle } from "../../app/ScreenTitle";
 
@@ -28,6 +30,13 @@ function clusterBy(escalations: readonly Escalation[]): Cluster[] {
  * OPEN IS `resolution === null`, read off the record. There is no status field
  * in the contract and the client invents none — a locally-tracked "resolved"
  * flag would survive a failed POST and quietly hide an unanswered wall.
+ *
+ * AN EMPTY INBOX IS A FACT; A PENDING ONE IS NOT. `EmptyPanel` renders only
+ * below the two guards above it, where the list has come back and come back
+ * with nothing in it. The in-flight and failed cases keep their own lines: an
+ * empty-state panel drawn while the request is still out would tell a reviewer
+ * that nobody is stuck at the one moment the app has no idea, and once the two
+ * look alike there is no reading that tells them apart again.
  */
 export function EscalationsScreen() {
   const escalations = useQuery(escalationsQuery);
@@ -46,7 +55,11 @@ export function EscalationsScreen() {
   const current = clusters.find((c) => c.path === selected) ?? fallback;
 
   if (current === undefined) {
-    return <p className="text-base text-ink-secondary">No escalations. Nobody is stuck.</p>;
+    return (
+      <Screen measure="700">
+        <EmptyPanel title="No escalations. Nobody is stuck." />
+      </Screen>
+    );
   }
 
   const answered = current.items.find((item) => item.resolution !== null);
@@ -106,7 +119,7 @@ export function EscalationsScreen() {
                 onResolved={() => setSelected(current.path)}
               />
             ) : (
-              <div className="flex flex-col gap-4 rounded-6 border border-state-settled-border bg-state-settled-surface p-8">
+              <Card tone="settled" className="flex flex-col gap-4 p-8">
                 <p className="text-md font-semibold text-state-settled-ink">
                   ✓ Rule written — cluster cleared.
                 </p>
@@ -122,7 +135,7 @@ export function EscalationsScreen() {
                     </div>
                   </>
                 )}
-              </div>
+              </Card>
             )}
           </section>
         </div>

@@ -1,5 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
+import { Card } from "../../shared/ui/Card";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
+import { RefusalNudge } from "../../shared/ui/RefusalNudge";
 import { TextField } from "../../shared/ui/TextField";
 
 /**
@@ -10,6 +12,12 @@ import { TextField } from "../../shared/ui/TextField";
  * GONE, and a suppression with no reason on the record is indistinguishable
  * afterwards from a row nobody ever looked at. The reason is the only evidence
  * that a person decided rather than the pipeline missed.
+ *
+ * THE REFUSAL IS ANNOUNCED, NOT MERELY DRAWN. The nudge was a bare
+ * `role="alert"` paragraph with no id and no `aria-describedby` from the reason
+ * input, so the blocker reached the eye and not the screen reader — the failure
+ * that leaves nothing on the record here as well as nothing on the screen.
+ * `RefusalNudge` owns the link; the id on the input is what it binds to.
  */
 export function ExcludeEditor({
   onSubmit,
@@ -21,14 +29,16 @@ export function ExcludeEditor({
   const [reason, setReason] = useState("");
   const [refused, setRefused] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const reasonId = useId();
 
   useEffect(() => inputRef.current?.focus(), []);
 
   return (
-    <div className="flex flex-col gap-3 rounded-5 border border-state-halt-border bg-state-halt-surface p-5">
+    <Card size="nested" tone="halt" className="flex flex-col gap-3 p-5">
       <Eyebrow variant="field">Why is this not our party?</Eyebrow>
       <TextField
         ref={inputRef}
+        id={reasonId}
         data-testid="exclude-reason"
         value={reason}
         tone={refused ? "halt" : "neutral"}
@@ -53,11 +63,11 @@ export function ExcludeEditor({
         }}
       />
       {refused ? (
-        <p data-testid="nudge" role="alert" className="text-xs font-semibold text-state-halt-ink">
-          a suppression needs its reason — the row disappears, the reason is all
-          that is left
-        </p>
+        <RefusalNudge
+          controlId={reasonId}
+          message="a suppression needs its reason — the row disappears, the reason is all that is left"
+        />
       ) : null}
-    </div>
+    </Card>
   );
 }

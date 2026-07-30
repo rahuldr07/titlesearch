@@ -21,7 +21,7 @@ import type { RuleStatus } from "@titlepipe/contract";
  * the lifecycle rail) binds the same one-word status a live/retired rule gets.
  * The explanatory sentence — "PENDING — AFFECTS NOTHING YET" — belongs to a
  * different element the design draws once: the amber banner on the new-rule
- * form (`NewRuleForm.tsx`), which already carries it verbatim as a literal
+ * form (`PendingBanner.tsx`), which already carries it verbatim as a literal
  * string, not through this label. Putting the long sentence here as well would
  * put it on the lifecycle rail and the row chip too, which the design never
  * does — this module's job is the chip, not the banner.

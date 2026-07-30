@@ -3,10 +3,10 @@ import type { ConfigProduct, Derivation } from "@titlepipe/contract";
 import { Button } from "../../shared/ui/Button";
 import { Card } from "../../shared/ui/Card";
 import { Chip } from "../../shared/ui/Chip";
+import { EmptyPanel } from "../../shared/ui/EmptyPanel";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
+import { DividedSection, ListRow } from "../../shared/ui/ListRow";
 import { cn } from "../../shared/ui/classNames";
-
-import { EmptyState } from "./EmptyState";
 
 /** The derivation code, in words. The server sends the code; this reads it. */
 const DERIVATION: Readonly<Record<Derivation, string>> = {
@@ -51,24 +51,34 @@ export function ProductList({
         ) : null}
       </div>
 
+      {/*
+        RESOLVED AND EMPTY — the query already returned, so this says the
+        account has no products, never that the list has not arrived. The
+        loading and failed answers are `ScreenMessage`'s, upstream in
+        `ProductsScreen`, and conflating the two would let a broken fetch
+        render as an invitation to start over.
+      */}
       {products.length === 0 ? (
-        <EmptyState
+        <EmptyPanel
           title="No products yet"
           body="A product decides which lines apply and how each period is derived. Add the first one."
-        >
-          <Button size="lg" onClick={onNew}>＋ Add a product</Button>
-        </EmptyState>
+          actions={<Button size="lg" onClick={onNew}>＋ Add a product</Button>}
+        />
       ) : (
         <Card>
-          <ul>
+          {/*
+            The rows' `first:` exemption is measured against `DividedSection`,
+            not against whatever else happens to share the parent. Nothing but
+            rows may live in here — a heading or a conditional banner would
+            silently take the exemption and leave the list opening with a
+            hairline hanging off nothing.
+          */}
+          <DividedSection>
             {products.map((p) => (
-              <li
+              <ListRow
                 key={p.id}
                 data-testid={`product-${p.id}`}
-                className={cn(
-                  "flex flex-wrap items-center gap-7 border-t border-line-subtle px-8 py-6 first:border-t-0",
-                  p.retired && "opacity-55",
-                )}
+                className={cn("flex flex-wrap items-center gap-7", p.retired && "opacity-55")}
               >
                 <span className="w-37 shrink-0 font-mono text-sm font-semibold text-ink-primary">
                   {p.code}
@@ -102,9 +112,9 @@ export function ProductList({
                     </Button>
                   </span>
                 ) : null}
-              </li>
+              </ListRow>
             ))}
-          </ul>
+          </DividedSection>
         </Card>
       )}
 

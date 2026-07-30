@@ -1,6 +1,7 @@
 import type { ClientOverride, EffectiveLine, LineApplication } from "@titlepipe/contract";
 
 import { Chip } from "../../shared/ui/Chip";
+import { ListRow } from "../../shared/ui/ListRow";
 import { cn } from "../../shared/ui/classNames";
 
 import { treatmentLabel } from "./compare";
@@ -35,9 +36,9 @@ export function EffectiveRow({
   const struck = line.application === "excluded";
 
   return (
-    <li
+    <ListRow
       data-testid={`effective-${line.line_id}`}
-      className="flex items-start gap-6 border-t border-line-subtle py-5 first:border-t-0"
+      className="flex items-start gap-6"
     >
       <span className="w-11 shrink-0 pt-1 font-mono text-xs font-semibold text-ink-muted">
         {line.n}
@@ -80,6 +81,6 @@ export function EffectiveRow({
       >
         {treatmentLabel(override)}
       </Chip>
-    </li>
+    </ListRow>
   );
 }

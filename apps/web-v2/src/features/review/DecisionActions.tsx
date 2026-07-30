@@ -29,6 +29,20 @@ interface DecisionActionsProps {
  * accidental keystroke must never send a senior a question, so it is a button
  * only (`useReviewKeys` binds no `e`-to-escalate).
  */
+
+/**
+ * The confirm button's DOM id, so the blank refusal can point a screen reader at
+ * the control it is about (`ReviewEditors`' `RefusalNudge`). A `data-testid` is
+ * for the test runner and carries no meaning to assistive tech, which is why the
+ * id is a second, separate attribute rather than a reuse of that one.
+ *
+ * It lives beside the button it names, not as a literal in the other file: the
+ * two are a pair, and a pair spelled twice is a pair that drifts the first time
+ * either side is renamed. Threading it as a prop would cross three components
+ * that have no other reason to know about it.
+ */
+/* eslint-disable-next-line react-refresh/only-export-components -- an id constant, not a second component; the alternative is a duplicated string literal in ReviewEditors.tsx, which is the drift this export exists to prevent. */
+export const CONFIRM_CONTROL_ID = "review-act-confirm";
 export function DecisionActions({
   offerExclude,
   onConfirm,
@@ -39,7 +53,7 @@ export function DecisionActions({
 }: DecisionActionsProps) {
   return (
     <div className="flex flex-wrap gap-4">
-      <Button size="sm" data-testid="act-confirm" onClick={onConfirm}>
+      <Button size="sm" id={CONFIRM_CONTROL_ID} data-testid="act-confirm" onClick={onConfirm}>
         Confirm C
       </Button>
       <Button size="sm" fill="outlined" tone="neutral" data-testid="act-correct" onClick={onCorrect}>

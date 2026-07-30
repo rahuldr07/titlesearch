@@ -1,5 +1,6 @@
 import type { Rule } from "@titlepipe/contract";
 import { Chip } from "../../shared/ui/Chip";
+import { EmptyPanel } from "../../shared/ui/EmptyPanel";
 import { cn } from "../../shared/ui/classNames";
 import { statusTone, statusLabel } from "./ruleStatus";
 
@@ -32,11 +33,18 @@ export function RuleList({
   selected: string | null;
   onSelect: (id: string) => void;
 }) {
+  /*
+   * RESOLVED AND EMPTY, and the body says which of the two empties this is.
+   * The rail is the whole book, so a blank one invites "the rulebook is gone";
+   * `EmptyPanel`'s dashed outline is the app stating an absence it has been
+   * told about, which is the one thing a blank column cannot say for itself.
+   */
   if (rules.length === 0) {
     return (
-      <p className="text-base text-ink-secondary">
-        No rules under this filter. The book is not empty — the filter is.
-      </p>
+      <EmptyPanel
+        title="No rules under this filter."
+        body="The book is not empty — the filter is."
+      />
     );
   }
 

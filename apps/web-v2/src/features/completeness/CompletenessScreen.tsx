@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { OrderCompletenessResponse } from "@titlepipe/contract";
-import { ScreenTitle } from "../../app/ScreenTitle";
 import { Button } from "../../shared/ui/Button";
 import { Chip } from "../../shared/ui/Chip";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
 import { Screen } from "../../shared/ui/Screen";
+import { ScreenHeading } from "../../shared/ui/ScreenHeading";
 import { ScreenMessage } from "../../shared/ui/ScreenMessage";
 import { Toggle, ToggleGroup } from "../../shared/ui/ToggleGroup";
 import { useSession } from "../../shared/session";
@@ -72,14 +72,11 @@ function GateBody({ gate: data }: { gate: OrderCompletenessResponse }) {
   return (
     <Screen measure="720" pad="32x40">
       <div className="flex flex-col gap-6">
-        <header className="flex flex-col gap-2">
-          <ScreenTitle>Between segment &amp; extract</ScreenTitle>
-          <h1 className="text-3xl font-semibold">Completeness gate</h1>
-          <p className="text-md leading-body text-ink-secondary">
-            Your intake claims, checked against what was actually segmented —
-            before a single field is extracted.
-          </p>
-        </header>
+        <ScreenHeading
+          eyebrow="Between segment & extract"
+          title="Completeness gate"
+          lede="Your intake claims, checked against what was actually segmented — before a single field is extracted."
+        />
 
         <div className="flex flex-wrap items-center gap-5">
           <Eyebrow variant="caption">Product ordered</Eyebrow>
