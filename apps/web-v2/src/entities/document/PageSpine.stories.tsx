@@ -71,6 +71,23 @@ export const CellsAreButtons: Story = {
   },
 };
 
+/**
+ * Without `onSelect` the spine is a picture: same cells, same accessible names,
+ * no button that moves nothing. `features/review/CoverageSpine` mounts it this
+ * way, and it is the ONLY producer of `coverage-cell` on the review pane.
+ */
+export const PictureWithoutASelectHandler: Story = {
+  args: { cells: coverageCells(12, SERVED) },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getAllByTestId("coverage-cell")).toHaveLength(12);
+    await expect(canvas.queryAllByRole("button")).toHaveLength(0);
+    await expect(
+      canvas.getByRole("img", { name: "page 9, present, not read in full" }),
+    ).toBeInTheDocument();
+  },
+};
+
 /** "You are here" survives without colour — `aria-current` carries it too. */
 export const CurrentPageIsMarked: Story = {
   args: { cells: coverageCells(12, SERVED), currentPage: 9, onSelect: fn() },

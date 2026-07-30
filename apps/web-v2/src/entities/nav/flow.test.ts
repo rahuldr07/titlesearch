@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { FLOW, flowRoute, flowSectionLabel } from "./flow";
+import { FLOW, flowFor, flowRoute, flowSectionLabel } from "./flow";
 
 /**
  * The defect these pin: `AppChrome` spliced Review in only when the URL carried
@@ -28,6 +28,40 @@ describe("the flow is six positions, always", () => {
 
   test("only Review is order-scoped", () => {
     expect(FLOW.filter((step) => step.orderScoped).map((s) => s.label)).toEqual(["Review"]);
+  });
+});
+
+/**
+ * The second defect these pin: `AppChrome` filtered the rail with
+ * `to.startsWith("/orders/") || held.has(to)`, and the first clause
+ * short-circuits the second — the Review row drew for any role at all,
+ * including one `canAccess` refuses.
+ */
+describe("every stage passes the same authz gate the doors pass", () => {
+  const labels = (role: Parameters<typeof flowFor>[0]) =>
+    flowFor(role).map(({ step }) => step.label);
+
+  test("a role without /orders gets NO Review row", () => {
+    // The typist is the one role the table refuses `screen.review.enter`.
+    expect(labels("typist")).not.toContain("Review");
+  });
+
+  test("a role the table admits still gets it", () => {
+    expect(labels("reviewer")).toContain("Review");
+    expect(labels("admin")).toContain("Review");
+  });
+
+  test("the gate is the door gate — Upload follows /ingest, not the flow", () => {
+    // /ingest is ops+admin, so a reviewer's rail opens on Questions.
+    expect(labels("reviewer")).not.toContain("Upload");
+    expect(labels("ops")).toContain("Upload");
+  });
+
+  test("a filtered stage never renumbers the ones after it", () => {
+    const positions = new Map(flowFor("reviewer").map(({ step, n }) => [step.label, n]));
+    expect(positions.get("Questions")).toBe(2);
+    expect(positions.get("Review")).toBe(5);
+    expect(positions.get("Delivered")).toBe(6);
   });
 });
 

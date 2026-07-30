@@ -5,18 +5,22 @@ import { cn } from "../../shared/ui/classNames";
 const TIERS: readonly PageSpineTier[] = ["read", "degraded", "partial", "unseen"];
 
 /**
- * The coverage spine: one cell for every page IN THE PACKAGE, clickable.
+ * ONE ELEMENT EMITS `coverage-cell`, and it is this one.
  *
- * RULE: one instrument, one denominator. FAILURE PREVENTED: the review pane
- * drew this spine over 64 cells and `PageStrip` listed 7 chips a scroll below
- * it, so one pane stated two different package sizes and a reader had no way to
- * know which was the package. The cells arrive already classified, so the two
- * renders cannot drift apart again by classifying separately.
+ * RULE: a testid a release gate counts has exactly one producer. FAILURE
+ * PREVENTED: `features/review/CoverageSpine` carried a line-for-line copy of
+ * this grid — same four tiers, same labels, same testid — so the moment both
+ * mounted, `review.spec`'s `toHaveCount(64)` saw 128 and the gate failed on a
+ * duplicate rather than on a regression. Whether the spine is a picture or a
+ * control is a prop, not a second implementation.
  *
- * EVERY CELL IS A REAL `<button>`. A `<span onClick>` is neither focusable nor
- * announced, and the spine is the only way to reach a page nothing cited. The
- * tier travels in the accessible name, so a screen-reader user gets the fact
- * the fill carries and not merely a page number.
+ * WHEN `onSelect` IS PRESENT EVERY CELL IS A REAL `<button>`. A `<span onClick>`
+ * is neither focusable nor announced, and the spine is the only way to reach a
+ * page nothing cited. When it is absent the spine is a picture — `role="img"`
+ * with the same accessible name — because a cell that looks clickable and does
+ * nothing is worse than a cell that never claimed to be. The tier travels in the
+ * name either way, so a screen-reader user gets the fact the fill carries and
+ * not merely a page number.
  *
  * THE CURRENT PAGE OVERRIDES ITS TIER FILL rather than adding a second mark, as
  * the export does (`:3057`). Losing one square's tier to say "you are here" is
@@ -31,8 +35,37 @@ const TIERS: readonly PageSpineTier[] = ["read", "degraded", "partial", "unseen"
 export interface PageSpineProps {
   /** Server-classified, one per package page. Built by `coverageCells`. */
   cells: readonly PageSpineCell[];
-  currentPage: number;
-  onSelect: (n: number) => void;
+  /** Marks "you are here" when the spine is being used to navigate. */
+  currentPage?: number | undefined;
+  /** Present ⇒ every cell is a button. Absent ⇒ the spine is a picture. */
+  onSelect?: ((n: number) => void) | undefined;
+}
+
+function CoverageCell({
+  cell,
+  current,
+  onSelect,
+}: {
+  cell: PageSpineCell;
+  current: boolean;
+  onSelect: ((n: number) => void) | undefined;
+}) {
+  // One place builds the cell's identity, so the picture and the control can
+  // never drift into two different squares — or two different testids.
+  const shared = {
+    "data-testid": "coverage-cell",
+    "aria-label": `page ${cell.n}, ${CELL_LABEL[cell.tier]}`,
+    "aria-current": current ? ("page" as const) : undefined,
+    title: `p${cell.n} · ${CELL_LABEL[cell.tier]}`,
+    className: cn(
+      "size-9",
+      cellClasses({ tier: cell.tier }),
+      current && "border-solid border-action bg-action",
+    ),
+  };
+
+  if (onSelect === undefined) return <span {...shared} role="img" />;
+  return <button {...shared} type="button" onClick={() => onSelect(cell.n)} />;
 }
 
 export function PageSpine({ cells, currentPage, onSelect }: PageSpineProps) {
@@ -41,25 +74,14 @@ export function PageSpine({ cells, currentPage, onSelect }: PageSpineProps) {
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap gap-2">
-        {cells.map((cell) => {
-          const current = cell.n === currentPage;
-          return (
-            <button
-              key={cell.n}
-              type="button"
-              data-testid="coverage-cell"
-              aria-label={`page ${cell.n}, ${CELL_LABEL[cell.tier]}`}
-              aria-current={current ? "page" : undefined}
-              title={`p${cell.n} · ${CELL_LABEL[cell.tier]}`}
-              onClick={() => onSelect(cell.n)}
-              className={cn(
-                "size-9",
-                cellClasses({ tier: cell.tier }),
-                current && "border-solid border-action bg-action",
-              )}
-            />
-          );
-        })}
+        {cells.map((cell) => (
+          <CoverageCell
+            key={cell.n}
+            cell={cell}
+            current={cell.n === currentPage}
+            onSelect={onSelect}
+          />
+        ))}
       </div>
 
       <ul className="flex flex-wrap gap-6">

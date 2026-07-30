@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { doorsFor, doorGlyph, doorTitle, type Door } from "../entities/nav/doors";
 import { Sidebar, type SidebarDoorItem, type SidebarSection } from "../entities/nav/Sidebar";
-import { FLOW, flowRoute, flowSectionLabel } from "../entities/nav/flow";
+import { flowFor, flowRoute, flowSectionLabel } from "../entities/nav/flow";
 import type { LifecycleStage } from "../entities/nav/LifecycleRail";
 import { useSession } from "../shared/session";
 import { useAttention, type Attention } from "./attention";
@@ -85,16 +85,16 @@ export function AppChrome() {
   if (!chrome) return null;
 
   const heldDoors = doorsFor(role);
-  const held = new Set(heldDoors.map((door) => door.path));
   const isActive = (to: string) => pathname === to || pathname.startsWith(`${to}/`);
   const attentionFor = (path: string): Attention =>
     path === "/escalations" ? escalationAttention : null;
 
-  // THE POSITION IS THE INDEX IN `FLOW`, taken before any filter, so a door a
-  // role does not hold can never renumber the stages that follow it — and
-  // Review, whose route needs an order, still counts as five whether or not
-  // one is in view (`entities/nav/flow.ts`).
-  const lifecycle: LifecycleStage[] = FLOW.map((step, i): LifecycleStage => {
+  // `flowFor` OWNS BOTH RULES: the position is the index in `FLOW` taken before
+  // the filter (a stage a role cannot enter never renumbers the ones after it),
+  // and every stage — Review included — passes the same authz gate the doors
+  // do. The order-shaped exception that used to live in this filter drew Review
+  // for roles `canAccess` refuses.
+  const lifecycle: LifecycleStage[] = flowFor(role).map(({ step, n }): LifecycleStage => {
     const route = flowRoute(step, orderId);
     const to = route ?? step.path;
     // `done`/`badge` are ORDER data: off an order screen they are false/null
@@ -110,13 +110,11 @@ export function AppChrome() {
       label: step.label,
       active: isActive(to),
       attention: attentionFor(to),
-      n: i + 1,
+      n,
       ...augment,
       ...(route === null ? { reachable: false } : {}),
     };
-  }).filter(
-    (stage) => stage.reachable === false || stage.to.startsWith("/orders/") || held.has(stage.to),
-  );
+  });
 
   const toItem = (door: Door): SidebarDoorItem => ({
     to: door.path,

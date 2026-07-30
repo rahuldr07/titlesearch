@@ -1,6 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
 import { Sidebar, type SidebarSection } from "./Sidebar";
+import type { SidebarDoorItem } from "./Sidebar";
+import { doorGlyph, doorTitle, doorsFor, type Door } from "./doors";
 
 const meta = {
   title: "Nav/Sidebar",
@@ -20,16 +22,28 @@ const brand = <span>TITLEPIPE</span>;
  * job IS the `signoff` pipeline stage), and Completeness carries a
  * server-sourced badge (`gaps.length`) with no checkmark.
  */
+/**
+ * The doors are DERIVED, exactly as `AppChrome` derives them — a hand-written
+ * fixture would carry hand-written squares, and a hand-written square cannot
+ * catch two doors drawing the same letter. That collision is the one this rail
+ * is least able to survive: collapsed, the square is all a row draws.
+ */
+const groupDoors = (group: Door["group"]): SidebarDoorItem[] =>
+  doorsFor("admin")
+    .filter((door) => door.group === group)
+    .map((door) => ({
+      to: door.path,
+      label: door.label,
+      icon: doorGlyph(door),
+      title: doorTitle(door),
+      active: door.path === "/queue",
+      attention: door.path === "/escalations" ? "attend" : null,
+    }));
+
+const letterDoors = [...groupDoors("work"), ...groupDoors("admin"), ...groupDoors("reference")];
+
 const sections: SidebarSection[] = [
-  {
-    kind: "doors",
-    label: "WORK",
-    doors: [
-      { to: "/queue", label: "queue", icon: "Q", title: "queue · g q", active: true, attention: null },
-      { to: "/overview", label: "overview", icon: "O", title: "overview · g o", active: false, attention: null },
-      { to: "/escalations", label: "escalation inbox", icon: "E", title: "escalation inbox · g e", active: false, attention: "attend" },
-    ],
-  },
+  { kind: "doors", label: "WORK", doors: groupDoors("work") },
   {
     kind: "lifecycle",
     label: "THIS ORDER",
@@ -42,20 +56,8 @@ const sections: SidebarSection[] = [
       { to: "/delivered", label: "Delivered", active: false, attention: null, n: 6, done: false, badge: null },
     ],
   },
-  {
-    kind: "doors",
-    label: "ADMIN",
-    doors: [
-      { to: "/rulebook", label: "rulebook", icon: "R", title: "rulebook · g b", active: false, attention: null },
-    ],
-  },
-  {
-    kind: "doors",
-    label: "REFERENCE",
-    doors: [
-      { to: "/gallery", label: "states", icon: "S", title: "states · g g", active: false, attention: null },
-    ],
-  },
+  { kind: "doors", label: "ADMIN", doors: groupDoors("admin") },
+  { kind: "doors", label: "REFERENCE", doors: groupDoors("reference") },
 ];
 
 /** Expanded: all four group headers in order, a numbered rail with a checkmark
@@ -110,5 +112,17 @@ export const Collapsed: Story = {
     expect(rail.querySelectorAll("h2")).toHaveLength(0);
     const queueDoor = await canvas.findByTestId("rail-door-/queue");
     expect(queueDoor).toHaveTextContent("Q");
+
+    // AT 78px THE SQUARE IS THE WHOLE ROW — no label is rendered — so two doors
+    // sharing a letter are two rows nobody can tell apart without hovering.
+    // Products keeps P and People draws its chord M (`glyphs.ts`).
+    const squares = await Promise.all(
+      letterDoors.map(async (door) =>
+        (await canvas.findByTestId(`rail-door-${door.to}`)).textContent?.trim(),
+      ),
+    );
+    expect(new Set(squares).size).toBe(squares.length);
+    expect(squares).toContain("P");
+    expect(squares).toContain("M");
   },
 };

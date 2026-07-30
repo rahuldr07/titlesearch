@@ -1,3 +1,6 @@
+import type { Role } from "@titlepipe/contract";
+import { canOpen } from "./doors";
+
 /**
  * THE FLOW IS SIX POSITIONS, ALWAYS, AND THE NUMBERING NEVER SHIFTS.
  *
@@ -33,6 +36,30 @@ export const FLOW: readonly FlowStep[] = [
   { path: "/orders/:orderId/review", label: "Review", orderScoped: true },
   { path: "/delivered", label: "Delivered", orderScoped: false },
 ];
+
+/** A step and the position it draws — the index it held BEFORE any filter. */
+export interface FlowPosition {
+  readonly step: FlowStep;
+  readonly n: number;
+}
+
+/**
+ * The stages this role may enter, each carrying its structural position.
+ *
+ * EVERY STAGE GOES THROUGH `canOpen`, REVIEW INCLUDED. `AppChrome` filtered
+ * with `to.startsWith("/orders/") || held.has(to)`, and the first clause
+ * short-circuits the second: the Review row drew for EVERY role, including one
+ * the authz table refuses. There is no second gate and no order-shaped
+ * exception — the rail's affordances and the server's refusals read the one
+ * table (`doors.ts`), which is the only reason they cannot drift apart.
+ *
+ * THE NUMBER IS TAKEN BEFORE THE FILTER, so a stage a role cannot enter never
+ * renumbers the ones after it: a reviewer holds no `/ingest` and still reads
+ * Delivered as six.
+ */
+export function flowFor(role: Role): FlowPosition[] {
+  return FLOW.map((step, i) => ({ step, n: i + 1 })).filter(({ step }) => canOpen(role, step.path));
+}
 
 /**
  * The route a step opens, or `null` when it names a position with no

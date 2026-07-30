@@ -1,37 +1,60 @@
 import { describe, expect, test } from "vitest";
-import { doorGlyph, doorTitle, doorForKey, doorsFor } from "./doors";
+import { ROLES, type Role } from "@titlepipe/contract";
+import { canOpen, doorGlyph, doorTitle, doorForKey, doorsFor, isRailDoor } from "./doors";
 
 /**
- * D2, ruled in the spec: the square shows the LABEL INITIAL and the chord moves
- * to the row title and the `?` map — a chord is learned where it is printed,
- * not from a square. `Door.key` stays the single chord source and `Door.icon`
- * stops aliasing it.
+ * D2, RE-RULED after adversarial verification. The square shows the LABEL
+ * INITIAL wherever that is unambiguous — but the rail's glyphs must also be
+ * DISTINCT, because the collapsed 78px rail draws the square and nothing else,
+ * so two P squares are two rows a reader cannot tell apart. The version of this
+ * file that asserted `["Q","O","E","R","P","C","P","A","S"]` pinned the exact
+ * failure `SidebarDoor`'s own doc block says it prevents.
+ *
+ * The tie-break is `glyphs.ts`: first claim wins on the initial, and a loser
+ * draws its own chord key — never an exception list, which would be a second
+ * copy of the label free to drift from it.
  */
-describe("the door glyph is the label's initial, derived not stored", () => {
-  test("the admin's rail draws the export's own initials", () => {
+const railGlyphsFor = (role: Role): string[] =>
+  doorsFor(role).filter(isRailDoor).map(doorGlyph);
+
+describe("the rail's glyphs are the label's initials, and they are distinct", () => {
+  test("the admin's rail keeps the export's own initials where they are unambiguous", () => {
     const byPath = new Map(doorsFor("admin").map((door) => [door.path, doorGlyph(door)]));
     expect(byPath.get("/queue")).toBe("Q");
     expect(byPath.get("/overview")).toBe("O");
+    expect(byPath.get("/escalations")).toBe("E");
     expect(byPath.get("/rulebook")).toBe("R");
-    expect(byPath.get("/products")).toBe("P");
     expect(byPath.get("/clients")).toBe("C");
-    expect(byPath.get("/people")).toBe("P");
     expect(byPath.get("/audit")).toBe("A");
     expect(byPath.get("/gallery")).toBe("S");
+    // Products is first in the catalogue, so it keeps the contested P.
+    expect(byPath.get("/products")).toBe("P");
   });
 
-  test("a colliding initial is fine — the export renders P twice and does not care", () => {
-    // The rail's plain door rows are the `work`/`admin`/`reference` groups; the
-    // `this-order` doors are drawn by the numbered rail and `account` is not
-    // drawn at all, so those are not part of what a reader compares.
-    const RENDERED = new Set(["work", "admin", "reference"]);
-    const glyphs = doorsFor("admin")
-      .filter((door) => RENDERED.has(door.group))
-      .map(doorGlyph);
-    expect(glyphs).toEqual(["Q", "O", "E", "R", "P", "C", "P", "A", "S"]);
-    // Uniqueness is NOT a rule here. A glyph that had to be unique would have
-    // to stop being the label's initial, which is the drift this replaced.
-    expect(glyphs.filter((g) => g === "P")).toHaveLength(2);
+  test("the one collision is broken by the CHORD, not by an exception list", () => {
+    // People loses P to Products and draws `g m` — the letter its own title
+    // and the `?` map already print, so the square still teaches something true.
+    expect(railGlyphsFor("admin")).toEqual(["Q", "O", "E", "R", "P", "C", "M", "A", "S"]);
+    const people = doorsFor("admin").find((door) => door.path === "/people");
+    expect(people && doorGlyph(people)).toBe("M");
+    expect(people && doorTitle(people)).toBe("people · g m");
+  });
+
+  test("no two doors the collapsed rail draws share a glyph, for EVERY role", () => {
+    for (const role of ROLES) {
+      const glyphs = railGlyphsFor(role);
+      expect(new Set(glyphs).size).toBe(glyphs.length);
+    }
+  });
+
+  test("the resolution is stable — a role's glyph is the catalogue's, not its own set's", () => {
+    // A reviewer holds neither /escalations nor /ingest; the doors it does hold
+    // draw the same letters they draw for an admin. A square that changed
+    // meaning on a role switch would be a worse mark than a duplicated one.
+    const admin = new Map(doorsFor("admin").map((door) => [door.path, doorGlyph(door)]));
+    for (const door of doorsFor("reviewer")) {
+      expect(doorGlyph(door)).toBe(admin.get(door.path));
+    }
   });
 });
 
@@ -45,5 +68,27 @@ describe("the chord rides the title, and the key stays the only chord source", (
     const rulebook = doorForKey("admin", "b");
     expect(rulebook?.path).toBe("/rulebook");
     expect(rulebook && doorGlyph(rulebook)).toBe("R");
+  });
+});
+
+/**
+ * The gate the rail's Review row bypassed: `startsWith("/orders/")` admitted an
+ * order-scoped route without asking the authz table at all.
+ */
+describe("one gate answers for doors and for order-scoped routes alike", () => {
+  test("a role the table refuses /orders is refused the review route", () => {
+    expect(canOpen("typist", "/orders")).toBe(false);
+    expect(canOpen("typist", "/orders/ord_demo_1/review")).toBe(false);
+    expect(canOpen("typist", "/orders/:orderId/review")).toBe(false);
+  });
+
+  test("a role the table admits gets it, resolved or still a pattern", () => {
+    expect(canOpen("reviewer", "/orders/ord_demo_1/review")).toBe(true);
+    expect(canOpen("reviewer", "/orders/:orderId/review")).toBe(true);
+  });
+
+  test("an unrestricted path is open by default — the table lists exceptions", () => {
+    expect(canOpen("typist", "/questions")).toBe(true);
+    expect(canOpen("reviewer", "/ingest")).toBe(false);
   });
 });

@@ -1,4 +1,5 @@
 import { canAccess, type Role } from "@titlepipe/contract";
+import { railGlyphs } from "./glyphs";
 
 /**
  * The doors, and the chord key that opens each.
@@ -26,14 +27,14 @@ import { canAccess, type Role } from "@titlepipe/contract";
  * test requires it in the rail, so it stays in `DOORS`/`doorsFor` for the
  * chord and the `?` map only.
  *
- * THE SQUARE SHOWS THE LABEL'S INITIAL, AND IT IS DERIVED, NOT STORED. The
- * export takes `label.charAt(0)` and renders P twice without caring (ruling
- * D2). An `icon` field would be a second copy of the label's first letter,
- * free to drift from it; `doorGlyph` cannot. The CHORD lives in `key` and is
- * surfaced where a chord is actually learned — the row's `title`
- * (`doorTitle`) and the `?` map, which already prints `g <key>` beside the
- * label. `Door.key` is therefore still the single source of the chord, and
- * nothing aliases it.
+ * THE SQUARE'S LETTER IS DERIVED, NOT STORED, and it is resolved across the
+ * whole drawn set so no two rows can show the same mark — `glyphs.ts` holds the
+ * tie-break and why the export's P/P collision was not simply copied. An `icon`
+ * field would be a second copy of the label's first letter, free to drift from
+ * it; a derivation cannot. The CHORD lives in `key` and is surfaced where a
+ * chord is actually learned — the row's `title` (`doorTitle`) and the `?` map,
+ * which already prints `g <key>` beside the label. `Door.key` is therefore
+ * still the single source of the chord, and nothing aliases it.
  */
 type DoorGroup = "work" | "this-order" | "admin" | "reference" | "account";
 
@@ -82,7 +83,19 @@ function isRestricted(path: string): boolean {
 }
 
 export function doorsFor(role: Role): Door[] {
-  return DOORS.filter((door) => !isRestricted(door.path) || canAccess(role, door.path));
+  return DOORS.filter((door) => canOpen(role, door.path));
+}
+
+/**
+ * May this role open this path? The SAME gate `doorsFor` applies, exposed for
+ * routes that are not doors — the lifecycle rail's Review stage is order-scoped
+ * (`/orders/<id>/review`) and appears in no catalogue. `AppChrome` used to admit
+ * it with `to.startsWith("/orders/")`, which short-circuits the door check and
+ * draws the row for EVERY role, including one `canAccess` refuses. An
+ * affordance the server would refuse is the drift this file exists to prevent.
+ */
+export function canOpen(role: Role, path: string): boolean {
+  return !isRestricted(path) || canAccess(role, path);
 }
 
 /** The door a chord's second key opens, or null if the role does not hold it. */
@@ -91,12 +104,33 @@ export function doorForKey(role: Role, key: string): Door | null {
 }
 
 /**
- * The letter the rail's square draws. Derived so it cannot drift from the label
- * a reader sees beside it; collisions are the export's own behaviour (Products
- * and People both draw P), not a bug.
+ * Groups the rail draws as a LETTERED row, stated as the exclusion rather than
+ * the inclusion: `this-order` is drawn numbered by `LifecycleRail` and
+ * `account` is not drawn at all. A group added later therefore joins the
+ * lettered set — and its uniqueness resolution — by default, instead of
+ * silently opting out of it and reintroducing a duplicate square.
+ */
+const LETTERLESS: ReadonlySet<DoorGroup> = new Set<DoorGroup>(["this-order", "account"]);
+
+export function isRailDoor(door: Door): boolean {
+  return !LETTERLESS.has(door.group);
+}
+
+/**
+ * Resolved ONCE over the whole catalogue, never per role: a door must not
+ * change letter because somebody switched roles, and an assignment that is
+ * collision-free over the catalogue is collision-free in every subset of it —
+ * so every role's rail is distinct without resolving it once per role.
+ */
+const RAIL_GLYPHS = railGlyphs(DOORS.filter(isRailDoor));
+
+/**
+ * The letter the rail's square draws — unique among the doors the rail draws.
+ * A letterless door (`this-order`, `account`) has no square; if something asks
+ * anyway it gets the plain initial, which is what the export would have drawn.
  */
 export function doorGlyph(door: Door): string {
-  return door.label.charAt(0).toUpperCase();
+  return RAIL_GLYPHS.get(door.path) ?? door.label.charAt(0).toUpperCase();
 }
 
 /**
