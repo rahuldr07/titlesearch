@@ -1,24 +1,37 @@
 import { useEffect } from "react";
-import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { doorsFor } from "../entities/nav/doors";
-import { Sidebar, type SidebarDoorItem } from "../entities/nav/Sidebar";
+import { useQuery } from "@tanstack/react-query";
+import { useNavigate, useRouterState } from "@tanstack/react-router";
+import { doorsFor, type Door } from "../entities/nav/doors";
+import { Sidebar, type SidebarDoorItem, type SidebarSection } from "../entities/nav/Sidebar";
 import type { LifecycleStage } from "../entities/nav/LifecycleRail";
 import { useSession } from "../shared/session";
 import { useAttention, type Attention } from "./attention";
 import { useNavCollapsed, useTheme } from "./preferences";
 import { orderFromPath } from "./orderFromPath";
-import { Eyebrow } from "../shared/ui/Eyebrow";
+import { SidebarBrand } from "./SidebarBrand";
+import {
+  orderPipelineQuery,
+  orderSignoffQuery,
+  orderCompletenessQuery,
+  orderFieldsQuery,
+  stageAugmentFor,
+  reviewAugment,
+} from "./orderLifecycle";
 
-/** The order lifecycle, in the sequence an order moves through. */
+/**
+ * The "THIS ORDER" numbered pipeline — Queue/Overview live in WORK now (Task
+ * 12). Review sits BETWEEN Completeness and Delivered (the design's own
+ * order: Upload, Questions, Processing, Completeness, Review, Delivered — a
+ * report is reviewed before it is delivered), so it is spliced in below
+ * rather than appended after `DELIVERED`.
+ */
 const FLOW: readonly { path: string; label: string }[] = [
-  { path: "/queue", label: "Queue" },
-  { path: "/overview", label: "Overview" },
   { path: "/ingest", label: "Upload" },
   { path: "/questions", label: "Questions" },
   { path: "/processing", label: "Processing" },
   { path: "/completeness", label: "Completeness" },
-  { path: "/delivered", label: "Delivered" },
 ];
+const DELIVERED = { path: "/delivered", label: "Delivered" };
 
 /**
  * The chrome — the SMART wrapper around the presentational left rail. It owns
@@ -68,57 +81,64 @@ export function AppChrome() {
   // One escalations query, disabled on the capture seat (the zero-GET rule).
   const escalationAttention = useAttention(onCaptureSeat ? "" : "/escalations");
 
+  // THIS ORDER's live state — the URL order, same as `OrderStrip` (Task 11's
+  // principle). All four disabled together off an order screen and on the
+  // capture seat, so neither adds a GET the zero-GET rule forbids.
+  const orderId = onCaptureSeat ? null : orderFromPath(pathname);
+  const enabled = orderId !== null;
+  const { data: pipeline } = useQuery({ ...orderPipelineQuery(orderId ?? ""), enabled });
+  const { data: signoff } = useQuery({ ...orderSignoffQuery(orderId ?? ""), enabled });
+  const { data: completeness } = useQuery({ ...orderCompletenessQuery(orderId ?? ""), enabled });
+  const { data: fields } = useQuery({ ...orderFieldsQuery(orderId ?? ""), enabled });
+
   if (onCaptureSeat) return null;
 
-  const orderId = orderFromPath(pathname);
-  const held = new Set(doorsFor(role).map((door) => door.path));
+  const heldDoors = doorsFor(role);
+  const held = new Set(heldDoors.map((door) => door.path));
   const isActive = (to: string) => pathname === to || pathname.startsWith(`${to}/`);
   const attentionFor = (path: string): Attention =>
     path === "/escalations" ? escalationAttention : null;
 
-  const lifecycle: LifecycleStage[] = FLOW.filter((item) => held.has(item.path)).map((item) => ({
+  const flowItems: { to: string; label: string }[] = FLOW.filter((item) => held.has(item.path)).map((item) => ({
     to: item.path,
     label: item.label,
-    active: isActive(item.path),
-    attention: attentionFor(item.path),
   }));
-  if (orderId !== null) {
-    const to = `/orders/${orderId}/review`;
-    lifecycle.push({ to, label: "Review", active: isActive(to), attention: null });
-  }
+  if (orderId !== null) flowItems.push({ to: `/orders/${orderId}/review`, label: "Review" });
+  if (held.has(DELIVERED.path)) flowItems.push({ to: DELIVERED.path, label: DELIVERED.label });
 
-  const flowPaths = new Set(FLOW.map((item) => item.path));
-  const worlds: SidebarDoorItem[] = doorsFor(role)
-    .filter((door) => !flowPaths.has(door.path))
-    .map((door) => ({
-      to: door.path,
-      label: door.label,
-      active: isActive(door.path),
-      attention: attentionFor(door.path),
-    }));
+  const lifecycle: LifecycleStage[] = flowItems.map((item, i) => {
+    const augment =
+      orderId === null
+        ? { done: false, badge: null }
+        : item.to === `/orders/${orderId}/review`
+          ? reviewAugment({ pipeline, fields })
+          : stageAugmentFor(item.to, { pipeline, signoff, completeness });
+    return { to: item.to, label: item.label, active: isActive(item.to), attention: attentionFor(item.to), n: i + 1, ...augment };
+  });
 
-  const brand = (
-    <Link to="/" className="flex min-w-0 items-center gap-3 no-underline">
-      <span aria-hidden className="flex size-8 shrink-0 flex-col justify-center gap-1 rounded-2 border-2 border-action px-1">
-        <span className="h-0.5 rounded-pill bg-action" />
-        <span className="h-0.5 w-3/4 rounded-pill bg-action" />
-        <span className="h-0.5 rounded-pill bg-action" />
-      </span>
-      <span className="min-w-0">
-        <span className="block truncate text-sm font-bold tracking-stamp text-ink-primary">TITLEPIPE</span>
-        <Eyebrow variant="caption">Abstractor Review</Eyebrow>
-      </span>
-    </Link>
-  );
+  const toItem = (door: Door): SidebarDoorItem => ({
+    to: door.path,
+    label: door.label,
+    icon: door.icon,
+    active: isActive(door.path),
+    attention: attentionFor(door.path),
+  });
+  const sections: SidebarSection[] = [];
+  const work = heldDoors.filter((d) => d.group === "work").map(toItem);
+  if (work.length > 0) sections.push({ kind: "doors", label: "WORK", doors: work });
+  if (lifecycle.length > 0) sections.push({ kind: "lifecycle", label: "THIS ORDER", stages: lifecycle });
+  const admin = heldDoors.filter((d) => d.group === "admin").map(toItem);
+  if (admin.length > 0) sections.push({ kind: "doors", label: "ADMIN", doors: admin });
+  const reference = heldDoors.filter((d) => d.group === "reference").map(toItem);
+  if (reference.length > 0) sections.push({ kind: "doors", label: "REFERENCE", doors: reference });
 
   return (
     <Sidebar
       collapsed={collapsed}
       onToggle={toggleCollapsed}
       onNavigate={(to) => void navigate({ to })}
-      brand={brand}
-      lifecycle={lifecycle}
-      worlds={worlds}
+      brand={<SidebarBrand />}
+      sections={sections}
     />
   );
 }

@@ -8,11 +8,15 @@ import { cn } from "../../shared/ui/classNames";
  * The href is a plain string the smart chrome computes; a left-click navigates
  * through the supplied callback (SPA), while a modified or middle click keeps
  * the real `href` so "open in new tab" still works. Active marking, the label,
- * the collapsed initial and the attention tone all arrive as props.
+ * the icon letter and the attention tone all arrive as props.
  *
  * ATTENTION IS A DOT, NEVER A COUNT (attention.ts). A red dot is an unresolved
  * complaint and PULSES (`animate-tp-pulse`); an amber dot is an open gap and
  * stays still. The red/amber split is the rule `sidebar.spec` pins.
+ *
+ * THE ICON SQUARE SHOWS IN BOTH STATES (Task 12) — collapsed AND expanded —
+ * matching the design, which never drops a door back to unlabelled chrome
+ * just because the rail widened.
  */
 export type DoorAttention = "halt" | "attend" | null;
 
@@ -20,14 +24,15 @@ export interface SidebarDoorProps {
   /** Route to navigate to; also the door's stable testid suffix. */
   to: string;
   label: string;
+  /** Single-letter icon, shown in a bordered square in every state. */
+  icon: string;
   collapsed: boolean;
   active: boolean;
   attention: DoorAttention;
   onNavigate: (to: string) => void;
 }
 
-export function SidebarDoor({ to, label, collapsed, active, attention, onNavigate }: SidebarDoorProps) {
-  const initial = label.trim().charAt(0).toUpperCase();
+export function SidebarDoor({ to, label, icon, collapsed, active, attention, onNavigate }: SidebarDoorProps) {
   const onClick = (event: MouseEvent<HTMLAnchorElement>) => {
     // Let the browser handle modified/aux clicks (new tab) via the real href.
     if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
@@ -48,13 +53,13 @@ export function SidebarDoor({ to, label, collapsed, active, attention, onNavigat
         active ? "bg-surface-raised text-ink-primary" : "text-ink-secondary",
       )}
     >
-      {collapsed ? (
-        <span aria-hidden className="font-mono text-sm">
-          {initial}
-        </span>
-      ) : (
-        <span className="truncate capitalize">{label}</span>
-      )}
+      <span
+        aria-hidden
+        className="flex size-6 shrink-0 items-center justify-center rounded-2 border border-line-strong font-mono text-micro text-ink-secondary"
+      >
+        {icon}
+      </span>
+      {collapsed ? null : <span className="truncate capitalize">{label}</span>}
       {attention === null ? null : (
         <span
           data-testid={`rail-dot-${to}`}

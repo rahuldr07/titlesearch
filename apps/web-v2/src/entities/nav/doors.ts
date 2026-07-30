@@ -16,12 +16,28 @@ import { canAccess, type Role } from "@titlepipe/contract";
  *
  * `label` is what the `?` key map prints, and it is load-bearing: `roles.spec`
  * asserts a typist's map does NOT contain "escalation inbox" or "readout".
+ *
+ * `group` decides which of the rail's sections draws a door (Task 12):
+ * `work` / `admin` / `reference` render as a plain labelled list; `this-order`
+ * doors are drawn by `LifecycleRail` instead (the numbered pipeline), never
+ * this list, so `group` is metadata for the RENDERER to route on, not a
+ * second source of the door set. `account` renders in NEITHER — the design
+ * does not draw Profile as a rail door (it lives in the account menu), and no
+ * test requires it in the rail, so it stays in `DOORS`/`doorsFor` for the
+ * chord and the `?` map only. `icon` is the letter-icon square shown on every
+ * rendered door, collapsed AND expanded — always the chord key, upper-cased,
+ * so it can never drift from the key that actually opens the door.
  */
+type DoorGroup = "work" | "this-order" | "admin" | "reference" | "account";
+
 export interface Door {
   path: string;
   /** Chord second key: `g` then this. */
   key: string;
   label: string;
+  group: DoorGroup;
+  /** Single-letter icon for the rail's icon-square. */
+  icon: string;
 }
 
 /** Screens the authz table restricts. Everything else is open by default. */
@@ -29,21 +45,21 @@ const RESTRICTED: readonly string[] = ["/queue", "/orders", "/escalations", "/in
 
 /** Not exported: consumers go through `doorsFor` so the role filter is never bypassed. */
 const DOORS: readonly Door[] = [
-  { path: "/queue", key: "q", label: "queue" },
-  { path: "/overview", key: "o", label: "overview" },
-  { path: "/ingest", key: "u", label: "upload" },
-  { path: "/questions", key: "n", label: "questions" },
-  { path: "/processing", key: "p", label: "processing" },
-  { path: "/completeness", key: "c", label: "completeness" },
-  { path: "/delivered", key: "d", label: "delivered" },
-  { path: "/escalations", key: "e", label: "escalation inbox" },
-  { path: "/rulebook", key: "b", label: "rulebook" },
-  { path: "/products", key: "t", label: "products & sign-off" },
-  { path: "/clients", key: "l", label: "clients" },
-  { path: "/people", key: "m", label: "people" },
-  { path: "/audit", key: "a", label: "audit" },
-  { path: "/profile", key: "f", label: "profile" },
-  { path: "/gallery", key: "g", label: "states" },
+  { path: "/queue", key: "q", label: "queue", group: "work", icon: "Q" },
+  { path: "/overview", key: "o", label: "overview", group: "work", icon: "O" },
+  { path: "/ingest", key: "u", label: "upload", group: "this-order", icon: "U" },
+  { path: "/questions", key: "n", label: "questions", group: "this-order", icon: "N" },
+  { path: "/processing", key: "p", label: "processing", group: "this-order", icon: "P" },
+  { path: "/completeness", key: "c", label: "completeness", group: "this-order", icon: "C" },
+  { path: "/delivered", key: "d", label: "delivered", group: "this-order", icon: "D" },
+  { path: "/escalations", key: "e", label: "escalation inbox", group: "work", icon: "E" },
+  { path: "/rulebook", key: "b", label: "rulebook", group: "admin", icon: "B" },
+  { path: "/products", key: "t", label: "products & sign-off", group: "admin", icon: "T" },
+  { path: "/clients", key: "l", label: "clients", group: "admin", icon: "L" },
+  { path: "/people", key: "m", label: "people", group: "admin", icon: "M" },
+  { path: "/audit", key: "a", label: "audit", group: "admin", icon: "A" },
+  { path: "/profile", key: "f", label: "profile", group: "account", icon: "F" },
+  { path: "/gallery", key: "g", label: "states", group: "reference", icon: "G" },
 ];
 
 /**
