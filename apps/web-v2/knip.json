@@ -30,5 +30,8 @@
   "rules": {
     "types": "warn",
     "enumMembers": "warn"
-  }
+  },
+  "ignore": [
+    "src/components/ui/**"
+  ]
 }

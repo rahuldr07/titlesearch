@@ -1,5 +1,7 @@
 @import "tailwindcss";
 @import "@titlepipe/ui-tokens/tokens.css";
+/* shadcn's seventeen names aliased onto ours; the file states each judgement. */
+@import "./shadcn-bridge.css";
 
 /*
  * The spacing grid. DELIBERATELY LOCAL to web-v2 — never move this into

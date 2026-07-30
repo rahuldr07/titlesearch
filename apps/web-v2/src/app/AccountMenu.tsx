@@ -2,14 +2,14 @@ import { useNavigate } from "@tanstack/react-router";
 import { ROLES, type Preferences, type Role } from "@titlepipe/contract";
 import { useSession } from "../shared/session";
 import {
-  Menu,
-  MenuGroup,
-  MenuGroupLabel,
-  MenuItem,
-  MenuPopup,
-  MenuSeparator,
-  MenuTrigger,
-} from "../shared/ui/Menu";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "../shared/ui/classNames";
 
 const ADMIN = [
@@ -31,6 +31,14 @@ const ADMIN = [
  *
  * The signer's name is READ-ONLY, from the session. Every consequential write
  * in this product is signed, and a name the client can type is not a signature.
+ *
+ * IT RUNS ON THE VENDORED SHADCN MENU, not the hand-wrapped one. The old kit
+ * `Menu` used `MenuGroupLabel` as a bare section heading; Base UI's
+ * `Menu.GroupLabel` reads its id off `Menu.Group`'s context and throws
+ * synchronously without one, which unmounted the whole chrome on a click with
+ * nothing in the UI to say why. A composition rule that has to be remembered at
+ * every call site is a rule that gets forgotten — the registry's own component
+ * encodes it, and the upgrade path keeps encoding it.
  */
 export function AccountMenu({
   theme,
@@ -54,45 +62,43 @@ export function AccountMenu({
   const go = (path: string) => () => void navigate({ to: path });
 
   return (
-    <Menu>
-      <MenuTrigger
-        render={
-          <button
-            type="button"
-            data-testid="account-menu"
-            className="flex items-center gap-3 rounded-4 border border-line-strong bg-surface-panel py-2 pl-2 pr-4"
-          >
-            <span className="flex size-8 items-center justify-center rounded-3 bg-action text-micro font-semibold text-ink-on-action">
-              {initials}
-            </span>
-            <span className="text-left leading-tight">
-              <span className="block text-micro font-semibold text-ink-primary">{actor}</span>
-              <span className="block text-micro tracking-label uppercase text-ink-muted">{role}</span>
-            </span>
-            <span aria-hidden className="text-micro text-ink-muted">▾</span>
-          </button>
-        }
-      />
-      <MenuPopup className="w-72">
-        <MenuGroup>
-          <MenuGroupLabel>Account</MenuGroupLabel>
-          <MenuItem onClick={go("/profile")}>Profile</MenuItem>
-          <MenuItem data-testid="theme-toggle" onClick={onToggleTheme}>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          data-testid="account-menu"
+          className="flex items-center gap-3 rounded-4 border border-line-strong bg-surface-panel py-2 pl-2 pr-4"
+        >
+          <span className="flex size-8 items-center justify-center rounded-3 bg-action text-micro font-semibold text-ink-on-action">
+            {initials}
+          </span>
+          <span className="text-left leading-tight">
+            <span className="block text-micro font-semibold text-ink-primary">{actor}</span>
+            <span className="block text-micro tracking-label uppercase text-ink-muted">{role}</span>
+          </span>
+          <span aria-hidden className="text-micro text-ink-muted">▾</span>
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-72">
+        <DropdownMenuGroup>
+          <DropdownMenuLabel>Account</DropdownMenuLabel>
+          <DropdownMenuItem onClick={go("/profile")}>Profile</DropdownMenuItem>
+          <DropdownMenuItem data-testid="theme-toggle" onClick={onToggleTheme}>
             {theme === "mocha" ? "Switch to TitlePipe theme" : "Switch to Mocha theme"}
-          </MenuItem>
-        </MenuGroup>
-        <MenuSeparator />
-        <MenuGroup>
-          <MenuGroupLabel>Admin</MenuGroupLabel>
+          </DropdownMenuItem>
+        </DropdownMenuGroup>
+        <DropdownMenuSeparator />
+        <DropdownMenuGroup>
+          <DropdownMenuLabel>Admin</DropdownMenuLabel>
           {ADMIN.map((item) => (
-            <MenuItem key={item.path} onClick={go(item.path)}>
+            <DropdownMenuItem key={item.path} onClick={go(item.path)}>
               {item.label}
-            </MenuItem>
+            </DropdownMenuItem>
           ))}
-        </MenuGroup>
-        <MenuSeparator />
-        <MenuGroup>
-          <MenuGroupLabel>Acting as</MenuGroupLabel>
+        </DropdownMenuGroup>
+        <DropdownMenuSeparator />
+        <DropdownMenuGroup>
+          <DropdownMenuLabel>Acting as</DropdownMenuLabel>
           <p className="mx-3 mb-3 rounded-3 border border-state-attend-border bg-state-attend-surface px-4 py-2 text-micro leading-body text-state-attend-ink">
             Preview control — not in production. The server enforces authorization
             independently; this only previews the gates.
@@ -115,13 +121,15 @@ export function AccountMenu({
               </button>
             ))}
           </div>
-        </MenuGroup>
-        <MenuSeparator />
-        <MenuItem onClick={go("/session")}>Session ended · demo</MenuItem>
-        <MenuItem tone="halt" onClick={go("/signin")}>
-          Sign out
-        </MenuItem>
-      </MenuPopup>
-    </Menu>
+        </DropdownMenuGroup>
+        <DropdownMenuSeparator />
+        <DropdownMenuGroup>
+          <DropdownMenuItem onClick={go("/session")}>Session ended · demo</DropdownMenuItem>
+          <DropdownMenuItem variant="destructive" onClick={go("/signin")}>
+            Sign out
+          </DropdownMenuItem>
+        </DropdownMenuGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

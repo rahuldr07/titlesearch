@@ -1,3 +1,4 @@
+import { fileURLToPath, URL } from "node:url";
 import type { StorybookConfig } from "@storybook/react-vite";
 
 /**
@@ -15,6 +16,24 @@ const config: StorybookConfig = {
   // data. Storybook's is anonymous and build-time, so it breaks neither — but
   // the default is on, and an unexamined default is not a decision.
   core: { disableTelemetry: true },
+  /*
+   * Storybook builds with its OWN Vite config and inherits nothing from
+   * `vite.config.ts`, so the `@/` alias has to be declared again here. It is
+   * not decoration: `@/` is how the shadcn registry imports, and without it
+   * every story in the app fails — not with a resolve error, but as an axe
+   * violation on Vite's error overlay, which is a genuinely confusing way to
+   * learn that a path is wrong.
+   */
+  viteFinal: (config) => ({
+    ...config,
+    resolve: {
+      ...config.resolve,
+      alias: {
+        ...config.resolve?.alias,
+        "@": fileURLToPath(new URL("../src", import.meta.url)),
+      },
+    },
+  }),
 };
 
 export default config;

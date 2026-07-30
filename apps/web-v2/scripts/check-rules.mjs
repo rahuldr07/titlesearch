@@ -92,8 +92,29 @@ const DATE_RE =
 
 const BANNED_NAMES = /^(utils?|helpers?|common|misc|shared|stuff)\.(ts|tsx)$/i;
 
+/**
+ * VENDORED SOURCE IS NOT OUR SOURCE. `src/components/ui/` holds shadcn registry
+ * files, added by `pnpm dlx shadcn@latest add` and re-added on upgrade. They
+ * are third-party code that happens to live in the tree so it can be read and
+ * patched — the same status as `node_modules`, with better ergonomics.
+ *
+ * They cannot satisfy these rules and should not be edited to: the registry's
+ * own idiom is arbitrary values (`w-[var(--radix-select-trigger-width)]`,
+ * `[&_svg]:shrink-0`), its files run past 150 lines (`select.tsx` is ~185), and
+ * it ships `dark:` variants this app does not use. Hand-editing them to pass
+ * would be reverted by the next `add`, and the diff that upgrade produces is
+ * the only review that matters for vendored code.
+ *
+ * The boundary is the point: everything OUTSIDE this directory is ours and is
+ * held to every rule. `src/components/ui/` is separate from `src/shared/ui/`
+ * for a second reason too — the registry writes `button.tsx` where the kit has
+ * `Button.tsx`, and on a case-insensitive filesystem that is one file.
+ */
+const VENDORED = join(ROOT, "src", "components", "ui");
+
 function walk(dir) {
   if (!existsSync(dir)) return [];
+  if (resolve(dir) === VENDORED) return [];
   const out = [];
   for (const name of readdirSync(dir)) {
     const p = join(dir, name);

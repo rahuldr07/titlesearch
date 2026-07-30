@@ -16,6 +16,13 @@
     "noEmit": true,
     "jsx": "react-jsx",
 
+    /* `@/` exists for the shadcn registry, which emits `@/lib/utils` and
+       `@/components/ui/*` imports and cannot be told to emit relative paths.
+       App code keeps writing relative imports; this alias is for vendored
+       files, so a reader can tell vendored source from ours by its import
+       style alone. */
+    "paths": { "@/*": ["./src/*"] },
+
     /* Strictness — BRIEF §6: no `any`, no `!`, no `@ts-ignore`, unions
        exhaustive with a never guard. `strict` plus the two below are what
        make the never-guard pattern a compile error rather than a silent
