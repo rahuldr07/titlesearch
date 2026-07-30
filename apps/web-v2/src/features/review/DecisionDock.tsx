@@ -1,5 +1,5 @@
 import type { Field } from "@titlepipe/contract";
-import { isExcluded } from "./fieldLabel";
+import { isExcluded } from "../../entities/field/fieldLabel";
 import { DECISION_STATES } from "./reportSections";
 import { Card, CardBody } from "../../shared/ui/Card";
 import { Eyebrow } from "../../shared/ui/Eyebrow";

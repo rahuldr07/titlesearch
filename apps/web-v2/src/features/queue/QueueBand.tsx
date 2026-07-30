@@ -11,27 +11,41 @@ import { Eyebrow } from "../../shared/ui/Eyebrow";
  * — merges the label into the thing it is labelling and costs the reader the
  * only structural cue the page has.
  *
- * The note beside it is the band's standing description, never a count. The
- * design prints "2 stopped · needs someone"; the count is the server's and no
- * endpoint supplies it here, so the band carries the phrase and omits the
- * number rather than inventing one.
+ * THE COUNT IS THE SERVER'S CENSUS, RENDERED, NEVER RE-DERIVED. The design
+ * prints "2 stopped · needs someone"; `GET /api/queue/bands` serves that `2` as
+ * its own field and the rest as `note`, so the band interpolates two given
+ * strings rather than counting the rows beneath it. Those two numbers are not
+ * the same number: the row list is scoped to what the caller may open and the
+ * census is not, so `orders.length` here would show a reviewer their permissions
+ * as though work had disappeared (hard rule 3, and the contract states it on the
+ * field). It is a count of what is LEFT — never a rate, and §4.5 means there
+ * never may be one.
+ *
+ * "Next up" passes no count and gets none: it is the one order the server chose,
+ * and a "1" beside it would invite the reader to wonder what the other number
+ * would have been.
  */
 export function QueueBand({
   title,
   note,
+  count,
   children,
 }: {
   title: string;
   note: string;
+  /** The server's census for this band. Omitted where the server sends none. */
+  count?: number | undefined;
   children: ReactNode;
 }) {
   return (
     <section className="flex flex-col gap-4">
       <div className="flex flex-wrap items-baseline gap-4 px-1">
-        <Eyebrow variant="group" as="h2">
+        <Eyebrow variant="group" as="h2" data-testid="band-label">
           {title}
         </Eyebrow>
-        <span className="text-sm text-ink-muted">{note}</span>
+        <span data-testid="band-note" className="text-sm text-ink-muted">
+          {count === undefined ? note : `${count} ${note}`}
+        </span>
       </div>
       {children}
     </section>

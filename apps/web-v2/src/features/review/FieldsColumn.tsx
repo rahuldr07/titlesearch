@@ -1,5 +1,5 @@
 import type { Field, OrderSignoffLine } from "@titlepipe/contract";
-import { type Pinned } from "./DecisionPanel";
+import { type Pinned } from "./useReviewEditor";
 import { DecisionColumn } from "./DecisionColumn";
 import { DecisionDock } from "./DecisionDock";
 import { FieldList } from "./FieldList";

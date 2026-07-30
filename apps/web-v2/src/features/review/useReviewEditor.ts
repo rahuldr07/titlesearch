@@ -1,6 +1,20 @@
 import { useState } from "react";
-import type { Pinned } from "./DecisionPanel";
+import type { FieldReading } from "@titlepipe/contract";
 import type { ReviewMode } from "./ReviewEditors";
+
+/**
+ * A reading whose recorded line is drawn on the page.
+ *
+ * The seat letter travels WITH the reading rather than being recomputed at the
+ * pin: it is the ordinal of the reading in the array the server sent, and
+ * recovering it from a `FieldReading` alone is impossible once the reading has
+ * left the list it came from. `review.spec` #10 reads that letter back out of
+ * the pin caption.
+ */
+export interface Pinned {
+  seat: string;
+  reading: FieldReading;
+}
 
 /**
  * Which editor is open, and what it is holding.

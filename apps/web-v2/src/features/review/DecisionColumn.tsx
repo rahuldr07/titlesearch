@@ -1,6 +1,11 @@
 import type { Field } from "@titlepipe/contract";
-import { DecisionPanel, type Pinned } from "./DecisionPanel";
+import { canDo } from "@titlepipe/contract";
 import { ReviewEditors, type ReviewMode } from "./ReviewEditors";
+import { SourcePin } from "./SourcePin";
+import type { Pinned } from "./useReviewEditor";
+import { DecisionCard } from "../../entities/field/DecisionCard";
+import { stateLabel } from "../../entities/field/fieldLabel";
+import { useSession } from "../../shared/session";
 
 interface DecisionColumnProps {
   field: Field;
@@ -24,12 +29,24 @@ interface DecisionColumnProps {
 }
 
 /**
- * The middle pane: the decision, and whatever it opened.
+ * The decision, and whatever it opened — the review screen's wiring onto the
+ * `entities/field` card.
  *
- * The editors live INSIDE the panel rather than beside it so the field they act
+ * THE CARD IS THE ENTITY'S, NOT THIS FEATURE'S. Review carried its own
+ * `DecisionPanel`, `DecisionActions` and `ReadingsPanel`, each a drifted copy of
+ * a component that already existed one directory over — and the copies had lost
+ * the export's own button wording along the way. What is left here is the only
+ * part that is genuinely review's: which role may act, and where the editors go.
+ *
+ * THE ROLE GATE STAYS IN THE FEATURE. An entity that reads the session would
+ * make every render of a field depend on who is looking, which is a decision
+ * about this screen rather than a fact about a field. Actions are ABSENT for a
+ * role that cannot act, never disabled: a greyed decision is an invitation to
+ * ask for permission, an absent one is an answer.
+ *
+ * THE EDITORS LIVE INSIDE THE CARD rather than beside it, so the field they act
  * on is never off screen while somebody types a reason. A reason written about
- * the wrong field is worse than no reason, and the only defence that costs
- * nothing is keeping the two in one column.
+ * the wrong field is worse than no reason.
  */
 export function DecisionColumn({
   field,
@@ -50,17 +67,38 @@ export function DecisionColumn({
   onExcludeSubmit,
   onPassSubmit,
 }: DecisionColumnProps) {
+  const role = useSession((s) => s.role);
+  const mayReview = canDo(role, "field.confirm");
+
   return (
-    <DecisionPanel
+    <DecisionCard
       field={field}
-      pinned={pinned}
-      onPin={onPin}
-      onAdopt={onAdopt}
-      onConfirm={onConfirm}
-      onCorrect={onCorrect}
-      onEscalate={() => onMode("escalate")}
-      onExclude={() => onMode("exclude")}
-      onPass={() => onMode("pass")}
+      statusLabel={stateLabel(field)}
+      actions={
+        mayReview
+          ? {
+              offerExclude: field.path.startsWith("judgments."),
+              onConfirm,
+              onCorrect,
+              onEscalate: () => onMode("escalate"),
+              onExclude: () => onMode("exclude"),
+              onPass: () => onMode("pass"),
+            }
+          : null
+      }
+      readings={{
+        onAdopt,
+        onPin: (reading, seat) => onPin({ seat, reading }),
+        pin:
+          pinned === null ? null : (
+            <SourcePin
+              seat={pinned.seat}
+              engineId={pinned.reading.engine_id}
+              page={pinned.reading.page}
+              coords={pinned.reading.line_coords}
+            />
+          ),
+      }}
     >
       <ReviewEditors
         mode={mode}
@@ -76,6 +114,6 @@ export function DecisionColumn({
         onExclude={onExcludeSubmit}
         onPass={onPassSubmit}
       />
-    </DecisionPanel>
+    </DecisionCard>
   );
 }

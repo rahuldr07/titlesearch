@@ -1,4 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
+import { demoFields } from "@titlepipe/mocks";
 import { EngineReadings } from "./EngineReadings";
 
 const meta = {
@@ -10,61 +12,65 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+const noop = () => {};
+const fieldAt = (path: string) => {
+  const found = demoFields.find((f) => f.path === path);
+  if (found === undefined) throw new Error(`no demo field at ${path}`);
+  return found;
+};
+
 /**
- * The resolution of conflict C7. The export shows one value plus an anonymous
- * `suggested` — the confidence-badge inversion in different clothes: an
- * unattributed recommendation the reviewer is invited to accept.
+ * ATTRIBUTED BY ENGINE ID, NEVER BY SEAT. "Reader A" is a position in an array;
+ * `llmwhisperer-hq` is a claim about an engine with a known failure mode — its
+ * zeros-for-Os is exactly what this field is queued on.
  *
- * NEITHER IS PRE-SELECTED. The moment one is highlighted as the default, the
- * screen makes a recommendation the backend never made (constraint 5).
- *
- * NO CONFIDENCE IS SHOWN anywhere here (conflict C10). Engine self-report is
- * not evidence.
+ * NEITHER IS PRE-SELECTED and no confidence is shown: highlighting one makes a
+ * recommendation the server never made, and engine self-report is not evidence.
  */
 export const TheyDisagree: Story = {
-  args: {
-    readings: [
-      { engineId: "gemini-2.5-flash", value: "SOUTHSTONE MORTGAGE LLC", page: 3 },
-      { engineId: "llmwhisperer-hq", value: "S0UTHST0NE MORTGAGE LLC", page: 3 },
-    ],
-    onAdopt: () => {},
-  },
+  args: { field: fieldAt("mortgages.1.lender"), onAdopt: noop, onPin: noop },
   render: (args) => (
     <div className="max-w-160">
       <EngineReadings {...args} />
     </div>
   ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByText("gemini-2.5-flash")).toBeVisible();
+    await expect(canvas.getByText("llmwhisperer-hq")).toBeVisible();
+    // The differing characters are marked, not left to the eye (`ux.spec` #2).
+    await expect(canvas.getAllByTestId("diff-hl").length).toBeGreaterThan(0);
+  },
 };
 
-/** Agreement is stated too — silence would leave the reviewer guessing. */
+/** Agreement is drawn the same way — the values simply carry no marks. */
 export const TheyAgree: Story = {
-  args: {
-    readings: [
-      { engineId: "gemini-2.5-flash", value: "$220,224.00", page: 3 },
-      { engineId: "llmwhisperer-hq", value: "$220,224.00", page: 3 },
-    ],
-    onAdopt: () => {},
-  },
+  args: { field: fieldAt("owner.zip"), onAdopt: noop, onPin: noop },
   render: (args) => (
     <div className="max-w-160">
       <EngineReadings {...args} />
     </div>
   ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.queryAllByTestId("diff-hl")).toHaveLength(0);
+  },
 };
 
 /**
- * "Use this" puts a reading straight into the correction editor — `ux.spec` #3,
- * "a reading can be adopted without retyping". Re-keying a value the reviewer
- * can already see is a defect source.
+ * A BLANK IS NEVER FILLED IN FROM THE READER THAT FOUND SOMETHING. One engine
+ * returned nothing and says so; the adopt control is absent on that row,
+ * because there is nothing to adopt.
  */
-export const SingleEngine: Story = {
-  args: {
-    readings: [{ engineId: "gemini-2.5-flash", value: "30296", page: 1 }],
-    onAdopt: () => {},
-  },
+export const OneEngineReturnedNothing: Story = {
+  args: { field: fieldAt("judgments.1.plaintiff_attorney"), onAdopt: noop, onPin: noop },
   render: (args) => (
     <div className="max-w-160">
       <EngineReadings {...args} />
     </div>
   ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByText("— nothing returned")).toBeVisible();
+  },
 };

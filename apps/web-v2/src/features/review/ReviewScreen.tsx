@@ -10,7 +10,7 @@ import {
   useExcludeField,
   usePassOrder,
 } from "./queries";
-import { readingsOf } from "./fieldLabel";
+import { readingsOf } from "../../entities/field/fieldLabel";
 import { EvidenceColumn } from "./EvidenceColumn";
 import { FieldsColumn } from "./FieldsColumn";
 import { ReviewHeader } from "./ReviewHeader";

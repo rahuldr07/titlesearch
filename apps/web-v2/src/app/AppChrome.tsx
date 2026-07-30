@@ -1,8 +1,9 @@
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
-import { doorsFor, type Door } from "../entities/nav/doors";
+import { doorsFor, doorGlyph, doorTitle, type Door } from "../entities/nav/doors";
 import { Sidebar, type SidebarDoorItem, type SidebarSection } from "../entities/nav/Sidebar";
+import { FLOW, flowRoute, flowSectionLabel } from "../entities/nav/flow";
 import type { LifecycleStage } from "../entities/nav/LifecycleRail";
 import { useSession } from "../shared/session";
 import { useAttention, type Attention } from "./attention";
@@ -18,21 +19,6 @@ import {
   stageAugmentFor,
   reviewAugment,
 } from "./orderLifecycle";
-
-/**
- * The "THIS ORDER" numbered pipeline — Queue/Overview live in WORK now (Task
- * 12). Review sits BETWEEN Completeness and Delivered (the design's own
- * order: Upload, Questions, Processing, Completeness, Review, Delivered — a
- * report is reviewed before it is delivered), so it is spliced in below
- * rather than appended after `DELIVERED`.
- */
-const FLOW: readonly { path: string; label: string }[] = [
-  { path: "/ingest", label: "Upload" },
-  { path: "/questions", label: "Questions" },
-  { path: "/processing", label: "Processing" },
-  { path: "/completeness", label: "Completeness" },
-];
-const DELIVERED = { path: "/delivered", label: "Delivered" };
 
 /**
  * The chrome — the SMART wrapper around the presentational left rail. It owns
@@ -104,34 +90,47 @@ export function AppChrome() {
   const attentionFor = (path: string): Attention =>
     path === "/escalations" ? escalationAttention : null;
 
-  const flowItems: { to: string; label: string }[] = FLOW.filter((item) => held.has(item.path)).map((item) => ({
-    to: item.path,
-    label: item.label,
-  }));
-  if (orderId !== null) flowItems.push({ to: `/orders/${orderId}/review`, label: "Review" });
-  if (held.has(DELIVERED.path)) flowItems.push({ to: DELIVERED.path, label: DELIVERED.label });
-
-  const lifecycle: LifecycleStage[] = flowItems.map((item, i) => {
+  // THE POSITION IS THE INDEX IN `FLOW`, taken before any filter, so a door a
+  // role does not hold can never renumber the stages that follow it — and
+  // Review, whose route needs an order, still counts as five whether or not
+  // one is in view (`entities/nav/flow.ts`).
+  const lifecycle: LifecycleStage[] = FLOW.map((step, i): LifecycleStage => {
+    const route = flowRoute(step, orderId);
+    const to = route ?? step.path;
+    // `done`/`badge` are ORDER data: off an order screen they are false/null
+    // rather than fabricated progress for an order nobody is looking at.
     const augment =
-      orderId === null
+      orderId === null || route === null
         ? { done: false, badge: null }
-        : item.to === `/orders/${orderId}/review`
+        : step.orderScoped
           ? reviewAugment({ pipeline, fields })
-          : stageAugmentFor(item.to, { pipeline, signoff, completeness });
-    return { to: item.to, label: item.label, active: isActive(item.to), attention: attentionFor(item.to), n: i + 1, ...augment };
-  });
+          : stageAugmentFor(step.path, { pipeline, signoff, completeness });
+    return {
+      to,
+      label: step.label,
+      active: isActive(to),
+      attention: attentionFor(to),
+      n: i + 1,
+      ...augment,
+      ...(route === null ? { reachable: false } : {}),
+    };
+  }).filter(
+    (stage) => stage.reachable === false || stage.to.startsWith("/orders/") || held.has(stage.to),
+  );
 
   const toItem = (door: Door): SidebarDoorItem => ({
     to: door.path,
     label: door.label,
-    icon: door.icon,
+    icon: doorGlyph(door),
+    title: doorTitle(door),
     active: isActive(door.path),
     attention: attentionFor(door.path),
   });
   const sections: SidebarSection[] = [];
   const work = heldDoors.filter((d) => d.group === "work").map(toItem);
   if (work.length > 0) sections.push({ kind: "doors", label: "WORK", doors: work });
-  if (lifecycle.length > 0) sections.push({ kind: "lifecycle", label: "THIS ORDER", stages: lifecycle });
+  if (lifecycle.length > 0)
+    sections.push({ kind: "lifecycle", label: flowSectionLabel(orderId), stages: lifecycle });
   const admin = heldDoors.filter((d) => d.group === "admin").map(toItem);
   if (admin.length > 0) sections.push({ kind: "doors", label: "ADMIN", doors: admin });
   const reference = heldDoors.filter((d) => d.group === "reference").map(toItem);

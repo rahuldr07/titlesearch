@@ -1,75 +1,119 @@
-import { PageChip } from "./PageChip";
-import { Eyebrow } from "../../shared/ui/Eyebrow";
+import type { Field, FieldReading } from "@titlepipe/contract";
+import { diffChars } from "./diff";
+import { readingsOf } from "./fieldLabel";
 import { Button } from "../../shared/ui/Button";
 
-/**
- * Both engine readings, ATTRIBUTED, neither pre-selected.
- *
- * This is the resolution of conflict C7. The export shows one `current` value
- * and one anonymous `suggested`, which is the confidence-badge inversion in
- * different clothes: an unattributed recommendation the reviewer is invited to
- * accept. CONTEXT §8.3 and `review.spec` #3 require both readings with engine
- * ids, and the contract ships `readings: FieldReading[]`.
- *
- * NEITHER IS PRE-SELECTED, and that is the whole point. The moment one is
- * highlighted as the default, the screen is making a recommendation the backend
- * never made — which is constraint 5. The reviewer picks, or corrects, or
- * escalates.
- *
- * NO CONFIDENCE IS SHOWN (constraint 5, conflict C10). Engine self-report is
- * not evidence and must never read as endorsement.
- *
- * `onAdopt` puts a reading straight into the correction editor — orphan O8's
- * sibling, `ux.spec` #3: "a reading can be adopted without retyping", because
- * re-keying a value a reviewer can already see is a defect source.
- *
- * NOT YET BUILT: per-character diff highlighting between the two readings
- * (`ux.spec` #2). It needs a real diff, and it is a component of its own rather
- * than something to inline here.
- */
-export interface Reading {
-  /** The engine that produced it. Never anonymous. */
-  engineId: string;
-  value: string;
-  page: number;
+/** The pin caption's seat letter — see the WHY on `onPin` below. */
+const SEAT = ["A", "B", "C", "D"] as const;
+
+function Diffed({ value, against }: { value: string; against: string }) {
+  return (
+    <span className="font-mono text-base text-ink-primary">
+      {diffChars(value, against).map((part, index) =>
+        part.differs ? (
+          <mark
+            key={index}
+            data-testid="diff-hl"
+            className="bg-state-attend-surface text-state-attend-ink"
+          >
+            {part.char}
+          </mark>
+        ) : (
+          <span key={index}>{part.char}</span>
+        ),
+      )}
+    </span>
+  );
 }
 
+/**
+ * WHAT EACH ENGINE RETURNED — the body of the fold, never the resting state.
+ *
+ * This is the half of the old two-card block that survives D4. The half that
+ * did not is the framing: a bordered card per engine, each with its own adopt
+ * button, presented the ensemble as the decision. The reading itself is stated
+ * once above (`AsRead`); this answers the second question — "which of them said
+ * what" — for the reviewer who does not believe the first answer.
+ *
+ * ATTRIBUTED BY ENGINE ID, NEVER BY SEAT. "Reader A" is a position in an array
+ * and tells a reviewer nothing they can act on; `llmwhisperer-hq` is a claim
+ * about a specific engine with a known failure mode (its zeros-for-Os is what
+ * `mortgages.1.lender` is queued on). The seat letter survives in ONE place —
+ * the pin caption, where `review.spec` #10 reads "READER B LINE" and where a
+ * short ordinal is what makes two pins on one page distinguishable.
+ *
+ * NEITHER IS PRE-SELECTED, and no confidence is shown. Highlighting one makes a
+ * recommendation the server never made; engine self-report is not evidence and
+ * must never read as endorsement.
+ *
+ * THE DIFFERING CHARACTERS ARE MARKED (`ux.spec` #2). "SOUTHSTONE" against
+ * "S0UTHST0NE" is three substitutions in twenty-three characters, and a
+ * reviewer comparing them by eye at speed will pass it.
+ *
+ * A READING IS ADOPTED, NEVER RETYPED (`ux.spec` #3). Transcribing a value out
+ * of one pane and into another produces exactly the class of defect this screen
+ * exists to catch.
+ */
 export function EngineReadings({
-  readings,
+  field,
   onAdopt,
-  onViewSource,
+  onPin,
 }: {
-  readings: readonly Reading[];
-  onAdopt: (reading: Reading) => void;
-  onViewSource?: ((page: number) => void) | undefined;
+  field: Field;
+  onAdopt: (value: string) => void;
+  /** Draws the reading's recorded line on the page. Seat names the pin. */
+  onPin: (reading: FieldReading, seat: string) => void;
 }) {
+  const readings = readingsOf(field);
   if (readings.length === 0) return null;
 
-  const disagree = new Set(readings.map((r) => r.value)).size > 1;
-
   return (
-    <div className="flex flex-col gap-4">
-      <Eyebrow variant="caption" tone={disagree ? "attend" : "muted"}>
-        {disagree
-          ? "They disagree — that is why it is yours"
-          : "Both readings agree"}
-      </Eyebrow>
+    <ul className="flex flex-col gap-3">
+      {readings.map((reading, index) => {
+        const seat = SEAT[index] ?? String(index + 1);
+        const other = readings[index === 0 ? 1 : 0]?.value ?? "";
+        return (
+          <li key={reading.id} className="flex flex-wrap items-baseline gap-4">
+            <button
+              type="button"
+              onClick={() => onPin(reading, seat)}
+              className="font-mono text-micro font-bold tracking-badge text-action underline"
+            >
+              {reading.engine_id}
+            </button>
 
-      {readings.map((reading) => (
-        <div
-          key={reading.engineId}
-          className="flex flex-wrap items-center gap-4 rounded-7 border border-line-strong bg-surface-panel px-5 py-4"
-        >
-          <span className="font-mono text-micro font-bold tracking-badge text-ink-muted uppercase">
-            {reading.engineId}
-          </span>
-          <span className="flex-1 font-mono text-md text-ink-primary">{reading.value}</span>
-          <PageChip page={reading.page} onView={onViewSource} />
-          <Button size="sm" fill="tinted" tone="action" onClick={() => onAdopt(reading)}>
-            Use this
-          </Button>
-        </div>
-      ))}
-    </div>
+            {reading.value === null ? (
+              <span className="font-mono text-base text-ink-muted">— nothing returned</span>
+            ) : (
+              <Diffed value={reading.value} against={other} />
+            )}
+
+            {reading.page === null ? null : (
+              <span className="font-mono text-micro font-semibold text-page-ref">
+                p{reading.page}
+              </span>
+            )}
+
+            {reading.value === null ? null : (
+              <Button
+                size="sm"
+                fill="tinted"
+                tone="action"
+                data-testid={`use-${reading.engine_id}`}
+                onClick={() => onAdopt(reading.value ?? "")}
+              >
+                Correct to this
+              </Button>
+            )}
+
+            {reading.snippet === null ? null : (
+              <p className="w-full font-quote text-xs italic text-ink-secondary">
+                {reading.snippet}
+              </p>
+            )}
+          </li>
+        );
+      })}
+    </ul>
   );
 }

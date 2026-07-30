@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { nextOrderQuery } from "./queries";
+import type { QueueBandId } from "@titlepipe/contract";
+import { nextOrderQuery, queueBandsQuery } from "./queries";
+import { useSession } from "../../shared/session";
 import { EmptyPanel } from "../../shared/ui/EmptyPanel";
 import { Screen } from "../../shared/ui/Screen";
 import { ScreenFailure } from "../../shared/ui/ScreenFailure";
@@ -36,20 +38,37 @@ import { NextOrderCard } from "./NextOrderCard";
  * cases are returned above it. Drawing the resolved-empty panel while the
  * request was still open would have the screen assert that no work exists on the
  * strength of a fetch that had not come back — a loading bug shipped as a design.
+ *
+ * BOTH READS GATE THE WHOLE SCREEN, for that same reason. The bands draw a
+ * resolved-and-empty panel when their count is zero, so letting them mount
+ * while `/api/queue/bands` is still open — or has failed — would print "Nothing
+ * held" on the strength of a fetch that never came back. Which bands exist is
+ * the server's answer too, so there is nothing to render optimistically.
  */
 export function QueueScreen() {
-  const { data, isPending, isError, error } = useQuery(nextOrderQuery);
+  // The acting role, DEV-ONLY (conflict C12). It keys the bands cache so the
+  // preview control actually previews; the server still decides what it answers.
+  const role = useSession((session) => session.role);
+  const next = useQuery(nextOrderQuery);
+  const bands = useQuery(queueBandsQuery(role));
   const [view, setView] = useState<"reviewer" | "senior">("reviewer");
 
-  if (isError)
+  if (next.isError || bands.isError) {
+    const failure = next.error ?? bands.error;
     return (
       <Screen measure="860">
-        <ScreenFailure reference={error instanceof Error ? error.message : undefined} />
+        <ScreenFailure reference={failure instanceof Error ? failure.message : undefined} />
       </Screen>
     );
-  if (isPending) return <ScreenMessage measure="860">Loading the next order…</ScreenMessage>;
+  }
+  if (next.isPending || bands.isPending)
+    return <ScreenMessage measure="860">Loading the next order…</ScreenMessage>;
 
-  const order = data.order;
+  const order = next.data.order;
+  // The server decides which bands this caller gets and in what order; the
+  // screen only knows where "Next up" is spliced in. A band it did not send is
+  // absent here, never an empty one — `Band` renders nothing for `undefined`.
+  const bandOf = (id: QueueBandId) => bands.data.bands.find((band) => band.id === id);
 
   return (
     <Screen measure="860">
@@ -68,8 +87,8 @@ export function QueueScreen() {
             <ToggleGroup
               aria-label="Queue view"
               value={[view]}
-              onValueChange={(next) => {
-                const picked = next.at(0);
+              onValueChange={(values) => {
+                const picked = values.at(0);
                 if (picked === "reviewer" || picked === "senior") setView(picked);
               }}
             >
@@ -79,7 +98,7 @@ export function QueueScreen() {
           }
         />
 
-        <MineBand />
+        <MineBand band={bandOf("mine")} />
 
         <QueueBand title="Next up" note="the system decides — no picking">
           {order === null ? (
@@ -92,7 +111,12 @@ export function QueueScreen() {
           )}
         </QueueBand>
 
-        <TailBands senior={view === "senior"} />
+        <TailBands
+          senior={view === "senior"}
+          held={bandOf("held")}
+          inFlight={bandOf("in_flight")}
+          delivered={bandOf("delivered")}
+        />
       </div>
     </Screen>
   );

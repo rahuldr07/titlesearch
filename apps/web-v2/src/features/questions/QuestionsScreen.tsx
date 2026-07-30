@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { SignoffReadonly } from "../../entities/signoff/SignoffReadonly";
 import { Screen } from "../../shared/ui/Screen";
 import { ScreenHeading } from "../../shared/ui/ScreenHeading";
 import { ScreenMessage } from "../../shared/ui/ScreenMessage";
@@ -53,7 +54,16 @@ export function QuestionsScreen() {
           signedAt={data.signed_at}
         />
 
-        <SignoffCard signoff={data} />
+        {/* SIGNED IS A DIFFERENT SCREEN, NOT A DISABLED ONE. `signed_by` is the
+            server's, and once it is set the answers are a record: there is no
+            amendment endpoint, and an append-only signature is not edited in
+            place. Drawing live answer buttons over it offered an act nothing
+            accepts, on a record the person reading it did not make. */}
+        {data.signed_by === null ? (
+          <SignoffCard signoff={data} />
+        ) : (
+          <SignoffReadonly signoff={data} />
+        )}
       </div>
     </Screen>
   );

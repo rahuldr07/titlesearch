@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
 import { FieldRow } from "./FieldRow";
 import { FieldValue } from "./FieldValue";
+import { demoFields } from "@titlepipe/mocks";
 import { NoValue } from "./NoValue";
 import { Card } from "../../shared/ui/Card";
 
@@ -14,7 +15,11 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const cited = { page: 3, snippet: "…" };
+const fieldAt = (path: string) => {
+  const found = demoFields.find((f) => f.path === path);
+  if (found === undefined) throw new Error(`no demo field at ${path}`);
+  return found;
+};
 
 /**
  * SELECTION, NOT HOVER. There is no `:hover` rule on any table row anywhere in
@@ -31,10 +36,10 @@ export const AssembledReport: Story = {
     <div className="max-w-200">
       <Card>
         <FieldRow label="Lender" onSelect={() => {}}>
-          <FieldValue value="SPECIMEN LENDING CO (FIXTURE)" provenance={cited} />
+          <FieldValue field={fieldAt("deed.grantor")} />
         </FieldRow>
         <FieldRow label="Amount" selected onSelect={() => {}}>
-          <FieldValue value="$220,224.00" provenance={cited} />
+          <FieldValue field={fieldAt("assessment.total")} />
         </FieldRow>
         <FieldRow label="Plat book / page">
           <NoValue value={{ kind: "not_present" }} />
@@ -46,7 +51,7 @@ export const AssembledReport: Story = {
           <NoValue value={{ kind: "pending" }} />
         </FieldRow>
         <FieldRow label="Judgment amount">
-          <FieldValue value="$4,712.83" provenance={null} />
+          <FieldValue field={fieldAt("judgments.1.amount")} />
         </FieldRow>
       </Card>
     </div>
@@ -69,7 +74,7 @@ export const Selected: Story = {
     <div className="max-w-200">
       <Card>
         <FieldRow label="Amount" selected onSelect={() => {}}>
-          <FieldValue value="$220,224.00" provenance={cited} />
+          <FieldValue field={fieldAt("assessment.total")} />
         </FieldRow>
       </Card>
     </div>
@@ -88,7 +93,7 @@ export const NotSelectedIsNotAnnounced: Story = {
     <div className="max-w-200">
       <Card>
         <FieldRow label="Lender" onSelect={() => {}}>
-          <FieldValue value="SPECIMEN LENDING CO (FIXTURE)" provenance={cited} />
+          <FieldValue field={fieldAt("deed.grantor")} />
         </FieldRow>
       </Card>
     </div>

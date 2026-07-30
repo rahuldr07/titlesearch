@@ -1,4 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
+import { demoFields } from "@titlepipe/mocks";
 import { FieldValue } from "./FieldValue";
 
 const meta = {
@@ -10,54 +12,68 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const cited = { page: 3, snippet: "…SOUTHSTONE MORTGAGE LLC…" };
+const fieldAt = (path: string) => {
+  const found = demoFields.find((f) => f.path === path);
+  if (found === undefined) throw new Error(`no demo field at ${path}`);
+  return found;
+};
 
-export const Presentations: Story = {
-  args: { value: "SOUTHSTONE MORTGAGE LLC", provenance: cited },
+/**
+ * ONE COMPONENT, EVERY ARM. This absorbed `features/review/SheetValue`: two
+ * renders of the same thing existed, and only one of them refused an uncited
+ * value while only the other could draw the NA states.
+ */
+export const EveryArm: Story = {
+  args: { field: fieldAt("deed.grantor") },
   render: () => (
     <div className="flex flex-col items-start gap-8">
-      <FieldValue value="SOUTHSTONE MORTGAGE LLC" provenance={cited} />
-      <FieldValue value="SOUTHSTONE MORTGAGE LLC" provenance={cited} presentation="correction" />
-      <FieldValue value="ESTRADA, MARIA L" provenance={{ page: 31, snippet: "…" }} presentation="excluded" />
-      <FieldValue value="$4,712.83" provenance={{ page: 32, snippet: "…" }} presentation="escalated" />
-      <FieldValue
-        value="Words line is legible and matches this reading."
-        provenance={{ page: 3, snippet: "…" }}
-        presentation="note"
-      />
+      <FieldValue field={fieldAt("deed.grantor")} />
+      <FieldValue field={fieldAt("legal.plat_book_page")} />
+      <FieldValue field={fieldAt("judgments.1.case_no")} />
+      <FieldValue field={fieldAt("assessment.tax_status")} />
+      <FieldValue field={fieldAt("mortgages.1.lender")} />
     </div>
   ),
 };
 
 /**
- * THE INVARIANT (`review.spec` #2): a value with no provenance renders as a
- * hard error — never a blank, never a bare value. Principle 6: never emit a
- * value you cannot cite.
+ * THE INVARIANT (`review.spec` #2): a value with no document, no page and no
+ * reading behind it renders as a hard error — never a blank, never a bare
+ * value. Principle 6: never emit a value you cannot cite.
  *
  * The design has NO arm for this, so the treatment is invented and flagged.
- * `provenance` is required-but-nullable rather than optional precisely so a
- * caller cannot omit it by accident and render an uncited value.
  */
 export const NoProvenanceIsAnError: Story = {
-  args: { value: "$220,224.00", provenance: null },
-  render: () => (
+  args: { field: fieldAt("judgments.1.amount") },
+  render: (args) => (
     <div className="flex flex-col items-start gap-8">
-      <FieldValue value="$220,224.00" provenance={null} />
+      <FieldValue {...args} />
     </div>
   ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByRole("alert")).toHaveTextContent("NO PROVENANCE");
+  },
 };
 
 /**
- * `value_raw` and `value_normalized` are shown as SEPARATE values, never merged
- * (BRIEF §8). The normalisation is the machine's interpretation; a reviewer
- * checking against the page needs to see what was actually printed there.
+ * THE FOUR NA STATES NEVER COLLAPSE, and `pending` is a fifth thing — the
+ * pipeline has not looked. Border style and fill carry the distinction, so it
+ * survives greyscale; colour is secondary.
  */
-export const RawAndNormalised: Story = {
-  args: { value: "$220,224.00", provenance: cited },
+export const NoValueStatesStayApart: Story = {
+  args: { field: fieldAt("legal.plat_book_page") },
   render: () => (
     <div className="flex flex-col items-start gap-8">
-      <FieldValue value="$220,224.00" raw="TWO HUNDRED TWENTY THOUSAND TWO HUNDRED TWENTY FOUR" provenance={cited} />
-      <FieldValue value="03/15/2024" raw="March 15, A.D. 2024" provenance={{ page: 1, snippet: "…" }} />
+      <FieldValue field={fieldAt("legal.plat_book_page")} />
+      <FieldValue field={fieldAt("judgments.1.case_no")} />
+      <FieldValue field={fieldAt("deed.dated_date")} />
+      <FieldValue field={fieldAt("assessment.tax_status")} />
     </div>
   ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByText("not yet extracted")).toBeVisible();
+    await expect(canvas.queryByText("Not Available")).not.toBeInTheDocument();
+  },
 };

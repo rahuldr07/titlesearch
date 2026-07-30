@@ -25,9 +25,9 @@ const sections: SidebarSection[] = [
     kind: "doors",
     label: "WORK",
     doors: [
-      { to: "/queue", label: "queue", icon: "Q", active: true, attention: null },
-      { to: "/overview", label: "overview", icon: "O", active: false, attention: null },
-      { to: "/escalations", label: "escalation inbox", icon: "E", active: false, attention: "attend" },
+      { to: "/queue", label: "queue", icon: "Q", title: "queue · g q", active: true, attention: null },
+      { to: "/overview", label: "overview", icon: "O", title: "overview · g o", active: false, attention: null },
+      { to: "/escalations", label: "escalation inbox", icon: "E", title: "escalation inbox · g e", active: false, attention: "attend" },
     ],
   },
   {
@@ -45,12 +45,16 @@ const sections: SidebarSection[] = [
   {
     kind: "doors",
     label: "ADMIN",
-    doors: [{ to: "/rulebook", label: "rulebook", icon: "B", active: false, attention: null }],
+    doors: [
+      { to: "/rulebook", label: "rulebook", icon: "R", title: "rulebook · g b", active: false, attention: null },
+    ],
   },
   {
     kind: "doors",
     label: "REFERENCE",
-    doors: [{ to: "/gallery", label: "states", icon: "G", active: false, attention: null }],
+    doors: [
+      { to: "/gallery", label: "states", icon: "S", title: "states · g g", active: false, attention: null },
+    ],
   },
 ];
 
@@ -87,8 +91,11 @@ export const Expanded: Story = {
     const queueDoor = await canvas.findByTestId("rail-door-/queue");
     expect(queueDoor).toHaveTextContent("Q");
     expect(queueDoor).toHaveTextContent("queue");
+    // The square is the label's INITIAL; the chord `b` lives in the title and
+    // the `?` map (ruling D2), so R here is the fix, not a typo.
     const rulebookDoor = await canvas.findByTestId("rail-door-/rulebook");
-    expect(rulebookDoor).toHaveTextContent("B");
+    expect(rulebookDoor).toHaveTextContent("R");
+    expect(rulebookDoor).toHaveAttribute("title", "rulebook · g b");
     expect(rulebookDoor).toHaveTextContent("rulebook");
   },
 };

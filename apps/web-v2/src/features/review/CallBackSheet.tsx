@@ -1,7 +1,7 @@
 import type { Field } from "@titlepipe/contract";
-import { fieldLabel } from "./fieldLabel";
+import { fieldLabel } from "../../entities/field/fieldLabel";
 import { SECTION_HEADING, sectionAnchor, sectionsOf } from "./reportSections";
-import { SheetValue } from "./SheetValue";
+import { FieldValue } from "../../entities/field/FieldValue";
 import { Card, CardBody, CardHeader } from "../../shared/ui/Card";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
 
@@ -69,7 +69,7 @@ export function CallBackSheet({
                     </button>
                   </dt>
                   <dd>
-                    <SheetValue field={field} />
+                    <FieldValue field={field} />
                   </dd>
                 </div>
               ))}

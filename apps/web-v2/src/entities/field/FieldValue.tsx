@@ -1,74 +1,95 @@
+import type { Field, NaReason } from "@titlepipe/contract";
+import { enginesDisagree, hasNoProvenance, isExcluded } from "./fieldLabel";
+import { NoValue } from "./NoValue";
+import type { NoValueKind } from "./noValueStates";
 import { PageChip } from "./PageChip";
-import { Eyebrow } from "../../shared/ui/Eyebrow";
-import { cn } from "../../shared/ui/classNames";
 
-/**
- * A field that HAS a value.
- *
- * The load-bearing rule, and the reason `provenance` is a required prop rather
- * than an optional one: **a value with no provenance renders as a hard error,
- * never a bare value** (`review.spec` #2, INVARIANT; principle 6 — never emit a
- * value you cannot cite). The design has no error arm for this, so the
- * treatment below is INVENTED and flagged — see `conflicts.md`. Everything else
- * here is drawn.
- *
- * Making `provenance` required-but-nullable is deliberate. Optional would let a
- * caller omit it by accident and render a bare, uncited value — the exact
- * failure the invariant exists to catch. Nullable forces the caller to say
- * "there is none", and then this component decides what that looks like.
- *
- * `raw` is separate from `value` because BRIEF §8 forbids merging
- * `value_raw` and `value_normalized`: the normalisation is the machine's
- * interpretation, and a reviewer checking a value against the page needs to see
- * what was actually on the page.
- */
-export interface Provenance {
-  page: number;
-  /** The exact text the value was read from. Never paraphrased. */
-  snippet: string;
+/** The four document answers, mapped to the six-arm render union. */
+function noValueFor(reason: NaReason, page: number | null): NoValueKind {
+  switch (reason) {
+    case "NOT_PRESENT":
+      return { kind: "not_present" };
+    case "NOT_FOUND":
+      return { kind: "not_found" };
+    case "NOT_STATED":
+      return { kind: "silent" };
+    case "PRESENT_UNREADABLE":
+      return { kind: "unreadable", page: page ?? 0 };
+  }
 }
 
-export type FieldPresentation =
-  | "machine"
-  | "correction"
-  | "excluded"
-  | "escalated"
-  | "note";
-
-const PRESENTATION: Record<FieldPresentation, { className: string; mark?: string }> = {
-  machine: { className: "font-mono text-md text-ink-primary" },
-  correction: {
-    className:
-      "rounded-1 border-b-(length:--stroke-emphasis) border-action bg-action-surface px-2 py-px font-mono text-md font-semibold text-action-ink",
-    mark: "Your correction",
-  },
-  excluded: {
-    className: "font-mono text-md text-ink-secondary line-through",
-    mark: "Excluded — not our party",
-  },
-  escalated: {
-    className: "font-mono text-md text-state-attend-ink",
-    mark: "↗ Escalated to senior review",
-  },
-  note: { className: "font-quote text-base text-ink-secondary" },
-};
-
+/**
+ * ONE FIELD'S VALUE, WHEREVER IT IS PRINTED.
+ *
+ * Two copies of this existed: an entity that took a `value` string with a
+ * required-but-nullable `provenance`, and a `SheetValue` in the review feature
+ * that took a `Field`. Only the second could render the NA states, and only the
+ * first refused an uncited value — so the sheet could print a value with no
+ * source, and the entity could collapse four different NA answers into a blank.
+ * This is the union, over the contract shape, and there is no second copy.
+ *
+ * NEVER EMIT A VALUE YOU CANNOT CITE (principle 6, `review.spec` #2). A value
+ * with no document, no page and no reading behind it is not a fact — it is a
+ * string of unknown origin sitting in a report, and it renders as a visible
+ * error rather than as an ordinary value. The design has no arm for this, so
+ * the treatment is INVENTED and flagged (`conflicts.md`).
+ *
+ * THE FOUR NA STATES NEVER COLLAPSE, and `pending` is a fifth thing — the
+ * pipeline has not looked. `NoValue` carries the distinction in border style
+ * and fill so it survives greyscale; this component only decides WHICH of them
+ * is true, from `na_reason` and `value`, never from confidence.
+ *
+ * A HUMAN DECISION IS LABELLED AS ONE. "Your correction" and "Escalated to
+ * senior review" are not styling — they are the difference between a value the
+ * machine produced and a value a person stood behind, and the sheet is the last
+ * place that distinction is visible before the document goes out.
+ *
+ * CONTRACT GAP: `value_raw` has no member on `Field`, so the normalised value
+ * stands alone here. BRIEF §8 forbids merging the two, which this satisfies by
+ * having only one — but a reviewer checking a normalisation against the page
+ * still cannot see what was printed there.
+ */
 export function FieldValue({
-  value,
-  raw,
-  provenance,
-  presentation = "machine",
+  field,
   onViewSource,
 }: {
-  value: string;
-  /** `value_raw`, when it differs from the normalised value. Never merged. */
-  raw?: string;
-  /** `null` means none exists — which is an error, not an omission. */
-  provenance: Provenance | null;
-  presentation?: FieldPresentation;
-  onViewSource?: (page: number) => void;
+  field: Field;
+  /** Scrolls the document pane to the cited line. Absent on read-only surfaces. */
+  onViewSource?: ((page: number) => void) | undefined;
 }) {
-  if (provenance === null) {
+  const page = field.source_page;
+
+  if (isExcluded(field)) {
+    // The row is OFF the sheet, and says so. A suppressed line that simply
+    // vanished would be indistinguishable from one nobody looked at.
+    return <span className="text-base text-ink-muted">Excluded — not our party</span>;
+  }
+
+  if (field.state === "escalated") {
+    return <span className="text-base text-state-attend-ink">↗ Escalated to senior review</span>;
+  }
+
+  if (field.value === null && field.na_reason !== null) {
+    return (
+      <span className="flex flex-wrap items-baseline gap-3">
+        <NoValue value={noValueFor(field.na_reason, page)} />
+        {field.na_reason === "PRESENT_UNREADABLE" && page !== null ? (
+          <PageChip page={page} onView={onViewSource} />
+        ) : null}
+      </span>
+    );
+  }
+
+  if (field.value === null) {
+    return (
+      <span className="flex flex-wrap items-baseline gap-3">
+        <NoValue value={{ kind: enginesDisagree(field) ? "unsettled" : "pending" }} />
+        <span className="text-tiny text-ink-muted">not on the sheet yet</span>
+      </span>
+    );
+  }
+
+  if (hasNoProvenance(field)) {
     return (
       <span
         role="alert"
@@ -80,20 +101,16 @@ export function FieldValue({
     );
   }
 
-  const { className, mark } = PRESENTATION[presentation];
-
   return (
-    <span className="inline-flex flex-wrap items-center gap-3">
-      <span className={cn(className)}>{value}</span>
-      <PageChip page={provenance.page} onView={onViewSource} />
-      {raw !== undefined && raw !== value ? (
-        <span className="font-mono text-xs text-ink-muted">
-          <span className="sr-only">As printed on the page: </span>
-          raw: {raw}
-        </span>
-      ) : null}
-      {mark ? (
-        <Eyebrow variant="field">{mark}</Eyebrow>
+    <span className="flex flex-wrap items-baseline gap-3">
+      <span className="font-mono text-base text-ink-primary">{field.value}</span>
+      {page === null ? (
+        <span className="text-tiny font-semibold text-state-halt-ink">no page cited</span>
+      ) : (
+        <PageChip page={page} onView={onViewSource} />
+      )}
+      {field.state === "corrected" ? (
+        <span className="text-tiny font-semibold text-action">Your correction</span>
       ) : null}
     </span>
   );

@@ -1,5 +1,5 @@
 import type { Field } from "@titlepipe/contract";
-import { FieldRow } from "./FieldRow";
+import { DecisionRow } from "../../entities/field/DecisionRow";
 import { Card, CardBody, CardHeader } from "../../shared/ui/Card";
 import { EmptyNote } from "../../shared/ui/EmptyPanel";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
@@ -37,14 +37,17 @@ export function FieldList({
   const queued = fields.filter((field) => field.state === "needs_review");
   const settled = fields.filter((field) => field.state !== "needs_review");
 
+  // `as="div"`, not the default `ul`: `DecisionRow` IS a `<button>`, and a
+  // button is not valid content for a `<li>`-less list element. The hairline and
+  // its `first:` exemption ride the row itself for the same reason.
   const rows = (group: readonly Field[]) => (
-    <DividedSection>
+    <DividedSection as="div">
       {group.map((field) => (
-        <FieldRow
+        <DecisionRow
           key={field.id}
           field={field}
           selected={field.path === selectedPath}
-          onSelect={() => onSelect(field.path)}
+          onActivate={() => onSelect(field.path)}
         />
       ))}
     </DividedSection>

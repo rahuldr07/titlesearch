@@ -1,5 +1,5 @@
 import { queryOptions, useMutation, useQueryClient } from "@tanstack/react-query";
-import { QueueNextResponse, PassOrderResponse } from "@titlepipe/contract";
+import { QueueBandsResponse, QueueNextResponse, PassOrderResponse } from "@titlepipe/contract";
 import { get, post } from "../../shared/api";
 
 /**
@@ -14,6 +14,33 @@ export const nextOrderQuery = queryOptions({
   queryKey: ["queue", "next"],
   queryFn: () => get("/api/queue/next", QueueNextResponse),
 });
+
+/**
+ * The four bands — Mine, Held, In flight, Recently delivered — as a CENSUS, not
+ * as a browse endpoint. Nothing on a band row carries a claim token, an
+ * assignment or an ordering the caller can influence, so `/api/queue/next`
+ * stays the only hand-over by construction rather than by this screen's
+ * restraint (`queue.spec` #1).
+ *
+ * WHICH bands come back is the server's answer to "what may this caller see":
+ * a reviewer is served no `in_flight` band at all rather than an empty one. The
+ * screen therefore renders the bands it was given and never a fixed four.
+ *
+ * Separate from `nextOrderQuery` deliberately. A pass invalidates the next
+ * order; it does not invalidate the census, and coupling the two would make
+ * every pass redraw four bands that did not change.
+ *
+ * Keyed on the acting role, the same way `myPermissionsQuery` is: the server
+ * narrows both WHICH bands come back and WHICH rows are in them, so a role
+ * switch that served a cached world would show one role's held orders under
+ * another's name. A stale world is worse than no world.
+ */
+export function queueBandsQuery(role: string) {
+  return queryOptions({
+    queryKey: ["queue", "bands", role],
+    queryFn: () => get("/api/queue/bands", QueueBandsResponse),
+  });
+}
 
 /**
  * A pass is REFUSED without a reason. The refusal is enforced server-side —

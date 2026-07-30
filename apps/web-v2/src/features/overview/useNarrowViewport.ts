@@ -8,20 +8,23 @@ import { useSyncExternalStore } from "react";
  * below this width the screen forces the rail — which reads better stacked
  * anyway — and SAYS SO, rather than silently ignoring a view the person chose.
  *
+ * 1190px is the export's own minimum for the seven columns at their drawn
+ * width. The threshold used to be 900, which meant the 900–1190px band drew a
+ * squeezed board rather than the rail: neither the export's answer (scroll) nor
+ * ours (rail), and the one arrangement where the columns are too narrow to
+ * compare with no affordance saying so. The board is now only ever drawn at the
+ * width it was designed for.
+ *
  * `useSyncExternalStore` over an effect-and-state pair because the match is
  * external state that can change before React commits; the store form cannot
  * tear, and it gives a server snapshot for free.
- *
- * 900px is the design's own threshold: seven columns at the drawn minimum plus
- * gaps needs roughly 1190px, and the first breakpoint below that where the rail
- * is unambiguously the better read is 900.
  */
-const NARROW = "(max-width: 900px)";
+export const NARROW_QUERY = "(max-width: 1189px)";
 
 let query: MediaQueryList | null = null;
 
 function media(): MediaQueryList {
-  query ??= window.matchMedia(NARROW);
+  query ??= window.matchMedia(NARROW_QUERY);
   return query;
 }
 

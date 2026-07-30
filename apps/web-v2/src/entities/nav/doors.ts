@@ -24,9 +24,16 @@ import { canAccess, type Role } from "@titlepipe/contract";
  * second source of the door set. `account` renders in NEITHER — the design
  * does not draw Profile as a rail door (it lives in the account menu), and no
  * test requires it in the rail, so it stays in `DOORS`/`doorsFor` for the
- * chord and the `?` map only. `icon` is the letter-icon square shown on every
- * rendered door, collapsed AND expanded — always the chord key, upper-cased,
- * so it can never drift from the key that actually opens the door.
+ * chord and the `?` map only.
+ *
+ * THE SQUARE SHOWS THE LABEL'S INITIAL, AND IT IS DERIVED, NOT STORED. The
+ * export takes `label.charAt(0)` and renders P twice without caring (ruling
+ * D2). An `icon` field would be a second copy of the label's first letter,
+ * free to drift from it; `doorGlyph` cannot. The CHORD lives in `key` and is
+ * surfaced where a chord is actually learned — the row's `title`
+ * (`doorTitle`) and the `?` map, which already prints `g <key>` beside the
+ * label. `Door.key` is therefore still the single source of the chord, and
+ * nothing aliases it.
  */
 type DoorGroup = "work" | "this-order" | "admin" | "reference" | "account";
 
@@ -36,8 +43,6 @@ export interface Door {
   key: string;
   label: string;
   group: DoorGroup;
-  /** Single-letter icon for the rail's icon-square. */
-  icon: string;
 }
 
 /** Screens the authz table restricts. Everything else is open by default. */
@@ -45,21 +50,21 @@ const RESTRICTED: readonly string[] = ["/queue", "/orders", "/escalations", "/in
 
 /** Not exported: consumers go through `doorsFor` so the role filter is never bypassed. */
 const DOORS: readonly Door[] = [
-  { path: "/queue", key: "q", label: "queue", group: "work", icon: "Q" },
-  { path: "/overview", key: "o", label: "overview", group: "work", icon: "O" },
-  { path: "/ingest", key: "u", label: "upload", group: "this-order", icon: "U" },
-  { path: "/questions", key: "n", label: "questions", group: "this-order", icon: "N" },
-  { path: "/processing", key: "p", label: "processing", group: "this-order", icon: "P" },
-  { path: "/completeness", key: "c", label: "completeness", group: "this-order", icon: "C" },
-  { path: "/delivered", key: "d", label: "delivered", group: "this-order", icon: "D" },
-  { path: "/escalations", key: "e", label: "escalation inbox", group: "work", icon: "E" },
-  { path: "/rulebook", key: "b", label: "rulebook", group: "admin", icon: "B" },
-  { path: "/products", key: "t", label: "products & sign-off", group: "admin", icon: "T" },
-  { path: "/clients", key: "l", label: "clients", group: "admin", icon: "L" },
-  { path: "/people", key: "m", label: "people", group: "admin", icon: "M" },
-  { path: "/audit", key: "a", label: "audit", group: "admin", icon: "A" },
-  { path: "/profile", key: "f", label: "profile", group: "account", icon: "F" },
-  { path: "/gallery", key: "g", label: "states", group: "reference", icon: "G" },
+  { path: "/queue", key: "q", label: "queue", group: "work" },
+  { path: "/overview", key: "o", label: "overview", group: "work" },
+  { path: "/ingest", key: "u", label: "upload", group: "this-order" },
+  { path: "/questions", key: "n", label: "questions", group: "this-order" },
+  { path: "/processing", key: "p", label: "processing", group: "this-order" },
+  { path: "/completeness", key: "c", label: "completeness", group: "this-order" },
+  { path: "/delivered", key: "d", label: "delivered", group: "this-order" },
+  { path: "/escalations", key: "e", label: "escalation inbox", group: "work" },
+  { path: "/rulebook", key: "b", label: "rulebook", group: "admin" },
+  { path: "/products", key: "t", label: "products & sign-off", group: "admin" },
+  { path: "/clients", key: "l", label: "clients", group: "admin" },
+  { path: "/people", key: "m", label: "people", group: "admin" },
+  { path: "/audit", key: "a", label: "audit", group: "admin" },
+  { path: "/profile", key: "f", label: "profile", group: "account" },
+  { path: "/gallery", key: "g", label: "states", group: "reference" },
 ];
 
 /**
@@ -83,4 +88,22 @@ export function doorsFor(role: Role): Door[] {
 /** The door a chord's second key opens, or null if the role does not hold it. */
 export function doorForKey(role: Role, key: string): Door | null {
   return doorsFor(role).find((door) => door.key === key) ?? null;
+}
+
+/**
+ * The letter the rail's square draws. Derived so it cannot drift from the label
+ * a reader sees beside it; collisions are the export's own behaviour (Products
+ * and People both draw P), not a bug.
+ */
+export function doorGlyph(door: Door): string {
+  return door.label.charAt(0).toUpperCase();
+}
+
+/**
+ * The row's hover/AT text: what the door is, and the chord that opens it.
+ * A chord is learned where it is printed — here and in the `?` map — never
+ * from a one-letter square that has to double as an identifier.
+ */
+export function doorTitle(door: Door): string {
+  return `${door.label} · g ${door.key}`;
 }

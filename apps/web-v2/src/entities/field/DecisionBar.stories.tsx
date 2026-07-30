@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
 import { DecisionBar } from "./DecisionBar";
 
 const meta = {
@@ -11,50 +12,52 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 const noop = () => {};
+const handlers = {
+  onConfirm: noop,
+  onCorrect: noop,
+  onEscalate: noop,
+  onExclude: noop,
+  onPass: noop,
+};
 
 /**
- * THERE IS NO BULK ACTION HERE AND THERE NEVER WILL BE. Constraint 6 says
- * approve-all, bulk-confirm and accept-remaining must not exist as components —
- * not disabled, not permission-gated: absent.
+ * THE COPY IS THE EXPORT'S. `✓ Confirm as read` and `✎ Correct it` name what
+ * the act DOES; the live bar read `Confirm C` / `Correct E`, welding the key
+ * legend onto the label in a screen that already prints that legend once in the
+ * queue header — and the shortcut had already moved once (⏎ → `c`).
  *
- * Correct and Escalate open a required-comment step rather than submitting: a
- * correction needs its reason (`review.spec` #4), an escalation needs its
- * question (`review.spec` #6).
- *
- * Keys render as bare mono text, not key-caps — the design has no key-cap
- * component, and styling one here would invent a primitive.
+ * THERE IS NO BULK ACTION HERE AND THERE NEVER WILL BE (HANDOFF §4.4).
  */
-export const Standard: Story = {
-  args: { onConfirm: noop, onCorrect: noop, onEscalate: noop },
+export const ValueField: Story = {
+  args: { ...handlers, offerExclude: false },
   render: (args) => (
     <div className="max-w-160">
       <DecisionBar {...args} />
     </div>
   ),
-};
-
-/** Identity fields add "Not our party" — R13 makes party identity its own check. */
-export const IdentityField: Story = {
-  args: {
-    onConfirm: noop,
-    onCorrect: noop,
-    onEscalate: noop,
-    onNotOurParty: noop,
-    canExclude: true,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByTestId("act-confirm")).toHaveTextContent("Confirm as read");
+    await expect(canvas.queryByTestId("act-exclude")).not.toBeInTheDocument();
+    // Absent, not disabled — and never as a component at all.
+    await expect(canvas.queryByText(/approve/i)).not.toBeInTheDocument();
   },
-  render: (args) => (
-    <div className="max-w-160">
-      <DecisionBar {...args} />
-    </div>
-  ),
 };
 
-/** A non-review role reaching this field by deep link can look, not touch. */
-export const ReadOnly: Story = {
-  args: { onConfirm: noop, onCorrect: noop, onEscalate: noop, disabled: true },
+/**
+ * `✕ Not our party` IS OFFERED ONLY WHERE PARTY IDENTITY IS THE QUESTION
+ * (rulebook R13). Correcting a judgment against a different M. Quenby would
+ * file a suppression as a value change.
+ */
+export const IdentityField: Story = {
+  args: { ...handlers, offerExclude: true },
   render: (args) => (
     <div className="max-w-160">
       <DecisionBar {...args} />
     </div>
   ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByTestId("act-exclude")).toHaveTextContent("Not our party");
+  },
 };

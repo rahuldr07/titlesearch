@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { OrderCompletenessResponse } from "@titlepipe/contract";
+import { OrderContextRow } from "../../entities/order/OrderContextRow";
 import { Button } from "../../shared/ui/Button";
-import { Chip } from "../../shared/ui/Chip";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
 import { Screen } from "../../shared/ui/Screen";
 import { ScreenHeading } from "../../shared/ui/ScreenHeading";
@@ -78,25 +78,27 @@ function GateBody({ gate: data }: { gate: OrderCompletenessResponse }) {
           lede="Your intake claims, checked against what was actually segmented — before a single field is extracted."
         />
 
-        <div className="flex flex-wrap items-center gap-5">
-          <Eyebrow variant="caption">Product ordered</Eyebrow>
-          <span className="text-md font-semibold">{data.product_name}</span>
-          <Chip tone="action" size="sm" shape="mono" bordered className="normal-case">
-            {data.period_label}
-          </Chip>
-
-          <div className="ml-auto flex items-center gap-4">
-            <Eyebrow variant="caption">Gate verdict · local preview</Eyebrow>
-            <ToggleGroup
-              aria-label="Gate verdict (local preview)"
-              value={[gateOpen ? "open" : "closed"]}
-              onValueChange={(value) => setGateOpen(value[0] !== "closed")}
-            >
-              <Toggle value="open">Open</Toggle>
-              <Toggle value="closed">Closed</Toggle>
-            </ToggleGroup>
-          </div>
-        </div>
+        {/* One row, shared with the delivered screen and Review, so the three
+            cannot disagree about what was ordered. The local-preview toggle
+            rides in the trailing slot exactly as it stood; moving it to
+            features/gallery is Wave 4's, not this row's. */}
+        <OrderContextRow
+          productName={data.product_name}
+          periodLabel={data.period_label}
+          trailing={
+            <div className="flex items-center gap-4">
+              <Eyebrow variant="caption">Gate verdict · local preview</Eyebrow>
+              <ToggleGroup
+                aria-label="Gate verdict (local preview)"
+                value={[gateOpen ? "open" : "closed"]}
+                onValueChange={(value) => setGateOpen(value[0] !== "closed")}
+              >
+                <Toggle value="open">Open</Toggle>
+                <Toggle value="closed">Closed</Toggle>
+              </ToggleGroup>
+            </div>
+          }
+        />
 
         {gateOpen ? <GateOpenBanner /> : <GateClosedBanner />}
 

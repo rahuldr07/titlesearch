@@ -1,67 +1,111 @@
 import { Button } from "../../shared/ui/Button";
 
 /**
- * The reviewer's actions on one field.
+ * The reviewer's actions on ONE field, in the export's own words.
  *
- * THERE IS NO BULK ACTION HERE AND THERE NEVER WILL BE. Hard constraint 6 says
- * approve-all, bulk-confirm and accept-remaining must not exist as components —
- * not disabled, not hidden behind a permission: absent. This bar takes a single
- * field and offers exactly the four decisions a person can make about it.
+ * THE COPY IS THE DESIGN'S, RECOVERED. The live bar read `Confirm C` /
+ * `Correct E` — the key legend welded onto the button label, in a screen that
+ * already prints that legend once in the queue header. The export says
+ * `✓ Confirm as read` and `✎ Correct it`: what the act DOES, not which key
+ * fires it. A label that names its shortcut stops being a label the moment the
+ * shortcut moves, and this one had already moved once (⏎ → `c`).
  *
- * NO OPTIMISTIC UPDATE. Constraint 10 and `review-conflict.spec` (3 INVARIANTs):
- * the server's returned state is the truth, a 409 is an ANSWER that renders,
- * and selection does not advance on a refusal. So these handlers report intent
- * upward and this component renders nothing about the outcome — it cannot,
- * because it does not know it yet.
+ * THERE IS NO BULK ACTION HERE AND THERE NEVER WILL BE. Approve-all,
+ * bulk-confirm and accept-remaining are ABSENT as components — not disabled,
+ * not permission-gated (HANDOFF §4.4).
  *
- * Correct and Escalate open a required-comment step rather than submitting:
- * a correction needs its reason (`review.spec` #4) and an escalation needs its
+ * `✕ Not our party` IS OFFERED ONLY WHERE PARTY IDENTITY IS THE QUESTION
+ * (rulebook R13). Correcting a judgment against a different M. Quenby would
+ * file a suppression as a value change; escalating it would ask a senior a
+ * question the reviewer has already answered.
+ *
+ * CORRECT AND ESCALATE OPEN A REQUIRED-COMMENT STEP rather than submitting: a
+ * correction needs its reason (`review.spec` #4), an escalation needs its
  * question (`review.spec` #6). Both are refusals, and both must say why.
  *
- * Keys are rendered as bare mono text, not as key-caps — the design has no
- * key-cap component and styling one here would invent a primitive.
+ * NO OPTIMISTIC UPDATE. These handlers report intent upward and this component
+ * renders nothing about the outcome — it cannot, because it does not know it
+ * yet, and a 409 is an ANSWER the server has to be allowed to give.
+ *
+ * CONTRACT GAP: the export gates escalate on `d.canEscalate` and swaps the
+ * confirm label to `Claim is right` when the decision came from an intake
+ * sign-off claim (`d.fromSignoff`). `Field` carries neither, so escalate is
+ * always offered and the label is always the machine-read wording.
  */
-export function DecisionBar({
-  onConfirm,
-  onCorrect,
-  onEscalate,
-  onNotOurParty,
-  /** Identity fields only — excluding a judgment that belongs to another person. */
-  canExclude = false,
-  disabled = false,
-}: {
+/**
+ * The confirm button's DOM id, so the blank refusal can point a screen reader
+ * at the control it is about (`ReviewEditors`' `RefusalNudge`). A `data-testid`
+ * is for the test runner and carries no meaning to assistive tech, which is why
+ * the id is a second, separate attribute rather than a reuse of that one. It
+ * lives beside the button it names: a pair spelled in two files is a pair that
+ * drifts the first time either side is renamed.
+ */
+/* eslint-disable-next-line react-refresh/only-export-components -- an id constant, not a second component; the alternative is a duplicated string literal in ReviewEditors.tsx, which is the drift this export exists to prevent. */
+export const CONFIRM_CONTROL_ID = "review-act-confirm";
+
+export interface DecisionBarProps {
+  /** R13 suppression is offered where party identity is the question. */
+  offerExclude: boolean;
   onConfirm: () => void;
   onCorrect: () => void;
   onEscalate: () => void;
-  onNotOurParty?: (() => void) | undefined;
-  canExclude?: boolean;
-  disabled?: boolean;
-}) {
-  return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap gap-4">
-        <Button tone="settled" fill="outlined" onClick={onConfirm} disabled={disabled}>
-          ✓ Confirm as read
-        </Button>
-        <Button tone="action" fill="outlined" onClick={onCorrect} disabled={disabled}>
-          ✎ Correct it
-        </Button>
-        <Button tone="attend" fill="outlined" onClick={onEscalate} disabled={disabled}>
-          ↗ Can&rsquo;t decide — escalate
-        </Button>
-        {canExclude && onNotOurParty ? (
-          <Button tone="neutral" fill="outlined" onClick={onNotOurParty} disabled={disabled}>
-            ✕ Not our party
-          </Button>
-        ) : null}
-      </div>
+  onExclude: () => void;
+  /** Order-level, and deliberately quiet — a pass is not a decision on a field. */
+  onPass: () => void;
+}
 
-      <p className="text-xs text-ink-secondary">
-        Keys: <span className="font-mono">C</span> confirm ·{" "}
-        <span className="font-mono">E</span> correct ·{" "}
-        <span className="font-mono">N</span> not our party ·{" "}
-        <span className="font-mono">J</span>/<span className="font-mono">K</span> move
-      </p>
+export function DecisionBar({
+  offerExclude,
+  onConfirm,
+  onCorrect,
+  onEscalate,
+  onExclude,
+  onPass,
+}: DecisionBarProps) {
+  return (
+    <div className="flex flex-wrap gap-4">
+      <Button
+        size="sm"
+        fill="outlined"
+        tone="settled"
+        id={CONFIRM_CONTROL_ID}
+        data-testid="act-confirm"
+        onClick={onConfirm}
+      >
+        ✓ Confirm as read
+      </Button>
+      <Button
+        size="sm"
+        fill="outlined"
+        tone="action"
+        data-testid="act-correct"
+        onClick={onCorrect}
+      >
+        ✎ Correct it
+      </Button>
+      {offerExclude ? (
+        <Button
+          size="sm"
+          fill="outlined"
+          tone="neutral"
+          data-testid="act-exclude"
+          onClick={onExclude}
+        >
+          ✕ Not our party
+        </Button>
+      ) : null}
+      <Button
+        size="sm"
+        fill="outlined"
+        tone="attend"
+        data-testid="act-escalate"
+        onClick={onEscalate}
+      >
+        ↗ Can&rsquo;t decide — escalate
+      </Button>
+      <Button size="sm" fill="ghost" tone="neutral" data-testid="act-pass" onClick={onPass}>
+        Pass — say why
+      </Button>
     </div>
   );
 }

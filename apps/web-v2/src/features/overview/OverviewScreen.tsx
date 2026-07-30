@@ -54,7 +54,7 @@ export function OverviewScreen() {
   const failed = data.stages.flatMap((stage) => stage.orders).filter((order) => order.failed);
 
   return (
-    <Screen measure="1340" pad="26x30">
+    <Screen measure="1340" pad="26x30" placement="top">
       <div className="flex flex-col gap-8">
         <OverviewHeader view={view} onView={setChosen} narrow={narrow} scopeNote={data.scope_note} />
         <TallyStrip

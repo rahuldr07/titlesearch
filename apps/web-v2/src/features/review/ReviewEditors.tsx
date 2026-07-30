@@ -1,5 +1,5 @@
 import { CorrectEditor } from "./CorrectEditor";
-import { CONFIRM_CONTROL_ID } from "./DecisionActions";
+import { CONFIRM_CONTROL_ID } from "../../entities/field/DecisionBar";
 import { EscalateEditor } from "./EscalateEditor";
 import { ExcludeEditor } from "./ExcludeEditor";
 import { PassControl } from "../../entities/order/PassControl";

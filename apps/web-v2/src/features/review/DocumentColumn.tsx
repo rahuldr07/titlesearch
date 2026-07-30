@@ -4,7 +4,7 @@ import type { Field, FieldReading } from "@titlepipe/contract";
 import { pagesQuery } from "./queries";
 import { PageFacsimile } from "./PageFacsimile";
 import { PageNav } from "./PageNav";
-import { readingsOf } from "./fieldLabel";
+import { readingsOf } from "../../entities/field/fieldLabel";
 import { toEvidenceBoxes } from "../../entities/document/coordinates";
 import { PageStrip } from "../../entities/document/PageStrip";
 import { Card, CardBody } from "../../shared/ui/Card";
