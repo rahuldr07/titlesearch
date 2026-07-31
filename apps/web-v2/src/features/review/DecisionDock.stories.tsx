@@ -38,16 +38,21 @@ export const AnsweredOfTotal: Story = {
  * key letters sit in nested spans and a substring query over the tree matches
  * every ancestor, not one node. Escalate is ABSENT — it has no hotkey (button
  * only), and ⏎ no longer confirms.
+ *
+ * KEY FIRST (2026-07-31). This asserted `Confirm` and `Correct` — the
+ * button-label form — while the doc above it and the export both read
+ * `C confirm · E correct`. Two loose `toContain`s on a single capital letter
+ * passed either way, so the assertion was blind to the very thing it names.
+ * The whole token is pinned now.
  */
 export const KeyHintMatchesLiveBindings: Story = {
   args: { fields: demoFields },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const text = canvas.getByTestId("decision-meter").textContent ?? "";
-    await expect(text).toContain("Confirm");
-    await expect(text).toContain("C");
-    await expect(text).toContain("Correct");
-    await expect(text).toContain("E");
+    await expect(text).toContain("C confirm");
+    await expect(text).toContain("E correct");
+    await expect(text).toContain("j/k move");
     await expect(text).not.toContain("⏎");
     await expect(text).not.toContain("Escalate");
   },

@@ -36,15 +36,54 @@ export const DECISION_STATES = new Set<Field["state"]>([
  */
 const OPEN_STATES = new Set<Field["state"]>(["needs_review", "escalated"]);
 
-/** Section order follows the delivered document, not the payload order. */
+/**
+ * THE HEADINGS ARE THE DELIVERED DOCUMENT'S OWN WORDS, verbatim from the
+ * export's report (`:2395-2441`) and its rail (`:1071-1077`): Title Case, and
+ * the abstractor's vocabulary rather than a paraphrase of it. They read
+ * `Vesting & owner`, `Mortgages & deeds of trust`, `Assessment & taxes` — three
+ * headings a typist comparing this draft against the Word template would have
+ * to translate, on a sheet whose own intro promises they "match the delivered
+ * Word document exactly". The casing is invisible on screen (`Eyebrow` is
+ * `uppercase`); the WORDS are not.
+ */
 export const SECTION_HEADING: Record<string, string> = {
-  owner: "Vesting & owner",
-  legal: "Legal description",
-  deed: "Vesting deed",
-  mortgages: "Mortgages & deeds of trust",
-  judgments: "Judgments & liens",
-  assessment: "Assessment & taxes",
+  search: "Search Information",
+  owner: "Vesting",
+  deed: "Vesting Deed",
+  mortgages: "Open Mortgages / Deeds of Trust",
+  legal: "Legal Description",
+  judgments: "Judgments & Liens",
+  assessment: "Taxes & Assessments",
+  notes: "Requirements / Notes",
 };
+
+/**
+ * DELIVERED-DOCUMENT ORDER, DECLARED. This module's comment has claimed since
+ * it was written that "section order follows the delivered document, not the
+ * payload order" while `sectionsOf` returned `[...groups.entries()]` — Map
+ * insertion order, i.e. exactly the payload order it disclaimed. The sheet
+ * therefore rendered Legal Description ahead of Vesting Deed and Judgments
+ * after Taxes, neither of which is the order the client receives.
+ *
+ * A key absent from the payload simply never appears (`sectionsOf` only emits
+ * groups that have fields), and a key absent from THIS list is appended in
+ * payload order rather than dropped — an unknown section is a fixture the
+ * screen has not been taught, not a section to hide.
+ *
+ * CONTRACT GAP: the export's first and last sections, `Search Information` and
+ * `Requirements / Notes`, have no field paths on the wire. They are named here
+ * so the order is the document's whole order, not the part we happen to serve.
+ */
+const SECTION_ORDER: readonly string[] = [
+  "search",
+  "owner",
+  "deed",
+  "mortgages",
+  "legal",
+  "judgments",
+  "assessment",
+  "notes",
+];
 
 /**
  * THE ONE GROUPING FUNCTION. `CallBackSheet` (the draft report) and
@@ -59,7 +98,9 @@ export function sectionsOf(fields: readonly Field[]): [string, Field[]][] {
     const section = field.path.split(".")[0] ?? "other";
     groups.set(section, [...(groups.get(section) ?? []), field]);
   }
-  return [...groups.entries()];
+  const known = SECTION_ORDER.filter((section) => groups.has(section));
+  const unknown = [...groups.keys()].filter((section) => !SECTION_ORDER.includes(section));
+  return [...known, ...unknown].map((section) => [section, groups.get(section) ?? []]);
 }
 
 /**

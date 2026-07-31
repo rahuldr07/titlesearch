@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { Card } from "../../shared/ui/Card";
+import { cn } from "../../shared/ui/classNames";
 import { PackageChip } from "./PackageChip";
 
 /**
@@ -31,13 +32,28 @@ import { PackageChip } from "./PackageChip";
  * family's pale `-border`. Hand-spelled it reached for the saturated
  * `border-action`, so the one meaning "you are over the target" was drawn
  * heavier here than anywhere else it appears.
+ *
+ * THE 14px BETWEEN THE ZONE AND THE FILE CARD IS OWNED HERE, not by the screen:
+ * the export sets that pair apart by less than it sets any other pair on the
+ * page (`margin-top:14px`, :352) because the receipt belongs to the drop, and
+ * the screen's own 18px rhythm would flatten the grouping. `className` carries
+ * only the OUTER gap the screen decides — the export opens 24px below the
+ * sub-copy and 18px everywhere after it, which no uniform flex gap can spell.
  */
-export function DropZone({ file, onFile }: { file: File | null; onFile: (file: File | null) => void }) {
+export function DropZone({
+  file,
+  onFile,
+  className,
+}: {
+  file: File | null;
+  onFile: (file: File | null) => void;
+  className?: string;
+}) {
   const [over, setOver] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   return (
-    <div className="flex flex-col gap-7">
+    <div className={cn("flex flex-col gap-7", className)}>
       <Card
         dashed
         tone={over ? "action" : "none"}

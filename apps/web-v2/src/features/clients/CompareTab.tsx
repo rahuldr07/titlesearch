@@ -24,6 +24,14 @@ const SWATCH: Readonly<Record<CompareMark, string>> = {
  * every mark on it came from the resolver — so an unresolved pairing is absent
  * rather than filled in with plausible dots.
  *
+ * THE LEDE THEREFORE DEPARTS FROM THE EXPORT, DELIBERATELY. The design opens
+ * "Every ACTIVE client against one product baseline"; this grid can only ever
+ * show every RESOLVED one, and a sentence promising all active clients over a
+ * grid that silently drops the unresolved ones is the more dangerous of the two
+ * — a missing column would read as a client with nothing special about it. Not
+ * a drift to be corrected back; the same reason the empty state names the
+ * pairing the server resolved nothing for instead of blaming a retired client.
+ *
  * The legend is above the grid, not in a tooltip, because five marks is more
  * than anyone holds in their head and a mark you have to hover to decode is a
  * mark you will guess at instead.

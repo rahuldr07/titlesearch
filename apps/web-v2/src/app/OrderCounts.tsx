@@ -13,7 +13,7 @@ function fieldsQuery(orderId: string) {
 }
 
 /**
- * The four numbers that describe an order, in the chrome, always visible.
+ * The four numbers that describe an order, in the chrome, on every order screen.
  *
  * FIELDS · AUTO-CONFIRMED · NEED YOU · NO SOURCE. Three of those are ordinary
  * workload. The fourth is the one that matters: NO SOURCE counts values the
@@ -39,6 +39,9 @@ function fieldsQuery(orderId: string) {
  *
  * `fields.length` was the same defect, quietly: the array is scoped to what the
  * caller may see, the census is not.
+ *
+ * `whyComments.test.ts` holds that claim to the file rather than to this
+ * paragraph: no `.filter(`, no `.length`, no comparison against `null` here.
  */
 const TILES = [
   { key: "fields", label: "Fields", tone: "text-ink-primary", muteAtZero: false },
@@ -70,10 +73,18 @@ export function OrderCounts({ orderId }: { orderId: string }) {
   const census = data.census;
 
   return (
-    // Always visible, never breakpoint-hidden: this used to live in the
-    // 232px sidebar foot, where `hidden ... lg:flex` kept it from cramming a
-    // narrow column. It now sits in the full-width top strip (§11
-    // 2026-07-30 revision), which has room at every width the app supports.
+    // NO BREAKPOINT HIDES THESE, AND THAT IS AN UNCLOSED GAP, not a ruling.
+    // The export sets `countsDisplay: compact ? 'none' : 'flex'` below 1180px
+    // (`TitlePipe.dc.html:2447`, `:3770`) and the design spec ruled to ADOPT
+    // it; nothing here implements that yet. Open item G1 in `conflicts.md` —
+    // do not read this comment as the decision going the other way.
+    //
+    // The comment this replaces read "always visible, never breakpoint-hidden",
+    // which stated the gap as though it were the rule. What is true today is
+    // only the literal fact, and `whyComments.test.ts` now checks that fact
+    // rather than the claim: no responsive-visibility utility appears in this
+    // file. "Always visible" was never true either — this returns null until
+    // the query resolves, and `OrderStrip` mounts it only on an order screen.
     <div data-testid="order-counts" className="flex flex-wrap gap-6">
       {TILES.map(({ key, label, tone, muteAtZero }) => {
         // An ABSENT census prints an em dash — not a zero, and not a number

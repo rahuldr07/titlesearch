@@ -14,10 +14,11 @@ import { NotFound } from "./Placeholders";
  * throws that away.
  *
  * THERE IS NO ROUTE-LEVEL ROLE GUARD, deliberately. A role's world is enforced
- * two ways the harvested specs actually assert: the door is ABSENT from the hub
- * and the map, and the chord refuses to open it (`roles.spec` ×4). Both read
- * the same `canAccess` table the server gates with, and the server refuses the
- * data regardless — which is the layer that matters.
+ * two ways: the door is ABSENT from the rail and the map, and the chord refuses
+ * to open it. Both read the same `canAccess` table the server gates with, and
+ * the server refuses the data regardless — which is the layer that matters.
+ * The four harvested world-boundary tests (`roles.spec`) ARE NOT BUILT as a
+ * spec file; `authz.test.ts` proves the table and `sidebar.spec` #2 the rail.
  */
 export const rootRoute = createRootRoute({
   component: () => (

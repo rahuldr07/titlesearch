@@ -21,13 +21,21 @@ type Story = StoryObj<typeof meta>;
  * Judgments has two open fields (`judgments.1.plaintiff_attorney`,
  * `judgments.1.case_no`, both `needs_review`) against three settled ones — the
  * badge must read 2, not 5 and not 0.
+ *
+ * THE NAMES ARE THE DELIVERED DOCUMENT'S (2026-07-31): the rail took the
+ * export's Title Case headings verbatim, so `Vesting & owner` is `Vesting` and
+ * `Judgments & liens` is `Judgments & Liens`. The assertions moved with the
+ * copy; they were pinning a paraphrase.
  */
 export const AllSections: Story = {
   args: { fields: demoFields },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(canvas.getByRole("link", { name: /Vesting & owner/ })).toBeInTheDocument();
-    const judgments = canvas.getByRole("link", { name: /Judgments & liens/ });
+    // By testid, not by name: `Vesting` is now a PREFIX of `Vesting Deed`, and
+    // a name regex that matches both is an ambiguous query, not an assertion.
+    const owner = canvas.getByTestId("section-link-owner");
+    await expect(within(owner).getByText("Vesting")).toBeInTheDocument();
+    const judgments = canvas.getByRole("link", { name: /Judgments & Liens/ });
     await expect(judgments).toBeInTheDocument();
     await expect(within(judgments).getByText("2")).toBeInTheDocument();
   },
@@ -48,7 +56,7 @@ export const JumpsToSection: Story = {
   args: { fields: demoFields },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const link = canvas.getByRole("link", { name: /Judgments & liens/ });
+    const link = canvas.getByRole("link", { name: /Judgments & Liens/ });
     await expect(link).toHaveAttribute("href", "#section-judgments");
     await expect(link).not.toHaveAttribute("aria-current");
     link.addEventListener("click", (e) => e.preventDefault(), { once: true });
@@ -64,7 +72,7 @@ export const NoOpenFieldsShowsNoBadge: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const legal = canvas.getByRole("link", { name: /Legal description/ });
+    const legal = canvas.getByRole("link", { name: /Legal Description/ });
     await expect(within(legal).queryByText(/[0-9]/)).not.toBeInTheDocument();
   },
 };

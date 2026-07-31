@@ -42,6 +42,13 @@ import { Button } from "../../shared/ui/Button";
  * "this block is the live one" inside a stack of peers, and this card has no
  * peers — its whole band is one card.
  *
+ * NO KEY HINT ON THE CARD. The card used to close with `Keys: ⏎ take it · P
+ * pass`. The export prints key hints on NO screen — the `?` map is the one
+ * place they live, and the queue card it draws (`:249-264`) ends at its two
+ * controls. The keys themselves are unchanged: `⏎` still takes and `p` still
+ * opens the pass, they are simply no longer advertised in the card's own copy.
+ * Nothing in `e2e/` asserted the line.
+ *
  * NEITHER THE JURISDICTION SLUG NOR THE CLIENT ID IS INFORMATION. `clayton-ga`
  * and `cli_riverbend` are internal keys printed at a reviewer in the slot the
  * export spends on the package size; the county and state above already say
@@ -133,11 +140,6 @@ export function NextOrderCard({ order }: { order: Order }) {
               }}
             />
           ) : null}
-
-          <p className="mt-6 text-xs text-ink-secondary">
-            Keys: <span className="font-mono">⏎</span> take it ·{" "}
-            <span className="font-mono">P</span> pass
-          </p>
         </CardBody>
       </Card>
     </>

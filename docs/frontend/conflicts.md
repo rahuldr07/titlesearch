@@ -1,6 +1,19 @@
 # Design conflicts — must not be implemented as drawn
 
-Sixteen. Each: what the design does, the constraint it breaks, and a suggested redraw.
+**Nineteen conflicts and eleven deliberate departures.** Two different kinds of record,
+kept in one file because a reader who finds a difference between the app and the export
+needs both to know what they are looking at:
+
+- a **conflict** (`C…`, below) is something the design ASKS FOR THAT CANNOT BE BUILT — it
+  breaks a harvested invariant, a documented server rule or a hard rule. Each carries what
+  the design does, the constraint it breaks, and a suggested redraw.
+- a **departure** (`D…`, at the foot) is something BUILT DIFFERENTLY ON PURPOSE. Nothing
+  refuses it; a named rule simply outranked fidelity. Each carries the design of record,
+  the ruling, and the rule that won.
+
+A difference not in either list is a defect. Find one and it goes in one of these two
+sections before it is fixed, so the next audit reports a decision rather than finding it
+again.
 
 **Three were release-blocking** — C8, C9, C11 contradicted harvested INVARIANT specs. All three are now resolved: D1 settled C11, and C8/C9 were built to the suggested redraw (`4267830`…`8412036`). **C17 is the one open blocker.**
 
@@ -201,3 +214,88 @@ These looked like conflicts and are not:
 - **Queue "Mine" list.** Assigned work, not a shopping list — but it does contradict the old "exactly one order, no list" invariant, so it is ruling **Q11**, not a conflict.
 - **`counts.noSource` as a headline.** Surfacing provenance-missing prominently is principle 6 working as intended. Only the *derivation* is wrong (C1).
 - **Aggregate rule counts** (live/pending/conflict/open). Not an accuracy headline; these are workflow counts on an admin screen.
+
+---
+
+## Deliberate departures — ruled 2026-07-30, not defects
+
+Eleven. Each: the design of record, the ruling, and the rule that outranked fidelity.
+Numbering follows the design spec's own decision ids (`docs/superpowers/specs/2026-07-30-design-fidelity-design.md`), so a departure can be traced back to where it was decided.
+
+### D1 — the order comes from the URL; there is no global current order
+**Design of record:** the top strip carries full order context on every screen, gated only on `showChrome`.
+**Ruling.** Order identity stays URL-derived (`app/orderFromPath.ts`). The export's strip is always populated because the export carries one global demo order; inventing a remembered "current order" would fabricate context on screens that have none, and two tabs on two orders is a normal way to work. Off an order screen the strip stays brand-neutral, and the lifecycle rail stops printing `THIS ORDER` over stages it cannot attach to an order.
+**Rule that won.** Principle 6 — never emit a value you cannot cite. A fabricated order ref is the cheapest possible violation of it.
+
+### D3 — the `/escalations` rail door the export does not draw
+**Design of record:** `navGroups.Work` is Queue + Overview only (`TitlePipe.dc.html:2938`); escalations are reached from the Overview board's escalated rows.
+**Ruling.** The door stays. It is the only live carrier of two release-blocking invariants — attention rides the doors as DOTS, never counts, and a door a role does not hold is ABSENT, not dimmed (`e2e/invariants/sidebar.spec.ts:43,:65`). Revisit only when another restricted door can carry the amber-dot and absence assertions.
+**Rule that won.** A harvested INVARIANT outranks the drawing. Deleting the door deletes the only place two of them can be asserted.
+
+### D4 — the reading fold keeps per-engine attribution behind a disclosure
+**Design of record:** the export contains neither `READER A` nor `use this reading` in its 3,779 lines; the decision card shows one value.
+**Ruling.** The A/B readings stay (C19) but FOLD. The build's bordered card-per-engine with its own adopt button roughly doubled the decision pane and put the ensemble in front of the question, so the detail moved into a `<details>` and the answer leads. What stays OUTSIDE the fold is load-bearing and not negotiable: the page cite, and the fact that more than one engine was consulted. The fold opens itself on a disagreement, because a disagreement has no resting state — it IS the question.
+**Rule that won.** Principle 6 survives the fold. A value whose page must be uncovered by a click ships uncited, because nobody clicks — so the cite never folds. Only *which engine returned what* does.
+
+### D5 — the rail glyph tie-break; the export's `P`/`P` collision is not copied
+**Design of record:** `sbItem` takes `label.charAt(0)`, so "Products & sign-off" and "People" both draw `P`, and the export's own collapsed rail carries that ambiguity.
+**Ruling.** Glyphs resolve across the whole drawn set (`entities/nav/glyphs.ts`): walk the catalogue in order, and each door takes the first free mark from its INITIAL, then its CHORD KEY, then a later letter of its label, then any free letter. First claim wins, so the export's letter survives on every door but the one that arrives second — which falls back to the chord the row `title` and the `?` map already print beside it.
+**Rule that won.** At 78px the square is the only thing a collapsed row draws, so two identical squares are two rows a reader can separate only by hovering. Fidelity loses on exactly the row where it costs a reader the ability to tell two doors apart, and nowhere else.
+
+### D6 — `Pass — say why` stays, and the export is the stale artefact
+**Design of record:** no pass affordance anywhere in the 3,779-line export.
+**Ruling.** Kept (`entities/field/DecisionBar.tsx`, `features/queue/NextOrderCard.tsx`). Pass-with-reason is real server behaviour — an endpoint, a `reason: min(1)` refusal (`packages/contract/src/endpoints.ts:208`), and fourth-pass auto-escalation. Removing it would delete a rule the server enforces because a drawing predates it.
+**Rule that won.** Hard rule — the backend is upstream and is never generated from the pixels. The screen is not allowed to retire a server rule.
+
+### D6a — the queue's on-screen key hint is removed
+**Design of record:** no key hints anywhere on a screen; the `?` map holds them.
+**App before:** `Keys: ⏎ take it · P pass` under the next-up card.
+**Ruling.** Removed. The chords stay bound; a printed hint beside a binding is a second place the binding can go stale, and the export teaches chords in one place. Verified before removal that no Playwright spec asserts the line.
+
+### D6b — `Report pipeline bug` is removed from the decision card
+**Design of record:** the export's 3,779 lines contain no bug-report affordance.
+**App before:** a bare `Report pipeline bug` line under the decision actions.
+**Ruling.** Removed (the reason is left in place as a comment at `entities/field/DecisionCard.tsx:120`). No product rule, no endpoint and nothing behind it — an affordance that says an operation exists when it does not. Contrast D6: `Pass — say why` stays for the exactly opposite reason.
+
+### D7 — ingest keeps two acts
+**Design of record:** one button, one act — `Continue to sign-off →`.
+**Ruling.** Two acts stay (`ingest.spec` #2, `features/ingest/IngestActs.tsx`): a package is uploaded, and then signed for. The export's copy is adopted onto the press that actually advances the step — press one is `Upload the package`, press two is `Continue to sign-off →` — so the design's wording lands where its meaning is true.
+**Rule that won.** A harvested INVARIANT, and the mock's own `POST /api/orders`, which refuses a multipart body without the five order fields (C20).
+
+### D8 — the Overview board raises its rail threshold instead of scrolling
+**Design of record:** the board wrapped in `overflow-x:auto` with `min-width:1190px` (`TitlePipe.dc.html:1371`).
+**Ruling.** The board squeezes to seven columns inside its container and falls back to the rail below 1190px (`features/overview/useNarrowViewport.ts`, `NARROW_QUERY = "(max-width: 1189px)"`). The export's minimum inside a 764px container hid Escalated and Delivered behind an affordance-less scrollbar (HANDOFF-UI §6). The board is now only ever drawn at its intended width, and the narrow case SAYS it switched rather than silently ignoring the view the reader chose.
+**Rule that won.** A column that can never be reached is worse than a column that is not drawn. The board exists for the comparison between columns, and a horizontal scroll destroys exactly that.
+
+### D10 — `/delivered` shows a different order and a UTC stamp
+**Design of record:** order `4176034-1`, delivered stamp in MST.
+**Ruling.** The screen shows `4175980-1` (`packages/mocks/src/data.ts:257` — the fixture's delivered order; `4176034-1` is mid-review and cannot also be delivered) and prints the zone as **UTC**, which is what the wire says (`features/delivered/deliveredRecord.ts:78-96`). MST would require knowing the recipient's zone; guessing it and labelling the guess is worse than being correct and foreign. When the server sends a localised stamp, render that instead of composing one here.
+**Rule that won.** Principle 6 again — a zone label is a claim, and an unciteable one on a delivered report is a legally significant number rendered wrong.
+
+### D9 — the stage-owner column: where markup and render disagree, the render governs
+**Design of record — MARKUP:** the owner is a filled pill, `TitlePipe.dc.html:508` reading `s.badgeBg`/`s.badgeFg`, with `:2951-2954` giving Automated a grey fill, LLM agent a violet tint and You a solid violet.
+**Design of record — RENDER:** all three owners draw as one plain uppercase label.
+**Ruling.** The render governs, so the plain caption stays (`features/processing/StageRow.tsx`) and the pill tones are dead style. "Make it look the same" means the rendered artefact. Ranking owners by colour would say a stage the machine runs is a different KIND of thing from one you run, when the column only answers "who touches this one" — and a second coloured object at the row's right edge is what made `waiting` read as a warning.
+**Rule that won.** The settled fidelity rule: the rendered artefact is the target. `StageRow.stories.tsx` now asserts the three owners carry an identical class list, so the ruling is a gate rather than a description.
+
+---
+
+## Open gaps — the app is not yet what a ruling says it should be
+
+Not conflicts (nothing refuses them) and not departures (nobody ruled for the app's version). These are decided-but-unbuilt, listed so they are not mistaken for either.
+
+### G1 — the order counts are not hidden below 1180px
+**Design of record:** `countsDisplay: compact ? 'none' : 'flex'`, `compact = innerWidth < 1180` (`TitlePipe.dc.html:2447`, `:3770`).
+**Ruling (design spec, 2026-07-30):** adopt it. Between 900 and 1180 the strip must carry the order ref, four tiles, the stamp and the account chip; the tiles are the part a reader can go and get, so they are what yields.
+**State:** unbuilt. `app/OrderCounts.tsx` carries no responsive-visibility utility, and `app/whyComments.test.ts` asserts that fact so the gap stays visible. Closing it should strike this entry.
+
+### G2 — `NO SOURCE` turns red above zero where the ruling says it stays muted
+**Ruling (same spec):** `NO SOURCE` stays muted rather than turning red — red makes it louder than `NEED YOU`, which is the actionable tile.
+**State:** unbuilt. `app/OrderCounts.tsx` gives the tile `text-state-halt-ink` and mutes it only at zero, and its comment argues the opposite case ("any other figure is the loudest thing on the strip"). One of the two records has to yield; the spec is the later artefact.
+
+### G3 — the count numerals are not mono
+**Design of record:** `font-family:'IBM Plex Mono'; font-size:15px; font-weight:600` (`TitlePipe.dc.html:141-153`), and the same spec ruling adopts it.
+**State:** unbuilt. The tiles render `text-md font-semibold` with no mono face.
+
+### G4 — comments across the tree cite specs that were never migrated
+**State:** `blind-blindness.spec` and `roles.spec` were harvested and never built as spec files; `leaderboard.spec`, `account.spec`, `home.spec`, `delivery-complaints.spec` and `golden.spec` likewise. Fourteen sites outside `src/app/` still cite one of them as a passing gate — `entities/document/{CitedText,coordinates,coordinates.test,DocumentPane.stories}`, `entities/nav/doors.ts` (×4), `features/delivered/ReissuedSheet.tsx`, `shared/session.ts`, `shared/ui/ClaimVsEvidence{,.stories}.tsx`. The four in `src/app/` were corrected on 2026-07-30 and `app/whyComments.test.ts` gates that directory; widen the gate when the rest are corrected.

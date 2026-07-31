@@ -46,12 +46,13 @@ export function useNavCollapsed(
 ): [boolean, () => void] {
   const client = useQueryClient();
   /*
-   * DISABLED ON THE CAPTURE SEAT. `blind-blindness.spec` #1 asserts the typist
-   * screen issues ZERO /api GETs — the only network call it may make is the
-   * submit POST. There is no navigator there to fold, so there is no preference
-   * to read, and a preferences fetch would be a request the seat has no reason
-   * to make. Structural blindness is about what the wire carries, not only what
-   * the screen draws.
+   * DISABLED ON THE CAPTURE SEAT. The rule: the typist screen issues ZERO /api
+   * GETs — the only call it may make is the submit POST. There is no navigator
+   * there to fold, so there is no preference to read, and structural blindness
+   * is about what the wire carries, not only what the screen draws. Its
+   * network-layer proof (`blind-blindness.spec` #1) IS NOT BUILT here; what
+   * enforces it is the caller passing `chromeFor(pathname).fetches`, which
+   * `chromeFor.test.ts` pins false for `/blind*`.
    */
   const { data } = useQuery({ ...preferencesQuery, enabled });
   const collapsed = data?.preferences.nav_collapsed ?? routeDefault;
@@ -101,8 +102,9 @@ export function useNavCollapsed(
  * same optimistic justification: which of two token blocks paints is a VIEW,
  * not a field decision, so there is no "decision that never happened" to show
  * early. `enabled` mirrors `useNavCollapsed`'s: the capture seat gets no theme
- * fetch either, because the zero-GET rule (`blind-blindness.spec`) doesn't
- * carve out an exception for preferences that happen to be cosmetic.
+ * fetch either, because the zero-GET rule doesn't carve out an exception for
+ * preferences that happen to be cosmetic. Same enforcement as above, and the
+ * same gap — the harvested network-layer spec IS NOT BUILT.
  */
 export function useTheme(enabled: boolean): [Preferences["theme"], () => void] {
   const client = useQueryClient();

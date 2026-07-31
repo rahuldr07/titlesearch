@@ -103,7 +103,12 @@ export function IngestScreen() {
           <AcceptedCard orderRef={accepted.external_ref} onAnother={reset} />
         ) : (
           <>
-            <DropZone file={file} onFile={setFile} />
+            {/* 18px is the export's rhythm for every block on this screen but
+                one: the sub-copy is set 24px off the drop zone (:345), which
+                opens the errand after the explanation instead of running the
+                two together. The extra 6px rides on the zone rather than the
+                column so the other three gaps keep the flex gap they share. */}
+            <DropZone file={file} onFile={setFile} className="mt-3" />
             <ClientPicker value={clientId} onSelect={setClientId} />
             <ProductPicker />
             <OrderForm

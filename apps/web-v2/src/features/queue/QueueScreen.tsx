@@ -81,7 +81,10 @@ export function QueueScreen() {
 
   return (
     <Screen measure="860">
-      <div className="flex flex-col gap-9">
+      {/* 20px band to band — the export's `margin:20px 2px 8px` on every band
+          header collapsing against the 20px under the last card of the band
+          above it. At 18px the bands read as one stack rather than four piles. */}
+      <div className="flex flex-col gap-10">
         <ScreenHeading
           eyebrow="Your queue"
           title="Work comes to you"

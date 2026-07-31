@@ -72,6 +72,31 @@ mkdirSync(out, { recursive: true });
 
 const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
+/**
+ * THE TWO SIDES MUST BE THE SAME PERSON.
+ *
+ * The export is drawn as `R. Delacroix · REVIEWER`; the app's session defaults
+ * to `L. Vance · ADMIN`. Capturing them as-is compares two different worlds and
+ * calls the difference a fidelity gap: Products, People and Profile all gate
+ * their authoring affordances on role, so the design showed a "viewing only"
+ * banner the app had no reason to draw. Three screens were mis-scored that way
+ * before anyone noticed the identities in the corner did not match.
+ *
+ * The role switcher is the account menu's own preview control, so this changes
+ * only what THIS CLIENT draws — the server still refuses independently.
+ * Tolerant by design: on a chromeless screen (`/signin`, `/session`) there is no
+ * menu to open, and that is not an error.
+ */
+async function actAsReviewer(page) {
+  const trigger = page.getByTestId("account-menu");
+  if ((await trigger.count()) === 0) return;
+  await trigger.click();
+  const role = page.getByTestId("role-reviewer");
+  if ((await role.count()) > 0) await role.click();
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(400);
+}
+
 const browser = await chromium.launch();
 const ctx = await browser.newContext({ viewport: { width: 1600, height: 1000 } });
 const design = await ctx.newPage();
@@ -109,6 +134,7 @@ for (const key of chosen) {
   await design.screenshot({ path: `${out}/design-${key}.png`, fullPage: true });
 
   await app.goto(`http://localhost:5174${screen.route}`, { waitUntil: "networkidle" });
+  await actAsReviewer(app);
   await app.waitForTimeout(900);
   await app.screenshot({ path: `${out}/app-${key}.png`, fullPage: true });
 

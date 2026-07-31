@@ -26,6 +26,11 @@ import type { GapClosure } from "./useGateState";
  * quotes the precondition this gate matched on, and nothing on the response
  * says what it was. The note below is keyed on `kind` alone and states only
  * what the kind itself means, which is the most that is true without inventing.
+ * The design's own sentence is otherwise restored word for word, INCLUDING the
+ * "Provisional — " it opens with. That repeats the label beside it on purpose:
+ * the note is quoted in escalations and read aloud on call-backs, and lifted
+ * out of this card the sentence has to carry its own caveat or it reads as a
+ * finding. Only the parenthetical the wire cannot supply is missing.
  */
 const KIND_LABEL: Record<GapKind, string> = {
   na_provisional: "Gap · answered N/A",
@@ -39,7 +44,7 @@ const KIND_LABEL: Record<GapKind, string> = {
 };
 
 const PROVISIONAL_NOTE =
-  "The precondition behind this gate is a fixture on the build, not a value segmentation produced. It reads the same on every package, so this card cannot yet be trusted as evidence about THIS order.";
+  "Provisional — the precondition behind this gate is a fixture on the build, not a value segmentation produced. It reads the same on every package, so this card cannot yet be trusted as evidence about THIS order.";
 
 export function GapCard({
   gap,

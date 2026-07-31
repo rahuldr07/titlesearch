@@ -60,6 +60,14 @@ const SEGMENT_CLASS: Record<SegmentTone, string> = {
  * (`act-escalate`). The letters are literal capitals in the markup, not a CSS
  * transform.
  *
+ * KEY FIRST, THEN THE VERB — the export's own order (`:869`, mono-semibold key
+ * then the word). This band read `Confirm C · Correct E · Move j/k`, which is
+ * the button-label form the design deliberately does NOT use here: welding the
+ * key onto the front of the verb makes the legend scan as four labels instead
+ * of a key map. Only the move token differs from the export, which prints
+ * `↑↓ move`; this screen binds `j`/`k`, and a legend must name the key that
+ * actually fires.
+ *
  * `{n} remaining` IS THE THIRD COUNT AND IT IS NOT A SECOND SOURCE — it is
  * `needTotal - answered`, the same two numbers beside it. It lives here because
  * the invariant that pins it (`server-owns-state.spec`, "a null pending field
@@ -86,9 +94,10 @@ export function DecisionDock({ fields }: { fields: readonly Field[] }) {
         </span>
         <span className="text-xs text-ink-muted">{needTotal - answered} remaining</span>
         <span className="ml-auto whitespace-nowrap text-tiny text-ink-muted">
-          Confirm <span className="font-mono">C</span> · Correct{" "}
-          <span className="font-mono">E</span> · Move{" "}
-          <span className="font-mono">j</span>/<span className="font-mono">k</span>
+          <span className="font-mono font-semibold">C</span> confirm ·{" "}
+          <span className="font-mono font-semibold">E</span> correct ·{" "}
+          <span className="font-mono font-semibold">j</span>/
+          <span className="font-mono font-semibold">k</span> move
         </span>
       </div>
 

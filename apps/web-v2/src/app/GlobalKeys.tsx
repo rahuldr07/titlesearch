@@ -17,7 +17,9 @@ import { KeyMap } from "./KeyMap";
  *
  * A ROLE CANNOT CHORD OUTSIDE ITS WORLD. `doorForKey` returns null and nothing
  * happens — the same table that hides the door refuses the shortcut, so there
- * is no back way in (`roles.spec` ×4).
+ * is no back way in. The four harvested world-boundary tests (`roles.spec`) ARE
+ * NOT BUILT as a spec file; `authz.test.ts` proves the table they read, and
+ * `sidebar.spec` #2 proves a door outside the role's world is absent.
  *
  * Hotkeys do not fire inside inputs by default, which is what stops a chord
  * key typed into a correction from navigating (`hard.spec` #5).
@@ -36,10 +38,12 @@ export function GlobalKeys() {
   const setMapOpen = useKeyboardLayer((s) => s.setMapOpen);
 
   /*
-   * THE GLOBAL KEY LAYER IS DEAD ON THE CAPTURE SEAT. `blind-blindness.spec` #2
-   * asserts `?` shows no map and `g q` does not navigate there. Structural
-   * blindness includes the keyboard: a chord out of the seat is a door out of
-   * it, and the map names worlds a typist must not be shown.
+   * THE GLOBAL KEY LAYER IS DEAD ON THE CAPTURE SEAT: `?` shows no map and
+   * `g q` does not navigate. Structural blindness includes the keyboard — a
+   * chord out of the seat is a door out of it, and the map names worlds a
+   * typist must not be shown. The harvested `blind-blindness.spec` #2 that
+   * would assert it IS NOT BUILT; what holds is the `onCaptureSeat` guard on
+   * every binding below, which is why it is repeated rather than centralised.
    */
   const onCaptureSeat = useRouterState({
     select: (s) => s.location.pathname.startsWith("/blind"),

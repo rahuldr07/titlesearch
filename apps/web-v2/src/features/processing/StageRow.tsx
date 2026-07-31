@@ -75,13 +75,22 @@ export function StageRow({ stage }: { stage: PipelineStage }) {
       </span>
 
       {/*
-       * THE OWNER IS A CAPTION, NOT A BADGE. The design sets all three owners in
-       * the same uppercase label at the same weight and the same ink — no fill,
-       * no border, no tone. Ranking them by colour would say a stage the machine
-       * runs is a different KIND of thing from one you run, when the column is
-       * only answering "who touches this one". The row's phase already carries
-       * every state signal on this screen; a second coloured object competing
-       * with it at the right edge is what made "waiting" read as a warning.
+       * THE OWNER IS A CAPTION, NOT A BADGE — and WHERE THE MARKUP AND THE
+       * RENDER DISAGREE, THE RENDER GOVERNS (design spec, 2026-07-30). The
+       * artefact described here is the RENDERED export, which draws all three
+       * owners as one plain uppercase label. Its MARKUP does not: `:508` fills
+       * the owner pill from `s.badgeBg`/`s.badgeFg`, and `:2951-2954` gives
+       * Automated a grey fill, LLM agent a violet tint and You a solid violet.
+       * Those tones never reach the rendered artefact, so they are dead style
+       * (fidelity audit D9) — not a treatment this file dropped.
+       *
+       * Ranking owners by colour would say a stage the machine runs is a
+       * different KIND of thing from one you run, when the column is only
+       * answering "who touches this one". The row's phase already carries every
+       * state signal on this screen; a second coloured object competing with it
+       * at the right edge is what made "waiting" read as a warning.
+       * `StageRow.stories.tsx` asserts the three owners render one identical
+       * class list, so the claim is a gate rather than a description.
        */}
       <Eyebrow variant="field" as="span" tone="strong" className="shrink-0">
         {stage.owner}

@@ -23,22 +23,24 @@ import {
 /**
  * The chrome — the SMART wrapper around the presentational left rail. It owns
  * the concerns entities may not touch (§6): the router, the preference fetch,
- * the acting role and the attention query. It hands the rail a plain door set
- * and the persisted collapse.
+ * the acting role, the attention query and this order's lifecycle reads.
  *
- * THE ACCOUNT MENU AND THE ORDER COUNTS LIVE IN `OrderStrip` NOW, not here —
- * the full-width top bar the design draws on every screen (§11 2026-07-30
- * revision). `AppChrome` keeps the theme fetch and the `data-theme` effect
- * (still needed for the whole document, capture seat aside) but no longer
- * renders `AccountMenu`; `OrderStrip` is `AppChrome`'s sibling in `rootRoute`,
- * not its child, and reads the same URL and the same preference independently.
+ * IT RENDERS THE RAIL AND NOTHING ELSE. The account menu and the order counts
+ * are `OrderStrip`'s (§11 2026-07-30 revision). Neither is nested in the other
+ * and neither gates the other: `rootRoute` puts this beside the content column
+ * and `OrderStrip` at the top of it, so they are cousins reading the same URL
+ * and the same preference query independently. The theme read that stays here
+ * is only for the document-wide `data-theme` effect below.
  *
  * IT IS ABSENT ON THE CAPTURE SEAT, structurally, not cosmetically. A typist on
  * a blind pass must not see the pipeline's world — the doors name screens that
- * tell them what the machine already thinks. The preference fetch and the
- * attention query are BOTH disabled there, so the seat issues zero /api GETs
- * (`blind-blindness.spec`); removing the rail is the same rule that kills the
- * keyboard layer on `/blind/*`.
+ * tell them what the machine already thinks. ALL SEVEN QUERIES BELOW ARE GATED
+ * ON THE ONE `fetches` FLAG, so an eighth cannot be added without the seat
+ * refusing it; `chromeFor.test.ts` pins `{chrome:false, fetches:false}` for
+ * `/blind*`, and
+ * `sidebar.spec` #3 pins the missing rail. The network-layer proof (harvested
+ * `blind-blindness.spec` #1 — zero /api GETs, counted in-page) IS NOT BUILT
+ * here: `e2e/helpers/net.ts` is the wrapper it needs and nothing calls it.
  *
  * THE ORDER COMES FROM THE URL, never a remembered "current order" — two tabs
  * on two orders is a normal way to work.
