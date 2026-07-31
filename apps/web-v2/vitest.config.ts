@@ -2,6 +2,7 @@ import { defineConfig } from "vitest/config";
 import { storybookTest } from "@storybook/addon-vitest/vitest-plugin";
 // Vitest 4 takes a provider FACTORY, not the string "playwright".
 import { playwright } from "@vitest/browser-playwright";
+import tailwindcss from "@tailwindcss/vite";
 
 /**
  * Two projects, deliberately separate.
@@ -35,7 +36,7 @@ export default defineConfig({
         },
       },
       {
-        plugins: [storybookTest({ configDir: ".storybook" })],
+        plugins: [tailwindcss(), storybookTest({ configDir: ".storybook" })],
         test: {
           name: "storybook",
           browser: {

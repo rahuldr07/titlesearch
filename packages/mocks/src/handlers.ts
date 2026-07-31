@@ -574,7 +574,18 @@ export const handlers = [
     return HttpResponse.json(ok);
   }),
 
-  /** Suppress with reason — R13. Terminal, like correct and escalate. */
+  /**
+   * Suppress with reason — R13. Terminal, like correct and escalate.
+   *
+   * R13 IS ENFORCED HERE, NOT ONLY WHERE THE BUTTON IS DRAWN. Suppression is
+   * offered where party identity IS the question — `judgments.*` — and the UI
+   * gated only the control: the `x` chord posted an exclude on `owner.zip` and
+   * this handler returned 200. A rule the client alone enforces is not
+   * enforced, and an excluded row is GONE (`conflicts.md` C18), so the one
+   * write that cannot be argued with afterwards was the one with no server
+   * check at all. The message is written to be read by a person, because it
+   * renders verbatim in the review screen's server note.
+   */
   http.post("/api/fields/:id/exclude", async ({ params, request }) => {
     const denied = guard(request, "field.correct");
     if (denied) return denied;
@@ -582,6 +593,12 @@ export const handlers = [
     if (!parsed.success) return err(parsed.error.message, 422);
     const field = fieldStore.find((f) => f.id === params["id"]);
     if (!field) return err("no such field", 404);
+    if (!field.path.startsWith("judgments.")) {
+      return err(
+        `exclude applies only to judgment party rows (R13); ${field.path} is not one`,
+        422,
+      );
+    }
     if (field.state === "corrected" || field.state === "escalated") {
       return err(`field is terminal (${field.state})`, 409);
     }

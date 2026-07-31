@@ -37,10 +37,25 @@ const stamp = cva(
     variants: {
       tone: {
         neutral: "text-ink-primary border-line-strong",
-        action: "text-action border-action",
-        settled: "text-state-settled border-state-settled",
-        attend: "text-state-attend border-state-attend",
-        halt: "text-state-halt border-state-halt",
+        /*
+         * THE INK IS THE `-ink` VALUE; THE BORDER IS THE BASE COLOUR.
+         *
+         * A stamp's word is small mono text and sits on the app ground as often
+         * as on a panel, where the base state colours do not clear AA:
+         * `state-attend` measures 4.35:1 on `surface-app` against the 4.5 a
+         * reader is owed. `Eyebrow` documented this tier and its reason already
+         * — this component simply had not adopted it, and nothing caught that
+         * because Tailwind was never compiled for the Storybook a11y run, so
+         * axe had been scanning unstyled markup.
+         *
+         * The BORDER keeps the base colour deliberately: a 2px rule is not text
+         * and is held to 3:1, and the double border is the mark that makes a
+         * stamp read as a stamp.
+         */
+        action: "text-action-ink border-action",
+        settled: "text-state-settled-ink border-state-settled",
+        attend: "text-state-attend-ink border-state-attend",
+        halt: "text-state-halt-ink border-state-halt",
       },
       size: {
         /** the header stamp (12px) */

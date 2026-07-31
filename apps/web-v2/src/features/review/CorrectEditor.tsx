@@ -26,6 +26,12 @@ import { TextField } from "../../shared/ui/TextField";
  * focus, and a bracket or a chord key still reaches the input as text
  * (`sidebar.spec` #5, `hard.spec` #5).
  *
+ * ONE ACT FILES ONE RECORD. Three clicks on the submit under 4s latency filed
+ * THREE correction records, with three reason rows, into the table that feeds
+ * the rule channel. `pending` makes the button inert AND stops the Enter path,
+ * which never touches the button at all — disabling the control alone would
+ * have left the keyboard commit exactly as unguarded as it was.
+ *
  * THE REFUSAL IS ANNOUNCED, NOT MERELY DRAWN. This file used to spell the nudge
  * as a bare `role="alert"` paragraph with no id and no `aria-describedby` back
  * to the reason field, so a sighted reviewer met the blocker and a screen-reader
@@ -36,11 +42,14 @@ import { TextField } from "../../shared/ui/TextField";
 export function CorrectEditor({
   seed,
   machineValue,
+  pending,
   onSubmit,
   onCancel,
 }: {
   seed: string;
   machineValue: string;
+  /** A correction is already in flight — a second submit is not a second act. */
+  pending: boolean;
   onSubmit: (value: string, reason: string) => void;
   onCancel: () => void;
 }) {
@@ -48,6 +57,7 @@ export function CorrectEditor({
   const [reason, setReason] = useState("");
   const [refused, setRefused] = useState(false);
   const valueRef = useRef<HTMLInputElement>(null);
+  const valueId = useId();
   const reasonId = useId();
 
   // `e` lands the caret in the value and SELECTS it, so typing replaces the
@@ -60,6 +70,7 @@ export function CorrectEditor({
   const changed = value.trim() !== "" && value.trim() !== machineValue.trim();
 
   const attempt = () => {
+    if (pending) return; // one act, one record — whatever the latency
     if (!changed) return; // inert: a correction must differ from the machine read
     if (reason.trim() === "") {
       setRefused(true);
@@ -86,9 +97,12 @@ export function CorrectEditor({
       onKeyDown={keys}
       className="flex flex-col gap-3 p-5"
     >
-      <Eyebrow variant="field">Correct to</Eyebrow>
+      <Eyebrow as="label" htmlFor={valueId} variant="field">
+        Correct to
+      </Eyebrow>
       <TextField
         ref={valueRef}
+        id={valueId}
         data-testid="edit-value"
         value={value}
         tone={refused ? "halt" : "neutral"}
@@ -97,7 +111,9 @@ export function CorrectEditor({
           if (refused) setRefused(false);
         }}
       />
-      <Eyebrow variant="field">Why — what the document says</Eyebrow>
+      <Eyebrow as="label" htmlFor={reasonId} variant="field">
+        Why — what the document says
+      </Eyebrow>
       <TextField
         id={reasonId}
         data-testid="edit-reason"
@@ -112,7 +128,7 @@ export function CorrectEditor({
         size="sm"
         data-testid="edit-submit"
         tone="action"
-        disabled={!changed}
+        disabled={!changed || pending}
         onClick={attempt}
       >
         ✎ Save correction

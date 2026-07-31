@@ -5,7 +5,15 @@ import type { NoValueKind } from "./noValueStates";
 import { PageChip } from "./PageChip";
 
 /** The four document answers, mapped to the six-arm render union. */
-function noValueFor(reason: NaReason, page: number | null): NoValueKind {
+/*
+ * EXPORTED SO THE CHOICE ITSELF IS TESTABLE. `noValueClasses` and
+ * `describeNoValue` are both tested on `kind` — the INPUT — so until
+ * `naReasonMapping.test.ts` reached this function, the mapping from the wire's
+ * `na_reason` to the render nobody may collapse was the one link in the chain
+ * with no test on it. A mutation swapping NOT_STATED's arm for NOT_FOUND's
+ * passed the entire suite.
+ */
+export function noValueFor(reason: NaReason, page: number | null): NoValueKind {
   switch (reason) {
     case "NOT_PRESENT":
       return { kind: "not_present" };

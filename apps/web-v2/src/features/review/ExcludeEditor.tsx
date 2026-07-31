@@ -13,6 +13,11 @@ import { TextField } from "../../shared/ui/TextField";
  * afterwards from a row nobody ever looked at. The reason is the only evidence
  * that a person decided rather than the pipeline missed.
  *
+ * ONE ACT FILES ONE RECORD. This editor commits on Enter and has no button to
+ * disable, so a held or repeated key was an unguarded repeat-submit path —
+ * three suppressions of one row, each with its own reason, on the only
+ * evidence that a person decided at all.
+ *
  * THE REFUSAL IS ANNOUNCED, NOT MERELY DRAWN. The nudge was a bare
  * `role="alert"` paragraph with no id and no `aria-describedby` from the reason
  * input, so the blocker reached the eye and not the screen reader — the failure
@@ -20,9 +25,12 @@ import { TextField } from "../../shared/ui/TextField";
  * `RefusalNudge` owns the link; the id on the input is what it binds to.
  */
 export function ExcludeEditor({
+  pending,
   onSubmit,
   onCancel,
 }: {
+  /** A suppression is already in flight — Enter again is not a second act. */
+  pending: boolean;
   onSubmit: (reason: string) => void;
   onCancel: () => void;
 }) {
@@ -50,6 +58,7 @@ export function ExcludeEditor({
         onKeyDown={(event) => {
           if (event.key === "Enter") {
             event.preventDefault();
+            if (pending) return; // one act, one record — whatever the latency
             if (reason.trim() === "") {
               setRefused(true);
               return;

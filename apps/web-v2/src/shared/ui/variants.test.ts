@@ -48,12 +48,22 @@ describe("the six no-value renders never collapse", () => {
   test("the distinction survives greyscale — each differs by more than colour", () => {
     // Colour alone fails for colour-blind and greyscale-printed readers, so
     // every kind must also differ in border-style or fill pattern.
-    const structural = (kind: (typeof NA_KINDS)[number]) =>
-      noValueClasses({ kind })
-        .split(/\s+/)
-        .filter((c) => /border-dashed|border-solid|na-hatch|^border$|bg-/.test(c))
-        .sort()
-        .join(" ");
+    //
+    // The filter deliberately keeps NO colour token. It used to keep `bg-`,
+    // which made this test — the one whose whole claim is that colour is not
+    // the distinction — pass on `bg-surface-app` vs `bg-na-unreadable-surface`,
+    // two fills that differ only in hue. Fill PRESENCE is structural; the
+    // fill's colour is not.
+    const structural = (kind: (typeof NA_KINDS)[number]) => {
+      const classes = noValueClasses({ kind }).split(/\s+/);
+      const marks = classes.filter((c) =>
+        /^(border|border-dashed|border-solid|border-double|border-none|na-hatch|italic|not-italic|font-quote|font-mono|font-semibold|font-bold)$/.test(
+          c,
+        ),
+      );
+      if (classes.some((c) => c.startsWith("bg-"))) marks.push("filled");
+      return marks.sort().join(" ");
+    };
 
     // not_present is dashed, silent is hatched, unreadable is tinted — the
     // three that must never be mistaken for one another.

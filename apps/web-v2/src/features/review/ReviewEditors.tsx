@@ -14,7 +14,13 @@ interface ReviewEditorsProps {
   seed: string;
   /** The machine-read value a correction must differ from (§11.1). */
   machineValue: string;
-  passPending: boolean;
+  /**
+   * A DECISION WRITE IS IN FLIGHT. One flag for all four editors, because
+   * exactly one is open at a time and the mutation it fires is the only one
+   * that can be pending underneath it. It was `passPending` and reached the
+   * pass control alone, which is why every other submit could be fired twice.
+   */
+  writePending: boolean;
   serverNote: string | null;
   blankNote: boolean;
   onCancel: () => void;
@@ -52,7 +58,7 @@ export function ReviewEditors({
   editorKey,
   seed,
   machineValue,
-  passPending,
+  writePending,
   serverNote,
   blankNote,
   onCancel,
@@ -85,21 +91,22 @@ export function ReviewEditors({
           key={editorKey}
           seed={seed}
           machineValue={machineValue}
+          pending={writePending}
           onCancel={onCancel}
           onSubmit={onCorrect}
         />
       ) : null}
 
       {mode === "escalate" ? (
-        <EscalateEditor onCancel={onCancel} onSubmit={onEscalate} />
+        <EscalateEditor pending={writePending} onCancel={onCancel} onSubmit={onEscalate} />
       ) : null}
 
       {mode === "exclude" ? (
-        <ExcludeEditor onCancel={onCancel} onSubmit={onExclude} />
+        <ExcludeEditor pending={writePending} onCancel={onCancel} onSubmit={onExclude} />
       ) : null}
 
       {mode === "pass" ? (
-        <PassControl pending={passPending} onCancel={onCancel} onSubmit={onPass} />
+        <PassControl pending={writePending} onCancel={onCancel} onSubmit={onPass} />
       ) : null}
     </>
   );

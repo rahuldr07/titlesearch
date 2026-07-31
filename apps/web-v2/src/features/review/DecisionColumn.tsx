@@ -1,5 +1,6 @@
 import type { Field } from "@titlepipe/contract";
 import { canDo } from "@titlepipe/contract";
+import { offersExclude } from "./excludeGate";
 import { ReviewEditors, type ReviewMode } from "./ReviewEditors";
 import { SourcePin } from "./SourcePin";
 import type { Pinned } from "./useReviewEditor";
@@ -14,7 +15,7 @@ interface DecisionColumnProps {
   seed: string;
   /** The machine-read value a correction must differ from (§11.1). */
   machineValue: string;
-  passPending: boolean;
+  writePending: boolean;
   serverNote: string | null;
   blankNote: boolean;
   onPin: (pinned: Pinned) => void;
@@ -54,7 +55,7 @@ export function DecisionColumn({
   mode,
   seed,
   machineValue,
-  passPending,
+  writePending,
   serverNote,
   blankNote,
   onPin,
@@ -77,7 +78,8 @@ export function DecisionColumn({
       actions={
         mayReview
           ? {
-              offerExclude: field.path.startsWith("judgments."),
+              // R13, from the one predicate the `x` chord reads too.
+              offerExclude: offersExclude(field.path),
               onConfirm,
               onCorrect,
               onEscalate: () => onMode("escalate"),
@@ -105,7 +107,7 @@ export function DecisionColumn({
         editorKey={`${field.id}:${seed}`}
         seed={seed}
         machineValue={machineValue}
-        passPending={passPending}
+        writePending={writePending}
         serverNote={serverNote}
         blankNote={blankNote}
         onCancel={() => onMode("idle")}

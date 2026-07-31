@@ -45,6 +45,10 @@ export function PassControl({
       </Eyebrow>
       <TextField
         id="pass-reason"
+        // The `id` wires the label; the testid is how specs reach it. Both, and
+        // deliberately the same string — a control whose two names disagree is
+        // one a reader has to look up twice.
+        data-testid="pass-reason"
         ref={inputRef}
         value={reason}
         disabled={pending}

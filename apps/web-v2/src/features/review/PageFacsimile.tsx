@@ -27,7 +27,7 @@ export function PageFacsimile({
   if (!page.read_in_full) {
     return (
       <div className="flex flex-col gap-3 rounded-5 border border-dashed border-line-strong bg-surface-sunken p-8">
-        <Eyebrow variant="caption">p{page.n} · not read in full</Eyebrow>
+        <Eyebrow variant="caption" tone="strong">p{page.n} · not read in full</Eyebrow>
         <p className="text-xs leading-body text-ink-secondary">
           The classifier found nothing here the report needs, so no reader typed
           this page. It is part of the package — it just did not contribute a
@@ -40,8 +40,14 @@ export function PageFacsimile({
   return (
     <figure className="flex flex-col gap-3">
       <figcaption className="flex items-baseline gap-4">
-        <Eyebrow variant="caption">{page.kind}</Eyebrow>
-        <span className="font-mono text-tiny text-ink-muted">page {page.n} of the package</span>
+        <Eyebrow variant="caption" tone="strong">{page.kind}</Eyebrow>
+        {/*
+          `ink-secondary`, not `ink-muted`: this caption sits on
+          `surface-document`, the grey the page rests on, where muted measures
+          4.33:1 against the 4.5 small text is owed. The muted tier was derived
+          against panel and app grounds — the surround is darker than both.
+        */}
+        <span className="font-mono text-tiny text-ink-secondary">page {page.n} of the package</span>
         {page.degraded ? (
           <span className="text-tiny font-semibold text-state-attend-ink">
             degraded scan — read against the words line
@@ -60,10 +66,22 @@ export function PageFacsimile({
       */}
       {/*
         `surface-document` is the BACKDROP the page sits on, not the page — the
-        grey of a viewer surround. The sheet itself is panel white.
-        Getting these the wrong way round renders the document as a grey slab,
-        which is precisely the "this is data, not paper" reading the facsimile
-        exists to prevent.
+        grey of a viewer surround. The sheet is `surface-paper` and its type is
+        `page-ink`. Getting these the wrong way round renders the document as a
+        grey slab, which is precisely the "this is data, not paper" reading the
+        facsimile exists to prevent.
+
+        THE PAGE FAMILY IS PINNED, AND THAT IS WHY IT IS USED HERE. `tokens.css`
+        declares `surface-paper`, `page-ink` and their siblings twice with the
+        SAME value, under the rule that a scan is a photograph of paper: the
+        surround darkens, the page does not. This sheet used to paint itself
+        `bg-surface-panel` / `text-ink-primary` — chrome tokens, which invert —
+        so under `[data-theme="mocha"]` a scanned county record rendered as a
+        dark slab with light type, and the marker over the cited line went
+        near-black. The pin had been written, documented and left wired to
+        nothing; `entities/document/documentIsPaper.test.ts` now resolves every
+        colour utility on this element back to its token and fails if it is one
+        the theme can move.
       */}
       {/*
         No second backdrop band: the pane this sits in already carries
@@ -72,11 +90,11 @@ export function PageFacsimile({
         at 320px the paper read as a note card floating in a large grey field.
       */}
       <div className="flex justify-center">
-        <div className="relative w-full max-w-230 rounded-2 bg-surface-panel px-12 py-11 shadow-page">
+        <div className="relative w-full max-w-230 rounded-2 bg-surface-paper px-12 py-11 shadow-page">
           <pre
             className={cn(
-              "font-quote text-sm leading-document whitespace-pre-wrap text-ink-primary",
-              page.degraded && "filter-scan-degraded",
+              "font-quote text-sm leading-document whitespace-pre-wrap text-page-ink",
+              page.degraded && "filter-scan-degraded text-scan-ink-degraded",
             )}
           >
             {page.lines.join("\n")}

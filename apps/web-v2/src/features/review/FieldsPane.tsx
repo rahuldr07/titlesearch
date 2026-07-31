@@ -16,7 +16,7 @@ interface FieldsPaneProps {
   pinned: Pinned | null;
   mode: ReviewMode;
   seed: string;
-  passPending: boolean;
+  writePending: boolean;
   serverNote: string | null;
   blankNote: boolean;
   onPin: (pinned: Pinned) => void;
@@ -74,7 +74,7 @@ export function FieldsPane({
   pinned,
   mode,
   seed,
-  passPending,
+  writePending,
   serverNote,
   blankNote,
   onPin,
@@ -107,7 +107,7 @@ export function FieldsPane({
             mode={mode}
             seed={seed}
             machineValue={selected.value ?? ""}
-            passPending={passPending}
+            writePending={writePending}
             serverNote={serverNote}
             blankNote={blankNote}
             onPin={onPin}

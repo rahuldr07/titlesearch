@@ -16,10 +16,10 @@
  * with that reason rather than the rule being loosened for everyone.
  */
 
-const PAPER = "#faf9f4"; // rules-allow: data-URI SVG has no CSS context; mirrors --color-surface-paper
+const PAPER = "#fbfaf5"; // rules-allow: data-URI SVG has no CSS context; mirrors --color-surface-paper
 const INK = "#232327"; // rules-allow: data-URI SVG has no CSS context; mirrors --color-page-ink
 const SCAN_INK = "#2a2a2e"; // rules-allow: data-URI SVG has no CSS context; mirrors --color-scan-ink
-const RULE_LINE = "#d4d7de"; // rules-allow: data-URI SVG has no CSS context; mirrors --color-line-strong
+const RULE_LINE = "#d5d0c0"; // rules-allow: data-URI SVG has no CSS context; mirrors --color-scan-line
 
 const PAGE_SVG = `
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 612 792">

@@ -1,22 +1,15 @@
 import { useParams, useSearch } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import type { Field } from "@titlepipe/contract";
-import {
-  orderFieldsQuery,
-  orderSignoffQuery,
-  useConfirmField,
-  useCorrectField,
-  useEscalateField,
-  useExcludeField,
-  usePassOrder,
-} from "./queries";
+import { orderFieldsQuery, orderSignoffQuery } from "./queries";
 import { readingsOf } from "../../entities/field/fieldLabel";
 import { DocumentPane } from "./DocumentPane";
 import { FieldsPane } from "./FieldsPane";
+import { offersExclude } from "./excludeGate";
 import { useReviewEditor } from "./useReviewEditor";
 import { useReviewKeys } from "./useReviewKeys";
 import { useReviewSelection } from "./useReviewSelection";
-import { ApiError } from "../../shared/api";
+import { useReviewWrites } from "./useReviewWrites";
 import { Screen } from "../../shared/ui/Screen";
 import { ScreenMessage } from "../../shared/ui/ScreenMessage";
 
@@ -43,6 +36,12 @@ import { ScreenMessage } from "../../shared/ui/ScreenMessage";
  *
  * SELECTION IS URL-OWNED, so `?field=` is a first-class deep link and a
  * complaint or an escalation can point at the exact field in context.
+ *
+ * EVERY WRITE GOES THROUGH `useReviewWrites`, which owns the five mutations,
+ * derives ONE server note from whichever was submitted last and refuses a
+ * duplicate submit. This screen used to wire each mutation by hand and four of
+ * the five carried `{ onSuccess: advance }` and nothing else — every refusal
+ * they were given was dropped on the floor.
  */
 export function ReviewScreen() {
   const { orderId } = useParams({ from: "/orders/$orderId/review" });
@@ -53,11 +52,7 @@ export function ReviewScreen() {
   // abstractor answered.
   const signoff = useQuery(orderSignoffQuery(orderId));
 
-  const confirm = useConfirmField(orderId);
-  const correct = useCorrectField(orderId);
-  const escalate = useEscalateField(orderId);
-  const exclude = useExcludeField(orderId);
-  const pass = usePassOrder(orderId);
+  const writes = useReviewWrites(orderId);
 
   const fields: Field[] = data?.fields ?? [];
   const { selected, select, step, advance } = useReviewSelection(orderId, fields, fieldParam);
@@ -67,7 +62,7 @@ export function ReviewScreen() {
 
   const submitConfirm = () => {
     if (selected === null) return;
-    confirm.mutate({ fieldId: selected.id, value: selected.value }, { onSuccess: advance });
+    writes.confirm(selected.id, selected.value, advance);
   };
 
   useReviewKeys(
@@ -83,10 +78,17 @@ export function ReviewScreen() {
       // `e` OPENS the correction field; it never commits (that is Enter, inside
       // the field). Escalate has no hotkey — it is `act-escalate`, a button.
       correct: openCorrect,
+      // `x` OBEYS THE SAME RULEBOOK GATE THE BUTTON DOES (R13). It was bound
+      // unconditionally, so on `owner.zip` — where `✕ Not our party` is
+      // correctly absent — the chord opened the editor anyway and the exclude
+      // posted 200. An excluded row is GONE (`conflicts.md` C18).
       exclude: () => setMode("exclude"),
       pass: () => setMode("pass"),
     },
-    mode === "idle" && selected !== null,
+    {
+      enabled: mode === "idle" && selected !== null,
+      excludable: selected !== null && offersExclude(selected.path),
+    },
   );
 
   if (isError) return <ScreenMessage tone="halt" measure="1340">Order fields unavailable.</ScreenMessage>;
@@ -107,24 +109,18 @@ export function ReviewScreen() {
           pinned={pinned}
           mode={mode}
           seed={editorSeed}
-          passPending={pass.isPending}
-          serverNote={confirm.error instanceof ApiError ? confirm.error.message : null}
+          writePending={writes.pending}
+          serverNote={writes.serverNote}
           blankNote={blankNote}
           onPin={setPinned}
           onAdopt={adopt}
           onConfirm={submitConfirm}
           onCorrect={openCorrect}
           onMode={setMode}
-          onCorrectSubmit={(value, reason) =>
-            correct.mutate({ fieldId: selected.id, value, reason }, { onSuccess: advance })
-          }
-          onEscalateSubmit={(question) =>
-            escalate.mutate({ fieldId: selected.id, question }, { onSuccess: advance })
-          }
-          onExcludeSubmit={(reason) =>
-            exclude.mutate({ fieldId: selected.id, reason }, { onSuccess: advance })
-          }
-          onPassSubmit={(reason) => pass.mutate(reason, { onSuccess: () => setMode("idle") })}
+          onCorrectSubmit={(value, reason) => writes.correct(selected.id, value, reason, advance)}
+          onEscalateSubmit={(question) => writes.escalate(selected.id, question, advance)}
+          onExcludeSubmit={(reason) => writes.exclude(selected.id, reason, advance)}
+          onPassSubmit={(reason) => writes.pass(reason, () => setMode("idle"))}
           onSelect={reselect}
         />
       </div>

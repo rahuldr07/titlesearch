@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { useHotkeys } from "react-hotkeys-hook";
 import type { Order } from "@titlepipe/contract";
+import { useScreenHotkey } from "../../shared/keyboard";
 import { usePassOrder } from "./queries";
 import { PassControl } from "../../entities/order/PassControl";
 import { Card, CardBody } from "../../shared/ui/Card";
@@ -64,11 +64,13 @@ export function NextOrderCard({ order }: { order: Order }) {
   const take = () =>
     void navigate({ to: "/orders/$orderId/review", params: { orderId: order.id } });
 
-  // Hotkeys do not fire inside inputs by default, which is what keeps `p` and
-  // Enter from firing while the reviewer is typing a pass reason (§7 scopes,
-  // and `hard.spec` #5 pins the general rule).
-  useHotkeys("p", () => setPassing(true), { preventDefault: true }, [order]);
-  useHotkeys("enter", () => { if (!passing) take(); }, { preventDefault: true }, [order, passing]);
+  // PANE-LOCAL, VIA `useScreenHotkey` — never the bare `preventDefault: true`
+  // document binding these were. That made EVERY Enter on /queue navigate to
+  // review: the doors are anchors, so a keyboard-only reviewer could follow
+  // none and each try ASSIGNED THEM AN ORDER. Both stand down while a control
+  // or a field has focus and while the `?` map is up (`queue-keys.spec`).
+  useScreenHotkey("p", () => setPassing(true), [order]);
+  useScreenHotkey("enter", () => { if (!passing) take(); }, [order, passing]);
 
   return (
     <>
