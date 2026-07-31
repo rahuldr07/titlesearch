@@ -29,10 +29,17 @@ export const railBadgeClasses = cva(
   },
 );
 
+/**
+ * Named so the tone can travel with a stage from the chrome that decided it
+ * (`app/orderLifecycle.ts`) to the pill that wears it, without either end
+ * writing the union out again and the two drifting into different sets.
+ */
+export type RailBadgeTone = "neutral" | "attend" | "halt";
+
 export interface RailBadgeProps {
   /** The row's path — the badge's testid rides the same namespace as its row. */
   to: string;
-  tone?: "neutral" | "attend" | "halt";
+  tone?: RailBadgeTone;
   children: ReactNode;
 }
 

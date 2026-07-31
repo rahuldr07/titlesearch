@@ -1,5 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 import { OrderPipelineResponse } from "@titlepipe/contract";
+import { FLOW_ORDERS } from "../../app/flowOrders";
 import { get } from "../../shared/api";
 
 /**
@@ -7,8 +8,14 @@ import { get } from "../../shared/api";
  * reached from the chrome menu with nothing in the URL, so the demo order
  * stands in until intake gets `/orders/:id/processing`. Adding that route is a
  * routing change and is deliberately not made here.
+ *
+ * RE-EXPORTED, NEVER RESTATED. `app/flowOrders.ts` owns which order each flow
+ * route is about, because the left rail has to know it too and a feature may
+ * not be imported by the chrome (§7). This was a private literal, and the rail
+ * — resolving from the URL instead — drew this screen's order as no order at
+ * all. A second copy of the id is a second answer waiting to disagree.
  */
-export const PIPELINE_ORDER_ID = "ord_demo_1";
+export const PIPELINE_ORDER_ID = FLOW_ORDERS["/processing"];
 
 /**
  * The run's stages, as the server has them.

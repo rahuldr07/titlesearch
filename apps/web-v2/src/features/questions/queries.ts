@@ -1,5 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 import { OrderSignoffResponse } from "@titlepipe/contract";
+import { FLOW_ORDERS } from "../../app/flowOrders";
 import { get } from "../../shared/api";
 
 /**
@@ -13,8 +14,15 @@ import { get } from "../../shared/api";
  * order forced the fixture to be signed and unsigned at once — and a signed
  * sign-off carries no policy suggestion, so the one screen whose job is
  * answering had nothing left to answer.
+ *
+ * RE-EXPORTED, NEVER RESTATED. `app/flowOrders.ts` owns which order each flow
+ * route is about, because the left rail has to know it too and a feature may
+ * not be imported by the chrome (§7). It is also the only place the divergence
+ * above is visible at a glance: two flow screens read `ord_demo_1` and this one
+ * does not, and a rail that showed one continuous journey across the three
+ * would be claiming a progression none of them share.
  */
-export const SIGNOFF_ORDER_ID = "ord_demo_4";
+export const SIGNOFF_ORDER_ID = FLOW_ORDERS["/questions"];
 
 /**
  * The effective sign-off list for one order.

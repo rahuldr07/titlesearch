@@ -76,11 +76,13 @@ export function flowRoute(step: FlowStep, orderId: string | null): string | null
  * The group header over the rail.
  *
  * RULE: the header must not name an order there is none of. The export always
- * says "This order" because it carries one global demo order; this app takes
- * order identity from the URL, and printing THIS ORDER over six stages beside a
- * strip that declines to name one is the screen contradicting itself. The
- * stages are still drawn — the flow is structural — so the header names the
- * flow rather than claiming an order.
+ * says "This order" because it carries one global demo order; this app resolves
+ * order identity per path (`app/flowOrders.ts`), and printing THIS ORDER over
+ * six stages beside a strip that declines to name one is the screen
+ * contradicting itself. The stages are still drawn — the flow is structural —
+ * so where there is no order the header names the flow instead. Where there IS
+ * one, `OrderStrip` resolves it the same way and prints its reference, so the
+ * two halves of the chrome are never talking about different orders.
  *
  * Literal capitals, in the string: a CSS `text-transform` does not change what
  * the text says, and the rail's other headers are spelled the same way.

@@ -5,6 +5,7 @@ import {
   OrderCompletenessResponse,
   OrderFieldsResponse,
 } from "@titlepipe/contract";
+import type { RailBadgeTone } from "../entities/nav/RailBadge";
 import { get } from "../shared/api";
 
 /**
@@ -43,13 +44,22 @@ export function orderFieldsQuery(orderId: string) {
 export interface StageAugment {
   done: boolean;
   badge: string | null;
+  /**
+   * The pill's tone, DECIDED HERE and carried to the badge. The export pairs
+   * gaps with red and an unanswered review with amber (`navFlow`,
+   * TitlePipe.dc.html:2928); a badge that picked its own colour from its own
+   * number would be a severity rule living in a navigator (§3).
+   */
+  badgeTone?: RailBadgeTone;
 }
 
 /**
- * CONTRACT GAP — `OrderPipelineResponse.stages` (receive/split/classify/
- * signoff/gate/extract/assemble/review) is a FINER-GRAINED list than the nav
+ * CONTRACT GAP — `OrderPipelineResponse.stages` (ingest/classify/signoff/gate/
+ * extract/assemble/validate/qc/finalize) is a FINER-GRAINED list than the nav
  * flow (Upload/Questions/Processing/Completeness/Review/Delivered); the two
  * are different granularities, not a 1:1 table waiting to be written down.
+ * The ids are quoted from the served response, not from memory: the previous
+ * spelling here named four stages the pipeline does not have.
  *
  * Only three nav stages have a stage whose WHOLE JOB is the nav screen's
  * whole job, not a proxy standing in for it: `/questions` IS the sign-off
@@ -94,19 +104,32 @@ export function stageAugmentFor(
   }
   if (path === "/completeness") {
     const gaps = data.completeness?.gaps.length ?? 0;
-    return { done, badge: gaps > 0 ? String(gaps) : null };
+    // The export's red on this one pill (`tone` in `navFlow`): a gap holds the
+    // run back from the most expensive step, which is a halt, not a workload.
+    return { done, badge: gaps > 0 ? String(gaps) : null, badgeTone: "halt" };
   }
   return { done, badge: null };
 }
 
-/** Augment for the dynamic `/orders/:id/review` stage. */
+/**
+ * Augment for the dynamic `/orders/:id/review` stage.
+ *
+ * THE STAGE IS `qc`, NOT `review`. The pipeline's nine ids are ingest, classify,
+ * signoff, gate, extract, assemble, validate, qc, finalize (pinned over the
+ * wire by `mockOrderFixtures.test.ts`), and `qc` is the one labelled "Human QC
+ * gate — the run stops here for you". This read asked for `review`, matched
+ * nothing, and so returned `done: false` for every order that ever existed — a
+ * checkmark that could not be drawn, on the one stage a reviewer is in.
+ */
 export function reviewAugment(data: {
   pipeline: OrderPipelineResponse | undefined;
   fields: OrderFieldsResponse | undefined;
 }): StageAugment {
-  const done = phaseDone(data.pipeline, "review");
+  const done = phaseDone(data.pipeline, "qc");
   // Same filter `OrderCounts`'s "Need you" tile counts — server-labelled
   // state, never confidence.
   const needYou = data.fields?.fields.filter((f) => f.state === "needs_review").length ?? 0;
-  return { done, badge: needYou > 0 ? String(needYou) : null };
+  // Amber, as the export marks an unanswered review: work waiting on a person
+  // is not the same signal as a run that has stopped.
+  return { done, badge: needYou > 0 ? String(needYou) : null, badgeTone: "attend" };
 }

@@ -2,7 +2,7 @@ import { queryOptions, useQuery } from "@tanstack/react-query";
 import { useRouterState } from "@tanstack/react-router";
 import { OrderContextResponse } from "@titlepipe/contract";
 import { get } from "../shared/api";
-import { orderFromPath } from "./orderFromPath";
+import { screenOrderFor } from "./flowOrders";
 import { chromeFor } from "./chromeFor";
 import { useTheme } from "./preferences";
 import { AccountMenu } from "./AccountMenu";
@@ -39,6 +39,12 @@ function contextQuery(orderId: string) {
  * lifecycle text nor picks a tone for it — hard rule 9, and the reason the
  * strip does not read `signed_by === null` and call the result a state.
  *
+ * IT NAMES THE ORDER THE RAIL IS DRAWING, and that is why it resolves through
+ * `screenOrderFor` rather than the URL alone. The four flow routes carry no
+ * order in the path, so the rail's group header said THIS ORDER over six stages
+ * while this strip said "TitlePipe" beside it — the screen declining to name
+ * the order it was entirely about. One resolver, two readers, one answer.
+ *
  * NO ORDER, NO FABRICATION: off an order screen this shows identity and a
  * brand-neutral left, never an invented order. On an order screen BEFORE the
  * context resolves it shows nothing rather than a placeholder ref — a wrong
@@ -50,7 +56,7 @@ export function OrderStrip() {
   // neither gates the other. Gating on `/blind` alone put an identity chip
   // reading "L. Vance · ADMIN" on the sign-in screen.
   const { chrome, fetches } = chromeFor(pathname);
-  const orderId = fetches ? orderFromPath(pathname) : null;
+  const orderId = fetches ? screenOrderFor(pathname) : null;
   // Own `useTheme` call — dedupes with `AppChrome`'s by shared query key, so
   // this is not a second network request, just a second subscriber.
   const [theme, toggleTheme] = useTheme(fetches);

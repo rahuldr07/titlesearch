@@ -9,7 +9,7 @@ import { useSession } from "../shared/session";
 import { useAttention, type Attention } from "./attention";
 import { chromeFor } from "./chromeFor";
 import { useNavCollapsed, useTheme } from "./preferences";
-import { orderFromPath } from "./orderFromPath";
+import { screenOrderFor } from "./flowOrders";
 import { SidebarBrand } from "./SidebarBrand";
 import {
   orderPipelineQuery,
@@ -42,8 +42,9 @@ import {
  * `blind-blindness.spec` #1 — zero /api GETs, counted in-page) IS NOT BUILT
  * here: `e2e/helpers/net.ts` is the wrapper it needs and nothing calls it.
  *
- * THE ORDER COMES FROM THE URL, never a remembered "current order" — two tabs
- * on two orders is a normal way to work.
+ * THE ORDER IS A PURE FUNCTION OF THE PATH (`flowOrders.ts`) — the URL's id, or
+ * the flow route's — never a remembered one. The URL alone left the flow
+ * screens, which carry no order in the path, drawing a grey rail.
  */
 export function AppChrome() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -74,10 +75,10 @@ export function AppChrome() {
   // One escalations query, disabled on the capture seat (the zero-GET rule).
   const escalationAttention = useAttention(fetches ? "/escalations" : "");
 
-  // THIS ORDER's live state — the URL order, same as `OrderStrip` (Task 11's
-  // principle). All four disabled together off an order screen and on the
-  // capture seat, so neither adds a GET the zero-GET rule forbids.
-  const orderId = fetches ? orderFromPath(pathname) : null;
+  // THIS ORDER's live state — the order this screen is about, resolved exactly
+  // as `OrderStrip` resolves it, from the one map. All four disabled together
+  // off an order screen and on the capture seat (the zero-GET rule).
+  const orderId = fetches ? screenOrderFor(pathname) : null;
   const enabled = orderId !== null;
   const { data: pipeline } = useQuery({ ...orderPipelineQuery(orderId ?? ""), enabled });
   const { data: signoff } = useQuery({ ...orderSignoffQuery(orderId ?? ""), enabled });
