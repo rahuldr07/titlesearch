@@ -33,7 +33,14 @@ export function PeopleScreen() {
       <div className="flex flex-col gap-8">
         <ScreenHeading
           eyebrow="Admin · People"
-          title="Everyone in this organisation"
+          /*
+            THE EMPHASIS IS THE BOUNDARY, not the noun. `ScreenHeading` paints a
+            descendant `<em>` in the display face, and the phrase worth painting
+            here is the closing one: this register is complete for this
+            organisation and stops at its edge, which is the difference between
+            an authorisation list you can trust and a directory you cannot.
+          */
+          title={<>Everyone <em>in this organisation</em></>}
           lede={
             <p>
               This screen changes authorisation, never credentials. Invitations

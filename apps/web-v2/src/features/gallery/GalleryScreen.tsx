@@ -54,9 +54,18 @@ export function GalleryScreen() {
   return (
     <Screen measure="1120">
       <div className="flex flex-col gap-11">
+        {/*
+          THE EMPHASIS IS THE CONTRAST THE HEADING IS ALREADY MAKING. RULE: the
+          mockup sets the CLOSING phrase of a heading in Fraunces italic and
+          `ScreenHeading` paints any descendant `<em>`, so a call site only has
+          to mark the phrase. FAILURE PREVENTED: italicising a whole heading, or
+          a word picked for looks, spends the design's one accent on nothing —
+          here the sentence turns on "the happy path" being what this catalogue
+          is NOT, so the accent lands on the clause that carries the meaning.
+        */}
         <ScreenHeading
           eyebrow="Reference"
-          title="States, not just the happy path"
+          title={<>States, not just <em>the happy path</em></>}
           lede="Every one of these has to stay visually distinct in production. This is the catalogue."
         />
 

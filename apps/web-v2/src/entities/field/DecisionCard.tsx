@@ -85,15 +85,32 @@ export function DecisionCard({
 
       <CardBody className="flex flex-col gap-6">
         {asking === null ? null : (
-          <div data-testid="sel-asking" className="flex flex-col gap-2">
-            <p className="text-md font-semibold leading-body text-ink-primary">{asking}</p>
+          <div data-testid="sel-asking" className="flex flex-col gap-5">
+            {/* THE QUESTION IS THIS SCREEN'S ONE PIECE OF DISPLAY TYPE. RULE:
+                Fraunces italic is the voice this design uses when the product
+                addresses a person, and Review draws no masthead (`ReviewScreen`
+                — the panes label themselves), so `Field.asking` IS its one such
+                moment. Four tokens already carried the spec and only the call
+                site was missing: `--text-4xl` is annotated "the decision
+                question", `--font-weight-book` "the italic decision question",
+                `opsz-90` "the italic question". FAILURE PREVENTED: at `text-md
+                font-semibold` it was 12.5px bold sans — smaller than the value
+                it asks about and the same size and weight as the FLAGGED note
+                beneath it, so the one sentence a reviewer must answer had no
+                more presence than the chrome around it. A question that reads
+                as a field label stops being read. Tight leading so a 26px line
+                does not open the card; ink, not accent — the wax buys Confirm. */}
+            <p className="font-display text-4xl font-book italic leading-tight opsz-90 text-ink-primary">{asking}</p>
             {why === null ? null : (
-              <p className="text-base leading-body text-ink-secondary">
-                {/*
-                  The export's own flag word, in literal capitals: the reason
-                  arrives labelled as the ROUTER's statement rather than as
-                  narration the screen might have written itself.
-                */}
+              /* THE ROUTER'S NOTE IS AN INSET BLOCK, not a loose line under the
+                 question: the mockup gives it the sheet fill, which is
+                 `chip-neutral-surface` — the token minted for "the quiet inset
+                 note block". The block is what separates the machine's reason
+                 for asking from the question. Two speakers, one not the product. */
+              <p className="rounded-7 bg-chip-neutral-surface px-6 py-4 text-base leading-body text-ink-secondary">
+                {/* The export's own flag word, in literal capitals: the reason
+                    arrives labelled as the ROUTER's statement rather than as
+                    narration the screen might have written itself. */}
                 <Eyebrow variant="caption" tone="attend">
                   FLAGGED{" "}
                 </Eyebrow>

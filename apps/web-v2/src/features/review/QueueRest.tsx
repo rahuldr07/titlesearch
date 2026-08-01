@@ -48,15 +48,27 @@ import { Eyebrow } from "../../shared/ui/Eyebrow";
  * THE LIST SCROLLS AT A BOUND. It went from five rows to seventeen inside a
  * `flex-none` band, so an uncapped list would push the draft report off the
  * screen on the very orders that need it read. `max-h-95` (190px) keeps roughly
- * three rows in view with the rest one scroll away, and the HEADING sits
+ * five rows in view with the rest one scroll away, and the HEADING sits
  * outside the scroller so the number never scrolls away from the rows.
  *
- * `shrink-0` ON EACH ROW IS LOAD-BEARING, NOT DECORATION. A flex column with a
- * max-height shrinks its children to fit BEFORE it will overflow, so at five
- * rows the cap was invisible and at seventeen every row collapsed to a ~10px
- * rule with its text clipped away — a list that looked like a stack of blank
- * lines. Caught in a 1600×1000 capture, not in a test: nothing asserts row
- * height, and the row count was already correct while the rows were unreadable.
+ * ONE CARD, HAIRLINE-DIVIDED — NOT SEVENTEEN CARDS WITH AIR BETWEEN THEM.
+ * RULE (mockup, screen 2): the rest of the queue is a single sheet whose rows
+ * are separated by the interior 1px rule, at a 36px pitch. FAILURE PREVENTED:
+ * each row used to be its own `Card` in a `gap-4` column, which cost 8px of
+ * ground per row AND silently disabled the divider — `DecisionRow` draws
+ * `border-t … first:border-t-0`, and every row was the first child of its own
+ * card, so seventeen rows drew seventeen "first" rows and not one separator.
+ * The list read as loose floating slabs at a 47px pitch: three rows visible
+ * inside the 190px cap where the mockup shows five, on the surface whose whole
+ * job is letting a reviewer see what else is waiting.
+ *
+ * THE SCROLLER IS THE WRAPPER, NOT THE CARD. `Card` sets `overflow-hidden` so
+ * a row's hover fill cannot escape its rounded corner; adding `overflow-y-auto`
+ * to that same element leaves two overflow declarations whose winner is
+ * stylesheet order, not call order. A plain scrolling wrapper around the card
+ * settles it with no class fighting another. It also retires the old
+ * `shrink-0`-per-row workaround: the rows are block-level buttons inside a
+ * block container now, so nothing can shrink them to a clipped 10px rule.
  *
  * THE ROW IS THE ENTITY'S. `DecisionRow` is the export's bare-button queue row
  * and it already knows every state a flagged field can be in. It emits
@@ -84,16 +96,17 @@ export function QueueRest({
         Rest of the queue · {rest.length}
       </Eyebrow>
 
-      <div className="flex max-h-95 flex-col gap-4 overflow-y-auto">
-        {rest.map((field) => (
-          <Card key={field.id} className="shrink-0 p-0">
+      <div className="max-h-95 overflow-y-auto">
+        <Card>
+          {rest.map((field) => (
             <DecisionRow
+              key={field.id}
               field={field}
               testId={`queue-row-${field.path}`}
               onActivate={() => onSelect(field.path)}
             />
-          </Card>
-        ))}
+          ))}
+        </Card>
       </div>
     </section>
   );

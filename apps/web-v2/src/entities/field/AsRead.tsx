@@ -4,6 +4,16 @@ import { enginesDisagree, readingsOf } from "./fieldLabel";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
 
 /**
+ * RULE: `--text-4xl` is annotated "the decision question, the as-read value" —
+ * the mockup draws both at 26px, so the question and its answer are what the
+ * eye lands on. FAILURE PREVENTED: at `text-md` the reading was 12.5px, the
+ * size of the field's own path label, so the string being confirmed was the
+ * least prominent text on the surface built to confirm it. Leading is flat
+ * because the mockup's band is 50px; at the inherited 1.45 it opens to 65px.
+ */
+const VALUE = "font-mono text-4xl leading-flat font-semibold text-ink-primary";
+
+/**
  * THE READING, SHOWN ONCE.
  *
  * The export draws one sunken `As read` row and no per-engine cards at all —
@@ -49,42 +59,40 @@ export function AsRead({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center gap-5 rounded-7 border border-line-strong bg-surface-sunken px-6 py-5">
+      <div className="flex flex-wrap items-center gap-5 rounded-7 border border-line-strong bg-surface-sunken px-6 py-5.5">
         {/* Literal capitals: a CSS transform does not change what the text says. */}
         <Eyebrow variant="caption">AS READ</Eyebrow>
 
         {field.value !== null ? (
-          <span className="font-mono text-md font-semibold text-ink-primary">{field.value}</span>
+          <span className={VALUE}>{field.value}</span>
         ) : draft !== null ? (
           <span className="flex flex-wrap items-baseline gap-3">
-            <span className="font-mono text-md font-semibold text-ink-primary">{draft}</span>
+            <span className={VALUE}>{draft}</span>
             <span className="text-xs text-state-attend-ink">draft — nothing settled yet</span>
           </span>
         ) : (
-          <span className="text-base text-ink-secondary">
-            Nothing has been merged for this field.
-          </span>
+          <span className="text-base text-ink-secondary">Nothing has been merged for this field.</span>
         )}
 
-        {/*
-          A missing cite is only a claim worth making about something that was
-          READ. On a field the pipeline has not reached there is nothing to cite
-          yet, and shouting "no page cited" at an absence would raise an alarm
-          about work nobody has done.
-        */}
+        {/* A missing cite is only a claim worth making about something that was
+            READ. On a field the pipeline has not reached there is nothing to
+            cite yet, and shouting "no page cited" at an absence would raise an
+            alarm about work nobody has done. */}
         {page === null ? (
           field.value === null && draft === null ? null : (
-            <span
-              data-testid="as-read-cite"
-              className="ml-auto text-tiny font-semibold text-state-halt-ink"
-            >
+            <span data-testid="as-read-cite" className="ml-auto text-tiny font-semibold text-state-halt-ink">
               no page cited
             </span>
           )
         ) : (
+          /* RULE: every page reference is the same bordered page-ref chip, so a
+             cite is one recognisable object wherever it appears. FAILURE
+             PREVENTED: bare coloured text read as the value's suffix, not as its
+             provenance — principle 6 turns on those being separate claims. Not
+             `PageChip`: that is a button, and this cite navigates nowhere. */
           <span
             data-testid="as-read-cite"
-            className="ml-auto font-mono text-micro font-semibold text-page-ref"
+            className="ml-auto rounded-3 border border-page-ref-border bg-page-ref-surface px-3 py-1 font-mono text-micro font-semibold text-page-ref"
           >
             p{page}
           </span>
@@ -116,13 +124,10 @@ export function AsRead({
       ) : (
         <details open={disagree} data-testid="readings-disclosure">
           <summary className="cursor-pointer text-xs text-ink-muted">
-            {/*
-              The count is the length of the `readings` array the server sent —
-              a description of the payload being rendered, not a re-derivation
-              of a count the server publishes elsewhere. It stays outside the
-              fold because "one engine read this" and "two engines read this and
-              split" are different claims about how much the value is worth.
-            */}
+            {/* The count is the length of the `readings` array the server sent — a
+                description of the payload rendered, not a re-derivation of any
+                count the server publishes. It stays outside the fold: "one engine
+                read this" and "two read it and split" are different claims. */}
             <span className="font-semibold text-ink-secondary">
               Read by {readings.length}
               {readings.length === 1 ? " engine" : " engines"}

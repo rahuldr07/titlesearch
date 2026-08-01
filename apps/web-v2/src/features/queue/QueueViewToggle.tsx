@@ -2,10 +2,22 @@ import { ToggleGroup, Toggle } from "../../shared/ui/ToggleGroup";
 
 export type QueueView = "reviewer" | "senior";
 
-/** The export's segment: 5px radius, 12/7px padding, panel fill in violet ink. */
+/**
+ * The mockup's `.toggle button`: 4px radius, `6px 14px`, and — pressed — the
+ * BRIGHTEST paper lifted on `--sh-1`, in primary ink at 600.
+ *
+ * RULE: the sealing wax is spent once per screen, on the one action. FAILURE
+ * PREVENTED: the pressed segment was `text-action`, so the queue's view
+ * preference was drawn in the same red as "Take next order" and the eye had two
+ * red things to rank. The mockup marks the pressed segment by RAISING it — a
+ * bright chip standing off a sunken track — which is a depth signal, and depth
+ * is what this palette separates with (Card.tsx). It survives greyscale too,
+ * which a colour swap on an 11px word does not.
+ */
 const SEGMENT = [
-  "rounded-4 border-transparent bg-transparent px-6 py-3.5 text-sm text-ink-secondary",
-  "data-pressed:border-transparent data-pressed:bg-surface-panel data-pressed:text-action",
+  "rounded-4 border-transparent bg-transparent px-7 py-3 text-sm text-ink-secondary",
+  "data-pressed:border-transparent data-pressed:bg-surface-raised",
+  "data-pressed:font-semibold data-pressed:text-ink-primary data-pressed:shadow-card",
 ].join(" ");
 
 /**
@@ -37,7 +49,11 @@ export function QueueViewToggle({
   return (
     <ToggleGroup
       aria-label="Queue view"
-      className="gap-1 rounded-6 border border-line-strong bg-surface-app p-1.5"
+      /* `.toggle` — 7px track (`--radius-7` is named for exactly this), 3px of
+         inner padding, 2px between cells, on the SUNKEN paper the mockup uses
+         for a track. `surface-app` was the desk, not a track, so the control had
+         no well for its pressed chip to sit in. */
+      className="gap-1 rounded-7 border border-line-strong bg-surface-sunken p-1.5"
       value={[view]}
       onValueChange={(values) => {
         const picked = values.at(0);

@@ -64,10 +64,19 @@ export function DecisionBar({
 }: DecisionBarProps) {
   return (
     <div className="flex flex-wrap gap-4">
+      {/*
+        THIS IS THE SCREEN'S ONE ACCENT ACTION, so it states only its tone and
+        takes the wax from `DEFAULT_FILL`. It was `fill="outlined"
+        tone="settled"` — the quietest control on the card, on the screen the
+        whole product exists for. A DOM sweep found no element painted with the
+        accent anywhere on Review: the discipline had been applied so evenly
+        that the decision itself disappeared into its own alternatives.
+        `settled` green is the right colour for a settled FIELD; it is the wrong
+        colour for the press that settles it.
+      */}
       <Button
         size="sm"
-        fill="outlined"
-        tone="settled"
+        tone="action"
         id={CONFIRM_CONTROL_ID}
         data-testid="act-confirm"
         onClick={onConfirm}

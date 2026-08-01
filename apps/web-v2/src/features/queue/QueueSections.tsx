@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import type { QueueBand as QueueBandData } from "@titlepipe/contract";
 import { EmptyPanel } from "../../shared/ui/EmptyPanel";
-import { BandOrders } from "./BandOrders";
+import { BandOrders, type BandPress } from "./BandOrders";
 import { QueueBand } from "./QueueBand";
 
 /**
@@ -50,7 +50,10 @@ import { QueueBand } from "./QueueBand";
  */
 export function MineBand({ band }: { band: QueueBandData | undefined }) {
   return (
-    <Band band={band} verb="Resume →">
+    /* `solid` on the one band that is YOUR open work — the mockup's `.btn.solid`,
+       an INK press, not the wax. Held and delivered take the hairline `.btn.line`
+       so the only full-strength accent on the screen stays "Take next order". */
+    <Band band={band} verb="Resume →" press="solid">
       {/* A fragment, not an attribute string: `&rsquo;` decodes reliably in JSX
           TEXT, and this file's copy is written with entities throughout. */}
       <EmptyPanel title={<>Nothing in progress — you&rsquo;re clear.</>} />
@@ -71,12 +74,12 @@ export function TailBands({
 }) {
   return (
     <>
-      <Band band={held} verb="Open →">
+      <Band band={held} verb="Open →" press="outlined">
         <EmptyPanel title="Nothing held." />
       </Band>
 
       {senior ? (
-        <Band band={inFlight} verb={null}>
+        <Band band={inFlight} verb={null} press="outlined">
           <EmptyPanel
             title="Nothing in flight."
             body="This band is a read, not a worklist — seeing an order here is not an invitation to take it."
@@ -88,7 +91,7 @@ export function TailBands({
           band row says which version was delivered, and a version number is a
           value like any other — printing `v2` here would be the screen asserting
           a revision count the server never sent. */}
-      <Band band={delivered} verb="Reopen →">
+      <Band band={delivered} verb="Reopen →" press="outlined">
         <EmptyPanel title="Nothing delivered recently on your account." />
       </Band>
     </>
@@ -104,16 +107,18 @@ export function TailBands({
 function Band({
   band,
   verb,
+  press,
   children,
 }: {
   band: QueueBandData | undefined;
   verb: string | null;
+  press: BandPress;
   children: ReactNode;
 }) {
   if (band === undefined) return null;
   return (
     <QueueBand title={band.title} note={band.note} count={band.count}>
-      <BandOrders band={band} verb={verb} empty={children} />
+      <BandOrders band={band} verb={verb} press={press} empty={children} />
     </QueueBand>
   );
 }

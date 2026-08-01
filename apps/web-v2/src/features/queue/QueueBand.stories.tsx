@@ -3,6 +3,8 @@ import { expect, within } from "storybook/test";
 import { OrderRow } from "../../entities/order/OrderRow";
 import { Button } from "../../shared/ui/Button";
 import { Chip } from "../../shared/ui/Chip";
+import { Card } from "../../shared/ui/Card";
+import { DividedSection } from "../../shared/ui/ListRow";
 import { QueueBand } from "./QueueBand";
 
 const meta = {
@@ -47,15 +49,25 @@ export const HeldRowOpensAndDoesNotClaim: Story = {
   args: { title: "Held", note: "stopped · needs someone", count: 1, children: null },
   render: (args) => (
     <QueueBand {...args}>
-      <OrderRow
-        orderRef="4176011-2"
-        chips={<Chip>Package incomplete</Chip>}
-        place="72 Aldergate Rd, Fairhollow GA · Greene County · GA"
-        note="Waiting on the abstractor to add documents"
-        waited="1d 4h"
-        stateEdge="attend"
-        action={<Button size="sm">Open →</Button>}
-      />
+      {/* The band's ONE sheet, as `BandOrders` builds it: rows are `<li>`s and a
+          bare `OrderRow` outside a list is an a11y violation, not just a style
+          one. `accent="attend"` is the held band's single severity mark. */}
+      <Card accent="attend">
+        <DividedSection>
+          <OrderRow
+            orderRef="4176011-2"
+            chips={<Chip>Package incomplete</Chip>}
+            place="72 Aldergate Rd, Fairhollow GA"
+            where="Greene County · GA"
+            note="Waiting on the abstractor to add documents"
+            waited="1d 4h"
+            /* `neutral`/`outlined`, the mockup's `.btn.line`. The bare
+               `<Button>` this was is the wax default, and the wax is spent once
+               per screen — on "Take next order", never on a row control. */
+            action={<Button size="sm" tone="neutral" fill="outlined">Open →</Button>}
+          />
+        </DividedSection>
+      </Card>
     </QueueBand>
   ),
   play: async ({ canvasElement }) => {
@@ -81,11 +93,16 @@ export const UnactionableRowDrawsNoControl: Story = {
   args: { title: "In flight", note: "processing · senior · ops view", count: 1, children: null },
   render: (args) => (
     <QueueBand {...args}>
-      <OrderRow
-        orderRef="4176048-3"
-        place="441 Kestrel Ln, Brackendale NC · Mecklenburg County · NC"
-        note="Extract fields"
-      />
+      <Card>
+        <DividedSection>
+          <OrderRow
+            orderRef="4176048-3"
+            place="441 Kestrel Ln, Brackendale NC"
+            where="Mecklenburg County · NC"
+            note="Extract fields"
+          />
+        </DividedSection>
+      </Card>
     </QueueBand>
   ),
   play: async ({ canvasElement }) => {

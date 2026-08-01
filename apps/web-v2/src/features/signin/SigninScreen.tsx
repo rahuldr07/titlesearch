@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { PipeMark } from "./PipeMark";
 import { buttonClasses } from "../../shared/ui/Button";
+import { Card } from "../../shared/ui/Card";
 import { Screen } from "../../shared/ui/Screen";
 import { cn } from "../../shared/ui/classNames";
 
@@ -27,9 +28,21 @@ import { cn } from "../../shared/ui/classNames";
  * session endpoints land — the copy is already true of that flow.
  */
 export function SigninScreen() {
+  // MEASURE 440, NOT THE EXPORT'S 380. The measure is the width of the CONTENT
+  // (`Screen`), and the sheet below spends 28px a side on padding.
   return (
-    <Screen measure="380" pad="40" placement="centre">
-      <div className="text-center">
+    <Screen measure="440" pad="40" placement="centre">
+      {/*
+        THE SHEET IS THE SCREEN — `Screen`'s `centre` placement is the export's
+        SIX SINGLE-CARD screens, and this is the first of them a person ever
+        sees. RULE: the reskin's ground is layered paper; every object in the
+        product sits on a sheet above the desk. FAILURE PREVENTED: on the warm
+        desk tone a mark, a button and a sentence with nothing under them read as
+        a page that failed to finish loading — which is the worst possible first
+        impression for a screen whose entire argument is that it is the real one
+        and not a copy of it.
+      */}
+      <Card size="emphasis" className="w-full px-14 py-16 text-center">
         <PipeMark />
 
         <div className="text-2xl font-bold tracking-stamp text-ink-primary">
@@ -47,7 +60,7 @@ export function SigninScreen() {
           Sign-in, passwords, and MFA are handled by your identity provider on
           its own page. This tool never sees your credentials.
         </p>
-      </div>
+      </Card>
     </Screen>
   );
 }

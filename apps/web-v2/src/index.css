@@ -2,6 +2,8 @@
 @import "@titlepipe/ui-tokens/tokens.css";
 /* shadcn's seventeen names aliased onto ours; the file states each judgement. */
 @import "./shadcn-bridge.css";
+/* The utilities Tailwind does not generate; that file states why each exists. */
+@import "./utilities.css";
 
 /*
  * The spacing grid. DELIBERATELY LOCAL to web-v2 — never move this into
@@ -50,87 +52,6 @@ html {
 
 ::selection {
   background: var(--color-surface-evidence);
-}
-
-/*
- * The scan filters. `--filter-*` is NOT a Tailwind theme namespace — verified
- * against the built CSS, `filter-scan` generated nothing — so the tokens need
- * explicit utilities or the page renders as a clean scan, exactly the wrong
- * impression: the product exists because most pages are degraded. tokens.md §9.3.
- */
-@utility filter-scan {
-  filter: var(--filter-scan);
-}
-
-@utility filter-scan-degraded {
-  filter: var(--filter-scan-degraded);
-}
-
-/*
- * The export's chip grids: `repeat(auto-fill, minmax(230px, 1fr))`. A FIXED
- * column count is the bug this replaces — `sm:grid-cols-2` gave the sign-off
- * defaults two ~430px chips at the 880px measure, stranding each YES/N-A value
- * hundreds of pixels from its label. Auto-fill makes the count follow the
- * measure, keeping a value beside its line at every width.
- */
-@utility grid-autofill-230 {
-  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-}
-
-/*
- * FRAUNCES' OPTICAL SIZE AXIS, added with the 2026-08-01 reskin.
- * `font-variation-settings` is not a Tailwind namespace, so without these the
- * only ways to set `opsz` are an inline style or an arbitrary value — both
- * banned by §6 — and the display face would ship at one optical size
- * everywhere, drawing the 38px h1 with letterforms meant for 9px type. Values
- * are the mockup's, one per display role: 144 h1 · 120 screen h2 · 100 featured
- * order number · 90 the italic question · 40 the brand word.
- */
-@utility opsz-40 {
-  font-variation-settings: "opsz" 40;
-}
-
-@utility opsz-90 {
-  font-variation-settings: "opsz" 90;
-}
-
-@utility opsz-100 {
-  font-variation-settings: "opsz" 100;
-}
-
-@utility opsz-120 {
-  font-variation-settings: "opsz" 120;
-}
-
-@utility opsz-144 {
-  font-variation-settings: "opsz" 144;
-}
-
-/*
- * TABULAR FIGURES — a product rule wearing a typography hat. Every value, cite,
- * count and page reference sits in a COLUMN and is read by comparison down that
- * column; figures that do not align turn "is this the same parcel number?" into
- * a character-by-character read. `font-feature-settings` has no utility either.
- */
-@utility tnum {
-  font-feature-settings: "tnum" 1;
-}
-
-/*
- * THE ABSENCE GRAMMAR'S TWO FILL PATTERNS — utilities, not arbitrary values, as the
- * gradients carry raw pixel stops (§6). A fill PATTERN survives a photocopier, so these
- * keep `silent` and `unreadable` apart from each other and from the bordered-empty states
- * (CONTEXT §11). The 2026-08-01 reskin moved the marks, per tokens.css's "solid+filled /
- * dashed+empty / solid+dotted / hatched / dotted+empty": na-dots is `silent` (read, does
- * not say); na-hatch is `unreadable`, because a hatch reads as damage — the mark you make
- * over what you cannot transcribe — so it took the attend stripe with it (`.nv.pu`).
- */
-@utility na-hatch {
-  background-image: repeating-linear-gradient(45deg, var(--color-na-unreadable-border) 0 2.5px, transparent 2.5px 6px);
-}
-@utility na-dots {
-  background-image: radial-gradient(var(--color-na-silent-hatch) 0.8px, transparent 0.9px);
-  background-size: 6px 6px;
 }
 
 /*

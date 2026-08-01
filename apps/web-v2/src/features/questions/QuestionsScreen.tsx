@@ -41,9 +41,20 @@ export function QuestionsScreen() {
   return (
     <Screen measure="640" pad="36x40">
       <div className="flex flex-col gap-7">
+        {/*
+          RULE: the mockup's signature is the CLOSING phrase of a heading set in
+          Fraunces italic, and `ScreenHeading` paints any descendant `<em>` — the
+          call site writes only the semantic element. FAILURE PREVENTED: the
+          accent going on "you did", the phrase a designer reaches for first,
+          which is the sentence's subject rather than its close and would leave
+          the heading emphasising a pronoun. The scope is what this screen is
+          about: these are the answers for THIS search, made now, not the QC pass
+          that comes later — which is exactly what the lede below spends three
+          clauses saying.
+        */}
         <ScreenHeading
           eyebrow="Step 2 — Sign-off"
-          title="Confirm what you did on this search"
+          title={<>Confirm what you did <em>on this search</em></>}
           lede="You answer these before the pipeline runs — this is you claiming your own work at the moment you hand it over, not the QC reviewer vouching for it later. All required. Suggested answers come from this client's reviewed policy; you still answer each line."
         />
 

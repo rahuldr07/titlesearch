@@ -3,7 +3,10 @@ import { queryOptions } from "@tanstack/react-query";
 import type { OrderCensus } from "@titlepipe/contract";
 import { OrderFieldsResponse } from "@titlepipe/contract";
 import { get } from "../shared/api";
-import { cn } from "../shared/ui/classNames";
+import { CensusTile, type CensusTileProps } from "../shared/ui/CensusTile";
+
+/** The tone names `CensusTile` accepts, so the table below states one of them. */
+type CensusTone = NonNullable<CensusTileProps["tone"]>;
 
 function fieldsQuery(orderId: string) {
   return queryOptions({
@@ -43,27 +46,28 @@ function fieldsQuery(orderId: string) {
  * `whyComments.test.ts` holds that claim to the file rather than to this
  * paragraph: no `.filter(`, no `.length`, no comparison against `null` here.
  */
+/**
+ * RULE (2026-08-01 reskin): a census figure is drawn by `CensusTile`, and its
+ * `strip` size IS the mockup's `.rstrip .stat` — figure and word on ONE
+ * baseline-aligned line, `21 FIELDS`, at `--text-census` in tabular mono.
+ * FAILURE PREVENTED: this file hand-rolled the tile and had drifted to the
+ * BOARD reading — a 9.5px cap stacked under a 13px numeral, right-aligned —
+ * inside 26px of chrome. Four stacked tiles in a 40px-tall strip read as eight
+ * unrelated fragments; the shared component was written against the drawing and
+ * simply had no caller here. Tones become the component's semantic names rather
+ * than four text-colour utilities spelled out beside a label.
+ */
 const TILES = [
-  { key: "fields", label: "Fields", tone: "text-ink-primary", muteAtZero: false },
-  {
-    key: "auto_confirmed",
-    label: "Auto-confirmed",
-    tone: "text-state-settled-ink",
-    muteAtZero: false,
-  },
-  { key: "needs_review", label: "Need you", tone: "text-action", muteAtZero: false },
+  { key: "fields", label: "Fields", tone: undefined, muteAtZero: false },
+  { key: "auto_confirmed", label: "Auto-confirmed", tone: "settled", muteAtZero: false },
+  { key: "needs_review", label: "Need you", tone: "action", muteAtZero: false },
   // Zero no-source is the good outcome, so it recedes; any other figure is the
   // loudest thing on the strip.
-  {
-    key: "no_source",
-    label: "No source",
-    tone: "text-state-halt-ink",
-    muteAtZero: true,
-  },
+  { key: "no_source", label: "No source", tone: "halt", muteAtZero: true },
 ] as const satisfies readonly {
   key: keyof OrderCensus;
   label: string;
-  tone: string;
+  tone: CensusTone | undefined;
   muteAtZero: boolean;
 }[];
 
@@ -85,7 +89,9 @@ export function OrderCounts({ orderId }: { orderId: string }) {
     // rather than the claim: no responsive-visibility utility appears in this
     // file. "Always visible" was never true either — this returns null until
     // the query resolves, and `OrderStrip` mounts it only on an order screen.
-    <div data-testid="order-counts" className="flex flex-wrap gap-6">
+    // 18px tile to tile — the mockup's `.rstrip` gap, which is the gap between
+    // every item on that strip including these.
+    <div data-testid="order-counts" className="flex flex-wrap items-center gap-9">
       {TILES.map(({ key, label, tone, muteAtZero }) => {
         // An ABSENT census prints an em dash — not a zero, and not a number
         // this component worked out for itself. "The server did not say" and
@@ -95,19 +101,13 @@ export function OrderCounts({ orderId }: { orderId: string }) {
         const value = census?.[key];
         const muted = value === undefined || (muteAtZero && value === 0);
         return (
-          <div key={key} className="text-right">
-            <div
-              className={cn(
-                "text-md font-semibold leading-flat",
-                muted ? "text-ink-muted" : tone,
-              )}
-            >
-              {value ?? "—"}
-            </div>
-            <div className="text-micro tracking-label uppercase text-ink-muted">
-              {label}
-            </div>
-          </div>
+          <CensusTile
+            key={key}
+            size="strip"
+            value={value ?? "—"}
+            caption={label}
+            {...(muted ? { tone: "muted" } : tone ? { tone } : {})}
+          />
         );
       })}
     </div>

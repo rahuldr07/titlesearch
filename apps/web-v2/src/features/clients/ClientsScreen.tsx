@@ -72,7 +72,14 @@ export function ClientsScreen() {
       <div className="flex flex-col gap-8">
         <ScreenHeading
           eyebrow="Admin · Clients"
-          title="Client settings & overrides"
+          /*
+            THE MOCKUP'S OWN EXAMPLE, WRITTEN OUT. `ScreenHeading` paints a
+            descendant `<em>` in the display face; the call site's only job is
+            to say which phrase earns it. "Overrides" is the whole subject of
+            the screen — settings are the given, the deltas are the argument —
+            so the emphasis lands where the reading does.
+          */
+          title={<>Client settings &amp; <em>overrides</em></>}
           lede={
             <p>
               A client holds only <span className="font-semibold">deltas</span>{" "}

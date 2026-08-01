@@ -24,8 +24,25 @@ const TIERS: readonly PageSpineTier[] = ["read", "degraded", "partial", "unseen"
  *
  * THE CURRENT PAGE OVERRIDES ITS TIER FILL rather than adding a second mark, as
  * the export does (`:3057`). Losing one square's tier to say "you are here" is
- * cheap; two marks on one 18px square is a square nobody can read. `aria-current`
+ * cheap; two marks on one 13px square is a square nobody can read. `aria-current`
  * carries the same fact where colour does not reach.
+ *
+ * THE SQUARE IS 13px ON A 3px GUTTER — the mockup's measured grid, against the
+ * 18px/4px this shipped at. RULE: the spine's job is to be READ AS A SHAPE — a
+ * whole package in one glance, so a run of unread pages is a visible block
+ * rather than a count. FAILURE PREVENTED: at 22px pitch a 64-page package ran
+ * wider than the document pane and wrapped to three ragged rows with the last
+ * one a third full; the mockup's 16px pitch lands the same 64 squares in two
+ * even rows, which is the only arrangement in which "how much of this package
+ * did anyone read" is answerable without counting.
+ *
+ * THE COST, STATED: 13px is a smaller pointer target than the 18px it replaces,
+ * and neither clears WCAG 2.5.8's 24px. The exception the spine relies on is
+ * the equivalent control — `PageNav`'s prev/next and page field reach every
+ * page of the package at full size, and every cell is focusable and named, so
+ * the keyboard path is unaffected. Flagged as a cost of matching the mockup's
+ * density, not argued away: if the owner wants the target back, the number to
+ * move is here and the legend swatch below it stays as it is.
  *
  * THE LEGEND COUNTS THE SQUARES DRAWN ABOVE IT and claims nothing else. The
  * buckets are the ones that coloured the cells, so the words can never disagree
@@ -58,7 +75,7 @@ function CoverageCell({
     "aria-current": current ? ("page" as const) : undefined,
     title: `p${cell.n} · ${CELL_LABEL[cell.tier]}`,
     className: cn(
-      "size-9",
+      "size-6.5",
       cellClasses({ tier: cell.tier }),
       current && "border-solid border-action bg-action",
     ),
@@ -73,7 +90,7 @@ export function PageSpine({ cells, currentPage, onSelect }: PageSpineProps) {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-1.5">
         {cells.map((cell) => (
           <CoverageCell
             key={cell.n}

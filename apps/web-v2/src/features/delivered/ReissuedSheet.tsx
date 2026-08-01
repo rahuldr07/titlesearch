@@ -1,4 +1,5 @@
 import { DEMO_AMENDED_FIELD, DEMO_ORDER_HISTORY } from "./demoContent";
+import { SheetHeading } from "./SheetHeading";
 import { Card } from "../../shared/ui/Card";
 import { DividedSection, ListRow } from "../../shared/ui/ListRow";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
@@ -32,9 +33,16 @@ export function ReissuedSheet({ orderId }: { orderId: string }) {
         </Stamp>
       </div>
 
-      <h1 className="mb-3 text-3xl font-semibold text-ink-primary">
-        Order {orderId} — amended sheet
-      </h1>
+      {/*
+        `amended sheet` IS THE CLOSING PHRASE AND IT IS THE NEWS. RULE: the
+        emphasis marks what the heading is telling you that you did not already
+        know. FAILURE PREVENTED: leaving this h1 the only unmarked one of the
+        pair, so the terminal state carries the design's accent and the state
+        that actually needs explaining does not.
+      */}
+      <SheetHeading size="md">
+        Order {orderId} — <em>amended sheet</em>
+      </SheetHeading>
       <p className="mx-auto mb-9 max-w-150 text-base leading-body text-ink-secondary">
         v1 retained in the record. Only the disputed field was reworked;
         everything else carried forward as settled.

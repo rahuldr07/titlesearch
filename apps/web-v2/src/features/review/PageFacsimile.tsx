@@ -110,7 +110,7 @@ export function PageFacsimile({
         at 320px the paper read as a note card floating in a large grey field.
       */}
       <div className="flex justify-center">
-        <div className="relative w-full max-w-230 rounded-2 bg-surface-paper px-12 py-11 shadow-page">
+        <div className="page-letter relative w-full max-w-230 rounded-2 bg-surface-paper px-12 py-11 shadow-page">
           <pre
             className={cn(
               "font-document text-base leading-document whitespace-pre-wrap text-page-ink",

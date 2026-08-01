@@ -17,43 +17,38 @@ import { Button } from "../../shared/ui/Button";
  * Order-scoped interaction lives here rather than on the screen because every
  * bit of it is meaningless without an order: the hotkeys cannot fire, the pass
  * cannot be sent, and the card only mounts when the server has handed one over.
- *
- * `passedRef` deliberately OUTLIVES the order it names. A pass invalidates the
- * query and a different order arrives underneath; the note has to stay long
- * enough to say which one went back, so this component is never keyed by order.
+ * `passedRef` deliberately OUTLIVES the order it names — a pass invalidates the
+ * query and a different order arrives underneath, so the note has to stay long
+ * enough to say which one went back, and this component is never keyed by order.
  *
  * THE PRODUCT AND THE PACKAGE SIZE ARE THE ORDER'S OWN (2026-07-30, Wave 2).
- * `Order.product`, `Order.period_label` and `Order.pages` carry what the design
- * put in its product chip and its size line, so neither is composed here and
- * neither is a constant. Both are NULLABLE and the card stays silent rather
- * than printing a placeholder: an order that failed validation has no resolved
- * product, and a package nobody could read has no page count — `null` says
- * that, and a `0` would claim somebody counted.
+ * `Order.product` and `Order.pages` carry what the design puts in its product
+ * chip and its size line, so neither is composed here and neither is a constant.
+ * Both are NULLABLE and the card stays silent rather than printing a
+ * placeholder: an order that failed validation has no resolved product, and a
+ * package nobody could read has no page count — `null` says that, and a `0`
+ * would claim somebody counted. CONTRACT GAP: the design's size line also reads
+ * "· 14 read in full", and nothing on this response carries it.
  *
- * CONTRACT GAP: the design's size line also reads "· 14 read in full". Nothing
- * on this response says how much of the package was carried forward, so the
- * card states the size and stops where the wire does.
+ * THE HERO IS PAPER AND DEPTH NOW, NOT AN EDGE (2026-08-01 reskin). RULE: depth
+ * separates, hairlines divide, and the wax is spent once — here, on "Take next
+ * order". FAILURE PREVENTED: this card carried a 1.5px accent border, so the
+ * screen's one press sat inside a box drawn in the same colour and the eye had
+ * two accents to choose between. The mockup's `.next` is the BRIGHTEST surface
+ * in the system (`--card-high` = `surface-raised`) lifted on `--sh-2`, with no
+ * edge at all: the card you are meant to act on is the one nearest you, and the
+ * only red thing on the page is the button.
  *
- * THE ONE ACCENTED CARD ON THE PAGE. The export gives this card a 1.5px
- * violet-tint edge and 18px of padding while every band row keeps a 1px rule,
- * so the card you are meant to act on is visibly the hero. Drawn on the kit's
- * default `Card` it wore the same edge as the "Nothing held." panel beside it.
- * It is an EDGE and not `Card`'s `accent` stripe on purpose: the stripe marks
- * "this block is the live one" inside a stack of peers, and this card has no
- * peers — its whole band is one card.
+ * ITS NUMERAL IS THE DISPLAY FACE, NOT MONO. `.n-ord` is Fraunces 30px at weight
+ * 480 — `--text-5xl` and `--font-weight-demi`, whose token comments name this
+ * exact use ("featured order number"). FAILURE PREVENTED: at `font-mono text-xl`
+ * the served order read as a row id, indistinguishable from the six mono refs in
+ * the bands above and below it. Refs inside the BANDS stay mono — they are a
+ * column of identifiers, and identifiers are what the mono face is for.
  *
- * NO KEY HINT ON THE CARD. The card used to close with `Keys: ⏎ take it · P
- * pass`. The export prints key hints on NO screen — the `?` map is the one
- * place they live, and the queue card it draws (`:249-264`) ends at its two
- * controls. The keys themselves are unchanged: `⏎` still takes and `p` still
- * opens the pass, they are simply no longer advertised in the card's own copy.
- * Nothing in `e2e/` asserted the line.
- *
- * NEITHER THE JURISDICTION SLUG NOR THE CLIENT ID IS INFORMATION. `clayton-ga`
- * and `cli_riverbend` are internal keys printed at a reviewer in the slot the
- * export spends on the package size; the county and state above already say
- * where the work is. The line now carries what the design puts there and
- * nothing else.
+ * NO KEY HINT ON THE CARD, and no jurisdiction slug or client id. The `?` map is
+ * the one place keys live; `⏎` still takes and `p` still opens the pass. The
+ * meta line carries what the design puts there and nothing else.
  */
 export function NextOrderCard({ order }: { order: Order }) {
   const navigate = useNavigate();
@@ -80,49 +75,54 @@ export function NextOrderCard({ order }: { order: Order }) {
         </p>
       )}
 
-      <Card className="border-(length:--stroke-emphasis) border-action-border">
-        <CardBody className="p-9">
-          <div className="flex flex-wrap items-center justify-between gap-8">
+      {/* `size="card"` keeps the mockup's 8px `--r-card`; only the SURFACE and
+          the elevation change. `emphasis` would have brought 18px of radius the
+          drawing does not give this card. */}
+      <Card className="bg-surface-raised shadow-pop">
+        <CardBody className="px-11 py-9">
+          <div className="flex flex-wrap items-center justify-between gap-11">
             <div className="min-w-0">
-              <Eyebrow variant="field" tone="action">Next order in line</Eyebrow>
-              <div className="mt-3 flex flex-wrap items-center gap-5">
-                <span
-                  data-testid="order-ref"
-                  className="font-mono text-xl font-semibold text-ink-primary"
-                >
-                  {order.external_ref}
-                </span>
-                {/* `{county} · {state}`, never "{county} County" — a literal
-                    "County" would be the screen asserting a jurisdiction type
-                    the server never sent, and Louisiana ships parishes. */}
-                <span className="text-sm text-ink-secondary">
+              <Eyebrow variant="group">Next order in line</Eyebrow>
+              <p
+                data-testid="order-ref"
+                className="mt-4 font-display text-5xl font-demi leading-flat opsz-100 text-ink-primary"
+              >
+                {order.external_ref}
+              </p>
+              {/* `.n-meta` — location and BOTH chips on one line. The page count
+                  was a paragraph of its own below the card's fold; the mockup
+                  files it beside the product because both answer the same
+                  question, and neither is a sentence. `{county} · {state}`,
+                  never "{county} County" — a literal "County" would assert a
+                  jurisdiction type the server never sent, and Louisiana ships
+                  parishes. The product chip is NEUTRAL, not the wax tint it
+                  wore: a tinted chip was a third accent in a card whose whole
+                  job is to have one. */}
+              <div className="mt-5 flex flex-wrap items-center gap-5">
+                <span className="text-md font-medium text-ink-secondary">
                   {order.county} · {order.state}
                 </span>
-                {/* The product is the SERVER'S word, only cased by the chip —
-                    the export draws this slot as a violet-tint chip and the app
-                    previously spent it on the order's status, which the design
-                    does not draw here at all. Nothing else on the page tells a
-                    reviewer what search they are about to be handed. */}
                 {order.product === null ? null : (
-                  <Chip data-testid="order-product" tone="action" size="sm" bordered>
+                  <Chip data-testid="order-product" size="sm" bordered>
                     {order.product}
                   </Chip>
                 )}
+                {order.pages === null ? null : (
+                  <Chip shape="mono" size="sm" bordered className="tnum">
+                    {order.pages} pages
+                  </Chip>
+                )}
               </div>
-              {order.pages === null ? null : (
-                <p className="mt-4 text-sm text-ink-secondary">
-                  <span className="font-mono font-semibold text-ink-primary">
-                    {order.pages}
-                  </span>{" "}
-                  pages
-                </p>
-              )}
             </div>
 
             {passing ? null : (
-              <div className="flex shrink-0 flex-wrap gap-4">
+              <div className="flex shrink-0 flex-wrap items-center gap-4">
                 <Button size="lg" onClick={take}>Take next order →</Button>
-                <Button size="lg" fill="outlined" tone="neutral" onClick={() => setPassing(true)}>
+                {/* `.btn.ghost` — the mockup gives Pass no box at all. Outlined,
+                    it drew a second bordered control the same height as the wax
+                    one: the "two buttons, pick one" reading §4.4 spends this
+                    screen avoiding. Passing is allowed, not on offer. */}
+                <Button size="lg" fill="ghost" tone="neutral" onClick={() => setPassing(true)}>
                   Pass — say why
                 </Button>
               </div>

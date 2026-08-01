@@ -37,6 +37,14 @@ export function ConfigHeader({
     <div className="flex flex-col gap-6">
       <ScreenHeading
         eyebrow="Admin · Products & sign-off"
+        /*
+          NO `<em>` HERE, DELIBERATELY. RULE: the design's signature italic
+          takes the CLOSING PHRASE of a heading; a one-word heading has none.
+          FAILURE PREVENTED: the only way to reach the italic from "Configuration"
+          is to set the entire h1 in it, which stops being an emphasis and
+          becomes a second typeface for one screen — the mockup's own finding is
+          that the display face earns its place by being spent rarely.
+        */
         title="Configuration"
         lede={
           <p>

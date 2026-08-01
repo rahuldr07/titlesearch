@@ -33,9 +33,37 @@ export interface CompareColumn {
  */
 export type CompareMark = "baseline" | "narrowed" | "replaced" | "waived" | "added";
 
+/**
+ * THE BASELINE MARK IS A FILLED DOT, NOT A MIDDOT.
+ *
+ * RULE: the mockup draws the baseline cell as a solid ● that carries across a
+ * 13 × N grid. FAILURE PREVENTED: `·` at the cell's 12.5px is a one-pixel
+ * speck, and a column of specks reads as an EMPTY column — which inverts the
+ * claim this screen rests on, that a column of dots is a client with nothing
+ * to argue about rather than a client nobody resolved.
+ *
+ * EVERY MARK IS A DIFFERENT SHAPE, not a different colour: solid, half-filled,
+ * two strokes, crossed, plus. The tints beneath them are reinforcement, so the
+ * grid stays readable in greyscale and to a reader who cannot separate the
+ * attend amber from the halt red.
+ */
 const SYMBOL: Readonly<Record<CompareMark, string>> = {
-  baseline: "·", narrowed: "◐", replaced: "≠", waived: "✕", added: "＋",
+  baseline: "●", narrowed: "◐", replaced: "≠", waived: "✕", added: "＋",
 };
+
+/**
+ * NOT ON THIS CLIENT'S RESOLVED CHECKLIST AT ALL — drawn, never left blank.
+ *
+ * RULE: the mockup gives "not applicable" its own glyph in the legend, beside
+ * the dot and the ring. FAILURE PREVENTED: an empty cell cannot be told apart
+ * from a cell that failed to render, so the one fact the grid must not blur —
+ * the server resolved this client and the line is not on their list — arrives
+ * looking like a bug. It stays muted because it is an absence, and it must
+ * never be read as the waive ✕, which is a line the baseline carries and an
+ * override took away.
+ */
+export const ABSENT_SYMBOL = "—";
+export const ABSENT_LABEL = "not applicable";
 
 const LABEL: Readonly<Record<CompareMark, string>> = {
   baseline: "same as baseline",

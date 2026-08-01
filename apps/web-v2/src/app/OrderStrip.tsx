@@ -68,32 +68,55 @@ export function OrderStrip() {
   if (!chrome) return null;
 
   return (
+    /*
+     * THE MOCKUP'S `.rstrip`, metric for metric: `gap:18px`, `padding:13px 28px`,
+     * one hairline underneath. The strip was on `18px 8px` with a `justify-
+     * between` three-way split, which pushed the census to the far right of a
+     * 1600px window — 900px from the order it counts. The drawing reads left to
+     * right as one sentence: WHICH order · WHAT is in it · then, after the
+     * spacer, WHERE it stands and WHO is holding it.
+     */
     <div
       data-testid="order-strip"
-      className="flex items-center justify-between gap-6 border-b border-line-strong bg-surface-panel px-9 py-4"
+      className="flex items-center gap-9 border-b border-line-strong bg-surface-panel px-14 py-6.5"
     >
       <div className="min-w-0">
         {orderId === null ? (
           <Eyebrow variant="section">TitlePipe</Eyebrow>
         ) : context === undefined ? null : (
-          <span className="font-mono text-md font-semibold text-ink-primary">
+          <span className="font-mono text-lg font-semibold text-ink-primary">
             ORDER {context.order_ref}
           </span>
         )}
       </div>
 
       {orderId === null ? null : (
-        <div className="flex flex-1 items-center justify-end gap-6">
+        <>
+          <StripDivider />
           <OrderCounts orderId={orderId} />
-          {context === undefined ? null : (
-            <Stamp tone={context.stamp.tone} size="sm">
-              {context.stamp.label}
-            </Stamp>
-          )}
-        </div>
+        </>
+      )}
+
+      {/* The spacer is the mockup's `.spacer`, and it is why identity sits hard
+          right on EVERY screen — including the ones with no order, where the
+          left slot is the brand word alone. */}
+      <span className="flex-1" />
+
+      {context === undefined || orderId === null ? null : (
+        <>
+          <Stamp tone={context.stamp.tone} size="sm">
+            {context.stamp.label}
+          </Stamp>
+          <StripDivider />
+        </>
       )}
 
       <AccountMenu theme={theme} onToggleTheme={toggleTheme} />
     </div>
   );
+}
+
+/** `.rstrip .div` — a 16px hairline between the strip's three statements. */
+function StripDivider() {
+  return <span aria-hidden className="h-8 w-px shrink-0 bg-line-strong" />;
 }

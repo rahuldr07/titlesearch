@@ -49,7 +49,23 @@ export function GapOptionButton({
       aria-expanded={expanded}
       onClick={onClick}
       className={cn(
-        "min-w-100 flex-1 flex-col items-start gap-1 rounded-7 px-7 py-6 text-left",
+        // `whitespace-normal` UNDOES `Button`'s `whitespace-nowrap`, which is
+        // right for a one-line control and wrong for this one. RULE: the
+        // consequence line is the point of this button and must be readable at
+        // whatever width the row gives it. FAILURE PREVENTED: on the three-option
+        // gap ("Deed chain complete") the options divide the card into 223px
+        // columns, and nowrap ran "The client paid for this product. Senior/ops
+        // only…" straight out of the card, where `Card`'s `overflow-hidden`
+        // clipped it mid-sentence — the one option with money attached, silently
+        // truncated.
+        "whitespace-normal",
+        // 300px, not 200. RULE: the option keeps the two-up rhythm the rest of
+        // the screen is drawn in. FAILURE PREVENTED: `--spacing` is 2px, so the
+        // old `min-w-100` reads 200px and let THREE options share one 688px row
+        // at 223px each — narrower than the 339px every two-option card gets,
+        // and the only place in the screen where the same control changes size.
+        // At 300px the third wraps to its own full-width row instead.
+        "min-w-150 flex-1 flex-col items-start gap-1 rounded-7 px-7 py-6 text-left",
         "border-(length:--stroke-emphasis)",
         // Opacity is this codebase's one signal for "you may not do this" —
         // never a general dimming, so it stays reserved for the role refusal.

@@ -25,13 +25,22 @@ import { Eyebrow } from "../../shared/ui/Eyebrow";
  * and a "1" beside it would invite the reader to wonder what the other number
  * would have been.
  *
- * VIOLET ON ONE LABEL ONLY. The export draws every band name in ink and NEXT UP
- * in `--violet`, pairing with the accented card beneath it to mark the live
- * step — the same meaning violet carries in `Eyebrow`'s own note. Drawn in ink
- * like the rest, the one band the reader is meant to act on had no more weight
- * than the history below it. `tone` is a GIVEN, never read off the title: a
- * `title === "Next up"` test here would be this component deciding which band
- * is live, and the band order is the screen's argument, not the label's.
+ * THE ACCENT LEFT THE BAND LABEL 2026-08-01. The old export drew NEXT UP in
+ * `--violet` to mark the live step. RULE: the sealing wax is spent ONCE per
+ * screen, on the one action (Eyebrow.tsx, Button.tsx). FAILURE PREVENTED: the
+ * mockup draws all three band heads identically at `--ink-2` (`.bh-lbl`) and
+ * keeps the wax for "Take next order"; a wax band label above a wax button is
+ * the accent inflation the reskin exists to undo, and the label is not the
+ * press. `tone` survives as an axis because it is a GIVEN a future band may
+ * need — never read off the title, since a `title === "Next up"` test here
+ * would be this component deciding which band is live.
+ *
+ * THE HAIRLINE AFTER THE LABEL IS THE MOCKUP'S BAND RHYTHM (`.bh-rule`, `flex:1
+ * height:1px`). FAILURE PREVENTED: without it a band head is two short words
+ * floating on the ground and the eye has nothing to travel along to the sheet
+ * below; with it, the label reads as a rule broken to let a word through, which
+ * is what makes four bands scan as four filed piles rather than four paragraphs.
+ * It is `aria-hidden` decoration and carries no meaning of its own.
  */
 export function QueueBand({
   title,
@@ -50,13 +59,29 @@ export function QueueBand({
 }) {
   return (
     <section className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-baseline gap-4 px-1">
-        <Eyebrow variant="group" tone={tone} as="h2" data-testid="band-label">
+      {/* `.band-head` — label, census, rule. `section` is the mockup's band-head
+          metric exactly (10.5px / .14em / 700 / ink-2); `group` is the NAV's
+          group label and one size down, which is why this read as a caption. */}
+      <div className="flex flex-wrap items-baseline gap-5 px-1">
+        <Eyebrow variant="section" tone={tone} as="h2" data-testid="band-label">
           {title}
         </Eyebrow>
-        <span data-testid="band-note" className="text-sm text-ink-muted">
+        {/* Mono and tabular because the leading figure is the SERVER'S census
+            (`.bh-count`), and a census sits in the same numeral family as every
+            other number in this product. The words after it are the server's
+            own and are printed in the case it sent — CSS caps would be the
+            screen restyling a sentence it did not write. */}
+        <span
+          data-testid="band-note"
+          className="tnum font-mono text-xs text-ink-muted"
+        >
           {count === undefined ? note : `${count} ${note}`}
         </span>
+        {/* `line-strong`, not the mockup's `--line-soft`: the mockup rules its
+            band head on the SHEET and ours sits on the app ground, where the
+            subtle rule is lighter than the surface it is drawn on and vanishes.
+            Same rule, re-measured against what it actually sits on. */}
+        <span aria-hidden className="h-px min-w-8 flex-1 bg-line-strong" />
       </div>
       {children}
     </section>

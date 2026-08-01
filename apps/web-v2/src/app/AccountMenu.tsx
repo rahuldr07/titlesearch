@@ -64,17 +64,27 @@ export function AccountMenu({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
+        {/*
+         * THE MOCKUP'S `.who`: a 24px ROUND avatar in primary ink, an 11.5px
+         * name, an 8.5px tracked role. RULE: the sealing wax is spent once per
+         * screen, on the one action. FAILURE PREVENTED: the avatar was
+         * `bg-action` — a wax lozenge in the chrome of EVERY screen, so no
+         * screen could honestly claim one accent. An identity mark is the
+         * person, not an alarm, and the mockup fills it with `--ink`.
+         */}
         <button
           type="button"
           data-testid="account-menu"
-          className="flex items-center gap-3 rounded-4 border border-line-strong bg-surface-panel py-2 pl-2 pr-4"
+          className="flex items-center gap-3 rounded-4 border border-line-strong bg-surface-panel py-1 pl-1 pr-4"
         >
-          <span className="flex size-8 items-center justify-center rounded-3 bg-action text-micro font-semibold text-ink-on-action">
+          <span className="flex size-12 items-center justify-center rounded-pill bg-ink-primary text-micro font-semibold tracking-badge text-surface-panel">
             {initials}
           </span>
+          {/* `leading-tight`, so the two lines occupy the 24px the avatar beside
+              them does — the mockup sets `.w-name` at 1.2 and `.w-role` at 1. */}
           <span className="text-left leading-tight">
-            <span className="block text-micro font-semibold text-ink-primary">{actor}</span>
-            <span className="block text-micro tracking-label uppercase text-ink-muted">{role}</span>
+            <span className="block text-sm font-semibold text-ink-primary">{actor}</span>
+            <span className="block text-micro tracking-caps uppercase text-ink-muted">{role}</span>
           </span>
           <span aria-hidden className="text-micro text-ink-muted">▾</span>
         </button>

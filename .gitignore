@@ -50,3 +50,7 @@ playwright-report/
 # pdfjs worker copied from node_modules into public/ by scripts/copy-pdf-worker.mjs
 # on every dev/build — a version-synced build artifact, not source.
 apps/web/public/pdf.worker.min.mjs
+
+# Fidelity captures. compare.mjs writes these; they are evidence for a review,
+# never an artefact of the build.
+/shots*/

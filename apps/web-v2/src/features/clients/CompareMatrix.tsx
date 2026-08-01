@@ -4,20 +4,8 @@ import { Card, CardFooter } from "../../shared/ui/Card";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
 import { cn } from "../../shared/ui/classNames";
 
-import {
-  deltaLabel, deltasOf, markLabel, markOf, markSymbol,
-  type CompareColumn, type CompareMark,
-} from "./compare";
-
-const CELL: Readonly<Record<CompareMark, string>> = {
-  baseline: "text-ink-muted",
-  narrowed: "bg-state-attend-surface font-bold text-state-attend-ink",
-  replaced: "bg-action-surface font-bold text-action-ink",
-  waived: "bg-state-halt-surface font-bold text-state-halt-ink",
-  added: "bg-state-settled-surface font-bold text-state-settled-ink",
-};
-
-const COL = "w-52 shrink-0 border-l border-line-subtle";
+import { deltaLabel, deltasOf, type CompareColumn } from "./compare";
+import { COL, LABEL_CELL, MarkCell } from "./CompareCell";
 
 /** The union of every resolved line, in line order. */
 function rowsOf(columns: readonly CompareColumn[]): readonly EffectiveLine[] {
@@ -38,9 +26,10 @@ function rowsOf(columns: readonly CompareColumn[]): readonly EffectiveLine[] {
  * different, and about what". Reading two clients by tabbing between two pages
  * makes that a memory exercise.
  *
- * A blank cell is not a dot: it means the server's checklist for that client
- * does not carry the line at all, which is a different fact from "resolved, and
- * unchanged".
+ * A DASH IS NOT A DOT: it means the server's checklist for that client does not
+ * carry the line at all, which is a different fact from "resolved, and
+ * unchanged". Both are drawn, because the third thing a cell could be — empty —
+ * is what a rendering failure looks like, and neither fact may borrow that.
  */
 export function CompareMatrix({
   columns,
@@ -63,7 +52,7 @@ export function CompareMatrix({
           through it as they pass.
         */}
         <div className="sticky top-0 z-(--z-raised) flex rounded-t-8 border-b border-line-strong bg-surface-panel">
-          <Eyebrow variant="field" className="min-w-105 flex-1 px-7 py-5">
+          <Eyebrow variant="field" className={cn(LABEL_CELL, "px-7 py-5")}>
             Sign-off line · {productName} baseline
           </Eyebrow>
           {columns.map((c) => (
@@ -71,7 +60,14 @@ export function CompareMatrix({
               <p className="text-xs font-bold leading-tight text-ink-primary">
                 {c.client.name}
               </p>
-              <p className="mt-1 text-tiny font-semibold text-action">
+              {/*
+                THE OVERRIDE COUNT IS THIS SCREEN'S ONE ACCENT, and the mockup
+                sets it in the mono voice — the same register as every other
+                counted thing in this direction. Switzer's figures here read as
+                a second title line under the client's name; the mono figures
+                read as a tally, which is what they are.
+              */}
+              <p className="mt-1 font-mono text-tiny font-semibold text-action">
                 {deltaLabel(deltasOf(c.checklist.lines, c.client.overrides).length)}
               </p>
             </div>
@@ -80,33 +76,15 @@ export function CompareMatrix({
 
         {rowsOf(columns).map((row) => (
           <div key={row.line_id} className="flex items-stretch border-t border-line-subtle">
-            <div className="flex min-w-105 flex-1 items-baseline gap-5 px-7 py-5">
+            <div className={cn(LABEL_CELL, "flex items-baseline gap-5 px-7 py-5")}>
               <span className="shrink-0 font-mono text-tiny font-semibold text-ink-muted">
                 {row.line_id}
               </span>
               <span className="flex-1 text-sm leading-close text-ink-primary">{row.label}</span>
             </div>
-            {columns.map((c) => {
-              const line = c.checklist.lines.find((l) => l.line_id === row.line_id);
-              const mark = line === undefined ? null : markOf(line, c.client.overrides);
-              return (
-                <div
-                  key={c.client.id}
-                  title={
-                    mark === null
-                      ? `${c.client.name} — not on their checklist`
-                      : `${c.client.name} — ${markLabel(mark)}`
-                  }
-                  className={cn(
-                    COL,
-                    "flex items-center justify-center text-md",
-                    mark === null ? "" : CELL[mark],
-                  )}
-                >
-                  {mark === null ? "" : markSymbol(mark)}
-                </div>
-              );
-            })}
+            {columns.map((c) => (
+              <MarkCell key={c.client.id} column={c} lineId={row.line_id} />
+            ))}
           </div>
         ))}
       </div>
@@ -125,3 +103,4 @@ export function CompareMatrix({
     </Card>
   );
 }
+

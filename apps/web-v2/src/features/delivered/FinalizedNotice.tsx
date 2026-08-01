@@ -1,4 +1,5 @@
 import { ArtifactCard } from "./ArtifactCard";
+import { SheetHeading } from "./SheetHeading";
 import { demoArtifactName } from "./demoContent";
 import { OrderContextRow } from "../../entities/order/OrderContextRow";
 import { Stamp } from "../../shared/ui/Stamp";
@@ -59,9 +60,17 @@ export function FinalizedNotice({
         </Stamp>
       </div>
 
-      <h1 className="mb-3 text-4xl font-semibold text-ink-primary">
-        Order {orderId} delivered
-      </h1>
+      {/*
+        THE ITALIC LANDS ON `delivered`, which is the whole claim. RULE: the
+        mockup emphasises the CLOSING phrase of a heading, and on this screen the
+        closing word is the state — everything above it is an identifier. FAILURE
+        PREVENTED: the order number in italic, which is the other candidate and
+        is exactly wrong: a reference is read, not felt, and it is already set in
+        the face that says so.
+      */}
+      <SheetHeading>
+        Order {orderId} <em>delivered</em>
+      </SheetHeading>
       <p className="mx-auto mb-11 max-w-172 text-md leading-open text-ink-secondary">
         The abstractor sign-off was completed at intake, the completeness gate
         cleared before extraction, and every flagged value was approved by a

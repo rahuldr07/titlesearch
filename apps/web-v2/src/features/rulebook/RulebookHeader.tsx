@@ -42,6 +42,14 @@ export function RulebookHeader({
   return (
     <ScreenHeading
       eyebrow="Admin · Rulebook"
+      /*
+        NO `<em>` HERE, DELIBERATELY. RULE: the signature italic takes a closing
+        PHRASE — "to you", "overrides" — not the head noun of a two-word label.
+        FAILURE PREVENTED: "Extraction <em>rules</em>" italicises the word that
+        carries no more of the argument than the one before it, and an emphasis
+        with no reason behind it teaches a reader that the italic means nothing,
+        which spends the device everywhere it is actually load-bearing.
+      */
       title="Extraction rules"
       lede={
         <p>

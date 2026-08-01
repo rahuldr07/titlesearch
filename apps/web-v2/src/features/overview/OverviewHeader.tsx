@@ -40,7 +40,20 @@ export function OverviewHeader({
   return (
     <ScreenHeading
       eyebrow="Overview"
-      title="Where every order sits"
+      /*
+       * THE SIGNATURE ITALIC, on the word the screen is an argument about. The
+       * mockup emphasises the CLOSING phrase of a heading — `to you.`,
+       * `overrides` — and here that phrase is one verb: the columns are orders
+       * that SIT, not orders that queue, and the lede spends two sentences
+       * saying that stopped is the design rather than a backlog. Emphasising
+       * "order" or "every" instead would decorate an arbitrary word; the verb is
+       * the claim.
+       */
+      title={
+        <>
+          Where every order <em>sits</em>
+        </>
+      }
       lede={
         <>
           <p>

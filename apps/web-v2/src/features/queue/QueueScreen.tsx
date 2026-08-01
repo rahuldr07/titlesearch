@@ -57,13 +57,13 @@ export function QueueScreen() {
   if (next.isError || bands.isError) {
     const failure = next.error ?? bands.error;
     return (
-      <Screen measure="860">
+      <Screen measure="1340">
         <ScreenFailure reference={failure instanceof Error ? failure.message : undefined} />
       </Screen>
     );
   }
   if (next.isPending || bands.isPending)
-    return <ScreenMessage measure="860">Loading the next order…</ScreenMessage>;
+    return <ScreenMessage measure="1340">Loading the next order…</ScreenMessage>;
 
   const order = next.data.order;
   // The server decides which bands this caller gets and in what order; the
@@ -80,14 +80,33 @@ export function QueueScreen() {
   const quiet = bandOf("mine")?.count === 0 && bandOf("held")?.count === 0;
 
   return (
-    <Screen measure="860">
-      {/* 20px band to band — the export's `margin:20px 2px 8px` on every band
-          header collapsing against the 20px under the last card of the band
-          above it. At 18px the bands read as one stack rather than four piles. */}
-      <div className="flex flex-col gap-10">
+    /*
+     * `1340`, not `860`. The mockup draws screen 1 across the full sheet — its
+     * queue column is ~1290px — and the row it draws is a seven-cell one-liner
+     * that does not fit in 860. Held at 860 the band either wraps every row back
+     * to two lines (undoing the density this reskin is for) or ellipsises the
+     * address, which is the one cell a reader scans a band by. This is the
+     * export's per-screen measure being overruled by the approved picture on the
+     * one screen the picture is unambiguous about; every other screen keeps its
+     * export width.
+     */
+    <Screen measure="1340">
+      {/* 24px band to band — the mockup's `.band{margin-top:24px}`. At 20px the
+          bands read as one stack rather than four piles. */}
+      <div className="flex flex-col gap-12">
         <ScreenHeading
+          size="26"
           eyebrow="Your queue"
-          title="Work comes to you"
+          /* THE SIGNATURE MOMENT, and it is the mockup's own line: `Work comes
+             <em>to you.</em>`. The closing phrase carries the whole argument of
+             the screen — you do not go and get work — so it is the phrase the
+             display italic is for. `ScreenHeading` paints the `<em>`; the call
+             site only has to mean it. */
+          title={
+            <>
+              Work comes <em>to you.</em>
+            </>
+          }
           lede={
             <p>
               The system hands over the next order by age and priority —
@@ -102,7 +121,7 @@ export function QueueScreen() {
 
         <MineBand band={bandOf("mine")} />
 
-        <QueueBand title="Next up" note="the system decides — no picking" tone="action">
+        <QueueBand title="Next up" note="the system decides — no picking">
           {order === null ? (
             <EmptyPanel
               title="Nothing is waiting."

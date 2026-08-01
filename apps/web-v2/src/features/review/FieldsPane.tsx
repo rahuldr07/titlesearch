@@ -99,7 +99,7 @@ export function FieldsPane({
         data-testid="decision-dock"
         className="flex min-h-0 flex-none flex-col border-b border-line-strong bg-surface-panel"
       >
-        <DecisionDock fields={fields} />
+        <DecisionDock fields={fields} selectedPath={selected.path} />
         <div className="max-h-190 min-h-0 overflow-y-auto px-9 pb-6">
           <DecisionColumn
             field={selected}

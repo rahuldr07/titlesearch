@@ -44,6 +44,15 @@ function clusterBy(escalations: readonly Escalation[]): Cluster[] {
  * `field_path_cluster` on every row and the contract has no per-field
  * escalation record, so the per-field screen the export draws is unbuildable).
  *
+ * NO SIGNATURE ITALIC ON THIS HEADING, DELIBERATELY. The mockup's device sets
+ * the CLOSING PHRASE of a heading in Fraunces italic — `Work comes <em>to
+ * you.</em>`, `Client settings & <em>overrides</em>` — and it works because
+ * there is a phrase there carrying the screen's argument. "Escalation inbox" is
+ * a two-word compound noun naming a place; the only candidates are "inbox",
+ * which is the least interesting word on the screen, and the whole title, which
+ * is the failure the device's own rule warns about. An emphasis with nothing to
+ * emphasise reads as decoration, and decoration is what spends a signature.
+ *
  * IT HAS AN `<h1>` NOW. `ScreenTitle` renders the kicker alone, so the largest
  * heading on the page was a 10px caption and the next thing under it was a
  * dotted machine path — a screen that read as a caption followed by an

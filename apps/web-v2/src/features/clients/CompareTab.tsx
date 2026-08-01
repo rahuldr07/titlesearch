@@ -3,10 +3,37 @@ import type { ClientsResponse, ConfigProduct } from "@titlepipe/contract";
 import { EmptyPanel } from "../../shared/ui/EmptyPanel";
 import { cn } from "../../shared/ui/classNames";
 
-import { COMPARE_LEGEND, type CompareColumn, type CompareMark } from "./compare";
+import {
+  ABSENT_LABEL, ABSENT_SYMBOL, COMPARE_LEGEND,
+  type CompareColumn, type CompareMark,
+} from "./compare";
 import { CompareMatrix } from "./CompareMatrix";
 import { CompareStacked } from "./CompareStacked";
 import { ProductChips } from "./ProductChips";
+
+function LegendItem({
+  symbol,
+  label,
+  swatch,
+}: {
+  symbol: string;
+  label: string;
+  swatch: string;
+}) {
+  return (
+    <li className="flex items-center gap-3">
+      <span
+        className={cn(
+          "flex size-11 items-center justify-center rounded-3 border border-line-strong text-sm font-bold",
+          swatch,
+        )}
+      >
+        {symbol}
+      </span>
+      <span className="text-xs text-ink-secondary">{label}</span>
+    </li>
+  );
+}
 
 const SWATCH: Readonly<Record<CompareMark, string>> = {
   baseline: "bg-surface-app text-ink-muted",
@@ -65,20 +92,22 @@ export function CompareTab({
 
       <ProductChips products={products} value={product.id} onChange={onSelectProduct} />
 
+      {/*
+        THE LEGEND NAMES SIX THINGS BECAUSE THE GRID DRAWS SIX. The five marks
+        come from the resolver; the sixth is the dash — a line the client's
+        resolved checklist does not carry at all. It used to be an empty cell
+        and so had nothing to name, which meant the grid's one genuinely
+        ambiguous cell was the only one the reader had no key for.
+      */}
       <ul className="flex flex-wrap gap-7">
         {COMPARE_LEGEND.map((l) => (
-          <li key={l.mark} className="flex items-center gap-3">
-            <span
-              className={cn(
-                "flex size-11 items-center justify-center rounded-3 border border-line-strong text-sm font-bold",
-                SWATCH[l.mark],
-              )}
-            >
-              {l.symbol}
-            </span>
-            <span className="text-xs text-ink-secondary">{l.label}</span>
-          </li>
+          <LegendItem key={l.mark} symbol={l.symbol} label={l.label} swatch={SWATCH[l.mark]} />
         ))}
+        <LegendItem
+          symbol={ABSENT_SYMBOL}
+          label={ABSENT_LABEL}
+          swatch="bg-surface-app text-ink-muted"
+        />
       </ul>
 
       {/*

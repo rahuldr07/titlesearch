@@ -56,6 +56,14 @@ export function AuditScreen() {
       <div className="flex flex-col gap-6">
         <ScreenHeading
           eyebrow="Admin · Audit"
+          /*
+            NO `<em>` HERE, DELIBERATELY. RULE: the signature italic takes a
+            closing phrase. "The record" is an article and a noun — emphasising
+            the noun is emphasising the whole heading with extra steps. FAILURE
+            PREVENTED: this screen's authority comes from being flat and
+            complete; a masthead that performs is the wrong voice for a log
+            whose entire claim is that nothing here was styled or chosen.
+          */
           title="The record"
           lede={
             <p>
