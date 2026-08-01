@@ -68,10 +68,26 @@ export function RailRow({
     event.preventDefault();
     onNavigate(to);
   };
+  /*
+   * THE ACTIVE ROW IS MARKED ON ITS LEFT EDGE, not by a floating pill. The
+   * approved mockup runs every rail row full-bleed with a 3px accent bar at the
+   * margin, so the marked row reads against the rail's own edge rather than as
+   * a rounded tab drifting inside it — which is what tells you where you are at
+   * a glance in a column of eleven near-identical rows. The bar is drawn as a
+   * transparent border on EVERY row, never added only when active: a border
+   * that appears on selection shifts the label 3px sideways, and a rail whose
+   * text jitters as you move through it is the failure this shape prevents.
+   *
+   * 3px is `--stroke-stamp`, deliberately NOT `--stroke-severity` (4px). The
+   * left edge at severity weight is the banner vocabulary; a navigator row is
+   * not an alarm.
+   */
   const rowClass = cn(
-    "relative flex items-center gap-3 rounded-3 text-xs font-medium no-underline",
-    collapsed ? "h-22 justify-center px-0" : "h-20 px-4",
-    active ? "bg-surface-raised text-ink-primary" : "text-ink-secondary",
+    "relative flex items-center gap-5 border-l-(length:--stroke-stamp) text-md no-underline",
+    collapsed ? "h-22 justify-center px-0" : "h-20 pr-8 pl-10",
+    active
+      ? "border-l-action bg-action-surface font-semibold text-ink-primary"
+      : "border-l-transparent font-medium text-ink-secondary",
   );
   const body = (
     <>

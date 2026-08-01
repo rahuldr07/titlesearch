@@ -40,16 +40,26 @@ export function PageFacsimile({
   return (
     <figure className="flex flex-col gap-3">
       <figcaption className="flex items-baseline gap-4">
-        <Eyebrow variant="caption" tone="strong">{page.kind}</Eyebrow>
         {/*
-          `ink-secondary`, not `ink-muted`: this caption sits on
-          `surface-document`, the grey the page rests on, where muted measures
-          4.33:1 against the 4.5 small text is owed. The muted tier was derived
-          against panel and app grounds — the surround is darker than both.
+          THE DOCUMENT INK FAMILY, NOT THE CHROME'S. This caption sits on
+          `surface-document`, and since the 2026-08-01 reskin that token holds
+          the mockup's viewer surround — a near-black reading room in
+          BOTH themes, not the light grey it used to be. Measured on it, the
+          chrome inks this line used to carry are 1.31:1 (`ink-primary`) and
+          1.68:1 (`ink-secondary`); `state-attend-ink` is 1.89:1. The
+          `--color-document-*` family exists for exactly this surround and is
+          the only legible vocabulary here. The old note this replaces argued
+          `ink-secondary` over `ink-muted` on a 4.33-vs-4.5 margin; the surface
+          moved out from under that argument entirely.
         */}
-        <span className="font-mono text-tiny text-ink-secondary">page {page.n} of the package</span>
+        <Eyebrow variant="caption" tone="strong" className="text-document-ink">
+          {page.kind}
+        </Eyebrow>
+        <span className="font-mono text-tiny text-document-ink-soft">
+          page {page.n} of the package
+        </span>
         {page.degraded ? (
-          <span className="text-tiny font-semibold text-state-attend-ink">
+          <span className="text-tiny font-semibold text-document-attend">
             degraded scan — read against the words line
           </span>
         ) : null}
@@ -63,6 +73,16 @@ export function PageFacsimile({
         own damage. Serif body, real margins, centred on its surround. The
         design draws it this way and it is not decoration: a reviewer who reads
         the page as data stops checking it against the value.
+
+        THE FACE IS COURIER PRIME, and only here. `--font-document` exists for
+        this one element — the mockup's type scale names it "the scanned page
+        only" — because what a county package actually holds is typewritten and
+        photocopied, and a monospaced typewriter face is the difference between
+        a transcript and a facsimile. It replaces `font-quote` (Fraunces), which
+        is the app's DISPLAY voice: setting a tax card in the same serif as the
+        screen headings quietly claimed the record was typeset by us. The size
+        moves 11px → 12px with it, because a mono face at the serif's size reads
+        a step smaller than it measures.
       */}
       {/*
         `surface-document` is the BACKDROP the page sits on, not the page — the
@@ -93,7 +113,7 @@ export function PageFacsimile({
         <div className="relative w-full max-w-230 rounded-2 bg-surface-paper px-12 py-11 shadow-page">
           <pre
             className={cn(
-              "font-quote text-sm leading-document whitespace-pre-wrap text-page-ink",
+              "font-document text-base leading-document whitespace-pre-wrap text-page-ink",
               page.degraded && "filter-scan-degraded text-scan-ink-degraded",
             )}
           >

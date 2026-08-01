@@ -24,6 +24,13 @@ import {
  * thing", and an empty list is not a thing — it is a hole with an instruction
  * in it. Every "nothing yet" panel in the config layer is drawn this way, so
  * three blank screens read as one state rather than three accidents.
+ *
+ * AND IT IS THE ONE PANEL THAT DOES NOT FLOAT. `Card` now separates itself with
+ * a shadow, because the register layers paper on paper. A hole in the paper is
+ * the opposite claim and takes no elevation at all — nothing is resting here.
+ * The dashed edge is drawn in `--color-line-dashed`, the token that exists for
+ * exactly this: a step heavier than the ordinary rule, so a broken line still
+ * reads as a line rather than as flecks.
  */
 
 /**
@@ -38,7 +45,7 @@ import {
  *    over reads as a layout that lost its content, not as a resolved answer.
  */
 const panel =
-  "flex-none gap-7 rounded-9 border border-dashed border-line-strong bg-surface-panel p-15 md:p-15";
+  "flex-none gap-7 rounded-8 border border-dashed border-line-dashed bg-surface-panel p-15 md:p-15";
 
 export interface EmptyPanelProps {
   title: ReactNode;
@@ -52,11 +59,15 @@ export function EmptyPanel({ title, body, actions }: EmptyPanelProps) {
   return (
     <Empty className={panel}>
       <EmptyHeader>
-        <EmptyTitle className="text-lg font-semibold tracking-normal text-ink-primary">
+        {/* Re-imposed on the new scale: `--text-2xl` IS the panel-title step and
+            `--text-lg` the body default. On the old scale these read 13px over
+            11px — a title one notch above its own caption, which is not a
+            heading, and a sentence set at the size reserved for field labels. */}
+        <EmptyTitle className="text-2xl font-semibold tracking-normal text-ink-primary">
           {title}
         </EmptyTitle>
         {body === undefined ? null : (
-          <EmptyDescription className="text-sm leading-body text-ink-secondary">
+          <EmptyDescription className="text-lg leading-body text-ink-secondary">
             {body}
           </EmptyDescription>
         )}
@@ -92,5 +103,5 @@ export interface EmptyNoteProps {
 }
 
 export function EmptyNote({ children }: EmptyNoteProps) {
-  return <p className="text-xs italic text-ink-muted">{children}</p>;
+  return <p className="text-base italic text-ink-muted">{children}</p>;
 }

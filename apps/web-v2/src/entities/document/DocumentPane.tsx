@@ -91,7 +91,7 @@ export function DocumentPane({
             )}
           </TransformWrapper>
         ) : (
-          <NotReadInFull page={page} dark={dark} />
+          <NotReadInFull page={page} />
         )}
       </div>
 
@@ -101,19 +101,24 @@ export function DocumentPane({
 }
 
 /** Never a blank pane — an empty region reads as "nothing here", which is false. */
-function NotReadInFull({ page, dark }: { page: number; dark: boolean }) {
+function NotReadInFull({ page }: { page: number }) {
   return (
     <div className="flex h-full items-center justify-center p-11 text-center">
       <div>
-        <Eyebrow variant="caption" tone="attend">
+        {/*
+          THE PANE IS DARK IN BOTH REGISTERS since the 2026-08-01 reskin —
+          `--color-surface-document` took the mockup's viewer surround value
+          and now holds the same value as `--color-document-bg`. So this text
+          sits on a near-black ground whichever `surround` is asked for, and the
+          chrome inks it used to reach for measure 1.89:1 (`state-attend-ink`)
+          and 1.68:1 (`ink-secondary`) there. The `--color-document-*` family is
+          the pane's own vocabulary and is the only legible choice; the `dark`
+          branch below was already correct and is now unconditional.
+        */}
+        <Eyebrow variant="caption" tone="attend" className="text-document-attend">
           Not read in full
         </Eyebrow>
-        <p
-          className={cn(
-            "mt-3 text-base",
-            dark ? "text-document-ink-soft" : "text-ink-secondary",
-          )}
-        >
+        <p className="mt-3 text-base text-document-ink-soft">
           Page {page} is in the package but was not captured in full, so there is
           no raster to show. That is expected for most pages.
         </p>

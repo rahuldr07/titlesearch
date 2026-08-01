@@ -16,13 +16,21 @@ import { cn } from "../../shared/ui/classNames";
  */
 /* eslint-disable-next-line react-refresh/only-export-components -- exported so the tone set is testable as a pure function in the node gate, the same reason Button exports buttonClasses. */
 export const railBadgeClasses = cva(
-  "ml-auto shrink-0 rounded-pill px-2 py-0.5 font-mono text-micro",
+  "ml-auto inline-flex h-8.5 min-w-8.5 shrink-0 items-center justify-center rounded-pill px-2.5 font-mono text-tiny font-semibold",
   {
     variants: {
       tone: {
         neutral: "bg-surface-sunken text-ink-secondary",
         attend: "border border-state-attend-border bg-state-attend-surface text-state-attend-ink",
-        halt: "border border-state-halt-border bg-state-halt-surface text-state-halt-ink",
+        /*
+         * SOLID, where attend is a tint. The mockup draws the two rail badges
+         * as a filled red pill and an outlined amber one, and the difference is
+         * doing work: at 17px a tint and a tint are one shape, and the whole
+         * claim of the badge is that six-open and three-unresolved are not the
+         * same news. Fill-vs-outline survives greyscale; two hues do not.
+         * `ink-on-action` on `state-halt` is gated in contrast.test.ts.
+         */
+        halt: "bg-state-halt text-ink-on-action",
       },
     },
     defaultVariants: { tone: "neutral" },

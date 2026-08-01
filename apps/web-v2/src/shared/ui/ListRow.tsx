@@ -45,14 +45,24 @@ export function DividedSection({ as = "ul", className, ...rest }: DividedSection
 const listRow = cva("border-t border-line-subtle first:border-t-0", {
   variants: {
     /**
-     * Two measured paddings, not a scale. 16/12px is the card row — people,
-     * products, stages. 12/8px is the row that is itself a button in a narrow
-     * column (the escalation cluster rail, the review field list), where the
-     * card step spends a fifth of the column on gutter. The in-between values
-     * scattered through the tree are one-offs; reproducing them as a third
-     * variant would ratify a scale nobody designed.
+     * Two measured paddings, not a scale — RE-MEASURED OFF THE MOCKUP in the
+     * 2026-08-01 reskin, which is where most of the new look actually lives.
+     * `false` is the mockup's queue row, `.orow` at `11px 18px`; `true` is its
+     * decision row, `.qrow` at `9px 15px`. The old 16/12 and 12/8 came from the
+     * export, and they are the reason the old screens read as taller and
+     * narrower than the approved picture: a queue row was 5px shorter in the
+     * gutter and 2px taller in the band, which compounds over eight rows into a
+     * visibly different page. Ten sites take this, so moving it here moves
+     * every screen at once — that is the point, and it is also why a third step
+     * is still refused. The in-between values scattered through the tree are
+     * one-offs; reproducing them as a variant would ratify a scale nobody drew.
+     *
+     * ODD NUMBERS ARE WHY `--spacing` IS 2px (index.css): `py-5.5` is 11px and
+     * `px-7.5` is 15px with no arbitrary value. On a 4px base neither exists,
+     * and the density would have to round — which is how a reskin quietly
+     * becomes an approximation of itself.
      */
-    dense: { true: "px-6 py-4", false: "px-8 py-6" },
+    dense: { true: "px-7.5 py-4.5", false: "px-9 py-5.5" },
     /**
      * The tint for a row that IS the click target, rather than a row that
      * contains one. `has-[:focus-visible]` repeats the TINT so the row a

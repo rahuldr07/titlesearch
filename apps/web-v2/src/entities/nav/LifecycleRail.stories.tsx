@@ -66,7 +66,11 @@ export const OnCompleteness: Story = {
     // Tones ride WITH the badge; the pill never reads its own number.
     const gaps = await canvas.findByTestId("rail-badge-/completeness");
     expect(gaps).toHaveTextContent("3");
-    expect(gaps).toHaveClass("bg-state-halt-surface");
+    // `bg-state-halt`, not `-surface`, since the 2026-08-01 reskin: the mockup
+    // draws the two rail badges as a FILLED pill and an outlined one, because at
+    // 17px two tints are one shape. The assertion still pins what it always
+    // pinned — that the halt badge wears the halt family and not attend's.
+    expect(gaps).toHaveClass("bg-state-halt");
     const needYou = await canvas.findByTestId("rail-badge-/orders/ord_demo_1/review");
     expect(needYou).toHaveClass("bg-state-attend-surface");
   },

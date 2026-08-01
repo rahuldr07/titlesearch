@@ -12,10 +12,6 @@ import { cn } from "./classNames";
  * every option one at a time and gets no signal that they form a set. A toggle
  * group gives arrow-key navigation within the group and a single tab stop,
  * which is what a set of mutually exclusive choices should behave like.
- *
- * Pressed is a fill swap to action + white — the same selection language the
- * design uses for tabs, option cards and the page strip. Consistency here is
- * load-bearing: a reviewer learns "violet fill means chosen" once.
  */
 export function ToggleGroup({
   value,
@@ -41,7 +37,7 @@ export function ToggleGroup({
       defaultValue={defaultValue}
       onValueChange={onValueChange}
       multiple={multiple}
-      className={cn("flex flex-wrap gap-3", className)}
+      className={cn("flex flex-wrap gap-4", className)}
       {...rest}
     >
       {children}
@@ -49,6 +45,27 @@ export function ToggleGroup({
   );
 }
 
+/**
+ * SELECTION IS AN INK INVERSION, NOT THE ACCENT.
+ *
+ * RULE: the sealing wax is spent once per screen, on the one action. FAILURE
+ * PREVENTED: filled in the accent, a row of filter chips put four wax objects
+ * on a screen whose actual press — "Take next order" — is one. The chosen chip
+ * then outranked the decision, which is the failure QueueViewToggle already had
+ * to route around by hand. The mockup fills the chosen chip in INK
+ * (`.pchip.on`) and gives it the card shadow; the accent never appears in a
+ * filter row. Ink also inverts with the theme — `bg-ink-primary` /
+ * `text-surface-panel` measures 15.8:1 light and 8.7:1 mocha — so one pair of
+ * tokens carries both.
+ *
+ * The shadow is on the PRESSED state only. Unpressed chips stay flat so a
+ * segmented track (QueueViewToggle) does not gain a raised chip in every slot;
+ * the mockup's `.toggle button.on` lifts for exactly the same reason.
+ *
+ * Three other selection surfaces — `Tabs`, `ChoiceCardGrid`, `PageStrip` —
+ * still fill in the accent. They are outside this task's files and want the
+ * same treatment.
+ */
 export function Toggle({
   value,
   disabled,
@@ -65,10 +82,12 @@ export function Toggle({
       value={value}
       disabled={disabled}
       className={cn(
-        "rounded-pill border px-5 py-3 text-xs font-semibold whitespace-nowrap",
+        "rounded-5 border px-5.5 py-3 text-xs font-semibold whitespace-nowrap",
         "border-line-strong bg-surface-panel text-ink-secondary",
-        "data-pressed:border-action data-pressed:bg-action data-pressed:text-ink-on-action",
+        "data-pressed:border-ink-primary data-pressed:bg-ink-primary",
+        "data-pressed:text-surface-panel data-pressed:shadow-card",
         "disabled:cursor-not-allowed disabled:bg-surface-app disabled:text-ink-muted",
+        "disabled:shadow-none",
         className,
       )}
     >

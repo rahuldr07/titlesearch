@@ -13,9 +13,10 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 /**
- * Cards are separated by a BORDER, never elevation — `--shadow-card` has no
- * source in the export at all. Shadow is reserved for things that genuinely
- * float: the menu, the drawer, the expanded decision card, the page.
+ * Cards are separated by DEPTH, never by an outer hairline — the approved
+ * mockup stacks paper on paper under `--sh-1`/`--sh-2` and draws no edge on a
+ * neutral container. The 1px rule survives INSIDE the card only: the divider
+ * between this header, its body and its footer.
  */
 export const Banded: Story = {
   args: { children: null },
@@ -42,9 +43,9 @@ export const Sizes: Story = {
   args: { children: null },
   render: () => (
     <div className="flex flex-col gap-8 max-w-160">
-      <Card size="card"><CardBody>card — 10px, the standard container</CardBody></Card>
-      <Card size="emphasis"><CardBody>emphasis — 12px, rulebook detail and the failure card</CardBody></Card>
-      <Card size="nested"><CardBody>nested — 8px, a card inside a card</CardBody></Card>
+      <Card size="card"><CardBody>card — 8px, --sh-1, the standard container</CardBody></Card>
+      <Card size="emphasis"><CardBody>emphasis — 10px, --sh-2, rulebook detail and the failure card</CardBody></Card>
+      <Card size="nested"><CardBody>nested — 7px, an inner well: inset hairline, no shadow</CardBody></Card>
     </div>
   ),
 };

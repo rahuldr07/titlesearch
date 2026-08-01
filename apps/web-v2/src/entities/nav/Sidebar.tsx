@@ -65,17 +65,30 @@ export function Sidebar({ collapsed, onToggle, onNavigate, brand, sections, foot
 
   const isCollapsed = forced || collapsed;
 
+  /*
+   * WARM PAPER ONE TONE OFF THE SHEET, and a hairline instead of a rule. The
+   * mockup's rail is `--sheet-dim` against `--card` panels, the quietest legible
+   * separation the paper ladder has: the navigator is furniture, and a
+   * panel-white column fenced by the strong line competed with the screen it
+   * frames.
+   *
+   * NO HORIZONTAL PADDING ON THE COLUMN. The rows run full-bleed so their active
+   * edge sits on the rail's own margin (see `RailRow`); everything that is not a
+   * row carries its own inset instead. The group separators are gone with it —
+   * the mockup separates sections with space and a tracked caps label, and a
+   * rule between every group turned a six-row flow into six fenced boxes.
+   */
   return (
     <aside
       ref={ref}
       data-testid="side-rail"
       data-collapsed={isCollapsed ? "1" : "0"}
       className={cn(
-        "sticky top-0 flex h-screen shrink-0 flex-col gap-4 overflow-y-auto border-r border-line-strong bg-surface-panel py-4",
-        isCollapsed ? "w-39 px-2" : "w-116 px-3",
+        "sticky top-0 flex h-screen shrink-0 flex-col gap-10 overflow-y-auto border-r border-line-subtle bg-surface-sunken py-12",
+        isCollapsed ? "w-39" : "w-116",
       )}
     >
-      <div className="flex items-center justify-between gap-2 px-1">
+      <div className="flex items-center justify-between gap-2 px-6">
         {isCollapsed ? null : brand}
         <button
           type="button"
@@ -89,13 +102,10 @@ export function Sidebar({ collapsed, onToggle, onNavigate, brand, sections, foot
         </button>
       </div>
 
-      {sections.map((section, i) => (
-        <div
-          key={section.label}
-          className={cn("flex flex-col gap-1", i === 0 ? "" : "border-t border-line-subtle pt-4")}
-        >
+      {sections.map((section) => (
+        <div key={section.label} className="flex flex-col">
           {isCollapsed ? null : (
-            <Eyebrow as="h2" variant="group" className="px-2 pb-1">
+            <Eyebrow as="h2" variant="group" className="px-12 pb-4">
               {section.label}
             </Eyebrow>
           )}
@@ -110,7 +120,7 @@ export function Sidebar({ collapsed, onToggle, onNavigate, brand, sections, foot
       ))}
 
       {foot === undefined ? null : (
-        <div className="mt-auto border-t border-line-subtle pt-4">{foot}</div>
+        <div className="mt-auto border-t border-line-subtle px-6 pt-4">{foot}</div>
       )}
     </aside>
   );

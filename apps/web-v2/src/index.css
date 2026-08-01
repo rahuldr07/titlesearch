@@ -5,21 +5,22 @@
 
 /*
  * The spacing grid. DELIBERATELY LOCAL to web-v2 — never move this into
- * packages/ui-tokens.
+ * packages/ui-tokens: apps/web imports that package and spaces against
+ * Tailwind's 4px default, so setting --spacing there would halve every one of
+ * its mt-2/px-2/gap-3. Same class of collision as --leading-relaxed
+ * (docs/frontend/tokens.md §9.1).
  *
  * Tailwind v4 derives every p-/m-/gap- utility from `--spacing`, NOT from our
- * `--space-*` tokens (which are not a Tailwind namespace and generate no
- * utilities). Left at Tailwind's 0.25rem default, expressing this design would
- * require arbitrary values everywhere, which §6 forbids.
+ * `--space-*` tokens (not a Tailwind namespace, they generate no utilities).
+ * The design's spacing is all on a 2px grid, so at `--spacing: 2px` every step
+ * is a plain utility: read `p-N` as `N x 2px`.
  *
- * The design's spacing is entirely on a 2px grid — measured: 2,4,6,8,10,12,14,
- * 16,18,20,22,24,28,32,40. At `--spacing: 2px` every one of those is a plain
- * utility: p-1=2px, p-4=8px, p-10=20px, p-20=40px. Read `p-N` as `N x 2px`.
- *
- * WHY NOT in ui-tokens: apps/web imports that package and uses mt-2/px-2/gap-3
- * heavily against Tailwind's 4px default. Setting --spacing there would halve
- * every one of them. Same class of collision as --leading-relaxed; see
- * docs/frontend/tokens.md §9.1.
+ * THE 2026-08-01 RESKIN ADDED HALF-STEPS, and they are why this grid is 2px and
+ * not 4px. The mockup's densities are odd numbers — queue row 11x18
+ * (`py-5.5 px-9`), decision row 9x15 (`py-4.5 px-7.5`), matrix cell 8x16
+ * (`py-4 px-8`), band gap 24 (`gap-12`), sheet padding 30–36 (`p-15`…`p-18`).
+ * Tailwind multiplies --spacing by a decimal suffix, so `py-5.5` is 11px with
+ * no arbitrary value; on a 4px grid none of 11, 15 or 9 is expressible.
  */
 @theme {
   --spacing: 2px;
@@ -29,12 +30,11 @@
  * The only place in apps/web-v2 that may set a bare element's appearance.
  * Everything else composes tokens through Tailwind utilities.
  *
- * `:focus-visible` is global on purpose — the design ships one focus treatment
- * (2px violet, 2px offset) and BRIEF §6 requires every interactive element to
- * carry a visible focus ring. Making it global means a primitive cannot
- * accidentally ship without one.
+ * `:focus-visible` is global on purpose — the design ships ONE focus treatment
+ * (2px --color-action, 2px offset; sealing wax since the 2026-08-01 reskin) and
+ * BRIEF §6 requires every interactive element to carry a visible ring. Global
+ * means a primitive cannot accidentally ship without one.
  */
-
 html {
   background-color: var(--color-surface-app);
   color: var(--color-ink-primary);
@@ -53,30 +53,10 @@ html {
 }
 
 /*
- * Base UI's two setup requirements (Quick start). Both are load-bearing:
- *
- * `isolation: isolate` on the app root gives portaled popups — menu, select,
- * tooltip, drawer, dialog — a stacking context to sit above. Without it they
- * can render behind page content that happens to create its own context, which
- * fails intermittently and only on some screens.
- *
- * `position: relative` on body is required for backdrops on iOS 26+ Safari.
- */
-/*
- * The `silent` no-value state's diagonal hatch. Defined here rather than as an
- * arbitrary Tailwind value because the gradient carries raw pixel stops, and
- * §6 keeps those out of TSX. The hatch is not decoration: it is what makes
- * `silent` distinguishable from `not_found` in greyscale and for colour-blind
- * readers, which CONTEXT §11 requires.
- */
-/*
  * The scan filters. `--filter-*` is NOT a Tailwind theme namespace — verified
  * against the built CSS, `filter-scan` generated nothing — so the tokens need
- * explicit utilities or the page renders as a clean scan, which is exactly the
- * wrong impression: the product exists because most pages are degraded.
- *
- * Third instance of this class of gap, after --space-* and --z-*. See
- * docs/frontend/tokens.md §9.3.
+ * explicit utilities or the page renders as a clean scan, exactly the wrong
+ * impression: the product exists because most pages are degraded. tokens.md §9.3.
  */
 @utility filter-scan {
   filter: var(--filter-scan);
@@ -89,30 +69,77 @@ html {
 /*
  * The export's chip grids: `repeat(auto-fill, minmax(230px, 1fr))`. A FIXED
  * column count is the bug this replaces — `sm:grid-cols-2` gave the sign-off
- * defaults two ~430px chips at the 880px measure, so each YES/N-A value was
- * stranded hundreds of pixels from the label it belongs to and the eye had to
- * track across a blank gap to pair them. Auto-fill makes the count follow the
- * measure, which is what the design specifies and what keeps a value beside
- * its line at every width.
- *
- * A utility rather than an arbitrary Tailwind value because §6 keeps raw pixel
- * numbers out of TSX; fourth instance of the missing-namespace gap after
- * --space-*, --z-* and --filter-*.
+ * defaults two ~430px chips at the 880px measure, stranding each YES/N-A value
+ * hundreds of pixels from its label. Auto-fill makes the count follow the
+ * measure, keeping a value beside its line at every width.
  */
 @utility grid-autofill-230 {
   grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
 }
 
-@utility na-hatch {
-  background-image: repeating-linear-gradient(
-    135deg,
-    transparent,
-    transparent 4px,
-    var(--color-na-silent-hatch) 4px,
-    var(--color-na-silent-hatch) 5px
-  );
+/*
+ * FRAUNCES' OPTICAL SIZE AXIS, added with the 2026-08-01 reskin.
+ * `font-variation-settings` is not a Tailwind namespace, so without these the
+ * only ways to set `opsz` are an inline style or an arbitrary value — both
+ * banned by §6 — and the display face would ship at one optical size
+ * everywhere, drawing the 38px h1 with letterforms meant for 9px type. Values
+ * are the mockup's, one per display role: 144 h1 · 120 screen h2 · 100 featured
+ * order number · 90 the italic question · 40 the brand word.
+ */
+@utility opsz-40 {
+  font-variation-settings: "opsz" 40;
 }
 
+@utility opsz-90 {
+  font-variation-settings: "opsz" 90;
+}
+
+@utility opsz-100 {
+  font-variation-settings: "opsz" 100;
+}
+
+@utility opsz-120 {
+  font-variation-settings: "opsz" 120;
+}
+
+@utility opsz-144 {
+  font-variation-settings: "opsz" 144;
+}
+
+/*
+ * TABULAR FIGURES — a product rule wearing a typography hat. Every value, cite,
+ * count and page reference sits in a COLUMN and is read by comparison down that
+ * column; figures that do not align turn "is this the same parcel number?" into
+ * a character-by-character read. `font-feature-settings` has no utility either.
+ */
+@utility tnum {
+  font-feature-settings: "tnum" 1;
+}
+
+/*
+ * THE ABSENCE GRAMMAR'S TWO FILL PATTERNS — utilities, not arbitrary values, as the
+ * gradients carry raw pixel stops (§6). A fill PATTERN survives a photocopier, so these
+ * keep `silent` and `unreadable` apart from each other and from the bordered-empty states
+ * (CONTEXT §11). The 2026-08-01 reskin moved the marks, per tokens.css's "solid+filled /
+ * dashed+empty / solid+dotted / hatched / dotted+empty": na-dots is `silent` (read, does
+ * not say); na-hatch is `unreadable`, because a hatch reads as damage — the mark you make
+ * over what you cannot transcribe — so it took the attend stripe with it (`.nv.pu`).
+ */
+@utility na-hatch {
+  background-image: repeating-linear-gradient(45deg, var(--color-na-unreadable-border) 0 2.5px, transparent 2.5px 6px);
+}
+@utility na-dots {
+  background-image: radial-gradient(var(--color-na-silent-hatch) 0.8px, transparent 0.9px);
+  background-size: 6px 6px;
+}
+
+/*
+ * Base UI's two setup requirements. `position: relative` on body is required
+ * for backdrops on iOS 26+ Safari. `isolation: isolate` on the app root gives
+ * portaled popups — menu, select, tooltip, drawer, dialog — a stacking context
+ * to sit above; without it they can render behind page content that makes its
+ * own context, which fails intermittently and only on some screens.
+ */
 body {
   position: relative;
 }

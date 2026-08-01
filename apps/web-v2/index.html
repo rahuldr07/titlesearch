@@ -4,12 +4,32 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>TitlePipe</title>
+    <!--
+      FOUR FACES, TWO HOSTS. Switzer is not on Google Fonts — it ships from
+      Fontshare — so this page carries a second preconnect pair. Dropping it
+      costs a full DNS+TLS round trip before any body text can paint.
+
+      Fraunces is requested VARIABLE on all three axes (ital, opsz, wght).
+      The `opsz` range is not decoration: this design sets optical size per
+      role (144 on the 38px h1, 90 on the 26px italic question), and a static
+      cut would collapse those into one drawing. `wght` is a range because the
+      display weights are fractional — 420 / 430 / 480 / 520.
+
+      Serif is semantic in this design: it renders human testimony (rulings,
+      reasons, citations) and never machine output. Fraunces carries it now.
+      Courier Prime is the SCANNED PAGE ONLY — a typewriter face for a
+      photographed county record, never for UI. See tokens.md.
+    -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <!-- Serif is semantic in this design: it renders human testimony (rulings,
-         reasons, citations) and never machine output. See tokens.md. -->
+    <link rel="preconnect" href="https://api.fontshare.com" />
+    <link rel="preconnect" href="https://cdn.fontshare.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Serif:ital,wght@0,400;0,500;0,600;1,400&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&family=Geist+Mono:wght@400;500;600&family=Courier+Prime:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://api.fontshare.com/v2/css?f[]=switzer@400,500,600&display=swap"
       rel="stylesheet"
     />
   </head>

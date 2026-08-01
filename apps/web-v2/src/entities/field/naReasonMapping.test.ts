@@ -191,9 +191,18 @@ describe("the chip and the render never contradict each other", () => {
  * two fills that differ only in hue. Comparing those token NAMES would let a
  * pure recolour pass a test whose whole claim is that colour is not the
  * distinction.
+ *
+ * `border-dotted` and `na-dots` were ADDED with the 2026-08-01 reskin, which is
+ * when the grammar first used a dotted stroke (`pending`) and a dot fill
+ * (`silent`). Both are exactly what this list says it keeps — a border STYLE
+ * and a fill PATTERN, each of which survives a photocopier — and their absence
+ * was an accident of the marks that happened to be in use, not a judgement that
+ * they are decorative. Leaving them out would have made this test read `pending`
+ * and `silent` as the same bare "border" and, worse, would have kept passing if
+ * a future edit really did collapse them.
  */
 const STRUCTURAL =
-  /^(border|border-dashed|border-solid|border-double|border-none|na-hatch|italic|not-italic|font-quote|font-mono|font-semibold|font-bold)$/;
+  /^(border|border-dashed|border-dotted|border-solid|border-double|border-none|na-hatch|na-dots|italic|not-italic|font-quote|font-mono|font-semibold|font-bold)$/;
 
 function greyscaleSignature(kind: NoValueKind["kind"]): string {
   const classes = noValueClasses({ kind }).split(/\s+/);

@@ -22,7 +22,8 @@ import { SPECIMEN_PAGE, SPECIMEN_BOXES } from "../../entities/document/pageSpeci
 
 /**
  * The pane the facsimile really sits in — `surface-document`, which is NOT
- * pinned: the surround is exactly the thing that is allowed to darken.
+ * pinned. Since the 2026-08-01 reskin it is the mockup viewer surround — a
+ * warm near-black in BOTH themes; before that only Mocha darkened it.
  */
 function Pane({ mocha, children }: { mocha?: boolean; children: React.ReactNode }) {
   const theme = mocha === true ? { "data-theme": "mocha" } : {};
@@ -81,13 +82,21 @@ export const IdenticalInBothThemes: Story = {
     const sheets = inks.map((pre) => pre.parentElement as HTMLElement);
     const panes = inks.map((pre) => pre.closest("div.bg-surface-document") as HTMLElement);
 
-    // VACUITY GUARD. If `data-theme` ever stops taking effect, every assertion
-    // below would pass by rendering the light theme twice. The SURROUND is the
-    // thing that must differ — it is the half of the rule nobody disputed.
-    const surrounds = panes.map((p) => getComputedStyle(p).backgroundColor);
-    console.log("DBG panes", panes.map((p) => p.className), surrounds, sheets.map((s) => getComputedStyle(s).backgroundColor), inks.map((i) => getComputedStyle(i).color));
-    await expect(surrounds[0]).not.toEqual(surrounds[1]);
-    await expect(luminance(surrounds[1] ?? "")).toBeLessThan(0.1);
+    // VACUITY GUARD, REWRITTEN 2026-08-01: without it every assertion below
+    // would pass by rendering the light theme twice. The SURROUND was the
+    // probe until the reskin gave `--color-surface-document` the mockup's dark
+    // viewer surround in BOTH theme blocks — it is now identical across the two
+    // panes and proves nothing. Probing a chrome token's computed value proves
+    // the same thing directly: the attribute selector really re-declared the
+    // custom properties on this subtree.
+    const chrome = panes.map((p) => getComputedStyle(p).getPropertyValue("--color-surface-panel"));
+    await expect(chrome[0]).not.toEqual(chrome[1]);
+
+    // The surround is dark in BOTH registers now — the stronger form of
+    // "the surround darkens, the page does not".
+    for (const pane of panes) {
+      await expect(luminance(getComputedStyle(pane).backgroundColor)).toBeLessThan(0.1);
+    }
 
     for (const sheet of sheets) {
       await expect(luminance(getComputedStyle(sheet).backgroundColor)).toBeGreaterThan(0.8);

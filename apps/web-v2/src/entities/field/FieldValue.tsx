@@ -98,10 +98,20 @@ export function FieldValue({
   }
 
   if (hasNoProvenance(field)) {
+    /*
+     * A STAMP, NOT A TINT. The mockup draws the no-source tag as the one
+     * SOLID-FILLED chip in the field column and defends the choice in its own
+     * margin notes — an uncited value outranks the palette's "solid fill means
+     * you may press this" discipline, because it is the only render here that
+     * is an ERROR rather than an answer. It stays in the halt family rather
+     * than taking the mockup's literal accent: red-that-means-stopped and
+     * red-that-means-press must not become the same red. `ink-on-action` on
+     * `state-halt` is gated in contrast.test.ts's filled-control sweep.
+     */
     return (
       <span
         role="alert"
-        className="inline-flex items-center gap-3 rounded-4 border border-state-halt-border bg-state-halt-surface px-4 py-2 text-xs font-semibold text-state-halt-ink"
+        className="inline-flex items-center gap-3 rounded-2 bg-state-halt px-4 py-2 text-micro font-bold uppercase tracking-eyebrow text-ink-on-action"
       >
         <span aria-hidden>⚠</span>
         NO PROVENANCE — this value cannot be shown without its source

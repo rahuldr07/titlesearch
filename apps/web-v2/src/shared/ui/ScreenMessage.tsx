@@ -30,10 +30,20 @@ export interface ScreenMessageProps {
 export function ScreenMessage({ children, tone = "muted", measure }: ScreenMessageProps) {
   return (
     <Screen measure={measure}>
+      {/*
+       * BODY SIZE, NOT DENSE-BODY SIZE. `text-base` (12px) is the mockup's
+       * inside-a-row tier — a county name, a row note, a thing read in a column
+       * of its peers. This line has no peers: it is the only content on the
+       * screen, standing where a whole screen will be. Drawn a step small it
+       * read as a caption for the emptiness rather than the app's own sentence,
+       * and it then had to GROW when the data landed and the real prose
+       * appeared at 13px, which is the same shift `measure` exists to prevent,
+       * arrived at through the type scale instead of the box.
+       */}
       <p
         role={tone === "halt" ? "alert" : undefined}
         className={cn(
-          "text-base leading-body",
+          "text-lg leading-body",
           tone === "halt" ? "text-state-halt-ink" : "text-ink-secondary",
         )}
       >

@@ -16,37 +16,52 @@ import { Eyebrow } from "./Eyebrow";
  * commit c2e9011 already deleted the rail that used to carry the rule once.
  */
 /**
- * ONE MEASURE FOR THE LEDE. The fifteen mastheads set it six different ways —
- * 370px, 468px, 470px, 570px, `max-w-prose` and `max-w-3xl` (768px) — with
- * seven different gaps between the same three elements. At 768px the 12.5px
- * body runs to ~100 characters and the eye loses the start of the next line;
- * 470px sets ~62, and is the value two unrelated screens landed on separately.
+ * THE ITALIC IS THE DESIGN'S SIGNATURE, AND IT IS PLAIN `<em>`.
  *
- * ACTIONS SIT ON THE HEADING ROW, never at the foot of the lede. Every current
- * site bottom-aligns its control against the whole block, so "+ New rule"
- * drops further from the title the longer the sentence beneath it runs, until
- * it reads as belonging to the paragraph. Pairing it with the h1 fixes the
- * association whatever the lede does.
+ * RULE: the mockup sets the closing phrase of a heading in Fraunces italic at
+ * the accent's deep ink — `Work comes <em>to you.</em>`, `Client settings &
+ * <em>overrides</em>`. FAILURE PREVENTED: the only other way to reach it is a
+ * `<span className="font-display italic text-action-ink">` typed out at each of
+ * fifteen mastheads, which is four tokens a call site can get wrong in four
+ * ways and which nothing would catch. Styling the descendant `<em>` here means
+ * a call site writes the SEMANTIC element and this component supplies every
+ * value — and a heading that never emphasises anything pays nothing for it.
  *
- * `size` IS AN AXIS BECAUSE THE EXPORT HAS ONE — 22px on most screens, 26px on
- * a few; `--text-3xl` and `--text-5xl` are named for exactly those two. It is
- * not a knob for taste. A third value means the export grew a third size.
+ * ONE MEASURE FOR THE LEDE, now 560px (`max-w-280`) at the mockup's 13.5px —
+ * ~78 characters. The fifteen mastheads used to set it six different ways.
+ *
+ * ACTIONS SIT ON THE HEADING ROW, never at the foot of the lede, so the control
+ * does not drift further from the title the longer the sentence beneath it runs.
+ *
+ * `size` IS AN AXIS BECAUSE THE DESIGN HAS ONE — the mockup draws exactly two
+ * display sizes, 30px for the common masthead and 38px for the featured one.
+ * The value names are the OLD export's pixel sizes and are now stale labels;
+ * they are kept because `IngestScreen` passes `size="26"` and renaming a value
+ * would break a call site this task does not own. The ORDER is what they mean:
+ * "22" is the smaller, "26" the larger. A third value means the design grew one.
  */
-const heading = cva("font-semibold text-ink-primary", {
-  variants: {
-    size: {
-      /** the screen h1 the design draws almost everywhere (22px) */
-      "22": "text-3xl",
-      /** the few it draws larger — upload is the clearest (26px) */
-      "26": "text-5xl",
+const heading = cva(
+  [
+    "-ml-1 font-display font-title leading-flat text-ink-primary",
+    "[&_em]:font-normal [&_em]:italic [&_em]:text-action-ink",
+  ],
+  {
+    variants: {
+      size: {
+        /** the masthead the design draws on most screens (30px) */
+        "22": "text-5xl opsz-120",
+        /** the few it draws larger — the queue and upload are the clearest (38px) */
+        "26": "text-6xl opsz-144",
+      },
     },
+    defaultVariants: { size: "22" },
   },
-  defaultVariants: { size: "22" },
-});
+);
 
 export interface ScreenHeadingProps {
   /** The kicker. It is the link home; do not wrap it in one. */
   eyebrow: ReactNode;
+  /** Wrap the emphasised phrase in `<em>` — this component paints it. */
   title: ReactNode;
   lede?: ReactNode;
   size?: "22" | "26";
@@ -62,9 +77,9 @@ export function ScreenHeading({
   actions,
 }: ScreenHeadingProps): ReactElement {
   return (
-    <header className="flex flex-col gap-3">
+    <header className="flex flex-col gap-4">
       <div className="flex flex-wrap items-end justify-between gap-8">
-        <div className="flex min-w-0 flex-1 flex-col gap-2">
+        <div className="flex min-w-0 flex-1 flex-col gap-4">
           <Link to="/" data-testid="screen-title" className="w-fit">
             <Eyebrow variant="screen">{eyebrow}</Eyebrow>
           </Link>
@@ -81,7 +96,7 @@ export function ScreenHeading({
        * which silently reorders the DOM rather than failing.
        */}
       {lede ? (
-        <div className="flex max-w-235 flex-col gap-3 text-base leading-body text-ink-secondary">
+        <div className="flex max-w-280 flex-col gap-3 text-xl leading-body text-ink-secondary">
           {lede}
         </div>
       ) : null}

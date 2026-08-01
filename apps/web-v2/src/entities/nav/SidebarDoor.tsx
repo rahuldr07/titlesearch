@@ -52,7 +52,7 @@ export function SidebarDoor({
       marker={
         <span
           aria-hidden
-          className="flex size-6 shrink-0 items-center justify-center rounded-2 border border-line-strong font-mono text-micro text-ink-secondary"
+          className="flex size-10 shrink-0 items-center justify-center rounded-2 border border-line-strong font-mono text-micro text-ink-secondary"
         >
           {icon}
         </span>

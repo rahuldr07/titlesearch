@@ -105,15 +105,23 @@ function StageLink({
   collapsed: boolean;
   filled: boolean;
 }) {
+  /*
+   * `pl-11.5` is 23px: the row's 3px accent border plus its 20px left padding,
+   * which puts this 20px box on the same centre line as the stage dot above and
+   * below it. The segment then fills the whole gap between two rows, so the six
+   * discs read as ONE line you have walked rather than as six ticks with dashes
+   * between them — the mockup draws the connector as continuous and that
+   * continuity is the only thing that makes a done step read as "behind you".
+   */
   return (
-    <div className={cn("flex", collapsed ? "justify-center" : "px-4")}>
+    <div className={cn("flex", collapsed ? "justify-center" : "pl-11.5")}>
       <span
         aria-hidden
         data-testid={`rail-link-${to}`}
         data-done={filled ? "1" : "0"}
-        className="flex size-6 items-center justify-center"
+        className="flex w-10 justify-center"
       >
-        <span className={cn("h-3 w-px", filled ? "bg-state-settled" : "bg-line-strong")} />
+        <span className={cn("h-4 w-px", filled ? "bg-state-settled" : "bg-line-strong")} />
       </span>
     </div>
   );

@@ -88,13 +88,13 @@ export const Densities: Story = {
     <div className="flex flex-col gap-8 max-w-140">
       <Card>
         <DividedSection>
-          <ListRow>16/12px — the card row: people, products, stages</ListRow>
+          <ListRow>18/11px — the mockup's queue row: people, products, stages</ListRow>
           <ListRow>and a second, so the hairline between them is visible</ListRow>
         </DividedSection>
       </Card>
       <Card>
         <DividedSection>
-          <ListRow dense>12/8px — the rail row and the review field list</ListRow>
+          <ListRow dense>15/9px — the mockup's decision row and the rail</ListRow>
           <ListRow dense>and a second, at the same tighter step</ListRow>
         </DividedSection>
       </Card>

@@ -101,11 +101,19 @@ describe("Screen", () => {
     expect(screenClasses({ measure: "860" })).toContain("mx-auto");
   });
 
-  test("the padding scale matches the export, on the 2px base", () => {
-    expect(screenScroller({ pad: "28x32" })).toContain("py-14");
-    expect(screenScroller({ pad: "28x32" })).toContain("px-16");
-    expect(screenScroller({ pad: "32x40" })).toContain("py-16");
-    expect(screenScroller({ pad: "40" })).toContain("p-20");
+  /**
+   * UPDATED BY THE 2026-08-01 RESKIN, and only the expected NUMBERS moved. The
+   * mockup pads its sheet 30x36 where the export's ordinary screen was 28x32,
+   * so every slot took the same +2 vertical / +4 horizontal step; the keys
+   * still name the export's slot, because they are the prop's public values.
+   * The claim under test is unchanged: the scale is a real scale on the 2px
+   * base, and the default slot is the one the mockup actually draws.
+   */
+  test("the padding scale matches the mockup's sheet, on the 2px base", () => {
+    expect(screenScroller({ pad: "28x32" })).toContain("py-15");
+    expect(screenScroller({ pad: "28x32" })).toContain("px-18");
+    expect(screenScroller({ pad: "32x40" })).toContain("py-17");
+    expect(screenScroller({ pad: "40" })).toContain("p-22");
   });
 
   /**

@@ -27,9 +27,19 @@ import { cn } from "./classNames";
  * strength, and dimming an ink colour to soften it is the one thing the tone
  * tokens exist to make unnecessary.
  */
+/**
+ * WEIGHT AND TRACKING ARE THE MOCKUP'S, exactly: `font:700 …/1` at `.2em` on
+ * every size, where this component ran 600 and let `sm` drop to `.16em`. A
+ * stamp is pressed, not typed — the letters are wide apart and heavy, and at
+ * 600/.16em the small one read as an ordinary eyebrow label with a box round
+ * it. The rotation comes down with them: the mockup turns the stamp -2.5°, and
+ * -6° was a cartoon tilt that fought the row it sat in. `-rotate-3` is the
+ * nearest step on the scale (arbitrary values are banned, and -3° is within a
+ * half-degree of the drawing).
+ */
 const stamp = cva(
   [
-    "inline-block -rotate-6 border-double uppercase font-mono font-semibold",
+    "inline-block -rotate-3 border-double uppercase font-mono font-bold",
     "border-(length:--stroke-stamp) leading-flat whitespace-nowrap",
     "inset-ring-(length:--stroke-emphasis) inset-ring-current",
   ],
@@ -58,13 +68,13 @@ const stamp = cva(
         halt: "text-state-halt-ink border-state-halt",
       },
       size: {
-        /** the header stamp (12px) */
-        sm: "text-sm tracking-eyebrow rounded-4 px-6 py-3",
-        /** "Session ended" (14px) */
+        /** the header stamp — 11px, the mockup's own `.stamp` metric */
+        sm: "text-sm tracking-stamp rounded-4 px-6 py-3",
+        /** "Session ended" — 13px */
         md: "text-lg tracking-stamp rounded-4 px-8 py-4",
-        /** "Reissued · v2" (18px) */
+        /** "Reissued · v2" — 17px */
         lg: "text-2xl tracking-stamp rounded-5 px-10 py-5",
-        /** "Finalized" — the terminal stamp (20px) */
+        /** "Finalized" — the terminal stamp, 21px */
         xl: "text-3xl tracking-stamp rounded-5 px-11 py-6",
       },
     },

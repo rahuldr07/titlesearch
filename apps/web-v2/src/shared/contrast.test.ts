@@ -104,18 +104,37 @@ const INKS = [
  * constraint rather than an omission — the distinction that matters, because
  * the last four contrast bugs were all omissions dressed as completeness.
  *
- * That surface (#dcdde3) is the light document pane D2's reversal introduced.
- * It is darker than any chrome surface, and the quiet `--color-ink-muted` tier
- * measures 4.24:1 on it — below AA. Darkening muted until it clears would push
- * it to within one step of `--color-ink-secondary`, collapsing two tiers the
- * design genuinely uses (70 of 133 eyebrows are the muted tier).
+ * REWRITTEN 2026-08-01. The pane used to be LIGHT in the light theme (#dcdde3,
+ * from D2's reversal) and dark only in Mocha, so the permitted list was the
+ * chrome's own primary/secondary inks. The approved hybrid mockup draws the
+ * reading room DARK (`--surround` #383129) and tokens.css now holds that value
+ * in BOTH theme blocks — one document register, not two.
  *
- * So the pane keeps its own ink vocabulary: primary and secondary in the light
- * register, `--color-document-ink*` in the dark one. The muted tier is not
- * available there. `PERMITTED_ON_DOCUMENT` states that, and the test below
- * pins the failure so nobody "fixes" it by reaching for muted.
+ * That flips which inks are legal. Chrome ink is a DARK colour in the light
+ * theme, so on a near-black pane `--color-ink-primary` measures 1.32:1 and
+ * `--color-ink-secondary` 2.55:1: the pane can no longer borrow from the chrome
+ * at all. It keeps the vocabulary that was built for it —
+ * `--color-document-ink*` — and because that family is shared across themes,
+ * this block now measures the same numbers twice, on purpose.
  */
-const PERMITTED_ON_DOCUMENT = ["color-ink-primary", "color-ink-secondary"] as const;
+const PERMITTED_ON_DOCUMENT = [
+  "color-document-ink",
+  "color-document-ink-soft",
+  "color-document-ink-strong",
+] as const;
+
+/**
+ * Chrome inks that must NOT be legible on the document pane. Not a curiosity —
+ * it is the exact regression `documentIsPaper.test.ts` was written after: a
+ * component reaching for a chrome token on the page. This pins the arithmetic
+ * side of the same rule, so "just use text-ink-primary there" cannot pass a
+ * palette review.
+ */
+const FORBIDDEN_ON_DOCUMENT_LIGHT = [
+  "color-ink-primary",
+  "color-ink-secondary",
+  "color-ink-muted",
+] as const;
 
 /** Each state's ink against its OWN tint — the pairing chips and buttons use. */
 const ON_TINT: ReadonlyArray<readonly [string, string]> = [
@@ -154,25 +173,29 @@ describe("the document pane has its own ink vocabulary", () => {
     }
   }
 
-  test("light: --color-ink-muted is NOT permitted there — it measures below AA", () => {
-    // Not an oversight. Darkening muted to clear this surface would collapse it
-    // into --color-ink-secondary and destroy a tier the design uses heavily.
-    const r = ratio(token("color-ink-muted", "light"), token("color-surface-document", "light"));
-    expect(r, `${r.toFixed(2)}:1`).toBeLessThan(AA_NORMAL);
-  });
+  /*
+   * The pane is a near-black surround in BOTH themes now, so the light theme's
+   * dark chrome inks are simply unavailable on it — all three of them, not just
+   * the quiet tier. Measured on #383129: primary 1.32:1, secondary 2.55:1,
+   * muted 2.00:1. Darkening any of them to "fix" this is not a move that
+   * exists; the pane has its own family and that is the whole point.
+   */
+  for (const ink of FORBIDDEN_ON_DOCUMENT_LIGHT) {
+    test(`light: ${ink} is NOT usable on the document pane`, () => {
+      const r = ratio(token(ink, "light"), token("color-surface-document", "light"));
+      expect(r, `${r.toFixed(2)}:1 — chrome ink must not be reached for on the pane`).toBeLessThan(
+        AA_NORMAL,
+      );
+    });
+  }
 
   /*
-   * NOT the same claim in Mocha, and this is not an oversight either — it is
-   * the mirror image, provably. In light, --color-surface-document (#dcdde3)
-   * is darker than the chrome, which is what makes light-on-... no: muted
-   * ink is a DARK colour there, and the document pane being darker-than-chrome
-   * shrinks the gap. In Mocha, ink is a LIGHT colour (subtext0) and
-   * --color-surface-document is a dark pane surround (rule 1: the surround
-   * darkens, the page doesn't) — darkening the surface only widens the gap
-   * for light-coloured ink. Measured: 6.89:1, comfortably above AA. Asserting
-   * "NOT permitted" here would encode a false claim about this palette, not
-   * document a real constraint — see task-2-report.md for the fuller
-   * argument.
+   * NOT the same claim in Mocha, and this is not an oversight — it is the
+   * mirror image, provably. Mocha's inks are LIGHT colours (text / subtext0)
+   * and the pane is a dark surround, so the gap is wide by construction rather
+   * than marginal. Asserting "NOT permitted" here would encode a false claim
+   * about this palette instead of documenting a real constraint. Measured:
+   * 5.76:1 for the quiet tier, the tightest of the three.
    */
   test("mocha: --color-ink-muted DOES clear AA there — the light-theme restriction does not carry over", () => {
     const r = ratio(token("color-ink-muted", "mocha"), token("color-surface-document", "mocha"));
@@ -194,61 +217,138 @@ describe("every state ink clears AA on its own tint", () => {
   }
 });
 
-describe("base state colours (light palette history — not extended to Mocha, see comment)", () => {
+describe("base state colours are never safe as text (light palette — not extended to Mocha, see comment)", () => {
   /**
-   * REWRITTEN 2026-07-28 for the warm-archival palette. The old cool/violet
-   * palette made this block's premise literally true everywhere it checked:
-   * every base state colour failed AA as text on its own tint / the app
-   * background, so `Chip`/`Eyebrow` used the `-ink` variant purely to stay
-   * legible. The new navy/oxblood/ochre family is not uniformly less legible
-   * — `--color-state-attend` (#8a6413) now clears AA on its own tint
-   * (`--color-state-attend-surface`), and `--color-state-settled` (#2f6d46)
-   * now clears AA on the app background. Measured:
+   * REWRITTEN 2026-08-01 for the hybrid warm-paper palette, and the rewrite
+   * RESTORES the original blanket claim rather than narrowing it.
    *
-   *   attend  on attend-surface  4.63:1  <- now clears AA (was a failure)
-   *   attend  on app background  4.35:1  <- still fails AA (unchanged)
-   *   settled on app background  5.01:1  <- now clears AA (was a failure)
+   * History, because the value of this block is that it keeps being re-measured
+   * rather than re-asserted. The 2026-07-28 navy/oxblood/ochre palette made two
+   * of these three pairings clear AA, so the block was rewritten to pin a mixed
+   * reality: `-ink` was a hierarchy choice for attend-on-tint and
+   * settled-on-app, and a legibility floor only for the rest. A's warm palette
+   * is lighter and warmer than that one — the ground dropped from #eae7e0 to
+   * #E3DCCA and the tints lifted — and all three pairings fail again. Measured
+   * against the shipped values:
    *
-   * `Chip` and `Eyebrow` still use `-ink` for every state, and that is
-   * correct — but it is now a DELIBERATE STATE-TEXT HIERARCHY choice (one
-   * consistent "text tone" per state, distinct from the "accent tone" used
-   * for borders/icons, across all four states alike) rather than a legibility
-   * floor. This block pins the new, mixed reality instead of a blanket "base
-   * is never safe" claim that would now be false for two of these three
-   * pairings.
+   *   attend  (#96690F) on attend-surface (#F3E8CD)  3.99:1  <- fails again
+   *   attend  (#96690F) on app background (#E3DCCA)  3.55:1  <- still fails
+   *   settled (#45714B) on app background (#E3DCCA)  4.13:1  <- fails again
    *
-   * NOT looped across THEMES 2026-07-29. This block documents a specific
-   * empirical fact about the LIGHT palette's dark-ink-on-light-surface
-   * arithmetic, and the fact inverts in Mocha rather than generalising: base
-   * state colours there (mauve/green/peach/red) are light/pastel and the
-   * surfaces they'd sit against (app/tint) are dark, so "base accent on app
-   * background" is high-contrast by construction, not marginal. Measured for
-   * confirmation: --color-state-attend (peach #fab387) on
-   * --color-surface-app (base #1e1e2e) in Mocha is 9.27:1 — nowhere near the
-   * light palette's still-fails 4.35:1, because the roles of ink and surface
-   * swap which one is the "light" quantity. Mechanically duplicating this
-   * block's `toBeLessThan(AA_NORMAL)` assertion under a theme loop would
-   * assert something false about Mocha; see task-2-report.md.
+   * So `Chip` and `Eyebrow` using the `-ink` variant for every state is once
+   * more a LEGIBILITY FLOOR, not a taste decision. The base tones are for
+   * borders, dots, bars and icons; they are not text. A future palette that
+   * makes one of them legible as text should flip the assertion back — with
+   * the measurement, as both previous revisions did.
+   *
+   * NOT looped across THEMES. This documents a specific empirical fact about
+   * the LIGHT palette's dark-ink-on-light-surface arithmetic, and the fact
+   * inverts in Mocha rather than generalising: base state colours there
+   * (mauve/green/peach/red) are light/pastel and the surfaces they would sit
+   * against are dark, so "base accent on app background" is high-contrast by
+   * construction. Measured for confirmation: peach #fab387 on base #1e1e2e is
+   * 9.27:1. Duplicating `toBeLessThan(AA_NORMAL)` under a theme loop would
+   * assert something false about Mocha.
    */
-  test("base attend on attend-surface now clears AA — -ink there is a hierarchy choice, not a legibility floor", () => {
+  test("base attend on its own tint is below AA", () => {
     const r = ratio(token("color-state-attend"), token("color-state-attend-surface"));
-    expect(r, `${r.toFixed(2)}:1`).toBeGreaterThanOrEqual(AA_NORMAL);
+    expect(r, `${r.toFixed(2)}:1`).toBeLessThan(AA_NORMAL);
   });
 
-  test("base attend on the app background is still below AA", () => {
+  test("base attend on the app background is below AA", () => {
     const r = ratio(token("color-state-attend"), token("color-surface-app"));
     expect(r, `${r.toFixed(2)}:1`).toBeLessThan(AA_NORMAL);
   });
 
-  test("base settled on the app background now clears AA — -ink there is a hierarchy choice, not a legibility floor", () => {
+  test("base settled on the app background is below AA", () => {
     const r = ratio(token("color-state-settled"), token("color-surface-app"));
-    expect(r, `${r.toFixed(2)}:1`).toBeGreaterThanOrEqual(AA_NORMAL);
+    expect(r, `${r.toFixed(2)}:1`).toBeLessThan(AA_NORMAL);
   });
 });
 
+/**
+ * THE ACCENT/HALT SEPARATION, AS A GATE.
+ *
+ * ADDED 2026-08-01 with the sealing-wax palette. The accent is now red
+ * (#8A3222) and `--color-state-halt` was an oxblood a hair away from it, so
+ * "press this" and "this order is stopped" were about to become the same
+ * colour on a tool where that distinction is load-bearing. tokens.css resolves
+ * it in three parts (hue, lightness, stroke); the two mechanical parts are
+ * pinned here so a later palette edit cannot quietly re-collapse them.
+ *
+ * These are RATIOS BETWEEN TWO PALETTE COLOURS, not text contrast — the point
+ * is greyscale separability, which is exactly what the WCAG luminance ratio
+ * measures when you strip hue out of the question.
+ */
+describe("the primary action and the halt state stay separable in greyscale", () => {
+  /**
+   * The bases. 1.5 is not a WCAG number; it is the floor below which the two
+   * accents are the same grey to a reader who is scanning rather than
+   * comparing. Measured at the shipped values: 1.65:1.
+   *
+   * There is no room to demand more. `--color-action` sits at luminance .0780
+   * and `--color-ink-primary` at .0122; any halt placed between them is at best
+   * 1.43:1 from BOTH, so a bigger gap from the accent buys an indistinguishable
+   * halt-vs-body-text instead. That ceiling is why the stroke test below exists
+   * and why it carries the heavier threshold.
+   */
+  test("--color-state-halt is a real lightness step below --color-action", () => {
+    const r = ratio(token("color-action"), token("color-state-halt"));
+    expect(
+      r,
+      `action vs halt is ${r.toFixed(2)}:1 — the two would read as one grey`,
+    ).toBeGreaterThanOrEqual(1.5);
+  });
+
+  /**
+   * The strokes, in BOTH themes — this is the mechanism that actually survives
+   * greyscale at 9.5px. A halt chip is an OUTLINED object; an action chip is an
+   * unoutlined tint. Light measures 2.09:1, Mocha 2.30:1.
+   *
+   * If someone "tidies" halt-border into the same tint family as action-border,
+   * every state chip in the app becomes a pale rectangle and this fails.
+   */
+  for (const theme of THEMES) {
+    test(`--color-state-halt-border reads as a stroke against --color-action-border — ${theme}`, () => {
+      const r = ratio(token("color-state-halt-border", theme), token("color-action-border", theme));
+      expect(
+        r,
+        `halt border vs action border is ${r.toFixed(2)}:1 in ${theme} — the outline cue is gone`,
+      ).toBeGreaterThanOrEqual(1.8);
+    });
+  }
+
+  /**
+   * And the halt border must be a stroke against the thing it is drawn ON, not
+   * merely against the action's hairline. A 2:1 gap between two invisible
+   * borders would satisfy the test above and nothing else.
+   */
+  for (const theme of THEMES) {
+    test(`--color-state-halt-border is visible on --color-state-halt-surface — ${theme}`, () => {
+      const r = ratio(token("color-state-halt-border", theme), token("color-state-halt-surface", theme));
+      expect(r, `${r.toFixed(2)}:1`).toBeGreaterThanOrEqual(2);
+    });
+  }
+});
+
+/**
+ * `color-state-attend` and `color-state-idle` were ADDED to this sweep
+ * 2026-08-01. They were missing, and the omission was not free: the palette
+ * check passed while `Chip`/`Badge` filled a solid attend swatch under
+ * `--color-ink-on-action` at 4.42:1, and only the Storybook axe run — which
+ * had just started compiling Tailwind for real — caught it. Exactly the
+ * failure mode this file's header describes: a tier gets checked, the next one
+ * is never checked at all. Every base colour this app fills belongs here.
+ */
 describe("ink-on-action clears AA on every filled control", () => {
   for (const theme of THEMES) {
-    for (const fill of ["color-action", "color-state-settled", "color-state-halt"] as const) {
+    for (const fill of [
+      "color-action",
+      "color-state-settled",
+      "color-state-attend",
+      "color-state-halt",
+      "color-state-idle",
+    ] as const) {
       test(`--color-ink-on-action on ${fill} — ${theme}`, () => {
         const r = ratio(token("color-ink-on-action", theme), token(fill, theme));
         expect(r, `${r.toFixed(2)}:1`).toBeGreaterThanOrEqual(AA_NORMAL);

@@ -12,9 +12,20 @@ import { cn } from "./classNames";
  * already expresses.
  *
  * `--color-ink-muted` is the default because the measured distribution says so:
- * of 133 bare eyebrows, 70 are the muted tier and 26 are action-violet, which
- * marks "this is the current context". Violet is therefore never decorative
- * here — it means you are looking at the live step.
+ * of 133 bare eyebrows, 70 are the muted tier.
+ *
+ * THE ACCENT LEFT THIS TIER 2026-08-01, and that is the point of the reskin.
+ * RULE: the sealing wax is spent ONCE per screen, on the one action. FAILURE
+ * PREVENTED: `screen` used to paint the masthead kicker in the accent, so every
+ * screen opened with a wax word above the title and a wax button below it, and
+ * the button stopped reading as the thing to press. The mockup draws the kicker
+ * muted (`— YOUR QUEUE`, `— ADMIN · CLIENTS`) and keeps the wax for the press.
+ * `cardTag` is the one survivor: it names the catalogue card's own subject, and
+ * no card carries an action.
+ *
+ * The metrics moved too. The mockup's 700-weight micro-caps tier is tracked
+ * .16–.18em throughout (`AS READ`, `PRODUCT`, `NEXT ORDER IN LINE`); .12em is
+ * its CHIP tracking, which is where `field` had drifted to.
  */
 /**
  * Each variant carries its own drawn colour, so a caller gets the design's
@@ -28,13 +39,13 @@ const eyebrow = cva("uppercase", {
   variants: {
     variant: {
       /** key-value row labels, and every <label> in the design (33 uses) */
-      field: "text-micro tracking-badge font-bold text-ink-muted",
-      /** the kicker above an <h1> (14 uses) — violet marks the live step */
-      screen: "text-tiny tracking-stamp font-semibold text-action",
-      /** card-header band label (9 uses) */
-      section: "text-xs tracking-label font-bold text-ink-primary",
-      /** group heading over a list (7 uses) */
-      group: "text-xs tracking-eyebrow font-bold text-ink-primary",
+      field: "text-micro tracking-eyebrow font-bold text-ink-muted",
+      /** the kicker above an <h1> (14 uses) — muted since the wax reskin */
+      screen: "text-xs tracking-eyebrow font-semibold text-ink-muted",
+      /** card-header band label (9 uses) — the mockup's band head is ink-2 */
+      section: "text-xs tracking-label font-bold text-ink-secondary",
+      /** group heading over a list (7 uses) — the mockup's nav group label */
+      group: "text-micro tracking-caps font-semibold text-ink-muted",
       /** inline caption beside a value (7 uses) */
       caption: "text-micro tracking-label font-bold text-ink-muted",
       /**
@@ -47,10 +58,12 @@ const eyebrow = cva("uppercase", {
        */
       cardHeading: "text-tiny tracking-badge font-bold text-ink-muted",
       /**
-       * The catalogue card's tag (10px/.12em/700/violet, export :2214). It is
-       * its own canonical combination and was previously reached by taking
-       * `screen` and overriding two of its three axes at the call site — which
-       * is how eight canonical combinations drift back into twenty-two.
+       * The catalogue card's tag (10px/.12em/700/accent, export :2214) — the
+       * one accent that stayed in this tier, because it names the card's own
+       * subject and no card carries an action. 7.66:1 on panel, 6.00:1 on the
+       * app ground. It is its own canonical combination, previously reached by
+       * taking `screen` and overriding two of its three axes at the call site —
+       * which is how eight canonical combinations drift back into twenty-two.
        */
       cardTag: "text-tiny tracking-label font-bold text-action",
       /** caption under a mono numeral — deliberately unweighted (6 uses) */
@@ -59,9 +72,10 @@ const eyebrow = cva("uppercase", {
     /*
      * Tones use `-ink` values, not base state colours. An eyebrow is 9–11px
      * text and sits on the app background as often as on a panel, where the
-     * base colours measure 3.83:1 (attend) and 4.26:1 (settled) — both below
-     * AA. The `-ink` values measure 6.32 and 6.86 on the same surface, and
-     * clear AA on panel, raised and sunken too.
+     * 2026-08-01 base colours measure 3.77:1 (attend) and 4.13:1 (settled) —
+     * both still below AA. The `-ink` values measure 4.95 and 5.96 on that same
+     * worst-case ground, and clear AA on panel, raised and sunken too; in mocha
+     * the same six run 4.92–11.03. Re-measured after the palette swap.
      */
     tone: {
       muted: "text-ink-muted",

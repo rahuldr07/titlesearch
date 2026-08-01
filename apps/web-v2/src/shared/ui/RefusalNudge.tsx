@@ -66,11 +66,22 @@ export function RefusalNudge({ message, controlId }: RefusalNudgeProps): ReactEl
   }, [controlId, nudgeId, message]);
 
   return (
+    /*
+     * THE REFUSAL OUT-READS THE CHIPS AROUND IT. `text-sm` (11px) is one step
+     * up from the `text-xs` it drew before, and the step is the point: the
+     * editors this appears in are dense with 9.5px tracked micro-caps — chip,
+     * key hint, no-value tag — and at 10.5px the one line that says WHY the
+     * submit did nothing sat in the same visual tier as the decoration. A
+     * release blocker (§4.6) that reads as chrome is a release blocker people
+     * scan past, and the aria wiring above only helps the reader who is
+     * listening. `leading-close` keeps a wrapped refusal from opening a gap
+     * that pushes the control it describes off its own row.
+     */
     <FieldError
       ref={lineRef}
       id={nudgeId}
       data-testid="nudge"
-      className="text-xs font-semibold text-state-halt-ink"
+      className="text-sm leading-close font-semibold text-state-halt-ink"
     >
       {message}
     </FieldError>

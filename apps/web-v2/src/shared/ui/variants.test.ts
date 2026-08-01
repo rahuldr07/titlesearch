@@ -151,7 +151,23 @@ describe("Card's ground and its stripe are separate axes", () => {
       expect(classes, `${tone} kept the neutral panel`).not.toContain("bg-surface-panel");
     }
     expect(cardClasses({ tone: "none" })).toContain("bg-surface-panel");
-    expect(cardClasses({ tone: "none" })).toContain("border-line-strong");
+  });
+
+  /*
+   * UPDATED 2026-08-01 with the palette revaluation. The neutral card used to
+   * assert `border-line-strong`; the approved mockup separates containers with
+   * DEPTH and keeps hairlines for interior divisions only, so that expectation
+   * now describes a card the design does not draw. The claim is not weakened —
+   * it is inverted and still pinned: the neutral card must carry the shadow and
+   * must NOT carry a neutral outer hairline.
+   */
+  test("a neutral card is separated by depth, never by an outer hairline", () => {
+    expect(cardClasses({ tone: "none" })).toContain("shadow-card");
+    expect(cardClasses({ tone: "none" })).not.toMatch(/\bborder-line-/);
+    expect(cardClasses({ size: "emphasis" })).toContain("shadow-pop");
+    // An inner well never floats — it takes the mockup's inset hairline instead.
+    expect(cardClasses({ size: "nested" })).not.toMatch(/\bshadow-/);
+    expect(cardClasses({ size: "nested" })).toContain("inset-ring-line-subtle");
   });
 
   test("accent draws a TOP stripe and never a left edge", () => {
