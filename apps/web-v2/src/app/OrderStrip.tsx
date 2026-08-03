@@ -7,7 +7,6 @@ import { orderContextQuery } from "./orderQueries";
 import { AccountMenu } from "./AccountMenu";
 import { OrderCounts } from "./OrderCounts";
 import { Stamp } from "../shared/ui/Stamp";
-import { Eyebrow } from "../shared/ui/Eyebrow";
 
 /**
  * The full-width top bar (§11 2026-07-30 revision) — `AppChrome`'s sibling in
@@ -31,10 +30,10 @@ import { Eyebrow } from "../shared/ui/Eyebrow";
  * while this strip said "TitlePipe" beside it — the screen declining to name
  * the order it was entirely about. One resolver, two readers, one answer.
  *
- * NO ORDER, NO FABRICATION: off an order screen this shows identity and a
- * brand-neutral left, never an invented order. On an order screen BEFORE the
- * context resolves it shows nothing rather than a placeholder ref — a wrong
- * order number read aloud is worse than a blank that lasts one paint.
+ * NO ORDER, NO FABRICATION: off an order screen this shows identity and an
+ * EMPTY left, never an invented order. On an order screen BEFORE the context
+ * resolves it shows nothing rather than a placeholder ref — a wrong order
+ * number read aloud is worse than a blank that lasts one paint.
  */
 export function OrderStrip() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -68,10 +67,20 @@ export function OrderStrip() {
       data-testid="order-strip"
       className="flex items-center gap-9 border-b border-line-strong bg-surface-panel px-14 py-6.5"
     >
+      {/*
+        OFF AN ORDER, THIS SLOT IS EMPTY — not the product name.
+        The rule it serves is unchanged and is the important one: NO
+        FABRICATION. A screen with no order in view must not invent one here.
+        What filled the gap was `TitlePipe` as a tracked-caps eyebrow, and the
+        2026-08-03 rail rebuild made that wrong twice over: the wordmark now sits
+        200px to the left in the serif-and-seal treatment that REPLACED those
+        caps, so the strip was repeating the product's name in the one style the
+        product had just stopped using. Naming yourself twice on one screen, in
+        two voices, is worse than the whitespace. The mockup draws no strip at
+        all off an order screen; identity still sits hard right, on the spacer.
+      */}
       <div className="min-w-0">
-        {orderId === null ? (
-          <Eyebrow variant="section">TitlePipe</Eyebrow>
-        ) : context === undefined ? null : (
+        {orderId === null || context === undefined ? null : (
           <span className="font-mono text-lg font-semibold text-ink-primary">
             ORDER {context.order_ref}
           </span>
@@ -86,13 +95,28 @@ export function OrderStrip() {
       )}
 
       {/* The spacer is the mockup's `.spacer`, and it is why identity sits hard
-          right on EVERY screen — including the ones with no order, where the
-          left slot is the brand word alone. */}
+          right on EVERY screen — including the ones with no order, where every
+          slot to its left is empty. */}
       <span className="flex-1" />
 
       {context === undefined || orderId === null ? null : (
         <>
-          <Stamp tone={context.stamp.tone} size="sm">
+          {/*
+            `data-tone` MIRRORS THE SERVER'S TONE INTO THE DOM so a test can
+            assert it travelled unchanged. Without it the only evidence is a
+            Tailwind class, which a reskin renames and which proves nothing about
+            provenance either way. Both halves of the stamp — the word and the
+            severity — are the server's single answer (hard rule 3), so both are
+            assertable: a screen that took the label and then chose its own
+            colour would have re-implemented half a state machine while looking
+            obedient. Pinned by `review.spec`'s stamp-provenance test.
+          */}
+          <Stamp
+            tone={context.stamp.tone}
+            size="sm"
+            data-testid="order-stamp"
+            data-tone={context.stamp.tone}
+          >
             {context.stamp.label}
           </Stamp>
           <StripDivider />

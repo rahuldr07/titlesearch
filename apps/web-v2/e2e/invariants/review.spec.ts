@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { interceptApi } from "../helpers/net";
 
 /**
  * HARVESTED INVARIANTS — migrated from apps/web @ ade49af (pre-rebuild).
@@ -217,4 +218,51 @@ test("the order strip shows the ref, the four counts, and the sign-off stamp", a
   // stood; `stamp.label` does, and the screen may not second-guess it.
   await expect(strip).toContainText("Package incomplete");
   await expect(strip.getByTestId("account-menu")).toBeVisible();
+});
+
+/**
+ * THE STAMP IS THE SERVER'S WORD, AND THIS PROVES IT RATHER THAN ASSUMING IT.
+ *
+ * The test above asserts the strip shows "Package incomplete" — which is true,
+ * and which a client-side derivation could also produce by accident, because
+ * that string is sitting right there in the fixture. Presence is not provenance.
+ *
+ * This one serves a stamp the browser could not have invented and requires the
+ * strip to print it verbatim. If anyone reintroduces the composition this
+ * endpoint replaced — `signed_by === null ? "Not signed" : "Signed"`, or any
+ * other browser-side lifecycle branch — the served label cannot appear and this
+ * fails. Hard rule 3: the server owns every state machine, and a lifecycle word
+ * IS a state machine's output.
+ *
+ * `interceptApi`, not `page.route`: MSW answers from a service worker and
+ * Playwright's router cannot see those requests at all (`e2e/helpers/net.ts`).
+ *
+ * The TONE is asserted through the same channel for the same reason. A screen
+ * that took the label from the server and then picked its own colour would have
+ * re-implemented half the state machine while looking obedient.
+ */
+test("the strip prints the server's stamp — it does not compose one", async ({ page }) => {
+  await interceptApi(page, {
+    method: "GET",
+    match: "/api/orders/ord_demo_1/context",
+    status: 200,
+    body: {
+      order_id: "ord_demo_1",
+      order_ref: "4176034-1",
+      product: "40-Year Search",
+      period_label: "40-year period · 07/18/1986 – 07/18/2026",
+      pages: 64,
+      // Not derivable from any field the browser holds, and deliberately not a
+      // word this product's vocabulary contains anywhere else.
+      stamp: { label: "Held for counsel", tone: "attend" },
+    },
+  });
+  await go(page);
+  const strip = page.getByTestId("order-strip");
+  await expect(strip).toContainText("Held for counsel");
+  // …and the fixture's own label is GONE, so the strip cannot be printing both
+  // or falling back to something it worked out for itself.
+  await expect(strip).not.toContainText("Package incomplete");
+  // The tone rides the same response: `attend`, not the fixture's `halt`.
+  await expect(strip.getByTestId("order-stamp")).toHaveAttribute("data-tone", "attend");
 });

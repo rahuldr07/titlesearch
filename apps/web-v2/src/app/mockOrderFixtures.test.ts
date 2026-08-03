@@ -3,6 +3,7 @@ import {
   LifecycleResponse,
   OrderCompletenessResponse,
   OrderPipelineResponse,
+  OrderFieldsResponse,
   OrderSignoffResponse,
 } from "@titlepipe/contract";
 import { mockServer } from "@titlepipe/mocks/node";
@@ -383,5 +384,61 @@ describe("the completeness gate", () => {
         for (const gap of gate.gaps) expect(gap.closed_by).not.toBeNull();
       }
     }
+  });
+});
+
+/**
+ * FIELDS BELONG TO ONE ORDER, AND THE ENVELOPE MUST NOT LIE ABOUT WHICH.
+ *
+ * `/api/orders/:id/fields` used to echo the requested id into `order_id` and
+ * then return the single module-level field store — ord_demo_1's 21 values —
+ * for ANY order. The envelope said ord_demo_4; every row inside it said
+ * ord_demo_1. Nothing caught it, because nothing had ever asked a second order
+ * for its fields.
+ *
+ * The strong assertion is the PROVENANCE one: not "a different order gets
+ * different data" (which a shuffled fixture would satisfy) but "every value
+ * served for order X carries X as its own order_id". That is the invariant the
+ * real backend has to hold too, and it fails loudly the moment one order's
+ * values are handed out under another's name.
+ */
+describe("field values carry the order they belong to", () => {
+  const LIVE = "ord_demo_1";
+  const fields = (id: string) => read(`/api/orders/${id}/fields`, OrderFieldsResponse);
+
+  test("every field served for an order names that order", async () => {
+    for (const id of await everyOrderId()) {
+      const body = await fields(id);
+      expect(body.order_id).toBe(id);
+      for (const field of body.fields) {
+        expect(field.order_id, `${field.path} served under ${id}`).toBe(id);
+      }
+    }
+  });
+
+  test("the census counts the fields actually served, never another order's", async () => {
+    for (const id of await everyOrderId()) {
+      const body = await fields(id);
+      // `census` is optional on the wire — a server that cannot count says so by
+      // omitting it. This mock always counts, and asserting presence keeps the
+      // three checks below from passing vacuously on an absent census.
+      const census = body.census;
+      expect(census, `${id} served no census`).toBeDefined();
+      expect(census?.fields).toBe(body.fields.length);
+      expect(census?.needs_review).toBe(
+        body.fields.filter((f) => f.state === "needs_review").length,
+      );
+      expect(census?.auto_confirmed).toBe(
+        body.fields.filter((f) => f.state === "auto_confirmed").length,
+      );
+    }
+  });
+
+  test("the live review order still carries its whole package", async () => {
+    // The order-scoping must not have emptied the one order that has fixtures —
+    // an all-empty server would satisfy every assertion above.
+    const body = await fields(LIVE);
+    expect(body.fields.length).toBeGreaterThan(0);
+    expect(body.census?.needs_review).toBeGreaterThan(0);
   });
 });

@@ -1,4 +1,5 @@
 import type { GalleryAccent } from "./galleryStates";
+import { accentMark } from "./accentMarks";
 import { Card } from "../../shared/ui/Card";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
 import { cn } from "../../shared/ui/classNames";
@@ -53,6 +54,21 @@ export function StateSample({
   return (
     <Card size="nested" tone={accent} className="w-full p-6">
       <Eyebrow variant="field" tone={accent} className="block">
+        {/*
+          THE MARK CARRIES THE REGISTER WHEN THE COLOUR CANNOT. Three of these
+          four tints are within 1.16:1 of each other in greyscale (`tokens.css`
+          header), so `Closed · added`, `Closed · amended` and `Note only` drew
+          as one rectangle the moment colour came off — on the very surface every
+          other screen is audited against. `accentMarks.ts` holds the glyphs and
+          the reasoning; `accentMarks.test.ts` fails if two ever match.
+
+          `aria-hidden` because the badge already NAMES its state in words. The
+          glyph is the greyscale channel, not the accessible one — nothing here
+          is announced twice.
+        */}
+        <span aria-hidden className="mr-1.5 not-italic">
+          {accentMark(accent)}
+        </span>
         {badge}
       </Eyebrow>
       <p className={cn("mt-2 text-xs leading-body", BODY_INK[accent])}>{body}</p>

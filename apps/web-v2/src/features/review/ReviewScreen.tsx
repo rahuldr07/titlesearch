@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { Field } from "@titlepipe/contract";
 import { orderFieldsQuery, orderSignoffQuery } from "./queries";
 import { readingsOf } from "../../entities/field/fieldLabel";
+import { ReviewStandin } from "./ReviewStandin";
 import { DocumentPane } from "./DocumentPane";
 import { FieldsPane } from "./FieldsPane";
 import { offersExclude } from "./excludeGate";
@@ -11,7 +12,6 @@ import { useReviewKeys } from "./useReviewKeys";
 import { useReviewSelection } from "./useReviewSelection";
 import { useReviewWrites } from "./useReviewWrites";
 import { Screen } from "../../shared/ui/Screen";
-import { ScreenMessage } from "../../shared/ui/ScreenMessage";
 
 /**
  * The review workstation — TWO PANES, edge to edge, in one frame that does not
@@ -91,9 +91,11 @@ export function ReviewScreen() {
     },
   );
 
-  if (isError) return <ScreenMessage tone="halt" measure="1340">Order fields unavailable.</ScreenMessage>;
-  if (isPending) return <ScreenMessage measure="1340">Loading the order…</ScreenMessage>;
-  if (selected === null) return <ScreenMessage measure="1340">No fields on this order.</ScreenMessage>;
+  // The three states with no workstation to draw live in `ReviewStandin`,
+  // which also states why only the empty one keeps the order's history.
+  if (isError) return <ReviewStandin orderId={orderId} state="error" />;
+  if (isPending) return <ReviewStandin orderId={orderId} state="loading" />;
+  if (selected === null) return <ReviewStandin orderId={orderId} state="empty" />;
   const editorSeed = seed ?? selected.value ?? readingsOf(selected)[0]?.value ?? "";
 
   return (

@@ -203,6 +203,40 @@ const fieldStore: Field[] = demoFields.map((f) => ({
   readings: f.readings?.map((r) => ({ ...r })),
 }));
 
+/**
+ * THE ONE ORDER THIS FIXTURE DESCRIBES. `data.ts` states it plainly — "the live
+ * review order — the package `demoFields` and `demoPages` describe" — and every
+ * row in `fieldStore` carries it as `order_id`. Read from the data rather than
+ * repeated as a literal, so the two cannot part company.
+ */
+const FIELDS_ORDER_ID = demoFields[0]?.order_id ?? "";
+
+/*
+ * FIXTURE CONFLICT, UNRESOLVED — FOR THE OWNER, NOT FOR THIS FILE TO GUESS.
+ *
+ * `pipelineFor` states the pipeline's own rule in words: the `extract` stage is
+ * "Held — an incomplete package never reaches extraction", and it is `waiting`
+ * for any order that has not passed the gate (`GATE_PASSED_STAGES` in
+ * workspace.ts is machine/review/escalated/delivered).
+ *
+ * ord_demo_1 — the order this whole field fixture describes, and the one Review
+ * opens on — sits at `stage: "gate"` with the stamp "Package incomplete". By the
+ * rule above it has NOT reached extraction, yet this endpoint serves 21
+ * extracted values with page-line provenance for it. Two server answers about
+ * one order contradict each other, which is precisely the class of bug
+ * `apps/web-v2/src/app/mockOrderFixtures.test.ts` was written to catch.
+ *
+ * There are two ways out and they are not equivalent:
+ *   (a) ord_demo_1's stage is wrong — it is the order under review, so `review`,
+ *       and the "Package incomplete" hero belongs to a different queue row; or
+ *   (b) extraction can precede the gate, and `pipelineFor`'s wording is wrong.
+ *
+ * (a) looks right and would ripple through the queue bands, the gate banner and
+ * the completeness screen, so it is a fixture decision rather than a fix. NOT
+ * TAKEN HERE: choosing between them is a pipeline ruling, and inventing one to
+ * make a screen consistent is the exact move hard rule 1 forbids.
+ */
+
 const escalationStore: Escalation[] = demoEscalations.map((e) => ({
   ...e,
   order_ids: [...e.order_ids],
@@ -496,22 +530,41 @@ export const handlers = [
     return HttpResponse.json(body);
   }),
 
+  /*
+   * THIS USED TO ANSWER FOR ANY ORDER WITH ONE ORDER'S FIELDS. It echoed the
+   * requested id into `order_id` and then returned `fieldStore` — ord_demo_1's
+   * 21 values, its 2 auto-confirmed and its 6 needing review — whoever asked.
+   * The rail made it visible: `/questions` resolves to ord_demo_4, an order at
+   * INTAKE, and its Review stage drew a badge of "6" counting another order's
+   * unanswered decisions.
+   *
+   * An order with no field fixture now gets an EMPTY set and a zero census, and
+   * the distinction between those two answers is the point. Empty says "this
+   * server holds no extracted values for that order" — which is true, and which
+   * the rail renders as no badge at all, the same thing it draws off an order
+   * screen. The old behaviour said something false about a real order.
+   *
+   * WHAT IS *NOT* DECIDED HERE, deliberately: which orders SHOULD have fields.
+   * That is a pipeline rule, and this file does not get to invent one from what
+   * a screen wants to show (hard rule 1). It is also not currently self-
+   * consistent — see the FIXTURE CONFLICT note below.
+   */
   http.get("/api/orders/:id/fields", ({ params }) => {
+    const id = String(params["id"]);
+    const fields = id === FIELDS_ORDER_ID ? fieldStore : [];
     const body: OrderFieldsResponse = {
-      order_id: String(params["id"]),
-      fields: fieldStore,
+      order_id: id,
+      fields,
       // The census is the SERVER'S, and this is where it is decided. It used to
       // be computed in `OrderCounts.tsx` — including `no_source`, which is a
       // ruling on provenance the browser has no standing to make (hard rule 3).
       // It is written out here rather than tallied so that this file states the
       // definition the real backend will have to match.
       census: {
-        fields: fieldStore.length,
-        auto_confirmed: fieldStore.filter((f) => f.state === "auto_confirmed")
-          .length,
-        needs_review: fieldStore.filter((f) => f.state === "needs_review")
-          .length,
-        no_source: fieldStore.filter(
+        fields: fields.length,
+        auto_confirmed: fields.filter((f) => f.state === "auto_confirmed").length,
+        needs_review: fields.filter((f) => f.state === "needs_review").length,
+        no_source: fields.filter(
           (f) =>
             f.value !== null &&
             f.source_doc_id === null &&

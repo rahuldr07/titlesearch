@@ -35,8 +35,15 @@ const seal = cva("shrink-0 rounded-pill border border-action", {
       /* 16px outer, 1px ring, 2px gap → a 10px dot. The mockup's 9px, rounded
          onto the 2px grid so the whole mark stays on it. */
       rail: "size-8 p-1",
-      /* Sign-in reads at arm's length from a page with nothing else on it. */
-      hero: "size-14 p-1.5",
+      /*
+       * Sign-in reads at arm's length from a page with nothing else on it.
+       * THE PADDING SCALES WITH THE BOX, which is the whole reason it is not
+       * simply `p-1` at a bigger size: a seal is a ring, a gap and a dot in
+       * fixed proportion, and holding the gap constant while doubling the
+       * diameter drew a dot at 0.71 of its ring against the rail's 0.63 — the
+       * same mark, visibly fatter, on the one screen that shows it alone.
+       */
+      hero: "size-14 p-2.5",
     },
   },
 });

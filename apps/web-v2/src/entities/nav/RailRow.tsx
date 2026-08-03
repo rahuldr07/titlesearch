@@ -1,5 +1,7 @@
 import type { MouseEvent, ReactNode } from "react";
 import { cn } from "../../shared/ui/classNames";
+import { isPlainClick } from "../../shared/ui/plainClick";
+import { railRowClasses } from "./railRowClasses";
 import { RailDot, type DoorAttention } from "./RailDot";
 
 export type { DoorAttention } from "./RailDot";
@@ -60,52 +62,16 @@ export function RailRow({
   reachable,
 }: RailRowProps) {
   const onClick = (event: MouseEvent<HTMLAnchorElement>) => {
-    // Let the browser handle modified/aux clicks (new tab) via the real href.
-    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    // Modified and middle clicks belong to the BROWSER — `isPlainClick` states
+    // why, and the real `href` below is what makes deferring to it work.
+    if (!isPlainClick(event)) return;
     event.preventDefault();
     onNavigate(to);
   };
-  /*
-   * THE ACTIVE ROW IS MARKED ON ITS LEFT EDGE, not by a floating pill. The
-   * mockup runs every rail row full-bleed with a 3px accent bar at the margin,
-   * so the marked row reads against the rail's own edge rather than as a rounded
-   * tab drifting inside it — which is what tells you where you are at a glance
-   * in a column of eleven near-identical rows. The bar is a TRANSPARENT border
-   * on every row, never added only when active: a border that appears on
-   * selection shifts the label 3px sideways, and a rail whose text jitters as
-   * you move through it is the failure this shape prevents. 3px is
-   * `--stroke-stamp`, deliberately not `--stroke-severity` (4px) — the left edge
-   * at severity weight is banner vocabulary, and a navigator row is not an alarm.
-   *
-   * THE FILL IS A WASH THAT DIES, not a band (`rail-wash`, the mockup's
-   * `linear-gradient(90deg, accent 8%, transparent 70%)`). It replaces
-   * `bg-action-surface` — the full-strength CHIP tint, which painted the marked
-   * row as a solid slab the width of the rail and made the loudest object on
-   * screen the thing pointing at the work rather than the work.
-   *
-   * GEOMETRY IS THE MOCKUP'S: `py-3 pr-12 pl-10.5` is its `6px 24px 6px 21px`,
-   * and 21 + the 3px border is the 24px inset the rest of the rail uses. Height
-   * is left to the content — rows were a fixed `h-20` (40px) against the
-   * mockup's 27.6px — which is also what makes the 2px group gap read as a gap.
-   * COLLAPSED KEEPS ITS 44px: at 78px the mark is the whole target and the whole
-   * label, and the two states are never on screen together.
-   */
-  const rowClass = cn(
-    /*
-     * `leading-tight` IS NOT COSMETIC. Tailwind v4 pairs every `--text-*` step
-     * with a `--text-*--line-height`, and `tokens.css` overrides the SIZES
-     * without the paired leadings — so `text-lg` at 13px was inheriting
-     * Tailwind's stock ratio for its own `lg` step (1.556) and rendering a
-     * 20.2px line box. The row came out 32.2px against the mockup's 27.6px, and
-     * nothing about the padding was wrong. 1.25 is `--leading-tight`, the
-     * mockup's 1.2 rounded onto the scale this app actually has.
-     */
-    "relative flex items-center gap-5 border-l-(length:--stroke-stamp) text-lg leading-tight no-underline",
-    collapsed ? "h-22 justify-center px-0" : "py-3 pr-12 pl-10.5",
-    active
-      ? "rail-wash border-l-action font-semibold text-ink-primary"
-      : "border-l-transparent font-medium text-ink-secondary",
-  );
+  // The geometry, the accent edge and the active wash live in
+  // `railRowClasses` — a pure function of these two booleans, and the reasoning
+  // for every value in it is there.
+  const rowClass = railRowClasses({ collapsed, active });
   const body = (
     <>
       {marker}

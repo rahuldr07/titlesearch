@@ -411,6 +411,25 @@
    * Names unchanged, values moved; the design is denser than the export was
    * (13px base, not 14) and taller at the top (38px h1, not 22). --text-6xl is
    * the one addition — there was no slot above 26px and the h1 needs one.
+   *
+   * ⚠ THESE SET SIZE ONLY, AND TAILWIND STILL SUPPLIES THE LEADING.
+   *
+   * Tailwind v4 pairs every `--text-*` with a `--text-*--line-height`, and a
+   * `text-lg` utility emits BOTH. Overriding the size alone — which is what this
+   * block does — leaves each utility carrying the stock ratio for Tailwind's own
+   * step of that name, applied to our value. `text-lg` is 13px here and inherits
+   * the ratio meant for Tailwind's 18px `lg` (1.556), so it renders a 20.2px line
+   * box where the design wants 15.6px.
+   *
+   * That is not theoretical: the navigator's rows measured 32.2px against the
+   * mockup's 27.6px with every padding value correct, and it was found by
+   * measuring a screenshot rather than by any test. ANY dense row is exposed.
+   *
+   * The fix at each site is an explicit `leading-*` utility from the block near
+   * the end of this file. Declaring `--text-*--line-height` pairs here would fix
+   * it globally and is the better answer, but it would silently restyle every
+   * screen at once — a change that needs its own pass and its own screenshots,
+   * not a side effect of a rail rebuild.
    */
   --text-micro: 0.59375rem; /* 9.5px  — tracked micro caps: chips, no-value, key labels */
   --text-tiny: 0.625rem; /* 10px   — mono cite, scope note, legend */
