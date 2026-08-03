@@ -1,46 +1,23 @@
-import { queryOptions } from "@tanstack/react-query";
-import {
+import type {
   OrderPipelineResponse,
   OrderSignoffResponse,
   OrderCompletenessResponse,
   OrderFieldsResponse,
 } from "@titlepipe/contract";
 import type { RailBadgeTone } from "../entities/nav/RailBadge";
-import { get } from "../shared/api";
 
 /**
- * Query wrappers + the pure derivation for the "THIS ORDER" numbered rail
- * (Task 12). Same duplication convention `OrderStrip.tsx` documents for its
- * own copy of the signoff query: `app/` is not a feature, but the URL and the
- * shape are the one contract schema parses, so a second small wrapper here
- * beats reaching into four features' internals for one query each — and
- * TanStack Query dedupes by queryKey regardless of which file asked first.
+ * READING A SERVED ORDER INTO ONE RAIL STAGE — the pure half of the "THIS
+ * ORDER" flow (Task 12). The queries that fetch what these functions read live
+ * in `orderQueries.ts`; this file takes their answers and nothing else, which is
+ * why every function here is a plain function of its arguments and testable
+ * without a server.
+ *
+ * NOTHING HERE DECIDES STATE. Every `done` traces to a served `phase === "done"`
+ * and every badge to a served count. That is the §3 line: the rail reports what
+ * the pipeline says, and the moment it computes instead, it can disagree with
+ * the screen it is pointing at.
  */
-export function orderPipelineQuery(orderId: string) {
-  return queryOptions({
-    queryKey: ["orders", orderId, "pipeline"],
-    queryFn: () => get(`/api/orders/${orderId}/pipeline`, OrderPipelineResponse),
-  });
-}
-export function orderSignoffQuery(orderId: string) {
-  return queryOptions({
-    queryKey: ["orders", orderId, "signoff"],
-    queryFn: () => get(`/api/orders/${orderId}/signoff`, OrderSignoffResponse),
-  });
-}
-export function orderCompletenessQuery(orderId: string) {
-  return queryOptions({
-    queryKey: ["orders", orderId, "completeness"],
-    queryFn: () => get(`/api/orders/${orderId}/completeness`, OrderCompletenessResponse),
-  });
-}
-export function orderFieldsQuery(orderId: string) {
-  return queryOptions({
-    queryKey: ["orders", orderId, "fields"],
-    queryFn: () => get(`/api/orders/${orderId}/fields`, OrderFieldsResponse),
-  });
-}
-
 export interface StageAugment {
   done: boolean;
   badge: string | null;

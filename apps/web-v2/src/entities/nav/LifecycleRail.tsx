@@ -1,7 +1,7 @@
-import { cn } from "../../shared/ui/classNames";
 import { RailRow, type DoorAttention } from "./RailRow";
 import { RailBadge, type RailBadgeTone } from "./RailBadge";
 import { StageDot } from "./StageDot";
+import { StageLink } from "./StageLink";
 
 /**
  * The lifecycle "flow" rail — the order's pipeline stages as a NUMBERED
@@ -50,7 +50,17 @@ export function LifecycleRail({ stages, collapsed, onNavigate }: LifecycleRailPr
         // The stage BEHIND this one owns the segment above it — see `StageLink`.
         const behind = stages[i - 1];
         return (
-          <div key={stage.to} className="flex flex-col">
+          /*
+           * `relative` so the segment can be positioned against THIS ROW rather
+           * than laid out between two of them. That is the whole fix: the
+           * connector used to be an 8px box in the flow between rows, which left
+           * the 10px above and below each 20px disc unlined and drew the six
+           * stages as six ticks with dashes floating between them. Absolutely
+           * positioned, one segment spans its row's full height and meets the
+           * next one exactly, so the column reads as ONE line — which is the
+           * only thing that makes a done step read as "behind you".
+           */
+          <div key={stage.to} className="relative flex flex-col">
             {behind === undefined ? null : (
               <StageLink to={stage.to} collapsed={collapsed} filled={behind.done} />
             )}
@@ -77,52 +87,5 @@ export function LifecycleRail({ stages, collapsed, onNavigate }: LifecycleRailPr
         );
       })}
     </nav>
-  );
-}
-
-/**
- * The spine between two stages, drawn as the export draws it (`railBg`,
- * TitlePipe.dc.html:2934): green once the stage BEHIND it is done, so the rail
- * fills in behind you and reads as a line you have walked rather than six
- * unrelated rows.
- *
- * RULE: the segment's colour is the EARLIER stage's `done`, never this one's
- * and never "we are past it". FAILURE PREVENTED: a rail coloured from the
- * active row runs green all the way to wherever you happen to be standing —
- * progress claimed by navigation, which is exactly the progress nobody
- * recorded. Ahead of the current stage the line stays grey because the server
- * has not said otherwise.
- *
- * Named for the stage BELOW it (`rail-link-<path>`) so a test can ask "is the
- * line into Completeness filled?" without counting rows.
- */
-function StageLink({
-  to,
-  collapsed,
-  filled,
-}: {
-  to: string;
-  collapsed: boolean;
-  filled: boolean;
-}) {
-  /*
-   * `pl-11.5` is 23px: the row's 3px accent border plus its 20px left padding,
-   * which puts this 20px box on the same centre line as the stage dot above and
-   * below it. The segment then fills the whole gap between two rows, so the six
-   * discs read as ONE line you have walked rather than as six ticks with dashes
-   * between them — the mockup draws the connector as continuous and that
-   * continuity is the only thing that makes a done step read as "behind you".
-   */
-  return (
-    <div className={cn("flex", collapsed ? "justify-center" : "pl-11.5")}>
-      <span
-        aria-hidden
-        data-testid={`rail-link-${to}`}
-        data-done={filled ? "1" : "0"}
-        className="flex w-10 justify-center"
-      >
-        <span className={cn("h-4 w-px", filled ? "bg-state-settled" : "bg-line-strong")} />
-      </span>
-    </div>
   );
 }

@@ -1,19 +1,25 @@
 import { Link } from "@tanstack/react-router";
-import { Eyebrow } from "../shared/ui/Eyebrow";
+import { Wordmark } from "../shared/ui/Wordmark";
 
-/** The wordmark `AppChrome` hands the rail as its `brand` slot. Split out to keep `AppChrome` under the line budget (§6). */
+/**
+ * The wordmark `AppChrome` hands the rail as its `brand` slot — the shared
+ * `Wordmark` at rail size, wrapped in the hub link.
+ *
+ * THE LINK IS THE ONLY THING THIS ADDS, and that is the point of the split: the
+ * mark itself is drawn once, in `shared/ui`, and sign-in renders the same object
+ * without an anchor around it. This file used to draw its own three-bar glyph
+ * and its own `TITLEPIPE` caps beside a duplicate of sign-in's — two copies of
+ * one identity, already divergent in size, weight and sub-line.
+ *
+ * The `ABSTRACTOR REVIEW` caption went with them. It was a second line under the
+ * product name in a 264px column that has four section headers below it; the
+ * mockup's rail names the product once and spends the rest of the space on
+ * navigation.
+ */
 export function SidebarBrand() {
   return (
-    <Link to="/" className="flex min-w-0 items-center gap-3 no-underline">
-      <span aria-hidden className="flex size-8 shrink-0 flex-col justify-center gap-1 rounded-2 border-2 border-action px-1">
-        <span className="h-0.5 rounded-pill bg-action" />
-        <span className="h-0.5 w-3/4 rounded-pill bg-action" />
-        <span className="h-0.5 rounded-pill bg-action" />
-      </span>
-      <span className="min-w-0">
-        <span className="block truncate text-sm font-bold tracking-stamp text-ink-primary">TITLEPIPE</span>
-        <Eyebrow variant="caption">Abstractor Review</Eyebrow>
-      </span>
+    <Link to="/" className="min-w-0 no-underline">
+      <Wordmark size="rail" />
     </Link>
   );
 }

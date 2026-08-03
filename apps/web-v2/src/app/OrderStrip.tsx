@@ -1,27 +1,13 @@
-import { queryOptions, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useRouterState } from "@tanstack/react-router";
-import { OrderContextResponse } from "@titlepipe/contract";
-import { get } from "../shared/api";
 import { screenOrderFor } from "./flowOrders";
 import { chromeFor } from "./chromeFor";
 import { useTheme } from "./preferences";
+import { orderContextQuery } from "./orderQueries";
 import { AccountMenu } from "./AccountMenu";
 import { OrderCounts } from "./OrderCounts";
 import { Stamp } from "../shared/ui/Stamp";
 import { Eyebrow } from "../shared/ui/Eyebrow";
-
-/**
- * THE ORDER-SCOPED LOOKUP THIS STRIP EXISTS TO READ (2026-07-30, Wave 2). It
- * returns the human reference for an order you have only the URL id of, and
- * the SERVER'S OWN lifecycle stamp — label and tone already decided, so no
- * screen composes that word from `signed_by === null` or from anything else.
- */
-function contextQuery(orderId: string) {
-  return queryOptions({
-    queryKey: ["orders", orderId, "context"],
-    queryFn: () => get(`/api/orders/${orderId}/context`, OrderContextResponse),
-  });
-}
 
 /**
  * The full-width top bar (§11 2026-07-30 revision) — `AppChrome`'s sibling in
@@ -60,8 +46,10 @@ export function OrderStrip() {
   // Own `useTheme` call — dedupes with `AppChrome`'s by shared query key, so
   // this is not a second network request, just a second subscriber.
   const [theme, toggleTheme] = useTheme(fetches);
+  // `orderQueries.ts` holds the query — the rail's flow header prints the same
+  // ref off the same key, so this is a second subscriber, not a second request.
   const { data: context } = useQuery({
-    ...contextQuery(orderId ?? ""),
+    ...orderContextQuery(orderId ?? ""),
     enabled: orderId !== null,
   });
 

@@ -24,9 +24,9 @@ const brand = <span>TITLEPIPE</span>;
  */
 /**
  * The doors are DERIVED, exactly as `AppChrome` derives them — a hand-written
- * fixture would carry hand-written squares, and a hand-written square cannot
- * catch two doors drawing the same letter. That collision is the one this rail
- * is least able to survive: collapsed, the square is all a row draws.
+ * fixture would carry hand-written marks, and a hand-written mark cannot catch
+ * two doors drawing the same one. That collision is the one this rail is least
+ * able to survive: collapsed, the mark is all a row draws.
  */
 const groupDoors = (group: Door["group"]): SidebarDoorItem[] =>
   doorsFor("admin")
@@ -40,7 +40,7 @@ const groupDoors = (group: Door["group"]): SidebarDoorItem[] =>
       attention: door.path === "/escalations" ? "attend" : null,
     }));
 
-const letterDoors = [...groupDoors("work"), ...groupDoors("admin"), ...groupDoors("reference")];
+const markedDoors = [...groupDoors("work"), ...groupDoors("admin"), ...groupDoors("reference")];
 
 const sections: SidebarSection[] = [
   { kind: "doors", label: "WORK", doors: groupDoors("work") },
@@ -61,7 +61,7 @@ const sections: SidebarSection[] = [
 ];
 
 /** Expanded: all four group headers in order, a numbered rail with a checkmark
- * and a badge, and every door's letter-icon square visible alongside its label. */
+ * and a badge, and every door's icon visible alongside its label. */
 export const Expanded: Story = {
   args: { collapsed: false, onToggle: () => {}, onNavigate: () => {}, brand, sections },
   play: async ({ canvasElement }) => {
@@ -89,20 +89,20 @@ export const Expanded: Story = {
     expect(canvas.queryByTestId("rail-badge-/processing")).not.toBeInTheDocument();
     expect(canvas.queryByTestId("rail-badge-/delivered")).not.toBeInTheDocument();
 
-    // every door shows its letter-icon square AND its label when expanded
+    // every door shows its icon AND its label when expanded
     const queueDoor = await canvas.findByTestId("rail-door-/queue");
-    expect(queueDoor).toHaveTextContent("Q");
+    expect(queueDoor).toHaveTextContent("▤");
     expect(queueDoor).toHaveTextContent("queue");
-    // The square is the label's INITIAL; the chord `b` lives in the title and
-    // the `?` map (ruling D2), so R here is the fix, not a typo.
+    // The mark is the mockup's ICON, not the chord and not the initial: `b`
+    // opens the rulebook and lives in the title and the `?` map, `§` draws it.
     const rulebookDoor = await canvas.findByTestId("rail-door-/rulebook");
-    expect(rulebookDoor).toHaveTextContent("R");
+    expect(rulebookDoor).toHaveTextContent("§");
     expect(rulebookDoor).toHaveAttribute("title", "rulebook · g b");
     expect(rulebookDoor).toHaveTextContent("rulebook");
   },
 };
 
-/** Collapsed: headers disappear, icon squares remain the only content. */
+/** Collapsed: headers disappear, the icons remain the only content. */
 export const Collapsed: Story = {
   args: { collapsed: true, onToggle: () => {}, onNavigate: () => {}, brand, sections },
   play: async ({ canvasElement }) => {
@@ -111,18 +111,18 @@ export const Collapsed: Story = {
     await expect(rail).toHaveAttribute("data-collapsed", "1");
     expect(rail.querySelectorAll("h2")).toHaveLength(0);
     const queueDoor = await canvas.findByTestId("rail-door-/queue");
-    expect(queueDoor).toHaveTextContent("Q");
+    expect(queueDoor).toHaveTextContent("▤");
 
-    // AT 78px THE SQUARE IS THE WHOLE ROW — no label is rendered — so two doors
-    // sharing a letter are two rows nobody can tell apart without hovering.
-    // Products keeps P and People draws its chord M (`glyphs.ts`).
-    const squares = await Promise.all(
-      letterDoors.map(async (door) =>
+    // AT 78px THE MARK IS THE WHOLE ROW — no label is rendered — so two doors
+    // sharing one are two rows nobody can tell apart without hovering. This
+    // asserts the rendered DOM; `doors.test.ts` asserts the catalogue that feeds
+    // it, for every role. Both, because the rail could still drop a mark.
+    const marks = await Promise.all(
+      markedDoors.map(async (door) =>
         (await canvas.findByTestId(`rail-door-${door.to}`)).textContent?.trim(),
       ),
     );
-    expect(new Set(squares).size).toBe(squares.length);
-    expect(squares).toContain("P");
-    expect(squares).toContain("M");
+    expect(new Set(marks).size).toBe(marks.length);
+    expect(marks.every((mark) => mark !== undefined && mark.length > 0)).toBe(true);
   },
 };

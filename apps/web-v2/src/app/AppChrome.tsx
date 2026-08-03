@@ -1,8 +1,8 @@
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
-import { doorsFor, doorGlyph, doorTitle, type Door } from "../entities/nav/doors";
-import { Sidebar, type SidebarDoorItem, type SidebarSection } from "../entities/nav/Sidebar";
+import { doorsFor } from "../entities/nav/doors";
+import { Sidebar } from "../entities/nav/Sidebar";
 import { flowFor, flowRoute, flowSectionLabel } from "../entities/nav/flow";
 import type { LifecycleStage } from "../entities/nav/LifecycleRail";
 import { useSession } from "../shared/session";
@@ -10,15 +10,16 @@ import { useAttention, type Attention } from "./attention";
 import { chromeFor } from "./chromeFor";
 import { useNavCollapsed, useTheme } from "./preferences";
 import { screenOrderFor } from "./flowOrders";
+import { railSections } from "./railSections";
 import { SidebarBrand } from "./SidebarBrand";
 import {
   orderPipelineQuery,
   orderSignoffQuery,
   orderCompletenessQuery,
   orderFieldsQuery,
-  stageAugmentFor,
-  reviewAugment,
-} from "./orderLifecycle";
+  orderContextQuery,
+} from "./orderQueries";
+import { stageAugmentFor, reviewAugment } from "./orderLifecycle";
 
 /**
  * The chrome — the SMART wrapper around the presentational left rail. It owns
@@ -84,10 +85,13 @@ export function AppChrome() {
   const { data: signoff } = useQuery({ ...orderSignoffQuery(orderId ?? ""), enabled });
   const { data: completeness } = useQuery({ ...orderCompletenessQuery(orderId ?? ""), enabled });
   const { data: fields } = useQuery({ ...orderFieldsQuery(orderId ?? ""), enabled });
+  // The HUMAN reference for the flow header, never the URL id: `ord_demo_4` is
+  // how the app addresses an order, not what anyone calls it. Shares
+  // `OrderStrip`'s queryKey, so this is a subscriber and not a fifth request.
+  const { data: context } = useQuery({ ...orderContextQuery(orderId ?? ""), enabled });
 
   if (!chrome) return null;
 
-  const heldDoors = doorsFor(role);
   const isActive = (to: string) => pathname === to || pathname.startsWith(`${to}/`);
   const attentionFor = (path: string): Attention =>
     path === "/escalations" ? escalationAttention : null;
@@ -119,31 +123,22 @@ export function AppChrome() {
     };
   });
 
-  const toItem = (door: Door): SidebarDoorItem => ({
-    to: door.path,
-    label: door.label,
-    icon: doorGlyph(door),
-    title: doorTitle(door),
-    active: isActive(door.path),
-    attention: attentionFor(door.path),
-  });
-  const sections: SidebarSection[] = [];
-  const work = heldDoors.filter((d) => d.group === "work").map(toItem);
-  if (work.length > 0) sections.push({ kind: "doors", label: "WORK", doors: work });
-  if (lifecycle.length > 0)
-    sections.push({ kind: "lifecycle", label: flowSectionLabel(orderId), stages: lifecycle });
-  const admin = heldDoors.filter((d) => d.group === "admin").map(toItem);
-  if (admin.length > 0) sections.push({ kind: "doors", label: "ADMIN", doors: admin });
-  const reference = heldDoors.filter((d) => d.group === "reference").map(toItem);
-  if (reference.length > 0) sections.push({ kind: "doors", label: "REFERENCE", doors: reference });
-
   return (
     <Sidebar
       collapsed={collapsed}
       onToggle={toggleCollapsed}
       onNavigate={(to) => void navigate({ to })}
       brand={<SidebarBrand />}
-      sections={sections}
+      sections={railSections({
+        doors: doorsFor(role),
+        lifecycle,
+        flowLabel: flowSectionLabel(orderId),
+        // `?? null` and not `?.order_ref`: the header waits for the real
+        // reference rather than showing the URL id in the meantime.
+        orderRef: context?.order_ref ?? null,
+        isActive,
+        attentionFor,
+      })}
     />
   );
 }

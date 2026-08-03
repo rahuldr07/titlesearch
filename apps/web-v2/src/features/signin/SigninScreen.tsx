@@ -1,8 +1,8 @@
 import { Link } from "@tanstack/react-router";
-import { PipeMark } from "./PipeMark";
 import { buttonClasses } from "../../shared/ui/Button";
 import { Card } from "../../shared/ui/Card";
 import { Screen } from "../../shared/ui/Screen";
+import { Wordmark } from "../../shared/ui/Wordmark";
 import { cn } from "../../shared/ui/classNames";
 
 /**
@@ -43,12 +43,16 @@ export function SigninScreen() {
         and not a copy of it.
       */}
       <Card size="emphasis" className="w-full px-14 py-16 text-center">
-        <PipeMark />
-
-        <div className="text-2xl font-bold tracking-stamp text-ink-primary">
-          TITLEPIPE
-        </div>
-        <div className="mt-2 mb-14 text-xs tracking-eyebrow uppercase text-ink-muted">
+        {/*
+          THE SAME MARK THE RAIL DRAWS, at hero size. It replaces a three-bar
+          "pipe seen end-on" glyph over `TITLEPIPE` in tracked caps — a second,
+          independently-drawn identity that the 2026-08-01 reskin left behind
+          when the rail moved to the mockup's seal-and-serif. The two are one
+          component now, so the first screen anyone sees and every screen after
+          it cannot disagree about what this product is called.
+        */}
+        <Wordmark size="hero" className="mb-3" />
+        <div className="mb-14 text-xs tracking-eyebrow uppercase text-ink-muted">
           Abstractor Review · internal
         </div>
 

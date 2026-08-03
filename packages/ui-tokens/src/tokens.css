@@ -179,6 +179,20 @@
   --color-ink-on-action: #fbf3ee; /* 7.48:1 on action, 5.15:1 on settled, 12.38:1 on halt */
   --color-key-chip-on-action: rgb(255 255 255 / 0.1);
 
+  /*
+   * THE RAIL'S ACTIVE WASH — the navigator's marked row, and deliberately NOT
+   * --color-action-surface. The mockup washes the active row with the accent at
+   * 8% and fades it to nothing by 70% of the row's width; the tint token is the
+   * full-strength chip fill, and using it painted a solid pink band across the
+   * rail that read louder than the screen it was pointing at. The row's claim is
+   * "you are here", which is the quietest thing the accent ever says.
+   *
+   * An rgba token rather than a utility-side colour function because §6 bans
+   * every CSS colour function inside apps/web-v2/src — including color-mix — so
+   * the alpha has to be resolved here, where the palette lives.
+   */
+  --color-rail-active-wash: rgb(138 50 34 / 0.08);
+
   /* ── state: settled — confirmed, delivered, gate passed ───────────────── */
   --color-state-settled: #45714b;
   --color-state-settled-ink: #35573a; /* body text on settled-surface — 6.65:1 */
@@ -546,6 +560,23 @@
   --shadow-page-on-dark: 0 14px 34px -10px rgb(0 0 0 / 0.55), 0 2px 6px rgb(0 0 0 / 0.35);
   /* toggle-switch knob */
   --shadow-knob: 0 1px 3px rgb(34 28 19 / 0.28);
+  /*
+   * The halo on the flow rail's CURRENT stage dot. Not an elevation — the dot is
+   * not floating — but a soft ring that separates the one outlined disc from the
+   * five other discs in the column without adding a second stroke weight to a
+   * rail that already spends stroke on "done". The mockup's value, and it is
+   * deliberately near-invisible: the tick marks behind you are what the eye
+   * should count, and a bright "you are here" competes with them.
+   *
+   * THE ONE THEME-SCOPED SHADOW, and the exception is stated rather than hidden:
+   * this file's header says non-colour tokens are structural and not themed,
+   * which is true of every other --shadow-* here because they are all near-black
+   * depth on light paper and depth reads the same way in both themes. This one
+   * carries no offset and no blur — it is a flat ring, i.e. a COLOUR wearing a
+   * shadow's syntax — so a dark ink ring is simply invisible on Mocha's ground.
+   * Overridden below.
+   */
+  --shadow-stage-current: 0 0 0 3px rgb(34 28 19 / 0.06);
 
   /* ── document rendering ───────────────────────────────────────────────── */
   /* The scan is meant to look scanned, not like a clean render. */
@@ -732,6 +763,11 @@
   --color-ink-on-action: #11111b; /* crust */
   --color-key-chip-on-action: rgb(17 17 27 / 0.18); /* mirrors the ink-on-action flip */
 
+  /* The rail's active wash — the accent (mauve) at the same weight the light
+     theme spends, raised two points because a pastel at 8% on a dark ground
+     lands under the just-noticeable step that 8% of wax clears on paper. */
+  --color-rail-active-wash: rgb(203 166 247 / 0.1);
+
   /* ── state: settled — confirmed, delivered, gate passed ───────────────── */
   --color-state-settled: #a6e3a1; /* green */
   --color-state-settled-ink: #a6e3a1; /* green itself, text on the dark tint below */
@@ -846,6 +882,12 @@
      more saturated mauve for the one callout border that must read heavier than
      the fill. Not AA-gated (not in ON_TINT). */
   --color-action-border-strong: #b389e8;
+
+  /* The flow rail's current-stage halo, inverted. See the @theme declaration for
+     why this one shadow is themed at all: it is a flat ring with no offset and
+     no blur, so on a dark ground the ring has to be LIGHT to exist. Same near-
+     invisible weight — the ring separates the disc, it does not announce it. */
+  --shadow-stage-current: 0 0 0 3px rgb(205 214 244 / 0.1);
 }
 
 /*

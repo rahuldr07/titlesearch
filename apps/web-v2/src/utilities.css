@@ -112,3 +112,20 @@
   background-image: radial-gradient(var(--color-na-silent-hatch) 0.8px, transparent 0.9px);
   background-size: 6px 6px;
 }
+
+/*
+ * THE NAVIGATOR'S ACTIVE ROW. A wash that fades out, not a filled band.
+ *
+ * A `bg-*` utility can only paint a flat colour, and the mockup's marked row is
+ * a 90deg gradient dying to nothing at 70% — which is what lets the accent bar
+ * at the left margin stay the thing that says "here" while the tint merely
+ * agrees with it. Painted flat (`bg-action-surface`, which is what this
+ * replaces) the row became a solid pink slab running the full 264px, louder
+ * than any content on the screen it was pointing into.
+ *
+ * The stop is a PERCENTAGE, so it holds at both rail widths without a second
+ * value; the colour is a token, so it follows the theme.
+ */
+@utility rail-wash {
+  background-image: linear-gradient(90deg, var(--color-rail-active-wash), transparent 70%);
+}
