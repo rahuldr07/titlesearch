@@ -129,3 +129,21 @@
 @utility rail-wash {
   background-image: linear-gradient(90deg, var(--color-rail-active-wash), transparent 70%);
 }
+
+/*
+ * A SCROLLER WITH NO SCROLLBAR CHROME. The navigator only.
+ *
+ * The rail does not fit a short window (1440x620: wants 840), and the bar it
+ * painted read as a second edge beside its own hairline. THE SCROLL STAYS —
+ * only the widget is hidden, so wheel, trackpad and keys still reach the foot.
+ * Deleting `overflow-y-auto` instead would CLIP the ADMIN and REFERENCE doors.
+ * ⚠ It costs the affordance `StageBoard` refused `overflow-x:auto` over; relied
+ * on here because the rail is a short list scanned for a name you already know.
+ */
+@utility scrollbar-none {
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
