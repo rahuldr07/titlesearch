@@ -17,7 +17,8 @@ import { cn } from "../../shared/ui/classNames";
  * accessibility failure, and the design's own framing supports this: the badge
  * text is what names the stage.
  */
-export type StagePhase = "done" | "gate" | "halted" | "waiting";
+/** A stage's phase — local: only this list draws one. */
+type StagePhase = "done" | "gate" | "halted" | "waiting";
 
 const DOT: Record<StagePhase, string> = {
   done: "border-state-settled bg-state-settled text-ink-on-action",

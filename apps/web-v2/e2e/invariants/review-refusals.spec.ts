@@ -214,3 +214,42 @@ test("the server refuses an exclude on a non-judgments path", async ({ page }) =
   // and the rule refuses only what it should
   expect(result.judgment.status).toBe(200);
 });
+
+/**
+ * THE SAME RULE, MADE DETERMINISTIC — three clicks inside ONE JavaScript tick.
+ *
+ * The test above dispatches its three clicks through Playwright, which yields
+ * between them, so React usually gets a render in and the stale-closure race
+ * never opens. "Usually" is the problem: it recorded TWO corrections under load
+ * and passed on every idle run, which is a test that reports the machine's speed
+ * rather than the code's correctness.
+ *
+ * Dispatching all three synchronously removes the timing entirely. No render can
+ * happen between them, so a guard that reads a render-time `isPending` sees the
+ * same stale `false` three times — deterministically, on any machine. Only a
+ * synchronous latch survives this (`useReviewWrites`).
+ *
+ * IT IS AN ADDITION, NOT A REPLACEMENT. The Playwright-driven test above still
+ * covers what a person actually does; this one covers what the rule actually
+ * says: ONE record per act, whatever the latency.
+ */
+test("three clicks in a single tick still file exactly one correction", async ({
+  page,
+}) => {
+  await trackApi(page);
+  await slowApi(page, "/correct", 2_000);
+  await page.goto("/orders/ord_demo_1/review");
+  await openCorrection(page);
+  await expect(page.getByTestId("edit-submit")).toBeVisible();
+  await page.evaluate(() => {
+    const el = document.querySelector('[data-testid="edit-submit"]');
+    if (!(el instanceof HTMLElement)) throw new Error("no submit control");
+    // Synchronous and back to back: React cannot re-render between these, which
+    // is precisely the window a render-time guard leaves open.
+    el.click();
+    el.click();
+    el.click();
+  });
+  await expect(page.getByTestId(JUDGMENT_ROW)).toBeVisible();
+  await expect.poll(async () => (await postsMatching(page, "/correct")).length).toBe(1);
+});

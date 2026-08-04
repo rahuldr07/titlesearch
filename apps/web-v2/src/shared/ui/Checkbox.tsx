@@ -26,7 +26,8 @@ type AccessibleName =
   | { "aria-label": string; "aria-labelledby"?: never }
   | { "aria-labelledby": string; "aria-label"?: never };
 
-export interface CheckboxBaseProps {
+/** The half without the accessible name; `CheckboxProps` is the public one. */
+interface CheckboxBaseProps {
   checked?: boolean;
   defaultChecked?: boolean;
   indeterminate?: boolean;

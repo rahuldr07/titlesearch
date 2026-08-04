@@ -21,8 +21,30 @@ import { cn } from "./classNames";
  * Ground and edge stay on ONE axis (`tone`): the failure prevented is a
  * mismatched pair, which a two-prop component cannot prevent.
  */
+/**
+ * `shrink-0` IS A BUG FIX, NOT A DEFAULT — and it has to live here, on the base,
+ * because the thing that causes the bug also lives here.
+ *
+ * `overflow-hidden` gives every card `min-height: 0`. That matters because a
+ * flex item's default `min-height: auto` is the ONLY thing stopping it being
+ * squeezed below its own content: cards opt out of that protection by being
+ * cards. So any card inside a `flex-col` whose siblings want more room than
+ * there is gets compressed toward nothing — silently, with its content still in
+ * the DOM and still readable to a test.
+ *
+ * FOUND ON REVIEW, by measuring rather than by any assertion: in the report
+ * scroller the signature record rendered 2px tall wanting 817, and `OrderRail`
+ * rendered at ZERO wanting 268. The rail had been invisible there for some time
+ * while THREE harvested invariants asserted against it — `toContainText` passes
+ * happily on a zero-height element, which is exactly why nothing caught it.
+ *
+ * A card is a bounded box of content. There is no case where the right answer is
+ * to crush one to a sliver rather than let its container scroll, which is what
+ * the container is for. A card that genuinely must flex can still say so — a
+ * `className` of `shrink` or `min-h-0` overrides this, because `cn` merges last.
+ */
 /* eslint-disable-next-line react-refresh/only-export-components -- exported so the variant logic is testable as a pure function in the node gate; a mutation audit showed component tests alone never caught a collapsed variant set. */
-export const cardClasses = cva("overflow-hidden", {
+export const cardClasses = cva("overflow-hidden shrink-0", {
   variants: {
     /* Size carries RADIUS AND ELEVATION together: here they are one decision,
        how far off the page the thing sits. Re-imposed against the mockup's
@@ -107,41 +129,9 @@ export function Card({ size, tone, accent, dashed, className, ...rest }: CardPro
   );
 }
 
-interface BandProps extends Omit<HTMLAttributes<HTMLDivElement>, "className"> {
-  children: ReactNode;
-  /** The neutral fill the design uses on header and footer bands. */
-  filled?: boolean;
-  className?: string;
-}
-
-/** The INTERIOR hairline — the one place a 1px rule still belongs on a card. */
-export function CardHeader({ filled = false, className, ...rest }: BandProps) {
-  return (
-    <div
-      className={cn(
-        "flex items-center gap-6 px-8 py-6 border-b border-line-subtle",
-        filled && "bg-surface-sunken",
-        className,
-      )}
-      {...rest}
-    />
-  );
-}
-
-export function CardFooter({ filled = true, className, ...rest }: BandProps) {
-  return (
-    <div
-      className={cn(
-        "px-8 py-5 border-t border-line-subtle text-xs text-ink-muted",
-        filled && "bg-surface-sunken",
-        className,
-      )}
-      {...rest}
-    />
-  );
-}
-
-/** Body padding for a card that is a single block rather than banded. */
-export function CardBody({ className, ...rest }: BandProps) {
-  return <div className={cn("p-8", className)} {...rest} />;
-}
+/*
+ * Re-exported so `Card` stays the single import for a card and its bands —
+ * splitting a file should not make every call site name two. The bands and
+ * their one interior rule live in `CardBands.tsx`.
+ */
+export { CardHeader, CardFooter, CardBody } from "./CardBands";

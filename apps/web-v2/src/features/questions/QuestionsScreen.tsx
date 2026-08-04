@@ -74,14 +74,18 @@ export function QuestionsScreen() {
             sign-off is ANSWERED, so it is pointed at an order at intake and the
             server correctly serves that order unsigned — `signoffFor` derives
             `signed_by` from the order's stage, so the branch can only fire on an
-            order that moved past intake while this screen was open. The design
-            puts the read-only block on the REVIEW screen, where a reviewer reads
-            a signature somebody else made; making it appear here instead would
-            mean pointing the answering screen at an order with nothing left to
-            answer. The block is exercised as a story
-            (`entities/signoff/SignoffReadonly.stories.tsx`) and reaches the app
-            when either intake gets an order-scoped route (`queries.ts`) or
-            Review composes it. */}
+            order that moved past intake while this screen was open. Making it
+            appear here by default would mean pointing the answering screen at an
+            order with nothing left to answer.
+
+            WHERE IT ACTUALLY LIVES IS REVIEW (`features/review/ReportPane.tsx`,
+            2026-08-03), which is where the design puts it and where a reviewer
+            reads a signature somebody else made. That closed the last open item
+            from the 2026-08-01 handoff: this block used to be reachable only as
+            a story, so the branch below was the one place it appeared in code
+            and nowhere in the running app. It stays here as the guard it is —
+            if an order IS signed while this screen is open, the answering form
+            must not draw over the record. */}
         {data.signed_by === null ? (
           <SignoffCard signoff={data} />
         ) : (

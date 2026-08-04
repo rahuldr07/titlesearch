@@ -266,3 +266,47 @@ test("the strip prints the server's stamp — it does not compose one", async ({
   // The tone rides the same response: `attend`, not the fixture's `halt`.
   await expect(strip.getByTestId("order-stamp")).toHaveAttribute("data-tone", "attend");
 });
+
+/**
+ * A REVIEWER READS THE SIGNATURE THEY ARE WORKING AGAINST.
+ *
+ * The intake sign-off is a claim a person made and put their name to, and every
+ * field decision on this screen is taken against it. Until 2026-08-03 the block
+ * that shows it existed only as a story: the one screen rendering it
+ * (`/questions`) is where a sign-off is ANSWERED and so correctly serves an
+ * UNSIGNED order, which meant the read-only branch could not fire anywhere in
+ * the running app.
+ *
+ * WHAT THIS PINS is not the placement — that can move — but the two rules that
+ * make the block honest, and both are refusals:
+ *
+ *   1. It NAMES THE SIGNER. "Signed" without a signer is the claim with the
+ *      accountability removed, and for a downstream reviewer this is the only
+ *      place the name appears.
+ *   2. It OFFERS NO CONTROL. There is no sign-off amendment endpoint and an
+ *      append-only signature is not edited in place, so the block renders no
+ *      button, no input and no disabled stand-in — a disabled control says "not
+ *      now", and the honest statement is "not here".
+ */
+test("Review shows the intake signature as a record, with no way to edit it", async ({
+  page,
+}) => {
+  await go(page);
+  const record = page.getByTestId("signoff-readonly");
+  await record.scrollIntoViewIfNeeded();
+  await expect(record).toBeVisible();
+  // THE SIGNER, BY NAME. Not the word "signed" — a badge reading SIGNED is a
+  // state, and the rule is about accountability: this block is the only place
+  // downstream where the person who made the claim is named at all.
+  await expect(record).toContainText("R. Delacroix");
+  // …and when, because a signature without a date cannot be placed against the
+  // package it was made about.
+  await expect(record).toContainText("2026-07-24");
+  // NO CONTROL OF ANY KIND. Counted rather than sampled: a single
+  // `not.toBeVisible()` on one selector would pass while another shipped.
+  await expect(record.getByRole("button")).toHaveCount(0);
+  await expect(record.getByRole("textbox")).toHaveCount(0);
+  await expect(record.getByRole("radio")).toHaveCount(0);
+  await expect(record.getByRole("checkbox")).toHaveCount(0);
+  await expect(record.locator("input, textarea, select")).toHaveCount(0);
+});

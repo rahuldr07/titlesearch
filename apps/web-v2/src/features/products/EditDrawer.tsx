@@ -5,7 +5,8 @@ import { ClientForm } from "./ClientForm";
 import { LineForm } from "./LineForm";
 import { ProductForm } from "./ProductForm";
 
-export type EditKind = "line" | "product" | "client";
+/** Which edit the drawer is for — local to the drawer. */
+type EditKind = "line" | "product" | "client";
 
 export interface EditTarget {
   kind: EditKind;

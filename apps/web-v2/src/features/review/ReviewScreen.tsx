@@ -106,7 +106,7 @@ export function ReviewScreen() {
         <FieldsPane
           orderId={orderId}
           fields={fields}
-          signoffLines={signoff.data?.lines ?? []}
+          signoff={signoff.data}
           selected={selected}
           pinned={pinned}
           mode={mode}

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { paneClasses } from "./Pane";
-import { screenClasses, screenScroller } from "./Screen";
+import { screenClasses, screenScroller } from "./screenClasses";
 
 /**
  * These guard the two classes whose ABSENCE is invisible.

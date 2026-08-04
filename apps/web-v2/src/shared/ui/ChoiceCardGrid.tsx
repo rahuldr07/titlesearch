@@ -1,7 +1,8 @@
 import { cn } from "./classNames";
 
 /** One card: an id the caller submits, a title, and the line under it. */
-export interface ChoiceCardOption {
+/** One card's shape — callers pass literals, so the grid owns the type. */
+interface ChoiceCardOption {
   id: string;
   title: string;
   sub?: string;

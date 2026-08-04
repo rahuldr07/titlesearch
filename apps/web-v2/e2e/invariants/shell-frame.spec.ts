@@ -88,3 +88,61 @@ test("the session-ended screen is equally bare", async ({ page }) => {
   await expect(page.getByTestId("side-rail")).toHaveCount(0);
   await expect(page.getByTestId("order-strip")).toHaveCount(0);
 });
+
+/**
+ * NOTHING IS CRUSHED TO A SLIVER. A whole class of defect, not one instance.
+ *
+ * A flex item is normally protected from shrinking below its own content by
+ * `min-height: auto` — but ANY element with `overflow` other than `visible`
+ * gives that up, and `Card` sets `overflow-hidden` on every instance. So a card
+ * in a column whose siblings want more room than exists gets compressed toward
+ * nothing while its content stays in the DOM, fully readable to a test.
+ *
+ * THAT IS WHY THIS MEASURES INSTEAD OF READING. Found on Review by measuring:
+ * the signature record rendered 2px tall wanting 817, and the order rail
+ * rendered at ZERO wanting 268 — with three harvested invariants asserting
+ * against that rail the whole time, every one of them green, because
+ * `toContainText` does not care how tall a box is. The same session had already
+ * lost seventeen queue rows to 10px blank rules for the identical reason.
+ *
+ * The rule is a comparison, not a magic number: a box may not render shorter
+ * than the content inside it. A container that cannot fit its children is what
+ * scrolling is for.
+ */
+const CROWDED = [
+  { url: "/orders/ord_demo_1/review", what: "the review report column" },
+  { url: "/queue", what: "the queue bands" },
+  { url: "/completeness", what: "the gap cards" },
+];
+
+for (const { url, what } of CROWDED) {
+  test(`nothing collapses below its own content — ${what}`, async ({ page }) => {
+    await page.goto(url);
+    await expect(page.getByTestId("side-rail")).toBeVisible();
+    // Let the last query settle; a box measured mid-fetch is legitimately empty.
+    await page.waitForTimeout(1200);
+    const crushed = await page.evaluate(() => {
+      const bad: { testid: string; rendered: number; wants: number }[] = [];
+      for (const el of Array.from(document.querySelectorAll("[data-testid]"))) {
+        const box = el as HTMLElement;
+        // Only elements that actually claim to be on screen. `scrollHeight` on a
+        // display:none box is 0, so hidden things cannot produce false alarms.
+        if (box.offsetParent === null && box.getClientRects().length === 0) continue;
+        const rendered = box.getBoundingClientRect().height;
+        // 4px of slack: sub-pixel layout and 1px borders are not a collapse.
+        if (box.scrollHeight > rendered + 4) {
+          // A deliberate scroller is not a collapse — it is the fix for one.
+          const overflowY = getComputedStyle(box).overflowY;
+          if (overflowY === "auto" || overflowY === "scroll") continue;
+          bad.push({
+            testid: box.getAttribute("data-testid") ?? "?",
+            rendered: Math.round(rendered),
+            wants: box.scrollHeight,
+          });
+        }
+      }
+      return bad;
+    });
+    expect(crushed, `crushed boxes: ${JSON.stringify(crushed)}`).toEqual([]);
+  });
+}

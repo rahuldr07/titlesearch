@@ -1,4 +1,4 @@
-import type { Field, OrderSignoffLine } from "@titlepipe/contract";
+import type { Field, OrderSignoffResponse } from "@titlepipe/contract";
 import { type Pinned } from "./useReviewEditor";
 import { DecisionColumn } from "./DecisionColumn";
 import { DecisionDock } from "./DecisionDock";
@@ -11,7 +11,17 @@ import { type ReviewMode } from "./ReviewEditors";
 interface FieldsPaneProps {
   orderId: string;
   fields: readonly Field[];
-  signoffLines: readonly OrderSignoffLine[];
+  /*
+   * THE WHOLE SIGN-OFF, NOT ITS LINES. `ReportPane` renders the signature
+   * RECORD below the draft — signer, timestamp and all — and those live on the
+   * response, not on a line. Passing both the response and a lines array would
+   * be two props carrying one fact, which is how they drift; the two consumers
+   * that only need lines take `.lines` at the point of use.
+   *
+   * `undefined` while the query is in flight, and that is a THIRD state, not a
+   * falsy one: absent means "not known yet" and must never render as "unsigned".
+   */
+  signoff: OrderSignoffResponse | undefined;
   selected: Field;
   pinned: Pinned | null;
   mode: ReviewMode;
@@ -69,7 +79,7 @@ interface FieldsPaneProps {
 export function FieldsPane({
   orderId,
   fields,
-  signoffLines,
+  signoff,
   selected,
   pinned,
   mode,
@@ -125,12 +135,12 @@ export function FieldsPane({
         <QueueRest fields={fields} selectedPath={selected.path} onSelect={onSelect} />
       </div>
 
-      <FinalizeBar fields={fields} signoffLines={signoffLines} />
+      <FinalizeBar fields={fields} signoffLines={signoff?.lines ?? []} />
 
       <ReportPane
         orderId={orderId}
         fields={fields}
-        signoffLines={signoffLines}
+        signoff={signoff}
         selectedPath={selected.path}
         onSelect={onSelect}
       />
