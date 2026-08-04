@@ -1,3 +1,8 @@
+> **SUPERSEDED 2026-08-04 by [`BUILD-PLAN.md`](./BUILD-PLAN.md)** wherever the two
+> conflict. This file is retained as evidence and history — its reasoning is the
+> justification the build plan inherits, and its gate records are required
+> artifacts. Do not delete it. Read `BUILD-PLAN.md` first.
+
 # TitlePipe Backend — The Plan (mid-2026)
 
 *The definitive build plan: a small, typed Python stack where PostgreSQL owns correctness, workers do slow processing, native libraries do CPU-heavy work, and security boundaries are structural. Synthesis of the 32-candidate study (`REPORT.md`), the toolchain manifest (`TOOLCHAIN.md`), and two adversarial reviews — best of all, decisions resolved.*

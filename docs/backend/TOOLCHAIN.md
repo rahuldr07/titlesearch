@@ -1,3 +1,8 @@
+> **SUPERSEDED 2026-08-04 by [`BUILD-PLAN.md`](./BUILD-PLAN.md)** wherever the two
+> conflict. This file is retained as evidence and history — its reasoning is the
+> justification the build plan inherits, and its gate records are required
+> artifacts. Do not delete it. Read `BUILD-PLAN.md` first.
+
 # Backend Toolchain Manifest — TitlePipe (mid-2026)
 
 *The concrete library/tooling picks. Versions verified against PyPI ~2026-07-21; pin at install time.*

@@ -1,3 +1,8 @@
+> **SUPERSEDED 2026-08-04 by [`BUILD-PLAN.md`](./BUILD-PLAN.md)** wherever the two
+> conflict. This file is retained as evidence and history — its reasoning is the
+> justification the build plan inherits, and its gate records are required
+> artifacts. Do not delete it. Read `BUILD-PLAN.md` first.
+
 ---
 title: TitlePipe Backend Architecture Review
 date: 2026-07-21
