@@ -146,3 +146,56 @@ for (const { url, what } of CROWDED) {
     expect(crushed, `crushed boxes: ${JSON.stringify(crushed)}`).toEqual([]);
   });
 }
+
+/**
+ * THE PROFILE CARD — a command closes it, a toggle does not.
+ *
+ * Not a style preference: it is the difference between a panel that gets out of
+ * your way and one that sits over the screen it just sent you to. When the
+ * card's navigation entries were rewritten as plain buttons they stopped
+ * closing, and the panel's own backdrop then swallowed every subsequent click —
+ * the app looked frozen. `DropdownMenuItem` for anything that leaves, plain
+ * buttons for the theme and role toggles, which must survive being used.
+ *
+ * The toggle half matters just as much: `authz.spec` and `sidebar.spec` both
+ * click a role and then press Escape, which only means anything if the panel is
+ * still open to be dismissed.
+ */
+test("navigating from the profile card closes it; toggling inside it does not", async ({
+  page,
+}) => {
+  await page.goto("/queue");
+  await page.getByTestId("account-menu").click();
+  await expect(page.getByTestId("profile-card")).toBeVisible();
+
+  // A TOGGLE KEEPS IT OPEN — you flip a theme to look at it.
+  await page.getByTestId("theme-toggle").click();
+  await expect(page.getByTestId("profile-card")).toBeVisible();
+  // …and the toggle actually did something, so this is not passing on a no-op.
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "mocha");
+
+  // Escape still dismisses it — the menu keeps what a menu is good at.
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("profile-card")).toHaveCount(0);
+
+  // A COMMAND CLOSES IT, and lands where it said it would.
+  await page.getByTestId("account-menu").click();
+  await page.getByRole("menuitem", { name: "Audit" }).click();
+  await expect(page).toHaveURL(/\/audit$/);
+  await expect(page.getByTestId("profile-card")).toHaveCount(0);
+});
+
+/**
+ * THE PANEL SAYS WHOSE SESSION IT IS. The list it replaced opened on the word
+ * "Account" with no person on it — the name sat on the trigger you had just
+ * clicked and covered up, so the one surface whose subject is identity never
+ * named it. The role rides along because "acting as" is directly below, and a
+ * role switcher with no current role stated is a control with no origin.
+ */
+test("the profile card names the person and their role", async ({ page }) => {
+  await page.goto("/queue");
+  await page.getByTestId("account-menu").click();
+  const card = page.getByTestId("profile-card");
+  await expect(card).toContainText("L. Vance");
+  await expect(card).toContainText(/admin/i);
+});
