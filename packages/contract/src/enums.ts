@@ -17,15 +17,45 @@ export const FieldState = z.enum([
 export type FieldState = z.infer<typeof FieldState>;
 
 /**
- * The two NA states (CONTEXT §11). They render identically and route oppositely:
- * - NOT_PRESENT — structurally absent in this jurisdiction (San Diego BOOK/PAGE,
- *   Houston INST#). Correct. Never surfaced for review.
- * - PRESENT_UNREADABLE — the field exists on a degraded scan and could not be
- *   read. Honest answer. Always surfaced.
- * A null `value` with null `na_reason` means "not yet extracted", not NA.
- * Collapsing these states is the ghost-chasing bug — do not key anything off null.
+ * The FOUR no-value states. Ratified by the owner 2026-07-26 (docs/frontend/
+ * open-rulings.md Q1), widening this enum from the previous two.
+ *
+ * Three independent sources converged on four: CONTEXT §11 + HANDOFF §2 (which
+ * said outright that the taxonomy "needs a ruling"), the Python `models.py`
+ * trio, and the design in design-mock/ — which draws all four distinctly and
+ * carries a States Gallery card reading "They must never collapse into one
+ * grey dash."
+ *
+ * They are statements about the DOCUMENT, and they route differently:
+ *
+ * - NOT_PRESENT — structurally absent in this jurisdiction (San Diego
+ *   BOOK/PAGE, Houston INST#, Greene BUILDING). Correct, and NEVER surfaced
+ *   for review. Surfacing it sends reviewers chasing ghosts on every
+ *   California order.
+ * - NOT_FOUND — the field exists in this jurisdiction and was searched for,
+ *   and there is nothing of record (McIntosh CONS, Mecklenburg PLAINTIFF
+ *   ATTORNEY). Always surfaced.
+ * - NOT_STATED — the document is silent on it. Distinct from NOT_FOUND: the
+ *   search happened and returned a document; the document does not say.
+ * - PRESENT_UNREADABLE — it is on the page and could not be read (degraded
+ *   scan, microfilm density loss). The honest answer. Always surfaced, and
+ *   the only member that carries a page reference.
+ *
+ * A null `value` with a null `na_reason` is "NOT YET EXTRACTED" — a fifth,
+ * distinct render, and NOT a member here. It is a statement about the
+ * PIPELINE, not the document. Never collapse it into an NA state, and never
+ * key anything off `value === null`.
+ *
+ * Backend mapping note: Python `models.py` calls NOT_PRESENT
+ * `NOT_USED_IN_JURISDICTION`. Same concept; reconcile at the Gate 6 port
+ * rather than renaming here, which would churn the surviving screens.
  */
-export const NaReason = z.enum(["NOT_PRESENT", "PRESENT_UNREADABLE"]);
+export const NaReason = z.enum([
+  "NOT_PRESENT",
+  "NOT_FOUND",
+  "NOT_STATED",
+  "PRESENT_UNREADABLE",
+]);
 export type NaReason = z.infer<typeof NaReason>;
 
 /**

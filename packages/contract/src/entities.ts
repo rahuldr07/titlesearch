@@ -36,6 +36,28 @@ export const Order = z.object({
   jurisdiction: z.string(),
   state: z.string(),
   county: z.string(),
+  /**
+   * ⚠ UI-DRIVEN REQUEST — AWAITING RATIFICATION (2026-07-30, fidelity Wave 2).
+   * READ FIELDS ONLY: what was ordered, over what span, in how many pages.
+   * Nothing here lets a client choose a product, change a period or re-count a
+   * package — the server resolves all three from the client's product config.
+   *
+   * The delivered screen printed all three as private constants because no
+   * wire carried them, and the app's fixtures said "38 pages" where the design
+   * says 64 — a number nothing validated because nothing owned it.
+   *
+   * Nullable: an order that failed validation has no resolved product, and a
+   * package nobody could read has no page count. `null` is that statement. `0`
+   * would be a count, and a count asserts somebody looked.
+   *
+   * `period_label`, not `period`, matching `OrderSignoffResponse.period_label`
+   * and `OrderCompletenessResponse.period_label` — it is a rendered label the
+   * server composes from the product's derivation rule, never a machine-
+   * readable span the client could recompute a date from.
+   */
+  product: z.string().nullable(),
+  period_label: z.string().nullable(),
+  pages: z.number().int().nullable(),
   status: OrderStatus,
   arrived_at: z.string(),
   accepted_at: z.string().nullable(),
@@ -83,6 +105,48 @@ export const Field = z.object({
   approved_at: z.string().nullable(),
   /** All engines' pre-merge values; review UI shows A and B side by side. */
   readings: z.array(FieldReading).optional(),
+  /**
+   * Set when a reviewer suppressed this row with a reason — rulebook R13,
+   * "canceled/satisfied/vacated/released/duplicates suppress with reason".
+   *
+   * ORTHOGONAL TO `state`, not a member of it. A judgment hit that is not
+   * against our owner may already have been confirmed or corrected before
+   * anybody noticed the party was wrong; folding suppression into the state
+   * machine would lose that history and force every consumer to re-handle an
+   * enum it has already exhausted.
+   *
+   * The reason is required at the endpoint, and it is the whole point: an
+   * excluded row is GONE from the delivered sheet, so the record of why is the
+   * only thing anybody can audit afterwards. A silent suppression is
+   * indistinguishable from a miss.
+   */
+  excluded_reason: z.string().nullable().optional(),
+  /**
+   * ⚠ UI-DRIVEN REQUEST — AWAITING RATIFICATION (2026-07-30, fidelity Wave 2).
+   * READ FIELDS ONLY, and the only two on this schema written for a person
+   * rather than for a machine.
+   *
+   * `asking` is the QUESTION the decision card leads with — "Is the vested
+   * owner MARIA L. ESTRADA or MARIA I. ESTRADA?". `why` is why it is being
+   * asked — "Two independent readers disagreed on the middle initial". The
+   * design carries both on every decision (`TitlePipe.dc.html:2386-2392`,
+   * rendered at `:874`); the review screen shows a field path and two values
+   * and leaves the reviewer to reconstruct them, which is work the pipeline is
+   * supposed to have already done.
+   *
+   * SERVER-AUTHORED, and that is the constraint rather than a convenience.
+   * Composing either in the browser would be the UI narrating why the pipeline
+   * routed something — a claim only the router can make, and one that would
+   * drift from the router the moment either changed.
+   *
+   * Optional AND nullable, following `excluded_reason` above: ABSENT on a field
+   * that never went to review, `null` on one that did and has no authored
+   * question yet. Under `exactOptionalPropertyTypes` a reader gets
+   * `string | null | undefined` and must handle all three, because they are
+   * three different statements.
+   */
+  asking: z.string().nullable().optional(),
+  why: z.string().nullable().optional(),
 });
 export type Field = z.infer<typeof Field>;
 

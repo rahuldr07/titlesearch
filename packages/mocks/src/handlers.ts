@@ -1,15 +1,20 @@
 import { http, HttpResponse } from "msw";
+import { workspaceHandlers } from "./workspace.js";
 import {
   BlindEntriesRequest,
   ConfirmFieldRequest,
   CorrectFieldRequest,
   CreateBugRequest,
   CreateComplaintRequest,
+  NaReason,
   EngineRoutingRequest,
   EscalateFieldRequest,
+  ExcludeFieldRequest,
+  GoldenAffirmRequest,
   GoldenCorrectionRequest,
   PassOrderRequest,
   ReconciliationRulingRequest,
+  ResolveComplaintRequest,
   ResolveEscalationRequest,
   canDo,
   isRole,
@@ -20,8 +25,12 @@ import {
   type Escalation,
   type Reconciliation,
   type Field,
+  type OrderContextResponse,
   type OrderFieldsResponse,
   type PassOrderResponse,
+  type QueueBandId,
+  type QueueBandOrder,
+  type QueueBandsResponse,
   type QueueNextResponse,
   type Rule,
 } from "@titlepipe/contract";
@@ -31,10 +40,14 @@ import {
   demoEscalations,
   demoFields,
   demoGolden,
-  demoOrder,
-  demoOrder2,
+  demoOrderEntity,
+  demoOrderRow,
+  demoOrders,
+  demoPages,
+  demoQueue,
   demoRules,
   demoTimelines,
+  type DemoOrderRow,
 } from "./data.js";
 
 /**
@@ -53,9 +66,127 @@ import {
  * The queue is SERVER-ordered (no cherry-pick). A recorded pass advances the
  * head, exactly like the real queue serving the next order. Pass counts and
  * 4th-pass auto-escalation stay server-side — nothing about them is exposed.
+ *
+ * PROJECTED FROM THE ONE SHARED ORDER SET, never restated. The order of service
+ * is `demoQueue`'s (`queue_position` ascending), which is data on the row rather
+ * than an accident of this array's literal order — this file used to name two
+ * singletons and the lifecycle board named its own, and the two disagreed about
+ * what state 4176034-1 was in.
  */
-const queue = [demoOrder, demoOrder2];
+const queue = demoQueue.map(demoOrderEntity);
 let queueHead = 0;
+
+/**
+ * The band headings and their sub-lines, the 2026-07-28 export's own
+ * (`TitlePipe.dc.html:219-220`, `:268-269`, `:298-299`, `:319-320`). Served
+ * rather than held in the browser for the same reason `LifecycleStamp.label`
+ * is: a client-side `Record<QueueBandId, string>` is a second copy of product
+ * copy, and a second copy drifts silently from the first.
+ *
+ * The export's sub-line interpolates the count into the sentence
+ * (`{{ queueHeldCount }} stopped · needs someone`). It does not here: `count`
+ * is its own served field, and a number baked into a string is a number no
+ * consumer can read without parsing prose.
+ */
+const BAND_COPY: Record<QueueBandId, { title: string; note: string }> = {
+  mine: { title: "Mine", note: "in progress" },
+  held: { title: "Held", note: "stopped · needs someone" },
+  in_flight: { title: "In flight", note: "processing · senior · ops view" },
+  delivered: { title: "Recently delivered", note: "get back to a recent one" },
+};
+
+/**
+ * A row as the band lists it. Deliberately NARROWER than the order: no claim
+ * token, no assignment, no priority, no ordering the caller can influence.
+ * `/api/queue/next` stays the only hand-over, so §4.4's "no queue
+ * cherry-picking" holds by construction rather than by the screen's restraint.
+ */
+function bandRow(row: DemoOrderRow): QueueBandOrder {
+  return {
+    id: row.id,
+    order_ref: row.order_ref,
+    addr: row.addr,
+    place: row.place,
+    waited: row.waited,
+    waiting_on: row.waiting_on,
+    state_label: row.state_label,
+    mine: row.mine,
+  };
+}
+
+/**
+ * The role gate is the SHOP'S, not the screen's: a reviewer's Held list is
+ * narrowed to their own orders and the In flight band is absent entirely —
+ * absent, not dimmed, because an absent band and an empty band are different
+ * statements and only the server can tell them apart.
+ *
+ * `count` is the census of the whole band and stays what it is when the row
+ * list narrows. That is the whole reason it is served rather than derived: a
+ * count that shrank with your permissions would read as work disappearing
+ * rather than as work you are not allowed to look at. It is a count of what is
+ * left and never a rate — there is no per-hour, per-person or per-period figure
+ * in this shape and §4.5 means there never may be.
+ */
+export function queueBandsFor(role: string): QueueBandsResponse {
+  const senior = role !== "reviewer";
+  const ids: QueueBandId[] = senior
+    ? ["mine", "held", "in_flight", "delivered"]
+    : ["mine", "held", "delivered"];
+  return {
+    bands: ids.map((id) => {
+      const all = demoOrders.filter((r) => r.band === id);
+      const visible = id === "held" && !senior ? all.filter((r) => r.mine) : all;
+      return {
+        id,
+        ...BAND_COPY[id],
+        count: all.length,
+        orders: visible.map(bandRow),
+      };
+    }),
+  };
+}
+
+/**
+ * The order-scoped lookup every screen below `/orders/{id}` needed and no
+ * endpoint offered: the human reference for an order you hold only the URL id
+ * of, plus what was ordered, over what span, in how many pages, and the
+ * SERVER'S WORD for where it stands.
+ *
+ * The stamp arrives already decided. The export computes that word from a
+ * five-branch `if/else` in the browser (`TitlePipe.dc.html:2888-2893`); that is
+ * a client-side lifecycle state machine and hard rule 3 puts state machines on
+ * the server.
+ *
+ * An unknown order THROWS rather than returning a placeholder — a context
+ * response that quietly names nothing is how a screen ends up printing a ref
+ * that belongs to no order. The route turns that into a 404.
+ */
+export function orderContextFor(orderId: string): OrderContextResponse {
+  const row = demoOrderRow(orderId);
+  if (row === undefined) throw new Error(`no such order: ${orderId}`);
+  return {
+    order_id: row.id,
+    order_ref: row.order_ref,
+    product: row.product,
+    period_label: row.period,
+    pages: row.pages,
+    stamp: { label: row.stamp_label, tone: row.stamp_tone },
+  };
+}
+
+/**
+ * Source pages. Text, not rasters — the review screen shows WHERE a value came
+ * from, and the recorded line coordinates index into this text.
+ */
+const pagesHandler = http.get("/api/orders/:id/pages", ({ params }) => {
+  const id = String(params["id"]);
+  const doc = demoPages[id];
+  return HttpResponse.json({
+    order_id: id,
+    total_pages: doc?.total ?? 0,
+    pages: doc?.pages ?? [],
+  });
+});
 
 const timelineHandler = http.get("/api/orders/:id/timeline", ({ params }) => {
   const id = String(params["id"]);
@@ -71,6 +202,40 @@ const fieldStore: Field[] = demoFields.map((f) => ({
   rule_refs: [...f.rule_refs],
   readings: f.readings?.map((r) => ({ ...r })),
 }));
+
+/**
+ * THE ONE ORDER THIS FIXTURE DESCRIBES. `data.ts` states it plainly — "the live
+ * review order — the package `demoFields` and `demoPages` describe" — and every
+ * row in `fieldStore` carries it as `order_id`. Read from the data rather than
+ * repeated as a literal, so the two cannot part company.
+ */
+const FIELDS_ORDER_ID = demoFields[0]?.order_id ?? "";
+
+/*
+ * FIXTURE CONFLICT, UNRESOLVED — FOR THE OWNER, NOT FOR THIS FILE TO GUESS.
+ *
+ * `pipelineFor` states the pipeline's own rule in words: the `extract` stage is
+ * "Held — an incomplete package never reaches extraction", and it is `waiting`
+ * for any order that has not passed the gate (`GATE_PASSED_STAGES` in
+ * workspace.ts is machine/review/escalated/delivered).
+ *
+ * ord_demo_1 — the order this whole field fixture describes, and the one Review
+ * opens on — sits at `stage: "gate"` with the stamp "Package incomplete". By the
+ * rule above it has NOT reached extraction, yet this endpoint serves 21
+ * extracted values with page-line provenance for it. Two server answers about
+ * one order contradict each other, which is precisely the class of bug
+ * `apps/web-v2/src/app/mockOrderFixtures.test.ts` was written to catch.
+ *
+ * There are two ways out and they are not equivalent:
+ *   (a) ord_demo_1's stage is wrong — it is the order under review, so `review`,
+ *       and the "Package incomplete" hero belongs to a different queue row; or
+ *   (b) extraction can precede the gate, and `pipelineFor`'s wording is wrong.
+ *
+ * (a) looks right and would ripple through the queue bands, the gate banner and
+ * the completeness screen, so it is a fixture decision rather than a fix. NOT
+ * TAKEN HERE: choosing between them is a pipeline ruling, and inventing one to
+ * make a screen consistent is the exact move hard rule 1 forbids.
+ */
 
 const escalationStore: Escalation[] = demoEscalations.map((e) => ({
   ...e,
@@ -256,7 +421,9 @@ const REQUIRED_ORDER_FIELDS = [
 ] as const;
 
 export const handlers = [
+  ...workspaceHandlers,
   timelineHandler,
+  pagesHandler,
   /**
    * Ingest: order create + package upload (multipart). An incomplete package
    * is refused AT THE DOOR with the missing fields named — never silently.
@@ -303,6 +470,12 @@ export const handlers = [
       jurisdiction: String(form.get("jurisdiction")),
       state: String(form.get("state")),
       county: String(form.get("county")),
+      // A freshly ingested package has none of these resolved yet, and `null`
+      // is that statement — `0` pages would assert somebody counted. Required
+      // on `Order` since 2026-07-30; see the ratification note in the contract.
+      product: null,
+      period_label: null,
+      pages: null,
       status: "ingested",
       arrived_at: new Date().toISOString(),
       accepted_at: null,
@@ -324,6 +497,26 @@ export const handlers = [
     return HttpResponse.json(body);
   }),
 
+  /**
+   * READ ONLY. No band row carries a way to take the work — see `bandRow`.
+   * The x-mock-role header is the mock's JWT role claim, the same convention
+   * `guard` reads below; a missing header is the dev-default admin session.
+   */
+  http.get("/api/queue/bands", ({ request }) => {
+    const raw = request.headers.get("x-mock-role");
+    return HttpResponse.json(queueBandsFor(raw === null ? "admin" : raw));
+  }),
+
+  /**
+   * The order-scoped read the top strip needs. An id that names no order is a
+   * 404 — never an invented context. See `orderContextFor`.
+   */
+  http.get("/api/orders/:id/context", ({ params }) => {
+    const row = demoOrderRow(String(params["id"]));
+    if (row === undefined) return err("no such order", 404);
+    return HttpResponse.json(orderContextFor(row.id));
+  }),
+
   http.post("/api/orders/:id/pass", async ({ request }) => {
     const denied = guard(request, "order.pass");
     if (denied) return denied;
@@ -337,10 +530,48 @@ export const handlers = [
     return HttpResponse.json(body);
   }),
 
+  /*
+   * THIS USED TO ANSWER FOR ANY ORDER WITH ONE ORDER'S FIELDS. It echoed the
+   * requested id into `order_id` and then returned `fieldStore` — ord_demo_1's
+   * 21 values, its 2 auto-confirmed and its 6 needing review — whoever asked.
+   * The rail made it visible: `/questions` resolves to ord_demo_4, an order at
+   * INTAKE, and its Review stage drew a badge of "6" counting another order's
+   * unanswered decisions.
+   *
+   * An order with no field fixture now gets an EMPTY set and a zero census, and
+   * the distinction between those two answers is the point. Empty says "this
+   * server holds no extracted values for that order" — which is true, and which
+   * the rail renders as no badge at all, the same thing it draws off an order
+   * screen. The old behaviour said something false about a real order.
+   *
+   * WHAT IS *NOT* DECIDED HERE, deliberately: which orders SHOULD have fields.
+   * That is a pipeline rule, and this file does not get to invent one from what
+   * a screen wants to show (hard rule 1). It is also not currently self-
+   * consistent — see the FIXTURE CONFLICT note below.
+   */
   http.get("/api/orders/:id/fields", ({ params }) => {
+    const id = String(params["id"]);
+    const fields = id === FIELDS_ORDER_ID ? fieldStore : [];
     const body: OrderFieldsResponse = {
-      order_id: String(params["id"]),
-      fields: fieldStore,
+      order_id: id,
+      fields,
+      // The census is the SERVER'S, and this is where it is decided. It used to
+      // be computed in `OrderCounts.tsx` — including `no_source`, which is a
+      // ruling on provenance the browser has no standing to make (hard rule 3).
+      // It is written out here rather than tallied so that this file states the
+      // definition the real backend will have to match.
+      census: {
+        fields: fields.length,
+        auto_confirmed: fields.filter((f) => f.state === "auto_confirmed").length,
+        needs_review: fields.filter((f) => f.state === "needs_review").length,
+        no_source: fields.filter(
+          (f) =>
+            f.value !== null &&
+            f.source_doc_id === null &&
+            f.source_page === null &&
+            (f.readings ?? []).length === 0,
+        ).length,
+      },
     };
     return HttpResponse.json(body);
   }),
@@ -384,11 +615,47 @@ export const handlers = [
     if (!field) return err("no such field", 404);
     field.state = "corrected";
     field.value = parsed.data.value;
-    field.na_reason =
-      parsed.data.na_reason === "NOT_PRESENT" ||
-      parsed.data.na_reason === "PRESENT_UNREADABLE"
-        ? parsed.data.na_reason
-        : null;
+    // Validate against the contract enum rather than an inline list. The list
+    // was the old two members, so widening NaReason to four (ratified Q1)
+    // silently dropped NOT_FOUND and NOT_STATED to null here — a reviewer's
+    // correction to "document silent" would have been recorded as no NA reason
+    // at all. Reading the enum means the next widening cannot repeat it.
+    const na = NaReason.safeParse(parsed.data.na_reason);
+    field.na_reason = na.success ? na.data : null;
+    field.approved_by = "L. Vance";
+    field.approved_at = new Date().toISOString();
+    return HttpResponse.json(ok);
+  }),
+
+  /**
+   * Suppress with reason — R13. Terminal, like correct and escalate.
+   *
+   * R13 IS ENFORCED HERE, NOT ONLY WHERE THE BUTTON IS DRAWN. Suppression is
+   * offered where party identity IS the question — `judgments.*` — and the UI
+   * gated only the control: the `x` chord posted an exclude on `owner.zip` and
+   * this handler returned 200. A rule the client alone enforces is not
+   * enforced, and an excluded row is GONE (`conflicts.md` C18), so the one
+   * write that cannot be argued with afterwards was the one with no server
+   * check at all. The message is written to be read by a person, because it
+   * renders verbatim in the review screen's server note.
+   */
+  http.post("/api/fields/:id/exclude", async ({ params, request }) => {
+    const denied = guard(request, "field.correct");
+    if (denied) return denied;
+    const parsed = ExcludeFieldRequest.safeParse(await request.json());
+    if (!parsed.success) return err(parsed.error.message, 422);
+    const field = fieldStore.find((f) => f.id === params["id"]);
+    if (!field) return err("no such field", 404);
+    if (!field.path.startsWith("judgments.")) {
+      return err(
+        `exclude applies only to judgment party rows (R13); ${field.path} is not one`,
+        422,
+      );
+    }
+    if (field.state === "corrected" || field.state === "escalated") {
+      return err(`field is terminal (${field.state})`, 409);
+    }
+    field.excluded_reason = parsed.data.reason;
     field.approved_by = "L. Vance";
     field.approved_at = new Date().toISOString();
     return HttpResponse.json(ok);
@@ -754,6 +1021,50 @@ export const handlers = [
     return HttpResponse.json(ok, { status: 201 });
   }),
 
+  /**
+   * Complaint resolution — REFUSED without a rule (the complaint loop
+   * terminates in a rulebook entry, principle 3). A drafted rule lands
+   * PENDING (origin: complaint) and cannot affect the pipeline until an
+   * engineer confirms it. The golden-case offer is optional. Two states
+   * only: recorded → resolved; a resolved complaint 409s a second attempt.
+   */
+  http.post("/api/complaints/:id/resolve", async ({ params, request }) => {
+    const denied = guard(request, "complaint.resolve");
+    if (denied) return denied;
+    const parsed = ResolveComplaintRequest.safeParse(await request.json());
+    if (!parsed.success) return err(parsed.error.message, 422);
+    const c = complaintStore.find((x) => x.id === params["id"]);
+    if (!c) return err("no such complaint", 404);
+    if (c.resolution !== null) return err("already resolved", 409);
+    let ruleId: string;
+    if ("rule_id" in parsed.data.rule) {
+      ruleId = parsed.data.rule.rule_id;
+      if (!ruleStore.some((r) => r.id === ruleId)) {
+        return err("cited rule does not exist", 422);
+      }
+    } else {
+      const draft = parsed.data.rule.draft;
+      draftCount += 1;
+      const rule: Rule = {
+        id: `rule_draft_${draftCount}`,
+        code: `DRAFT-CMP-${draftCount}`,
+        text: draft.text,
+        origin: "complaint",
+        status: "pending",
+        jurisdiction_scope: draft.jurisdiction_scope ?? null,
+        version: 1,
+        confirmed_by: null,
+        source_doc_ref: null,
+      };
+      ruleStore.push(rule);
+      ruleId = rule.id;
+    }
+    c.resolution = parsed.data.resolution;
+    c.rule_id = ruleId;
+    c.golden_offer_accepted = parsed.data.golden_offer_accepted ?? null;
+    return HttpResponse.json(ok);
+  }),
+
   /** Section × tag matrix vs the golden set. No aggregate number exists here. */
   http.get("/api/bench/results", () =>
     HttpResponse.json({
@@ -994,8 +1305,11 @@ export const handlers = [
 
   /**
    * Golden correction — permanently logged, on the record. Refused without
-   * source_citation + reason + signed_by (contract-enforced). Tag upgrades
-   * to `ruled`; the prior value survives in corrected_from forever.
+   * source_citation + reason (contract-enforced). Tag upgrades to `ruled`; the
+   * prior value survives in corrected_from forever. The signer is derived from
+   * the authenticated identity (x-mock-actor stands in for the session/JWT
+   * identity claim), NEVER a client-supplied body field — a browser must not
+   * decide who signed a change to ground truth.
    */
   http.post("/api/golden/corrections", async ({ request }) => {
     const denied = guard(request, "golden.correct");
@@ -1008,7 +1322,48 @@ export const handlers = [
     gf.value = parsed.data.corrected_value;
     gf.tag = "ruled";
     gf.source_citation = parsed.data.source_citation;
-    gf.corrected_by = parsed.data.signed_by;
+    gf.corrected_by = request.headers.get("x-mock-actor") ?? "unknown";
+    gf.corrected_at = new Date().toISOString();
+    gf.correction_reason = parsed.data.reason;
+    return HttpResponse.json(ok, { status: 201 });
+  }),
+
+  /**
+   * Confirm seed — the seed is right; the model failure is real. VALUE
+   * unchanged (corrected_from stays null — nothing changed); tag upgrades
+   * delivered_report → `ruled` (now human-verified). Signed + reasoned,
+   * permanent. One action per field: a field already acted on 409s.
+   */
+  http.post("/api/golden/:id/confirm", async ({ params, request }) => {
+    const denied = guard(request, "golden.confirm");
+    if (denied) return denied;
+    const parsed = GoldenAffirmRequest.safeParse(await request.json());
+    if (!parsed.success) return err(parsed.error.message, 422);
+    const gf = goldenStore.find((g) => g.id === params["id"]);
+    if (!gf) return err("no such golden field", 404);
+    if (gf.corrected_at !== null) return err("seed already resolved", 409);
+    gf.tag = "ruled";
+    gf.corrected_by = request.headers.get("x-mock-actor") ?? "unknown";
+    gf.corrected_at = new Date().toISOString();
+    gf.correction_reason = parsed.data.reason;
+    return HttpResponse.json(ok, { status: 201 });
+  }),
+
+  /**
+   * Demote seed to suspect — the document is ambiguous; neither value can be
+   * confirmed (a diagnosis, PRD §12). VALUE unchanged; tag → `suspect`.
+   * Signed (server-derived actor) + reasoned, permanent. One action per field.
+   */
+  http.post("/api/golden/:id/demote", async ({ params, request }) => {
+    const denied = guard(request, "golden.demote");
+    if (denied) return denied;
+    const parsed = GoldenAffirmRequest.safeParse(await request.json());
+    if (!parsed.success) return err(parsed.error.message, 422);
+    const gf = goldenStore.find((g) => g.id === params["id"]);
+    if (!gf) return err("no such golden field", 404);
+    if (gf.corrected_at !== null) return err("seed already resolved", 409);
+    gf.tag = "suspect";
+    gf.corrected_by = request.headers.get("x-mock-actor") ?? "unknown";
     gf.corrected_at = new Date().toISOString();
     gf.correction_reason = parsed.data.reason;
     return HttpResponse.json(ok, { status: 201 });

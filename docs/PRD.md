@@ -284,7 +284,7 @@ FastAPI (port; 155 tests green throughout) · Postgres managed (Render/Neon) + R
 7. Two-person team overload → phases sized; queue+managed-everything; nothing exotic.
 
 ## 19. Open items
-Session protocol doc (P0) · R15 audit (P0) · Shape B (P2) · tenant_id/RLS (P1) · blind fifty execution (P3) · SOC 2 (deferred to client demand) · client portal (separate product).
+Session protocol doc (P0) · Shape B (P2) · tenant_id/RLS (P1) · blind fifty execution (P3) · SOC 2 (deferred to client demand) · client portal (separate product). R15 audit + v14 completed in Gate 0.
 
 ---
 

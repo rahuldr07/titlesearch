@@ -19,6 +19,13 @@ venv/
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
+# uv.lock IS tracked — one committed lock per deployable is what makes a
+# frozen install reproducible. Only build output and caches are ignored.
+*.egg-info/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
 
 # node
 node_modules/
@@ -33,3 +40,17 @@ playwright-report/
 # local artifacts
 *.log
 .DS_Store
+
+# loose dev screenshots at the repo root (apps/ and docs/ assets are unaffected).
+# Deliberate design/QA captures belong in docs/archive/, not the working root.
+/*.png
+# side-by-side output from apps/web-v2/compare.mjs
+/shots/
+
+# pdfjs worker copied from node_modules into public/ by scripts/copy-pdf-worker.mjs
+# on every dev/build — a version-synced build artifact, not source.
+apps/web/public/pdf.worker.min.mjs
+
+# Fidelity captures. compare.mjs writes these; they are evidence for a review,
+# never an artefact of the build.
+/shots*/

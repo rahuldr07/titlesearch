@@ -72,9 +72,109 @@ export const QueueNextResponse = z.object({
 });
 export type QueueNextResponse = z.infer<typeof QueueNextResponse>;
 
+/**
+ * ⚠ UI-DRIVEN REQUEST — AWAITING RATIFICATION (2026-07-30, fidelity Wave 2).
+ * GET /api/queue/bands — READ SHAPES ONLY, and deliberately NOT a browse
+ * endpoint. None of these rows carries a way to TAKE the work: there is no
+ * claim token, no assignment field, no ordering the caller can influence.
+ * `/api/queue/next` remains the only hand-over, so §4.4's "no queue
+ * cherry-picking" holds by construction rather than by the screen's restraint.
+ *
+ * Mine is work already assigned to the caller; Held is work that stopped; In
+ * flight is a senior/ops read; Recently delivered is history.
+ *
+ * `count` is the SERVER'S census and is NOT `orders.length`. The row list is
+ * scoped to what the caller may open; the census is not. A count that shrank
+ * with your permissions would read as work disappearing rather than as work
+ * you are not allowed to look at — the same rule `LifecycleStage.count`
+ * already states, and the reason neither may be re-derived in a browser
+ * (hard rule 3). It is a count of what is left, never a rate: there is no
+ * per-hour, per-person or per-period figure anywhere in this shape and §4.5
+ * means there never may be.
+ *
+ * `title` and `note` are the server's words for the same reason
+ * `LifecycleStamp.label` is: a client-side `Record<QueueBandId, string>` is a
+ * second copy of product copy that drifts silently from the first.
+ *
+ * Whether the Mine band may be DRAWN at all is open ruling Q11 — it sits
+ * against "exactly one order, no list". This shape does not decide that; it
+ * makes the data expressible so the ruling can be about the screen.
+ */
+export const QueueBandId = z.enum(["mine", "held", "in_flight", "delivered"]);
+export type QueueBandId = z.infer<typeof QueueBandId>;
+
+export const QueueBandOrder = z.object({
+  id: z.string(),
+  order_ref: z.string(),
+  addr: z.string(),
+  place: z.string(),
+  /** How long it has sat. A duration already elapsed, never a countdown or a rate. */
+  waited: z.string().nullable(),
+  waiting_on: z.string(),
+  /** The server's word for why it stopped. Null when it has not. Never an enum. */
+  state_label: z.string().nullable(),
+  mine: z.boolean(),
+});
+export type QueueBandOrder = z.infer<typeof QueueBandOrder>;
+
+export const QueueBand = z.object({
+  id: QueueBandId,
+  title: z.string(),
+  note: z.string(),
+  /** SERVER-SUPPLIED. Never `orders.length` — see the block comment above. */
+  count: z.number().int(),
+  orders: z.array(QueueBandOrder),
+});
+export type QueueBand = z.infer<typeof QueueBand>;
+
+/**
+ * Which bands appear, and in what order, is the SERVER'S answer to "what may
+ * this caller see" — a reviewer is served no `in_flight` band at all rather
+ * than an empty or dimmed one. An absent band and an empty band are different
+ * statements, and only the server can tell them apart.
+ */
+export const QueueBandsResponse = z.object({ bands: z.array(QueueBand) });
+export type QueueBandsResponse = z.infer<typeof QueueBandsResponse>;
+
+/**
+ * ⚠ UI-DRIVEN REQUEST — AWAITING RATIFICATION (2026-07-31, fidelity Wave 2).
+ * READ SHAPE ONLY: no endpoint accepts these, and none may be written.
+ *
+ * The four figures the order strip prints, DECIDED ON THE SERVER. They were
+ * being computed in the browser from the `fields` array, and `no_source` was
+ * the reason this shape had to exist: the strip filtered for
+ * `value !== null && source_doc_id === null && source_page === null &&
+ * readings.length === 0` and printed the result as a headline number. That is
+ * the browser ruling on provenance — a server judgement (hard rule 3) and one
+ * the screen could not cite (principle 6). A count whose definition lives in a
+ * component is a count nobody can audit against the pipeline.
+ *
+ * NONE of these is `fields.length` or a tally of `fields[].state`, for the same
+ * reason `QueueBand.count` and `LifecycleStage.count` are not `orders.length`:
+ * the array is scoped to what the caller may see, the census is not. A total
+ * that shrank with your permissions reads as work vanishing.
+ *
+ * A CENSUS, NEVER A RATE (§4.5) — how many sit here now. There is no per-hour,
+ * per-person or per-period figure in this shape and there never may be.
+ */
+export const OrderCensus = z.object({
+  fields: z.number().int(),
+  auto_confirmed: z.number().int(),
+  needs_review: z.number().int(),
+  /** Values the pipeline produced with no document, page or reading behind them. */
+  no_source: z.number().int(),
+});
+export type OrderCensus = z.infer<typeof OrderCensus>;
+
 export const OrderFieldsResponse = z.object({
   order_id: z.string(),
   fields: z.array(Field),
+  /**
+   * OPTIONAL, and absent is not zero — it is "the server did not say". The
+   * strip must print the silence rather than fill it in, which is the whole
+   * point of moving these numbers off the client.
+   */
+  census: OrderCensus.optional(),
 });
 export type OrderFieldsResponse = z.infer<typeof OrderFieldsResponse>;
 
@@ -151,15 +251,38 @@ export type ResolveEscalationRequest = z.infer<typeof ResolveEscalationRequest>;
 
 // ---- golden ----------------------------------------------------------------
 
-/** POST /api/golden/corrections — source + reason + signature, permanently logged. */
+/**
+ * POST /api/golden/corrections — source + reason, permanently logged and
+ * signed. The signer is derived server-side from the authenticated session,
+ * never declared by the client — a browser must not decide who signed a change
+ * to ground truth (that would be forgeable). The request carries the evidence
+ * (value + citation + reason); the server stamps the actor.
+ */
 export const GoldenCorrectionRequest = z.object({
   golden_field_id: z.string(),
   corrected_value: z.string().nullable(),
   source_citation: z.string().min(1),
   reason: z.string().min(1),
-  signed_by: z.string().min(1),
 });
 export type GoldenCorrectionRequest = z.infer<typeof GoldenCorrectionRequest>;
+
+/**
+ * The other two seed actions (SeedCorrection §4.9 — "three actions, nothing
+ * else"). Both leave the VALUE untouched and both are permanent, signed, and
+ * reasoned — this is the one screen where ground truth changes:
+ *   POST /api/golden/{id}/confirm — the seed is right; the model failure is
+ *     real. Tag upgrades to `ruled` (now human-verified, not merely typed).
+ *   POST /api/golden/{id}/demote  — the document is ambiguous; neither value
+ *     can be confirmed. Tag → `suspect` (a diagnosis, PRD §12).
+ * The field id travels in the URL, not the body. Refused without a reason;
+ * the action is still signed, but by the server-derived session identity (an
+ * unsigned change to ground truth is the failure the corpus exists to prevent,
+ * and a client-declared signer would be forgeable).
+ */
+export const GoldenAffirmRequest = z.object({
+  reason: z.string().min(1),
+});
+export type GoldenAffirmRequest = z.infer<typeof GoldenAffirmRequest>;
 
 // ---- blind fifty -----------------------------------------------------------
 
@@ -391,6 +514,31 @@ export const CreateComplaintRequest = z.object({
 });
 export type CreateComplaintRequest = z.infer<typeof CreateComplaintRequest>;
 
+/**
+ * POST /api/complaints/{id}/resolve — the complaint loop terminates in a rule
+ * (principle 3: escalations, reconciliation, AND complaints all produce a
+ * rulebook entry; PRD §12: resolution = fix + rule + free golden-case offer).
+ * REFUSED without a rule, exactly like escalation resolution — cite an
+ * existing rule or draft one, which lands PENDING (origin: complaint) and
+ * cannot affect the pipeline until an engineer confirms it. The golden-case
+ * offer is optional: a complaint that becomes a permanent test case is the
+ * strongest fix, but not every one earns it.
+ */
+export const ResolveComplaintRequest = z.object({
+  resolution: z.string().min(1),
+  rule: z.union([
+    z.object({ rule_id: z.string() }),
+    z.object({
+      draft: z.object({
+        text: z.string().min(1),
+        jurisdiction_scope: z.string().nullable().optional(),
+      }),
+    }),
+  ]),
+  golden_offer_accepted: z.boolean().optional(),
+});
+export type ResolveComplaintRequest = z.infer<typeof ResolveComplaintRequest>;
+
 // ---- audit -----------------------------------------------------------------
 
 /**
@@ -480,3 +628,45 @@ export const DeliveriesResponse = z.object({
 export const ComplaintsResponse = z.object({ complaints: z.array(Complaint) });
 export const ReportsResponse = z.object({ reports: z.array(Report) });
 export const BugsResponse = z.object({ bugs: z.array(Bug) });
+
+// ---- source pages ----------------------------------------------------------
+/**
+ * GET /api/orders/{id}/pages — the package's pages, as TEXT.
+ *
+ * A page carries the lines that were read off it, not a raster: the review
+ * screen needs to show WHERE a value came from, and the recorded line
+ * coordinates index into this text. `read_in_full` is server-supplied — most
+ * pages of a county package carry no field the report needs, and a page nobody
+ * typed is normal rather than an error.
+ */
+export const SourcePage = z.object({
+  n: z.number().int(),
+  /** Server's classification. A page not read in full is normal, not a gap. */
+  read_in_full: z.boolean(),
+  /** What the page is — "WARRANTY DEED", "TREASURER", used as the header. */
+  kind: z.string(),
+  lines: z.array(z.string()),
+  /** Scan quality finding. Drives the degraded render; never inferred client-side. */
+  degraded: z.boolean(),
+});
+export type SourcePage = z.infer<typeof SourcePage>;
+
+export const OrderPagesResponse = z.object({
+  order_id: z.string(),
+  total_pages: z.number().int(),
+  pages: z.array(SourcePage),
+});
+export type OrderPagesResponse = z.infer<typeof OrderPagesResponse>;
+
+/**
+ * POST /api/fields/{id}/exclude — suppress a row WITH its reason (R13).
+ *
+ * The reason is required for the same argument as a correction's: a suppressed
+ * row is invisible on the delivered sheet, so the record of why it went is the
+ * only thing anybody can audit later. A silent suppression is indistinguishable
+ * from a miss.
+ */
+export const ExcludeFieldRequest = z.object({
+  reason: z.string().min(1),
+});
+export type ExcludeFieldRequest = z.infer<typeof ExcludeFieldRequest>;
