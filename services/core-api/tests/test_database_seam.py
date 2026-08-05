@@ -14,6 +14,15 @@ and it would keep doing so for as long as anyone believed it.
 
 Nothing here is skipped. If Docker is unavailable these tests FAIL.
 
+TWO TESTS BELOW WERE INVERTED BY TASK 2, which each of them said would happen.
+`roles.sql` now creates five roles, so "the catalog holds none of them" became
+"it holds exactly these" and "these DSNs cannot connect" became "they connect as
+themselves". Both now request `roles_applied`, which is what makes this file's
+result the same whether it is collected before or after `test_roles.py` —
+without it the suite was green only because `test_database_seam` sorts first,
+and that green would not have survived a new filename between the two, a subset
+run, or `pytest-randomly`.
+
 Everything this file needs from `conftest.py` arrives as a fixture. It is not
 imported, because `from conftest import ...` only resolves under pytest's
 legacy `prepend` import mode — see the comment above those fixtures.
@@ -25,7 +34,6 @@ from collections.abc import Callable, Mapping
 
 import pytest
 from sqlalchemy import URL, Connection, create_engine, make_url, text
-from sqlalchemy.exc import OperationalError
 from testcontainers.community.postgres import PostgresContainer
 
 # PostgreSQL encodes its version as major * 10000 + minor: 18.0 is 180000 and
@@ -33,10 +41,11 @@ from testcontainers.community.postgres import PostgresContainer
 POSTGRES_18 = 180000
 POSTGRES_19 = 190000
 
-# Every role this project owns is `titlepipe_`-prefixed. The `\_` is a literal
-# underscore: backslash is LIKE's default escape character, and a bare `_`
-# matches any single character, so `titlepipe_%` would also match `titlepipeX…`.
-TITLEPIPE_ROLE_PATTERN = r"titlepipe\_%"
+# The `titlepipe\_%` LIKE pattern used to be duplicated here and in
+# test_roles.py, with the same paragraph explaining the escape twice. It is a
+# `titlepipe_role_pattern` fixture in conftest.py now — everything else these
+# tests share already arrived that way, and a LIKE-escape rule written twice is
+# one that gets corrected once.
 
 
 def _setting(connection: Connection, name: str) -> str:
@@ -86,23 +95,35 @@ def test_the_server_is_postgresql_18(admin_dsn: str) -> None:
 
 
 def test_the_three_dsns_are_three_privilege_levels(
+    roles_applied: str,
     admin_dsn: str,
     migration_dsn: str,
     app_dsn: str,
     migration_role: str,
     app_role: str,
+    owner_role: str,
     managed_roles: tuple[str, ...],
+    titlepipe_role_pattern: str,
 ) -> None:
     """One server, one database, three logins — checked against the catalog.
 
     The shape half of this used to be the whole of it: three `make_url` calls
     and a set of usernames, which passes against a dead server and would keep
-    passing if a later `roles.sql` created `titlepipe_app` as a SUPERUSER. The
-    implementation is honest today — nothing in Task 1 creates a role — but
-    "honest" and "asserted" are different words, so the live server is asked.
+    passing if `roles.sql` created `titlepipe_app` as a SUPERUSER. So the live
+    server is asked.
 
-    Task 2 creates these roles and must revisit the emptiness assertion below;
-    that it will fail loudly then is the point of writing it this way.
+    INVERTED BY TASK 2, as the previous version said it must be. This test used
+    to assert the catalog held NO `titlepipe_*` role, which was Task 1's true
+    statement about Task 1: nothing in it created one. Task 2's `roles.sql`
+    creates five, so the assertion is now the positive one — those roles exist,
+    the two this file names are among them, and the superuser is not one of
+    them. Deleting it instead would have left nothing connecting the three DSNs
+    to the roles they claim to be.
+
+    `roles_applied` is requested FIRST and is the reason this test is
+    order-independent. `admin_dsn` alone would leave the outcome depending on
+    whether `test_roles.py` had already run, which is a green that survives
+    until someone adds a file whose name sorts between the two.
     """
     admin = make_url(admin_dsn)
     migration = make_url(migration_dsn)
@@ -120,47 +141,64 @@ def test_the_three_dsns_are_three_privilege_levels(
         # import error rather than anything that reads as a configuration bug.
         assert url.drivername == "postgresql+psycopg"
 
-    engine = create_engine(admin_dsn)
+    engine = create_engine(roles_applied)
     try:
         with engine.connect() as connection:
-            existing = _roles_matching(connection, TITLEPIPE_ROLE_PATTERN)
+            existing = _roles_matching(connection, titlepipe_role_pattern)
     finally:
         engine.dispose()
 
-    assert existing == set(), (
-        f"Task 1 must create no roles, but the server already has {sorted(existing)}. "
-        f"Roles are Task 2's to create: {sorted(managed_roles)}."
+    expected = set(managed_roles) | {owner_role}
+    assert expected <= existing, (
+        f"roles.sql must create {sorted(expected)}, but the server has "
+        f"{sorted(existing)}; missing {sorted(expected - existing)}."
     )
 
+    # The superuser is a fourth identity and must not have wandered into the
+    # namespace. `test_the_container_identity_is_not_environment_derived` guards
+    # the other direction — an exported `POSTGRES_USER` renaming it onto a role.
+    assert admin.username not in existing
 
-def test_the_role_dsns_cannot_connect_yet(app_dsn: str, app_role: str) -> None:
+    # `titlepipe_owner` exists and NO DSN in this file names it. That is the
+    # split: a table's owner bypasses RLS unless FORCE is set, so the owner is
+    # the one role with no connection string anywhere.
+    assert owner_role in existing
+    assert owner_role not in {admin.username, migration.username, application.username}
+
+
+def test_the_role_dsns_connect_as_their_own_role(
+    roles_applied: str,
+    migration_dsn: str,
+    app_dsn: str,
+    migration_role: str,
+    app_role: str,
+) -> None:
     """The privilege claim, tested against the server rather than the string.
 
-    `app_dsn` carrying a different username is shape. `app_dsn` being unable to
-    open a connection at all, while `admin_dsn` opens one against the same
-    server in the test above, is privilege — and it is what makes a silent
-    fallback to the superuser impossible to miss.
+    INVERTED BY TASK 2, and this is the direction the previous version said it
+    should end up facing. It used to assert these DSNs could NOT connect, which
+    was true only because the roles did not exist — and it could not prove why:
+    MEASURED 2026-08-05, PostgreSQL answers `password authentication failed for
+    user "..."` both for an absent role and for a wrong password, deliberately,
+    so that a stranger cannot enumerate roles. A negative that cannot
+    distinguish those two is a weak negative.
 
-    What this CANNOT prove is why the connection failed. MEASURED 2026-08-05:
-    PostgreSQL answers `password authentication failed for user "..."` both for
-    a role that does not exist and for a role whose password is wrong, on
-    purpose, so that a stranger cannot enumerate roles. Absence is proved by the
-    `pg_roles` query in the test above, which reads the catalog as the superuser
-    and is the only authority on it. This test proves non-connectability, and
-    that is all it claims.
-
-    Task 2 creates the role and gives it `role_passwords[APP_ROLE]`, at which
-    point this connection succeeds and this test is Task 2's to turn into a
-    positive one.
+    The positive is strictly stronger. `current_user` coming back as the role
+    named in the DSN proves the connection was authenticated AS that role, which
+    is the thing a silent fallback to the superuser would break — and the
+    superuser is asserted to be a different name in the test above. It also
+    proves `roles.sql` set the password the harness generated, which no catalog
+    read can show.
     """
-    engine = create_engine(app_dsn)
-    try:
-        with pytest.raises(OperationalError) as raised, engine.connect():
-            pass
-    finally:
-        engine.dispose()
+    for dsn, role in ((migration_dsn, migration_role), (app_dsn, app_role)):
+        engine = create_engine(dsn)
+        try:
+            with engine.connect() as connection:
+                connected_as = str(connection.execute(text("SELECT current_user")).scalar_one())
+        finally:
+            engine.dispose()
 
-    assert app_role in str(raised.value)
+        assert connected_as == role, f"{dsn.split('@')[-1]} authenticated as {connected_as!r}"
 
 
 def test_the_container_identity_is_not_environment_derived(
