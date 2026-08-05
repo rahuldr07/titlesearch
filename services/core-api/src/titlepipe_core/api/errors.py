@@ -51,6 +51,7 @@ from titlepipe_domain import (
     ValidationError,
 )
 
+
 def _log() -> Any:
     """Acquired at call time, never bound at import. A module-level logger pins
     whatever logging configuration was active first and silently ignores a later
