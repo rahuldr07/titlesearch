@@ -32,7 +32,8 @@ Where a decision genuinely cannot be derived — a ruling, a credential — it i
 
 ## Global contract
 
-- **PostgreSQL 18.4.** Not 16, not 19. Port **5433** on the Windows dev box.
+- **PostgreSQL 18.4.** Not 16, not 19. **Supplied by an ephemeral container**
+  (`postgres:18.4`), not by a host cluster — ruled 2026-08-05, see below.
 - **Portable:** only `CREATE ROLE` and `FORCE ROW LEVEL SECURITY` are assumed.
   No provider-specific SQL — deployment is undecided.
 - **Four no-value states**, exactly: `NOT_PRESENT`, `NOT_FOUND`, `NOT_STATED`,
@@ -184,10 +185,77 @@ arbitrary modules such as `tests/db.py`.
   reject its own test variable. Use `TP_TEST_DATABASE_URL`.
 
 **PROOF** A test reads `SELECT current_setting('server_version')` and asserts it
-starts with `18.`.
+starts with `18.`, **and** asserts `180000 <= server_version_num < 190000`.
 
-**INJECTION** Point `TP_TEST_DATABASE_URL` at port 5432 (16.14 on the dev box).
-The version test must fail.
+*An earlier revision of this line justified the numeric check by saying a
+prefix "would be confused by a future `180.x`". That is wrong —
+`"180.1".startswith("18.")` is `False`. It also suggested `>= 180000`, which
+cannot fail independently: `server_version_num` is `major*10000 + minor`, so the
+prefix assertion passing already implies it. The bounded range is the version
+that can actually fail on its own, which is the only reason to write a second
+assertion at all.*
+
+**INJECTION — the one this plan originally specified does not work here, and
+would have recorded a pass as proof.** The original text read *"point
+`TP_TEST_DATABASE_URL` at port 5432 (16.14 on the dev box); the version test
+must fail."* Measured on the actual dev machine, 2026-08-05:
+
+| where | what is really there |
+|---|---|
+| WSL `127.0.0.1:5432` | cluster `18/main`, online, **PostgreSQL 18.4** — the *right* major |
+| WSL `127.0.0.1:5433` | nothing listening |
+| Windows host `172.24.192.1:5432` and `:5433` | unreachable from WSL (NAT + firewall) |
+| majors installed in WSL | **18 only.** There is no 16 to point at. |
+
+So the specified injection points the version test at an 18.4 server, the test
+**passes**, and a green injection gets written into the commit as evidence — the
+precise vacuity this protocol exists to prevent.
+
+**Replacement, verified runnable before being written here:** run the wrong
+major as a container and point `TP_TEST_DATABASE_URL` at it.
+
+```
+docker run --rm postgres:16   postgres --version   →  16.14   ← the wrong major
+docker run --rm postgres:18.4 postgres --version   →  18.4
+```
+
+`postgres:16` resolves to exactly the 16.14 the original text names. This needs
+no second cluster, is re-runnable, and exercises the `testcontainers` path this
+task already depends on.
+
+**This is also why the database is a container and not the host cluster.** Task
+3 runs `upgrade head → downgrade base → upgrade head` against a *fresh*
+database and Task 6 seeds tenants into it. Doing that to a developer's
+persistent cluster is worse than disposable. `00-HOW-TO-EXECUTE.md` §7 already
+lists Docker as an acceptable source.
+
+**Correction, 2026-08-05 — an earlier revision of this section claimed the host
+cluster "could not be authenticated to anyway". That was false, and it was
+false in the direction that matters.** It was concluded from two failures — TCP
+to `127.0.0.1:5432` (password auth, `.pgpass` entry stale) and `sudo -u
+postgres` (wants an interactive password) — without trying the default path:
+
+```
+psql -tAc "select current_user, current_setting('server_version')"
+  rahul|18.4 (Ubuntu 18.4-1.pgdg26.04+1)
+```
+
+**Peer auth over the unix socket succeeds.** So the developer's real 18.4
+cluster is one `TP_TEST_DATABASE_URL='postgresql:///postgres'` away from being
+dropped and re-seeded by Task 3, and *proven reachable with Docker switched
+off*:
+
+```
+DOCKER_HOST=tcp://127.0.0.1:1 TP_TEST_DATABASE_URL='postgresql:///postgres' pytest
+  3 passed
+```
+
+That is a green suite with no container, no isolation, and the ruling on this
+page bypassed. `TP_TEST_DATABASE_URL` is therefore **not** an unguarded escape
+hatch: the fixture must reject a hostless (unix-socket) URL and any non-
+PostgreSQL backend, so the override cannot silently become the thing this
+ruling exists to prevent. An override that can defeat the rule it lives under is
+not an override, it is a hole.
 
 ---
 

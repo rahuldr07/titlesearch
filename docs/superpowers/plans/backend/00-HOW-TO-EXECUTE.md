@@ -144,14 +144,26 @@ run the injection, the task is not done, however green the suite is.
 
 Several plans need a real PostgreSQL. Two are known to exist:
 
-| where | port | version |
-|---|---|---|
-| Windows dev box | **5433** | **18.4** ← use this |
-| Windows dev box | 5432 | 16.14 — **wrong major** |
-| Second laptop | — | Docker + Postgres available |
+**Ruled 2026-08-05: use an ephemeral `postgres:18.4` container, not a host
+cluster.** `TP_TEST_DATABASE_URL` overrides it for anyone aiming at a real one.
 
-Pointing at the default port silently tests the wrong major. Every plan that
-touches the database asserts `server_version` for exactly this reason.
+This table described the Windows box and was **measured to be wrong for the WSL
+environment the work actually runs in**. Both rows are kept because a stale
+instruction that quietly inverts is worse than no instruction:
+
+| where | port | version | measured 2026-08-05 |
+|---|---|---|---|
+| Windows dev box | 5433 | 18.4 | **unreachable from WSL** (NAT + firewall) |
+| Windows dev box | 5432 | 16.14 | unreachable from WSL |
+| WSL local | **5432** | **18.4** | online — the *default* port is the *right* major here |
+| WSL local | 5433 | — | nothing listening |
+| container | — | any | `postgres:18.4` and `postgres:16` (=16.14) both run |
+
+Pointing at the default port silently tests the wrong major **on the Windows
+box, and the right one in WSL** — which is worse, because a plan that says
+"avoid 5432" sends you to a port with nothing on it. Every plan that touches the
+database asserts `server_version` for exactly this reason, and no plan should
+name a port without saying which machine it means.
 
 **Superusers bypass RLS unconditionally** — `FORCE ROW LEVEL SECURITY` does not
 stop them. Any isolation test that connects as a superuser passes while proving
