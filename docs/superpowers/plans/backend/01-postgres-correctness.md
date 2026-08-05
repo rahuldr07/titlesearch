@@ -605,7 +605,7 @@ def make_sessionmaker(engine: AsyncEngine) -> async_sessionmaker[AsyncSession]
 @asynccontextmanager
 async def tenant_session(
     sessionmaker: async_sessionmaker[AsyncSession], tenant: TenantId | None
-) -> AsyncIterator[AsyncSession]
+) -> AsyncGenerator[AsyncSession]      # NOT AsyncIterator — see below
 
 class TenantRepository[T: Base]:
     def __init__(self, session: AsyncSession, model: type[T]) -> None
@@ -621,6 +621,23 @@ forbids type variables inside `ClassVar`; pyright 1.1.411 — what `pyright==1.1
 resolves to — reports *"ClassVar type cannot include type variables"*.
 
 `tenant=None` is legal and means deny-everything. Health checks use it.
+
+**Two amendments to this contract, made while implementing it. Plans 02–06 read
+the signatures above, so they are recorded here rather than only in the code.**
+
+1. **The return annotation is `AsyncGenerator[AsyncSession]`, not
+   `AsyncIterator`.** Annotating an `@asynccontextmanager` as `AsyncIterator` is
+   deprecated in typeshed and pyright strict *rejects* it — `The function
+   "asynccontextmanager" is deprecated … Use -> AsyncGenerator[Foo] instead
+   (reportDeprecated)`. The only alternative was a `# pyright: ignore`, which
+   Task 0's gate bans. **The annotation moved; the behaviour did not** — callers
+   still receive an identical `_AsyncGeneratorContextManager[AsyncSession]`.
+2. **`tenant_session` commits on clean exit** and discards the transaction on any
+   exception. This was unspecified and is load-bearing rather than decorative: a
+   GUC set with `is_local` reverts only at COMMIT, so a session that never
+   commits never exercises the pooled-reuse case and injection 3 below would be
+   unprovable. If a later plan needs the caller to own the commit, it is a
+   three-line change — but it must then find another way to prove the revert.
 
 The GUC is applied via an `after_begin` listener on `Session`, calling
 `set_config(TENANT_GUC, tenant_guc_value(...), true)`. **`set_config` has exactly

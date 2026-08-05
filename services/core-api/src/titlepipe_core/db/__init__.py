@@ -19,8 +19,25 @@ documenting the rule is a rule that teaches people to stop writing the
 documentation". The two disagree, and this file works around the stricter of
 them rather than changing a test it does not own.
 
-`models.py` holds `Base` and the seven skeleton tables. Task 5 adds the engine,
-the tenant session and the repository base beside them.
+`models.py` holds `Base` and the seven skeleton tables. `session.py` holds the
+engine, the sessionmaker and `tenant_session` — the only scoped way to open a
+session — and `repository.py` holds the base every later repository is built on.
+
+Everything a caller outside this package needs is re-exported here, so that the
+import that reaches the database is `from titlepipe_core.db import
+tenant_session` rather than a module path somebody could sidestep. `Base` is
+included because `TenantRepository`'s bound is stated in terms of it and a caller
+writing an annotation needs the same symbol.
 """
 
-__all__: list[str] = []
+from titlepipe_core.db.models import Base
+from titlepipe_core.db.repository import TenantRepository
+from titlepipe_core.db.session import make_engine, make_sessionmaker, tenant_session
+
+__all__ = [
+    "Base",
+    "TenantRepository",
+    "make_engine",
+    "make_sessionmaker",
+    "tenant_session",
+]
