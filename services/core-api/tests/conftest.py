@@ -21,10 +21,12 @@ from pathlib import Path
 from types import MappingProxyType
 
 import pytest
+from alembic import command
+from alembic.config import Config
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
-from sqlalchemy import URL, make_url
+from sqlalchemy import URL, create_engine, make_url, text
 from sqlalchemy.exc import ArgumentError
 
 # `testcontainers.postgres` is a deprecated shim that warns on import; the
@@ -640,6 +642,175 @@ def roles_applied(admin_dsn: str, role_passwords: Mapping[str, str]) -> str:
 # and every one of their locks would carry it. The move becomes right the day a
 # SECOND service needs these DSN rules — at that point the rules are genuinely
 # shared and the dependency earns its place. Not before.
+
+
+# --- Alembic ----------------------------------------------------------------
+#
+# `alembic.ini` sits beside `migrations/`, resolved from this file for the same
+# reason `ROLES_SQL` is: the suite runs from the repository root as often as from
+# the service directory.
+ALEMBIC_INI = Path(__file__).resolve().parent.parent / "alembic.ini"
+
+# The `config.attributes` key `migrations/env.py` reads the DSN from. Spelled
+# here rather than imported, because importing anything from `env.py` EXECUTES
+# it — the file's last statement runs a migration.
+#
+# `config.attributes` and not `Config.set_main_option`, and that is not
+# arbitrary: `set_main_option` goes through `ConfigParser`, where a `%` in a
+# password begins an interpolation and raises. Generated passwords are
+# `token_urlsafe` and have no `%`, but `test_a_password_full_of_quoting_hazards_survives`
+# exists precisely because that alphabet is not a promise about real ones.
+ALEMBIC_DSN_ATTRIBUTE = "dsn"
+
+# Alembic's own bookkeeping table. It is created outside any revision script and
+# `downgrade base` does NOT drop it, which is why `_scrub_migration_objects`
+# drops it by hand — see `migrated_database`.
+ALEMBIC_VERSION_TABLE = "alembic_version"
+
+# Everything migration `0001` creates, named so the teardown can remove it
+# WITHOUT depending on `alembic downgrade` having worked.
+#
+# THAT INDEPENDENCE IS THE WHOLE POINT AND IT WAS THE BUG. The teardown used to
+# be `command.downgrade(...)` followed by an unguarded `DROP TABLE`, so a
+# downgrade that RAISED skipped the drop entirely — and the next test module
+# inherited seven tables, the enum, the function and a populated
+# `alembic_version`, at which point `test_roles.py`'s
+# `test_a_table_created_after_set_role_belongs_to_the_owner` failed with
+# `DuplicateTable: relation "alembic_version" already exists`. The exact
+# cross-file failure the drop existed to prevent, reintroduced by the drop being
+# unreachable. Reproduced 2026-08-05 with two probe modules.
+#
+# Tables first (the enum has a dependent column until `fields` is gone), then the
+# type, then the function. `IF EXISTS` throughout: this runs on the happy path
+# too, where `downgrade` has already removed everything and every statement is a
+# no-op.
+MIGRATION_TABLES = (
+    "audit_log",
+    "field_readings",
+    "fields",
+    "pages",
+    "packages",
+    "orders",
+    "tenants",
+    ALEMBIC_VERSION_TABLE,
+)
+MIGRATION_ENUM_TYPE = "na_reason"
+MIGRATION_FUNCTION = "audit_log_reject_mutation"
+
+
+def _alembic_config(dsn: str) -> Config:
+    """A `Config` pointed at `alembic.ini`, migrating `dsn`.
+
+    `dsn` must be `titlepipe_migration`'s. It is the only role that can
+    `SET ROLE titlepipe_owner`, which `env.py` does before the first statement.
+    """
+    config = Config(str(ALEMBIC_INI))
+    config.attributes[ALEMBIC_DSN_ATTRIBUTE] = dsn
+    return config
+
+
+@pytest.fixture(scope="session")
+def alembic_config() -> Callable[[str], Config]:
+    """`dsn -> Config`, so a test can drive `upgrade`, `downgrade` and `check`."""
+    return _alembic_config
+
+
+def _scrub_migration_objects(admin_dsn: str) -> None:
+    """Remove every object migration `0001` creates, unconditionally.
+
+    The cleanup of last resort. It must not depend on Alembic having worked,
+    because the case it exists for is Alembic NOT having worked — a downgrade
+    that raised half way, an upgrade that failed after three tables, a revision
+    with a broken `downgrade()`. Every statement is `IF EXISTS`, so running it
+    after a clean downgrade is a sequence of no-ops.
+
+    The superuser connection, not `titlepipe_migration`. Teardown must not be the
+    thing that fails because a test left the session with a `SET ROLE` in place
+    or revoked a grant it meant to restore.
+    """
+    engine = create_engine(admin_dsn)
+    try:
+        with engine.begin() as connection:
+            for table in MIGRATION_TABLES:
+                connection.execute(text(f"DROP TABLE IF EXISTS {table}"))
+            connection.execute(text(f"DROP TYPE IF EXISTS {MIGRATION_ENUM_TYPE}"))
+            connection.execute(text(f"DROP FUNCTION IF EXISTS {MIGRATION_FUNCTION}()"))
+    finally:
+        engine.dispose()
+
+
+@pytest.fixture(scope="module")
+def migrated_database(roles_applied: str, migration_dsn: str) -> Iterator[str]:
+    """`alembic upgrade head`, then the database returned to exactly how it was.
+
+    Yields `admin_dsn` — the superuser — because everything read through this is
+    a CATALOG read (`pg_class.relowner`, `pg_enum`, `pg_trigger`), and
+    `pg_authid` is superuser-only. No isolation assertion may use it; there are
+    none in this task, and from Task 4 on they connect as `titlepipe_app`.
+
+    ---------------------------------------------------------------------------
+    🔴 MODULE-SCOPED, AND THE SCOPE IS LOAD-BEARING RATHER THAN A COST DECISION.
+    ---------------------------------------------------------------------------
+    Session scope would leave the seven tables and `alembic_version` in place for
+    every later test file, and `tests/test_roles.py` would then FAIL:
+    `test_a_table_created_after_set_role_belongs_to_the_owner` creates a table
+    called `alembic_version` by name — deliberately, because Task 3 depends on
+    that specific table landing on the owner — and a second `CREATE TABLE` of a
+    name that already exists raises `DuplicateTable` instead. That is a
+    collection-order bug of exactly the kind `roles_applied`'s docstring was
+    written about, and it would be invisible until somebody reordered the files.
+
+    ---------------------------------------------------------------------------
+    THE STRUCTURE BELOW IS THE FIX FOR A LEAK THIS FIXTURE ACTUALLY HAD, and
+    every part of it is load-bearing:
+
+    **`upgrade` is INSIDE the `try`.** It used to be outside, so an upgrade that
+    failed part way — three tables created, the fourth raising — got no teardown
+    at all and left the debris for the next module. Nothing here relies on the
+    upgrade being atomic; the teardown covers a partial one either way, which is
+    what `test_a_failed_upgrade_leaves_no_partial_schema_behind` then proves
+    independently.
+
+    **`downgrade` and the scrub are in NESTED `try`/`finally`, not sequential.**
+    Sequentially, a downgrade that raised skipped the scrub entirely — measured,
+    and the next module saw all seven tables, the enum, the function and a
+    populated `alembic_version`. Nested, the scrub runs whatever the downgrade
+    did, and the downgrade's own exception still propagates rather than being
+    replaced by a teardown error.
+
+    **The scrub removes the TYPE and the FUNCTION too**, not only the tables.
+    `alembic downgrade base` is not the only way this fixture leaves debris, and
+    `DROP TABLE` drops neither of those.
+
+    `downgrade` is still called first rather than scrubbing alone: it is the path
+    under test, and a `downgrade()` that has stopped working must fail loudly
+    here rather than being papered over by a cleanup that would have removed the
+    same objects anyway.
+    """
+    config = _alembic_config(migration_dsn)
+    upgraded = False
+    try:
+        command.upgrade(config, "head")
+        upgraded = True
+        yield roles_applied
+    finally:
+        try:
+            # Guarded on the upgrade having SUCCEEDED. An upgrade that raised
+            # leaves no version row to downgrade from, so an unconditional
+            # `downgrade` here would raise out of the `finally` and REPLACE the
+            # upgrade's own exception as the reported failure — the original
+            # would survive only as `__context__`, three screens down. The scrub
+            # below runs either way and is what actually cleans up.
+            if upgraded:
+                command.downgrade(config, "base")
+        finally:
+            _scrub_migration_objects(roles_applied)
+
+
+@pytest.fixture(scope="session")
+def alembic_version_table() -> str:
+    """`alembic_version`, so the name is not spelled out in every test that reads it."""
+    return ALEMBIC_VERSION_TABLE
 
 
 @pytest.fixture(scope="session")

@@ -63,7 +63,13 @@ addopts = "-q --strict-markers --strict-config"
 asyncio_mode = "strict"
 
 [tool.pyright]
-include = ["src", "tests"]
+# `migrations` is in here because it was NOT, and three real type errors lived
+# there undetected — two false return annotations (`Column` is invariant, so
+# `Column[UUID]` is not a `Column[object]`) and one `Column[Unknown]`. They were
+# written to a checker that was never pointed at them. A migration is executable
+# Python that creates every table this system has; there is no version of
+# "checked" that excludes it.
+include = ["src", "tests", "migrations"]
 typeCheckingMode = "strict"
 pythonVersion = "3.13"
 reportMissingTypeStubs = false

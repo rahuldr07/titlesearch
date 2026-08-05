@@ -1,0 +1,190 @@
+"""How Alembic reaches the database, and as whom.
+
+🔴 THREE HAND-OFFS FROM TASK 2, EACH MEASURED AGAINST postgres:18.4. This file
+hits all three, and `tests/test_roles.py` already fails loudly for two of them.
+
+**1. `SET ROLE titlepipe_owner`, after connecting and before
+`context.begin_transaction()`.** `titlepipe_migration` holds its membership of
+`titlepipe_owner` `WITH INHERIT FALSE, SET TRUE`, so it holds NONE of the
+owner's privileges until it says so. Forget the `SET ROLE` and the first
+statement — `alembic_version`'s own `CREATE TABLE` — fails with `permission
+denied for schema public`.
+
+The database enforces it that way *because the alternative was a silent wrong
+answer*. Under the default `INHERIT` the `CREATE TABLE` SUCCEEDED and produced a
+table owned by `titlepipe_migration`, a LOGIN role — and a table's owner bypasses
+row-level security on it unless the table is `FORCE ROW LEVEL SECURITY`. The
+migration reported success and the catalog was wrong.
+
+**2. It must be CONNECTION-scoped: never `SET LOCAL`, never followed by `RESET
+ROLE`.** After a `RESET ROLE`, `titlepipe_migration` reading its own migration
+state fails with `permission denied for table alembic_version` — a TABLE error
+this time, not a schema one, because by then the table exists and belongs to
+somebody else. `alembic current`, `alembic stamp` and `alembic downgrade` all
+read it.
+
+**3. Everything stays in schema `public`.** `CREATE SCHEMA` as
+`titlepipe_owner` fails with `permission denied for database <db>`: the owner
+holds `CREATE ON SCHEMA public` (granted by `roles.sql`) and no `CREATE ON
+DATABASE`. A migration that creates a non-`public` schema needs a new grant in
+`roles.sql`, and that grant needs its own test.
+
+`migrations/sql/roles.sql` is NOT Alembic's to run. It creates the role Alembic
+authenticates as, so it must already have been applied when `alembic upgrade` is
+called. The test suite applies it through the `roles_applied` fixture.
+
+## Why there is a `connection.commit()` between the two
+
+It looks like a stray line and it is load-bearing. `connection.execute(...)`
+autobegins a transaction in SQLAlchemy 2.0, and `MigrationContext` records
+`_in_external_transaction = connection.in_transaction()` at `configure()` time.
+With a transaction already open, `context.begin_transaction()` returns a
+`nullcontext` and **Alembic never commits** — the whole upgrade would then be
+rolled back when the `with` block closes the connection, leaving a database that
+reports no migrations and an `alembic upgrade` that exited 0.
+
+Committing first closes the autobegun transaction and hands Alembic a clean
+connection to manage. `SET ROLE` survives it precisely because it is not `SET
+LOCAL` — which is hand-off 2 restated from the other end.
+"""
+
+from __future__ import annotations
+
+import os
+from logging.config import fileConfig
+
+from alembic import context
+from sqlalchemy import engine_from_config, pool, text
+
+from titlepipe_core.db.models import Base
+
+# `roles.sql` creates it; `tests/test_roles.py` proves nothing else can become
+# it. Spelled here rather than imported from `conftest.py`, which is test-only
+# and not importable from a migration.
+OWNER_ROLE = "titlepipe_owner"
+
+# The environment variable an operator sets for `alembic upgrade head` on a real
+# deployment. It shares the application's `TITLEPIPE_` prefix because it IS
+# application configuration — MEASURED 2026-08-05, pydantic-settings 2.14.2
+# resolves `CoreApiSettings` by walking the model's FIELDS, so a `TITLEPIPE_`
+# variable matching no field is invisible to `extra="forbid"` and cannot break
+# startup.
+DATABASE_URL_VARIABLE = "TITLEPIPE_DATABASE_URL"
+
+# The key `tests/test_schema_migration.py` passes the container's DSN under.
+# `config.attributes` is a PLAIN DICT and `Config.set_main_option` is not: the
+# latter goes through `ConfigParser`, where a `%` in a password is read as the
+# start of an interpolation and raises. Generated passwords here are
+# `token_urlsafe` and contain no `%`, but `test_a_password_full_of_quoting_hazards_survives`
+# exists precisely because that alphabet is not a guarantee about real ones.
+DSN_ATTRIBUTE = "dsn"
+
+config = context.config
+
+if config.config_file_name is not None:
+    # 🔴 `disable_existing_loggers=False` IS NOT OPTIONAL, and the default is the
+    # other way. `logging.config.fileConfig` defaults to `True`, which DISABLES
+    # every logger that already exists and is not named in the ini — permanently,
+    # process-wide, with no undo. MEASURED: one in-process `alembic upgrade`
+    # left 50 loggers `disabled=True`, `asyncio`, `psycopg`, `sqlalchemy`,
+    # `urllib3` and `fastapi` among them.
+    #
+    # Nothing fails today only because core-api's telemetry renders through
+    # structlog rather than through stdlib loggers. That is luck. The day
+    # anything runs a migration inside the application process — a startup
+    # `upgrade head`, a management command, a test — this silently switches off
+    # the logging of everything that was already imported.
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
+
+# `alembic check` and `--autogenerate` compare against this. `Base.metadata`
+# carries the naming convention, so a constraint Alembic creates gets the same
+# name the model would have given it.
+target_metadata = Base.metadata
+
+
+def _database_url() -> str:
+    """The DSN, from the caller, the environment or the ini file — in that order.
+
+    Three sources because there are three callers. The tests hand a container
+    DSN in through `config.attributes`; an operator exports
+    `TITLEPIPE_DATABASE_URL`; and `sqlalchemy.url` in `alembic.ini` is the slot
+    an operator may fill locally, deliberately left empty in the committed file
+    so no credential lives in version control.
+
+    Refusing outright when all three are empty is the point. Alembic's own
+    default for a missing URL is to build an engine from an empty string, which
+    fails somewhere inside SQLAlchemy with a message about a driver rather than
+    about configuration.
+    """
+    from_caller = config.attributes.get(DSN_ATTRIBUTE)
+    if isinstance(from_caller, str) and from_caller.strip():
+        return from_caller.strip()
+
+    from_environment = os.environ.get(DATABASE_URL_VARIABLE, "").strip()
+    if from_environment:
+        return from_environment
+
+    from_ini = (config.get_main_option("sqlalchemy.url") or "").strip()
+    if from_ini:
+        return from_ini
+
+    raise RuntimeError(
+        f"no database URL: set {DATABASE_URL_VARIABLE}, or `sqlalchemy.url` in "
+        f"alembic.ini, or pass one as config.attributes[{DSN_ATTRIBUTE!r}]. It "
+        f"must be titlepipe_migration's DSN — that is the only role that can "
+        f"SET ROLE {OWNER_ROLE}."
+    )
+
+
+def run_migrations_offline() -> None:
+    """Refused, with the reason, rather than half-supported.
+
+    `--sql` mode has no connection, so there is nothing to `SET ROLE` on. Alembic
+    would happily emit the seven `CREATE TABLE`s as text, and a DBA running that
+    script as themselves would create every table owned by whoever they happen
+    to be — the exact silent mis-ownership the `INHERIT FALSE` membership was
+    introduced to make impossible. A generated script that needs a hand-added
+    prologue to be correct is a script somebody eventually runs without it.
+
+    Emitting `SET ROLE` into the output was considered and rejected: nothing
+    would verify it survived into what was actually executed, and this file's
+    whole job is to make that unnecessary to trust.
+    """
+    raise RuntimeError(
+        "offline (--sql) migrations are not supported: there is no connection to "
+        f"issue `SET ROLE {OWNER_ROLE}` on, so every object in the generated "
+        "script would be created owned by whoever runs it. Run `alembic upgrade` "
+        "against the database as titlepipe_migration."
+    )
+
+
+def run_migrations_online() -> None:
+    """Connect as `titlepipe_migration`, become `titlepipe_owner`, then migrate."""
+    configuration = dict(config.get_section(config.config_ini_section) or {})
+    configuration["sqlalchemy.url"] = _database_url()
+
+    # `NullPool` because this process opens one connection, runs one migration
+    # and exits. A pooled engine would hold the connection open past `dispose()`
+    # on some drivers and keep a lock on `alembic_version` alive with it.
+    connectable = engine_from_config(configuration, prefix="sqlalchemy.", poolclass=pool.NullPool)
+
+    try:
+        with connectable.connect() as connection:
+            # Not a bind parameter: `SET ROLE` takes an identifier, and an
+            # identifier cannot be parameterised. `OWNER_ROLE` is a constant in
+            # this file, never input.
+            connection.execute(text(f"SET ROLE {OWNER_ROLE}"))
+            connection.commit()  # see the module docstring — Alembic will not commit otherwise
+
+            context.configure(connection=connection, target_metadata=target_metadata)
+
+            with context.begin_transaction():
+                context.run_migrations()
+    finally:
+        connectable.dispose()
+
+
+if context.is_offline_mode():
+    run_migrations_offline()
+else:
+    run_migrations_online()
