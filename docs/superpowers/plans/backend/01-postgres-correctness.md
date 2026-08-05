@@ -416,9 +416,53 @@ that it is deliberately outside the gate. Do not leave it unstated.
 - `UPDATE audit_log` raises;
 - if models.py declares mapped classes, `alembic check` reports no diff.
 
-**INJECTION** The second `upgrade` must succeed. If it fails on "already exists",
-the downgrade was a no-op. Test `0002`'s downgrade separately — `0001`'s
-`DROP TABLE` removes policies as a side effect and would mask it.
+**A defect in the PROOF above, before the injections.** *"`UPDATE audit_log`
+raises"* does not distinguish a `FOR EACH STATEMENT` trigger from a `FOR EACH
+ROW` one — **when the UPDATE matches rows, both fire.** The whole reason this
+task specifies STATEMENT is the case where it matches *nothing*. So the proof
+must `UPDATE audit_log … WHERE id = <an id that does not exist>` and still
+require the raise. An UPDATE that matches rows proves nothing about the choice
+of trigger, and under Task 4's RLS every cross-tenant UPDATE matches zero rows —
+which is exactly when a row-level trigger goes silent and the proof passes
+vacuously.
+
+**INJECTION — the specified one is not an injection.** It read: *"The second
+`upgrade` must succeed. If it fails on 'already exists', the downgrade was a
+no-op."* That is the third clause of the PROOF restated, plus a diagnostic hint.
+Nothing is broken and nothing is required to fail. Replaced with four, one per
+clause of the proof:
+
+| # | break this | this must fail |
+|---|---|---|
+| 1 | delete `DROP TYPE na_reason` from `0001`'s downgrade | the second `upgrade` — with `type "na_reason" already exists`. **`DROP TABLE` does not drop a type**, so this is the likeliest real bug in the whole task, not a hypothetical |
+| 2 | delete one `op.drop_table` from the downgrade | the second `upgrade`, on `already exists` |
+| 3 | add a fifth label to the `na_reason` enum, then separately reorder two | the label test — **on both count and order**, separately |
+| 4 | change the trigger to `FOR EACH ROW` | the append-only test, *via the zero-match UPDATE above*. With a matching UPDATE it stays green, which is the point |
+| 5 | add a column to `models.py` and no migration | `alembic check` |
+
+**And the containment lesson from Task 2 applies here.** A test that enumerates
+tables from `pg_class` and asserts a property of each is satisfied by the wrong
+seven tables as readily as the right ones — five decoy roles defeated Task 2's
+cardinality floor exactly this way. Assert the **exact expected set** of table
+names, not a count and not a subset.
+
+**Hand-offs from Task 2, measured against 18.4 — `env.py` will hit all three:**
+
+- `SET ROLE titlepipe_owner` must be issued on the connection after connect and
+  before `context.begin_transaction()`. The database now *enforces* this:
+  `titlepipe_migration` holds membership `WITH INHERIT FALSE`, so a forgotten
+  `SET ROLE` is `permission denied for schema public` rather than a table
+  silently owned by a LOGIN role.
+- **`SET ROLE` must be connection-scoped and never `SET LOCAL` or reset.** After
+  `RESET ROLE`, reading `alembic_version` fails with `permission denied for
+  table alembic_version` — *not* for the schema. `alembic current`, `stamp` and
+  `downgrade` all read that table.
+- `CREATE SCHEMA` as the owner fails with `permission denied for database`. The
+  owner has no `CREATE ON DATABASE`, so a migration creating any non-`public`
+  schema breaks.
+
+`roles.sql` is **not Alembic's to run** — it creates the role Alembic
+authenticates as.
 
 ---
 
