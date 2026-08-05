@@ -22,9 +22,10 @@ from __future__ import annotations
 
 import logging
 import sys
-from typing import Any
+from collections.abc import Mapping, MutableMapping
 
 import structlog
+from structlog.typing import FilteringBoundLogger, Processor
 
 from titlepipe_domain import Environment, LogRenderer
 from titlepipe_domain.redaction import redact_mapping, sanitise_exception
@@ -35,7 +36,7 @@ def build_redaction_processor(
     keep_exception_messages: bool,
     allowlist_only: bool,
     extra_sensitive_parts: frozenset[str] = frozenset(),
-) -> Any:
+) -> Processor:
     """The final processor before rendering.
 
     Handles the `exception` field explicitly. It is produced by
@@ -48,14 +49,22 @@ def build_redaction_processor(
     alarming, all of which carried a party name to stdout.
     """
 
-    def processor(_logger: Any, _method_name: str, event_dict: dict[str, Any]) -> dict[str, Any]:
+    # Typed against structlog's processor contract rather than `dict[str, Any]`.
+    # The logger argument is never touched here, so it is `object`; the record is
+    # a mapping of unknown values, which is `object` too. Nothing is lost — every
+    # value is narrowed by `isinstance` before it is read.
+    def processor(
+        _logger: object,
+        _method_name: str,
+        event_dict: MutableMapping[str, object],
+    ) -> Mapping[str, object]:
         formatted: object = event_dict.get("exception")
         if isinstance(formatted, str):
             event_dict["exception"] = sanitise_exception(
                 formatted, keep_messages=keep_exception_messages
             )
         return redact_mapping(
-            event_dict,
+            dict(event_dict),
             extra_parts=extra_sensitive_parts,
             allowlist_only=allowlist_only,
         )
@@ -77,7 +86,7 @@ def configure_logging(
     the redaction processor is what removes a value, rather than some
     downstream accident. Deployed environments refuse to start with it off.
     """
-    processors: list[Any] = [
+    processors: list[Processor] = [
         structlog.contextvars.merge_contextvars,
         structlog.processors.add_log_level,
         structlog.processors.StackInfoRenderer(),
@@ -96,7 +105,7 @@ def configure_logging(
             )
         )
 
-    final: Any
+    final: Processor
     if renderer is LogRenderer.JSON:
         final = structlog.processors.JSONRenderer()
     else:
@@ -113,7 +122,7 @@ def configure_logging(
     )
 
 
-def get_logger(name: str) -> Any:
+def get_logger(name: str) -> FilteringBoundLogger:
     """A bound logger. Call after `configure_logging`.
 
     Never bind this at module scope. structlog caches a bound logger on first

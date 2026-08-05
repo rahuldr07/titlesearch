@@ -23,16 +23,17 @@ import contextlib
 from collections.abc import AsyncGenerator, Callable
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any
 
 from fastapi import FastAPI
+from structlog.typing import FilteringBoundLogger
 
 from titlepipe_blind.settings import BlindApiSettings
 from titlepipe_blind.telemetry.hooks import NullRequestMetrics, RequestMetrics
 from titlepipe_blind.telemetry.logging import get_logger
 from titlepipe_domain import Clock, IdFactory, SystemClock, Uuid4IdFactory
 
-def _log() -> Any:
+
+def _log() -> FilteringBoundLogger:
     """Acquired at call time, never bound at import. A module-level logger pins
     whatever logging configuration was active first and silently ignores a later
     one — see `get_logger`'s own warning. This module's own docstring forbids

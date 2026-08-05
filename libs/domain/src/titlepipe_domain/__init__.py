@@ -18,8 +18,10 @@ from titlepipe_domain.errors import (
 )
 from titlepipe_domain.identifiers import IdFactory, Uuid4IdFactory
 from titlepipe_domain.runtime import Environment, LogRenderer, ServiceName
+from titlepipe_domain.tenancy import TENANT_GUC, TenantId, tenant_guc_value
 
 __all__ = [
+    "TENANT_GUC",
     "Clock",
     "ConflictError",
     "DependencyUnavailableError",
@@ -32,7 +34,9 @@ __all__ = [
     "RefusalError",
     "ServiceName",
     "SystemClock",
+    "TenantId",
     "UnauthenticatedError",
     "Uuid4IdFactory",
     "ValidationError",
+    "tenant_guc_value",
 ]

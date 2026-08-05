@@ -112,6 +112,43 @@ must still fail, on reason length. *A gate exercised on one rule is a gate teste
 on one rule; this repo's frontend equivalent was defeated on 9 of 11 rules by the
 first evasion tried.*
 
+**That is not sufficient, and was proven not to be on 2026-08-05.** All ten
+injections above passed against a gate that three one-token changes walked
+straight through. Testing only the *canonical spelling* of each rule is the same
+vacuity as a catalog proof against an empty database. Also inject, and require a
+non-zero exit for each:
+
+- **the aliased and rebound spellings** — `from sqlalchemy import text as sql`,
+  `_emit = print`, `savepoint = session.begin_nested`. The first of these is the
+  *conventional* SQLAlchemy import, so this is an accident waiting to happen, not
+  an adversary. A gate keyed on the token being followed by `(` misses all three.
+- **the other suppression comment** — this repo type-checks with **pyright**, so
+  `# pyright: ignore` must be banned alongside `# type: ignore`. Six were sitting
+  in scanned `src/` when the rule was written, unflagged.
+- **the near-miss path exemptions** — `notapi/errors.py` must fire (a suffix
+  match exempts it) and `api/db/routes.py` must fire (a substring match gives a
+  route handler the raw-SQL carve-out).
+- **a scan that finds nothing must FAIL.** Point the script at a nonexistent
+  root: `Scanned 0 files` with exit 0 is the failure mode this script is most
+  likely to have in the wild, and it reads as success. Same cardinality floor the
+  catalog proofs need.
+
+And require the **negative** direction, which is what separates a gate from a
+grep: `response.text`, a parameter named `text`, `scrub_text(`, and every banned
+name inside a string literal or a comment must **not** fire. A rule that flags
+the sentence documenting the rule gets the documentation deleted.
+
+**Known hole, not closeable by this gate — say so rather than implying cover.**
+An annotated assignment from an `Any`-typed expression is a fourth spelling of
+type erasure: `x: dict[str, object] | None = request.scope.get("state")` makes
+the identical unverified assertion as `cast(...)` with the token that advertises
+it removed, and pyright accepts it because assigning `Any` to a declared type is
+always allowed. *Verified: the rewrite passes pyright, passes the tests, and
+passes this gate with no exemption at all.* It is the spelling a developer
+reaches for the moment the gate complains about `cast(`. The countermeasure is
+review, plus preferring runtime-checked construction (`[dict(e) for e in raw]`)
+over assertion.
+
 ---
 
 ## Task 1 · Dependencies and the database seam
@@ -244,6 +281,15 @@ Alembic revision ids are the literal strings `"0001"` and `"0002"`, so Task 4's
 **Hand-write the migration. `--autogenerate` cannot see policies, grants, roles
 or enums.**
 
+**Task 0's rules gate does not scan `migrations/`.** Its scan roots are
+`services/*/src` and `libs/*/src`, so a `print(`, an `Any` or an un-scoped raw
+statement in a migration is invisible to it — *verified 2026-08-05: a migration
+carrying all three reported clean*. That is the correct default (a migration is
+almost entirely raw SQL by nature), but it means the migrations are reviewed by
+hand and nothing else. Either widen the scan roots and give `migrations/` the
+same carve-out `*/db/` has, or state in the migration package's `__init__.py`
+that it is deliberately outside the gate. Do not leave it unstated.
+
 **PROOF**
 - `upgrade head → downgrade base → upgrade head` clean on a fresh database;
 - `na_reason` has exactly four labels, in order;
@@ -296,7 +342,18 @@ Include `tenants` — the seed and the FK checks need it.
 column — derive it, do not hardcode):
 - `relrowsecurity AND relforcerowsecurity` for each;
 - a `tenant_isolation` policy exists on each;
+- **the policy's `qual` from `pg_policies` contains `nullif`** — Task 0's whole
+  argument for the empty-string sentinel is that the policy wraps it. Nothing in
+  Task 0 can enforce that; `test_tenancy.py` can only compare one string literal
+  to another. Write the policy without `nullif` and an unset GUC hits
+  `''::uuid`, which *raises* — a 500 in place of a clean denial. This assertion
+  is where that claim finally becomes checkable, so it is not optional;
 - `has_table_privilege('titlepipe_app', t, 'SELECT')` and `'INSERT'` for each.
+
+**Cardinality floor — these proofs pass on an empty database.** Enumerating from
+`pg_class` and asserting a property of every row returned is vacuously true when
+zero rows come back. Assert at least **6 tenant tables** before asserting
+anything about them, and likewise at least 5 `titlepipe_*` roles in Task 2.
 
 **INJECTION** Drop `FORCE` from one table, connect as `titlepipe_owner`, and the
 catalog test must fail. **Squawk will not catch any of this** — it lints lock

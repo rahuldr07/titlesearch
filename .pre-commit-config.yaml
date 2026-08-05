@@ -70,6 +70,18 @@ repos:
         entry: python scripts/check_no_client_data.py
         language: system
 
+      # Structural rules no linter expresses: tenant scoping, the HTTP mapping
+      # boundary, unredacted stdout, type erasure. It resolves the repository
+      # root from its own location and scans every service and lib, so it takes
+      # no filenames — a subset of changed files is not what any of these rules
+      # are about, and pointing it at one would scan nothing.
+      - id: check-backend-rules
+        name: backend structural rules
+        entry: python scripts/check_backend_rules.py
+        language: system
+        pass_filenames: false
+        files: '^(services|libs|scripts)/'
+
       # The guard is a security control, so it has tests and they run here.
       - id: guard-tests
         name: client-data guard tests

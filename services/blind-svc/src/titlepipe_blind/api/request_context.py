@@ -23,14 +23,39 @@ from __future__ import annotations
 import re
 from collections.abc import Awaitable, Callable
 from contextvars import ContextVar
-from typing import Any, Final, cast
+from typing import (
+    Final,
+    cast,  # rules-allow(any-type): three uses below, each behind an `isinstance` and each carrying its own line-scoped reason for what it claims beyond that check
+)
 
 import structlog
 from starlette.requests import Request
 from starlette.responses import Response
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
+from structlog.typing import FilteringBoundLogger
 
 from titlepipe_domain import IdFactory, Uuid4IdFactory
+
+# Starlette types the ASGI scope and every message as `MutableMapping[str, Any]`,
+# so anything read out of either arrives as `Any`. Each `isinstance` below proves
+# a *class* and only a class; pyright then infers `dict[Unknown, Unknown]` or
+# `list[Unknown]`, because narrowing out of an untyped mapping tells it nothing
+# about the contents. The three `cast`s supply the missing type arguments, and
+# each is exempted on its own line rather than by one exemption for the file,
+# because the honest answer differs per site: two of them claim a key type that
+# nothing has checked, and the third claims only `object`, which is true of every
+# element of every list.
+#
+# The file-scoped exemption that used to sit here said the casts "assert nothing
+# the code has not tested". That was false at the headers site, and the falsehood
+# had teeth. `isinstance(raw, list)` proves `list`; the cast claimed
+# `list[tuple[bytes, bytes]]`; and a downstream app emitting `str` header names
+# turned the dedupe below into a `str`-versus-`bytes` comparison, which is always
+# unequal — so the existing `X-Request-ID` survived the filter and this middleware
+# appended a second one. That is exactly the regression the "Replace, never
+# append" comment says the code exists to prevent. The inbound list is now
+# filtered against the pair shape at runtime before anything is compared, so what
+# reaches the dedupe is checked rather than claimed.
 
 REQUEST_ID_HEADER: Final = "X-Request-ID"
 MAX_INBOUND_REQUEST_ID_LENGTH: Final = 64
@@ -62,7 +87,11 @@ def request_id_for(request: Request) -> str | None:
     """
     scope_state: object = request.scope.get("state")
     if isinstance(scope_state, dict):
-        stored: object = cast("dict[str, object]", scope_state).get(SCOPE_STATE_KEY)
+        state = cast(  # rules-allow(any-type): isinstance proves `dict` and nothing more; the `str` key type is asserted and unverified, and is harmless only because the single use is a `.get()` whose result is re-checked below
+            "dict[str, object]",
+            scope_state,
+        )
+        stored: object = state.get(SCOPE_STATE_KEY)
         if isinstance(stored, str):
             return stored
     return current_request_id()
@@ -121,7 +150,12 @@ class RequestContextMiddleware:
         # this frame, so the outermost error handler can still name the request.
         existing: object = scope.get("state")
         state: dict[str, object] = (
-            cast("dict[str, object]", existing) if isinstance(existing, dict) else {}
+            cast(  # rules-allow(any-type): isinstance proves `dict` and nothing more; the `str` key type is asserted and unverified, and is harmless only because this frame writes one `str` key and reads nothing back out
+                "dict[str, object]",
+                existing,
+            )
+            if isinstance(existing, dict)
+            else {}
         )
         state[SCOPE_STATE_KEY] = request_id
         scope["state"] = state
@@ -138,9 +172,32 @@ class RequestContextMiddleware:
             if message["type"] == "http.response.start":
                 response_started = True
                 raw: object = message.get("headers")
-                existing_headers: list[tuple[bytes, bytes]] = (
-                    list(cast("list[tuple[bytes, bytes]]", raw)) if isinstance(raw, list) else []
+                inbound: list[object] = (
+                    cast(  # rules-allow(any-type): isinstance proves `list`, and `object` elements is true of every list that is only read from — so unlike the `list[tuple[bytes, bytes]]` this replaces, it claims nothing beyond the check
+                        "list[object]",
+                        raw,
+                    )
+                    if isinstance(raw, list)
+                    else []
                 )
+                # Filtered to the shape the ASGI spec requires — two elements,
+                # both `bytes` — before any of it is compared. This is not
+                # defensive tidying: the dedupe below compares `key.lower()` to a
+                # `bytes` literal, so a downstream app emitting a `str` header
+                # name produced a comparison that is always unequal, the inbound
+                # `X-Request-ID` survived, and the append below made it two.
+                # A non-conforming entry is dropped rather than coerced; guessing
+                # an encoding for a header this layer does not own would be a
+                # second unverified assertion in place of the one just removed.
+                existing_headers: list[tuple[bytes, bytes]] = []
+                for entry in inbound:
+                    # A sequence pattern is the check, and it is a real one: two
+                    # elements, both `bytes`. Nothing narrowed here is asserted.
+                    match entry:
+                        case (bytes() as header_name, bytes() as header_value):
+                            existing_headers.append((header_name, header_value))
+                        case _:
+                            continue
                 # Replace, never append: this wrapper is the single writer of
                 # the header, and appending emitted it twice when a downstream
                 # response had already set it.
@@ -192,7 +249,7 @@ class RequestContextMiddleware:
             _request_id.reset(token)
 
 
-def _log() -> Any:
+def _log() -> FilteringBoundLogger:
     """Acquired at call time; a module-level proxy would pin the first
     configuration structlog ever saw."""
     return structlog.get_logger(__name__)
