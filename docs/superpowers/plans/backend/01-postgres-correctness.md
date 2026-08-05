@@ -642,8 +642,45 @@ one signature** — `(text, text, boolean)`. There is no two-argument form.
 **PROOF** `tenant_session` applies the GUC (assert `current_setting` inside it);
 `tenant=None` yields `""`; `TenantRepository` requires a `model` argument.
 
-**INJECTION** Remove the `after_begin` listener. Task 6 assertion 1b must fail —
-every tenant then sees nothing.
+**INJECTION — the specified one cannot be run at this point in the plan.** It
+read: *"Remove the `after_begin` listener. Task 6 assertion 1b must fail — every
+tenant then sees nothing."* Task 6 does not exist yet, and building it here to
+satisfy this task's injection is exactly the scope-widening the execution
+protocol forbids. **A task whose proof lives in a later task has no proof.**
+
+The instinct behind it is right and belongs *here*: removing the listener makes
+every tenant see nothing, and **a suite that only asserts denial goes green when
+everything is broken.** So Task 5 needs its own positive control — which it can
+now have, because Task 4 landed policies and there are tables to seed.
+
+**Run all five, one at a time:**
+
+| # | break | must fail |
+|---|---|---|
+| 1 | remove the `after_begin` listener | the **positive control** — with a tenant set, a seeded row must be visible. Every denial assertion in this task stays green, which is the point |
+| 2 | make `tenant_guc_value(None)` return `"None"` | the deny path must go from *0 rows* to `invalid input syntax for type uuid: "None"` — a 500 in place of a denial |
+| 3 | pass `is_local=false` to `set_config` | the GUC must leak past the transaction onto the pooled connection; assert the next checkout starts denied |
+| 4 | drop `max_overflow` from `make_engine`'s signature | Task 6 needs `pool_size=1, max_overflow=0` and cannot get it otherwise. A signature test must fail |
+| 5 | give `TenantRepository` a default `model` | the constructor must refuse; `ClassVar[type[T]]` is forbidden by the typing spec and pyright reports *"ClassVar type cannot include type variables"* |
+
+**The positive control is not optional.** Assertions of the form "no tenant sees
+nothing" are satisfied by a system that denies everyone, by a broken DSN, and by
+an empty table. Without a control the suite cannot tell *isolated* from *broken*
+— the same defect that made Task 2's cardinality floor insufficient and Task 3's
+enum test compare a constant to itself.
+
+**Two things Task 4 measured that land on this task:**
+
+- **The `''` case is Task 5's own doing.** `current_setting(x, true)` returns
+  NULL when never assigned and `''` once assigned and reverted — and
+  `set_config(…, is_local=true)` reverting at commit is precisely what produces
+  `''` on a pooled connection. So `nullif` guards *this task's* footprint, not a
+  hypothetical. Assert both absences: a fresh connection and a reused one.
+- **`connect_args={"options": "-c app.current_tenant="}` belongs on
+  `make_engine`.** The test suite pins this at the fixture layer, but that layer
+  strips `PG*` from the process first, so the connection-level pin is unreachable
+  there and currently unverified. Task 5 is where it becomes real: a pooled
+  connection must start at the deny sentinel so only `SET LOCAL` can move it.
 
 ---
 
