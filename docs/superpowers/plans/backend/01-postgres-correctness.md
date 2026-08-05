@@ -1,0 +1,448 @@
+# Plan 01 — Postgres correctness
+
+> **Read [`00-HOW-TO-EXECUTE.md`](./00-HOW-TO-EXECUTE.md) first.** It defines the
+> dispatch/verify/inject/review loop, what to tell each subagent, and when to
+> stop. This file is *what to build and how to prove it*.
+
+**Ships:** a schema whose tenant isolation is proven. No HTTP routes.
+
+**Why first:** every route in Plans 02–06 is tenant-scoped. Retrofitting the
+tenant GUC into handlers already written is the leak ADR-0001 finding 4 records
+as verified in the wild.
+
+**Every SQL claim below was executed against PostgreSQL 18.4 on 2026-08-05 and
+produced the stated result.** Surprises are recorded where they happened.
+
+---
+
+## How this plan specifies things
+
+Each task gives a **CONTRACT** (what must be true when it is done), a **PROOF**
+(how you know), and an **INJECTION** (what to break so you know the proof works).
+
+It deliberately does *not* dictate every column and function body. The executing
+subagent can read the repo and run the database; it decides the code. **The
+proofs are written to enumerate from the live catalog rather than from a list in
+this file**, so they hold whatever the subagent chose.
+
+Where a decision genuinely cannot be derived — a ruling, a credential — it is a
+🔴 HUMAN GATE and you stop.
+
+---
+
+## Global contract
+
+- **PostgreSQL 18.4.** Not 16, not 19. Port **5433** on the Windows dev box.
+- **Portable:** only `CREATE ROLE` and `FORCE ROW LEVEL SECURITY` are assumed.
+  No provider-specific SQL — deployment is undecided.
+- **Four no-value states**, exactly: `NOT_PRESENT`, `NOT_FOUND`, `NOT_STATED`,
+  `PRESENT_UNREADABLE`. (`pending`/`unsettled` are pipeline states, not members.)
+- **Pins stay:** `ruff==0.15.*`, `pyright==1.1.*`, `fastapi==0.139.*`.
+- **`uv.lock` is regenerated and committed** whenever `pyproject.toml` changes;
+  CI runs `uv sync --frozen`.
+- **`pytest.mark.skip` / `xfail` are forbidden in this plan's tests.** A skipped
+  isolation test is a failed one.
+
+**Gate — run from `services/core-api` unless stated:**
+
+```
+uv run ruff check .
+uv run ruff format --check .
+uv run pyright
+uv run pytest
+cd ../../libs/domain && uv run pytest      # Task 0 lives here and is NOT collected above
+uv run python ../../scripts/check_backend_rules.py
+```
+
+That second `pytest` is not a nicety: `services/core-api/pyproject.toml` sets
+`testpaths = ["tests"]`, so the core-api gate never sees `libs/domain/tests/`.
+
+### 🔴 HUMAN GATES
+
+| gate | why you cannot resolve it |
+|---|---|
+| **Role passwords** | Never invent, never commit. Ask for the env var names and values. |
+| **A running PostgreSQL 18.4** | Without it every proof here is theatre. Do not substitute a fake. |
+| **PRD §7 vs skeleton columns** | Task 3 needs a ruling on how much of the real model to build now. |
+
+---
+
+## Task 0 · The canon and the rules gate
+
+**Build this first — everything imports from it rather than re-deriving.** Two
+modules that each invent tenant scoping is a data leak; two normalizers that
+disagree is a corrupted accuracy measurement.
+
+**CONTRACT**
+
+`libs/domain` exports `TenantId`, `TENANT_GUC`, and `tenant_guc_value()`.
+
+`tenant_guc_value(None)` returns the **empty string** — never `"None"`, never
+`None`. *Proven 2026-08-05: `''::uuid` raises `invalid input syntax for type
+uuid: ""`, while `nullif('','')::uuid` is NULL and denies cleanly. The empty
+string is the only correct sentinel, and only because the policy wraps it in
+`nullif`.*
+
+`scripts/check_backend_rules.py` exits non-zero on any of:
+
+| rule | scope |
+|---|---|
+| `Any`, `# type: ignore`, `cast(` | `src/` |
+| `begin_nested(` | `src/` — a SAVEPOINT unwinds the tenant GUC |
+| `text(` / `exec_driver_sql(` | `src/` **except** `*/db/` |
+| `HTTPException` | `src/` except `api/errors.py` |
+| `print(` | `src/` |
+| file > 400 lines | `src/` |
+| `rules-allow:` with a reason under 12 chars | everywhere |
+
+Scan roots resolve from the **repo root**, not `cwd`: `services/*/src`,
+`libs/*/src`. **`tests/` is never scanned** — later tasks require raw SQL there.
+
+**⚠ The gate will not be clean on the current tree.** Existing code predates
+these rules. Part of this task is to bring `services/*/src` and `libs/*/src` into
+compliance, or to record a specific, reasoned `rules-allow:` where the existing
+code is right and the rule is too blunt. Report which you did and why.
+
+**PROOF** — `libs/domain/tests/test_tenancy.py`, run from `libs/domain`:
+`tenant_guc_value(None) == ""`, and explicitly `!= "None"`.
+
+**INJECTION — all seven, one at a time.** Add a file under `src/` violating each
+rule; each must exit non-zero and name the file. Then `# rules-allow: short` —
+must still fail, on reason length. *A gate exercised on one rule is a gate tested
+on one rule; this repo's frontend equivalent was defeated on 9 of 11 rules by the
+first evasion tried.*
+
+---
+
+## Task 1 · Dependencies and the database seam
+
+**CONTRACT**
+
+`services/core-api` depends on `sqlalchemy>=2.0.51,<2.1` (the `<2.1` cap is
+required — `2.1.0b3` is on PyPI and is *newer* than stable),
+`psycopg[binary,pool]>=3.3.4,<3.4`, `alembic>=1.18.5,<1.19`, and dev
+`testcontainers[postgres]>=4.15.0,<5.0`. `uv.lock` regenerated and committed.
+
+`services/core-api/tests/conftest.py` exposes session-scoped fixtures giving
+**three distinct DSNs**, because they are three different privilege levels:
+
+| fixture | connects as | used for |
+|---|---|---|
+| `admin_dsn` | superuser | `roles.sql`, seeding |
+| `migration_dsn` | `titlepipe_migration` | Alembic |
+| `app_dsn` | `titlepipe_app` | **every isolation assertion** |
+
+**Fixtures must live in `conftest.py`.** pytest does not collect fixtures from
+arbitrary modules such as `tests/db.py`.
+
+**Three traps, all verified:**
+
+- `PostgresContainer.get_connection_url()` returns **`postgresql+psycopg2://`**
+  by default. psycopg2 is deliberately not a dependency. Pass
+  `driver="psycopg"`.
+- `testcontainers[postgres]`'s extra is **empty** and installs no driver;
+  `psycopg[binary]` is what makes it connect.
+- The override env var **must not start with `TITLEPIPE_`**. `settings.py` sets
+  `env_prefix="TITLEPIPE_"` with `extra="forbid"`, so `CoreApiSettings` would
+  reject its own test variable. Use `TP_TEST_DATABASE_URL`.
+
+**PROOF** A test reads `SELECT current_setting('server_version')` and asserts it
+starts with `18.`.
+
+**INJECTION** Point `TP_TEST_DATABASE_URL` at port 5432 (16.14 on the dev box).
+The version test must fail.
+
+---
+
+## Task 2 · Roles
+
+**CONTRACT**
+
+Five roles. The owner is the one that matters and it is **`NOLOGIN`**:
+
+| role | login | purpose |
+|---|---|---|
+| `titlepipe_owner` | **no** | owns every table; nothing connects as it |
+| `titlepipe_migration` | yes | runs Alembic; member of `titlepipe_owner` |
+| `titlepipe_app` | yes | core-api |
+| `titlepipe_worker` | yes | extraction / render |
+| `titlepipe_blind` | yes | blind-svc, separate database |
+
+All five: `NOSUPERUSER NOBYPASSRLS`. **A table owner bypasses RLS unless `FORCE`
+is set**, which is why ownership sits with a role nothing logs in as.
+
+`migrations/sql/roles.sql` is **idempotent and creates all five**, taking
+passwords from the environment — never a literal. Name the variables in the file
+and fail loudly if unset.
+
+**🔴 HUMAN GATE: ask for the password variable names and values before writing
+this.** Do not invent them.
+
+**`CREATE TABLE` sets the owner to the CURRENT role, not to a role you merely
+inherit.** So `migrations/env.py` must issue `SET ROLE titlepipe_owner` on the
+connection immediately after connect, before `context.begin_transaction()`.
+Without it, tables are owned by whoever ran Alembic and the contract fails.
+
+**PostgreSQL 15+ revoked `CREATE` on schema `public` from `PUBLIC`.** *Proven:
+without an explicit grant, `CREATE TABLE` as the owner fails with `permission
+denied for schema public`.* `roles.sql` must grant it.
+
+**PROOF** — a catalog test that **enumerates roles from `pg_roles`**, not from a
+list here:
+- every `titlepipe_*` role: `rolsuper = false`, `rolbypassrls = false`;
+- `titlepipe_owner`: `rolcanlogin = false`;
+- every table in `public`: `relowner` is `titlepipe_owner`;
+- no LOGIN role appears as any table's `relowner`.
+
+**INJECTION** `ALTER ROLE titlepipe_app BYPASSRLS;` in a transaction you roll
+back. The catalog test must fail.
+
+---
+
+## Task 3 · Schema and first migration
+
+**🔴 HUMAN GATE — ask before writing.** `docs/PRD.md` §7 defines the real model
+(`packages(id, order_id, storage_key, page_count, sha256, …)`, a four-level FK
+chain, `updated_at` everywhere). This plan needs only enough to *prove
+isolation*. Ask which:
+**(a)** skeleton — `id`, `tenant_id`, `created_at` plus the two typed columns
+below, no FKs between them; or **(b)** PRD §7 shapes in full.
+The proofs below hold either way. **(a) is the recommendation** — Plan 01 is a
+security gate, and every column added now is a column migrated later.
+
+**CONTRACT**
+
+Tables: `tenants`, `orders`, `packages`, `pages`, `fields`, `field_readings`,
+`audit_log`.
+
+**`tenants` is the registry, not a tenant table** — its PK *is* the tenant id, so
+its policy is on `id`. The other six are **tenant tables** and each carries
+`tenant_id uuid NOT NULL`.
+
+Two typed columns are not negotiable whichever option is chosen:
+- `fields.na_reason` — a Postgres **ENUM named `na_reason`** with exactly the
+  four labels. An enum makes an unknown value a *write* error rather than a
+  read-time surprise.
+- `field_readings.line_coords jsonb NULL` — **nullable is load-bearing.** Engines
+  without coordinate support declare `null` and never fake a box. Reader A is a
+  VLM and genuinely cannot cite.
+
+`audit_log` is append-only, enforced by a trigger that is **`FOR EACH
+STATEMENT`**. *`FOR EACH ROW` never fires: under RLS an UPDATE with a mismatched
+tenant matches zero rows, so a row-level trigger is silent and the proof passes
+vacuously. Proven — the statement-level trigger raises regardless of matched
+rows.*
+
+`Base` is a plain `DeclarativeBase` (not `MappedAsDataclass`) in
+`src/titlepipe_core/db/models.py`, carrying a `MetaData` naming convention so
+constraint names are deterministic. Task 5 imports this exact symbol.
+
+Alembic revision ids are the literal strings `"0001"` and `"0002"`, so Task 4's
+`down_revision` matches. `migrations/` needs `__init__.py` or ruff reports
+`INP001`.
+
+**Hand-write the migration. `--autogenerate` cannot see policies, grants, roles
+or enums.**
+
+**PROOF**
+- `upgrade head → downgrade base → upgrade head` clean on a fresh database;
+- `na_reason` has exactly four labels, in order;
+- `UPDATE audit_log` raises;
+- if models.py declares mapped classes, `alembic check` reports no diff.
+
+**INJECTION** The second `upgrade` must succeed. If it fails on "already exists",
+the downgrade was a no-op. Test `0002`'s downgrade separately — `0001`'s
+`DROP TABLE` removes policies as a side effect and would mask it.
+
+---
+
+## Task 4 · Forced RLS and the grants
+
+**CONTRACT**
+
+Every tenant table: `ENABLE` **and** `FORCE ROW LEVEL SECURITY`, with
+
+```sql
+CREATE POLICY tenant_isolation ON <t>
+  USING (tenant_id = nullif(current_setting('app.current_tenant', true), '')::uuid);
+```
+
+`tenants` uses `id` instead of `tenant_id`.
+
+**Then the GRANTs.** *RLS is evaluated **after** the privilege check, never
+instead of it.* Without them `titlepipe_app` gets `permission denied` — and a
+read test would pass for entirely the wrong reason:
+
+```sql
+GRANT USAGE ON SCHEMA public TO titlepipe_app, titlepipe_worker;
+GRANT SELECT, INSERT, UPDATE ON <all seven tables> TO titlepipe_app;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO titlepipe_app;
+```
+
+Include `tenants` — the seed and the FK checks need it.
+
+**Two corrections to earlier drafts, both proven, both counter-intuitive:**
+
+1. **`WITH CHECK` is not required to stop cross-tenant INSERT.** PostgreSQL
+   applies the `USING` expression as the check when `WITH CHECK` is absent. The
+   forged INSERT was refused under `USING` alone. Add `WITH CHECK` only if reads
+   and writes need *different* conditions.
+2. **`current_setting(x, true)` and `nullif(…,'')` guard different absences.**
+   Never set → NULL → no error. Set to `''` (our own sentinel) → **raises**. Both
+   are needed; only the `nullif` saves us.
+
+**PROOF** — a catalog test that **enumerates tenant tables from `pg_class`**
+(every table in `public` except `tenants`, or by the presence of a `tenant_id`
+column — derive it, do not hardcode):
+- `relrowsecurity AND relforcerowsecurity` for each;
+- a `tenant_isolation` policy exists on each;
+- `has_table_privilege('titlepipe_app', t, 'SELECT')` and `'INSERT'` for each.
+
+**INJECTION** Drop `FORCE` from one table, connect as `titlepipe_owner`, and the
+catalog test must fail. **Squawk will not catch any of this** — it lints lock
+safety and has no rules for GRANT, POLICY, RLS or roles.
+
+---
+
+## Task 5 · Tenant session and repository base
+
+**Every database access in every later plan goes through this.** It exists so
+there is no un-scoped path to reach for.
+
+**CONTRACT** — Plans 02–06 consume these signatures:
+
+```python
+def make_engine(dsn: str, *, pool_size: int = 5, max_overflow: int = 10) -> AsyncEngine
+def make_sessionmaker(engine: AsyncEngine) -> async_sessionmaker[AsyncSession]
+
+@asynccontextmanager
+async def tenant_session(
+    sessionmaker: async_sessionmaker[AsyncSession], tenant: TenantId | None
+) -> AsyncIterator[AsyncSession]
+
+class TenantRepository[T: Base]:
+    def __init__(self, session: AsyncSession, model: type[T]) -> None
+    async def get(self, id_: UUID) -> T | None
+    async def add(self, entity: T) -> None
+```
+
+`make_engine` **must expose `max_overflow`** — Task 6 needs `pool_size=1,
+max_overflow=0` and cannot get it otherwise.
+
+`model` is a **constructor parameter, not `ClassVar[type[T]]`.** The typing spec
+forbids type variables inside `ClassVar`; pyright 1.1.411 — what `pyright==1.1.*`
+resolves to — reports *"ClassVar type cannot include type variables"*.
+
+`tenant=None` is legal and means deny-everything. Health checks use it.
+
+The GUC is applied via an `after_begin` listener on `Session`, calling
+`set_config(TENANT_GUC, tenant_guc_value(...), true)`. **`set_config` has exactly
+one signature** — `(text, text, boolean)`. There is no two-argument form.
+
+**Three traps, all verified:**
+
+- **`SET LOCAL` outside a transaction is a no-op.** *Proven: `WARNING: SET LOCAL
+  can only be used in transaction blocks`, and it then reports `SET`. Silently
+  does nothing, claims success.*
+- **`SAVEPOINT` unwinds the GUC.** Task 0's gate bans `begin_nested()` under
+  `src/`. **Tests may still use savepoints** — that is how Task 6 assertion 4
+  checks the behaviour, and `tests/` is not scanned.
+- **`after_begin` is ORM-only.** Verified absent from `ConnectionEvents` and
+  `PoolEvents` — though `ConnectionEvents` *does* have `begin`, so someone may
+  believe they are covered at Core level and not be. Raw `engine.connect()`,
+  Alembic and Procrastinate bypass it entirely.
+
+**PROOF** `tenant_session` applies the GUC (assert `current_setting` inside it);
+`tenant=None` yields `""`; `TenantRepository` requires a `model` argument.
+
+**INJECTION** Remove the `after_begin` listener. Task 6 assertion 1b must fail —
+every tenant then sees nothing.
+
+---
+
+## Task 6 · The isolation proof
+
+### 🔴 Requires PostgreSQL 18.4. `skip` is forbidden. Connect as `titlepipe_app`.
+
+**Superusers bypass RLS unconditionally — `FORCE` does not stop them.** *Proven:
+as `postgres`, a correctly forced table still returned every tenant's rows.* An
+isolation test on the admin DSN passes while proving nothing.
+
+**CONTRACT — the fixture.** A session-scoped fixture on `admin_dsn` seeds, before
+any app-role connection opens: tenants **A** and **B**, **two** orders for A,
+**exactly one** for B. Seeding must set the tenant GUC per tenant — *proven: even
+the migration role, inheriting the owner, is refused by policy under `FORCE`.*
+
+**Engine: `pool_size=1, max_overflow=0`.** With a larger pool, B may get a fresh
+connection and pass for the wrong reason.
+
+**Seven assertions:**
+
+| # | assertion | expected | closes |
+|---|---|---|---|
+| 1 | A writes and commits; B's txn on the **same** connection, no tenant set | **0 rows** | the GUC surviving pool checkout |
+| 1b | **POSITIVE CONTROL** — B with its own tenant | **exactly 1, not 0** | a system that denies everything |
+| 2 | A inserts a row carrying B's `tenant_id` | raises **SQLSTATE 42501** | write-side isolation |
+| 3 | no tenant set, select | **0 rows, no exception** | the `nullif` guard |
+| 4 | inside one txn: set tenant, savepoint, rollback to it, re-select | still A's rows | the SAVEPOINT trap |
+| 5 | raw `engine.connect()`, no tenant | 0 rows | `after_begin` is ORM-only |
+| 6 | `SET ROLE titlepipe_owner` as app | raises `permission denied to set role` | Task 2's ownership rule |
+
+**1b is not optional.** Assertions 1, 3 and 5 are all satisfied by a database
+that denies everything to everyone. Without the control the suite cannot tell
+"isolated" from "broken".
+
+**Assert on SQLSTATE, not on "raises".** A typo'd column, a NOT NULL violation
+and an RLS refusal all raise. Match `42501` specifically.
+
+*Assertions 1, 1b, 2, 3 and 6 were executed on 2026-08-05 against 18.4 as a
+non-superuser and produced exactly these results.*
+
+**INJECTION — both, and both re-runnable:**
+- Connect as the **superuser** instead of `titlepipe_app`. Assertions 1, 2 and 6
+  must all fail.
+- Remove the `after_begin` listener (Task 5's injection). **1b** must fail.
+
+---
+
+## Task 7 · CI
+
+**CONTRACT** `.github/workflows/backend.yml` gains a `postgres:18.4` service,
+runs `roles.sql` before Alembic, `alembic upgrade head`, the core-api suite,
+**the `libs/domain` suite** (otherwise Task 0's proof never runs), and the rules
+gate.
+
+**Squawk lints `.sql`, and the migrations are Python.** Either emit SQL with
+`alembic upgrade head --sql` and lint that, or scope Squawk to
+`migrations/sql/` — and **say which in the workflow**. Do not leave a CI line
+implying coverage that does not exist.
+
+State in the workflow that **Squawk does not cover GRANT, POLICY, RLS or
+roles** — Tasks 2 and 4's catalog tests do.
+
+---
+
+## Done
+
+```
+uv run ruff check .                             clean
+uv run ruff format --check .                    clean
+uv run pyright                                  0 errors
+uv run pytest                    (core-api)     green, all 7 assertions
+cd libs/domain && uv run pytest                 green
+python scripts/check_backend_rules.py           clean
+alembic upgrade head → downgrade base → upgrade head    no error
+uv sync --frozen                                succeeds
+```
+
+Plus, and these are the ones that matter:
+
+- every tenant table has `relrowsecurity AND relforcerowsecurity` and is owned by
+  `titlepipe_owner`;
+- no LOGIN role is superuser, bypassrls, or owns a table;
+- `titlepipe_app` holds SELECT/INSERT/UPDATE on all seven tables;
+- **every injection was run and observed to fail**, named in the commit message.
+
+**Not in this plan:** any HTTP route, WorkOS, R2, Procrastinate, OTel. Those land
+at the gate that first needs them, so an unused dependency never reaches a
+production image.

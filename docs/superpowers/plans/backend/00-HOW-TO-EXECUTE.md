@@ -1,0 +1,194 @@
+# How to execute a backend plan
+
+> **You are the LEAD.** You do not write the code. You dispatch a subagent per
+> task, verify its work yourself, and refuse it when the evidence is missing.
+> This file is the protocol. Every numbered plan in this directory assumes it.
+
+Read this once, then read your plan. If the two conflict, **this file wins on
+process** and the plan wins on content.
+
+---
+
+## 1. The rule this whole protocol exists for
+
+**A subagent's report that it is done is not evidence that it is done.**
+
+This is not cynicism, it is the measured behaviour of this repo's own history:
+
+- Implementation agents reported "all gates green" when `knip` was red and the
+  e2e suite had never been run once.
+- Four separate defects — a 3,276px page, seventeen rows collapsed to 10px
+  rules, a document facsimile at 11% of its pane, an accent colour painted on
+  nothing — **passed every test in a 594-test suite.**
+- A settings validator agreed with its own bug for weeks, because the only value
+  ever exercised was the one that should have failed.
+
+So: **you run the gate. Not the subagent.** A task is done when *you* have seen
+the commands pass in your own tool output, and seen the injection fail.
+
+---
+
+## 2. The loop, per task
+
+```
+  1. DISPATCH   one subagent, one task, with the task's full text
+  2. RECEIVE    its report — treat as a claim, not a result
+  3. VERIFY     run the gate yourself
+  4. INJECT     apply the task's ANTI-VACUITY step; confirm the named check FAILS
+  5. RESTORE    undo the injection; confirm green again
+  6. REVIEW     dispatch an independent reviewer (§4)
+  7. COMMIT     only now, with the evidence in the message (§6)
+```
+
+Never batch. Never run task N+1 while N is unverified — later tasks consume
+earlier interfaces, and a wrong interface propagates silently.
+
+### Dispatching
+
+Give the subagent: the task's complete text, this file's §3 (its obligations),
+and the repo path. Do **not** give it the whole plan — a subagent that can see
+later tasks will build for them and widen its own scope.
+
+Tell it explicitly: *"Report what you actually ran and what it printed. If you
+could not run something, say so. A truthful 'blocked' is worth more than a
+plausible 'done', and I will verify either way."*
+
+---
+
+## 3. What every implementing subagent must be told
+
+Paste this into every dispatch:
+
+> - Work only within the files this task names. If you need to change a file it
+>   does not name, stop and report why.
+> - Read the neighbouring code before writing. Match its style, its comment
+>   density, its idiom. This repo comments the *why*, not the *what*.
+> - No `Any`, no `# type: ignore`, no `cast()` without a `rules-allow:` comment
+>   carrying a reason of at least 12 characters.
+> - Never weaken or delete an existing test to make yours pass. If an existing
+>   test now fails, that is a finding — report it, do not fix it silently.
+> - Never mark a test `skip` or `xfail` to get green. If you cannot run
+>   something, say so.
+> - Do not invent credentials, connection strings, or fixture data that the task
+>   did not specify. Ask.
+> - When you finish, report: the exact commands you ran, their output, and
+>   anything you were unsure about. Unsurfaced uncertainty is the expensive kind.
+
+---
+
+## 4. The review stage
+
+Dispatch a **separate** subagent. Not the implementer, and not given the
+implementer's report — a reviewer shown the answer reviews the answer.
+
+Its brief, verbatim:
+
+> Review this diff against the task it claims to implement. **Your default
+> verdict is NOT DONE.** Find what is missing, wrong, or unproven. For each
+> finding: cite `file:line`, state concretely what breaks and under what input,
+> and say what the code should do instead. Do not report style preferences. If
+> the work is genuinely complete, say so in one line — but look for at least
+> these first:
+>
+> - a test that asserts a constant rather than querying the real thing
+> - a test that would pass if the implementation were deleted
+> - an error path with no test
+> - a `try/except` that swallows
+> - anything that runs at import time rather than call time
+> - a shared helper re-implemented locally instead of imported
+
+**Escalate on disagreement, do not average.** If the reviewer and implementer
+conflict, you decide by running the thing — not by splitting the difference.
+
+---
+
+## 5. When you are blocked
+
+Plans mark hard stops as **🔴 HUMAN GATE**. At one of those you **stop and ask
+the user**. You do not:
+
+- invent a password, a DSN, or a credential;
+- substitute an in-memory fake for a database the plan requires;
+- mark the test `skip` and move on;
+- pick one side of a ruling the plan says is the owner's.
+
+A plan that stalls at a human gate is working correctly. A plan that glides past
+one has produced work nobody can trust.
+
+**If the plan itself is wrong or incomplete — say so and stop.** These documents
+have been attacked twice and still had defects. You finding a hole is the system
+working, not you failing.
+
+---
+
+## 6. Evidence, and what goes in the commit
+
+Each task commits separately. The message states what was proven, not what was
+attempted:
+
+```
+<what the task achieved, in one line>
+
+<why, and any decision you made that the plan left open>
+
+Gate: <the exact commands, and their results>
+Injection: <what you broke, and which assertion failed as a result>
+```
+
+**"Tests pass" is not evidence. "Tests fail without the fix" is.** If you did not
+run the injection, the task is not done, however green the suite is.
+
+---
+
+## 7. Working with the database
+
+Several plans need a real PostgreSQL. Two are known to exist:
+
+| where | port | version |
+|---|---|---|
+| Windows dev box | **5433** | **18.4** ← use this |
+| Windows dev box | 5432 | 16.14 — **wrong major** |
+| Second laptop | — | Docker + Postgres available |
+
+Pointing at the default port silently tests the wrong major. Every plan that
+touches the database asserts `server_version` for exactly this reason.
+
+**Superusers bypass RLS unconditionally** — `FORCE ROW LEVEL SECURITY` does not
+stop them. Any isolation test that connects as a superuser passes while proving
+nothing. This was demonstrated on this repo on 2026-08-05: as `postgres`, a
+correctly forced table still returned every tenant's rows.
+
+---
+
+## 8. Reporting to the user
+
+At the end of each task, report in plain language:
+
+- what now works that did not before;
+- the gate output, quoted, not summarised;
+- which injection you ran and what failed;
+- anything you decided that the plan left open;
+- anything you could not verify — **say this even when everything else is green.**
+
+Do not claim completion for work you did not verify yourself. If a subagent said
+it worked and you did not check, the honest report is *"the subagent reports X;
+I have not verified it."*
+
+---
+
+## 9. Plans in this directory
+
+| plan | ships | status |
+|---|---|---|
+| [`01-postgres-correctness.md`](./01-postgres-correctness.md) | schema, roles, forced RLS, the tenant-isolation proof | ready |
+| 02 — first vertical slice | `GET /api/rules` through the whole spine | not written |
+| 03 — identity | WorkOS sessions, server-evaluated authz | not written |
+| 04 — order reads | context, queue, fields with provenance | not written |
+| 05 — domain core + mutations | the five-state machine, seven refusals | not written |
+| 06 — ingest + queue | R2 presigned upload, Procrastinate | not written |
+
+Plans 02–06 are written after 01 lands, so each is informed by what actually
+happened rather than what was predicted.
+
+**Canonical context:** [`docs/backend/BUILD-PLAN.md`](../../../backend/BUILD-PLAN.md)
+— architecture, pinned versions and the traps behind each. Read it before Task 0.
