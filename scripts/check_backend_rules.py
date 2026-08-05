@@ -22,13 +22,28 @@ savepoint opened, so the next statement in the same transaction runs under the
 wrong tenant — or none — and RLS enforces the wrong thing. There is no safe
 nested transaction while the tenant lives in a session setting.
 
-**3. `text` / `exec_driver_sql`** — scope `src/` **except** the `db` package
-directly inside a distribution package. Raw SQL is how a query stops being
-tenant-scoped, because the ORM's filters are what carry the scope. The `db`
-packages own the handful of statements (`SET LOCAL`, health checks,
-migrations) that must be raw, and they are reviewed as such. `tests/` is not
-scanned at all: proving RLS denies a row requires raw SQL that deliberately
-tries to reach across a tenant.
+**3. `text` / `literal_column` / `exec_driver_sql` / `raw_connection`** — scope
+`src/` **except** the `db` package directly inside a distribution package. Raw
+SQL is how a query stops being tenant-scoped, because the ORM's filters are what
+carry the scope.
+
+`literal_column` is an exact synonym for `text` in injection terms — both splice
+a string straight into the statement — and it was reachable through this gate
+until it was named here. `raw_connection` is worse than either: it hands back
+the DBAPI connection, so the statement leaves behind not only the ORM's filters
+but the `Session` events that set the tenant GUC in the first place. It stays
+under this rule, and therefore under this rule's `db` carve-out, because a pool
+health check is a plausible reason to want one; that carve-out is where the
+review has to actually happen.
+
+A test suite legitimately needs raw SQL: proving RLS denies a row requires a
+statement that deliberately reaches across a tenant. This repository's tests
+live *beside* `src/` — `services/*/tests`, `libs/*/tests` — which is outside the
+scan roots, so they are out of scope by **location**. A `tests` package *inside*
+`src/` is a different thing and is scanned like any other: it imports and runs
+like any other module, and `titlepipe_probe.tests.queries` is as much shipped
+code as `titlepipe_probe.api.control`. If a `src/**/tests/` package is ever
+wanted it can earn a `rules-allow-file`.
 
 **4. `HTTPException`** — scope `src/` except each package's own `api/errors.py`.
 One layer decides what a failure becomes over HTTP. Domain code that raises
@@ -40,6 +55,14 @@ path from a debugging session to NPI in a log aggregator.
 
 **6. file > 400 lines** — scope `src/`. A cap, not a target. Reviewability is
 the control this whole repository leans on.
+
+This file is itself over the cap and does not carry an exemption, because it is
+not in the cap's scope: the scan roots are `services/*/src` and `libs/*/src`,
+and `scripts/` is neither. That is an accident of scoping rather than a
+judgement, so it is written down here beside the rule. A gate that visibly
+breaks its own rule without saying so is a gate people stop believing, and the
+honest position is that this file would need a `rules-allow-file(file-length)`
+the day `scripts/` came into scope.
 
 **7. a `rules-allow` whose reason is under 12 characters, or which does not
 name a rule** — every scanned file. An exemption without a reason is a deletion
@@ -153,6 +176,23 @@ statements on every line passes the length cap while being twice the thing the
 cap exists to prevent. Ruff's formatter splits compound statements and is the
 real control here; the line count is a backstop, not a proof.
 
+**3. A name assembled at runtime.** `getattr(sa, "t" + "ext")` binds
+SQLAlchemy's `text` under a name the AST never sees, and neither do
+`globals()["text"]`, `importlib.import_module`, or `eval`. Banning `getattr`
+was considered and rejected on measurement: `src/` holds six `getattr` calls
+today, four with a constant attribute name (`"detail"`, `"resources"`) and two
+with a module constant, and every one of them reads Starlette or FastAPI state
+that is untyped by construction. A rule keyed on a *constant* attribute name
+would therefore start life with six false positives — and would still miss the
+evasion above, whose attribute name is a `BinOp`. A rule keyed on a
+*non*-constant name would catch that one spelling and none of the others.
+
+The honest boundary is that this gate catches renames and idioms, not
+adversaries. `from sqlalchemy import text as sql` is what a tired person writes
+and `literal_column` is what a helpful person reaches for; both are now caught.
+`"t" + "ext"` is what somebody writes to get past this file, and at that point
+the control is review, not a detector.
+
 ## `rules-allow` — two forms, both rule-scoped, and exactly what each covers
 
 **Line form.** `# rules-allow(<rule-id>): <reason>` on the *same physical line*
@@ -163,6 +203,15 @@ one-off.
 file exempts that one named rule for the whole file. Rule 6 needs this — a
 file's length is attached to no line — and so does the boundary module whose
 every third line is the same justified exemption.
+
+Because rule 6 is attached to no line, the *line* form can never grant it.
+`# rules-allow(file-length): …` parsed cleanly, was recorded as an accepted
+exemption, and was then never consulted: the file-length violation carries
+`line=0` and is only ever checked against the file-form set. It failed closed —
+the file still failed the length cap — which is the worse direction to be
+silent in, because the author sees a rejected file and a reason they wrote that
+apparently did nothing. It is now rejected by name, pointing at the form that
+works.
 
 Both are rule-scoped for the same reason. A file excused for `any-type` must
 not thereby acquire a licence to `print(`, and neither must a *line*: the
@@ -194,8 +243,8 @@ cwd-relative root would match nothing.
 Matching nothing **exits non-zero**. A gate that cannot find the code has not
 checked it, and the three ways this happened were all silent: a mistyped root
 path, a root argument pointing at a single service, and — the subtle one — a
-checkout living under a directory named `venv` or `tests`, which made every
-absolute path contain a skipped component and emptied the scan. Skipped
+checkout living under a directory named `venv` or `node_modules`, which made
+every absolute path contain a skipped component and emptied the scan. Skipped
 directory names are therefore matched against each file's path *relative to
 its own scan root*, never against the absolute path, so where the repository
 happens to be checked out cannot change what is scanned.
@@ -228,10 +277,18 @@ SCAN_ROOT_DEPTH: Final = 3
 MAX_FILE_LINES: Final = 400
 MIN_ALLOW_REASON_LENGTH: Final = 12
 
-# Directory names that are never source and never ours to police. `tests` is in
-# here on purpose and is not an oversight — see rule 3.
+# Directory names that are never source: build products, caches and installed
+# third-party trees. `tests` used to be in here and is deliberately gone. It was
+# excused because rule 3 does not apply to test code — but this repository's
+# tests are at `services/*/tests`, beside `src/` and outside the scan roots
+# entirely, so the name never needed skipping to achieve that. What it did
+# achieve was excusing a real package: `…/src/titlepipe_probe/tests/queries.py`
+# scanned clean with a `text(…)` and a `print(…)` in it while the identical body
+# one directory over was caught. Everything under a scan root is scanned; a
+# `src/**/tests/` package that genuinely needs raw SQL can earn a
+# `rules-allow-file`.
 SKIPPED_DIRECTORY_NAMES: Final = frozenset(
-    {"tests", ".venv", "venv", "__pycache__", "node_modules", ".mypy_cache", ".ruff_cache"}
+    {".venv", "venv", "__pycache__", "node_modules", ".mypy_cache", ".ruff_cache"}
 )
 
 # Every rule id an exemption may name, with the message quoted back at whoever
@@ -244,6 +301,12 @@ RULES: Final[dict[str, str]] = {
     "print": "stdout bypasses the redaction processor",
     "file-length": f"over {MAX_FILE_LINES} lines stops being reviewable",
 }
+
+# Rule ids the *line* form can never grant, because the violation they suppress
+# is attached to no line. A `# rules-allow(file-length): …` used to parse, be
+# recorded, and then never be consulted — the file-length violation carries
+# `line=0` and is only ever tested against the file-form set.
+FILE_ONLY_RULE_IDS: Final = frozenset({"file-length"})
 
 ALLOW_MARKER: Final = "rules-allow"
 FILE_ALLOW_PREFIX: Final = "rules-allow-file("
@@ -281,7 +344,11 @@ NAME_RULES: Final = (
     ),
     NameRule(
         "raw-sql",
-        frozenset({"exec_driver_sql"}),
+        # `literal_column` splices a string into the statement exactly as `text`
+        # does; `raw_connection` returns the DBAPI connection, which leaves the
+        # ORM's filters *and* the Session events that set the tenant GUC behind.
+        # Neither is an English word, so both take the attribute shape too.
+        frozenset({"exec_driver_sql", "literal_column", "raw_connection"}),
         True,
         "raw SQL is not tenant-scoped by the ORM; keep it in a db/ package",
     ),
@@ -466,6 +533,16 @@ def _read_scoped_allow(
             line,
             ALLOW_MARKER,
             f"unknown rule id {rule_id!r}; expected one of {', '.join(sorted(RULES))}",
+        )
+    if prefix == LINE_ALLOW_PREFIX and rule_id in FILE_ONLY_RULE_IDS:
+        # Accepting this and then never consulting it is how a reason becomes
+        # decoration. See the `rules-allow` section of the module docstring.
+        return Violation(
+            relative,
+            line,
+            ALLOW_MARKER,
+            f"{rule_id!r} is about the whole file, so a line exemption can never grant it; "
+            f"write '# {FILE_ALLOW_PREFIX}{rule_id}): <reason>'",
         )
     if not _reason_is_adequate(remainder):
         return _short_reason(relative, line, remainder)
@@ -690,17 +767,30 @@ def scannable_files(roots: list[Path]) -> list[Path]:
 
 
 def scan_file(path: Path, relative: str) -> list[Violation]:
-    """Read and scan one file, reporting a file this scanner cannot decode.
+    """Read and scan one file, reporting a file this scanner cannot read at all.
 
     A `# -*- coding: latin-1 -*-` module with one high byte in it used to take
     the entire run down with an uncaught `UnicodeDecodeError`, so *no* file got
     a report. That is the same situation as unparseable source and gets the
     same answer: name the file, keep going.
+
+    The handler caught only that one exception, which meant it still had the
+    failure mode it was written to remove. MEASURED against this tree: a broken
+    symlink under a scan root raises `FileNotFoundError` and a directory named
+    `weird.py` raises `IsADirectoryError`, both uncaught, both aborting the run
+    with a traceback before any file was reported. Neither is exotic — a stale
+    editable-install link and a half-restored CI cache produce them — and in
+    pre-commit the gate then failed with an errno instead of a filename.
+    `OSError` covers both, plus the permission and I/O cases nobody has hit yet.
+
+    `UnicodeDecodeError` is a `ValueError`, not an `OSError`, so it has to stay
+    named. Its own `str` already says which byte at which offset, so one message
+    serves both without losing anything.
     """
     try:
         source = path.read_text(encoding="utf-8")
-    except UnicodeDecodeError as exc:
-        return [Violation(relative, 0, "parse", f"is not valid UTF-8, so no rule ran on it: {exc}")]
+    except (UnicodeDecodeError, OSError) as exc:
+        return [Violation(relative, 0, "parse", f"could not be read, so no rule ran on it: {exc}")]
     return scan_source(source, relative)
 
 

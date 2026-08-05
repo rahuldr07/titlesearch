@@ -24,6 +24,11 @@ id, so Task 4's policy keys on `id` there and on `tenant_id` everywhere else.
 Task 4 derives that split from the presence of a `tenant_id` COLUMN rather than
 from a list, which is why `tenants` must not grow one.
 
+**EVERY TENANT TABLE'S PRIMARY KEY IS `(tenant_id, id)`, AND `tenants`' IS
+`(id)`.** See `_TenantRow` for the cross-tenant existence oracle that a
+single-column `id` primary key opens under `FORCE ROW LEVEL SECURITY`, and for
+the measurement.
+
 `Base` is a plain `DeclarativeBase` and **not** `MappedAsDataclass`. Task 5
 imports this exact symbol as the bound of `TenantRepository[T: Base]`; the
 dataclass variant would additionally impose `__init__` ordering rules on every
@@ -55,6 +60,18 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 # The skeleton has nothing but primary keys today. The convention is here anyway
 # because the day it is missing is the day a constraint is created without it,
 # and renaming a live constraint costs more than declaring the rule now.
+#
+# 🔴 IT IS THE `pk` ENTRY, AND THE WIRING, THAT THE DATABASE PROVES. MEASURED
+# 2026-08-05 on the tree before this change: deleting
+# `naming_convention=NAMING_CONVENTION` from `Base.metadata`, changing `pk` to
+# `%(table_name)s_pkey`, and narrowing `ix` from `column_0_N_name` to
+# `column_0_name` each left the suite at `159 passed` — `alembic check` does not
+# compare constraint NAMES. `test_every_table_has_the_primary_key_it_is_supposed
+# _to_have` now reads `pk_<table>` out of `pg_constraint`, which kills the first
+# two. The other four patterns name no constraint that exists yet, so
+# `test_the_naming_convention_is_exactly_these_five_patterns` pins them as
+# literals instead; see that test for why reading them back from here would pin
+# nothing.
 NAMING_CONVENTION: Final[dict[str, str]] = {
     "ix": "ix_%(table_name)s_%(column_0_N_name)s",
     "uq": "uq_%(table_name)s_%(column_0_N_name)s",
@@ -90,7 +107,13 @@ NA_REASON_LABELS: Final = ("NOT_PRESENT", "NOT_FOUND", "NOT_STATED", "PRESENT_UN
 # with no corresponding `DROP TYPE` — `DROP TABLE` does not drop a type, so the
 # second `upgrade` after a `downgrade` then dies on `type "na_reason" already
 # exists`.
-NA_REASON: Final = ENUM(*NA_REASON_LABELS, name="na_reason", create_type=False)
+# The type's name in the catalog, as its own constant. `ENUM.name` is typed
+# `str | None`, so a test reading it back would have to narrow before it could
+# compare anything; and `"na_reason"` was written out three times in
+# `tests/test_schema_migration.py` for exactly that reason.
+NA_REASON_TYPE_NAME: Final = "na_reason"
+
+NA_REASON: Final = ENUM(*NA_REASON_LABELS, name=NA_REASON_TYPE_NAME, create_type=False)
 
 # `gen_random_uuid()` is in core PostgreSQL from 13 on; no `pgcrypto` extension
 # and therefore no extension for the migration to create as a privileged role.
@@ -132,16 +155,71 @@ class _TenantRow(_Row):
     `tenant_id = nullif(current_setting('app.current_tenant', true), '')::uuid`,
     and `NULL = <anything>` is NULL, which is not true — so a nullable
     `tenant_id` would produce rows no tenant can read and none can delete,
-    invisible to every policy and to every test that reads through one.
+    invisible to every policy and to every test that reads through one. The
+    composite primary key below now enforces `NOT NULL` as well; the explicit
+    flag stays so that dropping `tenant_id` from the key cannot silently make the
+    column nullable.
+
+    ---------------------------------------------------------------------------
+    🔴 `tenant_id` IS PART OF THE PRIMARY KEY, AND IT CLOSES A CROSS-TENANT
+       EXISTENCE ORACLE THAT RLS CANNOT CLOSE.
+    ---------------------------------------------------------------------------
+    Unique enforcement runs BEFORE a policy's `WITH CHECK`, so under
+    `ENABLE` + `FORCE ROW LEVEL SECURITY` with Task 4's `tenant_isolation`
+    policy, a `PRIMARY KEY (id)` answers "does this id exist in some other
+    tenant?" to a caller who can neither read nor count the row. MEASURED
+    2026-08-05 against postgres:18.4, one table each way, tenant B connected as
+    a non-owner LOGIN role with `app.current_tenant` set to B:
+
+        tenant B, rows visible in orders_pk_id:  0
+        tenant B, rows visible in orders_pk_tid: 0
+
+        PK(id)             INSERT an id held only by tenant A
+            -> ERROR: duplicate key value violates unique constraint "pk_orders_pk_id"
+        PK(id)             INSERT an id held by nobody          -> succeeds
+        PK(tenant_id, id)  INSERT an id held only by tenant A   -> succeeds
+        PK(tenant_id, id)  INSERT an id held by nobody          -> succeeds
+
+    Two distinguishable answers for two rows tenant B cannot see. It is BOUNDED
+    today only because ids are 128-bit and server-generated, so the attacker must
+    already hold the id — from a shared link, a support ticket, an exported CSV.
+    It stops being bounded the moment a natural key lands, and PRD §7 gives
+    `orders` an order number and `pages` a page index. The convention is
+    therefore set here, while it is one line per table rather than a rewrite of
+    every table and every foreign key referencing them.
+
+    The tenant prefix is also what an RLS-filtered scan wants: every index this
+    key backs leads with the column every policy predicate tests.
+
+    `sort_order=-1` is what puts `tenant_id` FIRST in the key. A
+    `PrimaryKeyConstraint` object cannot be shared between tables and an explicit
+    one in `__table_args__` collides with `_Row.id`'s `primary_key=True` — that
+    combination raises `SAWarning: Table 'fields' specifies columns 'id' as
+    primary_key=True, not matching locally specified columns 'tenant_id', 'id'`,
+    MEASURED 2026-08-05 on SQLAlchemy 2.0. `sort_order` sorts this column ahead
+    of the inherited ones, and SQLAlchemy builds the implicit primary key in
+    table-column order, so the key comes out `(tenant_id, id)`. MEASURED: the
+    emitted DDL is `CONSTRAINT pk_fields PRIMARY KEY (tenant_id, id)`.
+
+    `tests/test_schema_migration.py` reads the key columns back out of
+    `pg_constraint` IN KEY ORDER, because nothing else would notice the prefix
+    going away.
     """
 
     __abstract__ = True
 
-    tenant_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, nullable=False, sort_order=-1
+    )
 
 
 class Tenant(_Row):
-    """The registry. Its PRIMARY KEY is the tenant id — see the module docstring."""
+    """The registry. Its PRIMARY KEY is the tenant id — see the module docstring.
+
+    `PRIMARY KEY (id)` here, alone of the seven, and it is not the omission
+    `_TenantRow` describes: this table's `id` IS a tenant id, so the key is
+    already tenant-scoped and there is no second column to prefix it with.
+    """
 
     __tablename__ = "tenants"
 

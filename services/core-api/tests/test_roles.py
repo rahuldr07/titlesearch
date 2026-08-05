@@ -47,6 +47,14 @@ import pytest
 from sqlalchemy import Connection, create_engine, text
 from sqlalchemy.exc import OperationalError, ProgrammingError
 
+# The same import `conftest.py` uses, and for the same reason: `testcontainers.
+# postgres` is a deprecated shim that warns on import, and the module actually
+# holding the class is `testcontainers.community.postgres`. Imported here only to
+# annotate the `postgres_container_factory` fixture's return type — a test has to
+# spell the type of its own parameter, and a type defined in `conftest.py` would
+# be unimportable under `--import-mode=importlib`.
+from testcontainers.community.postgres import PostgresContainer
+
 # The cardinality floor. Asserted BEFORE any per-role property, because every
 # such property is vacuously true over an empty catalog — which is precisely
 # what a `roles.sql` that silently did nothing would produce.
@@ -89,23 +97,64 @@ OPERAND_TRAILERS = "',;)"
 # Tables created and rolled back inside the ownership tests. Neither reaches the
 # catalog beyond the transaction that made it.
 #
-# `alembic_version` is spelled with its real name deliberately. It is the first
-# table Alembic creates, it is created outside any migration script, and Task 3
-# depends on it landing on `titlepipe_owner` like everything else — so it is
-# checked by name rather than inferred from a probe table that happens to
-# behave the same way.
+# `alembic_version` is NOT spelled here. It comes from `conftest.py`'s
+# `alembic_version_table` fixture, which is the same string the migration scrub
+# and `MIGRATION_TABLES` are built from — a second copy of it in this file would
+# be a name that could drift away from the one the teardown drops.
 OWNERSHIP_PROBE_TABLE = "task2_ownership_probe"
-ALEMBIC_VERSION_TABLE = "alembic_version"
+
+# A role whose name starts `titlepipe` and whose ninth character is NOT an
+# underscore. It exists for exactly one assertion: `TITLEPIPE_ROLE_PATTERN` in
+# `conftest.py` is `titlepipe\_%`, where the backslash makes `_` a LITERAL
+# underscore rather than LIKE's any-single-character wildcard. Deleting that
+# escape is a mutation the rest of the suite cannot see, because every real role
+# matches either way. This one matches only the broken pattern.
+DECOY_ROLE = "titlepipexdecoy"
+
+# The second grantor the convergence test needs. A membership row belonging to
+# somebody else cannot be reproduced without somebody else.
+SECOND_GRANTOR_ROLE = "dba"
+SECOND_GRANTOR_PASSWORD = "dba-throwaway"
+
+# Every role attribute `roles.sql` converges, in the spelling `ALTER ROLE`
+# takes, paired with the drifted value the convergence test plants. `CREATE ROLE`
+# clears all of them by default, which is exactly why the drift has to be
+# planted on roles that ALREADY EXIST: a reviewer's mutation run deleted
+# `NOSUPERUSER`, `NOBYPASSRLS`, `NOCREATEDB NOCREATEROLE NOREPLICATION` and
+# `CONNECTION LIMIT -1` from the `ALTER ROLE`s one at a time and the suite stayed
+# green for all five, because the roles were only ever freshly created.
+ATTRIBUTE_DRIFT = (
+    "SUPERUSER BYPASSRLS CREATEDB CREATEROLE REPLICATION NOINHERIT "
+    "VALID UNTIL '2020-01-01' CONNECTION LIMIT 0"
+)
+
+# The GUCs the convergence test plants as per-role defaults, one per scope.
+# `session_replication_role` is the one that matters — it is applied AT CONNECT,
+# it switches every trigger off, and Task 3's `audit_log` is append-only only
+# because of a trigger. MEASURED 2026-08-05 before `RESET ALL` was added here:
+# planted once as a superuser, it survived every rerun, and a fresh
+# `titlepipe_app` connection could `DELETE FROM audit_log` — 3 rows to 0.
+CLUSTER_WIDE_DRIFT_GUC = "session_replication_role"
+DATABASE_SCOPED_DRIFT_GUC = "search_path"
 
 
 class RoleAttributes(NamedTuple):
     """The catalog columns this task's contract is written in.
 
-    The last three are convergence rather than contract. Each was a hole:
-    `has_password` because `NOLOGIN` plus a surviving verifier is a credential
-    one `ALTER ROLE ... LOGIN` away from working, and `valid_until` /
-    `connection_limit` because a drifted value converged to "correct attributes,
-    cannot connect" while `roles.sql` reported success.
+    THE LAST SEVEN ARE CONVERGENCE RATHER THAN CONTRACT, and every one of them
+    was a hole somebody measured:
+
+      * `has_password` — `NOLOGIN` plus a surviving verifier is a credential one
+        `ALTER ROLE ... LOGIN` away from working;
+      * `valid_until` / `connection_limit` — a drifted value converged to
+        "correct attributes, cannot connect" while `roles.sql` reported success;
+      * `inherits` — `rolinherit` is ROLE-level and separate from the
+        membership's `INHERIT FALSE`. `ALTER ROLE ... NOINHERIT` survived a
+        rerun;
+      * `can_create_databases`, `can_create_roles`, `can_replicate` — read by
+        nothing in this suite until now, which is why deleting `NOCREATEDB
+        NOCREATEROLE NOREPLICATION` from `roles.sql`'s `ALTER ROLE`s was a
+        surviving mutation.
     """
 
     is_superuser: bool
@@ -114,6 +163,10 @@ class RoleAttributes(NamedTuple):
     has_password: bool
     valid_until: str | None
     connection_limit: int
+    inherits: bool
+    can_create_databases: bool
+    can_create_roles: bool
+    can_replicate: bool
 
 
 def _titlepipe_roles(connection: Connection, pattern: str) -> dict[str, RoleAttributes]:
@@ -133,7 +186,8 @@ def _titlepipe_roles(connection: Connection, pattern: str) -> dict[str, RoleAttr
             # Casting in SQL keeps the comparison on the server's own spelling,
             # which is also the one an operator would type.
             "SELECT rolname, rolsuper, rolbypassrls, rolcanlogin, "
-            "rolpassword IS NOT NULL, rolvaliduntil::text, rolconnlimit "
+            "rolpassword IS NOT NULL, rolvaliduntil::text, rolconnlimit, "
+            "rolinherit, rolcreatedb, rolcreaterole, rolreplication "
             "FROM pg_authid WHERE rolname LIKE :pattern"
         ),
         {"pattern": pattern},
@@ -146,6 +200,10 @@ def _titlepipe_roles(connection: Connection, pattern: str) -> dict[str, RoleAttr
             bool(row[4]),
             None if row[5] is None else str(row[5]),
             int(row[6]),
+            bool(row[7]),
+            bool(row[8]),
+            bool(row[9]),
+            bool(row[10]),
         )
         for row in result
     }
@@ -160,30 +218,143 @@ def _catalog(dsn: str, pattern: str) -> dict[str, RoleAttributes]:
         engine.dispose()
 
 
-def _owner_members(dsn: str, owner_role: str) -> list[tuple[str, str, bool, bool]]:
-    """Every `pg_auth_members` row for `owner_role`: (member, grantor, inherit, set).
+class RoleEdge(NamedTuple):
+    """One `pg_auth_members` row: `member` can reach `granted`, by `grantor`."""
 
-    EVERY row, deliberately. The previous version of this read ended in `.one()`,
-    so a second membership granted by a different grantor raised
-    `MultipleResultsFound` — a SQLAlchemy error about result shape, not an
-    assertion about privilege, and the thing it was supposed to detect was
-    exactly "there is more than one row".
+    granted: str
+    member: str
+    grantor: str
+    inherits: bool
+    can_set: bool
+
+
+def _titlepipe_edges(dsn: str, pattern: str) -> list[RoleEdge]:
+    """🔴 EVERY membership row with a `titlepipe_*` role on EITHER SIDE.
+
+    THE DIRECTION IS THE WHOLE POINT, and reading one direction is how this
+    suite missed a privilege escalation. The previous version of this helper
+    took an `owner_role` and filtered `WHERE owner.rolname = :owner` — it
+    enumerated MEMBERS OF THE OWNER, and `roles.sql` converged the same one
+    direction. MEASURED 2026-08-05 against postgres:18.4:
+
+        GRANT titlepipe_migration TO titlepipe_app;   -- one stray grant
+        <rerun roles.sql>                             -- exit 0
+        as titlepipe_app: SET ROLE titlepipe_migration; SET ROLE titlepipe_owner;
+        -> current_user = titlepipe_owner
+
+    Two hops. Nothing was a member of the owner except `titlepipe_migration`,
+    the old assertion passed, and a LOGIN role was the owner of every table —
+    free to `ALTER TABLE ... NO FORCE ROW LEVEL SECURITY` and `DROP POLICY`
+    before Task 4 has written one.
+
+    Matching the MEMBER side also catches PostgreSQL's PREDEFINED roles, which
+    the owner-side read could never see: `GRANT pg_read_all_data TO
+    titlepipe_app` puts `pg_read_all_data` on the granted side.
+
+    EVERY row, deliberately. An earlier version ended in `.one()`, so a second
+    membership from a different grantor raised `MultipleResultsFound` — a
+    SQLAlchemy error about result shape rather than an assertion about
+    privilege, for the exact condition being detected.
     """
     engine = create_engine(dsn)
     try:
         with engine.connect() as connection:
             result = connection.execute(
                 text(
-                    "SELECT member.rolname, grantor.rolname, am.inherit_option, am.set_option "
+                    "SELECT granted.rolname, member.rolname, grantor.rolname, "
+                    "am.inherit_option, am.set_option "
                     "FROM pg_auth_members am "
-                    "JOIN pg_roles owner ON owner.oid = am.roleid "
+                    "JOIN pg_roles granted ON granted.oid = am.roleid "
                     "JOIN pg_roles member ON member.oid = am.member "
                     "JOIN pg_roles grantor ON grantor.oid = am.grantor "
-                    "WHERE owner.rolname = :owner"
+                    "WHERE granted.rolname LIKE :pattern OR member.rolname LIKE :pattern"
                 ),
-                {"owner": owner_role},
+                {"pattern": pattern},
             )
-            return [(str(r[0]), str(r[1]), bool(r[2]), bool(r[3])) for r in result]
+            return [
+                RoleEdge(str(r[0]), str(r[1]), str(r[2]), bool(r[3]), bool(r[4])) for r in result
+            ]
+    finally:
+        engine.dispose()
+
+
+def _role_settings(dsn: str, pattern: str) -> list[tuple[str, str, str]]:
+    """`pg_db_role_setting` for `titlepipe_*` roles: (role, database, entry).
+
+    NOTHING IN THIS SUITE READ THIS CATALOG, and `roles.sql` did not read it
+    either, so a per-role GUC DEFAULT survived every rerun. MEASURED 2026-08-05
+    against postgres:18.4:
+
+        ALTER ROLE titlepipe_app SET session_replication_role='replica';
+        <rerun roles.sql>                            -> exit 0, still set
+        fresh connection as titlepipe_app            -> mode_at_connect=replica
+        before=3  ->  DELETE FROM audit_log  ->  after=0
+
+    A per-role default is applied AT CONNECT and never checked at use, so it
+    defeats Task 3's append-only `audit_log` without touching a policy, a
+    trigger or a grant. An in-session `SET` of the same GUC is correctly refused
+    with 42501, which is what made the hole invisible.
+
+    Both scopes are read. `ALTER ROLE r SET ...` and `ALTER ROLE r IN DATABASE d
+    SET ...` are SEPARATE rows and `RESET ALL` on one does not touch the other;
+    the database-scoped one is applied on exactly the connections that matter.
+    """
+    engine = create_engine(dsn)
+    try:
+        with engine.connect() as connection:
+            result = connection.execute(
+                text(
+                    "SELECT r.rolname, coalesce(d.datname, ''), entry "
+                    "FROM pg_db_role_setting s "
+                    "JOIN pg_roles r ON r.oid = s.setrole "
+                    "LEFT JOIN pg_database d ON d.oid = s.setdatabase "
+                    "CROSS JOIN LATERAL unnest(s.setconfig) AS entry "
+                    "WHERE r.rolname LIKE :pattern"
+                ),
+                {"pattern": pattern},
+            )
+            return [(str(r[0]), str(r[1]), str(r[2])) for r in result]
+    finally:
+        engine.dispose()
+
+
+def _titlepipe_default_privileges(dsn: str, pattern: str) -> list[tuple[str, str, str]]:
+    """`pg_default_acl` rows that touch a `titlepipe_*` role: (owner, objtype, grantee).
+
+    THE ONLY GRANT MECHANISM IN POSTGRESQL THAT REACHES OBJECTS THAT DO NOT
+    EXIST YET, which is why it is asserted here while ordinary table grants
+    deliberately are not — `roles.sql`'s header states that split and why.
+    MEASURED 2026-08-05: a single
+
+        ALTER DEFAULT PRIVILEGES FOR ROLE titlepipe_owner IN SCHEMA public
+            GRANT ALL ON TABLES TO titlepipe_blind;
+
+    survived a rerun that exited 0, and would have handed `titlepipe_blind` full
+    access to every table Task 4 and every later migration creates — with no
+    grant visible on any table anybody would think to inspect. The file's header
+    claimed at the time that `titlepipe_blind` "cannot read TitlePipe's tables —
+    no table grant exists".
+
+    A grantee that IS the owner is excluded, matching `roles.sql`: revoking it
+    would strip the owner's own default privileges on its own future objects,
+    which is drift rather than convergence.
+    """
+    engine = create_engine(dsn)
+    try:
+        with engine.connect() as connection:
+            result = connection.execute(
+                text(
+                    "SELECT owner.rolname, d.defaclobjtype, grantee.rolname "
+                    "FROM pg_default_acl d "
+                    "JOIN pg_roles owner ON owner.oid = d.defaclrole "
+                    "CROSS JOIN LATERAL aclexplode(d.defaclacl) AS a "
+                    "JOIN pg_roles grantee ON grantee.oid = a.grantee "
+                    "WHERE a.grantee <> d.defaclrole "
+                    "AND (owner.rolname LIKE :pattern OR grantee.rolname LIKE :pattern)"
+                ),
+                {"pattern": pattern},
+            )
+            return sorted({(str(r[0]), str(r[1]), str(r[2])) for r in result})
     finally:
         engine.dispose()
 
@@ -298,6 +469,20 @@ def test_roles_sql_creates_five_powerless_roles_and_a_nologin_owner(
         # The one that matters. A superuser or a BYPASSRLS role ignores every
         # policy Task 4 writes, and does so silently.
         assert attributes.bypasses_rls is False, f"{name} has BYPASSRLS"
+        # THE THREE NOBODY READ. Deleting `NOCREATEDB NOCREATEROLE
+        # NOREPLICATION` from `roles.sql` was a surviving mutation for exactly
+        # this reason. `CREATEROLE` is the widest of them: on PostgreSQL 16+ it
+        # is enough to create a role, grant it anything the holder holds, and
+        # ALTER any role it created.
+        assert attributes.can_create_databases is False, f"{name} has CREATEDB"
+        assert attributes.can_create_roles is False, f"{name} has CREATEROLE"
+        assert attributes.can_replicate is False, f"{name} has REPLICATION"
+        # `rolinherit`, which is NOT the membership's `INHERIT FALSE` and is
+        # converged separately. A `NOINHERIT` role holds none of the privileges
+        # of the groups it belongs to until it says `SET ROLE`, so flipping it
+        # breaks grants that arrive through group membership rather than
+        # widening anything — a silent half-broken role.
+        assert attributes.inherits is True, f"{name} is NOINHERIT"
         # Converged, not contractual — but a role that cannot connect breaks the
         # system just as completely as one with too much power, and both drifts
         # used to survive a rerun that reported success.
@@ -341,21 +526,65 @@ def test_every_login_role_can_connect_with_its_own_password(
 
 
 def test_the_owner_is_not_connectable_over_the_wire(
-    roles_applied: str, owner_role: str, role_dsn: Callable[[str, str, str], str]
+    roles_applied: str,
+    owner_role: str,
+    app_role: str,
+    role_passwords: Mapping[str, str],
+    role_dsn: Callable[[str, str, str], str],
 ) -> None:
-    """NOLOGIN at the wire, not only in the catalog.
+    """NOLOGIN at the wire, not only in the catalog — and the SERVER refused it.
 
-    What this CANNOT prove is WHY the connection failed. MEASURED 2026-08-05
-    against postgres:18.4: a `NOLOGIN` role with no password is refused with
-    `password authentication failed for user "titlepipe_owner"` — the same
-    message a wrong password gets, on purpose, so that a stranger cannot
-    enumerate roles or their login status. `rolcanlogin` is asserted from the
-    catalog in the test above and that is the authority on it; this asserts
-    non-connectability, and that is all it claims.
+    🔴 `OperationalError` ALONE IS NOT AN ASSERTION ABOUT PRIVILEGE. A stopped
+    container, a wrong port, a DNS failure and a firewall all raise the same
+    class, so the previous version of this test would have passed against a
+    server that was not running at all.
+
+    THE OBVIOUS FIX DOES NOT WORK HERE, and the measurement is worth recording
+    because it contradicts what the review that asked for it assumed. psycopg
+    attaches a SQLSTATE to STATEMENT errors — `tests/test_schema_migration.py`
+    asserts `42501` and `P0001` that way — but NOT to a connection-time
+    authentication failure. MEASURED 2026-08-05 against psycopg 3.3.4 and
+    postgres:18.4:
+
+        err.orig.sqlstate        -> None
+        err.orig.diag.sqlstate   -> None
+        str(err.orig)            -> 'connection failed: ... FATAL:  password
+                                    authentication failed for user
+                                    "titlepipe_owner"'
+
+    libpq reports connection failures through `PQerrorMessage`, which is a
+    string; there is no `PGresult` for a connection that never opened, and so no
+    `SQLSTATE` field to read. Asserting `28P01` here would be asserting `None`.
+
+    So the discrimination is done with two things that ARE available:
+
+      1. A LIVE CONTROL. `titlepipe_app` connects to the same host, port and
+         database first. If the server were down or the port wrong, this test
+         fails there — on the connection that is SUPPOSED to work, which is a
+         readable failure — rather than passing on the one that is supposed to
+         fail;
+      2. THE SERVER'S OWN WORDS. `FATAL:  password authentication failed for
+         user "titlepipe_owner"` can only have been sent BY a PostgreSQL backend
+         that read the startup packet. `Connection refused`, `timeout expired`
+         and `could not translate host name` are what the failure modes above
+         produce, and none of them contains it.
+
+    What this still cannot prove is WHY the server refused: a `NOLOGIN` role
+    with no password is refused with the message a WRONG PASSWORD gets, on
+    purpose, so that a stranger cannot enumerate roles or their login status.
+    `rolcanlogin` is asserted from the catalog in the test above and that is the
+    authority on it.
 
     The password below is not the owner's — the owner has none. It is a
     deliberately wrong one, which is the only kind there is for this role.
     """
+    control = create_engine(role_dsn(roles_applied, app_role, role_passwords[app_role]))
+    try:
+        with control.connect() as connection:
+            assert str(connection.execute(text("SELECT current_user")).scalar_one()) == app_role
+    finally:
+        control.dispose()
+
     engine = create_engine(role_dsn(roles_applied, owner_role, "there-is-no-owner-password"))
     try:
         with pytest.raises(OperationalError) as raised, engine.connect():
@@ -363,7 +592,10 @@ def test_the_owner_is_not_connectable_over_the_wire(
     finally:
         engine.dispose()
 
-    assert owner_role in str(raised.value)
+    assert f'password authentication failed for user "{owner_role}"' in str(raised.value), (
+        f"the connection failed, but not with the server's own authentication "
+        f"refusal — so this may be a server that is not there: {raised.value}"
+    )
 
 
 def test_roles_sql_is_idempotent(
@@ -448,18 +680,21 @@ def test_only_the_migration_role_can_become_the_owner(
     migration_dsn: str,
     migration_role: str,
     owner_role: str,
+    titlepipe_role_pattern: str,
 ) -> None:
-    """🔴 THE MEMBERSHIP CONTRACT: the member set is EXACTLY `{titlepipe_migration}`.
+    """🔴 THE MEMBERSHIP CONTRACT: the EDGE SET is exactly one edge.
 
-    SET EQUALITY, not `in`. The previous version of this test read
-    `pg_auth_members` only to check the OPTIONS of the one row it already
-    expected to find, so it never noticed an EXTRA row — and nothing else in the
-    suite read the member set at all. MEASURED 2026-08-05 against the unfixed
-    `roles.sql`: one hand-written `GRANT titlepipe_owner TO titlepipe_app`
-    survived every rerun, after which `titlepipe_app` could `SET ROLE
-    titlepipe_owner` and create tables owned by the owner. A LOGIN role able to
-    become the owner defeats the entire five-role split, and the script reported
-    success the whole time.
+    NOT "the owner's member set". That was the claim, it was checked, it passed,
+    and a LOGIN role was still two `SET ROLE`s from owning every table — see
+    `_titlepipe_edges` for the measurement. The assertion below is over EVERY
+    `pg_auth_members` row with a `titlepipe_*` role on EITHER side, so a path of
+    any length through any of the five roles is one row of this set and cannot
+    hide behind a direction nobody read.
+
+    SET EQUALITY, not `in`. An earlier version read `pg_auth_members` only to
+    check the OPTIONS of the row it already expected to find, so it never
+    noticed an EXTRA one: one hand-written `GRANT titlepipe_owner TO
+    titlepipe_app` survived every rerun while the script reported success.
 
     EVERY row's options are checked, not one row's. The second measured hole was
     a row from a DIFFERENT GRANTOR: re-granting only updates the same grantor's
@@ -467,20 +702,25 @@ def test_only_the_migration_role_can_become_the_owner(
     ours and `titlepipe_migration` would create tables it owned itself. Reading
     that with `.one()` — as this test used to — raises `MultipleResultsFound`,
     a result-shape error rather than a privilege assertion, for the exact
-    condition being detected.
+    condition being detected. The length check below is what catches it now.
 
     `pg_has_role(..., 'USAGE')` asks "do the owner's privileges apply right
     now"; `'MEMBER'` asks "could it SET ROLE". They must differ.
     """
-    rows = _owner_members(roles_applied, owner_role)
+    edges = _titlepipe_edges(roles_applied, titlepipe_role_pattern)
 
-    assert {member for member, _, _, _ in rows} == {migration_role}, (
-        f"only {migration_role} may be a member of {owner_role}; found "
-        f"{sorted((member, grantor) for member, grantor, _, _ in rows)}"
+    assert [(edge.granted, edge.member) for edge in edges] == [(owner_role, migration_role)], (
+        f"the only membership edge touching a titlepipe role may be "
+        f"{owner_role} <- {migration_role}, exactly once; found "
+        f"{sorted((e.granted, e.member, e.grantor) for e in edges)}"
     )
-    for member, grantor, inherits, can_set in rows:
-        assert inherits is False, f"{member} inherits {owner_role} (granted by {grantor})"
-        assert can_set is True, f"{member} cannot SET ROLE {owner_role} (granted by {grantor})"
+    for edge in edges:
+        assert edge.inherits is False, (
+            f"{edge.member} inherits {edge.granted} (granted by {edge.grantor})"
+        )
+        assert edge.can_set is True, (
+            f"{edge.member} cannot SET ROLE {edge.granted} (granted by {edge.grantor})"
+        )
 
     engine = create_engine(migration_dsn)
     try:
@@ -504,6 +744,60 @@ def test_only_the_migration_role_can_become_the_owner(
     )
 
 
+def test_no_titlepipe_role_carries_a_per_role_setting_default(
+    roles_applied: str, titlepipe_role_pattern: str
+) -> None:
+    """🔴 `pg_db_role_setting` is EMPTY for these roles, in both scopes.
+
+    A per-role GUC default is applied AT CONNECT and never checked again, so it
+    is not visible to any assertion about policies, triggers, grants or role
+    attributes — and nothing in this suite looked at it. See `_role_settings`
+    for the measurement: `session_replication_role = replica`, planted once,
+    survived every rerun and let `titlepipe_app` empty an append-only
+    `audit_log`.
+
+    ZERO ROWS rather than "no dangerous rows". There is no such thing as a
+    benign per-role default here: `roles.sql` sets none, so any row at all is
+    something a person or a provider put there, and enumerating the harmful
+    GUCs would be a denylist against a list PostgreSQL grows every release.
+
+    The convergence side of this — that `roles.sql` REPAIRS a planted setting
+    rather than merely never creating one — is
+    `test_roles_sql_converges_a_cluster_somebody_has_meddled_with`.
+    """
+    assert _role_settings(roles_applied, titlepipe_role_pattern) == [], (
+        "a titlepipe role carries a per-role GUC default. It is applied at "
+        "connect and checked nowhere; session_replication_role=replica is "
+        "enough to switch off every trigger the audit log depends on."
+    )
+
+
+def test_no_default_privileges_reach_a_titlepipe_role(
+    roles_applied: str, titlepipe_role_pattern: str
+) -> None:
+    """🔴 `pg_default_acl` is EMPTY for these roles, as owner and as grantee.
+
+    See `_titlepipe_default_privileges`: one `ALTER DEFAULT PRIVILEGES FOR ROLE
+    titlepipe_owner IN SCHEMA public GRANT ALL ON TABLES TO titlepipe_blind`
+    survives a rerun that exits 0 and grants full access to every table Task 4
+    and every later migration creates — before those tables exist, so no test
+    that inspects a table can ever see it.
+
+    🔴 THE ASYMMETRY WITH ORDINARY GRANTS IS DELIBERATE AND IS NOT AN OVERSIGHT.
+    `roles.sql` does NOT converge table, sequence or schema grants, because
+    converging them would mean deleting the grants Task 4's migrations are going
+    to write, on every rerun. Default privileges are the one mechanism that acts
+    on objects that do not exist yet, which is why they belong to the file that
+    owns the roles rather than to the file that owns the tables. If Task 4 wants
+    default privileges, they go in `roles.sql` — and this test is what will make
+    that impossible to forget, by failing.
+    """
+    assert _titlepipe_default_privileges(roles_applied, titlepipe_role_pattern) == [], (
+        "a titlepipe role is named in pg_default_acl. That grant applies to "
+        "every table created from now on, and appears on no table today."
+    )
+
+
 def test_roles_sql_converges_a_cluster_somebody_has_meddled_with(
     roles_applied: str,
     role_passwords: Mapping[str, str],
@@ -513,16 +807,21 @@ def test_roles_sql_converges_a_cluster_somebody_has_meddled_with(
     owner_role: str,
     app_role: str,
     migration_role: str,
+    managed_roles: tuple[str, ...],
 ) -> None:
-    """Every drift the review found, applied at once, then repaired by one rerun.
+    """🔴 EVERY drift, on EVERY role, in one cluster, repaired by one rerun.
 
     IDEMPOTENT IS NOT CONVERGENT, and that distinction is the whole point of this
-    test. `roles.sql` created correctly and re-ran cleanly while leaving all of
-    the following in place — each measured 2026-08-05, each a rerun that exited 0
-    and reported success:
+    test. Every item below is a rerun that exited 0 and reported success while
+    leaving the drift in place, each measured 2026-08-05 against postgres:18.4:
 
       * `GRANT titlepipe_owner TO titlepipe_app` — a LOGIN role that can become
         the owner of every table;
+      * `GRANT titlepipe_migration TO titlepipe_app` — the SAME escalation in
+        TWO HOPS, which the owner-side-only convergence could not see at all;
+      * `GRANT pg_read_all_data TO titlepipe_app` — a PREDEFINED role, where the
+        titlepipe role is on the MEMBER side and the granted side is not a
+        titlepipe role at all;
       * a second membership row from another grantor carrying `INHERIT TRUE`,
         which restores the silent mis-ownership `INHERIT FALSE` was taken to
         kill. `REVOKE` without `GRANTED BY` does not reach it, even as
@@ -531,74 +830,207 @@ def test_roles_sql_converges_a_cluster_somebody_has_meddled_with(
       * `ALTER ROLE titlepipe_owner LOGIN BYPASSRLS PASSWORD '...'` — the login
         and bypass flags were repaired, the VERIFIER was not, leaving a live
         credential for the role that owns everything;
-      * `VALID UNTIL '2020-01-01'` and `CONNECTION LIMIT 0` — converged to
-        "correct attributes, cannot connect".
+      * `SUPERUSER`, `CREATEDB`, `CREATEROLE`, `REPLICATION`, `NOINHERIT`,
+        `VALID UNTIL '2020-01-01'` and `CONNECTION LIMIT 0`;
+      * `ALTER ROLE ... SET session_replication_role` and the database-scoped
+        `... IN DATABASE ... SET search_path`, which are separate
+        `pg_db_role_setting` rows and were read by nothing;
+      * `ALTER DEFAULT PRIVILEGES`, owner-side and grantee-side.
+
+    🔴 THE DRIFT IS PLANTED ON **EVERY** ROLE WITH **EVERY** ATTRIBUTE, and that
+    is a change rather than thoroughness for its own sake. This test used to
+    poison `titlepipe_owner` (LOGIN/BYPASSRLS/PASSWORD) and `titlepipe_app`
+    (VALID UNTIL/CONNECTION LIMIT) and nothing else. A reviewer ran 181 mutations
+    of `roles.sql` against the suite and FIVE survived green: deleting
+    `NOSUPERUSER` or `NOBYPASSRLS` from the four LOGIN roles' `ALTER ROLE`, and
+    deleting `NOSUPERUSER`, `NOCREATEDB NOCREATEROLE NOREPLICATION` or
+    `CONNECTION LIMIT -1` from the owner's. All five survive for the same
+    reason: `CREATE ROLE` defaults to every one of those, so a role this session
+    CREATED is correct however the `ALTER` is written, and only a role that
+    already exists and already holds the attribute can tell the two apart.
 
     A `dba` role is created here to reproduce the second-grantor case, because
-    it cannot be reproduced without a second grantor. It is dropped in the
-    `finally`, and the whole thing is safe only because the database is an
-    ephemeral container.
+    it cannot be reproduced without a second grantor. ITS GRANT COMES FIRST:
+    once `titlepipe_owner` holds `SUPERUSER`, a non-superuser `dba` cannot grant
+    it — `ERROR: Only roles with the SUPERUSER attribute may grant roles with
+    the SUPERUSER attribute` — so the order of the two poison blocks below is
+    load-bearing.
+
+    A `titlepipexdecoy` role is created for `TITLEPIPE_ROLE_PATTERN`: see
+    `DECOY_ROLE`. Both are dropped in the `finally`, and the whole thing is safe
+    only because the database is an ephemeral container.
     """
     admin = create_engine(roles_applied)
     try:
-        with admin.begin() as connection:
-            connection.execute(text(f"GRANT {owner_role} TO {app_role}"))
-            connection.execute(
-                text(
-                    f"ALTER ROLE {owner_role} LOGIN BYPASSRLS "
-                    f"PASSWORD 'a-verifier-that-must-not-survive'"
-                )
-            )
-            connection.execute(
-                text(f"ALTER ROLE {app_role} VALID UNTIL '2020-01-01' CONNECTION LIMIT 0")
-            )
-            connection.execute(
-                text("CREATE ROLE dba NOSUPERUSER LOGIN CREATEROLE PASSWORD 'dba-throwaway'")
-            )
-            connection.execute(text(f"GRANT {owner_role} TO dba WITH ADMIN OPTION"))
-
-        dba = create_engine(role_dsn(roles_applied, "dba", "dba-throwaway"))
         try:
-            with dba.begin() as connection:
+            with admin.begin() as connection:
+                identity = connection.execute(text("SELECT current_database(), current_user")).one()
+                database = str(identity[0])
+                operator = str(identity[1])
                 connection.execute(
-                    text(f"GRANT {owner_role} TO {migration_role} WITH INHERIT TRUE, SET TRUE")
+                    text(
+                        f"CREATE ROLE {SECOND_GRANTOR_ROLE} NOSUPERUSER LOGIN CREATEROLE "
+                        f"PASSWORD '{SECOND_GRANTOR_PASSWORD}'"
+                    )
                 )
+                connection.execute(
+                    text(f"GRANT {owner_role} TO {SECOND_GRANTOR_ROLE} WITH ADMIN OPTION")
+                )
+
+            dba = create_engine(
+                role_dsn(roles_applied, SECOND_GRANTOR_ROLE, SECOND_GRANTOR_PASSWORD)
+            )
+            try:
+                with dba.begin() as connection:
+                    connection.execute(
+                        text(f"GRANT {owner_role} TO {migration_role} WITH INHERIT TRUE, SET TRUE")
+                    )
+            finally:
+                dba.dispose()
+
+            with admin.begin() as connection:
+                # Memberships first: several of these become impossible once the
+                # roles below hold SUPERUSER.
+                connection.execute(text(f"GRANT {owner_role} TO {app_role}"))
+                connection.execute(text(f"GRANT {migration_role} TO {app_role}"))
+                connection.execute(text(f"GRANT pg_read_all_data TO {app_role}"))
+
+                for role in (*managed_roles, owner_role):
+                    connection.execute(text(f"ALTER ROLE {role} {ATTRIBUTE_DRIFT}"))
+                connection.execute(
+                    text(
+                        f"ALTER ROLE {owner_role} LOGIN PASSWORD 'a-verifier-that-must-not-survive'"
+                    )
+                )
+
+                connection.execute(
+                    text(f"ALTER ROLE {app_role} SET {CLUSTER_WIDE_DRIFT_GUC} = 'replica'")
+                )
+                connection.execute(
+                    text(
+                        f"ALTER ROLE {app_role} IN DATABASE {database} "
+                        f"SET {DATABASE_SCOPED_DRIFT_GUC} = 'nowhere_useful'"
+                    )
+                )
+
+                # BOTH SIDES. The first is the one that matters — the owner
+                # giving away every table it is about to create — and the second
+                # is the shape the owner-side filter alone would miss: somebody
+                # ELSE's default privileges naming a titlepipe role as grantee.
+                connection.execute(
+                    text(
+                        f"ALTER DEFAULT PRIVILEGES FOR ROLE {owner_role} IN SCHEMA public "
+                        f"GRANT ALL ON TABLES TO {app_role}"
+                    )
+                )
+                connection.execute(
+                    text(
+                        f"ALTER DEFAULT PRIVILEGES FOR ROLE {operator} IN SCHEMA public "
+                        f"GRANT SELECT ON TABLES TO {migration_role}"
+                    )
+                )
+
+                connection.execute(text(f"CREATE ROLE {DECOY_ROLE} NOLOGIN"))
+
+            # THE DRIFT IS REAL BEFORE THE REPAIR, or this test proves nothing —
+            # a "convergence" test whose poison silently failed to apply is a
+            # test that asserts `roles.sql` did not break a cluster nobody broke.
+            poisoned = _catalog(roles_applied, titlepipe_role_pattern)
+            assert poisoned[owner_role].has_password is True
+            for role in (*managed_roles, owner_role):
+                assert poisoned[role].is_superuser is True, role
+                assert poisoned[role].bypasses_rls is True, role
+                assert poisoned[role].can_create_databases is True, role
+                assert poisoned[role].can_create_roles is True, role
+                assert poisoned[role].can_replicate is True, role
+                assert poisoned[role].inherits is False, role
+                assert poisoned[role].connection_limit == 0, role
+                assert poisoned[role].valid_until != "infinity", role
+            assert len(_titlepipe_edges(roles_applied, titlepipe_role_pattern)) > 1
+            assert len(_role_settings(roles_applied, titlepipe_role_pattern)) == 2
+            assert len(_titlepipe_default_privileges(roles_applied, titlepipe_role_pattern)) == 2
+
+            result = apply_roles_sql(roles_applied, role_passwords)
+            assert result.returncode == 0, (
+                f"convergence run exited {result.returncode}:\n{result.stderr}"
+            )
+
+            edges = _titlepipe_edges(roles_applied, titlepipe_role_pattern)
+            assert [(edge.granted, edge.member) for edge in edges] == [
+                (owner_role, migration_role)
+            ], sorted((edge.granted, edge.member, edge.grantor) for edge in edges)
+            assert all(edge.inherits is False for edge in edges)
+            assert all(edge.can_set is True for edge in edges)
+
+            repaired = _catalog(roles_applied, titlepipe_role_pattern)
+            for role in (*managed_roles, owner_role):
+                assert repaired[role].is_superuser is False, role
+                assert repaired[role].bypasses_rls is False, role
+                assert repaired[role].can_create_databases is False, role
+                assert repaired[role].can_create_roles is False, role
+                assert repaired[role].can_replicate is False, role
+                assert repaired[role].inherits is True, role
+                assert repaired[role].valid_until == "infinity", role
+                assert repaired[role].connection_limit == -1, role
+            assert repaired[owner_role].can_log_in is False
+            assert repaired[owner_role].has_password is False
+            for role in managed_roles:
+                assert repaired[role].can_log_in is True, role
+
+            assert _role_settings(roles_applied, titlepipe_role_pattern) == []
+            assert _titlepipe_default_privileges(roles_applied, titlepipe_role_pattern) == []
+
+            # `titlepipe\\_%` escapes the underscore, so `titlepipexdecoy` is not
+            # a titlepipe role. Drop the escape and this row appears here, where
+            # `valid_until` is NULL rather than `infinity` — the mutation the
+            # rest of the suite cannot see.
+            assert DECOY_ROLE not in repaired, (
+                f"{DECOY_ROLE} was returned by the titlepipe_* catalog read, so "
+                f"the LIKE pattern has lost its underscore escape and is "
+                f"matching any ninth character"
+            )
+            # ...and `roles.sql` left it alone, which is the other half: a
+            # pattern that over-matches in the FILE would have converged it.
+            with admin.begin() as connection:
+                survived = connection.execute(
+                    text("SELECT count(*) FROM pg_roles WHERE rolname = :name"),
+                    {"name": DECOY_ROLE},
+                ).scalar_one()
+            assert survived == 1, f"roles.sql reached {DECOY_ROLE}, which is not its role"
         finally:
-            dba.dispose()
-
-        # The drift is real before the repair, or this test proves nothing.
-        assert len(_owner_members(roles_applied, owner_role)) > 1
-        assert _catalog(roles_applied, titlepipe_role_pattern)[owner_role].has_password is True
-
-        result = apply_roles_sql(roles_applied, role_passwords)
-        assert result.returncode == 0, (
-            f"convergence run exited {result.returncode}:\n{result.stderr}"
+            # ORDER IS LOAD-BEARING. The convergence run comes FIRST, because it
+            # is what removes the membership `dba` granted — and while that row
+            # exists, `DROP ROLE dba` fails with `DependentObjectsStillExist:
+            # privileges for membership of role titlepipe_migration in role
+            # titlepipe_owner`. MEASURED: with the two the other way round, any
+            # assertion failing above raised a second, unrelated error out of the
+            # cleanup and left the poisoned roles in place for every test after
+            # this one.
+            #
+            # 🔴 ITS RESULT IS NOT ASSERTED HERE, and that is deliberate. An
+            # `assert` inside a `finally` REPLACES whatever the body raised, so
+            # the reported failure would be "the repair exited 3" and the real
+            # one would be gone. The return code is checked immediately after
+            # this `try`, which is reached only when the body did not raise.
+            repair = apply_roles_sql(roles_applied, role_passwords)
+        assert repair.returncode == 0, (
+            f"the restoring run exited {repair.returncode}, so this session's "
+            f"remaining tests would run against a poisoned cluster:\n{repair.stderr}"
         )
-
-        members = _owner_members(roles_applied, owner_role)
-        assert {member for member, _, _, _ in members} == {migration_role}
-        assert all(not inherits for _, _, inherits, _ in members)
-
-        owner = _catalog(roles_applied, titlepipe_role_pattern)[owner_role]
-        assert owner.has_password is False
-        assert owner.can_log_in is False
-        assert owner.bypasses_rls is False
-
-        application = _catalog(roles_applied, titlepipe_role_pattern)[app_role]
-        assert application.valid_until == "infinity"
-        assert application.connection_limit == -1
     finally:
-        # ORDER IS LOAD-BEARING. The convergence run comes FIRST, because it is
-        # what removes the membership `dba` granted — and while that row exists,
-        # `DROP ROLE dba` fails with `DependentObjectsStillExist: privileges for
-        # membership of role titlepipe_migration in role titlepipe_owner`.
-        # MEASURED: with the two the other way round, any assertion failing
-        # above raised a second, unrelated error out of the cleanup and left the
-        # poisoned roles in place for every test after this one.
-        apply_roles_sql(roles_applied, role_passwords)
-        with admin.begin() as connection:
-            connection.execute(text("DROP ROLE IF EXISTS dba"))
-        admin.dispose()
+        # NESTED, because the first statement of a `finally` can raise and take
+        # everything after it with it. The previous version called
+        # `apply_roles_sql` WITHOUT checking it, then `DROP ROLE dba`, then
+        # `admin.dispose()` — so a failed convergence left the membership in
+        # place, the `DROP ROLE` raised out of the cleanup, and the engine was
+        # never disposed while the session kept a LOGIN BYPASSRLS owner and a
+        # `titlepipe_app` at CONNECTION LIMIT 0.
+        try:
+            with admin.begin() as connection:
+                connection.execute(text(f"DROP ROLE IF EXISTS {SECOND_GRANTOR_ROLE}"))
+                connection.execute(text(f"DROP ROLE IF EXISTS {DECOY_ROLE}"))
+        finally:
+            admin.dispose()
 
 
 def test_a_password_full_of_quoting_hazards_survives(
@@ -625,6 +1057,13 @@ def test_a_password_full_of_quoting_hazards_survives(
 
     The password is restored in the `finally`, because the session's other tests
     hold the generated one.
+
+    🔴 THE RESTORE IS ASSERTED OUTSIDE THE `finally`. It used to be
+    `assert apply_roles_sql(...).returncode == 0` INSIDE it, and an `assert` in a
+    `finally` REPLACES whatever the body raised: a hazardous password that failed
+    to connect would have been reported as "the restore exited 3", with the real
+    failure gone. The restore still always runs; only the assertion moved to
+    where it can be reached, which is after a body that did not raise.
     """
     hazardous = "a'b\\c\nd%se--f"
     try:
@@ -638,11 +1077,15 @@ def test_a_password_full_of_quoting_hazards_survives(
         finally:
             engine.dispose()
     finally:
-        assert apply_roles_sql(roles_applied, role_passwords).returncode == 0
+        restored = apply_roles_sql(roles_applied, role_passwords)
+    assert restored.returncode == 0, (
+        f"the generated password was not restored, so every later test in this "
+        f"session holds the wrong one:\n{restored.stderr}"
+    )
 
 
 def test_a_table_created_after_set_role_belongs_to_the_owner(
-    roles_applied: str, migration_dsn: str, owner_role: str
+    roles_applied: str, migration_dsn: str, owner_role: str, alembic_version_table: str
 ) -> None:
     """The ownership mechanism itself, proved through the path a migration takes.
 
@@ -660,8 +1103,14 @@ def test_a_table_created_after_set_role_belongs_to_the_owner(
     Alembic creates, it is created outside any migration script, and if it
     landed on `titlepipe_migration` the version table would be the one object in
     the schema owned by a LOGIN role — which is exactly the shape nobody
-    inspects. The name is spelled out here so a future reader can see it was
-    checked and not assumed.
+    inspects.
+
+    THE NAME COMES FROM `conftest.py`'s `alembic_version_table` FIXTURE, not
+    from a constant in this file. It used to be both, and a second copy of a
+    name is a name that can drift: the same string is what `MIGRATION_TABLES`
+    hands to the migration scrub, and if the two ever disagreed this test would
+    create a table the teardown does not drop — which is precisely the
+    cross-module leak that teardown exists for.
 
     Nothing is dropped, because nothing is committed. The `CREATE TABLE`s and
     the `SET ROLE` all live in a transaction that is rolled back, so the catalog
@@ -683,7 +1132,7 @@ def test_a_table_created_after_set_role_belongs_to_the_owner(
         with engine.connect() as connection:
             connection.execute(text(f"SET ROLE {owner_role}"))
 
-            for table in (OWNERSHIP_PROBE_TABLE, ALEMBIC_VERSION_TABLE):
+            for table in (OWNERSHIP_PROBE_TABLE, alembic_version_table):
                 connection.execute(text(f"CREATE TABLE {table} (id integer)"))
                 assert _relation_owner(connection, table) == owner_role, (
                     f"{table} did not land on {owner_role}"
@@ -732,20 +1181,33 @@ def test_the_libpq_environment_refuses_a_dsn_that_reaches_the_local_cluster(
 
 
 def test_roles_sql_keeps_the_passwords_out_of_the_server_log(roles_sql_path: Path) -> None:
-    """The log mitigation is present. A SOURCE check, and it says so.
+    """The three suppression `SET`s are in the file. A SOURCE check, and only that.
 
-    MEASURED 2026-08-05 with `log_statement = 'all'`: every password reached the
-    server log three times — in the presence-check SELECT, in `CREATE ROLE` and
-    in `ALTER ROLE`. The first of those runs before any role is touched, so even
-    a run that REFUSED for a missing variable leaked the ones that were supplied.
+    MEASURED 2026-08-05 with `log_statement = 'all'` against a fresh
+    postgres:18.4: each password reached the server log FIVE times, not the
+    three an earlier version of this docstring claimed. The two
+    `SELECT format(...)` statements that GENERATE the DDL are logged verbatim
+    too, and a logged copy of `SELECT format('CREATE ROLE %I ... PASSWORD %L',
+    'titlepipe_app', 'APPCANARY-222')` is as much a leaked credential as the
+    `CREATE ROLE` it produces. The five, in order: the presence-check SELECT, the
+    SELECT that generates `CREATE ROLE`, the executed `CREATE ROLE`, the SELECT
+    that generates `ALTER ROLE`, the executed `ALTER ROLE`.
 
-    WHAT THIS CANNOT DO is prove the suppression works, and pretending otherwise
-    would be worse than not testing it. The container is started by
-    testcontainers with default logging, changing it means a custom command or a
-    config mount, and reading the log back means `docker logs` on a container
-    this seam deliberately does not expose. What this holds is that the two
-    `SET`s are still in the file — enough to catch their deletion, which is the
-    realistic regression, and honest about being no more than that.
+    `log_min_error_statement` is the third assertion and the newest hole.
+    `log_statement = 'none'` only covers statements that SUCCEED; a statement
+    that FAILS is logged in full at `log_min_error_statement`, whose default is
+    `error`. MEASURED 2026-08-05, with the other two already in force:
+
+        ALTER ROLE <missing role> PASSWORD 'ERRCANARY-777';
+        -> STATEMENT:  ALTER ROLE <missing role> PASSWORD 'ERRCANARY-777';
+
+        ...and with SET log_min_error_statement = 'panic' first: nothing.
+
+    THIS TEST IS THE SOURCE HALF. It catches the realistic regression — somebody
+    deleting a line that looks like noise. The BEHAVIOURAL half, which the
+    previous version of this docstring said "cannot" be done, is
+    `test_no_password_reaches_the_log_of_a_server_that_logs_everything` below;
+    that word was wrong and is corrected there.
     """
     code = "\n".join(
         line
@@ -755,10 +1217,85 @@ def test_roles_sql_keeps_the_passwords_out_of_the_server_log(roles_sql_path: Pat
 
     assert "SET log_statement = ''none''" in code
     assert "SET log_min_duration_statement = -1" in code
+    assert "SET log_min_error_statement = ''panic''" in code
+
+
+def test_no_password_reaches_the_log_of_a_server_that_logs_everything(
+    postgres_container_factory: Callable[[str], PostgresContainer],
+    apply_roles_sql: Callable[[str, Mapping[str, str]], subprocess.CompletedProcess[str]],
+    managed_roles: tuple[str, ...],
+) -> None:
+    """🔴 THE SUPPRESSION, PROVED — not asserted from the source.
+
+    The docstring above this used to say proving it "cannot" be done: the
+    container is started by testcontainers with default logging, changing that
+    means a custom command, and reading the log back means `docker logs`. All
+    three are ten lines. `PostgresContainer` has `with_command`, so the server
+    is started with `log_statement = all`; it has `get_logs`, so the log is
+    readable from the test. "Cannot" was "chose not to", and the difference
+    matters because the thing being claimed is that a credential does not exist
+    somewhere.
+
+    A DEDICATED CONTAINER, not the session one. `log_statement = all` is a
+    server-level setting that has to be in place before the first connection, and
+    every other test in this session wants the default. It is started and stopped
+    inside this test.
+
+    🔴 THE POSITIVE CONTROL IS THE POINT. "The canary is not in the log" is
+    satisfied by an empty log, a container that never started, a `get_logs` that
+    returned nothing, and a `grep` against the wrong bytes. So a probe statement
+    is run on an ordinary connection AFTER `roles.sql` and asserted to BE in the
+    log. If `log_statement = all` did not take effect, the probe is missing and
+    this test fails — rather than passing for the wrong reason.
+
+    MEASURED 2026-08-05 with this exact arrangement, fresh cluster each time:
+    0 occurrences of the canary with the suppression in place, 4 with the three
+    `SET`s deleted from `roles.sql`. FOUR AND NOT FIVE, and the missing one is
+    the point of the other fix: the fifth was the presence check, which no
+    longer sends a password to the server at all. Against the version of
+    `roles.sql` that still had it, the same measurement gave 5 — and 1 on a run
+    that REFUSED for a missing variable, where it is now 0.
+
+    The passwords are literals rather than `role_passwords`. They belong to a
+    container that is destroyed before this function returns, they must be
+    greppable and distinctive, and using the session's real ones would put them
+    in a log this test then reads.
+    """
+    canaries = {role: f"LOGCANARY-{index}-DO-NOT-LOG" for index, role in enumerate(managed_roles)}
+    probe = "LOGPROBE-THIS-STATEMENT-MUST-BE-LOGGED"
+
+    container = postgres_container_factory("log-probe-throwaway").with_command(
+        "postgres -c log_statement=all"
+    )
+    with container as started:
+        dsn = started.get_connection_url()
+
+        result = apply_roles_sql(dsn, canaries)
+        assert result.returncode == 0, f"roles.sql exited {result.returncode}:\n{result.stderr}"
+
+        engine = create_engine(dsn)
+        try:
+            with engine.connect() as connection:
+                connection.execute(text(f"SELECT '{probe}'"))
+        finally:
+            engine.dispose()
+
+        stdout, stderr = started.get_logs()
+        log = stdout.decode("utf-8", "replace") + stderr.decode("utf-8", "replace")
+
+    assert probe in log, (
+        "the probe statement is not in the server log, so log_statement=all did "
+        "not take effect and the absence of the canaries below proves nothing"
+    )
+    for role, canary in canaries.items():
+        assert canary not in log, (
+            f"{role}'s password is in the server log of a cluster with "
+            f"log_statement=all. The suppression in roles.sql is not working."
+        )
 
 
 def test_a_table_created_without_set_role_is_refused_outright(
-    roles_applied: str, migration_dsn: str, owner_role: str
+    roles_applied: str, migration_dsn: str, owner_role: str, alembic_version_table: str
 ) -> None:
     """🔴 THE TASK 3 HAND-OFF, ENFORCED BY THE DATABASE RATHER THAN REQUESTED.
 
@@ -789,14 +1326,14 @@ def test_a_table_created_without_set_role_is_refused_outright(
     try:
         with engine.connect() as connection:
             with pytest.raises(ProgrammingError) as raised:
-                connection.execute(text(f"CREATE TABLE {ALEMBIC_VERSION_TABLE} (id integer)"))
+                connection.execute(text(f"CREATE TABLE {alembic_version_table} (id integer)"))
             connection.rollback()
 
             # The same statement, one `SET ROLE` later, is fine — so this is a
             # privilege boundary and not a broken role or a broken connection.
             connection.execute(text(f"SET ROLE {owner_role}"))
-            connection.execute(text(f"CREATE TABLE {ALEMBIC_VERSION_TABLE} (id integer)"))
-            assert _relation_owner(connection, ALEMBIC_VERSION_TABLE) == owner_role
+            connection.execute(text(f"CREATE TABLE {alembic_version_table} (id integer)"))
+            assert _relation_owner(connection, alembic_version_table) == owner_role
             connection.rollback()
     finally:
         engine.dispose()
@@ -833,10 +1370,18 @@ def test_the_owner_cannot_create_without_the_schema_grant(
 
         assert "permission denied for schema public" in str(raised.value)
     finally:
-        with admin.begin() as connection:
-            connection.execute(text(f"GRANT CREATE ON SCHEMA public TO {owner_role}"))
-        migration.dispose()
-        admin.dispose()
+        # NESTED. The `GRANT` is a statement over a connection and can raise —
+        # a lock, a dropped role, a server that went away — and flat, it took
+        # both `dispose()` calls with it, leaking two connection pools on top of
+        # whatever had already gone wrong.
+        try:
+            with admin.begin() as connection:
+                connection.execute(text(f"GRANT CREATE ON SCHEMA public TO {owner_role}"))
+        finally:
+            try:
+                migration.dispose()
+            finally:
+                admin.dispose()
 
     # Restored, and proved restored rather than assumed: the next test in the
     # session depends on it.

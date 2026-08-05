@@ -81,19 +81,57 @@ DSN_ATTRIBUTE = "dsn"
 
 config = context.config
 
-if config.config_file_name is not None:
+# 🔴 `cmd_opts is not None` MEANS "THE `alembic` CONSOLE SCRIPT IS THE ENTRY
+# POINT", AND CONFIGURING THE PROCESS'S LOGGING IS ONLY CORRECT THERE.
+#
+# Alembic sets `Config.cmd_opts` in exactly one place — `CommandLine.main`,
+# from `parser.parse_args` — and its own docstring calls it "the command-line
+# options passed to the ``alembic`` script". Every `alembic.command.*` call
+# leaves it `None`, which covers the test suite, a startup `upgrade head`, and
+# any management command.
+#
+# `config_file_name is not None` ALONE WAS NOT THAT TEST, and the difference was
+# not academic. `tests/conftest.py::_alembic_config` does
+# `Config(str(ALEMBIC_INI))`, so `config_file_name` is always set and this block
+# ran on all sixteen `command.*` calls in the suite.
+#
+# WHAT IT DID EACH TIME, MEASURED 2026-08-05 with a handler of our own attached
+# to the root logger before a programmatic `command.check`:
+#
+#     before: root handlers [<StreamHandler <stderr>>]
+#     after : root handlers [<StreamHandler <stderr>>]
+#     our handler still attached: False
+#
+# The count is unchanged because `fileConfig` installs a `StreamHandler` of its
+# own; the handler that was there is gone and CLOSED. `disable_existing_loggers`
+# does not govern that — `logging.config.fileConfig` calls
+# `_clearExistingHandlers()` unconditionally and `_install_loggers` then removes
+# and closes root's handlers before installing the ini's. An earlier fix here
+# addressed the flag and left the teardown, which is the half that fires whatever
+# the flag says.
+#
+# `tests/test_schema_migration.py::test_a_programmatic_migration_leaves_the_root
+# _loggers_handlers_attached` is the gate's test, and the sibling immediately
+# below it drives the CLI branch so the gate cannot be quietly turned into a
+# permanent `False`.
+if config.config_file_name is not None and config.cmd_opts is not None:
     # 🔴 `disable_existing_loggers=False` IS NOT OPTIONAL, and the default is the
     # other way. `logging.config.fileConfig` defaults to `True`, which DISABLES
     # every logger that already exists and is not named in the ini — permanently,
-    # process-wide, with no undo. MEASURED: one in-process `alembic upgrade`
-    # left 50 loggers `disabled=True`, `asyncio`, `psycopg`, `sqlalchemy`,
-    # `urllib3` and `fastapi` among them.
+    # process-wide, with no undo. MEASURED 2026-08-05 in a process that had
+    # imported `asyncio`, `urllib3`, `psycopg`, `sqlalchemy`, `fastapi`,
+    # `alembic` and `titlepipe_core.app`, then called
+    # `fileConfig("alembic.ini")` at the stdlib default: 16 loggers newly
+    # `disabled=True`, `asyncio`, `psycopg`, `sqlalchemy`, `urllib3` and
+    # `fastapi` among them. (An earlier version of this comment said 50. That
+    # number is a function of what the process has imported and was not
+    # reproducible; the five named ones are.)
     #
-    # Nothing fails today only because core-api's telemetry renders through
-    # structlog rather than through stdlib loggers. That is luck. The day
-    # anything runs a migration inside the application process — a startup
-    # `upgrade head`, a management command, a test — this silently switches off
-    # the logging of everything that was already imported.
+    # It still matters after the gate above. `alembic upgrade head` from a shell
+    # is a short-lived process, but `_clearExistingHandlers` and this flag apply
+    # to everything already imported in it — SQLAlchemy, psycopg and this
+    # service's own modules among them. `test_fileconfig_still_runs_for_the
+    # _alembic_cli_and_keeps_existing_loggers_enabled` covers it.
     fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 # `alembic check` and `--autogenerate` compare against this. `Base.metadata`

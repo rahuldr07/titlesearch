@@ -38,6 +38,7 @@ non-zero, which no change to the backend can falsify.
 from __future__ import annotations
 
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -45,7 +46,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from check_backend_rules import MAX_FILE_LINES, main
+from check_backend_rules import MAX_FILE_LINES, MIN_ALLOW_REASON_LENGTH, main
 
 # Long enough to satisfy rule 7, and phrased the way a real one should be.
 GOOD_REASON = "the ASGI scope is MutableMapping[str, Any] and this follows an isinstance"
@@ -207,6 +208,30 @@ def test_the_one_token_rename_does_not_get_past_the_name_rules(
         # Calls, bare and qualified.
         ("raw-sql", 'from sqlalchemy.sql import text\n\nq = text("select 1")\n'),
         ("savepoint", "def f(s):\n    return s.begin_nested()\n"),
+        # `literal_column` is an exact synonym for `text` in injection terms and
+        # went straight through the gate until it was named. It has no English
+        # collision, so every shape fires: import, call, attribute read.
+        ("raw-sql", "from sqlalchemy import literal_column\n"),
+        (
+            "raw-sql",
+            "import sqlalchemy as sa\n"
+            "\n"
+            "\n"
+            "def f(session):\n"
+            '    cols = sa.literal_column("id, tenant_id")\n'
+            "    return session.execute(sa.select(cols)).all()\n",
+        ),
+        ("raw-sql", 'def f(sa):\n    return sa.literal_column("id, tenant_id")\n'),
+        # `raw_connection` is the one that leaves the ORM entirely — no tenant
+        # filter, and none of the Session events that set the tenant GUC.
+        (
+            "raw-sql",
+            "def f(engine):\n"
+            "    cursor = engine.raw_connection().cursor()\n"
+            '    return cursor.execute("SELECT id FROM orders")\n',
+        ),
+        ("raw-sql", "def f(engine):\n    borrow = engine.raw_connection\n    return borrow\n"),
+        ("raw-sql", "from sqlalchemy.engine import raw_connection\n"),
         # References that are not calls.
         ("print", "def f(register):\n    register(print)\n"),
         ("print", "def f():\n    return print\n"),
@@ -247,9 +272,29 @@ def test_a_banned_name_fires_in_every_shape_the_gate_claims(
         'def f(widget):\n    widget.draw(text="hello")\n',
         # An attribute assignment stores to `.text`; it does not read it.
         'def f(node):\n    node.text = "hello"\n',
-        # Definitions of something else that happens to share the word.
-        "def text(value: str) -> str:\n    return value\n",
-        "class Text:\n    pass\n",
+        # Definitions of something else that happens to share the word, and —
+        # the part that matters — a *read* of what they bound. The earlier rows
+        # here were `def text(value): return value` and `class Text: pass`, and
+        # neither one provided the coverage it looked like: the first never read
+        # `text` back, and the second named something that is not a banned name
+        # at all. Deleting the `FunctionDef`/`AsyncFunctionDef`/`ClassDef`
+        # binding branch outright left all 117 tests passing while making
+        # `handler = cast` after a local `def cast` a false positive.
+        "def cast(value: str, kind: type) -> object:\n"
+        "    return kind(value)\n"
+        "\n"
+        "\n"
+        "CONVERTERS = [cast]\n",
+        "async def text(value: str) -> str:\n"
+        "    return value\n"
+        "\n"
+        "\n"
+        "RENDERERS = [text]\n",
+        "class Any:\n"
+        '    """A marker meaning no constraint. Not typing.Any."""\n'
+        "\n"
+        "\n"
+        "MATCH_ALL = Any\n",
         # A `for`/`with`/`except` target is a binding like any other.
         "def f(rows):\n    for text in rows:\n        yield text\n",
         "def f(cm):\n    with cm as text:\n        return text\n",
@@ -288,6 +333,51 @@ def test_a_call_is_still_a_call_when_the_parenthesis_is_not_adjacent(
     assert relative in output
 
 
+def test_an_import_binding_does_not_excuse_the_uses_that_follow_it(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """An import is the banned thing arriving, not the file coining a word.
+
+    Adding `ast.alias` to the binding set left all 117 tests passing, because
+    every one of them either imported a banned name without reading it back or
+    read one without importing it. What the mutation actually did was turn
+
+        from typing import Any  # rules-allow(any-type): <a real reason>
+
+    into a whole-file licence for `Any` — one reason, written about the import,
+    silently answering for every use below it. That is the file-form exemption
+    granted by accident and without the word `file` appearing anywhere.
+
+    So both files here bind by import *and then reference*. `licensed.py` is
+    the laundering case and is the one that reported zero violations under the
+    mutation.
+    """
+    plain = write(
+        tmp_path,
+        "services/svc/src/pkg/imported.py",
+        "from typing import Any\n\n\ndef f(value: Any) -> Any:\n    return value\n",
+    )
+    licensed = write(
+        tmp_path,
+        "services/svc/src/pkg/licensed.py",
+        f"from typing import Any  # rules-allow(any-type): {GOOD_REASON}\n"
+        "\n"
+        "\n"
+        "def f(value: Any) -> Any:\n"
+        "    return value\n",
+    )
+    code, output = run(tmp_path, capsys)
+    assert code != 0
+
+    # The import itself, then both annotations on the signature line.
+    assert f"{plain}:1" in output
+    assert output.count(f"{plain}:4") == 2
+
+    # The allow covers its own line and nothing below it.
+    assert f"{licensed}:1" not in output
+    assert output.count(f"{licensed}:4") == 2
+
+
 # --- the scope exemptions do not fire ---------------------------------------
 
 
@@ -298,6 +388,28 @@ def test_raw_sql_is_allowed_inside_a_db_package(
     one reviewed place."""
     write(
         tmp_path, "services/svc/src/pkg/db/session.py", 'import sqlalchemy as sa\n\nsa.text("x")\n'
+    )
+    code, output = run(tmp_path, capsys)
+    assert code == 0, output
+    assert scanned_count(output) > 0
+
+
+def test_the_db_carve_out_covers_the_whole_raw_sql_rule_and_not_just_text(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """`literal_column` and `raw_connection` are under rule 3, so they are under
+    rule 3's carve-out. That is deliberate and it is where the review has to
+    happen: a pool health check is a plausible reason to want a DBAPI
+    connection, and `db/` is the one place a reviewer looks for it."""
+    write(
+        tmp_path,
+        "services/svc/src/pkg/db/health.py",
+        "import sqlalchemy as sa\n"
+        "\n"
+        "\n"
+        "def check(engine):\n"
+        "    raw = engine.raw_connection()\n"
+        '    return sa.select(sa.literal_column("1")), raw\n',
     )
     code, output = run(tmp_path, capsys)
     assert code == 0, output
@@ -348,16 +460,60 @@ def test_the_raw_sql_carve_out_does_not_reach_a_db_directory_at_any_depth(
     assert relative in output
 
 
-def test_a_tests_directory_is_never_scanned(
+PROBE_MODULE = (
+    "from sqlalchemy import text\n"
+    "\n"
+    "\n"
+    "def all_orders(session):\n"
+    '    rows = session.execute(text("SELECT * FROM orders")).all()\n'
+    "    print(rows)\n"
+    "    return rows\n"
+)
+
+
+def test_a_tests_package_inside_src_is_scanned_like_any_other_module(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """Proving RLS denies a row takes raw SQL that deliberately reaches across a
-    tenant. Scanning `tests/` would make the proof unwritable."""
-    write(tmp_path, "services/svc/src/pkg/ok.py", "value = 1\n")
+    """`tests` was a skipped directory name, and it excused a real package.
+
+    MEASURED before the fix: the left-hand file below scanned clean while the
+    identical body one directory over was caught, and the run reported a
+    scanned count of 1. `titlepipe_probe.tests.queries` imports and runs like
+    any other module — it is shipped code that happens to sit in a directory
+    with a reassuring name.
+
+    The skip was aimed at the *test suite*, and the test suite is at
+    `services/*/tests`, beside `src/` and outside the scan roots, so it needed
+    no skip name to stay out. The name only ever covered the case it should not
+    have. Both files must now be scanned and both must report all three
+    violations.
+    """
+    inside = write(tmp_path, "services/probe/src/titlepipe_probe/tests/queries.py", PROBE_MODULE)
+    beside = write(tmp_path, "services/probe/src/titlepipe_probe/api/control.py", PROBE_MODULE)
+    code, output = run(tmp_path, capsys)
+    assert code != 0
+    assert scanned_count(output) == 2
+    for relative in (inside, beside):
+        assert f"{relative}:1" in output, output
+        assert f"{relative}:5" in output, output
+        assert f"{relative}:6" in output, output
+
+
+def test_a_tests_package_inside_src_can_still_earn_an_exemption(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The replacement for the blanket skip. A `src/**/tests/` package that
+    genuinely needs raw SQL says so once, in the file, naming the rule — which
+    is a reviewable sentence rather than a directory name nobody re-reads."""
     write(
         tmp_path,
-        "services/svc/src/pkg/tests/test_rls.py",
-        "import sqlalchemy as sa\n\nsa.text(\"set local app.current_tenant = ''\")\nprint(1)\n",
+        "services/probe/src/titlepipe_probe/tests/queries.py",
+        f"# rules-allow-file(raw-sql): {GOOD_REASON}\n"
+        "from sqlalchemy import text\n"
+        "\n"
+        "\n"
+        "def all_orders(session):\n"
+        '    return session.execute(text("SELECT * FROM orders")).all()\n',
     )
     code, output = run(tmp_path, capsys)
     assert code == 0, output
@@ -368,10 +524,10 @@ def test_where_the_checkout_lives_cannot_change_what_is_scanned(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     """Skipped directory names were matched against the *absolute* path, so a
-    clone under any ancestor called `venv`, `tests`, `node_modules` or a cache
-    directory scanned zero files and reported clean. A scratch worktree at
-    `~/venv/proj` is not a hypothetical."""
-    inside = tmp_path / "venv" / "tests" / "node_modules" / "proj"
+    clone under any ancestor called `venv`, `node_modules` or a cache directory
+    scanned zero files and reported clean. A scratch worktree at `~/venv/proj`
+    is not a hypothetical."""
+    inside = tmp_path / "venv" / ".ruff_cache" / "node_modules" / "proj"
     elsewhere = tmp_path / "plain" / "proj"
     offender = "from typing import Any\n\nv: Any = 1\nprint(v)\n"
     write(inside, "services/svc/src/pkg/m.py", offender)
@@ -414,7 +570,15 @@ def test_names_that_merely_contain_a_banned_name_do_not_fire(
         "\n"
         "\n"
         "def pprint(value: str) -> str:\n"
-        "    return value\n",
+        "    return value\n"
+        "\n"
+        "\n"
+        "def raw_connection_url(dsn: str) -> str:\n"
+        "    return dsn\n"
+        "\n"
+        "\n"
+        "def literal_columns(names: list[str]) -> list[str]:\n"
+        "    return names\n",
     )
     code, output = run(tmp_path, capsys)
     assert code == 0, output
@@ -610,6 +774,79 @@ def test_a_short_allow_does_not_suppress_what_it_sits_on(
     assert "[rules-allow]" in output
     assert "[any-type]" in output
     assert output.count(f"{relative}:3") == 2
+
+
+def test_the_allow_reason_floor_is_exactly_where_it_says_it_is(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Both sides of rule 7's boundary, the way rule 6 already had.
+
+    Rule 6 got the boundary treatment and rule 7 did not: the only fixtures in
+    this file were 5 and 7 characters and the good reason is 74, so nothing sat
+    either side of 12 and `MIN_ALLOW_REASON_LENGTH = 30` passed all 117 tests.
+    A cap of 30 is not obviously wrong — it is just not the cap that is written
+    down, and the whole point of a number in an enforcement script is that it
+    is the number everyone was told.
+
+    The two reasons are written out as literals rather than built from the
+    constant, for the same reason `test_the_line_cap_...` writes out 400: a
+    fixture derived from the constant moves with it and pins nothing.
+    """
+    assert MIN_ALLOW_REASON_LENGTH == 12
+
+    exactly_twelve = "pooled reuse"
+    one_short = "pooled reus"
+    assert len(exactly_twelve) == 12
+    assert len(one_short) == 11
+
+    write(
+        tmp_path,
+        "services/svc/src/pkg/floor.py",
+        f'v = cast("int", 1)  # rules-allow(any-type): {exactly_twelve}\n',
+    )
+    code, output = run(tmp_path, capsys)
+    assert code == 0, output
+    assert scanned_count(output) == 1
+
+    relative = write(
+        tmp_path,
+        "services/svc/src/pkg/floor.py",
+        f'v = cast("int", 1)  # rules-allow(any-type): {one_short}\n',
+    )
+    code, output = run(tmp_path, capsys)
+    assert code != 0
+    assert "[rules-allow]" in output
+    # And it does not suppress what it sits on: the rejected exemption plus the
+    # `cast` it failed to excuse, both on line 1.
+    assert "[any-type]" in output
+    assert output.count(f"{relative}:1") == 2
+
+
+def test_the_line_form_cannot_grant_a_rule_that_is_about_the_whole_file(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A silent no-op, and the wrong kind of silent.
+
+    `# rules-allow(file-length): …` parsed, passed rule 7, and was recorded as
+    an accepted exemption — and was then never consulted, because a file-length
+    violation carries `line=0` and is only ever tested against the file-form
+    set. It failed closed, so nothing leaked; what it cost was an author
+    staring at a rejected file next to a reason they had written that appeared
+    to do nothing. It is now refused by name, pointing at the form that works.
+    """
+    write(
+        tmp_path,
+        "services/svc/src/pkg/wrong_form.py",
+        f"# rules-allow(file-length): {GOOD_REASON}\n"
+        + "".join(f"x{n} = {n}\n" for n in range(401)),
+    )
+    code, output = run(tmp_path, capsys)
+    assert code != 0
+    assert "[rules-allow]" in output
+    assert "can never grant it" in output
+    assert "rules-allow-file(file-length)" in output
+    # And the rule it failed to grant still fires.
+    assert "[file-length]" in output
 
 
 def test_a_line_allow_naming_an_unknown_rule_is_a_violation(
@@ -814,9 +1051,13 @@ def test_scan_roots_that_hold_no_python_are_a_failure(
 ) -> None:
     """A root that exists but is empty of anything scannable is still a scan of
     nothing, and is reported differently from a root that does not exist so
-    that the two are not debugged as the same problem."""
+    that the two are not debugged as the same problem.
+
+    The unscannable file is under `.venv/` rather than `tests/`: `tests` is no
+    longer a skipped name, and a fixture that quietly stopped being skipped
+    would turn this into a test of nothing."""
     (tmp_path / "services" / "svc" / "src").mkdir(parents=True)
-    write(tmp_path, "services/svc/src/pkg/tests/test_all.py", 'print("x")\n')
+    write(tmp_path, "services/svc/src/.venv/lib/pkg/m.py", 'print("x")\n')
     code, output = run(tmp_path, capsys)
     assert code != 0
     assert scanned_count(output) == 0
@@ -830,13 +1071,40 @@ def test_the_default_root_is_the_repository_and_not_the_working_directory(
     exercise `REPO_ROOT` at all: every other test passes an explicit root, so a
     wrong number of `.parent` calls would go unnoticed by all of them.
 
-    It asserts the count and nothing about the verdict. Whether the backend is
+    It runs the script twice for two different reasons.
+
+    In-process, `main([])` catches a wrong number of `.parent` calls — that is
+    all the earlier version of this test ever caught, despite its name.
+    `REPO_ROOT = Path.cwd()` passed it, and passed all 117 tests, because
+    pytest is invoked from the repository root and there the two expressions
+    are equal. cwd is the substitution the module docstring names as the
+    failure this constant exists to prevent, so the test named after it has to
+    actually fail on it.
+
+    It cannot be caught in-process: `REPO_ROOT` is bound when the module is
+    imported, and by then pytest's cwd is already the repository root — a
+    `monkeypatch.chdir` afterwards moves nothing. So the second run is a
+    subprocess started from somewhere else, which is also the documented
+    invocation (`../../scripts/check_backend_rules.py` from a service
+    directory). Under the cwd form it scans an empty tmp directory, finds zero
+    files, and this fails.
+
+    Both assert the count and nothing about the verdict. Whether the backend is
     currently clean is not this test's business, and making it so would couple
     the guard's suite to the code it guards.
     """
     main([])
-    output = capsys.readouterr().out
-    assert scanned_count(output) > 0
+    assert scanned_count(capsys.readouterr().out) > 0
+
+    script = Path(__file__).resolve().parent.parent / "check_backend_rules.py"
+    elsewhere = subprocess.run(
+        [sys.executable, str(script)],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert scanned_count(elsewhere.stdout) > 0, elsewhere.stdout + elsewhere.stderr
 
 
 def test_unparseable_source_is_reported_rather_than_skipped(
@@ -869,3 +1137,56 @@ def test_undecodable_bytes_are_reported_without_taking_the_run_down(
     # The scan kept going: the file after the undecodable one was still read.
     assert scanned_count(output) == 2
     assert f"{other}:1" in output
+
+
+def test_a_broken_symlink_is_reported_without_taking_the_run_down(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """`OSError` was not caught, so the handler still had the failure mode it
+    was written to remove.
+
+    MEASURED before the fix: a dangling `.py` symlink under a scan root raised
+    `FileNotFoundError` out of `main`, printed a traceback, and reported *no*
+    file at all — the exact outcome the docstring beside the `UnicodeDecodeError`
+    handler says it exists to prevent. A stale editable install and a
+    half-restored CI cache both produce one, and in pre-commit the gate then
+    failed with an errno instead of a filename.
+
+    The count is asserted because a fix that silently skipped the unreadable
+    path would pass every other assertion here.
+    """
+    package = tmp_path / "services/svc/src/pkg"
+    package.mkdir(parents=True)
+    (package / "stale.py").symlink_to(tmp_path / "gone" / "target.py")
+    other = write(tmp_path, "services/svc/src/pkg/other.py", 'print("x")\n')
+
+    code, output = run(tmp_path, capsys)
+    assert code != 0
+    assert "[parse]" in output
+    assert "services/svc/src/pkg/stale.py" in output
+    assert "could not be read" in output
+    assert scanned_count(output) == 2
+    assert f"{other}:1" in output
+
+
+def test_a_directory_named_like_a_module_is_reported_without_taking_the_run_down(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The second uncaught `OSError`, and the one nobody expects.
+
+    MEASURED before the fix: a directory called `weird.py` — `rglob("*.py")`
+    matches directories too — raised `IsADirectoryError` and aborted the run.
+    It is reported rather than filtered out for the same reason the symlink is:
+    a scan root in a state the scanner cannot make sense of is a fact about the
+    checkout, and swallowing it is how a gate reports clean on a tree it never
+    read. The module *inside* it is still scanned.
+    """
+    inner = write(tmp_path, "services/svc/src/pkg/weird.py/inner.py", 'print("x")\n')
+
+    code, output = run(tmp_path, capsys)
+    assert code != 0
+    assert "[parse]" in output
+    assert "services/svc/src/pkg/weird.py" in output
+    assert "could not be read" in output
+    assert scanned_count(output) == 2
+    assert f"{inner}:1" in output

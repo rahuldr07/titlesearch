@@ -11,6 +11,7 @@ more than the rest of the suite put together.
 
 from __future__ import annotations
 
+import ipaddress
 import os
 import secrets
 import shutil
@@ -26,8 +27,8 @@ from alembic.config import Config
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
-from sqlalchemy import URL, create_engine, make_url, text
-from sqlalchemy.exc import ArgumentError
+from sqlalchemy import URL, Engine, create_engine, make_url, text
+from sqlalchemy.exc import ArgumentError, SQLAlchemyError
 
 # `testcontainers.postgres` is a deprecated shim that warns on import; the
 # module actually holding the class is `testcontainers.community.postgres`.
@@ -176,6 +177,119 @@ PASSWORD_BYTES = 32
 # environment. There is no test for that, because there is nothing to assert.
 DATABASE_URL_OVERRIDE = "TP_TEST_DATABASE_URL"
 
+# The ONLY query-string keys `TP_TEST_DATABASE_URL` may carry, and this is an
+# ALLOWLIST rather than a denylist on purpose.
+#
+# THE HOLE IT CLOSES, MEASURED 2026-08-05 (third of this shape in this file):
+#
+#     TP_TEST_DATABASE_URL='postgresql://rahul@bogus.invalid:5432/postgres?host=/var/run/postgresql'
+#     uv run pytest tests/test_database_seam.py -k postgresql_18   ->  1 passed
+#
+# `bogus.invalid` does not resolve, and the run still passed — because
+# SQLAlchemy's psycopg dialect merges the URL's query into the DBAPI connect
+# kwargs, where libpq's own `host=` OVERRIDES the host in the URL. The seam ran
+# against the developer's real 18.4 cluster over the unix socket by peer auth,
+# with `_normalise_override_dsn` looking only at `url.host` and never at
+# `url.query`. `?hostaddr=` does the same thing over TCP.
+#
+# A denylist is the wrong shape here: libpq's parameter keyword list grows every
+# release, and each new one is a hole that opens by itself. The allowlist holds
+# only keys that cannot move the connection anywhere — `sslmode` and
+# `connect_timeout` change HOW the connection is made, `application_name`
+# changes only what the server logs. Adding a key needs a measured reason that
+# it cannot redirect a connection.
+#
+# `hostaddr`, `host`, `port`, `dbname`, `user`, `passfile`, `service` and
+# `options` are all absent for that reason. `service` deserves its own mention:
+# it names a stanza in a service file that can supply every one of the others.
+OVERRIDE_QUERY_ALLOWLIST = frozenset({"application_name", "connect_timeout", "sslmode"})
+
+# The second, separately-named variable that makes a loopback override legal.
+#
+# `postgresql+psycopg://rahul@localhost:5432/titlepipe` used to be ACCEPTED —
+# measured, along with `…@127.0.0.1/…`. The validator's docstring defends
+# accepting an explicit host as "the deliberate act", and for a named remote
+# host that holds. `localhost` is not that: it is the accident-shaped spelling,
+# the value a developer's muscle memory produces, and what runs behind it is not
+# a read. See `_scrub_migration_objects` — eight `DROP TABLE`s, a `DROP TYPE` and
+# a `DROP FUNCTION`, on every module teardown.
+#
+# Deliberately verbose and deliberately unlike anything a tool exports on its
+# own: it has to be a sentence someone typed on purpose. It does not begin with
+# `TITLEPIPE_`, for the reason recorded at `DATABASE_URL_OVERRIDE`.
+LOOPBACK_ACKNOWLEDGEMENT = "TP_TEST_DATABASE_URL_LOOPBACK_IS_DELIBERATE"
+
+# The tenant GUC, and the value that means "no tenant established".
+#
+# Task 6 owns the policies; what is owned HERE is the floor they stand on.
+# `models.py` writes every tenant predicate as
+# `nullif(current_setting('app.current_tenant', true), '')::uuid`, so the whole
+# invariant is: nothing established -> `''` -> `nullif` -> NULL -> no row
+# matches -> deny.
+#
+# `PGOPTIONS` replaces that floor with a VALID TENANT. MEASURED 2026-08-05:
+#
+#     PGOPTIONS='-c app.current_tenant=22222222-2222-2222-2222-222222222222' \
+#       psql -tAc "select current_setting('app.current_tenant',true)"
+#     -> 22222222-2222-2222-2222-222222222222
+#
+#     # same variable exported, through SQLAlchemy:
+#     create_engine("postgresql+psycopg://@/postgres")                  -> '2222…'
+#     create_engine(..., connect_args={"options": "-c app.current_tenant="}) -> ''
+#
+# The preset is CONNECTION-scoped, so it survives `SET LOCAL` plus a rollback on
+# a pooled connection — a Task 6 test could then prove isolation against a
+# connection that was never actually denied. `PGSERVICE` + `PGSERVICEFILE`
+# inject the identical thing through a service file's `options=` key.
+#
+# Two layers answer it, because either alone is one exported variable from being
+# wrong: `_no_libpq_environment` strips every `PG*` key from the pytest process,
+# and `SEAM_CONNECT_ARGS` pins the value at connect time so that even a
+# `PGOPTIONS` that got past the first layer is overridden — libpq's `options`
+# connection parameter is what `PGOPTIONS` is only the DEFAULT for.
+TENANT_GUC = "app.current_tenant"
+TENANT_DENY_SENTINEL = ""
+
+# Passed to every engine this file builds. `-c <guc>=` sets the GUC to the empty
+# string at connection start, which is the deny sentinel above; only `SET LOCAL`
+# can move it after that.
+SEAM_CONNECT_ARGS: Mapping[str, str] = MappingProxyType(
+    {"options": f"-c {TENANT_GUC}={TENANT_DENY_SENTINEL}"}
+)
+
+# Bounds on `roles.sql`, because unbounded was the real behaviour.
+#
+# `subprocess.run` was called with `capture_output`, `text` and `check` and NO
+# `timeout`, and libpq's own `connect_timeout` is unset — meaning infinite — by
+# default. `_apply_roles_sql` then strips every `PG*` variable from the child's
+# environment, which removes the one thing an operator could have set to bound
+# it. MEASURED 2026-08-05, `10.255.255.1` being a blackhole from this box:
+#
+#     env -i PATH=… PGHOST=10.255.255.1 PGPORT=5432 PGUSER=operator PGDATABASE=tp \
+#       timeout 20 psql --no-psqlrc --quiet -tAc "select 1"
+#     -> shell exit 124            # i.e. still connecting when the ceiling hit
+#
+#     …the same with PGCONNECT_TIMEOUT=5
+#     -> psql: error: … "10.255.255.1", port 5432 failed: timeout expired, after 5s
+#
+# `roles_applied` is session-scoped, so the first of those is the whole suite
+# hung with no output and nothing to read — `capture_output=True` means even
+# psql's own progress goes nowhere.
+#
+# `PGCONNECT_TIMEOUT` bounds the CONNECT; the `subprocess` timeout bounds
+# everything, including a server that accepts the connection and then never
+# answers. Both are needed and neither subsumes the other.
+#
+# CORRECTED: an earlier draft of this comment said libpq rounds
+# `connect_timeout` values below 2 up to 2, which is what the older
+# documentation says. MEASURED on this box's libpq (PostgreSQL 18.4) against the
+# same blackhole: `PGCONNECT_TIMEOUT=1` gave up after 1s and `=2` after 2s. The
+# floor is not there, so 5 is chosen for the reason it looks like — a container
+# on loopback that may still be warming up — and not to clear a rounding rule.
+# The outer bound is generous for the same reason: `roles.sql` does real work.
+LIBPQ_CONNECT_TIMEOUT_SECONDS = 5
+ROLES_SQL_TIMEOUT_SECONDS = 60.0
+
 # The five roles `migrations/sql/roles.sql` creates.
 #
 # `titlepipe_owner` is deliberately NOT in `MANAGED_ROLES`, and that is the one
@@ -225,19 +339,47 @@ ROLE_PASSWORD_VARIABLES: Mapping[str, str] = MappingProxyType(
 # them.
 ROLES_SQL = Path(__file__).resolve().parent.parent / "migrations" / "sql" / "roles.sql"
 
-# libpq's own spelling of a connection, which is how `roles.sql` is handed a
-# server WITHOUT putting a password in `argv`. A DSN on the command line is
-# readable by every process on the box through `ps`, and — closer to home —
-# `subprocess.CompletedProcess.__repr__` prints `args`, so a failing assertion
-# on the result would put the superuser credential in the pytest report. The
-# environment is in neither.
-LIBPQ_BACKEND = "postgresql"
+# DELETED 2026-08-05: `LIBPQ_BACKEND = "postgresql"`. It was a character-for-
+# character duplicate of `POSTGRESQL_BACKEND` above, was never compared against
+# anything, and its only reference in the whole tree was its own name inside
+# `_libpq_environment`'s docstring — a constant whose sole purpose was to be a
+# place to hang a comment. The comment was worth keeping and is now the second
+# paragraph of that docstring, where the thing it explains actually happens.
 
 # SQLAlchemy dropped this alias in 1.4, so its backend name really is `postgres`
 # and it is rejected like any other wrong backend. It gets a hint attached
 # because, unlike `mysql`, it IS a PostgreSQL URL in libpq's and psql's
 # spelling — the operator is right and only the scheme is wrong.
 DROPPED_POSTGRES_ALIAS = "postgres"
+
+
+def _is_loopback(host: str) -> bool:
+    """Does `host` name this machine?
+
+    Two answers, because a host is either a literal address or a name and there
+    is no third case worth guessing at here.
+
+    Literals go through `ipaddress`, which gets the whole of `127.0.0.0/8`
+    rather than the one address people write. MEASURED 2026-08-05 on CPython
+    3.13: `ip_address("127.0.0.53").is_loopback` is `True` — that is the
+    systemd-resolved stub, a real thing a WSL box answers on — and so is
+    `ip_address("::ffff:127.0.0.1").is_loopback`, so the IPv4-mapped IPv6 form
+    needs no special case. `make_url` strips the brackets from `[::1]`, so what
+    arrives here is already the bare literal.
+
+    NAMES are matched against exactly `localhost` and its `.localdomain` form,
+    and this deliberately does NOT resolve. Resolution would make the answer
+    depend on the developer's `/etc/hosts` and on DNS being up, so the same DSN
+    could be refused on one machine and accepted on another — and a refusal that
+    is not reproducible is a refusal nobody trusts. A name that resolves to
+    loopback and is not spelled `localhost` is out of scope by the same
+    accident-versus-deliberate line the caller draws: nobody types
+    `db.example.com` by muscle memory believing it is somewhere else.
+    """
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return host.lower() in {"localhost", "localhost.localdomain"}
 
 
 def _normalise_override_dsn(url: URL) -> str:
@@ -258,10 +400,25 @@ def _normalise_override_dsn(url: URL) -> str:
        `postgresql+psycopg:////tmp/x.db` and failed as `database "/tmp/x.db"
        does not exist` — an error naming neither sqlite nor this variable, and
        pointing at the host cluster;
-    2. HOST, which must be explicit. Hostless is the socket form above. An
-       explicit host is still the operator's to get right: this rejects the
-       accident, not the deliberate act;
-    3. driver, last and only now. A bare `postgresql://` resolves to psycopg2 in
+    2. QUERY STRING, and it must come BEFORE the host check rather than after.
+       `?host=` and `?hostaddr=` reach the DBAPI as libpq connect keywords and
+       OVERRIDE the URL's host, so `url.host` is not yet known to mean anything
+       while an unvetted query is still attached. Checking the host first would
+       be validating a field the next component can move. See
+       `OVERRIDE_QUERY_ALLOWLIST` for the measurement — this was the third
+       instance of the same shape of hole in this one function;
+    3. HOST, which must be explicit and must not be loopback. Hostless is the
+       socket form above. Loopback needs the acknowledgement variable, because
+       `localhost` is what a developer's muscle memory types rather than what a
+       deliberate act looks like. A named remote host is still the operator's to
+       get right: THAT is the accident-vs-deliberate line this draws, and the
+       residual below says what is behind it;
+    4. PORT, which must also be explicit. `_libpq_environment` already refuses a
+       portless DSN — an empty `PGPORT` is 5432 to libpq, exactly as an empty
+       `PGHOST` was the unix socket — but it refuses it at `roles.sql`, which is
+       the middle of a session and several fixtures after the operator's
+       mistake. Refusing here names the variable instead of naming the SQL file;
+    5. driver, last and only now. A bare `postgresql://` resolves to psycopg2 in
        SQLAlchemy and psycopg2 is deliberately not a dependency, so the DBAPI is
        named. An explicit driver is left alone — someone who asked for a
        different one should get the import error naming it, not a silent rewrite
@@ -283,6 +440,19 @@ def _normalise_override_dsn(url: URL) -> str:
 
     Every rejection is a `ValueError` naming `TP_TEST_DATABASE_URL`, because the
     developer who exported it is the only one who can fix it.
+
+    RESIDUAL, STATED IN FULL. The earlier version of this paragraph said only
+    that an explicit host "is the operator's to get right", which understated
+    what an accepted DSN authorises. Behind this validator run, against whatever
+    server it lets through: `migrations/sql/roles.sql` (`CREATE ROLE`,
+    `ALTER ROLE`, `REVOKE`, `GRANT` — including
+    `ALTER ROLE titlepipe_owner LOGIN BYPASSRLS PASSWORD …` and a `dba` role),
+    `alembic upgrade head` and `downgrade base`, and — on EVERY module teardown,
+    unconditionally, whether or not anything failed — `_scrub_migration_objects`:
+    eight `DROP TABLE IF EXISTS`, one `DROP TYPE IF EXISTS`, one
+    `DROP FUNCTION IF EXISTS`. Naming a server here is authorising all of that,
+    which is why loopback now needs a second variable and why the container is
+    the default.
     """
     # Masked from here on. Everything that can reach a message or a traceback
     # goes through this rather than through the URL's own password field.
@@ -296,11 +466,44 @@ def _normalise_override_dsn(url: URL) -> str:
             f"not {backend!r}: {shown}{hint}"
         )
 
+    for key in url.query:
+        if key not in OVERRIDE_QUERY_ALLOWLIST:
+            raise ValueError(
+                f"{DATABASE_URL_OVERRIDE} carries the query parameter {key!r}, which "
+                f"is not one of the {sorted(OVERRIDE_QUERY_ALLOWLIST)} this seam "
+                f"allows. SQLAlchemy hands the query straight to libpq as connect "
+                f"keywords, where host, hostaddr, dbname, user, service and options "
+                f"OVERRIDE what the URL says — so a query parameter can silently "
+                f"point this run at a different server than the one written here, "
+                f"and the psql child would still go to the URL's: {shown}"
+            )
+
     if not url.host:
         raise ValueError(
             f"{DATABASE_URL_OVERRIDE} must name an explicit host. A hostless URL "
             f"reaches the local cluster over the unix socket, which is the one "
             f"server this seam exists to stay off: {shown}"
+        )
+
+    if _is_loopback(url.host) and not os.environ.get(LOOPBACK_ACKNOWLEDGEMENT, "").strip():
+        raise ValueError(
+            f"{DATABASE_URL_OVERRIDE} names the loopback host {url.host!r}, which is "
+            f"the developer's own cluster in every spelling but the socket one. This "
+            f"seam runs roles.sql, alembic upgrade/downgrade and — on every module "
+            f"teardown — eight DROP TABLEs, a DROP TYPE and a DROP FUNCTION against "
+            f"whatever it is pointed at. Export "
+            f"{LOOPBACK_ACKNOWLEDGEMENT}=1 as well if that is genuinely what you "
+            f"want: {shown}"
+        )
+
+    if url.port is None:
+        raise ValueError(
+            f"{DATABASE_URL_OVERRIDE} must name an explicit port. Omitting it means "
+            f"5432 to SQLAlchemy and to libpq alike, which on a development box is "
+            f"the developer's own cluster — and `_libpq_environment` refuses a "
+            f"portless DSN outright, so a run that got past here would die halfway "
+            f"through the session at roles.sql instead of at the variable that "
+            f"caused it: {shown}"
         )
 
     if "+" in url.drivername:
@@ -376,6 +579,22 @@ def _role_dsn(dsn: str, role: str, password: str) -> str:
     bypasses RLS unconditionally — `FORCE ROW LEVEL SECURITY` does not stop one
     — so an isolation assertion that quietly fell back to `admin_dsn` would pass
     while proving nothing at all.
+
+    THE QUERY IS DROPPED, NOT COPIED, and that is the point this helper was
+    corrected on. It used to pass `query=url.query` through. A query parameter
+    is not decoration: SQLAlchemy's psycopg dialect merges it into the connect
+    keywords, and libpq's `host`, `hostaddr`, `dbname`, `user`, `service` and
+    `options` each override the field of the same name in the URL. Propagating
+    it meant that a `?host=` on `admin_dsn` — which the validator now refuses,
+    but which nothing else here would have noticed — moved every role connection
+    somewhere the role fields say nothing about. Dropping it makes the returned
+    DSN mean exactly the six fields it spells out.
+
+    `_normalise_override_dsn` allows three inert keys through (`sslmode`,
+    `connect_timeout`, `application_name`), and those are dropped here as well.
+    That is a knowing simplification rather than an oversight: none of them can
+    change WHERE the connection goes, and re-adding one is a two-line change on
+    the day a test actually needs it.
     """
     url = make_url(dsn)
     return URL.create(
@@ -385,16 +604,37 @@ def _role_dsn(dsn: str, role: str, password: str) -> str:
         host=url.host,
         port=url.port,
         database=url.database,
-        query=url.query,
     ).render_as_string(hide_password=False)
+
+
+def _seam_engine(dsn: str) -> Engine:
+    """`create_engine`, with the tenant GUC pinned to the deny sentinel.
+
+    Every engine this file builds goes through here, and the reason is recorded
+    at `TENANT_GUC`: an exported `PGOPTIONS` (or a `PGSERVICE` pointing at a
+    service file with an `options=` key) presets `app.current_tenant` to a VALID
+    tenant on every connection, connection-scoped, surviving `SET LOCAL` and
+    rollback. `_no_libpq_environment` removes those variables from the pytest
+    process; this pins the value at connect time so that even one that got past
+    the scrub is overridden, because libpq's `options` connection parameter is
+    what `PGOPTIONS` is merely the default for.
+
+    Not a fixture, because `_scrub_migration_objects` runs inside a teardown and
+    cannot request one.
+    """
+    return create_engine(dsn, connect_args=dict(SEAM_CONNECT_ARGS))
 
 
 def _libpq_environment(dsn: str) -> dict[str, str]:
     """The same server as `dsn`, spelled as the `PG*` variables libpq reads.
 
-    `psql` is given no connection argument at all, for the reason recorded at
-    `LIBPQ_BACKEND`: an argument is printed by `CompletedProcess.__repr__` and
-    visible in `ps`, and an environment variable is neither.
+    `psql` is given no connection argument at all. A DSN on the command line is
+    readable by every process on the box through `ps`, and — closer to home —
+    `subprocess.CompletedProcess.__repr__` prints `args`, so a failing assertion
+    on the result would put the superuser credential straight into the pytest
+    report. The environment is in neither. (That paragraph used to hang off a
+    `LIBPQ_BACKEND` constant that existed only to carry it; the constant is
+    gone, the reason is here.)
 
     THIS VALIDATES RATHER THAN TRUSTS, and that is the same lesson
     `_normalise_override_dsn` above was written for — this function was the same
@@ -410,37 +650,88 @@ def _libpq_environment(dsn: str) -> dict[str, str]:
     runs there is `CREATE ROLE`, `ALTER ROLE`, `REVOKE` and `GRANT` against a
     server nobody destroys at the end of the session.
 
-    Host, user and database are each required for the same reason: an empty
-    `PGUSER` becomes the OS user under peer auth, and an empty `PGDATABASE`
-    becomes a database named after that user. Only `PGPASSWORD` may legitimately
-    be empty — a DSN can carry its credential in `.pgpass` — and it is the one
-    field that cannot redirect the connection anywhere.
+    Host, user, database AND PORT are each required for the same reason: libpq
+    treats an empty value and an unset one identically and substitutes its
+    default. An empty `PGUSER` becomes the OS user under peer auth, an empty
+    `PGDATABASE` becomes a database named after that user, and an empty `PGPORT`
+    is 5432. Port was the one left out of the rule, which made it the `PGHOST=""`
+    bug two paragraphs up wearing a different field name. MEASURED 2026-08-05:
+
+        env -i PATH=… PGHOST=127.0.0.1 PGPORT= PGUSER=… PGDATABASE=… psql -w …
+        -> connection to server at "127.0.0.1", port 5432 failed: …
+
+    — libpq names 5432 in its own error, having been given nothing. On this
+    development box 5432 is the developer's 18.4 cluster. Only `PGPASSWORD` may
+    legitimately be empty — a DSN can carry its credential in `.pgpass` — and it
+    is the one field that cannot redirect the connection anywhere.
+
+    A NON-EMPTY QUERY IS REFUSED OUTRIGHT rather than translated. This function
+    reads only the URL's structural fields, so a `?host=/var/run/postgresql`
+    that SQLAlchemy WOULD honour is invisible here — which means psql and every
+    `create_engine` in the suite would target DIFFERENT SERVERS from the same
+    DSN, `roles.sql` landing on one and Alembic on the other. A DSN whose two
+    consumers can disagree must not be runnable at all, so this refuses instead
+    of guessing. `_normalise_override_dsn` lets three inert keys past
+    (`sslmode`, `connect_timeout`, `application_name`) and `_role_dsn` drops
+    them, so nothing in the seam reaches here with a query today; the day one
+    genuinely has to, the fix is to translate that key into its `PG*` spelling
+    (`PGSSLMODE`, `PGCONNECT_TIMEOUT`, `PGAPPNAME`) here — not to relax this.
+
+    `PGCONNECT_TIMEOUT` is SUPPLIED rather than merely permitted. `_apply_roles_sql`
+    strips every `PG*` variable from the child's environment, which removes the
+    operator's own bound along with the dangerous ones, and libpq's default
+    `connect_timeout` is infinite; see `LIBPQ_CONNECT_TIMEOUT_SECONDS`.
     """
     url = make_url(dsn)
 
-    for field, value in (
-        ("host", url.host),
-        ("username", url.username),
-        ("database", url.database),
-    ):
-        if not value:
-            raise ValueError(
-                f"refusing to run roles.sql: the target DSN has no {field}, and a "
-                f"libpq connection missing one reaches the LOCAL cluster over the "
-                f"unix socket — the one server this harness must never write to: "
-                f"{url.render_as_string(hide_password=True)}"
-            )
+    if url.query:
+        raise ValueError(
+            f"refusing to run roles.sql: the target DSN carries the query "
+            f"parameter(s) {sorted(url.query)}, which SQLAlchemy passes to libpq as "
+            f"connect keywords but this function cannot see. psql and every "
+            f"create_engine in this suite would then be aimed at different servers "
+            f"from one DSN: {url.render_as_string(hide_password=True)}"
+        )
 
-    return {
+    environment = {
         "PGHOST": url.host or "",
-        "PGPORT": str(url.port) if url.port is not None else "",
+        "PGPORT": "" if url.port is None else str(url.port),
         "PGUSER": url.username or "",
         "PGPASSWORD": url.password or "",
         "PGDATABASE": url.database or "",
+        "PGCONNECT_TIMEOUT": str(LIBPQ_CONNECT_TIMEOUT_SECONDS),
     }
 
+    # Port is checked LAST, and the position is not arbitrary.
+    # `tests/test_roles.py::test_the_libpq_environment_refuses_a_dsn_that_reaches_the_local_cluster`
+    # feeds `postgresql+psycopg://db.example/titlepipe` expecting the word
+    # "username" and `postgresql+psycopg://operator@db.example` expecting
+    # "database" — and both of those are ALSO portless, so a port check placed
+    # earlier would answer "port" to a question about the username and break a
+    # test file this task does not own. Order changes which of several true
+    # refusals is reported; it changes nothing about what is accepted.
+    for variable, field in (
+        ("PGHOST", "host"),
+        ("PGUSER", "username"),
+        ("PGDATABASE", "database"),
+        ("PGPORT", "port"),
+    ):
+        if not environment[variable]:
+            raise ValueError(
+                f"refusing to run roles.sql: the target DSN has no {field}, and a "
+                f"libpq connection missing one reaches the LOCAL cluster over the "
+                f"unix socket or its default port — the one server this harness must "
+                f"never write to: {url.render_as_string(hide_password=True)}"
+            )
 
-def _apply_roles_sql(dsn: str, passwords: Mapping[str, str]) -> subprocess.CompletedProcess[str]:
+    return environment
+
+
+def _apply_roles_sql(
+    dsn: str,
+    passwords: Mapping[str, str],
+    timeout: float = ROLES_SQL_TIMEOUT_SECONDS,
+) -> subprocess.CompletedProcess[str]:
     """Run `migrations/sql/roles.sql` against `dsn`, with `passwords` in the environment.
 
     `psql` rather than psycopg, and that is forced rather than chosen.
@@ -462,10 +753,20 @@ def _apply_roles_sql(dsn: str, passwords: Mapping[str, str]) -> subprocess.Compl
     at all. Every `PG*` variable is dropped for the same reason — one exported
     `PGHOST` and the script runs somewhere else entirely.
 
+    `timeout` IS BOUNDED, AND UNBOUNDED WAS THE REAL BEHAVIOUR. See
+    `ROLES_SQL_TIMEOUT_SECONDS` for the measurement — psql still connecting to a
+    blackholed host when a 20-second ceiling killed it, with `roles_applied`
+    being session-scoped so nothing else in the suite could even start, and
+    `capture_output=True` so it printed nothing while it waited. It is a
+    parameter rather than
+    a constant read inside so that
+    `test_roles_sql_that_never_returns_is_bounded_and_names_only_the_host` can
+    drive it in a second instead of in a minute.
+
     RESIDUAL, STATED: `passwords` is an argument, so a failure inside this
     function prints it. That is the residual `role_passwords` already accepts
     and bounds — these belong to a container that no longer exists by the time
-    anyone reads the log.
+    anyone reads the log. `dsn` is an argument on the same terms.
     """
     psql = shutil.which("psql")
     if psql is None:
@@ -485,18 +786,85 @@ def _apply_roles_sql(dsn: str, passwords: Mapping[str, str]) -> subprocess.Compl
         **{ROLE_PASSWORD_VARIABLES[role]: password for role, password in passwords.items()},
     }
 
-    # S603 wants the argument vector checked for untrusted input. Every element
-    # of it is a constant in this file or `shutil.which`'s answer; the two
-    # values that vary — the server and the passwords — are in `env`, which is
-    # not a shell and is not word-split. There is no `shell=True` here and there
-    # must never be one.
-    return subprocess.run(  # noqa: S603
-        [psql, "--no-psqlrc", "--quiet", "-v", "ON_ERROR_STOP=1", "-f", str(ROLES_SQL)],
-        env=environment,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    try:
+        # S603 wants the argument vector checked for untrusted input. Every
+        # element of it is a constant in this file or `shutil.which`'s answer;
+        # the two values that vary — the server and the passwords — are in
+        # `env`, which is not a shell and is not word-split. There is no
+        # `shell=True` here and there must never be one.
+        return subprocess.run(  # noqa: S603
+            [psql, "--no-psqlrc", "--quiet", "-v", "ON_ERROR_STOP=1", "-f", str(ROLES_SQL)],
+            env=environment,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired:
+        # THE HOST, NEVER THE DSN. The whole point of putting the connection in
+        # `env` was to keep the credential out of anything printable, and a
+        # timeout message quoting `dsn` would hand it back on the one path where
+        # an operator is guaranteed to be reading the output.
+        #
+        # `from None` is load-bearing rather than tidy. The chained traceback
+        # would print `subprocess.run`'s own frames, and `env` is one of their
+        # ARGUMENTS — that dictionary holds `PGPASSWORD` (the superuser's) and
+        # all four role passwords. Suppressing the chain removes every one of
+        # them from the report. What it cannot remove is this function's own
+        # frame, whose `dsn` and `passwords` arguments are the residual stated
+        # above.
+        raise RuntimeError(
+            f"roles.sql did not finish within {timeout} seconds against host "
+            f"{make_url(dsn).host!r}, so no role contract has been established. "
+            f"The DSN is deliberately not quoted here. A server that accepts a "
+            f"connection and never answers, or a host that blackholes the SYN, "
+            f"looks exactly like this."
+        ) from None
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _no_libpq_environment() -> Iterator[None]:
+    """Every `PG*` variable removed from this pytest process, for its whole life.
+
+    ---------------------------------------------------------------------------
+    🔴 THE ONLY `autouse` IN THIS FILE, AND IT IS NOT THE ONE `roles_applied`
+       REJECTED. That rejection was about a fixture that would START A CONTAINER
+       for `test_settings.py`. This one edits a dictionary. It drags nothing into
+       anything, costs nothing, and cannot be forgotten — which is the property
+       it exists for.
+    ---------------------------------------------------------------------------
+
+    `_apply_roles_sql` already builds its child's environment from
+    `not name.startswith("PG")`, so the policy was settled; it was just applied
+    in exactly one of the two places that needed it. Nothing stripped `PG*` for
+    the ~30 in-process `create_engine` calls across this suite, and those are
+    where every isolation assertion from Task 4 on will live.
+
+    `PGOPTIONS` is the one that matters and `TENANT_GUC` records the
+    measurement: it presets `app.current_tenant` to a valid tenant on every
+    connection, which replaces the deny floor Task 6's whole invariant rests on.
+    But the same variable family also holds `PGHOST`, `PGPORT`, `PGDATABASE`,
+    `PGUSER`, `PGSERVICE` and `PGSERVICEFILE`, each of which can move a
+    connection somewhere else, and `PGSSLMODE`, which can weaken one. Removing
+    the family is a smaller rule than enumerating the dangerous members of it,
+    and — the reason it is a prefix rather than a list — libpq keeps adding
+    members.
+
+    `pytest.MonkeyPatch.context()` rather than the `monkeypatch` fixture:
+    `monkeypatch` is function-scoped and this must outlive every test, including
+    session-scoped fixture setup. The context manager restores the developer's
+    real environment when the session ends, so a `PGHOST` they rely on outside
+    pytest survives.
+
+    A test that needs one of these back monkeypatches it in for itself —
+    `test_a_fresh_connection_starts_at_the_deny_sentinel_even_under_pgoptions`
+    does exactly that, deliberately defeating this layer to prove the second one
+    holds on its own.
+    """
+    with pytest.MonkeyPatch.context() as patch:
+        for name in [name for name in os.environ if name.startswith("PG")]:
+            patch.delenv(name, raising=False)
+        yield
 
 
 @pytest.fixture(scope="session")
@@ -543,10 +911,18 @@ def role_passwords() -> Mapping[str, str]:
 
 
 @pytest.fixture(scope="session")
-def admin_dsn() -> Iterator[str]:
+def admin_dsn(_no_libpq_environment: None) -> Iterator[str]:
     """Superuser. `roles.sql`, seeding, and the catalog reads those need.
 
     Never used for an isolation assertion.
+
+    `_no_libpq_environment` is requested EXPLICITLY even though it is `autouse`.
+    pytest does order a session-scoped autouse fixture ahead of a session-scoped
+    ordinary one, so this is belt and braces — but the thing being ordered is
+    "an exported `PGHOST` cannot redirect the container's DSN, and an exported
+    `PGOPTIONS` cannot preset the tenant", and an ordering guarantee that lives
+    only in pytest's documentation is a worse place for that than the argument
+    list. The parameter is unused by name; `ARG001` is off for tests.
     """
     override = _override_dsn()
     if override is not None:
@@ -727,16 +1103,117 @@ def _scrub_migration_objects(admin_dsn: str) -> None:
     The superuser connection, not `titlepipe_migration`. Teardown must not be the
     thing that fails because a test left the session with a `SET ROLE` in place
     or revoked a grant it meant to restore.
+
+    ONE TRANSACTION PER STATEMENT, NOT ONE FOR ALL TEN. Every statement used to
+    run inside a single `engine.begin()`, which made the cleanup of last resort
+    ALL-OR-NOTHING: one failure — a table with a dependent object the fixed drop
+    order does not anticipate, a lock held by a connection a test forgot to
+    close — rolled back the nine drops that had already worked, and the next
+    module inherited everything. A resort that only works when nothing is wrong
+    is not a last resort. Ten transactions cost ten round trips against a
+    container on loopback, which is nothing beside the price of debugging a
+    cross-module leak.
+
+    It still RAISES, and it raises after trying every statement rather than at
+    the first failure. A teardown that swallowed errors would turn "the database
+    is dirty" into "some later, unrelated test fails strangely" — the exact
+    trade this fixture's history is a record of.
     """
-    engine = create_engine(admin_dsn)
+    statements = [
+        *(f"DROP TABLE IF EXISTS {table}" for table in MIGRATION_TABLES),
+        f"DROP TYPE IF EXISTS {MIGRATION_ENUM_TYPE}",
+        f"DROP FUNCTION IF EXISTS {MIGRATION_FUNCTION}()",
+    ]
+
+    failures: list[str] = []
+    engine = _seam_engine(admin_dsn)
     try:
-        with engine.begin() as connection:
-            for table in MIGRATION_TABLES:
-                connection.execute(text(f"DROP TABLE IF EXISTS {table}"))
-            connection.execute(text(f"DROP TYPE IF EXISTS {MIGRATION_ENUM_TYPE}"))
-            connection.execute(text(f"DROP FUNCTION IF EXISTS {MIGRATION_FUNCTION}()"))
+        for statement in statements:
+            try:
+                with engine.begin() as connection:
+                    connection.execute(text(statement))
+            except SQLAlchemyError as error:
+                # The statement, not the connection: every one of these is built
+                # from constants in this file, so quoting it leaks nothing and
+                # is the only thing that says WHICH object survived.
+                failures.append(f"{statement} -> {type(error).__name__}: {error}")
     finally:
         engine.dispose()
+
+    if failures:
+        raise RuntimeError(
+            "the migration scrub could not remove every object, so the database "
+            "is dirty for the next module. Each remaining statement and its "
+            "error:\n" + "\n".join(failures)
+        )
+
+
+def _teardown_migrated_database(config: Config, admin_dsn: str, upgraded: bool) -> None:
+    """`downgrade base` if there is anything to downgrade, then the scrub — always.
+
+    ---------------------------------------------------------------------------
+    🔴 EXTRACTED FROM `migrated_database` SO THAT IT CAN BE TESTED. That is the
+       entire reason it is a function.
+    ---------------------------------------------------------------------------
+    A reviewer mutated four things here and the suite stayed green for every
+    one. RE-MEASURED 2026-08-05 against the tree as it stood before this change
+    (`9820dfd`), one mutation at a time, whole suite each time — `131 passed`
+    four times out of four:
+
+      1. flattening this nested `try`/`finally`, so a raising `downgrade` skips
+         the scrub;
+      2. moving `command.upgrade` back outside the caller's `try`;
+      3. deleting the scrub from the teardown altogether;
+      4. removing `"fields"` from `MIGRATION_TABLES`.
+
+    Each is described in the caller's docstring as the fix for a leak that
+    actually happened, and none of them was exercised — because on the happy
+    path `downgrade base` always succeeds, and a structure that only matters
+    when something fails is not reached by tests where nothing does.
+
+    Inline in a fixture's `finally`, there was no way to drive it with a
+    `downgrade` that raises. As a named function behind the
+    `teardown_migrated_database` fixture, there is. THREE OF THE FOUR NOW FAIL,
+    each re-measured on this branch:
+
+      1. `test_the_teardown_scrubs_even_when_the_downgrade_raises` — monkeypatches
+         `alembic.command.downgrade` to raise, then asserts both that the debris
+         is gone and that the downgrade's own exception still propagated;
+      3. the same test, plus
+         `test_the_teardown_skips_the_downgrade_it_cannot_do_but_still_scrubs`;
+      4. `test_migration_tables_matches_the_model_metadata`, from the other side.
+
+    🔴 MUTATION 2 IS STILL UNCOVERED, and saying so is better than implying
+    otherwise. Whether `command.upgrade` sits inside the caller's `try` only
+    matters when the upgrade itself raises, and forcing that means injecting a
+    failing revision into a module-scoped fixture's setup — which is what
+    `tests/test_schema_migration.py::test_a_failed_upgrade_leaves_no_partial_schema_behind`
+    is built around. That file belongs to another unit, so the gap is recorded
+    here rather than closed from this side.
+
+    THE THREE PROPERTIES, each load-bearing:
+
+    **`downgrade` and the scrub are NESTED, not sequential.** Sequentially, a
+    downgrade that raised skipped the scrub entirely — measured, and the next
+    module saw all seven tables, the enum, the function and a populated
+    `alembic_version`. Nested, the scrub runs whatever the downgrade did, and
+    the downgrade's exception still propagates rather than being replaced by a
+    teardown error.
+
+    **`upgraded` guards the downgrade.** An upgrade that raised leaves no
+    version row to downgrade from, so an unconditional `downgrade` would raise
+    out of the `finally` and REPLACE the upgrade's own exception as the reported
+    failure — the original surviving only as `__context__`, three screens down.
+
+    **`downgrade` is called first rather than scrubbing alone.** It is the path
+    under test. A `downgrade()` that has stopped working must fail loudly here
+    rather than be papered over by a cleanup that removes the same objects.
+    """
+    try:
+        if upgraded:
+            command.downgrade(config, "base")
+    finally:
+        _scrub_migration_objects(admin_dsn)
 
 
 @pytest.fixture(scope="module")
@@ -761,9 +1238,6 @@ def migrated_database(roles_applied: str, migration_dsn: str) -> Iterator[str]:
     written about, and it would be invisible until somebody reordered the files.
 
     ---------------------------------------------------------------------------
-    THE STRUCTURE BELOW IS THE FIX FOR A LEAK THIS FIXTURE ACTUALLY HAD, and
-    every part of it is load-bearing:
-
     **`upgrade` is INSIDE the `try`.** It used to be outside, so an upgrade that
     failed part way — three tables created, the fourth raising — got no teardown
     at all and left the debris for the next module. Nothing here relies on the
@@ -771,21 +1245,14 @@ def migrated_database(roles_applied: str, migration_dsn: str) -> Iterator[str]:
     what `test_a_failed_upgrade_leaves_no_partial_schema_behind` then proves
     independently.
 
-    **`downgrade` and the scrub are in NESTED `try`/`finally`, not sequential.**
-    Sequentially, a downgrade that raised skipped the scrub entirely — measured,
-    and the next module saw all seven tables, the enum, the function and a
-    populated `alembic_version`. Nested, the scrub runs whatever the downgrade
-    did, and the downgrade's own exception still propagates rather than being
-    replaced by a teardown error.
-
     **The scrub removes the TYPE and the FUNCTION too**, not only the tables.
     `alembic downgrade base` is not the only way this fixture leaves debris, and
     `DROP TABLE` drops neither of those.
 
-    `downgrade` is still called first rather than scrubbing alone: it is the path
-    under test, and a `downgrade()` that has stopped working must fail loudly
-    here rather than being papered over by a cleanup that would have removed the
-    same objects anyway.
+    Everything after the `yield` is `_teardown_migrated_database`, which is a
+    named function rather than an inline `finally` for one reason: inline, none
+    of its structure could be tested, and a reviewer's four mutations of it all
+    left the suite green. Its docstring holds the rest of the argument.
     """
     config = _alembic_config(migration_dsn)
     upgraded = False
@@ -794,23 +1261,69 @@ def migrated_database(roles_applied: str, migration_dsn: str) -> Iterator[str]:
         upgraded = True
         yield roles_applied
     finally:
-        try:
-            # Guarded on the upgrade having SUCCEEDED. An upgrade that raised
-            # leaves no version row to downgrade from, so an unconditional
-            # `downgrade` here would raise out of the `finally` and REPLACE the
-            # upgrade's own exception as the reported failure — the original
-            # would survive only as `__context__`, three screens down. The scrub
-            # below runs either way and is what actually cleans up.
-            if upgraded:
-                command.downgrade(config, "base")
-        finally:
-            _scrub_migration_objects(roles_applied)
+        _teardown_migrated_database(config, roles_applied, upgraded)
 
 
 @pytest.fixture(scope="session")
 def alembic_version_table() -> str:
     """`alembic_version`, so the name is not spelled out in every test that reads it."""
     return ALEMBIC_VERSION_TABLE
+
+
+@pytest.fixture(scope="session")
+def migration_tables() -> tuple[str, ...]:
+    """Every table the scrub drops, including `alembic_version`.
+
+    Exposed so `test_migration_tables_matches_the_model_metadata` can hold it
+    against `Base.metadata` — it is a hand-maintained literal behind the cleanup
+    of last resort, and the first revision that adds a table makes it silently
+    incomplete.
+    """
+    return MIGRATION_TABLES
+
+
+@pytest.fixture(scope="session")
+def teardown_migrated_database() -> Callable[[Config, str, bool], None]:
+    """`migrated_database`'s teardown, callable, so its structure can be tested.
+
+    See `_teardown_migrated_database` — four mutations of it survived the suite
+    because a `finally` block on a path where nothing fails is never exercised.
+    """
+    return _teardown_migrated_database
+
+
+@pytest.fixture(scope="session")
+def seam_engine() -> Callable[[str], Engine]:
+    """`create_engine` with the tenant GUC pinned to the deny sentinel.
+
+    Every engine built inside this seam must come from here. See `TENANT_GUC`
+    for what an exported `PGOPTIONS` does to a connection that does not.
+    """
+    return _seam_engine
+
+
+@pytest.fixture(scope="session")
+def tenant_guc() -> str:
+    """`app.current_tenant` — the setting Task 6's policies read."""
+    return TENANT_GUC
+
+
+@pytest.fixture(scope="session")
+def tenant_deny_sentinel() -> str:
+    """The value that means "no tenant established", i.e. deny."""
+    return TENANT_DENY_SENTINEL
+
+
+@pytest.fixture(scope="session")
+def loopback_acknowledgement_name() -> str:
+    """The variable that makes a loopback `TP_TEST_DATABASE_URL` legal."""
+    return LOOPBACK_ACKNOWLEDGEMENT
+
+
+@pytest.fixture(scope="session")
+def override_query_allowlist() -> frozenset[str]:
+    """The query-string keys `TP_TEST_DATABASE_URL` may carry, and only those."""
+    return OVERRIDE_QUERY_ALLOWLIST
 
 
 @pytest.fixture(scope="session")
@@ -910,6 +1423,20 @@ def apply_roles_sql() -> Callable[[str, Mapping[str, str]], subprocess.Completed
     `roles_applied` is the ordinary way in and runs it once with everything
     supplied. This is the handle for the tests that must run it WRONG — with a
     variable withheld or exported empty — and read the refusal.
+    """
+    return _apply_roles_sql
+
+
+@pytest.fixture(scope="session")
+def apply_roles_sql_with_timeout() -> Callable[
+    [str, Mapping[str, str], float], subprocess.CompletedProcess[str]
+]:
+    """The same function, with its subprocess timeout as a third argument.
+
+    A second fixture rather than a widened one, because `apply_roles_sql` is
+    annotated as a two-argument callable in a test module this task does not
+    own. The timeout test needs to wait one second rather than sixty, and it is
+    the only caller that passes the third argument.
     """
     return _apply_roles_sql
 

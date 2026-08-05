@@ -221,20 +221,32 @@ def test_an_unhandled_exception_is_diagnosable_in_development(app: FastAPI) -> N
     assert body["details"]["developer_message"] == "something specific"
 
 
-def test_domain_and_service_code_never_import_httpexception() -> None:
-    """The boundary rule: domain code raises DomainError; only the mapping
-    layer knows about HTTP."""
-    from pathlib import Path
-
-    import titlepipe_core
-
-    root = Path(titlepipe_core.__file__).parent
-    offenders = [
-        path.relative_to(root).as_posix()
-        for path in root.rglob("*.py")
-        if "HTTPException" in path.read_text(encoding="utf-8") and path.name != "errors.py"
-    ]
-    assert not offenders, f"HTTPException outside the mapping layer: {offenders}"
+# The boundary rule — domain code raises `DomainError`, only the mapping layer
+# knows about HTTP — is enforced by `scripts/check_backend_rules.py` (rule 4)
+# and is deliberately not re-implemented here.
+#
+# `test_domain_and_service_code_never_import_httpexception` used to live at this
+# spot and was wrong in both directions. MEASURED against this tree:
+#
+#   src/titlepipe_core/notapi/errors.py, containing a real `from fastapi import
+#   HTTPException` and a real `raise`:
+#       check_backend_rules.py  ->  exit 1, names the file and both lines
+#       the local guard         ->  PASSES
+#
+#   any module whose docstring merely mentions the type — which this comment
+#   itself now would:
+#       check_backend_rules.py  ->  clean
+#       the local guard         ->  FAILS
+#
+# The first is the `path.name != "errors.py"` exemption reaching any depth, the
+# near-miss hole Plan 01 Task 0's injection required be closed. The second is a
+# raw substring scan reading prose as code; it fired during Task 3, and the
+# shared gate parses precisely so that it cannot.
+#
+# The shared gate is stronger on every axis — it parses, it is rule-scoped, its
+# exemption mechanism is documented and rule-scoped too, it covers six projects
+# rather than one, and it has its own suite. Two gates for one rule is how they
+# drift, and this pair had drifted in both directions at once.
 
 
 # --- fixes from the deployment-hardening review -----------------------------
