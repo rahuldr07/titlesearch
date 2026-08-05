@@ -519,9 +519,75 @@ column — derive it, do not hardcode):
 zero rows come back. Assert at least **6 tenant tables** before asserting
 anything about them, and likewise at least 5 `titlepipe_*` roles in Task 2.
 
-**INJECTION** Drop `FORCE` from one table, connect as `titlepipe_owner`, and the
-catalog test must fail. **Squawk will not catch any of this** — it lints lock
-safety and has no rules for GRANT, POLICY, RLS or roles.
+**INJECTION — the specified one is impossible, and conflates two things.** It
+read: *"Drop `FORCE` from one table, connect as `titlepipe_owner`, and the
+catalog test must fail."* **Nothing can connect as `titlepipe_owner`** — Task 2
+makes it `NOLOGIN`, deliberately, because a table's owner bypasses RLS unless
+`FORCE` is set. And the catalog test reads `pg_class.relforcerowsecurity`, which
+*any* connection can see, so it never needed that login in the first place. The
+sentence asks for a connection that must not exist in order to run a check that
+does not need it.
+
+Underneath it is a real proof worth keeping, reachable a different way: with
+`FORCE` dropped, a role that has *become* the owner sees every tenant's rows.
+`titlepipe_migration` can `SET ROLE titlepipe_owner` — that is exactly the path
+Task 2's `WITH INHERIT FALSE, SET TRUE` grant leaves open, and exactly the path
+Task 2's membership convergence exists to keep to one role.
+
+**Run all five, one at a time, restoring between:**
+
+| # | break | must fail |
+|---|---|---|
+| 1 | drop `FORCE` from one table | the catalog test, on `relforcerowsecurity` — from an ordinary connection |
+| 2 | with `FORCE` dropped, `SET ROLE titlepipe_owner` from `titlepipe_migration` and select | **every tenant's rows are returned.** Restore `FORCE`: the same statement returns only the set tenant's. This is the proof the original injection was reaching for |
+| 3 | drop the `tenant_isolation` policy from one table | the catalog test, on the policy's absence — *and* the cardinality floor must fire first if the derivation returns nothing |
+| 4 | remove `nullif` from one policy's `USING` | the `pg_policies` assertion, **and** a session with the GUC set to `''` must raise `invalid input syntax for type uuid: ""` rather than deny |
+| 5 | revoke `SELECT` on one table from `titlepipe_app` | the privilege assertion. *RLS is evaluated **after** the privilege check* — without the grants a read test passes for entirely the wrong reason |
+
+**Squawk will not catch any of this** — it lints lock safety and has no rules for
+GRANT, POLICY, RLS or roles.
+
+### Measured before this task was written. All of it applies to `0002`.
+
+A throwaway `0002` doing exactly this task was built and run against 18.4 on
+2026-08-05. What it hit:
+
+- **`FORCE RLS` makes every tenant table invisible to `titlepipe_owner`, which
+  is the role every migration runs as.** After `0002`, `UPDATE orders SET
+  tenant_id = tenant_id` returns `UPDATE 0`. No error, no warning. **Every
+  backfill, correction or delete written after this task is a silent no-op.**
+  `SET LOCAL row_security = off` turns the silence into a loud
+  `ERROR: 42501: query would be affected by row-level security policy`. Decide
+  which a data migration must do, state it here, and note in `0001` that after
+  `0002` those tables are no longer freely writable by migrations.
+- **`alembic_version` must be excluded from the derivation explicitly.** It
+  lives in `public`, is owned by `titlepipe_owner`, and has no `tenant_id`, so
+  deriving "tenant tables" naively gives it an `id`-keyed policy and locks
+  Alembic out of its own version table.
+- **`GRANT … UPDATE` on `audit_log`** — which this task's contract specifies for
+  "all seven tables" — contradicts the append-only trigger. The trigger refuses
+  it anyway, so the grant only misstates intent. `DELETE` is correctly not
+  granted, which makes the trigger's `DELETE` branch unreachable for
+  `titlepipe_app`; belt and braces, worth stating rather than discovering.
+- **`GRANT USAGE, SELECT ON ALL SEQUENCES` is a no-op.** Every PK is
+  `gen_random_uuid()`; there are no sequences. Harmless, but it does not do what
+  a reader assumes.
+- **A `REVOKE` in the downgrade only reaches grants it can act as grantor for** —
+  the same class as the `GRANTED BY … CASCADE` bug already fixed for
+  `pg_auth_members`. Converge the ACL rather than mirroring the upgrade's
+  grants, or accept documented debris.
+- **`titlepipe_owner` has no `USAGE` grant on schema `public`** — it inherits it
+  from `PUBLIC`. On a hardened cluster (`REVOKE USAGE ON SCHEMA public FROM
+  PUBLIC`) migrations break. This task grants `USAGE` to `titlepipe_app` and
+  `titlepipe_worker`; add the owner.
+- **Default privileges belong in `roles.sql`, not here.** It already converges
+  `pg_default_acl`, and a grant this task makes to a role will be silently
+  widened by any default-ACL drift `roles.sql` does not repair.
+
+**Both counter-intuitive claims above were re-measured and hold:** `USING` alone
+does refuse a cross-tenant INSERT (`new row violates row-level security policy`)
+with no `WITH CHECK` present, and the `nullif` guard is load-bearing — unset GUC
+denies cleanly, GUC set to `''` denies cleanly, and the unwrapped form raises.
 
 ---
 
