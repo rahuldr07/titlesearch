@@ -18,6 +18,26 @@ Revision `0002` (Task 4) adds `ENABLE`/`FORCE ROW LEVEL SECURITY`, the
 separate revisions so that "the tables exist" and "the tables are isolated" are
 separately reversible.
 
+🔴 **THESE TABLES ARE FREELY WRITABLE BY A MIGRATION ONLY UNTIL `0002` RUNS, AND
+NOTHING ELSE IN THIS FILE SAYS SO.** Every `INSERT`, `UPDATE` and `DELETE` a
+later revision writes against them lands on a connection that is
+`titlepipe_owner` — and `0002`'s `FORCE ROW LEVEL SECURITY` is precisely the
+statement that removes the OWNER's exemption from the policy. MEASURED
+2026-08-05 against postgres:18.4, two rows in `orders` belonging to two tenants,
+as `titlepipe_migration` with `SET ROLE titlepipe_owner`:
+
+    UPDATE orders SET tenant_id = tenant_id;   ->  UPDATE 0
+    SELECT count(*) FROM orders;               ->  0
+
+No error, no warning, exit 0. A data migration written after `0002` **does
+nothing and reports success**. The remedy is two statements —
+`SET LOCAL row_security = off` (which turns that silence into
+`42501 query would be affected by row-level security policy`) followed by
+`ALTER TABLE <t> NO FORCE ROW LEVEL SECURITY`, both inside the migration's own
+transaction. `0002`'s module docstring holds the full recipe and the
+measurements, and `tests/test_forced_rls_and_grants.py::test_a_migration_shaped
+_write_is_a_silent_no_op_until_it_says_so` pins both halves.
+
 Every statement is written out rather than generated in a loop. Seven near
 identical `create_table` calls read worse than a `for`, and they are worth it:
 each object gets one reviewable line, and a review or an injection that removes

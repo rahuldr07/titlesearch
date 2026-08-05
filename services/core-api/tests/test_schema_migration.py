@@ -1284,10 +1284,21 @@ def test_a_failed_upgrade_leaves_no_partial_schema_behind(
     it was claiming: a chain of revisions applied by one `upgrade` either all
     land or none do.
 
-    Proved with a `0002` that creates a table and then executes nonsense. If the
-    chain were per-migration, `0001`'s seven tables would survive the failure and
-    the assertion below would find them. Because it is one transaction, `public`
-    comes back with nothing but Alembic's own version table.
+    Proved with a probe revision on top of the real head that creates a table and
+    then executes nonsense. If the chain were per-migration, `0001`'s seven tables
+    would survive the failure and the assertion below would find them. Because it
+    is one transaction, `public` comes back with nothing but Alembic's own version
+    table.
+
+    🔴 THE PROBE'S REVISION ID IS `partial_upgrade_probe`, NOT A NUMBER, AND IT
+    USED TO BE `"0002"`. Task 4 landed a real `0002`, and two revisions sharing an
+    id give `alembic.util.exc.CommandError: Multiple head revisions are present
+    for given argument 'head'` plus a `UserWarning: Revision 0002 is present more
+    than once` — this test failing on a collision rather than on the property it
+    is about. A name that cannot be produced by the `NNNN` convention this
+    repository uses for real revisions cannot collide with a future one either.
+    `down_revision` follows the real head for the same reason: a probe hanging off
+    `0001` would fork the chain instead of extending it.
 
     🔴 WHAT THIS TEST DOES **NOT** DO, stated because the docstring used to claim
     it did. It said this "demonstrates the case `migrated_database`'s teardown was
@@ -1323,7 +1334,7 @@ def test_a_failed_upgrade_leaves_no_partial_schema_behind(
     `CREATE TABLE partial_upgrade_probe` really did run and really was rolled
     back.
     """
-    (tmp_path / "0002_probe.py").write_text(_FAILING_REVISION, encoding="utf-8")
+    (tmp_path / "partial_upgrade_probe.py").write_text(_FAILING_REVISION, encoding="utf-8")
 
     real_config = alembic_config(migration_dsn)
     versions = Path(str(real_config.get_main_option("script_location"))) / "versions"
@@ -1379,8 +1390,8 @@ from collections.abc import Sequence
 
 from alembic import op
 
-revision: str = "0002"
-down_revision: str | None = "0001"
+revision: str = "partial_upgrade_probe"
+down_revision: str | None = "0002"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
