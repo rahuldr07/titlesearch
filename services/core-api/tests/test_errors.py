@@ -7,7 +7,6 @@ are the contract the frontend and the refusal tests will branch on.
 from __future__ import annotations
 
 import pytest
-from conftest import DEPLOYED_BASE_URL
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from pydantic import BaseModel, field_validator
@@ -242,7 +241,7 @@ def test_domain_and_service_code_never_import_httpexception() -> None:
 
 
 def test_a_validator_message_never_reaches_the_caller(
-    production_settings: CoreApiSettings, frozen_clock: FrozenClock
+    production_settings: CoreApiSettings, frozen_clock: FrozenClock, deployed_base_url: str
 ) -> None:
     """Review reproduced a production 422 containing the submitted party name.
 
@@ -255,7 +254,7 @@ def test_a_validator_message_never_reaches_the_caller(
     async def _correct(payload: UppercaseGrantor) -> dict[str, str]:
         return {"grantor": payload.grantor}
 
-    with TestClient(app, base_url=DEPLOYED_BASE_URL) as client:
+    with TestClient(app, base_url=deployed_base_url) as client:
         response = client.post("/correct", json={"grantor": "Timothy Buchanan"})
 
     assert response.status_code == 422
@@ -266,7 +265,7 @@ def test_a_validator_message_never_reaches_the_caller(
 
 
 def test_an_unhandled_500_carries_the_correlation_header_and_cors(
-    production_settings: CoreApiSettings, frozen_clock: FrozenClock
+    production_settings: CoreApiSettings, frozen_clock: FrozenClock, deployed_base_url: str
 ) -> None:
     """All three were missing when Starlette's ServerErrorMiddleware rendered
     the 500: it sits outside both the correlation and CORS layers."""
@@ -276,7 +275,7 @@ def test_an_unhandled_500_carries_the_correlation_header_and_cors(
     async def _boom() -> None:
         raise RuntimeError("connection string postgres://u:hunter2@db/core")
 
-    with TestClient(app, raise_server_exceptions=False, base_url=DEPLOYED_BASE_URL) as client:
+    with TestClient(app, raise_server_exceptions=False, base_url=deployed_base_url) as client:
         response = client.get(
             "/boom",
             headers={"Origin": "https://app.titlepipe.example", "X-Request-ID": "trace-500"},
@@ -291,7 +290,7 @@ def test_an_unhandled_500_carries_the_correlation_header_and_cors(
 
 
 def test_a_forged_host_header_is_refused(
-    production_settings: CoreApiSettings, frozen_clock: FrozenClock
+    production_settings: CoreApiSettings, frozen_clock: FrozenClock, deployed_base_url: str
 ) -> None:
     """Without a Host allowlist, an absolute link the service generates can be
     pointed at an attacker's domain."""
@@ -300,5 +299,5 @@ def test_a_forged_host_header_is_refused(
     with TestClient(app, base_url="https://evil.example") as client:
         assert client.get("/health").status_code == 400
 
-    with TestClient(app, base_url=DEPLOYED_BASE_URL) as client:
+    with TestClient(app, base_url=deployed_base_url) as client:
         assert client.get("/health").status_code == 200

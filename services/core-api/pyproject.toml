@@ -10,11 +10,26 @@ dependencies = [
     "pydantic==2.13.*",
     "pydantic-settings==2.14.*",
     "structlog>=26.1,<27",
+    # The upper cap is hygiene, not a beta guard. MEASURED 2026-08-05:
+    #   uv pip compile <<< 'sqlalchemy>=2.0.51'                    -> 2.0.51
+    #   uv pip compile --prerelease=allow <<< 'sqlalchemy>=2.0.51' -> 2.1.0b3
+    # `2.1.0b3` is on PyPI and does sort newer than every 2.0 release, but uv —
+    # like pip — never selects a pre-release while a stable satisfies the range,
+    # so a bare `>=2.0.51` would NOT pull a beta. An earlier comment here said
+    # it would; that was wrong. What `<2.1` actually buys is exclusion of 2.1.0
+    # STABLE, an unreviewed major-minor that would otherwise arrive on its
+    # release day through a plain `uv lock`.
+    "sqlalchemy>=2.0.51,<2.1",
+    # `[binary]` ships the libpq wheel, which is also what makes testcontainers
+    # able to connect at all — its own `[postgres]` extra installs no driver.
+    # `[pool]` is the connection pool the engine will want from Task 4 on.
+    "psycopg[binary,pool]>=3.3.4,<3.4",
+    "alembic>=1.18.5,<1.19",
 ]
 
-# Gate 1 is the foundation only. SQLAlchemy, psycopg, Alembic, WorkOS, PgQueuer,
-# boto3, HTTPX and the telemetry exporters land at the gate that first needs
-# them, so an unused dependency never reaches a production image.
+# WorkOS, PgQueuer, boto3, HTTPX and the telemetry exporters still land at the
+# gate that first needs them, so an unused dependency never reaches a
+# production image. The database three above are that gate's arrivals.
 
 [dependency-groups]
 dev = [
@@ -24,6 +39,10 @@ dev = [
     "pytest-asyncio==1.4.*",
     "pytest-cov==7.*",
     "httpx2>=2,<3",               # Starlette 1.1 TestClient targets httpx2; plain httpx is deprecated there
+    # The `[postgres]` extra is EMPTY — it declares no driver. The connection
+    # works because `psycopg[binary]` is a runtime dependency above, not
+    # because of anything this extra installs.
+    "testcontainers[postgres]>=4.15.0,<5.0",
     "titlepipe-test-support",
 ]
 
