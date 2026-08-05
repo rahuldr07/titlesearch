@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1600">
+<title>TitlePipe — Direction B: Precision Instrument</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300..800&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* ============ TOKENS ============ */
+  :root{
+    /* neutrals — cool, stepped, no warm cast */
+    --n0:#0b0c0f;   /* rail, near-black */
+    --n1:#15171c;   /* dark surround */
+    --n2:#3f434c;   /* strong text on light */
+    --n3:#6b7280;   /* secondary text */
+    --n4:#9aa0ab;   /* tertiary / disabled */
+    --n5:#d4d7dd;   /* strong hairline */
+    --n6:#e6e8ec;   /* soft hairline */
+    --n7:#f2f3f5;   /* recessed fill */
+    --n8:#fafbfc;   /* panel */
+    --page:#eceef1; /* page ground */
+    --ink:#101216;  /* primary text */
+
+    /* the single accent — used at full strength exactly once per screen */
+    --accent:#1240e4;
+    --accent-ink:#ffffff;
+
+    /* semantic (status only, never decorative) */
+    --red:#c92a2a;    --red-bg:#fbeaea;   --red-bd:#eab6b6;
+    --amber:#9a6700;  --amber-bg:#fbf2dd; --amber-bd:#e6cf9a;
+    --green:#1d7a3e;  --green-bg:#e7f3ea; --green-bd:#b5d8c0;
+
+    /* paper — the document stays light in every theme */
+    --paper:#f8f6f1;
+    --paper-ink:#2b2620;
+
+    --r-1:2px; --r-2:4px; --r-3:6px;  /* radius progression: chip → card → panel */
+    --ui:"Geist",-apple-system,sans-serif;
+    --mono:"Geist Mono","SFMono-Regular",Consolas,monospace;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{background:var(--n1)}
+  body{
+    font-family:var(--ui);color:var(--ink);background:var(--page);
+    width:1600px;margin:0 auto;font-size:13px;line-height:1.45;
+    -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+    font-feature-settings:"tnum" 1,"ss01" 1;
+  }
+  .mono{font-family:var(--mono);font-feature-settings:"tnum" 1}
+  ::selection{background:var(--accent);color:#fff}
+
+  /* ============ SHARED PRIMITIVES ============ */
+  .eyebrow{font-size:10px;font-weight:600;letter-spacing:.14em;color:var(--n3);text-transform:uppercase}
+  .kchip{ /* citation chip — every value carries one */
+    display:inline-flex;align-items:center;gap:4px;font-family:var(--mono);
+    font-size:10px;font-weight:500;color:var(--n3);background:var(--n7);
+    border:1px solid var(--n6);border-radius:var(--r-1);padding:1px 5px;white-space:nowrap;
+  }
+  .kchip::before{content:"¶";font-size:9px;color:var(--n4)}
+  .kchip.err{color:var(--red);background:var(--red-bg);border-color:var(--red-bd)}
+  .kchip.err::before{content:"!"}
+
+  .statechip{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:600;
+    letter-spacing:.08em;text-transform:uppercase;padding:2px 7px;border-radius:var(--r-1);border:1px solid}
+  .statechip.red{color:var(--red);background:var(--red-bg);border-color:var(--red-bd)}
+  .statechip.amber{color:var(--amber);background:var(--amber-bg);border-color:var(--amber-bd)}
+  .statechip.grey{color:var(--n3);background:var(--n7);border-color:var(--n5)}
+  .statechip.green{color:var(--green);background:var(--green-bg);border-color:var(--green-bd)}
+
+  /* ---- the no-value grammar: border style + fill pattern carry the meaning ---- */
+  .nv{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:var(--n2)}
+  .nv .sw{width:30px;height:15px;border-radius:var(--r-1);flex:none}
+  /* NOT_PRESENT — expected absent: solid border, diagonal hatch (struck through) */
+  .sw.not-present{border:1px solid var(--n4);
+    background:repeating-linear-gradient(45deg,transparent 0 3px,#c6cad2 3px 4.5px)}
+  /* NOT_FOUND — searched, absent: dashed border, empty */
+  .sw.not-found{border:1.5px dashed var(--n4);background:transparent}
+  /* NOT_STATED — document is silent: double border, faint dot grid */
+  .sw.not-stated{border:3px double var(--n4);
+    background:radial-gradient(circle at 2px 2px,#c6cad2 1px,transparent 1px);background-size:6px 6px}
+  /* PRESENT_UNREADABLE — ink exists, can't be read: solid border, dark smear */
+  .sw.unreadable{border:1px solid var(--n3);background:
+    radial-gradient(ellipse 9px 4px at 30% 45%,#565b66 60%,transparent 61%),
+    radial-gradient(ellipse 7px 3px at 68% 60%,#6b7280 55%,transparent 56%),
+    radial-gradient(circle 2px at 85% 30%,#565b66 90%,transparent),
+    radial-gradient(circle 1.5px at 12% 70%,#6b7280 90%,transparent),#eceef1}
+  /* PENDING — nobody has looked yet: dotted border, empty */
+  .sw.pending{border:1.5px dotted var(--n4);background:transparent}
+
+  button{font-family:var(--ui);cursor:pointer}
+  .btn{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;
+    padding:6px 12px;border-radius:var(--r-2);border:1px solid var(--n5);
+    background:#fff;color:var(--ink);letter-spacing:.01em}
+  .btn:hover{border-color:var(--n3)}
+  .btn.quiet{border-color:transparent;background:transparent;color:var(--n3);font-weight:500}
+  .btn.dark{background:var(--ink);border-color:var(--ink);color:#fff}
+  .btn.accent{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);
+    box-shadow:0 1px 2px rgba(18,64,228,.28)}
+  .btn.danger-quiet{color:var(--red);border-color:transparent;background:transparent;font-weight:500}
+
+  /* ============ SECTION FRAME ============ */
+  .screen{display:grid;grid-template-columns:236px 1fr;min-height:680px}
+  .divider{
+    background:var(--n0);color:#fff;display:flex;align-items:baseline;gap:14px;
+    padding:10px 28px;border-top:1px solid #23262d;border-bottom:1px solid #23262d}
+  .divider .no{font-family:var(--mono);font-size:10px;color:#6b7280;letter-spacing:.1em}
+  .divider .t{font-size:11px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:#c8ccd4}
+
+  /* ============ SIDEBAR ============ */
+  .rail{background:var(--n0);color:#b9bec8;padding:20px 0 24px;display:flex;flex-direction:column}
+  .brand{padding:0 20px 18px;border-bottom:1px solid #1f2229;margin-bottom:14px}
+  .brand .name{font-size:15px;font-weight:700;letter-spacing:-.01em;color:#fff;display:flex;align-items:center;gap:8px}
+  .brand .name .mark{width:16px;height:16px;border-radius:3px;background:
+    linear-gradient(135deg,#fff 0 50%,#5a616e 50% 100%);flex:none}
+  .brand .sub{font-family:var(--mono);font-size:9px;color:#565b66;margin-top:4px;letter-spacing:.12em}
+  .railgroup{padding:10px 12px 4px}
+  .railgroup .glabel{font-size:9px;font-weight:600;letter-spacing:.16em;color:#565b66;
+    text-transform:uppercase;padding:0 8px 6px}
+  .rlink{display:flex;align-items:center;gap:9px;padding:6px 8px;border-radius:var(--r-2);
+    font-size:12.5px;font-weight:500;color:#b9bec8;text-decoration:none}
+  .rlink:hover{background:#16181d;color:#e6e8ec}
+  .rlink.on{background:#1c1f26;color:#fff;font-weight:600;
+    box-shadow:inset 2px 0 0 #fff}
+  .rlink .ico{width:13px;text-align:center;font-size:11px;color:#565b66;flex:none}
+  .rlink.on .ico{color:#fff}
+
+  .steps{padding:2px 8px}
+  .step{display:flex;align-items:center;gap:9px;padding:5px 8px;border-radius:var(--r-2);
+    font-size:12px;color:#8a909c;position:relative}
+  .step .num{width:17px;height:17px;border-radius:50%;border:1px solid #3a3e48;flex:none;
+    display:flex;align-items:center;justify-content:center;
+    font-family:var(--mono);font-size:9px;color:#8a909c;background:transparent}
+  .step.done{color:#6b7280}
+  .step.done .num{border-color:var(--green);background:var(--green);color:#fff;font-size:9px}
+  .step.current{color:#fff;font-weight:600;background:#1c1f26}
+  .step.current .num{border-color:#fff;color:#fff}
+  .step .badge{margin-left:auto;min-width:16px;height:16px;padding:0 4px;border-radius:8px;
+    font-family:var(--mono);font-size:9.5px;font-weight:600;
+    display:flex;align-items:center;justify-content:center}
+  .badge.red{background:var(--red);color:#fff}
+  .badge.amber{background:#e8b53a;color:#3d2e00}
+  .steprail{position:absolute;left:16px;top:22px;bottom:-6px;width:1px;background:#23262d}
+  .step:last-child .steprail{display:none}
+
+  /* ============ SECTION 1 — QUEUE ============ */
+  .main{padding:30px 34px 40px;min-width:0}
+  .qhead{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:6px}
+  h1{font-size:29px;font-weight:650;letter-spacing:-.025em;line-height:1.1;margin-top:6px}
+  .lede{font-size:13px;color:var(--n3);margin-top:7px;max-width:560px}
+  .roletoggle{display:flex;border:1px solid var(--n5);border-radius:var(--r-2);overflow:hidden;background:#fff}
+  .roletoggle button{font-size:11.5px;font-weight:600;padding:6px 14px;border:0;background:transparent;color:var(--n3);letter-spacing:.02em}
+  .roletoggle button.on{background:var(--ink);color:#fff}
+
+  .band{margin-top:26px}
+  .bandhead{display:flex;align-items:baseline;gap:10px;padding-bottom:8px}
+  .bandhead .bt{font-size:11px;font-weight:700;letter-spacing:.13em;text-transform:uppercase}
+  .bandhead .bc{font-family:var(--mono);font-size:11px;color:var(--n3)}
+  .bandhead .rule{flex:1;height:1px;background:var(--n6);align-self:center}
+
+  .rows{background:var(--n8);border:1px solid var(--n5);border-radius:var(--r-3);overflow:hidden;
+    box-shadow:0 1px 2px rgba(16,18,22,.05)}
+  .orow{display:grid;grid-template-columns:110px 1fr 150px 34px 190px 130px 110px;
+    align-items:center;gap:14px;padding:11px 18px;border-bottom:1px solid var(--n6)}
+  .orow:last-child{border-bottom:0}
+  .orow:hover{background:#fff}
+  .oid{font-family:var(--mono);font-size:12.5px;font-weight:600;color:var(--ink)}
+  .oaddr{font-size:13px;font-weight:500;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ocounty{font-size:12px;color:var(--n3)}
+  .ost{font-family:var(--mono);font-size:11px;color:var(--n3)}
+  .onote{font-size:12px;color:var(--n2)}
+  .owait{font-family:var(--mono);font-size:11px;color:var(--n3);text-align:right;white-space:nowrap}
+  .owait b{color:var(--ink);font-weight:600}
+  .oact{text-align:right}
+
+  /* NEXT UP card */
+  .nextcard{background:var(--n8);border:1px solid var(--n5);border-radius:var(--r-3);
+    box-shadow:0 1px 2px rgba(16,18,22,.05),0 8px 24px -18px rgba(16,18,22,.25);
+    display:grid;grid-template-columns:1fr auto;align-items:center;padding:20px 24px;gap:24px}
+  .nextcard .nlabel{font-size:10px;font-weight:700;letter-spacing:.16em;color:var(--n3);text-transform:uppercase}
+  .nextcard .nid{font-family:var(--mono);font-size:24px;font-weight:600;letter-spacing:-.01em;margin-top:6px}
+  .nextcard .nmeta{display:flex;align-items:center;gap:10px;margin-top:9px;font-size:12px;color:var(--n2)}
+  .nextcard .nmeta .dot{width:2px;height:2px;border-radius:50%;background:var(--n4)}
+  .nextcard .nacts{display:flex;flex-direction:column;gap:8px;align-items:flex-end}
+
+  /* ============ SECTION 2 — DECISION ============ */
+  .decision-wrap{background:var(--page)}
+  .topstrip{background:#fff;border-bottom:1px solid var(--n5);
+    display:flex;align-items:center;gap:0;padding:0 34px;height:52px}
+  .ts-item{display:flex;align-items:baseline;gap:7px;padding:0 18px;height:100%;
+    border-right:1px solid var(--n6);display:flex;align-items:center}
+  .ts-item:first-child{padding-left:0}
+  .ts-item .v{font-family:var(--mono);font-size:14px;font-weight:600}
+  .ts-item .k{font-size:10px;font-weight:600;letter-spacing:.1em;color:var(--n3);text-transform:uppercase}
+  .ts-item .v.red{color:var(--red)}
+  .stamp{margin-left:18px;font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.14em;
+    color:var(--red);border:1.5px solid var(--red);border-radius:var(--r-1);padding:3px 8px;
+    transform:rotate(-1.2deg);background:var(--red-bg)}
+  .who{margin-left:auto;display:flex;align-items:center;gap:9px}
+  .who .av{width:24px;height:24px;border-radius:50%;background:var(--ink);color:#fff;
+    font-size:9.5px;font-weight:700;display:flex;align-items:center;justify-content:center}
+  .who .wn{font-size:12px;font-weight:600}
+  .who .wr{font-size:10px;font-weight:600;letter-spacing:.1em;color:var(--n3)}
+
+  .deck{display:grid;grid-template-columns:620px 1fr;gap:26px;padding:26px 34px 40px}
+
+  /* left: facsimile */
+  .doccol{min-width:0}
+  .surround{background:var(--n1);border-radius:var(--r-3);padding:26px 30px 18px;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
+  .paper{background:var(--paper);color:var(--paper-ink);border-radius:1px;
+    box-shadow:0 1px 3px rgba(0,0,0,.5),0 14px 40px -12px rgba(0,0,0,.6);
+    padding:34px 38px;font-family:"Courier New",Courier,monospace;font-size:11.5px;line-height:1.7;
+    position:relative}
+  .paper::after{content:"";position:absolute;inset:0;border-radius:1px;pointer-events:none;
+    background:radial-gradient(ellipse 120% 60% at 50% -10%,rgba(255,255,255,.5),transparent 60%),
+    repeating-linear-gradient(0deg,transparent 0 3px,rgba(43,38,32,.012) 3px 4px)}
+  .paper .doc-h{text-align:center;font-weight:700;letter-spacing:.06em;font-size:12px}
+  .paper .doc-h2{text-align:center;font-size:10.5px;letter-spacing:.04em;margin-top:2px}
+  .paper hr{border:0;border-top:1px solid #cfc9bd;margin:12px 0}
+  .paper .ln{white-space:pre;overflow:hidden}
+  .paper .ln b{font-weight:700}
+  .hit{background:rgba(18,64,228,.13);outline:1px solid rgba(18,64,228,.4);
+    border-radius:1px;padding:0 2px;margin:0 -2px}
+  .paper .faded{color:#8e8574}
+  .doccaption{display:flex;justify-content:space-between;align-items:baseline;
+    padding:14px 4px 0;font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:#7d828c}
+  .doccaption b{color:#c8ccd4;font-weight:600}
+
+  /* coverage grid */
+  .coverage{margin-top:16px;background:var(--n8);border:1px solid var(--n5);
+    border-radius:var(--r-3);padding:14px 18px}
+  .covhead{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px}
+  .covhead .ct{font-size:10px;font-weight:700;letter-spacing:.13em;color:var(--n3);text-transform:uppercase}
+  .covgrid{display:grid;grid-template-columns:repeat(32,1fr);gap:3px}
+  .cell{aspect-ratio:1;border-radius:1px;background:var(--n6)}
+  .cell.read{background:var(--n4)}
+  .cell.cited{background:var(--ink)}
+  .cell.cur{background:var(--ink);outline:2px solid var(--ink);outline-offset:1.5px}
+  .covlegend{display:flex;gap:16px;margin-top:11px;font-size:10.5px;color:var(--n3)}
+  .covlegend span{display:inline-flex;align-items:center;gap:6px}
+  .covlegend i{width:9px;height:9px;border-radius:1px;display:inline-block}
+
+  /* right: decision queue */
+  .qcol{min-width:0}
+  .dqhead{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+  .dqhead .l{font-size:11px;font-weight:700;letter-spacing:.13em;text-transform:uppercase}
+  .dqhead .r{font-family:var(--mono);font-size:11px;color:var(--n3)}
+  .dqhead .r b{color:var(--ink);font-weight:600}
+  .seg{display:grid;grid-template-columns:repeat(18,1fr);gap:2px;margin-bottom:20px}
+  .seg i{height:4px;border-radius:1px;background:var(--n5)}
+  .seg i.f{background:var(--ink)}
+  .seg i.cur{background:var(--ink);height:6px;margin-top:-1px}
+
+  .dcard{background:#fff;border:1px solid var(--n5);border-radius:var(--r-3);
+    box-shadow:0 1px 2px rgba(16,18,22,.06),0 12px 32px -20px rgba(16,18,22,.3)}
+  .dcard .dc-top{display:flex;align-items:center;gap:10px;padding:16px 22px 0}
+  .dcard .flabel{font-size:16px;font-weight:700;letter-spacing:-.01em}
+  .dcard .q{padding:8px 22px 0;font-size:13.5px;color:var(--n2)}
+  .flagline{margin:14px 22px 0;padding:10px 14px;background:var(--n7);border-left:2px solid var(--n3);
+    border-radius:0 var(--r-1) var(--r-1) 0;font-size:12px;color:var(--n2);line-height:1.5}
+  .flagline .fk{font-size:9.5px;font-weight:700;letter-spacing:.14em;color:var(--n3);
+    text-transform:uppercase;display:block;margin-bottom:3px}
+
+  .asread{margin:16px 22px 0;border:1px solid var(--n5);border-radius:var(--r-2);
+    display:flex;align-items:center;gap:14px;padding:13px 16px;background:var(--n8)}
+  .asread .ak{font-size:9.5px;font-weight:700;letter-spacing:.14em;color:var(--n3);text-transform:uppercase}
+  .asread .av2{font-family:var(--mono);font-size:24px;font-weight:600;letter-spacing:.04em}
+  .asread .kchip{margin-left:auto}
+  .disclosure{margin:10px 22px 0;font-size:11.5px;color:var(--n3);display:flex;align-items:center;gap:7px}
+  .disclosure .tri{font-size:8px;color:var(--n4)}
+  .disclosure .mono2{font-family:var(--mono);font-size:10.5px}
+
+  .dacts{display:flex;align-items:center;gap:8px;padding:18px 22px 18px;margin-top:8px;
+    border-top:1px solid var(--n6)}
+  .dacts .spacer{flex:1}
+  .keyhint{font-family:var(--mono);font-size:9px;color:var(--n4);border:1px solid var(--n6);
+    border-radius:2px;padding:0 3px;margin-left:5px;background:var(--n7)}
+  .btn.accent .keyhint{color:rgba(255,255,255,.7);border-color:rgba(255,255,255,.3);background:transparent}
+
+  /* rest of queue */
+  .rest{margin-top:22px}
+  .resthead{display:flex;align-items:baseline;gap:10px;margin-bottom:8px}
+  .resthead .l{font-size:10.5px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--n3)}
+  .resthead .n{font-family:var(--mono);font-size:11px;color:var(--n3)}
+  .resthead .rule{flex:1;height:1px;background:var(--n6);align-self:center}
+  .rrow{display:grid;grid-template-columns:170px 1fr auto auto;align-items:center;gap:14px;
+    padding:9px 16px;border:1px solid var(--n6);border-radius:var(--r-2);background:var(--n8);margin-bottom:6px}
+  .rrow .rl{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--n2)}
+  .rrow .rv{font-family:var(--mono);font-size:12.5px;font-weight:500}
+  .rrow .nv{font-family:var(--ui)}
+  .rrow .chev{color:var(--n4);font-size:11px}
+
+  /* ============ DIRECTION PANEL ============ */
+  .direction{background:var(--n0);color:#8a909c;padding:34px;font-size:11.5px;line-height:1.65}
+  .direction h3{font-size:10px;font-weight:700;letter-spacing:.18em;color:#565b66;
+    text-transform:uppercase;margin-bottom:14px}
+  .direction .cols{display:grid;grid-template-columns:1fr 1fr 1.4fr 1fr;gap:34px}
+  .direction .dk{font-size:9.5px;font-weight:700;letter-spacing:.14em;color:#565b66;
+    text-transform:uppercase;display:block;margin-bottom:7px}
+  .direction b{color:#c8ccd4;font-weight:600}
+  .direction .hex{font-family:var(--mono);font-size:10px;color:#6b7280}
+  .direction ul{list-style:none}
+  .direction li{margin-bottom:7px;padding-left:12px;position:relative}
+  .direction li::before{content:"—";position:absolute;left:0;color:#3a3e48}
+  .palrow{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+  .palrow i{width:11px;height:11px;border-radius:2px;display:inline-block;flex:none;border:1px solid #23262d}
+</style>
+</head>
+<body>
+
+<!-- ================= SECTION 1 : QUEUE ================= -->
+<div class="divider"><span class="no">01</span><span class="t">Work comes to you — the queue</span></div>
+<div class="screen">
+  <aside class="rail">
+    <div class="brand">
+      <div class="name"><span class="mark"></span>TitlePipe</div>
+      <div class="sub">ABSTRACT&nbsp;·&nbsp;PRODUCTION</div>
+    </div>
+
+    <div class="railgroup">
+      <div class="glabel">Work</div>
+      <a class="rlink on" href="#"><span class="ico">▤</span>Queue</a>
+      <a class="rlink" href="#"><span class="ico">◫</span>Overview</a>
+    </div>
+
+    <div class="railgroup">
+      <div class="glabel">This order · 4176034-1</div>
+      <div class="steps">
+        <div class="step done"><span class="steprail"></span><span class="num">1</span>Intake</div>
+        <div class="step done"><span class="steprail"></span><span class="num">✓</span>Package</div>
+        <div class="step"><span class="steprail"></span><span class="num">3</span>Machine read</div>
+        <div class="step current"><span class="steprail"></span><span class="num">4</span>Review<span class="badge red">3</span></div>
+        <div class="step"><span class="steprail"></span><span class="num">5</span>Sign-off<span class="badge amber">6</span></div>
+        <div class="step"><span class="num">6</span>Deliver</div>
+      </div>
+    </div>
+
+    <div class="railgroup" style="margin-top:auto">
+      <div class="glabel">Admin</div>
+      <a class="rlink" href="#"><span class="ico">§</span>Rulebook</a>
+      <a class="rlink" href="#"><span class="ico">◳</span>Products &amp; sign-off</a>
+      <a class="rlink" href="#"><span class="ico">◷</span>Clients</a>
+      <a class="rlink" href="#"><span class="ico">◔</span>People</a>
+      <a class="rlink" href="#"><span class="ico">≡</span>Audit</a>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="qhead">
+      <div>
+        <div class="eyebrow">Your queue</div>
+        <h1>Work comes to you</h1>
+        <p class="lede">Orders arrive in line. Take the next one, finish what you hold, or say why you're passing.</p>
+      </div>
+      <div class="roletoggle">
+        <button class="on">Reviewer</button>
+        <button>Senior</button>
+      </div>
+    </div>
+
+    <!-- MINE -->
+    <section class="band">
+      <div class="bandhead"><span class="bt">Mine</span><span class="bc">2 in progress</span><span class="rule"></span></div>
+      <div class="rows">
+        <div class="orow">
+          <span class="oid">4176034-1</span>
+          <span class="oaddr">4152 Creekstone Dr, Demoville GA</span>
+          <span class="ocounty">Clayton County</span>
+          <span class="ost">GA</span>
+          <span class="onote">Package incomplete</span>
+          <span class="owait">WAITING <b>3h 12m</b></span>
+          <span class="oact"><button class="btn dark">Resume →</button></span>
+        </div>
+        <div class="orow">
+          <span class="oid">4176041-6</span>
+          <span class="oaddr">18 Marlin Way, Demoville GA</span>
+          <span class="ocounty">Clayton County</span>
+          <span class="ost">GA</span>
+          <span class="onote">Sign-off open</span>
+          <span class="owait">WAITING <b>1h 48m</b></span>
+          <span class="oact"><button class="btn dark">Resume →</button></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- NEXT UP -->
+    <section class="band">
+      <div class="bandhead"><span class="bt">Next up</span><span class="rule"></span></div>
+      <div class="nextcard">
+        <div>
+          <div class="nlabel">Next order in line</div>
+          <div class="nid">4176034-1</div>
+          <div class="nmeta">
+            <span>Clayton · GA</span><span class="dot"></span>
+            <span class="statechip grey">40-year search</span><span class="dot"></span>
+            <span class="mono" style="font-size:11px">64 pages</span>
+          </div>
+        </div>
+        <div class="nacts">
+          <!-- the one full-strength accent on this screen -->
+          <button class="btn accent" style="font-size:13px;padding:9px 18px">Take next order →</button>
+          <button class="btn quiet">Pass — say why</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- HELD -->
+    <section class="band">
+      <div class="bandhead"><span class="bt">Held</span><span class="bc">4 stopped</span><span class="rule"></span></div>
+      <div class="rows">
+        <div class="orow">
+          <span class="oid">4175998-2</span>
+          <span class="oaddr">771 Old Quarry Rd, Demoville GA</span>
+          <span class="ocounty">Clayton County</span>
+          <span class="ost">GA</span>
+          <span class="onote"><span class="statechip red">Package incomplete</span></span>
+          <span class="owait">WAITING <b>26h 04m</b></span>
+          <span class="oact"><button class="btn">Open →</button></span>
+        </div>
+        <div class="orow">
+          <span class="oid">4176012-4</span>
+          <span class="oaddr">96 Fenwick Ct, Demoville GA</span>
+          <span class="ocounty">Clayton County</span>
+          <span class="ost">GA</span>
+          <span class="onote"><span class="statechip amber">Escalated</span></span>
+          <span class="owait">WAITING <b>7h 51m</b></span>
+          <span class="oact"><button class="btn">Open →</button></span>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- ================= SECTION 2 : DECISION ================= -->
+<div class="divider"><span class="no">02</span><span class="t">The decision card — where the product earns its keep</span></div>
+<div class="decision-wrap">
+  <div class="topstrip">
+    <div class="ts-item"><span class="v">4176034-1</span><span class="k">Order</span></div>
+    <div class="ts-item"><span class="v">21</span><span class="k">Fields</span></div>
+    <div class="ts-item"><span class="v">2</span><span class="k">Auto-confirmed</span></div>
+    <div class="ts-item"><span class="v">6</span><span class="k">Need you</span></div>
+    <div class="ts-item"><span class="v red">1</span><span class="k" style="color:var(--red)">No source</span></div>
+    <span class="stamp">PACKAGE INCOMPLETE</span>
+    <div class="who">
+      <span class="av">LV</span>
+      <div><div class="wn">L. Vance</div><div class="wr">REVIEWER</div></div>
+    </div>
+  </div>
+
+  <div class="deck">
+    <!-- LEFT: facsimile + coverage -->
+    <div class="doccol">
+      <div class="surround">
+        <div class="paper">
+          <div class="doc-h">CLAYTON COUNTY TAX COMMISSIONER</div>
+          <div class="doc-h2">ANNUAL PROPERTY TAX STATEMENT — 2025</div>
+          <hr>
+          <div class="ln">PARCEL ID ............ 05-112-03-041</div>
+          <div class="ln">TAX DISTRICT ......... 07 — DEMOVILLE</div>
+          <div class="ln">OWNER OF RECORD ...... HOLLOWAY, MARCUS T &amp; DANA R</div>
+          <div class="ln"><span class="hit">MAILING ADDRESS ...... 4152 CREEKSTONE DR</span></div>
+          <div class="ln"><span class="hit">                       DEMOVILLE GA <b>30296</b></span></div>
+          <div class="ln">LEGAL ................ LOT 41 BLK C CREEKSTONE PH 2</div>
+          <hr>
+          <div class="ln">FAIR MARKET VALUE .... 284,900</div>
+          <div class="ln">ASSESSED (40%) ....... 113,960</div>
+          <div class="ln faded">EXEMPTIONS ........... S1 HOMESTEAD</div>
+          <div class="ln faded">TOTAL TAX DUE ........ 3,481.22   PAID 10/12/2025</div>
+        </div>
+        <div class="doccaption">
+          <span><b>CLAYTON COUNTY TAX COMMISSIONER</b></span>
+          <span>PAGE <b>22</b> OF 64</span>
+        </div>
+      </div>
+
+      <div class="coverage">
+        <div class="covhead">
+          <span class="ct">Package coverage · 64 pages</span>
+          <span class="mono" style="font-size:10px;color:var(--n3)">9 cited</span>
+        </div>
+        <div class="covgrid">
+          <!-- row 1: pages 1–32 -->
+          <i class="cell read"></i><i class="cell read"></i><i class="cell read"></i><i class="cell cited"></i><i class="cell read"></i><i class="cell read"></i><i class="cell cited"></i><i class="cell read"></i><i class="cell read"></i><i class="cell read"></i><i class="cell cited"></i><i class="cell read"></i><i class="cell read"></i><i class="cell read"></i><i class="cell read"></i><i class="cell cited"></i><i class="cell read"></i><i class="cell read"></i><i class="cell read"></i><i class="cell read"></i><i class="cell read"></i><i class="cell cur"></i><i class="cell read"></i><i class="cell read"></i><i class="cell read"></i><i class="cell cited"></i><i class="cell read"></i><i class="cell read"></i><i class="cell read"></i><i class="cell cited"></i><i class="cell read"></i><i class="cell read"></i>
+          <!-- row 2: pages 33–64 -->
+          <i class="cell read"></i><i class="cell read"></i><i class="cell cited"></i><i class="cell read"></i><i class="cell read"></i><i class="cell read"></i><i class="cell read"></i><i class="cell read"></i><i class="cell cited"></i><i class="cell read"></i><i class="cell read"></i><i class="cell read"></i><i class="cell read"></i><i class="cell read"></i><i class="cell read"></i><i class="cell read"></i><i class="cell read"></i><i class="cell read"></i><i class="cell"></i><i class="cell"></i><i class="cell"></i><i class="cell"></i><i class="cell"></i><i class="cell"></i><i class="cell"></i><i class="cell"></i><i class="cell"></i><i class="cell"></i><i class="cell"></i><i class="cell"></i><i class="cell"></i><i class="cell"></i>
+        </div>
+        <div class="covlegend">
+          <span><i style="background:var(--ink)"></i>cited</span>
+          <span><i style="background:var(--n4)"></i>machine-read</span>
+          <span><i style="background:var(--n6)"></i>not yet read</span>
+          <span><i style="background:var(--ink);outline:2px solid var(--ink);outline-offset:1.5px;width:7px;height:7px"></i>this page</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: decision queue -->
+    <div class="qcol">
+      <div class="dqhead">
+        <span class="l">Decision queue</span>
+        <span class="r"><b>12</b> of 18 answered</span>
+      </div>
+      <div class="seg">
+        <i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="cur"></i><i></i><i></i><i></i><i></i><i></i>
+      </div>
+
+      <div class="dcard">
+        <div class="dc-top">
+          <span class="flabel">OWNER ZIP</span>
+          <span class="statechip amber">Needs review</span>
+        </div>
+        <p class="q">Confirm the ZIP on the tax card.</p>
+        <div class="flagline">
+          <span class="fk">Flagged</span>
+          Both readers returned the same digits, but the region's OCR confidence is below the routing threshold.
+        </div>
+        <div class="asread">
+          <span class="ak">As read</span>
+          <span class="av2">30296</span>
+          <span class="kchip">p22</span>
+        </div>
+        <div class="disclosure">
+          <span class="tri">▶</span>
+          Read by <span class="mono2">2</span> engines — same value from each
+        </div>
+        <div class="dacts">
+          <!-- the one full-strength accent on this screen -->
+          <button class="btn accent">✓ Confirm as read<span class="keyhint">C</span></button>
+          <button class="btn">✎ Correct it<span class="keyhint">X</span></button>
+          <button class="btn">↗ Can't decide — escalate<span class="keyhint">E</span></button>
+          <span class="spacer"></span>
+          <button class="btn quiet">Pass — say why</button>
+        </div>
+      </div>
+
+      <div class="rest">
+        <div class="resthead"><span class="l">Rest of the queue</span><span class="n">17</span><span class="rule"></span></div>
+
+        <div class="rrow">
+          <span class="rl">Parcel ID</span>
+          <span class="rv">05-112-03-041</span>
+          <span class="kchip">p4</span>
+          <span class="chev">›</span>
+        </div>
+
+        <div class="rrow">
+          <span class="rl">HOA covenants</span>
+          <span class="nv"><span class="sw not-present"></span>Not Available · N/A — <b style="font-weight:600">EXPECTED</b></span>
+          <span class="kchip">rule 114</span>
+          <span class="chev">›</span>
+        </div>
+
+        <div class="rrow">
+          <span class="rl">Mortgage book/page</span>
+          <span class="nv"><span class="sw unreadable"></span>Present — unreadable on page 30</span>
+          <span class="kchip">p30</span>
+          <span class="chev">›</span>
+        </div>
+
+        <div class="rrow">
+          <span class="rl">Mobile home note</span>
+          <span class="nv"><span class="sw not-stated"></span>Document silent — not stated on any page</span>
+          <span class="kchip">64 pp</span>
+          <span class="chev">›</span>
+        </div>
+
+        <div class="rrow" style="border-color:var(--red-bd);background:var(--red-bg)">
+          <span class="rl" style="color:var(--red)">Deed instrument no.</span>
+          <span class="rv">2019-044182</span>
+          <span class="kchip err">NO SOURCE</span>
+          <span class="chev">›</span>
+        </div>
+
+        <div class="rrow" style="opacity:.75">
+          <span class="rl">Owner mailing city</span>
+          <span class="nv"><span class="sw pending"></span>Pending — nobody has looked yet</span>
+          <span class="kchip" style="visibility:hidden">—</span>
+          <span class="chev">›</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= THE DIRECTION ================= -->
+<div class="direction">
+  <h3>The direction — B · Precision instrument</h3>
+  <div class="cols">
+    <div>
+      <span class="dk">Type</span>
+      <ul>
+        <li><b>Geist</b> (300–800, variable) — every piece of UI. Hierarchy is weight × size × tracking, never a second face.</li>
+        <li><b>Geist Mono</b> — order IDs, values, counts, times, citations. Tabular figures everywhere (<span class="hex">tnum</span>).</li>
+        <li><b>Courier</b> inside the facsimile only — it is a photograph of paper, not UI.</li>
+      </ul>
+    </div>
+    <div>
+      <span class="dk">Palette</span>
+      <div class="palrow"><i style="background:#0b0c0f"></i><span class="hex">#0B0C0F</span>&nbsp;rail / surround</div>
+      <div class="palrow"><i style="background:#eceef1"></i><span class="hex">#ECEEF1</span>&nbsp;page ground</div>
+      <div class="palrow"><i style="background:#fafbfc"></i><span class="hex">#FAFBFC</span>&nbsp;panels</div>
+      <div class="palrow"><i style="background:#101216"></i><span class="hex">#101216</span>&nbsp;ink</div>
+      <div class="palrow"><i style="background:#1240e4"></i><span class="hex">#1240E4</span>&nbsp;accent — once per screen</div>
+      <div class="palrow"><i style="background:#c92a2a"></i><span class="hex">#C92A2A</span>&nbsp;·&nbsp;<i style="background:#9a6700"></i><span class="hex">#9A6700</span>&nbsp;·&nbsp;<i style="background:#1d7a3e"></i><span class="hex">#1D7A3E</span>&nbsp;status only</div>
+      <div class="palrow"><i style="background:#f8f6f1"></i><span class="hex">#F8F6F1</span>&nbsp;paper — light in every theme</div>
+    </div>
+    <div>
+      <span class="dk">Load-bearing decisions</span>
+      <ul>
+        <li>The accent appears at full strength exactly once per screen — <b>Take next order</b> and <b>Confirm as read</b>. Everything else earns hierarchy from near-black, weight and tone.</li>
+        <li>No-value states are a border-and-pattern grammar, legible in greyscale: hatch = expected absent · dashed = searched-not-found · double+dots = document silent · smear = present-unreadable · dotted = pending.</li>
+        <li>A value without a citation renders as an error (red row, <span class="hex">NO SOURCE</span> chip) — provenance is structural, not decorative.</li>
+        <li>Layering by tone, not hairline soup: near-black rail → cool ground → raised panels, with a strict 2 / 4 / 6&nbsp;px radius progression.</li>
+      </ul>
+    </div>
+    <div>
+      <span class="dk">Deliberately not done</span>
+      <ul>
+        <li>No serif, no gradients, no illustration, no rates or timers — and no colour anywhere it isn't a statement about the document or the one action that moves work forward.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "web-v2",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "web-v2", "dev"],
+      "port": 5174
+    }
+  ]
+}

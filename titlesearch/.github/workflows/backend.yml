@@ -1,0 +1,350 @@
+name: backend
+
+# Every job here runs real commands. There are no placeholder steps: a workflow
+# that reports green without executing anything is worse than no workflow,
+# because it is quoted as evidence.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "services/**"
+      - "libs/**"
+      - "infra/**"
+      # The enforcement surface. Omitting these let a change to the
+      # client-data guard, the lock check or the container build context merge
+      # without this workflow ever running.
+      - "scripts/**"
+      - "ruff.toml"
+      - ".pre-commit-config.yaml"
+      - ".dockerignore"
+      - ".gitattributes"
+      - ".env.example"
+      - ".github/workflows/backend.yml"
+  pull_request:
+    paths:
+      - "services/**"
+      - "libs/**"
+      - "infra/**"
+      # The enforcement surface. Omitting these let a change to the
+      # client-data guard, the lock check or the container build context merge
+      # without this workflow ever running.
+      - "scripts/**"
+      - "ruff.toml"
+      - ".pre-commit-config.yaml"
+      - ".dockerignore"
+      - ".gitattributes"
+      - ".env.example"
+      - ".github/workflows/backend.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  UV_VERSION: "0.11.26"
+  PYTHON_VERSION: "3.13"
+
+# Supply-chain pinning status, stated plainly rather than implied:
+#
+#   pinned by exact version — uv, Python, Semgrep, every Python dependency
+#                             (via uv.lock), the uv container image
+#   pinned by minor range   — pip-audit (2.*)
+#   pinned by tag only      — GitHub Actions (@v4/@v5), trivy-action (@0.28.0),
+#                             python:3.13-slim-bookworm base images
+#
+# Tag pinning is mutable: a tag can be repointed. Moving to SHA and digest pins
+# is tracked in docs/backend/GATE_1_FOUNDATION.md §9 and is blocked on the same
+# thing as the rest of the container work — no Docker on the build machine, so
+# no digest has ever been resolved. Pinning to a digest nobody has verified
+# would be worse than the honest tag.
+
+jobs:
+  # The same hooks a developer runs locally, run as the authority. This is what
+  # executes the client-data guard, the lock check and their tests in CI —
+  # without it those controls were only ever enforced on machines where someone
+  # had installed the hooks.
+  hygiene:
+    name: hygiene
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+
+      - name: Install Python ${{ env.PYTHON_VERSION }}
+        run: uv python install ${{ env.PYTHON_VERSION }}
+
+      - name: Pre-commit (all files)
+        run: uvx pre-commit run --all-files --show-diff-on-failure
+
+      # Belt and braces: the guard is also run directly over every tracked
+      # file, so it holds even if the hook wiring is changed.
+      - name: Client-data guard over the whole tree
+        run: git ls-files -z | xargs -0 python scripts/check_no_client_data.py
+
+  # Each Python project is verified independently. They are separate
+  # deployables with separate locks, and a single combined environment would
+  # hide a missing dependency in one of them.
+  project:
+    name: ${{ matrix.project }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        project:
+          - libs/domain
+          - libs/test-support
+          - services/core-api
+          - services/blind-svc
+          - services/extraction-svc
+          - services/render-svc
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+
+      - name: Install Python ${{ env.PYTHON_VERSION }}
+        run: uv python install ${{ env.PYTHON_VERSION }}
+
+      # --frozen fails if uv.lock does not match pyproject.toml. This is the
+      # lock verification step; a separate `uv lock --check` would be redundant.
+      - name: Frozen install
+        working-directory: ${{ matrix.project }}
+        run: uv sync --frozen --all-groups
+
+      - name: Ruff check
+        working-directory: ${{ matrix.project }}
+        run: uv run ruff check --output-format github .
+
+      - name: Ruff format
+        working-directory: ${{ matrix.project }}
+        run: uv run ruff format --check .
+
+      - name: Pyright strict
+        working-directory: ${{ matrix.project }}
+        run: uv run pyright
+
+      - name: Tests
+        working-directory: ${{ matrix.project }}
+        run: uv run pytest --cov --cov-report=term-missing
+
+      - name: Build distributions
+        working-directory: ${{ matrix.project }}
+        run: uv build
+
+      # Audits the lock, not the installed environment, so the result matches
+      # what the container will get. Same script a developer runs locally.
+      - name: Audit dependencies
+        run: python scripts/audit_dependencies.py ${{ matrix.project }}
+
+  containers:
+    name: container / ${{ matrix.service }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [core-api, blind-svc, extraction-svc, render-svc]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      # Build context is the repository root: every service has a path
+      # dependency on libs/domain.
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/containers/Dockerfile.${{ matrix.service }}
+          push: false
+          load: true
+          tags: titlepipe/${{ matrix.service }}:${{ github.sha }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+
+      - name: Verify the container does not run as root
+        run: |
+          user="$(docker inspect --format '{{.Config.User}}' titlepipe/${{ matrix.service }}:${{ github.sha }})"
+          echo "configured user: ${user}"
+          test -n "${user}" || { echo "image runs as root"; exit 1; }
+          uid="$(docker run --rm --entrypoint python titlepipe/${{ matrix.service }}:${{ github.sha }} -c 'import os; print(os.getuid())')"
+          echo "runtime uid: ${uid}"
+          test "${uid}" != "0" || { echo "image runs as uid 0"; exit 1; }
+
+      - name: Verify no reload or debug in the runtime command
+        run: |
+          cmd="$(docker inspect --format '{{json .Config.Cmd}}' titlepipe/${{ matrix.service }}:${{ github.sha }})"
+          echo "cmd: ${cmd}"
+          case "${cmd}" in
+            *--reload*|*--debug*) echo "development flag in production command"; exit 1 ;;
+          esac
+
+      # The probes run the image as production, because that is the
+      # configuration whose refusals are worth asserting — and because the
+      # settings model has no default for `environment` by design, so an
+      # incomplete environment here is a container that never starts.
+      #
+      # A valid production configuration is therefore the whole set, not just
+      # the host: docs off, a Host allowlist, an explicit same-origin
+      # declaration and a non-placeholder seal password. Anything less and
+      # `_deployed_environments_refuse_unsafe_configuration` refuses to build.
+      #
+      # The seal password is a throwaway for a container that serves no session
+      # and is destroyed at the end of the step. It only has to be 32 characters
+      # and absent from PLACEHOLDER_SECRETS.
+      - name: Smoke test
+        env:
+          SEAL: "ci-smoke-only-not-a-real-secret!"
+        run: |
+          set -euo pipefail
+          image="titlepipe/${{ matrix.service }}:${{ github.sha }}"
+
+          # Waits for a URL, and fails loudly with the container's own logs if
+          # it never answers. The previous version looped and then fell through,
+          # so a container that exited at startup produced a confusing failure
+          # at the next assertion instead of the real reason here.
+          await() {
+            local url="$1"
+            for _ in $(seq 1 30); do
+              if curl -fsS "${url}" >/dev/null 2>&1; then
+                return 0
+              fi
+              if [ -z "$(docker ps -q -f name=probe)" ]; then
+                echo "::error::container exited before serving ${url}"
+                docker logs probe || true
+                return 1
+              fi
+              sleep 1
+            done
+            echo "::error::timed out waiting for ${url}"
+            docker logs probe || true
+            return 1
+          }
+
+          case "${{ matrix.service }}" in
+            core-api)
+              docker run -d --name probe -p 8000:8000 \
+                -e TITLEPIPE_ENVIRONMENT=production \
+                -e TITLEPIPE_HOST=0.0.0.0 \
+                -e TITLEPIPE_DOCS_ENABLED=false \
+                -e TITLEPIPE_SAME_ORIGIN_DEPLOYMENT=true \
+                -e TITLEPIPE_ALLOWED_HOSTS='["127.0.0.1","localhost"]' \
+                -e TITLEPIPE_COOKIE_SEAL_PASSWORD="${SEAL}" \
+                "${image}"
+              await http://127.0.0.1:8000/health
+              curl -fsS http://127.0.0.1:8000/health | tee /dev/stderr | grep -q '"status":"ok"'
+              curl -fsS http://127.0.0.1:8000/ready  | tee /dev/stderr | grep -q '"ready":true'
+              # Production must not serve docs, and must refuse a forged Host.
+              test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8000/docs)" = 404
+              test "$(curl -s -o /dev/null -w '%{http_code}' \
+                -H 'Host: evil.example' http://127.0.0.1:8000/health)" = 400
+              # Correlation is part of the contract, so it is asserted on the
+              # image rather than only in the unit suite.
+              curl -fsS -D - -o /dev/null http://127.0.0.1:8000/health \
+                | grep -iq '^x-request-id:'
+              docker rm -f probe
+              ;;
+            blind-svc)
+              docker run -d --name probe -p 8100:8100 \
+                -e TITLEPIPE_BLIND_ENVIRONMENT=production \
+                -e TITLEPIPE_BLIND_HOST=0.0.0.0 \
+                -e TITLEPIPE_BLIND_DOCS_ENABLED=false \
+                -e TITLEPIPE_BLIND_SAME_ORIGIN_DEPLOYMENT=true \
+                -e TITLEPIPE_BLIND_ALLOWED_HOSTS='["127.0.0.1","localhost"]' \
+                -e TITLEPIPE_BLIND_COOKIE_SEAL_PASSWORD="${SEAL}" \
+                "${image}"
+              await http://127.0.0.1:8100/health
+              curl -fsS http://127.0.0.1:8100/health | tee /dev/stderr | grep -q '"service":"blind-api"'
+              curl -fsS http://127.0.0.1:8100/ready  | tee /dev/stderr | grep -q '"ready":true'
+              test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8100/docs)" = 404
+              docker rm -f probe
+              ;;
+            extraction-svc)
+              docker run --rm -e TITLEPIPE_EXTRACTION_ENVIRONMENT=production \
+                "${image}" titlepipe-extraction check
+              ;;
+            render-svc)
+              docker run --rm -e TITLEPIPE_RENDER_ENVIRONMENT=production \
+                -e TITLEPIPE_RENDER_GOTENBERG_URL=http://gotenberg.internal:3000 \
+                "${image}" titlepipe-render check
+              ;;
+          esac
+
+      # A container that refuses an incomplete configuration is a claim the
+      # Dockerfiles make in a comment ("No ENV default for the deployment
+      # environment") and that nothing checked. Asserted here because it is a
+      # property of the image, not of the settings model's unit tests.
+      - name: Verify the image refuses to start without an environment
+        run: |
+          set -uo pipefail
+          image="titlepipe/${{ matrix.service }}:${{ github.sha }}"
+          case "${{ matrix.service }}" in
+            core-api|blind-svc) probe=(timeout 20 docker run --rm "${image}") ;;
+            extraction-svc)     probe=(docker run --rm "${image}" titlepipe-extraction check) ;;
+            render-svc)         probe=(docker run --rm "${image}" titlepipe-render check) ;;
+          esac
+          if output="$("${probe[@]}" 2>&1)"; then
+            echo "::error::image started with no environment configured"
+            echo "${output}"
+            exit 1
+          fi
+          echo "refused as expected:"
+          echo "${output}" | tail -5
+
+      - name: Trivy image scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: titlepipe/${{ matrix.service }}:${{ github.sha }}
+          format: table
+          exit-code: "1"
+          ignore-unfixed: true
+          severity: HIGH,CRITICAL
+
+      - name: Generate SBOM
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: titlepipe/${{ matrix.service }}:${{ github.sha }}
+          format: cyclonedx
+          output: sbom-${{ matrix.service }}.cdx.json
+
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-${{ matrix.service }}
+          path: sbom-${{ matrix.service }}.cdx.json
+
+  security:
+    name: security
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Trivy filesystem scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: table
+          exit-code: "1"
+          ignore-unfixed: true
+          severity: HIGH,CRITICAL
+          scanners: vuln,secret,misconfig
+
+      - name: Semgrep
+        run: |
+          pipx install semgrep
+          semgrep --error --config p/python --config p/security-audit \
+            --metrics off services libs

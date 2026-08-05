@@ -1,0 +1,100 @@
+import { useRef, useState } from "react";
+import { Card } from "../../shared/ui/Card";
+import { cn } from "../../shared/ui/classNames";
+import { PackageChip } from "./PackageChip";
+
+/**
+ * ONE PDF, ONE ORDER.
+ *
+ * The drop zone is the design's own framing and it is load-bearing copy, not
+ * decoration: a reviewer who drops three county packages expecting three orders
+ * gets one order with two documents nobody will ever look at. Saying "one PDF,
+ * one order" at the moment of the drop is cheaper than discovering it at
+ * delivery.
+ *
+ * THE ZONE IS PAPER, NOT BACKDROP. The design draws it as a white panel carrying
+ * a dashed rule, standing on the grey ground: the dash says "nothing here yet",
+ * the white says "this is the sheet you are filling". Sinking it to
+ * `surface-sunken` reads as a well cut into the page and loses the second half.
+ *
+ * THE FILE INPUT IS REAL AND KEYBOARD-REACHABLE. Drag-and-drop is an addition
+ * to it, never a replacement — a drop-only target is unusable by keyboard and
+ * invisible to a test harness, and `ingest.spec` sets the file directly on the
+ * input.
+ *
+ * NOT AN `EmptyPanel`, though it is drawn from the same dashed ground. An empty
+ * panel means the server answered and there is nothing there; this zone is an
+ * input that has not been used yet, and the app has been told nothing either
+ * way. Reusing the resolved-and-empty component for a waiting control is how a
+ * loading state ends up shipped as a design.
+ *
+ * The drag-over tint comes from `Card tone="action"`, whose hairline is the
+ * family's pale `-border`. Hand-spelled it reached for the saturated
+ * `border-action`, so the one meaning "you are over the target" was drawn
+ * heavier here than anywhere else it appears.
+ *
+ * THE 14px BETWEEN THE ZONE AND THE FILE CARD IS OWNED HERE, not by the screen:
+ * the export sets that pair apart by less than it sets any other pair on the
+ * page (`margin-top:14px`, :352) because the receipt belongs to the drop, and
+ * the screen's own 18px rhythm would flatten the grouping. `className` carries
+ * only the OUTER gap the screen decides — the export opens 24px below the
+ * sub-copy and 18px everywhere after it, which no uniform flex gap can spell.
+ */
+export function DropZone({
+  file,
+  onFile,
+  className,
+}: {
+  file: File | null;
+  onFile: (file: File | null) => void;
+  className?: string;
+}) {
+  const [over, setOver] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  return (
+    <div className={cn("flex flex-col gap-7", className)}>
+      <Card
+        dashed
+        tone={over ? "action" : "none"}
+        className="flex flex-col items-center gap-7 p-14 text-center"
+        onDragOver={(event) => {
+          event.preventDefault();
+          setOver(true);
+        }}
+        onDragLeave={() => setOver(false)}
+        onDrop={(event) => {
+          event.preventDefault();
+          setOver(false);
+          onFile(event.dataTransfer.files[0] ?? null);
+        }}
+      >
+        <span className="flex size-22 items-center justify-center rounded-7 border border-action-border font-mono text-micro tracking-badge font-bold text-action">
+          PDF
+        </span>
+        <span className="flex flex-col gap-2">
+          <span className="text-md font-semibold text-ink-primary">
+            Drop the search package here
+          </span>
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            className="text-xs text-ink-muted hover:text-action"
+          >
+            or click to browse — one PDF, one order
+          </button>
+        </span>
+        <input
+          ref={inputRef}
+          type="file"
+          accept="application/pdf"
+          data-testid="package-input"
+          onChange={(event) => onFile(event.target.files?.[0] ?? null)}
+          className="sr-only"
+        />
+      </Card>
+
+      {file === null ? null : <PackageChip file={file} />}
+    </div>
+  );
+}
