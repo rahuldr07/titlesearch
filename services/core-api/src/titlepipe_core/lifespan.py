@@ -32,6 +32,7 @@ from titlepipe_core.telemetry.hooks import NullRequestMetrics, RequestMetrics
 from titlepipe_core.telemetry.logging import get_logger
 from titlepipe_domain import Clock, IdFactory, SystemClock, Uuid4IdFactory
 
+
 def _log() -> Any:
     """Acquired at call time, never bound at import. A module-level logger pins
     whatever logging configuration was active first and silently ignores a later

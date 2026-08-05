@@ -17,6 +17,8 @@ and nothing here dumps the model.
 
 from __future__ import annotations
 
+import base64
+import binascii
 from typing import Self
 
 from pydantic import Field, SecretStr, model_validator
@@ -24,15 +26,37 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from titlepipe_domain import Environment, LogRenderer, ServiceName
 
-# A cookie-seal password must be exactly 32 characters (WorkOS sealed sessions).
-# Enforced here so the failure lands at startup rather than at first login.
-SEAL_PASSWORD_LENGTH = 32
+# A cookie-seal password is a FERNET KEY: 32 random bytes, urlsafe-base64
+# encoded, which is 44 characters including the single '=' pad. Enforced here so
+# the failure lands at startup rather than at first login.
+#
+# THIS WAS 32 AND IT WAS WRONG — the byte count, not the encoded length. Every
+# real WorkOS credential is 44 characters, so the check would have rejected the
+# genuine article and accepted nothing that works. It was never caught because
+# the placeholder default was itself 32 characters, so the validator agreed with
+# the bug: the only value ever tested was the one that should have failed.
+#
+# The length is checked against the DECODED byte count rather than trusting 44,
+# because 44 characters of the wrong alphabet is not a key. `base64` is stdlib,
+# so this stays honest without pulling `cryptography` in at Gate 1 — the
+# constructive `Fernet(secret)` check belongs at the gate that adds WorkOS, and
+# is noted in BUILD-PLAN §5.1.
+SEAL_KEY_BYTES = 32
+SEAL_PASSWORD_LENGTH = 44
 
 # Values that exist to make a fresh checkout run. Any of them in a deployed
 # environment means a real secret was never supplied.
-# Exactly 32 characters. Listed in PLACEHOLDER_SECRETS below, so a deployed
-# environment refuses to start with it — which is the point of naming it.
-DEVELOPMENT_SEAL_PASSWORD = "development-only-seal-password!!"  # noqa: S105
+#
+# This one is a STRUCTURALLY VALID Fernet key that decodes to the readable
+# sentence "development-only-seal-password!!" — obviously a placeholder to a
+# human, and it passes the same validator a real key does. The previous value
+# was that sentence UNENCODED: 32 characters, i.e. the byte count rather than
+# the encoded length. It agreed with the old off-by-12 check and hid it, which
+# is why nothing failed until a real credential was tried.
+#
+# It is listed in PLACEHOLDER_SECRETS below, so a deployed environment still
+# refuses to start with it — which is the point of naming it.
+DEVELOPMENT_SEAL_PASSWORD = "ZGV2ZWxvcG1lbnQtb25seS1zZWFsLXBhc3N3b3JkISE="  # noqa: S105
 
 PLACEHOLDER_SECRETS = frozenset(
     {
@@ -120,12 +144,32 @@ class CoreApiSettings(BaseSettings):
         return cls()  # pyright: ignore[reportCallIssue]
 
     @model_validator(mode="after")
-    def _seal_password_is_the_right_length(self) -> Self:
+    def _seal_password_is_a_fernet_key(self) -> Self:
+        """
+        A Fernet key, checked by DECODING it — not by counting characters.
+
+        The length is the cheap half; the alphabet is the half that catches a
+        truncated paste or a base64 (not urlsafe) variant, both of which are 44
+        characters and neither of which WorkOS will accept.
+        """
         secret = self.cookie_seal_password.get_secret_value()
         if len(secret) != SEAL_PASSWORD_LENGTH:
             raise ValueError(
-                f"cookie_seal_password must be exactly {SEAL_PASSWORD_LENGTH} characters; "
-                f"got {len(secret)}"
+                f"cookie_seal_password must be a {SEAL_PASSWORD_LENGTH}-character "
+                f"Fernet key (urlsafe-base64 of {SEAL_KEY_BYTES} bytes); "
+                f"got {len(secret)} characters"
+            )
+        try:
+            decoded = base64.urlsafe_b64decode(secret)
+        except (binascii.Error, ValueError) as exc:
+            raise ValueError(
+                "cookie_seal_password is not valid urlsafe-base64; it must be a "
+                "Fernet key, e.g. Fernet.generate_key().decode()"
+            ) from exc
+        if len(decoded) != SEAL_KEY_BYTES:
+            raise ValueError(
+                f"cookie_seal_password must decode to exactly {SEAL_KEY_BYTES} "
+                f"bytes; got {len(decoded)}"
             )
         return self
 

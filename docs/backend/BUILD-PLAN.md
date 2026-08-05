@@ -13,9 +13,33 @@ than guessed.
 
 ---
 
-## 0. Read this first — nothing starts until three things close
+## 0. Decisions — all seven closed 2026-08-05
 
-These are decisions, not code. Each is cheap to make and expensive to defer.
+Ruled by the owner. Recorded here so nothing re-derives them.
+
+| # | Question | Ruling |
+|---|---|---|
+| 1 | No-value states | **Four** — the contract's ratified set (§0.1) |
+| 2 | Test database | **Docker + testcontainers**, on the second dev machine (§0.2) |
+| 3 | ADR-0001 | **Signed 2026-08-05** with three amendments recorded (§0.3) |
+| 4 | Deployment target | **Undecided — Plan 01 stays portable** (§0.4) |
+| 5 | Blind fifty | **Deferred, not dropped.** Release gates stand; `blind-svc` stays |
+| 6 | Migration safety net | **Built before Plan 02**, as its own task (§5.2) |
+| 7 | Plan format | Dense — decisions and traps, not step-by-step TDD |
+
+### 0.4 Deployment is undecided, and Plan 01 must survive that
+
+Plan 01 may assume only: PostgreSQL 18.4, the ability to `CREATE ROLE`, and
+`ALTER TABLE … FORCE ROW LEVEL SECURITY`. No provider-specific SQL, no managed
+extensions, no vendor lock. Deployment becomes ADR-0002 when it is known.
+
+**This is a live constraint, not a formality.** Several managed Postgres
+providers restrict role creation or forced RLS — the exact primitives tenant
+isolation rests on. Choosing one later without checking those two capabilities
+would invalidate Plan 01's entire security model.
+
+The three subsections below are retained for their reasoning; the rulings above
+supersede the "recommendation" lines in each.
 
 ### 0.1 The NA taxonomy — blocks the first migration
 
@@ -145,11 +169,12 @@ anyio            = ">=4.14.2,<5.0.0"
 - **uvicorn had four behavioural changes in two months.** Set `--http httptools`
   explicitly. **Never `--http zttp`** — 0.52.0's own notes say it is experimental
   and not for production traffic.
-- **`httpx` is the one broken link.** Last stable 2024-12-06 — twenty months.
-  Classifiers stop at 3.12, so 3.13 is undeclared. Maintainer reportedly closed
-  issues in Feb 2026. It arrives transitively via `fastapi[standard]`'s
-  TestClient regardless. **Pin `httpx==0.28.1` exactly, use it only in tests, and
-  do not build outbound HTTP on it.** Engine adapters use each vendor's own SDK.
+- **`httpx` is stale — and this repo already solved it.** Upstream httpx's last
+  stable is 2024-12-06 (twenty months), classifiers stop at 3.12, and the
+  maintainer reportedly closed issues in Feb 2026. **The services already depend
+  on `httpx2>=2,<3`**, the maintained fork that Starlette 1.1's TestClient
+  targets. Keep it. Do not "fix" this back to plain httpx. Engine adapters use
+  each vendor's own SDK for outbound calls regardless.
 
 **uvicorn, not granian.** Granian is genuinely faster — but it is a
 single-maintainer project (679 commits by one person, next human 5), it shipped
@@ -235,8 +260,8 @@ R2 client must use the account endpoint — presigning requires
 ### 2.5 Quality gates
 
 ```toml
-ruff              = "==0.16.1"    # EXACT — 0.16.0 changed defaults from 59 rules to 413
-mypy              = "==2.3.0"     # EXACT — 2.0.0 broke local-partial-types, strict-bytes, --allow-redefinition
+ruff              = "==0.15.*"    # CURRENT. Do NOT float to 0.16 — see below
+pyright           = "==1.1.*"     # THE type checker in use; backend.yml:138 runs it
 pytest            = ">=9.1.1,<10.0"
 pytest-asyncio    = ">=1.4.0,<2.0"
 testcontainers    = {version = ">=4.15.0,<5.0", extras = ["postgres"]}
@@ -246,12 +271,21 @@ hypothesis        = ">=6.165.0,<7.0"
 squawk-cli        = "==2.61.0"
 ```
 
-**Never float ruff.** 0.16.0 (2026-07-23) jumped the default rule set from 59 to
-413 while removing 18 pycodestyle/pyflakes rules from defaults, and changed the
-JSON output shape so fields can now be `null`.
+**Never float ruff, and do not casually bump it to 0.16.** The services pin
+`0.15.*` today. 0.16.0 (2026-07-23) jumped the default rule set from **59 rules
+to 413** while removing 18 pycodestyle/pyflakes rules from defaults, and changed
+the JSON output shape so fields can now be `null`. That is a migration with its
+own diff to review, not a version bump — schedule it deliberately or not at all.
 
-**`ty` (Astral's type checker) is 0.0.66** with 2–3 releases a week and no stable
-API. Advisory-only, non-blocking CI job if at all. mypy remains the gate.
+**Pyright is the type checker, not mypy.** `services/core-api/pyproject.toml:22`
+pins it and `backend.yml:138` runs `uv run pyright`. An earlier draft of this
+plan specified mypy; that was wrong, and swapping type checkers on an established
+codebase buys nothing. **`ty` (Astral's) is 0.0.66** with 2–3 releases a week and
+no stable API — not a candidate.
+
+**Versions here are the repo's current pins, deliberately.** Newer stable exists
+for several (fastapi 0.141.1, uvicorn 0.52.1). Upgrading is a separate, reviewed
+task — not something Plan 01 does while also introducing the entire data layer.
 
 **Squawk has no rules for `GRANT`, `CREATE POLICY`, RLS or roles.** It lints lock
 safety, not security posture. `PLAN.md:150` bundles them into one gate line, which

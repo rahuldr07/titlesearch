@@ -20,7 +20,10 @@ from titlepipe_core.settings import CoreApiSettings
 from titlepipe_domain import Environment
 from titlepipe_test_support import FrozenClock, SequenceIdFactory
 
-DEPLOYED_SEAL_PASSWORD = "a-real-32-character-seal-secret!"
+# A valid Fernet key — urlsafe-base64 of 32 bytes, 44 characters. The old value
+# here was a 32-CHARACTER string, which is the byte count rather than the
+# encoded length; it passed only because the validator carried the same error.
+DEPLOYED_SEAL_PASSWORD = "YS1yZWFsLWRlcGxveWVkLXNlYWwtc2VjcmV0LTMyYnk="
 DEPLOYED_BASE_URL = "https://app.titlepipe.example"  # must match allowed_hosts
 
 

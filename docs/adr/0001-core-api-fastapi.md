@@ -1,8 +1,35 @@
 # ADR-0001 — core-api language: FastAPI (Python), not Hono/Bun (TypeScript)
 
-**Status:** ACCEPTED (decided 2026-07-21)
-**Date:** proposed 2026-07-17 · accepted 2026-07-21
+**Status:** ACCEPTED — **SIGNED 2026-08-05**
+**Date:** proposed 2026-07-17 · accepted 2026-07-21 · **signed 2026-08-05**
 **Deciders:** rahuldr07 (owner)
+**Signed by:** rahuldr07 (owner), 2026-08-05
+
+> **SIGNATURE (2026-08-05).** This closes `PLAN.md` Gate 0 step 2, which had
+> stood unticked while step 3 carried `✔ done`. Three amendments are recorded on
+> signature and are binding wherever this ADR's body says otherwise:
+>
+> 1. **Auth: WorkOS AuthKit**, not Clerk. Sealed-session cookies plus Python
+>    session helpers; **Postgres owns authorization**, which is what keeps the
+>    design safe from WorkOS's stale-claim and revocation windows.
+> 2. **Queue: Procrastinate is PRIMARY**, not PgQueuer. The reconciliation note
+>    below names PgQueuer as leading; that gate has since resolved against it.
+>    PgQueuer's psycopg driver raises `RuntimeError` unless the connection is in
+>    autocommit, so the transactional enqueue this architecture requires — the
+>    order row and its job committing together or not at all — is impossible with
+>    it. `IMPLEMENTATION_PLAN.md:769` already specifies Procrastinate's signature
+>    (`connection: AsyncConnection`). PgQueuer remains the documented challenger
+>    behind `QueuePort`.
+> 3. **Contract: Pydantic/OpenAPI is authoritative for the wire**, migrated
+>    endpoint-by-endpoint — **but Zod is NOT demoted to UI-only.** `openapi-fetch`
+>    ships zero runtime validation by design, and the repo requires every response
+>    to parse at the boundary. Zod remains the browser's runtime parser.
+>
+> **`HANDOFF §5`'s "core-api may go TypeScript/Hono per services decision" is
+> CLOSED by this signature.** Do not reopen it without a new ADR.
+>
+> Full reasoning, with the versions and traps behind each amendment:
+> [`docs/backend/BUILD-PLAN.md`](../backend/BUILD-PLAN.md).
 **Evidence:** deep-research run wf_f4a3917f-d01 — 24 sources, 25 claims adversarially verified 3-vote each (24 confirmed, 1 refuted), all primary sources fetched live 2026-07-17.
 
 > **Reconciliation note (2026-07-21).** The CORE decision of this ADR — **core-api = FastAPI (Python), not Hono/Bun** — still stands and is unchanged. Several *secondary* tooling picks mentioned below have since been superseded by the reconciled canonical plan in **`docs/backend/PLAN.md`** (which is authoritative on tooling):

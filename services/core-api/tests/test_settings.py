@@ -7,6 +7,8 @@ still pass if only one of the seven checks survived a refactor.
 
 from __future__ import annotations
 
+import base64
+
 import pytest
 from pydantic import SecretStr, ValidationError
 
@@ -16,7 +18,9 @@ from titlepipe_core.settings import (
 )
 from titlepipe_domain import Environment, LogRenderer
 
-GOOD_SECRET = "a-real-32-character-seal-secret!"
+# A valid Fernet key: urlsafe-base64 of 32 bytes, 44 characters. Not "a 32
+# character string" — that distinction is the bug these tests now pin.
+GOOD_SECRET = "dGVzdC1zZWFsLXNlY3JldC1leGFjdGx5LTMyLWJ5dGU="
 
 
 def deployed(**overrides: object) -> CoreApiSettings:
@@ -97,16 +101,42 @@ def test_development_permits_the_convenient_defaults() -> None:
     assert settings.docs_enabled is True
 
 
-def test_seal_password_must_be_exactly_32_characters() -> None:
-    """WorkOS sealed sessions require it. Fail at startup, not at first login."""
-    with pytest.raises(ValidationError, match="exactly 32 characters"):
+def test_seal_password_must_be_a_44_character_fernet_key() -> None:
+    """WorkOS sealed sessions require it. Fail at startup, not at first login.
+
+    THE NUMBER WAS 32 AND IT WAS WRONG — that is the byte count, not the encoded
+    length. Every real WorkOS credential is 44 characters, so the old check
+    rejected the genuine article and accepted nothing that works.
+    """
+    with pytest.raises(ValidationError, match="44-character"):
         CoreApiSettings(
             environment=Environment.DEVELOPMENT, cookie_seal_password=SecretStr("too-short")
         )
+    # The old value: 32 characters, which used to PASS. It must now fail.
+    with pytest.raises(ValidationError, match="44-character"):
+        CoreApiSettings(
+            environment=Environment.DEVELOPMENT,
+            cookie_seal_password=SecretStr("development-only-seal-password!!"),
+        )
 
 
-def test_the_development_default_satisfies_its_own_length_rule() -> None:
-    assert len(DEVELOPMENT_SEAL_PASSWORD) == 32
+def test_seal_password_of_the_right_length_but_wrong_alphabet_is_refused() -> None:
+    """Length is the cheap half. This is the half that catches a bad paste."""
+    with pytest.raises(ValidationError, match=r"urlsafe-base64|decode to exactly"):
+        CoreApiSettings(
+            environment=Environment.DEVELOPMENT,
+            cookie_seal_password=SecretStr("!" * 44),
+        )
+
+
+def test_the_development_default_satisfies_its_own_rule() -> None:
+    """The default must pass the real validator, not a weaker one.
+
+    It did not before: the placeholder was 32 characters and so was the check,
+    so the only value ever exercised was the one that should have failed.
+    """
+    assert len(DEVELOPMENT_SEAL_PASSWORD) == 44
+    assert len(base64.urlsafe_b64decode(DEVELOPMENT_SEAL_PASSWORD)) == 32
     assert CoreApiSettings(
         environment=Environment.DEVELOPMENT
     ).cookie_seal_password.get_secret_value() == (DEVELOPMENT_SEAL_PASSWORD)
