@@ -54,6 +54,44 @@ and both shipped **`192 passed`**:
   `GRANT SELECT, INSERT` on the five tenant tables that are not `audit_log` was
   green. `_expected_grants` derives the withheld list from the granted one so a
   verb cannot be absent from both.
+
+## 🔴 AND THEN THREE MORE, FOUND 2026-08-06 AND MEASURED AT `195 passed` EACH
+
+The two above were about the policy this file looks AT. These three are about
+everything it does not look at — the policy SET, the ACL's grantee, and the
+policy's role list:
+
+* **nothing bounded the policy set.** `_assert_tenant_isolation_policy` asked
+  whether `tenant_isolation` was PRESENT, never whether it was ALONE. Permissive
+  policies OR together, so a second one is a second way in. MEASURED, one line
+  added to `0002::_isolate` with the matching `DROP POLICY` in `_release`:
+
+      CREATE POLICY tenant_maintenance ON <table> FOR UPDATE
+        USING (true) WITH CHECK (true)
+
+  `195 passed`, against a database in which any established tenant can re-tenant
+  every other tenant's rows to itself and then read them. `_permissive_policies`
+  and the exact-set assertion in `_assert_tenant_isolation_policy` close it;
+* **`pg_policies.with_check` was never read.** `_policies` selected `qual` and
+  stopped. `0002` writes NO `WITH CHECK`, and PostgreSQL then reuses `USING` for
+  it — so `with_check` MUST come back NULL, and a policy supplying its own is a
+  policy whose write side is not the read side. It is now selected uncoalesced
+  (`qual` is still `coalesce`d; `with_check` must not be, because NULL is the
+  answer being asserted) and required to be NULL;
+* **`pg_policies.roles` was never read.** MEASURED, `CREATE POLICY
+  tenant_isolation … FOR ALL TO titlepipe_app USING (…)`: `195 passed`. It is
+  bounded today only because `titlepipe_app` is the one role holding a grant,
+  and it goes live the moment `titlepipe_worker` or `titlepipe_blind` gets one —
+  those roles would then be denied every row with no error naming a policy. The
+  list is now required to be `PUBLIC`.
+
+The behavioural half of the first of those is
+`tests/test_tenant_isolation.py::test_2…`, which now issues a cross-tenant
+`UPDATE` as `titlepipe_app`. Before that arm existed, **no test in this
+repository ever issued an `UPDATE` as `titlepipe_app` at all** — every `UPDATE`
+in the suite ran as the container superuser or as `titlepipe_migration` with
+`SET ROLE titlepipe_owner`, so the verb the ACL assertions above check was never
+once executed by the role they check it for.
 """
 
 from __future__ import annotations
@@ -147,6 +185,13 @@ WORKER_ROLE = "titlepipe_worker"
 OWNER_ROLE = "titlepipe_owner"
 MIGRATION_ROLE = "titlepipe_migration"
 
+# The label both `aclexplode` readers below translate `grantee = 0` to. It is a
+# pseudo-role rather than a role: `grantee::regrole` renders 0 as `-`, which is
+# not a name anybody can grep for or grant to. Spelled once here and matched
+# against in Python; the two SQL strings write the same word as a literal
+# because it is the CASE branch's own output rather than a value being compared.
+PUBLIC_GRANTEE = "PUBLIC"
+
 # The verbs `0002` grants, and the ones it must never grant anywhere. `DELETE` is
 # in the second list on all seven: the contract is SELECT/INSERT/UPDATE, and a
 # stray `GRANT ALL` would satisfy every positive assertion in this file while
@@ -202,17 +247,43 @@ TENANT_ONE = UUID("11111111-1111-1111-1111-111111111111")
 TENANT_TWO = UUID("22222222-2222-2222-2222-222222222222")
 
 
+# `pg_policies.roles` for a policy written with no `TO` clause. It is a `name[]`,
+# and the view renders the PUBLIC case — `pg_policy.polroles = '{0}'` — as the
+# single element `public` rather than as the oid. MEASURED 2026-08-06 against
+# postgres:18.4, all seven policies after `upgrade head`:
+#
+#     ('orders', 'tenant_isolation', 'ALL', 'PERMISSIVE', ['public'],
+#      qual IS NULL -> False, with_check IS NULL -> True, with_check -> None,
+#      pg_typeof(roles) -> name[])
+#
+# so the value asserted below is the string, not the oid. Reading `pg_policy`
+# directly would give `{0}`; `pg_policies` is what every other assertion in this
+# file already reads and it is the spelling a reader can reproduce with `\dp`.
+POLICY_ROLES_PUBLIC = ("public",)
+
+
 class PolicyFacts(NamedTuple):
-    """The three things a `tenant_isolation` policy has to be.
+    """The five things a `tenant_isolation` policy has to be.
 
     `qual` is `pg_policies`' rendering of the `USING` expression, which is the
     only place the `nullif` can be read back from — `pg_policy.polqual` is a
     `pg_node_tree` and is not text anybody can assert on.
+
+    `with_check` is `str | None` AND THE `None` IS THE POINT. `0002` writes no
+    `WITH CHECK`, so PostgreSQL reuses `USING` for the write side; the view
+    reports that reuse as NULL. Coalescing it to `''` the way `qual` is coalesced
+    would erase the one value being asserted, which is why the two columns are
+    read differently.
+
+    `roles` is `pg_policies.roles`, and it is `('public',)` for a policy with no
+    `TO` clause — see `POLICY_ROLES_PUBLIC`.
     """
 
     command_name: str
     permissive: str
     qual: str
+    with_check: str | None
+    roles: tuple[str, ...]
 
 
 def _tenant_tables(connection: Connection, version_table: str) -> set[str]:
@@ -262,16 +333,50 @@ def _policies(connection: Connection) -> dict[tuple[str, str], PolicyFacts]:
 
     A table with no policy contributes no row and is simply absent, which is why
     every caller asserts membership before reading a value.
+
+    EVERY POLICY IN `public` IS RETURNED, not only the ones called
+    `tenant_isolation`. That is what makes `_permissive_policies` able to ask
+    whether the expected policy is the ONLY one — the question this query could
+    not answer while its callers only ever indexed it by name.
+
+    `with_check` IS NOT COALESCED and `qual` still is. NULL is the value being
+    asserted for the first and a meaningless one for the second; see
+    `PolicyFacts`.
     """
     result = connection.execute(
         text(
-            "SELECT tablename, policyname, cmd, permissive, coalesce(qual, '') "
+            "SELECT tablename, policyname, cmd, permissive, coalesce(qual, ''), "
+            "       with_check, roles "
             "FROM pg_policies WHERE schemaname = 'public'"
         )
     )
     return {
-        (str(row[0]), str(row[1])): PolicyFacts(str(row[2]), str(row[3]), str(row[4]))
+        (str(row[0]), str(row[1])): PolicyFacts(
+            str(row[2]),
+            str(row[3]),
+            str(row[4]),
+            None if row[5] is None else str(row[5]),
+            tuple(str(role) for role in row[6]),
+        )
         for row in result
+    }
+
+
+def _permissive_policies(policies: Mapping[tuple[str, str], PolicyFacts], table: str) -> set[str]:
+    """The names of every PERMISSIVE policy on `table`.
+
+    PERMISSIVE only, and the narrowing is the whole reason this helper exists
+    rather than a bare set comprehension over the names. **Permissive policies OR
+    together**: a second one is a second, independent way to reach a row, and the
+    fact that a correct `tenant_isolation` sits beside it changes nothing. A
+    RESTRICTIVE policy ANDs instead, so it can only take rows away — an extra one
+    of those is an outage rather than a leak, and it is caught by the positive
+    control in `tests/test_tenant_isolation.py` rather than here.
+    """
+    return {
+        name
+        for (owner, name), facts in policies.items()
+        if owner == table and facts.permissive == "PERMISSIVE"
     }
 
 
@@ -291,6 +396,84 @@ def _table_privileges(connection: Connection, role: str, table: str) -> dict[str
         {"role": role, "table": table, "verbs": verbs},
     )
     return {str(row[0]): bool(row[1]) for row in result}
+
+
+def _table_grantees(connection: Connection) -> dict[tuple[str, str], set[str]]:
+    """(table, verb) -> every grantee holding it, with `PUBLIC` spelled out.
+
+    ---------------------------------------------------------------------------
+    🔴 `aclexplode` AND NOT `has_table_privilege`, FOR THE REASON
+       `_schema_usage_grantees` ALREADY RECORDS ONE LEVEL UP: THE TWO ANSWER
+       DIFFERENT QUESTIONS, AND ONLY THIS ONE CAN SEE WHO WAS NAMED.
+    ---------------------------------------------------------------------------
+    `_table_privileges` above is deliberately the EFFECTIVE question — "will the
+    server let this role do this" — and that is the right question for the
+    assertions it feeds. But it is answered TRUE by a privilege reaching the role
+    through `PUBLIC` or through a membership, and nothing in this file asked who
+    the ACL actually names. MEASURED 2026-08-06, `0002`'s eight `GRANT … TO
+    titlepipe_app` respelled `TO PUBLIC`: **`195 passed`**. Under that migration
+    `titlepipe_worker` — which `0002` grants nothing, and which can set
+    `app.current_tenant` itself because a custom GUC carries no ACL — reads and
+    writes any tenant it names.
+
+    MEASURED on the same container after a correct `upgrade head`, `orders`:
+
+        SELECT   -> {titlepipe_owner, titlepipe_app}
+        INSERT   -> {titlepipe_owner, titlepipe_app}
+        UPDATE   -> {titlepipe_owner, titlepipe_app}
+        DELETE   -> {titlepipe_owner}
+        TRUNCATE -> {titlepipe_owner}
+
+    and `audit_log` identically but for `UPDATE -> {titlepipe_owner}`, which is
+    the one grant that differs. `titlepipe_owner` is in every set because it is
+    the table's OWNER and PostgreSQL materialises the owner's own default
+    privileges into `relacl` the moment anything is granted — it is not a grant
+    `0002` makes, and `test_downgrading_only_0002_removes_every_policy_grant_and
+    _force` records the same fact from the other side.
+
+    `grantee = 0` is `PUBLIC` and renders as `-` through `regrole`, so it is
+    translated by name — the same translation `_schema_usage_grantees` makes, and
+    for the same reason: a hyphen is not a thing anybody can grep for.
+
+    `coalesce(relacl, acldefault('r', relowner))` because `relacl` is NULL on a
+    table nobody has ever granted anything on, and `aclexplode(NULL)` returns no
+    rows — which would read as "nobody holds anything" rather than "the owner
+    holds everything".
+    """
+    result = connection.execute(
+        text(
+            "SELECT c.relname, a.privilege_type, "
+            "       CASE WHEN a.grantee = 0 THEN 'PUBLIC' "
+            "            ELSE a.grantee::regrole::text END "
+            "FROM pg_class c "
+            "JOIN pg_namespace n ON n.oid = c.relnamespace, "
+            "     aclexplode(coalesce(c.relacl, acldefault('r', c.relowner))) AS a "
+            "WHERE n.nspname = 'public' AND c.relkind = 'r'"
+        )
+    )
+    grantees: dict[tuple[str, str], set[str]] = {}
+    for row in result:
+        grantees.setdefault((str(row[0]), str(row[1])), set()).add(str(row[2]))
+    return grantees
+
+
+def _expected_grantees(table: str) -> dict[str, set[str]]:
+    """verb -> exactly who `0002` plus table ownership leaves holding it.
+
+    DERIVED FROM `_expected_grants` rather than written out a second time, which
+    is the same rule that constant already applies to the withheld verbs: a
+    second literal is a second thing to keep in step, and the one that drifts is
+    the one nothing is pointed at. `audit_log` therefore drops out of `UPDATE`
+    here because it drops out of `granted` there, with no branch on the name.
+
+    The owner is in every set unconditionally — see `_table_grantees` for the
+    measurement and for why that is ownership rather than a grant.
+    """
+    granted, withheld = _expected_grants(table)
+    return {
+        **{verb: {OWNER_ROLE, APP_ROLE} for verb in granted},
+        **{verb: {OWNER_ROLE} for verb in withheld},
+    }
 
 
 def _normalised_qual(qual: str) -> str:
@@ -354,16 +537,55 @@ def _assert_tenant_isolation_policy(
     key_column: str,
     tenant_guc: str,
 ) -> None:
-    """The whole `tenant_isolation` contract for one table: presence, cmd, permissive, qual.
+    """The whole `tenant_isolation` contract for one table, and the whole POLICY SET.
 
     `ALL` and `PERMISSIVE` are asserted here rather than only on the six, which is
     the second thing the registry's own test was missing: a `tenant_isolation`
     policy declared `FOR SELECT` leaves INSERT, UPDATE and DELETE entirely
     unpoliced, and reads exactly like isolation to anything that only reads.
+
+    ---------------------------------------------------------------------------
+    🔴 THE FIRST ASSERTION USED TO BE MEMBERSHIP AND IS NOW THE EXACT SET, AND
+       THAT IS THE DIFFERENCE BETWEEN ASKING WHETHER THE RIGHT POLICY IS PRESENT
+       AND ASKING WHETHER IT IS THE ONLY ONE.
+    ---------------------------------------------------------------------------
+    It read `(table, POLICY_NAME) in policies`, which is true of a table carrying
+    a correct `tenant_isolation` AND anything else somebody added. Permissive
+    policies OR together. MEASURED 2026-08-06, `0002::_isolate` given one extra
+    line (with the matching `DROP POLICY` in `_release`, so the downgrade test
+    stayed green too):
+
+        CREATE POLICY tenant_maintenance ON <table> FOR UPDATE
+          USING (true) WITH CHECK (true)
+
+    **`195 passed`.** Every assertion in this file was about `tenant_isolation`,
+    which was still perfect, and the second policy handed every established
+    tenant an unconditional UPDATE over every other tenant's rows.
+
+    `with_check` AND `roles` ARE ASSERTED FOR THE SAME KIND OF REASON — they were
+    columns nothing read:
+
+    * **`with_check` must be NULL.** `0002` writes no `WITH CHECK` and relies on
+      PostgreSQL reusing the `USING` expression for the write side; that reuse is
+      exactly what refuses a cross-tenant INSERT, and `0002`'s own docstring
+      records the measurement. A policy that supplies its own `WITH CHECK` has a
+      write side that is no longer the read side, and `WITH CHECK (true)` is the
+      spelling that lets every cross-tenant write straight through while every
+      read assertion in this file stays green;
+    * **`roles` must be `PUBLIC`.** MEASURED 2026-08-06, the policy respelled
+      `FOR ALL TO titlepipe_app`: `195 passed`. It is harmless TODAY only because
+      `titlepipe_app` is the one role `0002` grants anything to. The day
+      `titlepipe_worker` or `titlepipe_blind` gets a grant, a policy scoped to
+      one role denies them every row — and the error names no policy, because
+      there is nothing to name: they simply match none.
     """
-    assert (table, POLICY_NAME) in policies, (
-        f"{table} has row-level security on and no {POLICY_NAME} policy. "
-        f"Policies present: {sorted(name for owner, name in policies if owner == table)}"
+    present = _permissive_policies(policies, table)
+    assert present == {POLICY_NAME}, (
+        f"the PERMISSIVE policies on {table} are {sorted(present)}, not just "
+        f"[{POLICY_NAME!r}]. Permissive policies OR together, so every extra one "
+        f"is an independent way to reach a row and a correct {POLICY_NAME} beside "
+        f"it changes nothing. An empty set means RLS is on with no policy, which "
+        f"denies every row to every non-bypassing role."
     )
     facts = policies[(table, POLICY_NAME)]
 
@@ -374,6 +596,19 @@ def _assert_tenant_isolation_policy(
     assert facts.permissive == "PERMISSIVE", (
         f"{table}'s {POLICY_NAME} is {facts.permissive}. A RESTRICTIVE-only "
         f"policy set denies every row, which reads as isolation and is an outage."
+    )
+    assert facts.with_check is None, (
+        f"{table}'s {POLICY_NAME} supplies its own WITH CHECK "
+        f"({facts.with_check!r}) instead of leaving PostgreSQL to reuse USING. "
+        f"The write side is then not the read side, and WITH CHECK (true) lets "
+        f"every cross-tenant INSERT and UPDATE through while every read assertion "
+        f"in this file stays green."
+    )
+    assert facts.roles == POLICY_ROLES_PUBLIC, (
+        f"{table}'s {POLICY_NAME} applies TO {list(facts.roles)} rather than to "
+        f"{list(POLICY_ROLES_PUBLIC)}. A policy scoped to one role denies every "
+        f"row to every other role that holds a grant, and the refusal names no "
+        f"policy because the row matches none."
     )
 
     fault = _tenant_predicate_fault(facts.qual, key_column, tenant_guc)
@@ -604,6 +839,93 @@ def test_audit_log_is_granted_insert_but_never_update(
         "grant only misstates the intent of an append-only table."
     )
     assert privileges["DELETE"] is False
+
+
+def test_the_grants_name_the_app_role_explicitly_and_reach_no_other_role(
+    migrated_database: str,
+    alembic_version_table: str,
+    seam_engine: Callable[[str], Engine],
+    app_role: str,
+) -> None:
+    """🔴 WHO THE ACL NAMES, WHICH `has_table_privilege` STRUCTURALLY CANNOT SAY.
+
+    MEASURED 2026-08-06 on this tree: `0002`'s eight `GRANT … TO titlepipe_app`
+    respelled `TO PUBLIC`, one mutation, whole suite — **`195 passed`**. Every
+    grant assertion in this file goes through `_table_privileges`, which uses
+    `has_table_privilege`, which answers about the EFFECTIVE privilege. A
+    privilege reaching `titlepipe_app` through `PUBLIC` is TRUE to that function
+    and indistinguishable from one granted to the role by name.
+
+    That choice is right for those assertions — they ask the question the server
+    will ask — and it is why this test exists beside them rather than instead of
+    them. `_table_grantees` reads `pg_class.relacl` through `aclexplode`, which
+    is the only thing that can tell an explicit entry from an inherited one; it
+    is the identical technique `_schema_usage_grantees` already uses one level up,
+    for the identical reason.
+
+    TWO ASSERTIONS, AND THE SECOND IS THE ONE THE MUTATION WAS LOUDEST ABOUT:
+
+    * **the grantee set is EXACT**, per table and per verb. `PUBLIC` absent falls
+      out of the equality rather than being a separate check, and the message
+      names it when it is what turned up, because `TO PUBLIC` is the specific
+      accident this is here for. `DELETE` and `TRUNCATE` are covered by the same
+      loop at `{titlepipe_owner}` — a `GRANT ALL` names the app role explicitly
+      and would satisfy a check that only looked at SELECT/INSERT/UPDATE;
+    * **`titlepipe_worker` holds NOTHING.** `0002` grants that role no table
+      privilege at all, and a negative control is the only assertion that can see
+      a privilege arriving somewhere nobody asked about. It matters more than it
+      looks: `app.current_tenant` is a custom GUC and therefore carries no ACL —
+      `0002`'s own header records that any role can `SET` its own — so a
+      `titlepipe_worker` that acquires SELECT is a role that reads whichever
+      tenant it names. MEASURED under the `TO PUBLIC` mutation: every verb on
+      every one of the seven came back TRUE for it.
+
+    The seven are DERIVED and then floored and set-checked, for the reason the
+    module docstring gives: the loops below pass over an empty set.
+
+    `WORKER_ROLE` is the module constant rather than a fixture because
+    `conftest.py` publishes `app_role` and `owner_role` and not this one, and
+    this task does not own that file.
+    """
+    engine = seam_engine(migrated_database)
+    try:
+        with engine.connect() as connection:
+            derived = _tenant_tables(connection, alembic_version_table)
+            grantees = _table_grantees(connection)
+            worker = {
+                table: _table_privileges(connection, WORKER_ROLE, table)
+                for table in sorted({*derived, REGISTRY_TABLE})
+            }
+    finally:
+        engine.dispose()
+
+    assert len(derived) >= MINIMUM_TENANT_TABLES, (
+        f"the derivation found {len(derived)} tenant tables, fewer than the "
+        f"{MINIMUM_TENANT_TABLES} that exist: {sorted(derived)}. Every assertion "
+        f"below is a loop, so a broken derivation reports success."
+    )
+    assert derived == set(EXPECTED_TENANT_TABLES), (
+        f"the tenant tables are {sorted(derived)}, not {sorted(EXPECTED_TENANT_TABLES)}"
+    )
+
+    for table in sorted({*derived, REGISTRY_TABLE}):
+        for verb, expected in sorted(_expected_grantees(table).items()):
+            held = grantees.get((table, verb), set())
+            public = " PUBLIC is every role on this cluster." if PUBLIC_GRANTEE in held else ""
+            assert held == expected, (
+                f"{verb} on {table} is held by {sorted(held)}, not "
+                f"{sorted(expected)}.{public} has_table_privilege cannot see this: "
+                f"it reports the EFFECTIVE privilege, so {app_role} reads TRUE "
+                f"whether 0002 named it or handed the grant to everybody."
+            )
+
+        for verb, allowed in sorted(worker[table].items()):
+            assert allowed is False, (
+                f"{WORKER_ROLE} holds {verb} on {table}, and 0002 grants it "
+                f"nothing. That role can set app.current_tenant itself — a custom "
+                f"GUC carries no ACL — so a privilege reaching it by any route is "
+                f"a role that reads and writes whichever tenant it names."
+            )
 
 
 def test_the_append_only_trigger_still_answers_for_the_paths_the_acl_does_not(

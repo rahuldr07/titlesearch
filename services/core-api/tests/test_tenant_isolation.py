@@ -104,6 +104,7 @@ the exemption exists: the SAVEPOINT trap cannot be proved without a SAVEPOINT.
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
+from typing import NamedTuple
 from uuid import UUID
 
 import pytest
@@ -205,16 +206,14 @@ def _every_seeded_id(seed: Seed, table: str) -> set[UUID]:
     return {row for ids in seed[table].values() for row in ids}
 
 
-async def _visible_order_ids(engine: AsyncEngine, tenant: TenantId | None) -> set[UUID]:
-    """Every `orders.id` a session established as `tenant` can see.
-
-    `tenant=None` is the deny case and is legal — see `session.py`. It encodes to
-    the empty string, `nullif` turns that into NULL, and no row satisfies any
-    policy.
-    """
-    sessionmaker = make_sessionmaker(engine)
-    async with tenant_session(sessionmaker, tenant) as session:
-        return set((await session.scalars(select(Order.id))).all())
+# DELETED 2026-08-06: `_visible_order_ids(engine, tenant)`. It had ZERO call
+# sites repository-wide — every reader in this file goes through
+# `_visible_ids_per_table`, which is the derived-set version of the same
+# question, or reads `select(Order.id)` inline where the point is the session
+# rather than the table. A helper nothing calls is a helper nothing keeps honest:
+# it was the one place in this file that still hardcoded `orders`, which is
+# precisely the shape the module docstring records as having made the whole proof
+# a proof about one table.
 
 
 async def _visible_ids_per_table(
@@ -294,6 +293,140 @@ async def _cross_tenant_insert_refusals(
                     )
                 else:
                     outcomes[table] = (None, ACCEPTED)
+                await session.rollback()
+    finally:
+        await engine.dispose()
+    return outcomes
+
+
+# 🔴 THE ONE TABLE THE UPDATE ARM CANNOT REACH, AND IT IS A RULING RATHER THAN A
+# GAP. `0002` grants `titlepipe_app` SELECT and INSERT on `audit_log` and no
+# UPDATE, deliberately — `tests/test_forced_rls_and_grants.py::test_audit_log_is
+# _granted_insert_but_never_update` holds that from the ACL side. The privilege
+# check runs BEFORE row-level security, so both arms below come back as the ACL's
+# refusal rather than the policy's. MEASURED 2026-08-06 against postgres:18.4,
+# `titlepipe_app` established as tenant A:
+#
+#     UPDATE audit_log SET tenant_id = '1111…';   -- A's own id
+#     -> 42501 permission denied for table audit_log
+#     UPDATE audit_log SET tenant_id = '2222…';   -- B's id
+#     -> 42501 permission denied for table audit_log
+#
+# So it is asserted as that refusal rather than skipped. The name is a literal
+# beside `EXPECTED_ISOLATION_TABLES` for the same reason that set is: the loop
+# derives its tables from the catalog, and this is what says which of them the
+# derivation is expected to behave differently for.
+APPEND_ONLY_TABLE = "audit_log"
+
+# The fragment PostgreSQL puts in the message when the refusal is the ACL's
+# rather than the policy's. MEASURED 2026-08-06, as above. It is asserted
+# alongside the SQLSTATE because `42501` is the code for both, and a policy
+# refusal reported as an ACL refusal (or the reverse) is a test that has stopped
+# describing what it names.
+ACL_REFUSAL_FRAGMENT = "permission denied for table"
+
+# What `_unqualified_update_outcomes` records in the message slot when the
+# statement was NOT refused. The arm that expects a refusal reports this string
+# instead of `DID NOT RAISE`, which names no table.
+NOT_REFUSED = "the UPDATE was accepted rather than refused"
+
+
+class UpdateReach(NamedTuple):
+    """What one `UPDATE <table> SET <key> = <tenant>` did, with NO `WHERE` clause.
+
+    🔴 NO `WHERE`, AND THAT IS THE ENTIRE DESIGN OF THIS HELPER RATHER THAN A
+       SIMPLIFICATION. MEASURED 2026-08-06 against postgres:18.4 as
+       `titlepipe_app` established as tenant A, on `orders`, with the wide-open
+       `FOR UPDATE USING (true) WITH CHECK (true)` policy injected alongside a
+       correct `tenant_isolation`:
+
+           UPDATE orders SET tenant_id = <A> WHERE id = <B's row>  ->  0
+           UPDATE orders SET tenant_id = <A>                       ->  3
+
+       and, with no injection, `0` and `2`. A `WHERE` reads a column, and
+       PostgreSQL applies the SELECT policy to any UPDATE that reads — so the
+       qualified form answers **0 even when the UPDATE policy is wide open** and
+       proves nothing about it: that is the SELECT policy talking. Only the
+       unqualified form reads nothing and goes straight through the UPDATE
+       policy.
+
+    `before` and `after` are `SELECT count(*)` on the same table in the same
+    session, either side of the statement. `after` is the leak in its most
+    legible form: re-tenanting somebody else's row to yourself makes it VISIBLE,
+    so a session that could see two rows before and three after has taken one.
+
+    `touched` is `rowcount`, and `None` means the statement raised — in which
+    case `sqlstate` and `message` carry the refusal and `after` is `None`,
+    because the transaction is aborted and cannot be read.
+    """
+
+    before: int
+    touched: int | None
+    after: int | None
+    sqlstate: str | None
+    message: str
+
+
+async def _unqualified_update_outcomes(
+    dsn: str, key_columns: Mapping[str, str], writer: TenantId, target: UUID
+) -> dict[str, UpdateReach]:
+    """table -> `UpdateReach` for `writer` running `UPDATE … SET <key> = target`.
+
+    One session per table, each established as `writer`, each ROLLED BACK. The
+    rollback is not tidiness: an accepted cross-tenant UPDATE that committed
+    would re-tenant a seeded row and every assertion in this file after it would
+    be reading a different database.
+
+    `target` is the parameter that makes this two arms rather than one. Called
+    with the WRITER's own id it asks how far an unqualified UPDATE reaches;
+    called with the OTHER tenant's id it asks whether the row can be re-tenanted,
+    which is the `WITH CHECK` side.
+
+    `sqlstate` is narrowed with `isinstance` rather than compared straight out of
+    `getattr`, for the reason `_cross_tenant_insert_refusals` records: comparing
+    `Any` to a string passes for a `None` as readily as for a code.
+
+    🔴 THE UPDATE GOES THROUGH `await session.connection()` AND THE READS GO
+       THROUGH THE SESSION, AND THE SPLIT IS FORCED BY THE TYPE CHECKER RATHER
+       THAN CHOSEN. `AsyncSession.execute` is annotated `-> Result[Any]`, which
+       publishes no `rowcount` — MEASURED 2026-08-06 against pyright 1.1.411:
+       `Cannot access attribute "rowcount" for class "Result[Any]"` plus
+       `reportUnknownMemberType`. `AsyncConnection.execute` is annotated
+       `-> CursorResult[Any]`, where `rowcount` is an ordinary `int`. The
+       alternative was a `# pyright: ignore`, which this repository treats as a
+       suppression to justify rather than a fix.
+
+       It is the SAME transaction either way: `session.connection()` hands back
+       the connection the session's transaction is already running on — the count
+       above has begun it, so `after_begin` has fired and the tenant is
+       established — and `session.rollback()` below still discards it.
+
+    S608 is suppressed for the reason recorded at `_visible_ids_per_table`.
+    """
+    outcomes: dict[str, UpdateReach] = {}
+    engine = make_engine(dsn)
+    try:
+        sessionmaker = make_sessionmaker(engine)
+        for table, key_column in sorted(key_columns.items()):
+            count = f"SELECT count(*) FROM {table}"  # noqa: S608
+            update = f"UPDATE {table} SET {key_column} = :target"  # noqa: S608
+            async with tenant_session(sessionmaker, writer) as session:
+                before = int((await session.execute(text(count))).scalar_one())
+                connection = await session.connection()
+                try:
+                    result = await connection.execute(text(update), {"target": target})
+                except DBAPIError as error:
+                    sqlstate = getattr(error.orig, "sqlstate", None)
+                    outcomes[table] = UpdateReach(
+                        before,
+                        None,
+                        None,
+                        sqlstate if isinstance(sqlstate, str) else None,
+                        str(error),
+                    )
+                else:
+                    after = int((await session.execute(text(count))).scalar_one())
+                    outcomes[table] = UpdateReach(before, result.rowcount, after, None, NOT_REFUSED)
                 await session.rollback()
     finally:
         await engine.dispose()
@@ -594,6 +727,54 @@ async def test_2_a_write_carrying_another_tenants_id_is_refused_with_42501(
     of this failure. The outcome is recorded per table and asserted after, so a
     table that accepted the row is reported as such alongside every table that
     refused it.
+
+    ---------------------------------------------------------------------------
+    🔴 THE THIRD HALF: `UPDATE`. UNTIL 2026-08-06 NO TEST IN THIS REPOSITORY EVER
+       ISSUED ONE AS `titlepipe_app`.
+    ---------------------------------------------------------------------------
+    Every `UPDATE` in the suite ran as the container superuser (which bypasses
+    RLS unconditionally) or as `titlepipe_migration` with `SET ROLE
+    titlepipe_owner` (which is `test_forced_rls_and_grants.py`'s data-migration
+    test). The verb that `0002` grants and that
+    `test_forced_rls_and_grants.py` now asserts in the ACL was never once
+    EXECUTED by the role it is granted to.
+
+    MEASURED 2026-08-06, `0002::_isolate` given one extra line and `_release` the
+    matching `DROP POLICY`:
+
+        CREATE POLICY tenant_maintenance ON <table> FOR UPDATE
+          USING (true) WITH CHECK (true)
+
+    **`195 passed`.** Permissive policies OR together, so `tenant_isolation`
+    stayed perfect and irrelevant. Re-measured with this arm in place, the first
+    table the loop reaches reports it exactly:
+
+        UpdateReach(before=2, touched=3, after=3) on field_readings
+
+    — A could see 2 rows, its unqualified UPDATE touched 3, and it could then see
+    3. It re-tenanted B's row to itself and read it. `orders` behaves identically
+    (`0` / `3` in the `WHERE` comparison at `UpdateReach`).
+
+    THE TWO ARMS, AND WHY NEITHER IS SPELLED "0 ROWS":
+
+    * **the reach arm** sets the key to A's OWN id. An unqualified UPDATE by A
+      legitimately touches A's own rows, so the number is not zero and cannot be
+      written as a literal either — assertion 1 commits an extra `orders` row for
+      A and `isolation_seed` is module-scoped, so how many A owns depends on
+      collection order. What holds under every ordering is that it touches
+      EXACTLY WHAT IT CAN SEE, and that the count it can see is UNCHANGED
+      afterwards. Under the mutation both fail, by exactly one row per table —
+      B's;
+    * **the re-tenanting arm** sets the key to B's id and must be refused
+      `42501`. That is the `WITH CHECK` side, which `0002` gets by writing no
+      `WITH CHECK` at all and letting PostgreSQL reuse `USING`.
+
+    `WHERE` IS ABSENT FROM BOTH AND THAT IS LOAD-BEARING — see `UpdateReach` for
+    the measurement. A qualified UPDATE reads a column, so the SELECT policy
+    answers it and it reports 0 rows even against a wide-open UPDATE policy.
+
+    `audit_log` is the one table both arms come back differently on, and it is a
+    Task 4 ruling rather than a hole — see `APPEND_ONLY_TABLE`.
     """
     engine = make_engine(isolation_dsn)
     try:
@@ -642,6 +823,72 @@ async def test_2_a_write_carrying_another_tenants_id_is_refused_with_42501(
         assert RLS_REFUSAL_FRAGMENT in message, (
             f"{table} answered 42501 for some reason other than the policy — a "
             f"missing INSERT grant returns the identical code: {message}"
+        )
+
+    reach = await _unqualified_update_outcomes(
+        isolation_dsn, isolation_key_columns, TenantId(isolation_tenant_a), isolation_tenant_a
+    )
+    retenanted = await _unqualified_update_outcomes(
+        isolation_dsn, isolation_key_columns, TenantId(isolation_tenant_a), isolation_tenant_b
+    )
+
+    assert set(reach) == set(EXPECTED_ISOLATION_TABLES), (
+        f"the UPDATE side was attempted on {sorted(reach)}, not on "
+        f"{sorted(EXPECTED_ISOLATION_TABLES)}. Both loops below are over this set."
+    )
+    assert set(retenanted) == set(reach), (
+        f"the two UPDATE arms covered different tables: {sorted(reach)} and {sorted(retenanted)}"
+    )
+
+    for table, outcome in sorted(reach.items()):
+        if table == APPEND_ONLY_TABLE:
+            assert outcome.sqlstate == INSUFFICIENT_PRIVILEGE_SQLSTATE, (
+                f"{table} is granted no UPDATE, so an UPDATE by "
+                f"{isolation_tenant_a} must be refused by the ACL before the "
+                f"policy is reached. It answered {outcome.sqlstate!r} and touched "
+                f"{outcome.touched} rows: {outcome.message}"
+            )
+            assert ACL_REFUSAL_FRAGMENT in outcome.message, (
+                f"{table} answered 42501 for some reason other than the missing "
+                f"grant — the policy returns the identical code: {outcome.message}"
+            )
+            continue
+
+        assert outcome.touched is not None, (
+            f"{isolation_tenant_a} could not UPDATE its own rows in {table} at "
+            f"all: {outcome.sqlstate!r} {outcome.message}. 0002 grants that role "
+            f"UPDATE on this table, so this is a broken grant rather than "
+            f"isolation working."
+        )
+        assert outcome.before >= 1, (
+            f"{isolation_tenant_a} saw no rows in {table} before the UPDATE, so a "
+            f"statement that touched none of them says nothing"
+        )
+        assert outcome.touched == outcome.before, (
+            f"an unqualified UPDATE by {isolation_tenant_a} touched "
+            f"{outcome.touched} rows in {table} while that session could see "
+            f"{outcome.before}. It reached rows belonging to somebody else: an "
+            f"UPDATE with no WHERE reads nothing, so it is answered by the UPDATE "
+            f"policy alone, and a second PERMISSIVE policy ORs its way past a "
+            f"perfectly correct tenant_isolation."
+        )
+        assert outcome.after == outcome.before, (
+            f"after that UPDATE, {isolation_tenant_a} could see {outcome.after} "
+            f"rows in {table} where it saw {outcome.before} before. It re-tenanted "
+            f"another tenant's row to itself and can now read it."
+        )
+
+    for table, outcome in sorted(retenanted.items()):
+        expected = ACL_REFUSAL_FRAGMENT if table == APPEND_ONLY_TABLE else RLS_REFUSAL_FRAGMENT
+        assert outcome.sqlstate == INSUFFICIENT_PRIVILEGE_SQLSTATE, (
+            f"{isolation_tenant_a} re-tenanted its own rows in {table} to "
+            f"{isolation_tenant_b} and got {outcome.sqlstate!r} rather than "
+            f"{INSUFFICIENT_PRIVILEGE_SQLSTATE!r}. A code of None means the write "
+            f"was ACCEPTED — one tenant handing its rows to another and losing "
+            f"sight of them: {outcome.message}"
+        )
+        assert expected in outcome.message, (
+            f"{table} answered 42501 for some reason other than {expected!r}: {outcome.message}"
         )
 
 

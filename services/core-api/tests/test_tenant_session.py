@@ -19,14 +19,31 @@ half of it here would mean two places to update the day a policy changes. What
 this file proves is the SEAM: that the GUC is applied inside the transaction,
 that it does not survive the transaction, that a fresh pooled connection starts
 denied, that the connection `migrations/env.py` opens starts denied too, that a
-write made inside a block is still there after it, and that the two public
-constructors carry — AND FORWARD — the parameters their callers depend on.
+write made inside a block is still there after it, THAT A WRITE MADE INSIDE A
+BLOCK AN EXCEPTION ESCAPES IS NOT, and that the two public constructors carry —
+AND FORWARD — the parameters their callers depend on.
 
-The last three of those were added 2026-08-06, each after a mutation showed the
+The last four of those were added 2026-08-06, each after a mutation showed the
 property was unpinned: `env.py`'s engine picked up `PGOPTIONS` and nothing
 noticed; `await session.commit()` could be deleted and the suite stayed green;
 and both pool bounds could be accepted and discarded and it stayed green again.
 Each mutation is recorded on the test that now closes it.
+
+TWO OF THOSE FOUR WERE RE-OPENED THE SAME DAY, BY A REVIEW THAT MUTATED THE
+COMMIT RATHER THAN DELETING IT, AND BOTH SHIPPED `195 passed`:
+
+* `await session.commit()` -> `await (await session.connection()).commit()`. The
+  crossing-the-boundary test wrote through `TenantRepository.add`, WHICH
+  FLUSHES, so the INSERT was already inside the transaction that a raw
+  connection-level commit ends. It now writes with a bare `session.add()` and no
+  flush, which only a real unit of work can persist;
+* the commit MOVED INTO THE `finally`. Nothing in this repository ever let an
+  exception out of a `tenant_session` block, so the one difference between
+  committing after the `yield` and committing in the `finally` was unobserved —
+  and it is the difference between discarding a partial write and persisting it
+  under a handler that reports failure.
+  `test_an_exception_escaping_the_block_leaves_the_flushed_write_behind_it` is
+  the sibling that closes it.
 
 ## The positive control, and why the denials are worthless without it
 
@@ -47,13 +64,13 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from inspect import Parameter, signature
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import pytest
 from alembic import command
 from alembic.config import Config
 from sqlalchemy import Connection, Engine, Select, create_engine, event, func, select, text
-from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import QueuePool
 
 from titlepipe_core.db import TenantRepository, make_engine, make_sessionmaker, tenant_session
@@ -437,15 +454,44 @@ async def test_a_row_written_in_one_tenant_session_is_readable_from_the_next(
     denial against an empty table proves nothing; this test asserts a row is
     PRESENT, which no empty table satisfies. Requesting it would also mean this
     test's own row was deleted out from under a later one's seed for no reason.
+
+    ---------------------------------------------------------------------------
+    🔴 IT WROTE THROUGH `TenantRepository.add`, WHICH FLUSHES, AND THAT PINNED
+       THE WRONG HALF OF THE THING IT IS NAMED AFTER.
+    ---------------------------------------------------------------------------
+    With the INSERT already on the wire before the block exits, "the block
+    committed" and "something committed" are the same observation. MEASURED
+    2026-08-06 on this branch, `tenant_session`'s `await session.commit()`
+    replaced by `await (await session.connection()).commit()` — a raw
+    connection-level commit that skips the ORM unit of work entirely and would
+    discard any pending write: **`195 passed`**. The flushed INSERT was inside
+    the transaction that commit ended, so the row came back and the test could
+    not tell the two commits apart.
+
+    IT NOW WRITES WITH A BARE `session.add()` AND NO FLUSH, so the INSERT exists
+    only as pending ORM state and reaches the server at the unit of work
+    `session.commit()` performs — and nowhere else. `close()` does not flush;
+    neither does a connection-level commit. Under that mutation the row is never
+    written at all and this test goes red.
+
+    THE ID IS GENERATED HERE RATHER THAN READ BACK, and that is forced by the
+    same change. `Order.id` has a SERVER default (`gen_random_uuid()`), so
+    `written.id` is `None` until something flushes — which is precisely what this
+    test must not do. Supplying the primary key explicitly is ordinary usage: the
+    column is a plain `uuid` with a default, not an identity column.
+
+    `TenantRepository` is still the READER. It is the seam Plans 02-06 use, and
+    the property under test is on the write side.
     """
     engine = make_engine(app_dsn)
+    written_id = uuid4()
     try:
         sessionmaker = make_sessionmaker(engine)
 
         async with tenant_session(sessionmaker, TENANT_ONE) as session:
-            written = Order(tenant_id=TENANT_ONE)
-            await TenantRepository(session, Order).add(written)
-            written_id = written.id
+            # NO FLUSH, AND NO `TenantRepository.add` — see the docstring. This
+            # line queues an INSERT that only the block's own commit can send.
+            session.add(Order(id=written_id, tenant_id=TENANT_ONE))
 
         async with tenant_session(sessionmaker, TENANT_ONE) as session:
             found = await TenantRepository(session, Order).get(written_id)
@@ -453,14 +499,109 @@ async def test_a_row_written_in_one_tenant_session_is_readable_from_the_next(
         await engine.dispose()
 
     assert found is not None, (
-        f"order {written_id}, written and flushed inside one tenant_session, was "
-        f"not there when a second tenant_session for {TENANT_ONE} asked for it. "
-        f"tenant_session is not committing on clean exit, so `close()` rolled the "
-        f"write back — every write in Plans 02-06 disappears and every handler "
-        f"still answers 200."
+        f"order {written_id}, added to a session inside one tenant_session block, "
+        f"was not there when a second tenant_session for {TENANT_ONE} asked for "
+        f"it. The block is not committing its unit of work on clean exit — either "
+        f"it never commits, so `close()` rolled the write back, or it commits at "
+        f"the connection and never flushes the ORM. Every write in Plans 02-06 "
+        f"disappears and every handler still answers 200."
     )
     assert found.id == written_id
     assert found.tenant_id == TENANT_ONE
+
+
+class _DeliberateFailure(Exception):
+    """Raised inside a `tenant_session` block, and by nothing else.
+
+    A private exception rather than `RuntimeError` or `ValueError`: the test
+    below asserts that THIS is what came out, and a generic class would also be
+    satisfied by the session machinery failing for its own reasons.
+    """
+
+
+async def _write_then_fail(sessionmaker: async_sessionmaker[AsyncSession], order_id: UUID) -> None:
+    """Flush an `orders` row inside a `tenant_session` block, then raise out of it.
+
+    A NAMED COROUTINE RATHER THAN THE BLOCK WRITTEN INLINE UNDER
+    `pytest.raises`, and the reason is the same one assertion 2 of
+    `test_tenant_isolation.py` gives for its own narrowing: `PT012` wants one
+    statement in the block, and the rule is right here. With the whole `async
+    with` inside, an exception raised by `make_sessionmaker`, by the `after_begin`
+    listener, or by the flush itself would satisfy `pytest.raises` exactly as the
+    deliberate one does — and this test is about what happens AFTER a write
+    succeeded.
+
+    THE FLUSH IS DELIBERATE AND IS THE OPPOSITE CHOICE FROM ITS SIBLING ABOVE.
+    That test writes without flushing so that only a real unit of work can
+    persist it; this one flushes so that the INSERT is genuinely on the wire and
+    inside the open transaction when the exception is thrown. Anything less and
+    "the row is absent afterwards" would be true because it was never sent.
+    """
+    async with tenant_session(sessionmaker, TENANT_ONE) as session:
+        session.add(Order(id=order_id, tenant_id=TENANT_ONE))
+        await session.flush()
+        raise _DeliberateFailure(order_id)
+
+
+@pytest.mark.asyncio
+async def test_an_exception_escaping_the_block_leaves_the_flushed_write_behind_it(
+    migrated_database: str, app_dsn: str
+) -> None:
+    """🔴 THE ROLLBACK. NO TEST LET AN EXCEPTION OUT OF A `tenant_session` BLOCK.
+
+    `tenant_session` yields, commits on the line after, and closes in a
+    `finally`. The commit's POSITION is the whole contract — before the `finally`
+    and after the `yield`, so an exception skips it and `close()` discards the
+    transaction. Nothing pinned the position. MEASURED 2026-08-06 on this branch,
+    the commit moved into the `finally` beside `close()`:
+
+        try:
+            yield session
+        finally:
+            await session.commit()
+            await session.close()
+
+    **`195 passed`.** In that state a handler that writes and then fails
+    validation COMMITS the partial write and returns its error — which is the
+    single worst shape this seam can take, because the caller is told the request
+    failed and the row is there.
+
+    The sibling above cannot see it: it exits cleanly, so the commit runs
+    wherever it is written. This is the only direction that distinguishes them.
+
+    THE EXCEPTION IS ASSERTED TO PROPAGATE, not merely to be raised. A
+    `tenant_session` that swallowed it — returning `True` from an `__exit__`, or
+    catching around the `yield` — would leave the caller believing the write
+    succeeded, and that is a different bug with the same absent row. `pytest.
+    raises` on a private exception class is what says the one that came out is
+    the one that went in.
+
+    THE SECOND SESSION IS THE ASSERTION. Reading from inside the first would read
+    the uncommitted row through its own transaction and prove nothing;
+    `migrated_database` is requested so that `roles_applied` has run and the
+    tables exist, and `seeded_orders` deliberately is not — this test asserts an
+    ABSENCE it created itself, against a row id nothing else in the suite writes.
+    """
+    engine = make_engine(app_dsn)
+    written_id = uuid4()
+    try:
+        sessionmaker = make_sessionmaker(engine)
+
+        with pytest.raises(_DeliberateFailure):
+            await _write_then_fail(sessionmaker, written_id)
+
+        async with tenant_session(sessionmaker, TENANT_ONE) as session:
+            found = await TenantRepository(session, Order).get(written_id)
+    finally:
+        await engine.dispose()
+
+    assert found is None, (
+        f"order {written_id} was flushed inside a tenant_session block that then "
+        f"raised, and a second session for {TENANT_ONE} can still see it. The "
+        f"block committed on the failing path: a handler that writes and then "
+        f"fails validation persists the partial write and reports an error, so "
+        f"the caller is told the request failed and the row is there."
+    )
 
 
 @pytest.mark.asyncio

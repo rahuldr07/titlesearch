@@ -14,10 +14,10 @@ either side, which is exactly the window in which drift happens.
 Four things are checked:
 
 1. the workflow is valid YAML, and every job in it has steps;
-2. every hook in the `repo: local` block of `.pre-commit-config.yaml` is named
-   by some step's `run:` — the hooks are how this repository writes down what
-   its gates are, so a gate added there and not here is a workflow that enforces
-   less than the hooks do;
+2. every hook in the `repo: local` block of `.pre-commit-config.yaml` is
+   INVOKED by an ENFORCING `run:` step — the hooks are how this repository
+   writes down what its gates are, so a gate added there and not here is a
+   workflow that enforces less than the hooks do;
 3. every repository path any `run:` names exists, and every `.py` among them
    compiles — a workflow that invokes a renamed script fails five minutes into
    a pipeline instead of here;
@@ -25,6 +25,73 @@ Four things are checked:
    `pyproject.toml`. This is the direction that actually happens: a package is
    added, and nothing lints, type-checks or tests it because nobody remembered
    the matrix.
+
+## 🔴 CHECK 2 USED TO ASK WHETHER A NAME APPEARED IN *SOME* `run:` STRING, AND
+   FIVE DIFFERENT WORKFLOWS THAT RUN NO GATE AT ALL SATISFIED IT
+
+It was `needle not in "\n".join(run_blocks())` — a substring search over every
+`run:` in the file, with no notion of whether that step executes, whether its
+result is allowed to fail, or whether the name was being INVOKED or merely
+printed. MEASURED 2026-08-06, one injection at a time into
+`.github/workflows/backend.yml`, `137 passed` for every one of them:
+
+1. the step's command replaced by `echo "TODO re-enable
+   scripts/check_backend_rules.py"` — the gate named and never run;
+2. `if: false` on the step;
+3. `if: ${{ github.event_name == 'schedule' }}` on the whole `hygiene` job, with
+   no `schedule` trigger anywhere in the file — every gate in the job dead;
+4. `continue-on-error: true` on all five gate steps — every gate runs, every
+   failure ignored, the job green;
+5. the script named only in a `#` comment INSIDE a `run: |` block.
+
+Four rules answer them, and `_step_enforces` / `_invocations` hold them:
+
+* the step's `if:` must be ABSENT or exactly `!cancelled()`;
+* the step's JOB must carry no `if:` at all;
+* neither the step nor its job may carry `continue-on-error`;
+* comments are dropped from the block, and the needle must appear as a
+  contiguous run of SHELL TOKENS in a command whose command word is not a
+  pure-output builtin.
+
+WHICH RULE CATCHES WHICH INJECTION IS MEASURED RATHER THAN ARGUED, because a
+rule that is only believed to be load-bearing is a rule nobody will notice
+losing. Each of the four was disabled ON ITS OWN and all five injections re-run
+against the other three, 2026-08-06:
+
+    rule disabled          injection that then SURVIVED
+    step `if:`             2
+    job `if:`              3
+    continue-on-error      4
+    token / builtin        1, and the unquoted `echo scripts/…` variant of it
+    `#`-line stripping     none
+
+THAT LAST ROW IS A CORRECTION TO WHAT THIS PARAGRAPH FIRST CLAIMED. Dropping
+whole `#` LINES turns out to catch injection 5 REDUNDANTLY: `shlex.split(…,
+comments=True)` already reduces `# python scripts/check_backend_rules.py` to no
+tokens at all, and the surviving `true` in that step is a pure-output builtin
+besides. The line-level strip is kept — it is the one that reads as intentional
+and it covers a `#` a future `shlex` might treat differently — but it is not
+what is holding injection 5 up today, and saying that it was would have been a
+claim about this file that this file disproves.
+
+ON THE TOKEN RULE, STATED PRECISELY BECAUSE IT IS THE ONE THAT IS NOT A YES/NO
+READ OF A KEY. The requirement is that the gate be INVOKED rather than mentioned,
+and "the line starts with the needle" is NOT available as a spelling of it — no
+real gate line does. MEASURED: the workflow runs `python
+scripts/check_backend_rules.py` and `git ls-files -z | xargs -0 python
+scripts/check_no_client_data.py`, and the needle is in the middle of both. So the
+rule is positional in the TOKEN stream instead: `shlex` splits the line, the
+tokens are cut at `|`, `&&`, `||`, `;` and `&` into commands, and a command whose
+first token is `echo`, `printf`, `:`, `true` or `false` cannot satisfy anything.
+Injection 1 is caught twice over, and the two halves were measured apart:
+QUOTED, the needle is part of a token rather than a token, so the token rule
+alone stops it; UNQUOTED (`run: echo TODO re-enable scripts/…`), the tokens are
+right there and only the builtin filter stops it. Both variants were run.
+
+`if: ${{ !cancelled() }}` itself is CORRECT and is what the workflow's own
+comment claims it is: each gate reports an independent verdict rather than the
+run stopping at the first failure. It is allowed through deliberately, and it is
+the only condition that is.
 
 ## On the YAML parser
 
@@ -54,6 +121,24 @@ PRE_COMMIT = REPO_ROOT / ".pre-commit-config.yaml"
 
 # The job whose matrix is supposed to enumerate every Python project.
 PROJECT_JOB = "project"
+
+# The ONE step condition a gate may carry. See the module docstring: it makes a
+# step run more often rather than less, and it is what gives each gate an
+# independent verdict after an earlier one has failed. Compared against
+# `_expression`, so both `!cancelled()` and `${{ !cancelled() }}` match.
+CANCELLED_GUARD = "!cancelled()"
+
+# Where one shell command ends and the next begins. `_invocations` cuts the token
+# stream here so that "the first token" is the command word of the command the
+# needle is actually in, rather than of whatever started the line — the needle in
+# `git ls-files -z | xargs -0 python scripts/check_no_client_data.py` belongs to
+# the `xargs` command, not to `git`.
+SEGMENT_SEPARATORS = frozenset({"|", "||", "&&", ";", "&"})
+
+# Command words that cannot run a gate however they are spelled. A step that
+# PRINTS a gate's name has not run it, and that is measurably not a theoretical
+# distinction — see injection 1 in the module docstring.
+OUTPUT_ONLY_COMMANDS = frozenset({"echo", "printf", ":", "true", "false"})
 
 # A repository-relative path as it appears inside a shell command: at least one
 # `/`, and no `{`, `$`, `:` or quote characters, so a `${{ … }}` expression, a
@@ -137,12 +222,162 @@ def jobs() -> dict[str, Any]:
 
 
 def run_blocks() -> tuple[str, ...]:
-    """Every shell command the workflow runs, in job and step order."""
+    """Every shell command the workflow runs, in job and step order.
+
+    EVERY ONE, including steps that are conditional or allowed to fail. This
+    feeds the path-existence and script-compilation checks, which are about
+    whether the file is coherent rather than about whether a gate is enforced —
+    a renamed script named in a skipped step is still a workflow that will break
+    the day the step is re-enabled. `enforcing_run_blocks` is the narrowed set
+    and is used by the gate check alone.
+    """
     return tuple(
         step["run"]
         for job in jobs().values()
         for step in (job.get("steps") or [])
         if isinstance(step, dict) and isinstance(step.get("run"), str)
+    )
+
+
+def _expression(value: object) -> str:
+    """A workflow condition with its `${{ … }}` wrapper removed, whitespace trimmed.
+
+    GitHub accepts `if: ${{ !cancelled() }}` and the bare `if: !cancelled()`
+    interchangeably, so a comparison against either spelling alone would refuse a
+    workflow that is correct. Unwrapping makes the two one string.
+    """
+    text = str(value).strip()
+    if text.startswith("${{") and text.endswith("}}"):
+        text = text[3:-2].strip()
+    return text
+
+
+def _continues_on_error(node: dict[str, Any]) -> bool:
+    """Is `continue-on-error` set to anything other than a literal `false`?
+
+    ANY value other than `false` disqualifies, rather than only the boolean
+    `true`. `continue-on-error: "true"` is a string to a YAML parser and
+    `continue-on-error: ${{ … }}` is an expression this test cannot evaluate, and
+    both mean "this step's failure may be ignored". A gate whose result is
+    optional is not a gate, so the unreadable case is refused rather than
+    guessed at.
+    """
+    value = node.get("continue-on-error")
+    return value is not None and _expression(value).lower() != "false"
+
+
+def _step_enforces(job: dict[str, Any], step: dict[str, Any]) -> bool:
+    """Would this step's failure actually fail the run?
+
+    Three questions, and the module docstring records the injection each one
+    answers:
+
+    * the JOB carries no `if:` AT ALL. Not "no falsy `if:`" — the condition is a
+      GitHub expression evaluated against a context this test does not have, and
+      `github.event_name == 'schedule'` on a workflow with no `schedule` trigger
+      reads as perfectly ordinary while disabling every step underneath it. A
+      job whose execution cannot be established here is a job whose gates cannot
+      be counted;
+    * the STEP's `if:` is absent or exactly `!cancelled()`. That one condition is
+      permitted because it is the one the workflow actually uses and it makes a
+      step run MORE often, not less: it keeps each gate reporting after an
+      earlier one has failed;
+    * neither carries `continue-on-error`.
+    """
+    if "if" in job:
+        return False
+    if _continues_on_error(job) or _continues_on_error(step):
+        return False
+    condition = step.get("if")
+    return condition is None or _expression(condition) == CANCELLED_GUARD
+
+
+def enforcing_run_blocks() -> tuple[str, ...]:
+    """The `run:` blocks whose failure would fail the workflow. See `_step_enforces`."""
+    return tuple(
+        step["run"]
+        for job in jobs().values()
+        for step in (job.get("steps") or [])
+        if isinstance(step, dict) and isinstance(step.get("run"), str) and _step_enforces(job, step)
+    )
+
+
+def _tokenise(line: str) -> list[str]:
+    """One shell line as tokens, with any trailing `#` comment dropped.
+
+    `shlex` is what makes a QUOTED mention different from an invoked one:
+    `echo "TODO re-enable scripts/x.py"` tokenises to `['echo', 'TODO re-enable
+    scripts/x.py']`, in which the path is part of a token and is not one.
+
+    A line `shlex` cannot parse — an unbalanced quote, which shell here-docs and
+    `case` patterns produce legitimately — falls back to a whitespace split. That
+    is weaker, and it is stated rather than hidden: the fallback is per LINE, so
+    it degrades one line rather than the file, and no line in this repository's
+    workflow currently takes it.
+    """
+    try:
+        return shlex.split(line, comments=True)
+    except ValueError:
+        return line.split()
+
+
+def _invocations(block: str) -> list[list[str]]:
+    """Every command in a `run:` block, tokenised, that could actually invoke something.
+
+    `#`-comment LINES are dropped before anything else, so a gate cannot be
+    satisfied by a note saying it ought to run. It is REDUNDANT with `_tokenise`'s
+    `shlex.split(…, comments=True)`, which reduces a whole comment line to no
+    tokens — measured, see the module docstring's attribution table, where
+    disabling this strip let nothing through. It is kept because it is the
+    legible statement of the rule and because it covers the whole line rather
+    than relying on `shlex`'s treatment of `#`, and it is documented as redundant
+    rather than as load-bearing.
+
+    Tokens are cut at the shell's command separators, so each element of the
+    result is one command and its arguments — that is what makes "the first
+    token" mean the command word rather than whatever began the line.
+
+    A command whose command word is a pure-output builtin is DROPPED ENTIRELY.
+    Printing a gate's name is not running it, and `echo` is how the first
+    injection in the module docstring did exactly that.
+    """
+    commands: list[list[str]] = []
+    for raw in block.splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        current: list[str] = []
+        for token in _tokenise(line):
+            if token in SEGMENT_SEPARATORS:
+                if current:
+                    commands.append(current)
+                current = []
+            else:
+                current.append(token)
+        if current:
+            commands.append(current)
+    return [command for command in commands if command[0] not in OUTPUT_ONLY_COMMANDS]
+
+
+def _is_invoked(needle: str, commands: list[list[str]]) -> bool:
+    """Does some command contain `needle`'s tokens contiguously, in order?
+
+    A TOKEN SEQUENCE rather than a substring, and contiguous rather than merely
+    present. A single-token needle — which is what a hook naming a repository
+    path produces — reduces to exact token membership, so the workflow is still
+    free to wrap the script in `xargs`, a pipeline or extra flags. A multi-token
+    needle is a hook that names no path and is therefore identified by its whole
+    `entry`; requiring that entry to appear as a contiguous run is the narrowest
+    thing available when there is nothing shorter to match on.
+    """
+    wanted = _tokenise(needle)
+    if not wanted:
+        return False
+    width = len(wanted)
+    return any(
+        command[start : start + width] == wanted
+        for command in commands
+        for start in range(len(command) - width + 1)
     )
 
 
@@ -219,26 +454,42 @@ def test_the_backend_workflow_is_valid_yaml_and_every_job_has_steps() -> None:
 
 
 def test_every_gate_this_repository_defines_runs_as_a_workflow_step() -> None:
+    """Every local hook is INVOKED by a step whose failure fails the run.
+
+    Four properties, each measured against an injection that used to ship
+    `137 passed` — see the module docstring for all five.
+    """
     gates = local_hook_gates()
     assert gates, (
         f"derived no local hooks from {rel(PRE_COMMIT)} — the derivation is broken, "
         "and a broken derivation is a test that cannot fail"
     )
 
-    commands = "\n".join(run_blocks())
+    enforcing = enforcing_run_blocks()
+    assert enforcing, (
+        f"{rel(WORKFLOW)} has no run: step whose failure would fail the run. Every "
+        f"one of them is conditional, continue-on-error, or in a job carrying an "
+        f"if: — the assertion below is a loop over this and would report success "
+        f"for every gate."
+    )
+
+    commands = [command for block in enforcing for command in _invocations(block)]
     missing = {
-        hook_id: [needle for needle in needles if needle not in commands]
+        hook_id: [needle for needle in needles if not _is_invoked(needle, commands)]
         for hook_id, needles in gates.items()
     }
     missing = {hook_id: absent for hook_id, absent in missing.items() if absent}
 
     assert not missing, (
-        f"{rel(WORKFLOW)} runs no step for these {rel(PRE_COMMIT)} local hooks: "
+        f"{rel(WORKFLOW)} invokes no enforcing step for these {rel(PRE_COMMIT)} "
+        "local hooks: "
         + "; ".join(
-            f"{hook_id} (expected a run: naming {absent})" for hook_id, absent in missing.items()
+            f"{hook_id} (expected a run: invoking {absent})" for hook_id, absent in missing.items()
         )
-        + ". Every gate the hooks define must also be a step of its own, or CI "
-        "enforces less than a developer's pre-commit does."
+        + f". A step satisfies a gate only when it RUNS it — named as shell tokens "
+        f"rather than printed or commented out — and only when its failure counts: "
+        f"no continue-on-error, no if: other than {CANCELLED_GUARD}, and no if: on "
+        f"its job. Otherwise CI enforces less than a developer's pre-commit does."
     )
 
 
