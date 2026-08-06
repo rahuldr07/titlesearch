@@ -27,16 +27,29 @@ cross-tenant write, no chain of seven tables — that is Task 6, and duplicating
 half of it here would mean two places to update the day a policy changes. What
 this file proves is the SEAM: that the GUC is applied inside the transaction,
 that it does not survive the transaction, that a fresh pooled connection starts
-denied, that the connection `migrations/env.py` opens starts denied too, that a
-write made inside a block is still there after it, THAT A WRITE MADE INSIDE A
-BLOCK AN EXCEPTION ESCAPES IS NOT, and that the two public constructors carry —
+denied, that the connection `migrations/env.py` opens starts denied too, THAT A
+CONNECTION RETURNING TO THE POOL IS PUT BACK AT THE SENTINEL WHATEVER WAS DONE TO
+IT, that a write made inside a block is still there after it, THAT A WRITE MADE
+INSIDE A BLOCK AN EXCEPTION ESCAPES IS NOT, THAT A REPOSITORY OVER AN UNSCOPED
+SESSION IS REFUSED, THAT `is_local=True` REVERTS THE TENANT AT COMMIT WITH NO
+HELP FROM THE `checkin` LISTENER, and that the two public constructors carry —
 AND FORWARD — the parameters their callers depend on.
 
-The last four of those were added 2026-08-06, each after a mutation showed the
+The last seven of those were added 2026-08-06, each after a mutation showed the
 property was unpinned: `env.py`'s engine picked up `PGOPTIONS` and nothing
 noticed; `await session.commit()` could be deleted and the suite stayed green;
-and both pool bounds could be accepted and discarded and it stayed green again.
-Each mutation is recorded on the test that now closes it.
+both pool bounds could be accepted and discarded and it stayed green again; a
+non-local `set_config` survived the pool checkout with nothing red; a
+repository could be built over a session that had never named a tenant; and
+`_SET_CONFIG_IS_LOCAL` could be flipped to `False` with the whole suite green,
+because the `checkin` listener added that same day answers for the pooled
+connection whatever wrote the GUC. Each mutation is recorded on the test that
+now closes it.
+
+THE LAST OF THOSE IS THE ONE TO NOTICE: a stronger defence landing on top of a
+weaker one DELETED THE COVERAGE OF THE WEAKER ONE. Both are wanted, so the test
+that closes it detaches the upper defence for its own duration rather than
+choosing between them.
 
 TWO OF THOSE FOUR WERE RE-OPENED THE SAME DAY, BY A REVIEW THAT MUTATED THE
 COMMIT RATHER THAN DELETING IT, AND BOTH SHIPPED `195 passed`:
@@ -69,21 +82,36 @@ made Task 2's cardinality floor insufficient and Task 3's enum test compare a
 constant to itself.
 
 🔴 IT IS NOT THE ONLY TEST THAT GOES RED, WHICH IS WHAT THIS PARAGRAPH AND THE
-POSITIVE CONTROL'S OWN DOCSTRING BOTH SAID. MEASURED 2026-08-06, the
-`event.listen(...)` line in `titlepipe_core.db.session.tenant_session` deleted,
-whole suite, `197 passed` -> **10 failed**:
+POSITIVE CONTROL'S OWN DOCSTRING BOTH SAID.
 
-    tests/test_tenant_session.py      6 of 11
+🔴 AND THE FIRST CORRECTION WENT STALE THE SAME DAY. It recorded `197 passed ->
+10 failed` and named
+`test_1_the_tenant_does_not_survive_the_pool_checkout_into_the_next_session`,
+which had already been RENAMED to
+`test_1_a_second_scoped_session_on_the_reused_connection_sees_nothing`, and both
+counts had moved under it. A mutation result is a measurement of one tree, and
+citing it by name is what makes it checkable — so it has to be re-taken when the
+tree moves. RE-MEASURED 2026-08-06 against this tree, the `event.listen(...)`
+line in `titlepipe_core.db.session.tenant_session` deleted, whole
+`services/core-api` suite, `212 passed` -> **`13 failed, 199 passed`**:
+
+    tests/test_tenant_session.py      7 of 14
       test_tenant_session_applies_the_guc_inside_the_transaction
       test_the_positive_control_a_tenant_session_sees_that_tenants_own_row
       test_a_row_written_in_one_tenant_session_is_readable_from_the_next
       test_an_exception_escaping_the_block_leaves_the_flushed_write_behind_it
       test_the_tenant_does_not_survive_the_commit_onto_the_pooled_connection
+      test_is_local_true_alone_reverts_the_tenant_at_commit_with_the_checkin_
+        listener_detached
       test_the_repository_reads_and_writes_through_the_scoped_session
-    tests/test_tenant_isolation.py    4 of 7
-      test_1_the_tenant_does_not_survive_the_pool_checkout_into_the_next_session
+    tests/test_tenant_isolation.py    6 of 9
+      test_1_a_second_scoped_session_on_the_reused_connection_sees_nothing
+      test_1a_the_committed_tenant_leaves_the_deny_sentinel_on_the_pooled_
+        connection
       test_1b_the_positive_control_each_tenant_sees_its_own_rows_in_every_table
       test_2_a_write_carrying_another_tenants_id_is_refused_with_42501
+      test_2b_the_positive_write_control_audit_log_takes_a_row_keyed_to_the_
+        writer
       test_4_a_savepoint_rolled_back_leaves_the_tenant_established
 
 Every one of them either reads the GUC back or WRITES, and a write with no
@@ -108,6 +136,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from sqlalchemy.pool import QueuePool
 
 from titlepipe_core.db import TenantRepository, make_engine, make_sessionmaker, tenant_session
+from titlepipe_core.db import engine as engine_module
 from titlepipe_core.db.models import Order
 from titlepipe_domain import TenantId
 
@@ -153,6 +182,27 @@ MAX_OVERFLOW_ATTRIBUTE: str = "_max_overflow"
 def get_max_overflow(pool: QueuePool) -> object:
     """The pool's overflow ceiling, read off the only attribute that carries it."""
     return getattr(pool, MAX_OVERFLOW_ATTRIBUTE)
+
+
+# `titlepipe_core.db.engine._restore_deny_sentinel`, reached the same way and for
+# the same reason as `MAX_OVERFLOW_ATTRIBUTE` above: written out as an import it
+# is a pyright strict error — MEASURED 2026-08-06,
+# `"_restore_deny_sentinel" is private and used outside of the module in which it
+# is declared (reportPrivateUsage)` — and `pyproject.toml` says of the checker
+# configuration that "no type-safety rule is relaxed anywhere", which a
+# `# pyright: ignore` here would be relaxing by hand.
+#
+# THE UNDERSCORE STAYS ON THE SOURCE SIDE ON PURPOSE. `DENY_SENTINEL_OPTIONS` had
+# its underscore removed because a MIGRATION needs it; this is a pool listener,
+# and a public handle for detaching half the deny floor is a door added to the
+# production module for a test's convenience. A rename raises `AttributeError`
+# from `get_checkin_listener`, which fails loudly rather than silently skipping.
+CHECKIN_LISTENER_ATTRIBUTE: str = "_restore_deny_sentinel"
+
+
+def get_checkin_listener() -> Callable[..., None]:
+    """The `checkin` listener `make_engine` attaches, as the same object it attached."""
+    return getattr(engine_module, CHECKIN_LISTENER_ATTRIBUTE)
 
 
 def _seed_two_tenants(engine: Engine) -> dict[UUID, UUID]:
@@ -431,10 +481,12 @@ async def test_the_positive_control_a_tenant_session_sees_that_tenants_own_row(
     session then runs at the deny sentinel, sees nothing, and every "0 rows"
     assertion elsewhere is *more* satisfied than before.
 
-    IT IS NOT THE ONLY ONE THAT DOES, which is what this said. MEASURED
-    2026-08-06 with that line deleted: 10 failures, 6 in this file and 4 of the
-    7 in `tests/test_tenant_isolation.py` — the module docstring lists them by
-    name. What is true is narrower and is the reason this test exists: no
+    IT IS NOT THE ONLY ONE THAT DOES, which is what this said. RE-MEASURED
+    2026-08-06 against this tree with that line deleted: 13 failures, 7 of the 14
+    in this file and 6 of the 9 in `tests/test_tenant_isolation.py` — the module
+    docstring lists them by name, and records why the first version of this
+    sentence (`10`, `6 of 11`, `4 of 7`) went stale within the day.
+    What is true is narrower and is the reason this test exists: no
     assertion in this file that reads a COUNT OF ZERO can tell the listener's
     absence from its presence, and without this one the file's denials would all
     still pass against a seam that establishes no tenant at all.
@@ -484,6 +536,28 @@ async def test_a_row_written_in_one_tenant_session_is_readable_from_the_next(
     session is a second transaction, so a row that was rolled back by `close()`
     is not there — which is a silent removal of the whole persistence layer, with
     every handler in Plans 02-06 still returning 200.
+
+    🔴 IT IS NOT THE ONLY WITNESS ANY MORE, AND `session.py` AND THIS DOCSTRING
+       BOTH SAID IT WAS. It was true when written and stopped being true the same
+       day: `test_tenant_isolation.py::test_2b_the_positive_write_control_audit_
+       log_takes_a_row_keyed_to_the_writer` was added hours later and reads its
+       own committed row back from a second session too. RE-MEASURED 2026-08-06
+       against this tree, `await session.commit()` deleted and the
+       `finally: await session.close()` left alone, whole `services/core-api`
+       suite — `212 passed` -> **`2 failed, 210 passed`**:
+
+           tests/test_tenant_isolation.py::test_2b_the_positive_write_control_
+             audit_log_takes_a_row_keyed_to_the_writer
+           tests/test_tenant_session.py::test_a_row_written_in_one_tenant_
+             session_is_readable_from_the_next
+
+       Two, and no others. What this test still owns ALONE is the mutation
+       beneath that one — `session.add()` with no flush, so a commit that skips
+       the ORM unit of work is caught as well, where `test_2b` writes through
+       `session.execute(text(...))` and is already on the wire. MEASURED the same
+       way, `await session.commit()` replaced by
+       `await (await session.connection()).commit()`: **`1 failed, 211 passed`**,
+       and the one is this test.
 
     Same tenant on both sides, deliberately. A different tenant would make a
     missing row ambiguous between "never committed" and "committed and correctly
@@ -749,6 +823,207 @@ async def test_the_tenant_does_not_survive_the_commit_onto_the_pooled_connection
     assert list(leaked) == [], (
         f"a raw checkout of the reused connection read {list(leaked)} of "
         f"{len(seeded_orders)} tenants' rows without establishing a tenant"
+    )
+
+
+@pytest.mark.asyncio
+async def test_a_non_local_set_config_does_not_survive_the_pool_checkin(
+    app_dsn: str, tenant_guc: str, tenant_deny_sentinel: str, seeded_orders: dict[UUID, UUID]
+) -> None:
+    """🔴 THE OTHER HALF OF THE DENY FLOOR: `connect_args` PINS ONCE, AT OPEN.
+
+    Its sibling above proves that a NORMALLY established tenant does not survive
+    the commit, and it proves that because `is_local=True` reverts at commit. That
+    says nothing about a value written with `is_local => false`, which nothing
+    reverts. `session.py` already records the measurement that makes this reachable
+    rather than theoretical: an injected sub-select calling `set_config` re-tenants
+    a live session in one statement, and a custom GUC has no ACL to revoke, so
+    `titlepipe_app` cannot be stopped from doing it.
+
+    MEASURED 2026-08-06 against postgres:18.4 with `make_engine`'s `checkin`
+    listener REMOVED, `pool_size=1, max_overflow=0`: the second checkout of the
+    same backend read back `'2222'`, the tenant the first checkout had set. With
+    the listener attached it reads the deny sentinel.
+
+    THE POISON IS `TENANT_ONE`, A REAL SEEDED TENANT, and not a made-up string.
+    The harm is not that the GUC holds something; it is that the next request to
+    check this connection out reads another tenant's rows without establishing
+    anything, so the row assertion below is the one that matters and the GUC
+    assertion is how you find out why.
+
+    `pg_backend_pid()` IS ASSERTED EQUAL for the same reason the sibling does it:
+    a pool that handed back a different backend would make every assertion here a
+    statement about a fresh connection that was never poisoned.
+
+    THE FIRST CHECKOUT IS A RAW `engine.connect()` AND NOT A `tenant_session`.
+    `after_begin` would overwrite the poison with the block's own tenant, and
+    `set_config(…, false)` is deliberately something no code in `src/` writes —
+    this test stands in for the injected statement, which is the only way the
+    value gets set non-locally at all.
+    """
+    engine = make_engine(app_dsn, pool_size=1, max_overflow=0)
+    read = _read_the_guc(tenant_guc)
+    poison = select(func.set_config(tenant_guc, str(TENANT_ONE), False))
+    try:
+        async with engine.connect() as connection:
+            first_backend = (await connection.execute(select(func.pg_backend_pid()))).scalar_one()
+            await connection.execute(poison)
+            established = (await connection.execute(read)).scalar_one()
+            await connection.commit()
+
+        async with engine.connect() as connection:
+            second_backend = (await connection.execute(select(func.pg_backend_pid()))).scalar_one()
+            residual = (await connection.execute(read)).scalar_one()
+            leaked = (await connection.scalars(select(Order.id))).all()
+    finally:
+        await engine.dispose()
+
+    assert established == str(TENANT_ONE), (
+        f"the non-local set_config did not take ({established!r}), so this test "
+        f"never poisoned the connection it claims to check"
+    )
+    assert second_backend == first_backend, (
+        f"the pool handed back backend {second_backend} where the first checkout "
+        f"used {first_backend}, so this test says nothing about connection reuse"
+    )
+    assert residual == tenant_deny_sentinel, (
+        f"the pooled connection came back out holding {residual!r}. A non-local "
+        f"set_config is reverted by neither commit nor rollback, and connect_args "
+        f"only fires when the connection OPENS — so the next request to check this "
+        f"connection out runs as {TENANT_ONE} without ever having said so."
+    )
+    assert list(leaked) == [], (
+        f"a raw checkout of the reused connection read {list(leaked)} of "
+        f"{len(seeded_orders)} tenants' rows without establishing a tenant"
+    )
+
+
+@pytest.mark.asyncio
+async def test_is_local_true_alone_reverts_the_tenant_at_commit_with_the_checkin_listener_detached(
+    app_dsn: str, tenant_guc: str, tenant_deny_sentinel: str, seeded_orders: dict[UUID, UUID]
+) -> None:
+    """🔴 THE STRONGER FLOOR DELETED THE COVERAGE OF THE FLOOR BENEATH IT.
+
+    `_SET_CONFIG_IS_LOCAL` and `_restore_deny_sentinel` are two defences at two
+    moments and BOTH ARE WANTED — see `engine.py`'s opening for why neither covers
+    the other's case. But the second one hides the first from this suite. `RESET`
+    on checkin puts the GUC back whatever wrote it, so a pooled connection reads
+    the deny sentinel on its next checkout even when `is_local` has been flipped
+    off, and every reuse assertion in the file stays green.
+
+    MEASURED 2026-08-06, `_SET_CONFIG_IS_LOCAL = False` in
+    `titlepipe_core.db.session`, whole `services/core-api` suite:
+
+        with this test absent   ->  211 passed
+        with this test present  ->  1 failed, 211 passed
+
+    So this test takes the `checkin` listener OFF for its own duration and asks
+    the question again with nothing else answering it. `event.remove` is paired
+    with an `event.listen` in a `finally`, so the engine leaves this test in the
+    state it arrived in — that matters even though the engine is local and about
+    to be disposed, because a detached listener escaping into a shared fixture
+    would silently disarm the other half of the floor for every test after it.
+
+    THE REMOVAL IS ASSERTED TO HAVE HAD SOMETHING TO REMOVE. `event.contains` is
+    checked first: without it, renaming the listener or dropping the
+    `event.listen` in `make_engine` would turn this into a test of an engine that
+    never had the masking defence, which passes for the wrong reason.
+
+    Everything else is the sibling tests' shape and for their reasons:
+    `pool_size=1, max_overflow=0` is the only spelling of "the same connection,
+    twice"; `pg_backend_pid()` is asserted equal so the residual reading is about
+    the reused backend; and the row assertion is the one that says what the leak
+    would cost, the GUC assertion being how you find out why.
+    """
+    engine = make_engine(app_dsn, pool_size=1, max_overflow=0)
+    pool = engine.sync_engine.pool
+    listener = get_checkin_listener()
+    read = _read_the_guc(tenant_guc)
+
+    assert event.contains(pool, "checkin", listener), (
+        "make_engine did not attach _restore_deny_sentinel to the pool's checkin, "
+        "so there is nothing here for this test to detach and it would prove "
+        "is_local=True against an engine that never had the masking defence"
+    )
+    event.remove(pool, "checkin", listener)
+    try:
+        sessionmaker = make_sessionmaker(engine)
+        async with tenant_session(sessionmaker, TENANT_ONE) as session:
+            inside = (await session.execute(read)).scalar_one()
+            inside_backend = (await session.execute(select(func.pg_backend_pid()))).scalar_one()
+
+        async with engine.connect() as connection:
+            residual = (await connection.execute(read)).scalar_one()
+            reused_backend = (await connection.execute(select(func.pg_backend_pid()))).scalar_one()
+            leaked = (await connection.scalars(select(Order.id))).all()
+    finally:
+        event.listen(pool, "checkin", listener)
+        await engine.dispose()
+
+    assert inside == str(TENANT_ONE), (
+        f"the session never established its tenant ({inside!r}), so the assertions "
+        f"below are about a connection that carried nothing to revert"
+    )
+    assert reused_backend == inside_backend, (
+        f"the pool handed back backend {reused_backend} where the session used "
+        f"{inside_backend}, so this test says nothing about connection reuse. "
+        f"pool_size=1 with max_overflow=0 is what makes them the same connection."
+    )
+    assert residual == tenant_deny_sentinel, (
+        f"with the checkin listener detached, the committed transaction left "
+        f"{residual!r} on the pooled connection. `set_config`'s third argument is "
+        f"`is_local`, and only `True` reverts the value at COMMIT — "
+        f"`_SET_CONFIG_IS_LOCAL` is that argument. The suite cannot otherwise see "
+        f"this: `_restore_deny_sentinel` RESETs the GUC on checkin whatever it "
+        f"holds, which is why this test removes it before asking."
+    )
+    assert list(leaked) == [], (
+        f"a raw checkout of the reused connection read {list(leaked)} of "
+        f"{len(seeded_orders)} tenants' rows without establishing a tenant"
+    )
+
+
+@pytest.mark.asyncio
+async def test_a_repository_over_a_session_that_did_not_come_from_tenant_session_is_refused() -> (
+    None
+):
+    """🔴 `TenantRepository` OFFERED SCOPING AND DID NOT FORCE IT.
+
+    Its `session` parameter is annotated `AsyncSession`, and every `AsyncSession`
+    satisfies that — including one called straight off the `async_sessionmaker`
+    that `titlepipe_core.db.__all__` exports. Such a session has no `after_begin`
+    listener, so no tenant is ever applied to it and every read through the
+    repository is silently empty.
+
+    `tenant_session` marks the sessions it makes with `TENANT_SCOPED_MARK` in
+    `Session.info` and the constructor refuses anything without it. The error names
+    `tenant_session`, which is asserted rather than assumed: an exception that does
+    not say what to do instead is a puzzle rather than a fix.
+
+    NO DATABASE IS TOUCHED, and that is a property of the check rather than a
+    convenience. `async_sessionmaker(...)()` builds a session object without
+    acquiring a connection, so the refusal happens before anything is opened — the
+    unreachable DSN is what proves it. Making this check `async` and asking the
+    server for `current_setting` instead would be a round trip inside a
+    constructor, and the GUC is enforced by the policy regardless.
+
+    THE ACCEPTING CASE IS NOT ASSERTED HERE because every other repository test in
+    this file is that assertion: they all construct a `TenantRepository` inside a
+    `tenant_session` block, and a mark that failed to be written turns all of them
+    red.
+    """
+    engine = create_async_engine(UNREACHABLE_DSN)
+    try:
+        unscoped = async_sessionmaker(engine, expire_on_commit=False)()
+        with pytest.raises(RuntimeError, match="tenant_session") as refusal:
+            TenantRepository(unscoped, Order)
+        await unscoped.close()
+    finally:
+        await engine.dispose()
+
+    assert "tenant_session" in str(refusal.value), (
+        f"the refusal reads {str(refusal.value)!r} and does not name the thing to "
+        f"use instead, so a caller who hits it has to read this module to fix it"
     )
 
 

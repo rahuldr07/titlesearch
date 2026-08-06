@@ -39,12 +39,12 @@ from __future__ import annotations
 
 import re
 import subprocess
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from pathlib import Path
 from typing import NamedTuple
 
 import pytest
-from sqlalchemy import Connection, create_engine, text
+from sqlalchemy import URL, Connection, create_engine, make_url, text
 from sqlalchemy.exc import OperationalError, ProgrammingError
 
 # The same import `conftest.py` uses, and for the same reason: `testcontainers.
@@ -116,6 +116,44 @@ DECOY_ROLE = "titlepipexdecoy"
 SECOND_GRANTOR_ROLE = "dba"
 SECOND_GRANTOR_PASSWORD = "dba-throwaway"
 
+# 🔴 THE NON-SUPERUSER OPERATOR, AND WHY THIS BLOCK EXISTS AT ALL.
+#
+# `conftest.py`'s `roles_applied` runs `roles.sql` as the CONTAINER SUPERUSER,
+# and until 2026-08-06 that was the only way this suite ever ran it. So the
+# entire `NOT rolsuper` branch of that file — the portability ruling, three
+# refusals, two warnings and every `CASE WHEN ... rolsuper` in it — was
+# unexecuted by any test, and the three defects those tests now catch (C2, C3,
+# C5 below) all lived exclusively on that branch. A green suite said nothing
+# about it.
+#
+# THE SHAPE BEING REPRODUCED is the one RDS, Cloud SQL, Neon and Supabase hand
+# you and the one `roles.sql`'s ruling is written for: a `LOGIN CREATEROLE` role
+# that OWNS ITS OWN DATABASE and holds no `rolsuper`. Owning the database is
+# what gives it `pg_database_owner`, and therefore the grant option on schema
+# `public` that the two `GRANT`s at the bottom of `roles.sql` need.
+#
+# A DEDICATED CONTAINER, NOT THE SESSION ONE, AND THAT IS FORCED RATHER THAN
+# TIDY. Roles are CLUSTER-wide. The session container already holds the five
+# `titlepipe_*` roles, created by the superuser, and a `CREATEROLE` operator
+# holds no `ADMIN OPTION` on roles it did not create — so `roles.sql` run
+# against a second database of the SAME cluster dies at the owner's `ALTER
+# ROLE` with `permission denied to alter role / Only roles with the CREATEROLE
+# attribute and the ADMIN option on role "titlepipe_owner" may alter this role`.
+# MEASURED 2026-08-06 while building this fixture, by doing exactly that.
+#
+# Passwords here are literals for the same reason `SECOND_GRANTOR_PASSWORD` is:
+# they belong to a container destroyed before the module finishes.
+OPERATOR_ROLE = "tp_operator"
+OPERATOR_PASSWORD = "operator-throwaway"
+OPERATOR_DATABASE = "tp_operator_db"
+
+# A database owned by the CONTAINER SUPERUSER rather than by the operator, used
+# by the read-back tests. In it the operator holds no grant option on schema
+# `public`, so its `GRANT`s are `WARNING: no privileges were granted for
+# "public"` and no-ops — which is the only state in which the two read-backs at
+# the foot of `roles.sql` have anything to catch.
+UNOWNED_DATABASE = "tp_unowned_db"
+
 # 🔴 THE ONE ROLE NAME THIS MODULE SPELLS, and it is a literal only because
 # there is no fixture for it. `conftest.py` exposes `owner_role`, `app_role` and
 # `migration_role`; it has no `worker_role`, and `managed_roles` is a tuple whose
@@ -125,6 +163,12 @@ SECOND_GRANTOR_PASSWORD = "dba-throwaway"
 # `conftest.py` fails on that line — naming the mismatch — rather than in a
 # catalog comparison against a role nobody creates.
 WORKER_ROLE = "titlepipe_worker"
+
+# ...and the second, for the same reason and with the same guard. `conftest.py`
+# has no `blind_role` fixture either. Every test below that uses it asserts it
+# is in `managed_roles` first, so a rename in `conftest.py` fails on that line
+# rather than in a catalog comparison against a role nobody creates.
+BLIND_ROLE = "titlepipe_blind"
 
 # Every role attribute `roles.sql` converges, in the spelling `ALTER ROLE`
 # takes, paired with the drifted value the convergence test plants. `CREATE ROLE`
@@ -348,17 +392,41 @@ def _titlepipe_default_privileges(dsn: str, pattern: str) -> list[tuple[str, str
     A grantee that IS the owner is excluded, matching `roles.sql`: revoking it
     would strip the owner's own default privileges on its own future objects,
     which is drift rather than convergence.
+
+    🔴 `LEFT JOIN` ON THE GRANTEE, AND `grantee = 0` SPELLED `PUBLIC`. This was
+    an INNER join until 2026-08-06, and so was the pass in `roles.sql` it exists
+    to check — which means the one grantee that reaches every role in the
+    cluster at once was invisible to both. `aclexplode` reports a grant to
+    `PUBLIC` as `grantee = 0` and no row of `pg_roles` has oid 0, so the join
+    dropped it. MEASURED 2026-08-06 against postgres:18.4:
+
+        ALTER DEFAULT PRIVILEGES FOR ROLE titlepipe_owner IN SCHEMA public
+            GRANT ALL ON TABLES TO PUBLIC;
+        -- pg_default_acl:   {=arwdDxtm/titlepipe_owner}
+        -- this helper:      []
+        -- statements roles.sql generated for it:  none
+
+    `test_no_default_privileges_reach_a_titlepipe_role` therefore read `[]` and
+    passed over a row handing full `arwdDxtm` on every table Task 4 and every
+    later migration creates to everybody, `titlepipe_blind` included.
+
+    A `PUBLIC` grantee is matched on the OWNER side only, exactly as `roles.sql`
+    matches it: `PUBLIC` is not a `titlepipe\\_%` name, so the row qualifies
+    because a role this file manages is giving its future objects away. A
+    `FOR ROLE seam_admin ... TO PUBLIC` row is somebody else's business and
+    neither this helper nor `roles.sql` touches it.
     """
     engine = create_engine(dsn)
     try:
         with engine.connect() as connection:
             result = connection.execute(
                 text(
-                    "SELECT owner.rolname, d.defaclobjtype, grantee.rolname "
+                    "SELECT owner.rolname, d.defaclobjtype, "
+                    "CASE WHEN a.grantee = 0 THEN 'PUBLIC' ELSE grantee.rolname END "
                     "FROM pg_default_acl d "
                     "JOIN pg_roles owner ON owner.oid = d.defaclrole "
                     "CROSS JOIN LATERAL aclexplode(d.defaclacl) AS a "
-                    "JOIN pg_roles grantee ON grantee.oid = a.grantee "
+                    "LEFT JOIN pg_roles grantee ON grantee.oid = a.grantee "
                     "WHERE a.grantee <> d.defaclrole "
                     "AND (owner.rolname LIKE :pattern OR grantee.rolname LIKE :pattern)"
                 ),
@@ -1429,9 +1497,12 @@ def test_a_table_created_without_set_role_is_refused_outright(
     """🔴 THE TASK 3 HAND-OFF, ENFORCED BY THE DATABASE RATHER THAN REQUESTED.
 
     `migrations/env.py` MUST issue `SET ROLE titlepipe_owner` immediately after
-    connecting and BEFORE `context.begin_transaction()`. It does, at
-    `migrations/env.py:255`. This test is what makes DELETING it impossible to
-    miss, from the roles side, without a schema.
+    connecting and BEFORE `context.begin_transaction()`. It does, in
+    `run_migrations_online`, on the line above its `connection.commit()`. (This
+    said `migrations/env.py:255` and the statement is at 264 — a line number is a
+    cross-reference that goes stale without anybody editing either end.) This
+    test is what makes DELETING it impossible to miss, from the roles side,
+    without a schema.
 
     (This read "Alembic is not initialised yet — Task 3 owns that, and this task
     does not scaffold it." Task 3 landed. Nothing about the test changes: it
@@ -1747,6 +1818,1042 @@ def test_schema_public_grants_usage_to_the_owner_and_both_service_roles(
             )
     finally:
         restored.dispose()
+
+
+def test_the_two_role_names_this_module_spells_are_roles_conftest_creates(
+    managed_roles: tuple[str, ...],
+) -> None:
+    """`WORKER_ROLE` and `BLIND_ROLE` are literals; this is what keeps them honest.
+
+    `conftest.py` exposes `owner_role`, `app_role` and `migration_role` as
+    fixtures and does not expose the other two, and `managed_roles` is a tuple
+    whose ORDER is not part of any contract — so indexing it would be worse than
+    writing the names. Writing them means they can drift.
+
+    Several tests below assert privileges and default-privilege rows for these
+    two by name. Without this, a rename in `conftest.py` would surface as a
+    catalog comparison failing against a role nobody creates, which names the
+    symptom and not the cause. This names the cause, on one line.
+    """
+    assert {WORKER_ROLE, BLIND_ROLE} <= set(managed_roles), (
+        f"this module spells {sorted({WORKER_ROLE, BLIND_ROLE} - set(managed_roles))}, "
+        f"which conftest.py does not say roles.sql creates ({sorted(managed_roles)})"
+    )
+
+
+def _dsn_for(dsn: str, role: str, password: str, database: str) -> str:
+    """The same server, reached as `role` against `database`.
+
+    `conftest.py`'s `_role_dsn` cannot be used here: it keeps `url.database`,
+    and every test below needs a DIFFERENT database on the same cluster — the
+    operator's own, or one it deliberately does not own. The query is dropped
+    for the reason that helper records, and `_libpq_environment` refuses a DSN
+    carrying one anyway.
+    """
+    url = make_url(dsn)
+    return URL.create(
+        drivername=url.drivername,
+        username=role,
+        password=password,
+        host=url.host,
+        port=url.port,
+        database=database,
+    ).render_as_string(hide_password=False)
+
+
+def _autocommit(dsn: str, statements: Sequence[str]) -> None:
+    """Run `statements` outside a transaction. `CREATE DATABASE` needs that."""
+    engine = create_engine(dsn, isolation_level="AUTOCOMMIT")
+    try:
+        with engine.connect() as connection:
+            for statement in statements:
+                connection.execute(text(statement))
+    finally:
+        engine.dispose()
+
+
+def _execute(dsn: str, statements: Sequence[str]) -> None:
+    engine = create_engine(dsn)
+    try:
+        with engine.begin() as connection:
+            for statement in statements:
+                connection.execute(text(statement))
+    finally:
+        engine.dispose()
+
+
+def _scalar(dsn: str, query: str, **parameters: object) -> object:
+    """One value off a fresh connection, with binds.
+
+    `**parameters` is not decoration. Every literal these tests want to push
+    into a query — a role name, a privilege name, a canary string inside a
+    `LIKE` — goes through a bind, so nothing here is built by interpolation.
+    That keeps `S608` honest rather than suppressed: a `noqa` on a query built
+    from a canary would be a `noqa` the next person copies onto one built from
+    something they do not control.
+    """
+    engine = create_engine(dsn)
+    try:
+        with engine.connect() as connection:
+            return connection.execute(text(query), parameters).scalar_one()
+    finally:
+        engine.dispose()
+
+
+@pytest.fixture(scope="module")
+def non_superuser_operator(
+    postgres_container_factory: Callable[[str], PostgresContainer],
+) -> Iterator[tuple[str, str]]:
+    """A cluster whose operator is `LOGIN CREATEROLE` and owns its own database.
+
+    Yields `(admin_dsn, operator_dsn)` — the container superuser, for planting
+    drift and reading the catalog back, and the operator, which is what
+    `roles.sql` is run as.
+
+    See `OPERATOR_ROLE` above for why this needs a container of its own and why
+    the whole non-superuser branch of `roles.sql` was unexecuted before this
+    fixture existed.
+
+    Module-scoped, so the four tests that use it share one container start. Each
+    of them restores whatever it planted, because they share it.
+    """
+    with postgres_container_factory("non-superuser-throwaway") as started:
+        admin = started.get_connection_url()
+        _autocommit(
+            admin,
+            (
+                f"CREATE ROLE {OPERATOR_ROLE} LOGIN CREATEROLE PASSWORD '{OPERATOR_PASSWORD}'",
+                f"CREATE DATABASE {OPERATOR_DATABASE} OWNER {OPERATOR_ROLE}",
+            ),
+        )
+        yield admin, _dsn_for(admin, OPERATOR_ROLE, OPERATOR_PASSWORD, OPERATOR_DATABASE)
+
+
+def test_a_non_superuser_operator_can_apply_roles_sql_end_to_end(
+    non_superuser_operator: tuple[str, str],
+    role_passwords: Mapping[str, str],
+    titlepipe_role_pattern: str,
+    apply_roles_sql: Callable[[str, Mapping[str, str]], subprocess.CompletedProcess[str]],
+    owner_role: str,
+    app_role: str,
+    migration_role: str,
+    managed_roles: tuple[str, ...],
+) -> None:
+    """🔴 THE PORTABILITY RULING, EXERCISED. Nothing ran this branch before.
+
+    `roles.sql`'s header states the ruling — the four dangerous attributes are
+    NAMED in `ALTER ROLE` only under `rolsuper`, and everywhere else they are
+    omitted and a WARNING names them — and records a 2026-08-05 measurement of a
+    `CREATEROLE` operator running the file end to end. That measurement was made
+    by hand and never became a test, so every `CASE WHEN ... rolsuper` in the
+    file, all three refusals on that branch and both of its warnings were
+    unexecuted by this suite. The three defects the tests below catch were all
+    on it.
+
+    THIS IS THE HAPPY PATH AND IT IS ASSERTED FIRST, because the three refusals
+    that follow are worthless without it: a `roles.sql` that refused on every
+    non-superuser cluster would satisfy all three and be unrunnable everywhere
+    this ruling exists to support. So a clean run must exit 0, create five
+    roles, land the membership with the right options, land both schema grants,
+    and warn about exactly what it could not do.
+
+    THE TWO WARNINGS ARE ASSERTED BY NAME. They are the degraded path's only
+    output, and a run that stopped emitting them would be indistinguishable from
+    a superuser run in the one place an operator looks.
+
+    The four dangerous attributes are asserted CLEAR, which on this path is a
+    claim about `CREATE ROLE` rather than about `ALTER ROLE`: `CREATE ROLE`
+    accepts `NOSUPERUSER NOBYPASSRLS NOCREATEDB NOREPLICATION` from a
+    non-superuser and `ALTER ROLE` does not, and the header calls that "the one
+    place the degraded path still converges all four".
+    """
+    admin, operator = non_superuser_operator
+
+    result = apply_roles_sql(operator, role_passwords)
+    assert result.returncode == 0, (
+        f"roles.sql exited {result.returncode} as a non-superuser operator "
+        f"against its own database:\n{result.stdout}\n{result.stderr}"
+    )
+    assert bool(_scalar(operator, "SELECT NOT rolsuper FROM pg_roles WHERE rolname = current_user"))
+
+    assert "SUPERUSER, BYPASSRLS, CREATEDB and REPLICATION could not be NAMED" in result.stderr, (
+        f"the degraded run did not say what it skipped:\n{result.stderr}"
+    )
+    assert "log_min_error_statement could not be set to panic" in result.stderr, (
+        f"the degraded run did not name the logging residual:\n{result.stderr}"
+    )
+
+    rows = _catalog(admin, titlepipe_role_pattern)
+    assert set(managed_roles) | {owner_role} <= set(rows), sorted(rows)
+    for name, attributes in sorted(rows.items()):
+        assert attributes.is_superuser is False, name
+        assert attributes.bypasses_rls is False, name
+        assert attributes.can_create_databases is False, name
+        assert attributes.can_replicate is False, name
+        assert attributes.can_create_roles is False, name
+
+    # The membership, and the operator's own auto-granted `ADMIN OPTION` rows
+    # beside it. PostgreSQL 16+ grants the creator membership of every role it
+    # creates; `roles.sql` exempts those rows from its own REVOKE on purpose,
+    # because revoking them leaves a cluster it can never manage again.
+    edges = {
+        (edge.granted, edge.member): edge
+        for edge in _titlepipe_edges(admin, titlepipe_role_pattern)
+    }
+    assert (owner_role, migration_role) in edges, sorted(edges)
+    assert edges[(owner_role, migration_role)].inherits is False
+    assert edges[(owner_role, migration_role)].can_set is True
+    assert {member for _, member in edges} - {migration_role} == {OPERATOR_ROLE}, (
+        f"the only members of a titlepipe role may be {migration_role} and the "
+        f"operator's own auto-granted rows; found {sorted(edges)}"
+    )
+
+    # Both schema grants landed. The operator owns this database, so it holds
+    # `pg_database_owner` and the grants are not the no-op warning the read-backs
+    # at the foot of `roles.sql` exist to catch.
+    granted = _scalar(
+        operator,
+        "SELECT count(*) FROM unnest(CAST(:roles AS text[]), CAST(:privileges AS text[])) "
+        "     AS wanted (role, privilege) "
+        "WHERE EXISTS ("
+        "  SELECT 1 FROM pg_namespace n "
+        "  CROSS JOIN LATERAL aclexplode(n.nspacl) AS a "
+        "  WHERE n.nspname = 'public' AND a.grantee = wanted.role::regrole "
+        "    AND a.privilege_type = wanted.privilege)",
+        roles=[owner_role, owner_role, app_role, WORKER_ROLE],
+        privileges=["CREATE", "USAGE", "USAGE", "USAGE"],
+    )
+    assert int(str(granted)) == 4, (
+        "the four explicit schema grants roles.sql makes did not all land in the "
+        "operator's own database"
+    )
+
+    assert _role_settings(admin, titlepipe_role_pattern) == []
+    assert _titlepipe_default_privileges(admin, titlepipe_role_pattern) == []
+
+
+def test_the_non_superuser_path_refuses_an_attribute_it_cannot_clear(
+    non_superuser_operator: tuple[str, str],
+    role_passwords: Mapping[str, str],
+    titlepipe_role_pattern: str,
+    apply_roles_sql: Callable[[str, Mapping[str, str]], subprocess.CompletedProcess[str]],
+    app_role: str,
+) -> None:
+    """🔴 C5. `BYPASSRLS` on `titlepipe_app`, and the run used to exit 0.
+
+    MEASURED 2026-08-06 against postgres:18.4 BEFORE the read-back was added,
+    with this exact arrangement:
+
+        ALTER ROLE titlepipe_app BYPASSRLS;   -- as the container superuser
+        <roles.sql, as the operator>          -- exit 0, two WARNINGs
+        pg_authid: titlepipe_app rolbypassrls -> t
+
+    `titlepipe_app` is the role core-api connects as. `BYPASSRLS` makes every
+    policy Task 4 writes advisory for it — silently, because no policy, grant or
+    trigger looks different. The operator was told that the four attributes
+    "could not be NAMED ... and are therefore NOT converged", which is a
+    statement about the mechanism and not about this cluster, and then got
+    exit 0.
+
+    The `ALTER ROLE`s still cannot clear it; that is the ruling and it is not
+    being relitigated. What changed is that the catalog is read back afterwards,
+    so "not converged" is now a refusal that names the role and the attribute
+    rather than a warning followed by success.
+
+    THE ROLLBACK IS ASSERTED, not just the exit status. `roles.sql` is one
+    transaction and a refusal must leave the cluster as it found it — so the
+    password planted by this run must NOT have taken effect. Checking that is
+    what distinguishes a refusal from a failure that happened to be late.
+
+    ALL FOUR ATTRIBUTES ARE DRIVEN, ONE AT A TIME, and they do NOT all refuse
+    the same way. The message is built by `string_agg` over a `VALUES` list, so a
+    `CASE` naming only one of them would pass a test written on `BYPASSRLS`
+    alone — but three of the four never reach that read-back at all. MEASURED
+    2026-08-06 against postgres:18.4, each attribute planted on `titlepipe_app`
+    by the container superuser and then the operator's own `ALTER ROLE
+    titlepipe_app LOGIN NOCREATEROLE INHERIT VALID UNTIL 'infinity' CONNECTION
+    LIMIT -1 PASSWORD …` issued by hand:
+
+        BYPASSRLS    -> ALTER ROLE          (accepted)
+        CREATEDB     -> ALTER ROLE          (accepted)
+        REPLICATION  -> ALTER ROLE          (accepted)
+        SUPERUSER    -> ERROR: permission denied to alter role
+                        DETAIL: Only roles with the SUPERUSER attribute may
+                                alter roles with the SUPERUSER attribute.
+
+    So `SUPERUSER` IS SELF-DEFENDING and the other three are not. A pre-existing
+    superuser `titlepipe_*` role stops `roles.sql` dead at the LOGIN roles'
+    `ALTER ROLE`, which is fail-closed and always was — that path needed no fix
+    and does not have one. `BYPASSRLS`, `CREATEDB` and `REPLICATION` let the
+    `ALTER ROLE` through, because the rule is about NAMING the attribute in the
+    statement and not about the target holding it, and those three are the ones
+    that used to reach exit 0. They are what the read-back is for.
+
+    Both shapes are asserted, per attribute, rather than collapsed into "it
+    refuses somehow": a change that made `BYPASSRLS` fail with PostgreSQL's
+    generic permission error instead of the named read-back would be a
+    regression in what the operator is told, and a test asserting only
+    `returncode != 0` would not see it.
+    """
+    admin, operator = non_superuser_operator
+
+    assert apply_roles_sql(operator, role_passwords).returncode == 0
+    before = _catalog(admin, titlepipe_role_pattern)
+
+    for attribute, column, expected in (
+        ("BYPASSRLS", "bypasses_rls", f"{app_role} has BYPASSRLS"),
+        ("CREATEDB", "can_create_databases", f"{app_role} has CREATEDB"),
+        ("REPLICATION", "can_replicate", f"{app_role} has REPLICATION"),
+        # PostgreSQL's own refusal, at the ALTER ROLE, before the read-back.
+        ("SUPERUSER", "is_superuser", "Only roles with the SUPERUSER attribute"),
+    ):
+        try:
+            _execute(admin, (f"ALTER ROLE {app_role} {attribute}",))
+            assert getattr(_catalog(admin, titlepipe_role_pattern)[app_role], column) is True, (
+                f"{attribute} did not plant, so this test proves nothing"
+            )
+
+            result = apply_roles_sql(operator, {**role_passwords, app_role: "must-not-take"})
+
+            assert result.returncode != 0, (
+                f"{app_role} holds {attribute}, which this session cannot clear, "
+                f"and roles.sql reported success:\n{result.stdout}"
+            )
+            assert expected in result.stderr, (
+                f"{attribute} was refused, but not with the message this test "
+                f"expects:\n{result.stderr}"
+            )
+        finally:
+            _execute(admin, (f"ALTER ROLE {app_role} NO{attribute}",))
+
+    # The whole file is one transaction, so the refusals above must have rolled
+    # back the password each of them tried to set.
+    assert apply_roles_sql(operator, role_passwords).returncode == 0
+    assert _catalog(admin, titlepipe_role_pattern) == before
+
+
+def test_the_non_superuser_path_refuses_a_membership_it_cannot_revoke(
+    non_superuser_operator: tuple[str, str],
+    role_passwords: Mapping[str, str],
+    titlepipe_role_pattern: str,
+    apply_roles_sql: Callable[[str, Mapping[str, str]], subprocess.CompletedProcess[str]],
+    owner_role: str,
+    app_role: str,
+) -> None:
+    """🔴 C3. The two-hop bypass, reached in one hop through "warn and continue".
+
+    `roles.sql`'s membership pass skips rows whose grantor the session does not
+    hold, because `ON_ERROR_STOP` would otherwise turn one such row into an
+    unreadable `permission denied to revoke privileges granted by role "x"`.
+    That skip is correct. Warning about it and then exiting 0 was not.
+
+    MEASURED 2026-08-06 against postgres:18.4, before the refusal was added:
+
+        GRANT titlepipe_owner TO titlepipe_app;   -- as the container superuser,
+                                                  -- so the grantor is the
+                                                  -- bootstrap superuser
+        <roles.sql, as the operator>              -- exit 0, WARNING naming the edge
+        pg_auth_members: titlepipe_owner <- titlepipe_app
+                         (inherit=t, set=t)          SURVIVED
+        as titlepipe_app: SET ROLE titlepipe_owner; SELECT current_user;
+        -> titlepipe_owner
+
+    That is the escalation the header of `roles.sql` opens with — `titlepipe_app`
+    becomes the owner of every table and can `ALTER TABLE ... NO FORCE ROW LEVEL
+    SECURITY` and `DROP POLICY` — and the file's own account of the two-hop bug
+    is that a convergence which reports success while leaving a path to the
+    owner is this block's characteristic failure.
+
+    THE ESCALATION IS DEMONSTRATED, not inferred. `SET ROLE` is actually issued
+    over a `titlepipe_app` connection, because "the row is still in
+    `pg_auth_members`" and "a LOGIN role can become the owner" are different
+    claims and only the second one is the reason to care.
+
+    THE OPERATOR'S OWN AUTO-GRANTED ROWS MUST NOT TRIGGER THIS, and that is the
+    other half of the test. PostgreSQL 16+ grants a `CREATEROLE` creator
+    membership `WITH ADMIN OPTION` of every role it creates, and MEASURED
+    2026-08-06 it records the BOOTSTRAP SUPERUSER as the grantor — so those rows
+    are un-revokable by the operator too. Without the `member = current_user AND
+    admin_option` exemption this refusal would fire on every non-superuser run,
+    including the clean one above. `test_a_non_superuser_operator_can_apply_
+    roles_sql_end_to_end` is what holds that, by exiting 0 with those four rows
+    present.
+    """
+    admin, operator = non_superuser_operator
+
+    assert apply_roles_sql(operator, role_passwords).returncode == 0
+    try:
+        _execute(admin, (f"GRANT {owner_role} TO {app_role}",))
+
+        planted = [
+            edge
+            for edge in _titlepipe_edges(admin, titlepipe_role_pattern)
+            if (edge.granted, edge.member) == (owner_role, app_role)
+        ]
+        assert len(planted) == 1, (
+            f"the stray grant did not plant, so this test proves nothing: {planted}"
+        )
+        assert planted[0].can_set is True, (
+            f"the stray grant cannot SET ROLE, so it is not the escalation this "
+            f"test is about: {planted}"
+        )
+        assert planted[0].grantor != OPERATOR_ROLE, (
+            "the grantor is the operator itself, so this row IS revokable and "
+            "the skip-and-refuse path is not being exercised"
+        )
+
+        result = apply_roles_sql(operator, role_passwords)
+
+        assert result.returncode != 0, (
+            f"a membership this session cannot revoke survived and roles.sql "
+            f"reported success:\n{result.stdout}"
+        )
+        assert f"{owner_role} <- {app_role}" in result.stderr, (
+            f"the refusal does not name the edge it could not revoke:\n{result.stderr}"
+        )
+        assert "refusing to finish" in result.stderr
+
+        # ...and the reason it matters, over the wire.
+        app = create_engine(_dsn_for(admin, app_role, role_passwords[app_role], OPERATOR_DATABASE))
+        try:
+            with app.connect() as connection:
+                connection.execute(text(f"SET ROLE {owner_role}"))
+                became = str(connection.execute(text("SELECT current_user")).scalar_one())
+        finally:
+            app.dispose()
+        assert became == owner_role, (
+            "the edge survived but SET ROLE did not work, so this test is no "
+            "longer demonstrating the escalation it was written for"
+        )
+    finally:
+        _execute(admin, (f"REVOKE {owner_role} FROM {app_role}",))
+
+    assert apply_roles_sql(operator, role_passwords).returncode == 0, (
+        "the cluster was left in a state roles.sql refuses on, so every later "
+        "test in this module would fail for the wrong reason"
+    )
+
+
+def test_the_non_superuser_path_refuses_default_privileges_it_cannot_revoke(
+    non_superuser_operator: tuple[str, str],
+    role_passwords: Mapping[str, str],
+    titlepipe_role_pattern: str,
+    apply_roles_sql: Callable[[str, Mapping[str, str]], subprocess.CompletedProcess[str]],
+    container_superuser: str,
+) -> None:
+    """🔴 The default-privileges twin of the test above, and the longer-reaching one.
+
+    `ALTER DEFAULT PRIVILEGES FOR ROLE <r>` requires the session to HOLD `<r>`,
+    and a `CREATEROLE` operator does not hold even the roles it created —
+    PostgreSQL 16's `createrole_self_grant` defaults to empty, so the creator's
+    implicit membership carries `ADMIN` but neither `INHERIT` nor `SET`. So the
+    pass skips those rows. It used to warn and exit 0 over them.
+
+    THIS IS THE ONE WITH THE LONGEST REACH, which is why it is a refusal rather
+    than a warning even though the same argument could be made for leaving it
+    alone: default privileges are the only grant mechanism in PostgreSQL that
+    attaches to objects THAT DO NOT EXIST YET. A row left behind here applies to
+    every table every later migration creates, and appears on no table anybody
+    can inspect today — `roles.sql`'s header makes exactly that argument as its
+    reason for converging this catalog at all while deliberately not converging
+    ordinary table grants.
+
+    The row is planted `FOR ROLE <container superuser>`, which the operator
+    certainly does not hold, with a `titlepipe_*` role as the GRANTEE — the
+    grantee-side shape, which the owner-side filter alone would miss.
+
+    🔴 IT IS PLANTED IN THE OPERATOR'S OWN DATABASE, AND THE FIRST VERSION OF
+    THIS TEST PLANTED IT IN THE CONTAINER'S AND FAILED. `pg_default_acl` is NOT
+    a shared catalog. MEASURED 2026-08-06 against postgres:18.4:
+
+        SELECT relname, relisshared FROM pg_class WHERE relname IN (...)
+        pg_authid           t
+        pg_auth_members     t
+        pg_db_role_setting  t
+        pg_default_acl      f      <-- per database
+        pg_namespace        f
+
+    So a default privilege planted in database A is invisible from database B,
+    and `roles.sql`'s convergence of this catalog reaches only the database it
+    is run against — unlike its role, membership and per-role-setting passes,
+    every one of which is cluster-wide. That is a residual rather than a defect
+    and `roles.sql`'s header now names it; the file already says it must be run
+    once per database TitlePipe owns tables in, and this is a second reason why.
+    """
+    admin, operator = non_superuser_operator
+    admin_url = make_url(admin)
+    superuser_there = _dsn_for(
+        admin, admin_url.username or "", admin_url.password or "", OPERATOR_DATABASE
+    )
+
+    assert apply_roles_sql(operator, role_passwords).returncode == 0
+    try:
+        _execute(
+            superuser_there,
+            (
+                f"ALTER DEFAULT PRIVILEGES FOR ROLE {container_superuser} IN SCHEMA public "
+                f"GRANT SELECT ON TABLES TO {BLIND_ROLE}",
+            ),
+        )
+        assert _titlepipe_default_privileges(superuser_there, titlepipe_role_pattern) != [], (
+            "the default privilege did not plant, so this test proves nothing"
+        )
+
+        result = apply_roles_sql(operator, role_passwords)
+
+        assert result.returncode != 0, (
+            f"a default privilege this session cannot revoke survived and "
+            f"roles.sql reported success:\n{result.stdout}"
+        )
+        assert f"grants TABLES to {BLIND_ROLE}" in result.stderr, (
+            f"the refusal does not identify the row — an owner/grantee pair is "
+            f"not a row, because there is one per object type per schema:\n"
+            f"{result.stderr}"
+        )
+        assert "objects that do not exist yet" in result.stderr
+    finally:
+        _execute(
+            superuser_there,
+            (
+                f"ALTER DEFAULT PRIVILEGES FOR ROLE {container_superuser} IN SCHEMA public "
+                f"REVOKE ALL ON TABLES FROM {BLIND_ROLE}",
+            ),
+        )
+
+    assert apply_roles_sql(operator, role_passwords).returncode == 0
+
+
+def test_the_schema_read_backs_refuse_when_public_supplies_the_privilege(
+    non_superuser_operator: tuple[str, str],
+    role_passwords: Mapping[str, str],
+    apply_roles_sql: Callable[[str, Mapping[str, str]], subprocess.CompletedProcess[str]],
+    owner_role: str,
+    app_role: str,
+) -> None:
+    """🔴 C6. The `CREATE` read-back contradicted the seventeen lines below it.
+
+    🔴 IT DEPENDED ON ANOTHER TEST HAVING RUN, WHICH IS WORSE THAN A MISSING
+       FIXTURE BECAUSE NO FIXTURE DECLARATION CAN EXPRESS IT. The
+       `GRANT USAGE ON SCHEMA public TO titlepipe_owner, titlepipe_app,
+       titlepipe_worker` below names three CLUSTER-WIDE roles in the THROWAWAY
+       cluster `non_superuser_operator` starts — not the session container, so
+       `conftest.py::roles_applied` does not reach it and requesting that
+       fixture does not help. The roles existed only because
+       `test_a_non_superuser_operator_can_apply_roles_sql_end_to_end` shares the
+       same module-scoped container and happens to be collected first. MEASURED
+       2026-08-06, this test alone:
+
+           psycopg.errors.UndefinedObject: role "titlepipe_owner" does not exist
+           [SQL: GRANT USAGE ON SCHEMA public TO titlepipe_owner, …]
+
+       The fix is to run `roles.sql` here first, AS THE OPERATOR against the
+       operator's own database. `roles.sql` is idempotent, so it costs one
+       redundant run in the full-file ordering and nothing else. Creating the
+       three roles directly as the SUPERUSER instead was tried and is wrong:
+       the operator then holds no ADMIN option on them and `roles.sql` dies at
+       `ALTER ROLE` — MEASURED 2026-08-06, `ERROR: permission denied to alter
+       role / DETAIL: Only roles with the CREATEROLE attribute and the ADMIN
+       option on role "titlepipe_owner" may alter this role` — hundreds of lines
+       before the read-back this test exists for, so the test would go green on
+       `returncode != 0` for entirely the wrong refusal.
+
+    `roles.sql` reads `USAGE` back off `nspacl` because `has_schema_privilege`
+    answers about the EFFECTIVE privilege and `PUBLIC`'s own `USAGE` therefore
+    hides a `GRANT` that WARNed and did nothing. The `CREATE` read-back three
+    lines above that comment was written on `has_schema_privilege`.
+
+    The defence was that PostgreSQL 15 revoked `CREATE` on `public` from
+    `PUBLIC`, so the two questions agree. They agree on a cluster initdb'd at 15
+    or later and left alone. MEASURED 2026-08-06 against postgres:18.4 with the
+    pre-15 ACL that `pg_upgrade` preserves verbatim:
+
+        GRANT CREATE ON SCHEMA public TO PUBLIC;
+        has_schema_privilege('titlepipe_owner','public','CREATE')  -> t
+        explicit CREATE entry for titlepipe_owner in nspacl        -> f
+
+    ...and in that state, with `roles.sql` run by an operator that does not own
+    the database, so both `GRANT`s are `WARNING: no privileges were granted for
+    "public"`:
+
+        roles.sql                                  -> exit 0
+        SET ROLE titlepipe_owner; CREATE TABLE ... -> works, through PUBLIC
+        REVOKE CREATE ON SCHEMA public FROM PUBLIC;   -- the standard hardening
+        SET ROLE titlepipe_owner; CREATE TABLE ... -> permission denied for
+                                                      schema public
+
+    A latent break rather than a live one, and the day it fires is the day
+    somebody hardens the schema — which is the day there is no operator
+    watching. It is the argument the `USAGE` block already makes, one privilege
+    over.
+
+    THE DATABASE IS OWNED BY THE CONTAINER SUPERUSER, not by the operator, and
+    that is the whole setup: schema `public` belongs to `pg_database_owner` from
+    PostgreSQL 15 on, so an operator that is not the database owner holds no
+    grant option and its `GRANT`s are warnings. That is the only state in which
+    either read-back has anything to catch.
+
+    BOTH HALVES ARE DRIVEN. `USAGE` is granted explicitly to the three roles
+    first, so the `USAGE` read-back is satisfied and cannot be what refuses —
+    otherwise a `CREATE` guard that had been deleted entirely would still make
+    this test pass.
+    """
+    admin, operator = non_superuser_operator
+    admin_url = make_url(admin)
+    superuser_here = _dsn_for(
+        admin, admin_url.username or "", admin_url.password or "", UNOWNED_DATABASE
+    )
+    operator_here = _dsn_for(admin, OPERATOR_ROLE, OPERATOR_PASSWORD, UNOWNED_DATABASE)
+
+    # See the docstring. The roles this test GRANTs to are cluster-wide and
+    # nothing here created them; they existed only because a sibling test
+    # sharing this module-scoped container had already run `roles.sql`. Run it
+    # here, AS THE OPERATOR and against the operator's OWN database, which is
+    # both idempotent and the only spelling that leaves the operator holding
+    # ADMIN on the roles — created by the superuser instead, `roles.sql` fails
+    # at `ALTER ROLE` with `permission denied to alter role`, hundreds of lines
+    # before the read-back this test is about.
+    established = apply_roles_sql(operator, role_passwords)
+    assert established.returncode == 0, (
+        f"roles.sql could not establish the role contract in the throwaway "
+        f"cluster, so this test never reaches the read-back it is "
+        f"about:\n{established.stdout}\n{established.stderr}"
+    )
+
+    _autocommit(admin, (f"CREATE DATABASE {UNOWNED_DATABASE}",))
+    try:
+        _execute(
+            superuser_here,
+            (
+                f"GRANT CONNECT ON DATABASE {UNOWNED_DATABASE} TO {OPERATOR_ROLE}",
+                # The pre-PostgreSQL-15 shape, which is what makes
+                # has_schema_privilege answer `t` for a role holding nothing.
+                "GRANT CREATE ON SCHEMA public TO PUBLIC",
+                # ...and the state an earlier successful run would have left, so
+                # that the USAGE read-back is satisfied and only the CREATE one
+                # can be the refusal.
+                f"GRANT USAGE ON SCHEMA public TO {owner_role}, {app_role}, {WORKER_ROLE}",
+            ),
+        )
+
+        assert bool(
+            _scalar(
+                superuser_here,
+                "SELECT has_schema_privilege(:role, 'public', 'CREATE')",
+                role=owner_role,
+            )
+        ), "PUBLIC's CREATE did not land, so the vacuous read-back is not being reproduced"
+        assert not bool(
+            _scalar(
+                superuser_here,
+                "SELECT EXISTS (SELECT 1 FROM pg_namespace n "
+                "CROSS JOIN LATERAL aclexplode(n.nspacl) AS a "
+                "WHERE n.nspname = 'public' AND a.grantee = CAST(:role AS regrole) "
+                "AND a.privilege_type = 'CREATE')",
+                role=owner_role,
+            )
+        ), f"{owner_role} already holds an explicit CREATE entry, so there is nothing to catch"
+
+        result = apply_roles_sql(operator_here, role_passwords)
+
+        assert result.returncode != 0, (
+            f"roles.sql could not grant CREATE on schema public — both GRANTs "
+            f"WARNed — and reported success anyway:\n{result.stdout}\n{result.stderr}"
+        )
+        assert f"CREATE on {owner_role}" in result.stderr, (
+            f"the refusal does not name the missing privilege and role:\n{result.stderr}"
+        )
+        assert "no privileges were granted" in result.stderr, (
+            "the GRANT did not actually warn, so this is not the state the read-back exists for"
+        )
+    finally:
+        _autocommit(admin, (f"DROP DATABASE IF EXISTS {UNOWNED_DATABASE} WITH (FORCE)",))
+
+
+def test_roles_sql_converges_a_default_privilege_granted_to_public(
+    roles_applied: str,
+    role_passwords: Mapping[str, str],
+    titlepipe_role_pattern: str,
+    apply_roles_sql: Callable[[str, Mapping[str, str]], subprocess.CompletedProcess[str]],
+    migration_dsn: str,
+    owner_role: str,
+) -> None:
+    """🔴 C1. The broadest default privilege there is, and both sides were blind to it.
+
+    `aclexplode` reports a grant to `PUBLIC` as `grantee = 0`. No row of
+    `pg_roles` has oid 0, so the `JOIN pg_roles grantee` that `roles.sql`'s
+    convergence pass carried — and that `_titlepipe_default_privileges` in this
+    file carried, for the same reason — DROPPED the row before either `WHERE`
+    ever ran. MEASURED 2026-08-06 against postgres:18.4:
+
+        ALTER DEFAULT PRIVILEGES FOR ROLE titlepipe_owner IN SCHEMA public
+            GRANT ALL ON TABLES TO PUBLIC;
+        -- pg_default_acl:                          {=arwdDxtm/titlepipe_owner}
+        -- statements roles.sql generated for it:   none
+        -- _titlepipe_default_privileges:           []
+
+    `test_no_default_privileges_reach_a_titlepipe_role` read `[]` and passed.
+
+    `PUBLIC` is every role in the cluster. This is therefore strictly worse than
+    the `TO titlepipe_blind` row the header records as the reason the block
+    exists: it grants full `arwdDxtm` on every table Task 4 and every later
+    migration creates to `titlepipe_blind` AND to everything else, including
+    roles nobody has created yet.
+
+    THE BEHAVIOURAL HALF IS THE POINT AND IT IS DONE FIRST. A catalog row is not
+    a privilege, and the reason default privileges are dangerous is that they
+    attach to objects that do not exist when the row is planted — so the proof
+    is to CREATE A TABLE through the path `env.py` takes and read `relacl`.
+    Everything happens inside a transaction that is rolled back, so the session's
+    catalog never sees the table.
+    """
+    planted = (
+        f"ALTER DEFAULT PRIVILEGES FOR ROLE {owner_role} IN SCHEMA public "
+        f"GRANT ALL ON TABLES TO PUBLIC"
+    )
+    admin = create_engine(roles_applied)
+    try:
+        try:
+            with admin.begin() as connection:
+                connection.execute(text(planted))
+
+            assert _titlepipe_default_privileges(roles_applied, titlepipe_role_pattern) == [
+                (owner_role, "r", "PUBLIC")
+            ], "the PUBLIC default privilege did not plant, so this test proves nothing"
+
+            # It reaches a table that did not exist when it was planted.
+            migration = create_engine(migration_dsn)
+            try:
+                with migration.connect() as connection:
+                    connection.execute(text(f"SET ROLE {owner_role}"))
+                    connection.execute(text(f"CREATE TABLE {OWNERSHIP_PROBE_TABLE} (id integer)"))
+                    reachable = connection.execute(
+                        text("SELECT has_table_privilege(:blind, :relation, 'SELECT')"),
+                        {"blind": BLIND_ROLE, "relation": OWNERSHIP_PROBE_TABLE},
+                    ).scalar_one()
+                    connection.rollback()
+            finally:
+                migration.dispose()
+            assert bool(reachable) is True, (
+                f"{BLIND_ROLE} cannot read a table created under the planted "
+                f"default privilege, so the drift is not what this test claims"
+            )
+
+            result = apply_roles_sql(roles_applied, role_passwords)
+            assert result.returncode == 0, (
+                f"convergence run exited {result.returncode}:\n{result.stderr}"
+            )
+
+            assert _titlepipe_default_privileges(roles_applied, titlepipe_role_pattern) == [], (
+                "roles.sql left a default privilege granted to PUBLIC in place. "
+                "It applies to every table every later migration creates and is "
+                "visible on none of them today."
+            )
+
+            migration = create_engine(migration_dsn)
+            try:
+                with migration.connect() as connection:
+                    connection.execute(text(f"SET ROLE {owner_role}"))
+                    connection.execute(text(f"CREATE TABLE {OWNERSHIP_PROBE_TABLE} (id integer)"))
+                    still = connection.execute(
+                        text("SELECT has_table_privilege(:blind, :relation, 'SELECT')"),
+                        {"blind": BLIND_ROLE, "relation": OWNERSHIP_PROBE_TABLE},
+                    ).scalar_one()
+                    connection.rollback()
+            finally:
+                migration.dispose()
+            assert bool(still) is False, (
+                f"{BLIND_ROLE} can still read a newly created table after the repair"
+            )
+        finally:
+            # Whatever happened above, the row must not survive into the next
+            # test. `REVOKE` for a row already removed is a no-op.
+            with admin.begin() as connection:
+                connection.execute(
+                    text(
+                        f"ALTER DEFAULT PRIVILEGES FOR ROLE {owner_role} IN SCHEMA public "
+                        f"REVOKE ALL ON TABLES FROM PUBLIC"
+                    )
+                )
+    finally:
+        admin.dispose()
+
+
+def test_roles_sql_converges_a_large_object_default_privilege(
+    roles_applied: str,
+    role_passwords: Mapping[str, str],
+    titlepipe_role_pattern: str,
+    apply_roles_sql: Callable[[str, Mapping[str, str]], subprocess.CompletedProcess[str]],
+    owner_role: str,
+) -> None:
+    """🔴 C4. `defaclobjtype = 'L'`, which PostgreSQL 18 added and the `CASE` missed.
+
+    The object-type `CASE` in `roles.sql` enumerated `r`, `S`, `f`, `T` and `n`
+    and had no `ELSE`. `LARGE OBJECTS` is a default-privilege object type as of
+    PostgreSQL 18 — MEASURED 2026-08-06 against postgres:18.4, `ALTER DEFAULT
+    PRIVILEGES ... GRANT SELECT ON LARGE OBJECTS` is accepted and writes
+    `defaclobjtype = 'L'`.
+
+    WHAT THE MISSING BRANCH PRODUCED WAS NOT A SKIP. `format`'s `%s` renders NULL
+    as the empty string, so the generated statement was
+
+        ALTER DEFAULT PRIVILEGES FOR ROLE titlepipe_owner REVOKE ALL ON  FROM titlepipe_blind
+        ERROR:  syntax error at or near "FROM"
+
+    — the run refused, which is the right direction, naming a syntax error
+    instead of the row. So the answer to "should a missing ELSE be a refusal" is
+    that it already was one, badly. It is now an enumerated branch, plus a
+    NAMED refusal for the next type PostgreSQL adds, raised by a guard before
+    the pass rather than by a statement this file built wrong.
+
+    THIS IS ALSO THE ONLY TEST THAT EXERCISES THE GLOBAL SCOPE of the pass's
+    namespace `CASE`. `LARGE OBJECTS` cannot be schema-qualified, so its row is
+    always `defaclnamespace = 0` and the generated statement must omit
+    `IN SCHEMA` entirely. Every other drift this suite plants is `IN SCHEMA
+    public`, so the `WHEN d.defaclnamespace = 0 THEN ''` branch had no test.
+    """
+    admin = create_engine(roles_applied)
+    try:
+        try:
+            with admin.begin() as connection:
+                connection.execute(
+                    text(
+                        f"ALTER DEFAULT PRIVILEGES FOR ROLE {owner_role} "
+                        f"GRANT SELECT ON LARGE OBJECTS TO {BLIND_ROLE}"
+                    )
+                )
+
+            assert (owner_role, "L", BLIND_ROLE) in _titlepipe_default_privileges(
+                roles_applied, titlepipe_role_pattern
+            ), "the large-object default privilege did not plant"
+            assert (
+                int(
+                    str(
+                        _scalar(
+                            roles_applied,
+                            "SELECT count(*) FROM pg_default_acl "
+                            "WHERE defaclobjtype = 'L' AND defaclnamespace = 0",
+                        )
+                    )
+                )
+                == 1
+            ), "the row is not at global scope, so the IN SCHEMA branch is still untested"
+
+            result = apply_roles_sql(roles_applied, role_passwords)
+            assert result.returncode == 0, (
+                f"roles.sql exited {result.returncode} over a LARGE OBJECTS "
+                f"default privilege:\n{result.stderr}"
+            )
+            assert _titlepipe_default_privileges(roles_applied, titlepipe_role_pattern) == [], (
+                "roles.sql left a LARGE OBJECTS default privilege in place"
+            )
+        finally:
+            with admin.begin() as connection:
+                connection.execute(
+                    text(
+                        f"ALTER DEFAULT PRIVILEGES FOR ROLE {owner_role} "
+                        f"REVOKE ALL ON LARGE OBJECTS FROM {BLIND_ROLE}"
+                    )
+                )
+    finally:
+        admin.dispose()
+
+
+def test_roles_sql_refuses_a_default_privilege_object_type_it_does_not_know(
+    roles_applied: str,
+    role_passwords: Mapping[str, str],
+    titlepipe_role_pattern: str,
+    apply_roles_sql: Callable[[str, Mapping[str, str]], subprocess.CompletedProcess[str]],
+    owner_role: str,
+) -> None:
+    """The `ELSE` the object-type `CASE` did not have, as a NAMED refusal.
+
+    PostgreSQL added `SCHEMAS` to this catalog in 15 and `LARGE OBJECTS` in 18.
+    A sixth type is a matter of time, and the failure mode of the version this
+    replaces was a syntax error naming neither the type nor the row — see
+    `test_roles_sql_converges_a_large_object_default_privilege`.
+
+    THE UNKNOWN TYPE IS FORGED IN THE CATALOG, because there is no other way to
+    have one: an object type PostgreSQL 18 does not know cannot be produced by
+    any statement PostgreSQL 18 will parse. `UPDATE pg_default_acl` is a
+    superuser DML on a system catalog, which PostgreSQL permits, and it is safe
+    here for the reason everything else in this file is safe — the database is
+    an ephemeral container. The row is planted as a real `LARGE OBJECTS` grant
+    and then relabelled, so `defaclacl` is well-formed and the only thing wrong
+    with it is the one byte under test.
+    """
+    admin = create_engine(roles_applied)
+    try:
+        try:
+            with admin.begin() as connection:
+                connection.execute(
+                    text(
+                        f"ALTER DEFAULT PRIVILEGES FOR ROLE {owner_role} "
+                        f"GRANT SELECT ON LARGE OBJECTS TO {BLIND_ROLE}"
+                    )
+                )
+                connection.execute(
+                    text("UPDATE pg_default_acl SET defaclobjtype = 'Z' WHERE defaclobjtype = 'L'")
+                )
+
+            assert (owner_role, "Z", BLIND_ROLE) in _titlepipe_default_privileges(
+                roles_applied, titlepipe_role_pattern
+            ), "the forged object type did not plant"
+
+            result = apply_roles_sql(roles_applied, role_passwords)
+
+            assert result.returncode != 0, (
+                f"roles.sql accepted an object type it cannot revoke:\n{result.stdout}"
+            )
+            assert "object type this file does not know how to revoke" in result.stderr, (
+                f"the refusal is not the named one — a syntax error out of a "
+                f"statement built with an empty object type is what this guard "
+                f"replaces:\n{result.stderr}"
+            )
+            assert "'Z'" in result.stderr, (
+                f"the refusal does not name the object type:\n{result.stderr}"
+            )
+        finally:
+            with admin.begin() as connection:
+                connection.execute(
+                    text("UPDATE pg_default_acl SET defaclobjtype = 'L' WHERE defaclobjtype = 'Z'")
+                )
+                connection.execute(
+                    text(
+                        f"ALTER DEFAULT PRIVILEGES FOR ROLE {owner_role} "
+                        f"REVOKE ALL ON LARGE OBJECTS FROM {BLIND_ROLE}"
+                    )
+                )
+    finally:
+        admin.dispose()
+
+    assert _titlepipe_default_privileges(roles_applied, titlepipe_role_pattern) == []
+    assert apply_roles_sql(roles_applied, role_passwords).returncode == 0
+
+
+def test_no_password_reaches_pg_stat_statements(
+    postgres_container_factory: Callable[[str], PostgresContainer],
+    apply_roles_sql: Callable[[str, Mapping[str, str]], subprocess.CompletedProcess[str]],
+    managed_roles: tuple[str, ...],
+) -> None:
+    """🔴 C2. The suppression gate tested two of the four settings, and the third leaked.
+
+    `roles.sql` emits four `SET`s to keep passwords out of the server's records,
+    and its non-superuser refusal — which exists because a `CREATEROLE` operator
+    cannot emit them — checked `log_statement` and `log_min_duration_statement`
+    and nothing else. `pg_stat_statements.track` was the third, and it is the one
+    that bites on exactly the clusters the portability ruling was written for:
+    the library is in `shared_preload_libraries` by default on RDS, Cloud SQL and
+    Neon, where the operator is never a superuser.
+
+    MEASURED 2026-08-06 against postgres:18.4 started with
+    `-c shared_preload_libraries=pg_stat_statements`, before the gate was
+    extended, this file run end to end by a `LOGIN CREATEROLE` operator against
+    its own database:
+
+        roles.sql                                       -> exit 0
+        stock: track=top, track_utility=on, save=on
+        pg_stat_statements rows containing a canary     -> 8
+
+    Eight and not thirteen: the extension JUMBLES constants out of ordinary
+    statements, so the two `SELECT format(...)` generators are normalised — but
+    it records UTILITY statements VERBATIM, and `CREATE ROLE` and `ALTER ROLE`
+    are utility statements. Eight is one `CREATE` and one `ALTER` per LOGIN role.
+    `save` defaults to `on`, so the text outlives a restart.
+
+    BOTH HALVES ARE HERE, and the first is what makes the second mean anything:
+
+      1. A SUPERUSER RUN LEAVES ZERO CANARIES on this same image with the same
+         extension loaded — so the four `SET`s do work, and the leak is a
+         property of the degraded path rather than of the file;
+      2. A NON-SUPERUSER RUN NOW REFUSES, naming the setting and the remedy.
+
+    THE POSITIVE CONTROL IS SEPARATE FROM BOTH. "No canary in the view" is
+    satisfied by an extension that is not recording, a view that is empty, and a
+    `LIKE` against the wrong bytes. So a utility statement carrying its own
+    marker is executed after the superuser run and asserted to BE there.
+    `CREATE TABLE` is used rather than `SELECT` for a specific reason: an
+    ordinary `SELECT` would be jumbled and its literal replaced by `$1`, which
+    is the very normalisation that makes the utility statements the only leak.
+    """
+    canaries = {
+        role: f"PSSCANARY-{index}-DO-NOT-RECORD" for index, role in enumerate(managed_roles)
+    }
+    marker = "pss_probe_this_utility_must_be_recorded"
+
+    container = postgres_container_factory("pg-stat-statements-throwaway").with_command(
+        "postgres -c shared_preload_libraries=pg_stat_statements"
+    )
+    with container as started:
+        admin = started.get_connection_url()
+        _execute(admin, ("CREATE EXTENSION pg_stat_statements",))
+
+        loaded = _scalar(admin, "SELECT current_setting('pg_stat_statements.track_utility', true)")
+        assert str(loaded) == "on", (
+            f"pg_stat_statements is not recording utility statements "
+            f"(track_utility={loaded!r}), so nothing below proves anything"
+        )
+
+        superuser_run = apply_roles_sql(admin, canaries)
+        assert superuser_run.returncode == 0, (
+            f"roles.sql exited {superuser_run.returncode} as superuser:\n{superuser_run.stderr}"
+        )
+
+        _execute(admin, (f"CREATE TABLE {marker} (id integer)", f"DROP TABLE {marker}"))
+
+        recorded = _scalar(
+            admin,
+            "SELECT count(*) FROM pg_stat_statements WHERE query LIKE :needle",
+            needle=f"%{marker}%",
+        )
+        assert int(str(recorded)) > 0, (
+            "the probe utility statement is not in pg_stat_statements, so the "
+            "absence of the canaries below proves nothing"
+        )
+
+        for role, canary in canaries.items():
+            leaked = _scalar(
+                admin,
+                "SELECT count(*) FROM pg_stat_statements WHERE query LIKE :needle",
+                needle=f"%{canary}%",
+            )
+            assert int(str(leaked)) == 0, (
+                f"{role}'s password is recorded verbatim in pg_stat_statements "
+                f"after a SUPERUSER run, so SET pg_stat_statements.track = 'none' "
+                f"is not working"
+            )
+
+        # ...and the degraded path, which cannot emit that SET, refuses.
+        _autocommit(
+            admin,
+            (
+                f"CREATE ROLE {OPERATOR_ROLE} LOGIN CREATEROLE PASSWORD '{OPERATOR_PASSWORD}'",
+                f"CREATE DATABASE {OPERATOR_DATABASE} OWNER {OPERATOR_ROLE}",
+            ),
+        )
+        operator = _dsn_for(admin, OPERATOR_ROLE, OPERATOR_PASSWORD, OPERATOR_DATABASE)
+
+        degraded = apply_roles_sql(operator, canaries)
+
+        assert degraded.returncode != 0, (
+            f"a non-superuser run on a cluster recording utility statements "
+            f"verbatim reported success; every password it set is now in "
+            f"pg_stat_statements:\n{degraded.stdout}"
+        )
+        assert "pg_stat_statements.track=top" in degraded.stderr, (
+            f"the refusal does not name the setting or its value:\n{degraded.stderr}"
+        )
+        assert "refusing to run" in degraded.stderr
+
+        for role, canary in canaries.items():
+            leaked = _scalar(
+                admin,
+                "SELECT count(*) FROM pg_stat_statements WHERE query LIKE :needle",
+                needle=f"%{canary}%",
+            )
+            assert int(str(leaked)) == 0, (
+                f"{role}'s password reached pg_stat_statements on a run that "
+                f"REFUSED — the gate is firing too late to be a control"
+            )
 
 
 def test_the_owner_cannot_create_without_the_schema_grant(

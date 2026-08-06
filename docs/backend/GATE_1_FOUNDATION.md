@@ -119,8 +119,13 @@ Three of these are **enforced by tests**, not documentation:
   package does not import Core or the workers **and** that those packages are
   not installed in its environment at all — so a future import cannot reach
   them either.
-- `services/core-api/tests/test_errors.py::test_domain_and_service_code_never_import_httpexception`
-  scans the package for `HTTPException` outside the mapping layer.
+- `scripts/check_backend_rules.py` (rule 4) scans every file under `src/` for
+  `HTTPException` outside the mapping layer. This used to name
+  `test_errors.py::test_domain_and_service_code_never_import_httpexception`;
+  commit `6df3eaa` deleted that test as wrong in both directions — it passed a
+  real `from fastapi import HTTPException` under the `errors.py` exemption and
+  failed on prose that merely mentioned the type. `test_errors.py` carries the
+  measurement where the test used to be.
 
 ## 3. Commands
 

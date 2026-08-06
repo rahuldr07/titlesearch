@@ -285,11 +285,7 @@ def test_a_banned_name_fires_in_every_shape_the_gate_claims(
         "\n"
         "\n"
         "CONVERTERS = [cast]\n",
-        "async def text(value: str) -> str:\n"
-        "    return value\n"
-        "\n"
-        "\n"
-        "RENDERERS = [text]\n",
+        "async def text(value: str) -> str:\n    return value\n\n\nRENDERERS = [text]\n",
         "class Any:\n"
         '    """A marker meaning no constraint. Not typing.Any."""\n'
         "\n"
@@ -974,6 +970,518 @@ def test_a_short_file_allow_reason_neither_exempts_nor_passes(
     assert code != 0
     assert "[rules-allow]" in output
     assert "[any-type]" in output
+
+
+# --- D4: reaching the banned behaviour without typing the banned name -------
+#
+# Four constructs were MEASURED against the gate as clean files scoring zero
+# hits, and each one is the banned *behaviour* arriving under a name no rule
+# mentioned. They are grouped here because they are one failure of the same
+# kind: a rule keyed on an identifier is a rule about spelling.
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        # The keyword spelling. MEASURED against SQLAlchemy 2.0.51: this emits
+        # `SAVEPOINT sa_savepoint_1`, byte for byte what `begin_nested()` emits.
+        "def f(s):\n    with s.begin(nested=True):\n        pass\n",
+        # `Session.begin` is `(self, nested: bool = False)`, so the positional
+        # form is accepted by SQLAlchemy and has to be caught by the same rule.
+        "def f(s):\n    with s.begin(True):\n        pass\n",
+        # Not a literal, so no rule keyed on the argument's *value* would see it.
+        "def f(s, flag):\n    with s.begin(nested=flag):\n        pass\n",
+        # Unqualified, in case the session was destructured.
+        "def f(begin):\n    return begin(nested=True)\n",
+        # `nested=False` is not a savepoint. It is a savepoint one character
+        # away, and the rule that told them apart would be a rule about the
+        # value of a literal.
+        "def f(s):\n    with s.begin(nested=False):\n        pass\n",
+    ],
+)
+def test_a_savepoint_opened_without_the_word_begin_nested_still_fires(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], source: str
+) -> None:
+    """`s.begin(nested=True)` is `begin_nested()`, and the ban was on the name."""
+    write(tmp_path, "services/svc/src/pkg/nested.py", source)
+    code, output = run(tmp_path, capsys)
+    assert code != 0, output
+    assert "[savepoint]" in output
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        # The no-argument forms are the whole reason `begin` cannot simply be
+        # added to the banned names: `Session.begin()`, `Connection.begin()` and
+        # `Engine.begin()` are how an ordinary transaction is opened.
+        "def f(s):\n    with s.begin():\n        pass\n",
+        "async def f(engine):\n    async with engine.begin() as conn:\n        return conn\n",
+        "def f(connection):\n    trans = connection.begin()\n    return trans\n",
+        # A read of the attribute, with no call and no argument.
+        "def f(s):\n    return s.begin\n",
+        # Somebody else's `begin`, defined here and reading nothing from a
+        # session. This is the false positive the rule is one step away from.
+        "def begin(self):\n    return None\n",
+    ],
+)
+def test_an_ordinary_transaction_is_not_a_savepoint(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], source: str
+) -> None:
+    """The other side of the `begin(` boundary. Banning the bare name would ban
+    every transaction in the codebase, which is why the rule is about the
+    argument and not about the name."""
+    write(tmp_path, "services/svc/src/pkg/plain_begin.py", source)
+    code, output = run(tmp_path, capsys)
+    assert code == 0, output
+    assert scanned_count(output) == 1
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        # The hole the module docstring named and left open: `text` is the one
+        # banned name whose attribute *read* is not a reference, because
+        # `response.text` is an HTTP body.
+        'import sqlalchemy as sa\n\nq = sa.text\n\n\ndef f(s):\n    return s.execute(q("x"))\n',
+        # Annotated, so the assignment carries a declared type as well.
+        "import sqlalchemy as sa\nfrom collections.abc import Callable\n"
+        "\n"
+        "q: Callable[[str], object] = sa.text\n"
+        "\n"
+        "\n"
+        "def f(s):\n"
+        '    return s.execute(q("x"))\n',
+        # Walrus, which binds without an assignment statement.
+        'import sqlalchemy as sa\n\n\ndef f(s):\n    if (q := sa.text):\n        return q("x")\n',
+    ],
+)
+def test_a_deferred_call_through_an_attribute_read_of_text_still_fires(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], source: str
+) -> None:
+    """`q = sa.text` then `q("select 1")`, which scored a clean file.
+
+    The signal is that the bound name is *called*. Nothing else separates it
+    from `body = response.text`, and nothing else needs to: a string is not
+    callable, so the innocent shape never has a call on the other end."""
+    write(tmp_path, "services/svc/src/pkg/deferred.py", source)
+    code, output = run(tmp_path, capsys)
+    assert code != 0, output
+    assert "[raw-sql]" in output
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        # The case that bought `text` its exemption in the first place, and the
+        # one this rule must not break.
+        "def f(response):\n    body = response.text\n    return body\n",
+        "def f(response):\n    body = response.text\n    return body.strip()\n",
+        # Bound to the banned word itself, read back, never called.
+        "def f(response):\n    text = response.text\n    return text\n",
+        # A call in the file, but not of the name that was bound.
+        "def f(response, render):\n    body = response.text\n    return render(body)\n",
+    ],
+)
+def test_an_http_body_read_from_dot_text_is_still_not_raw_sql(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], source: str
+) -> None:
+    """The false-positive cost of the rule above, measured on the shape that
+    forced `attribute_is_reference=False`."""
+    write(tmp_path, "services/svc/src/pkg/body.py", source)
+    code, output = run(tmp_path, capsys)
+    assert code == 0, output
+    assert scanned_count(output) == 1
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        "import sys\n\n\ndef f(v):\n    sys.stdout.write(v)\n",
+        "import sys\n\n\ndef f(v):\n    sys.stderr.write(v)\n",
+        "import sys\n\n\ndef f(rows):\n    sys.stdout.writelines(rows)\n",
+        # Whatever `sys` was imported as.
+        "import sys as system\n\n\ndef f(v):\n    system.stdout.write(v)\n",
+        "from sys import stdout\n\n\ndef f(v):\n    stdout.write(v)\n",
+        # One level further down, which is the byte-oriented channel.
+        "import sys\n\n\ndef f(b):\n    sys.stdout.buffer.write(b)\n",
+        # Deferred by one line, the way `_emit = print` was.
+        "import sys\n\n\ndef f(v):\n    emit = sys.stdout.write\n    emit(v)\n",
+    ],
+)
+def test_writing_to_stdout_without_the_word_print_still_fires(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], source: str
+) -> None:
+    """Rule 5 is about the channel. `sys.stdout.write(v)` is the same unredacted
+    path to a log aggregator that `print(` is, and the ban was on `print`."""
+    write(tmp_path, "services/svc/src/pkg/emit.py", source)
+    code, output = run(tmp_path, capsys)
+    assert code != 0, output
+    assert "[print]" in output
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        # Both of these are in the tree today, in four telemetry modules each.
+        # `PrintLoggerFactory(file=sys.stdout)` is the *sanctioned* path: it is
+        # structlog's writer, and the redaction processors run before it. A rule
+        # that banned `sys.stdout` outright would flag the redaction chain.
+        "import sys\nimport structlog\n"
+        "\n"
+        "\n"
+        "def configure():\n"
+        "    return structlog.PrintLoggerFactory(file=sys.stdout)\n",
+        "import sys\n\n\ndef colours():\n    return sys.stderr.isatty()\n",
+        # A real file, and a pathlib write. Banning `.write` broadly is
+        # unworkable, so the rule is keyed on the stream and not on the method.
+        "def f(handle, v):\n    handle.write(v)\n",
+        "from pathlib import Path\n\n\ndef f(p: Path, v: str):\n    p.write_text(v)\n",
+        # A subprocess pipe is not this process's stdout.
+        "def f(proc, v):\n    proc.stdin.write(v)\n",
+        # Reading a captured stream, which is what `stdout` usually means in
+        # test and subprocess code.
+        "def f(result):\n    return result.stdout.strip()\n",
+    ],
+)
+def test_the_sanctioned_uses_of_the_standard_streams_do_not_fire(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], source: str
+) -> None:
+    """The false-positive cost of the stream rule, measured on the shapes the
+    real tree actually contains."""
+    write(tmp_path, "services/svc/src/pkg/streams.py", source)
+    code, output = run(tmp_path, capsys)
+    assert code == 0, output
+    assert scanned_count(output) == 1
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        # `text()` is a factory for `TextClause`; constructing the product
+        # directly was never named by a rule and scored a clean file.
+        "from sqlalchemy.sql.elements import TextClause\n",
+        'from sqlalchemy.sql.elements import TextClause\n\nq = TextClause("select 1")\n',
+        'import sqlalchemy as sa\n\n\ndef f(s):\n    return s.execute(sa.TextClause("x"))\n',
+        "def f(sa):\n    return sa.TextClause\n",
+        # `literal_column(x)` is `ColumnClause(x, is_literal=True)`.
+        "from sqlalchemy.sql.elements import ColumnClause\n",
+        'def f(sa):\n    return sa.ColumnClause("id", is_literal=True)\n',
+    ],
+)
+def test_the_class_a_banned_factory_builds_is_banned_too(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], source: str
+) -> None:
+    """Banning `text` and not `TextClause` bans a spelling rather than a thing."""
+    write(tmp_path, "services/svc/src/pkg/clause.py", source)
+    code, output = run(tmp_path, capsys)
+    assert code != 0, output
+    assert "[raw-sql]" in output
+
+
+def test_the_db_carve_out_reaches_the_clause_classes_and_the_deferred_call(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Both new raw-SQL shapes are under rule 3, so both are under rule 3's
+    carve-out. A shape that fired inside `db/` would be a rule with a different
+    scope wearing the same rule id."""
+    write(
+        tmp_path,
+        "services/svc/src/pkg/db/queries.py",
+        "import sqlalchemy as sa\n"
+        "from sqlalchemy.sql.elements import TextClause\n"
+        "\n"
+        "q = sa.text\n"
+        "\n"
+        "\n"
+        "def f(session):\n"
+        '    return session.execute(q("x")), TextClause("y")\n',
+    )
+    code, output = run(tmp_path, capsys)
+    assert code == 0, output
+    assert scanned_count(output) == 1
+
+
+def test_a_name_that_merely_contains_a_clause_class_does_not_fire(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    write(
+        tmp_path,
+        "services/svc/src/pkg/near_clause.py",
+        "class TextClauseAdapter:\n"
+        "    pass\n"
+        "\n"
+        "\n"
+        "def build_column_clauses(names):\n"
+        "    return names\n",
+    )
+    code, output = run(tmp_path, capsys)
+    assert code == 0, output
+    assert scanned_count(output) == 1
+
+
+# --- the HTTP shape that is returned rather than raised ---------------------
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        "from starlette.responses import JSONResponse\n",
+        "from starlette.responses import JSONResponse\n\n\ndef f():\n"
+        '    return JSONResponse(status_code=400, content={"detail": "no"})\n',
+        "def f(responses):\n    return responses.PlainTextResponse\n",
+        "from fastapi.responses import FileResponse, StreamingResponse\n",
+    ],
+)
+def test_deciding_the_http_shape_by_returning_one_fires_outside_the_api_package(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], source: str
+) -> None:
+    """`raise HTTPException` and `return JSONResponse(...)` are the same defect
+    reached two ways, and the `http-exception` rule can only see the first.
+
+    It is a separate rule id because its carve-out has to be wider: a router
+    returning a `FileResponse` is ordinary FastAPI, so the whole `api` package
+    is exempt where `http-exception` exempts only `api/errors.py`.
+    """
+    write(tmp_path, "services/svc/src/pkg/domain/orders.py", source)
+    code, output = run(tmp_path, capsys)
+    assert code != 0, output
+    assert "[http-response]" in output
+
+
+@pytest.mark.parametrize(
+    "relative",
+    [
+        "services/svc/src/pkg/api/errors.py",
+        "services/svc/src/pkg/api/routers/reports.py",
+    ],
+)
+def test_the_api_package_owns_the_response_classes(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], relative: str
+) -> None:
+    write(
+        tmp_path,
+        relative,
+        "from starlette.responses import JSONResponse\n"
+        "\n"
+        "\n"
+        "async def handler(request):\n"
+        '    return JSONResponse(content={"ok": True})\n',
+    )
+    code, output = run(tmp_path, capsys)
+    assert code == 0, output
+    assert scanned_count(output) == 1
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        # Bare `Response` is deliberately not banned, and this is the reason:
+        # an engine adapter annotates `httpx.Response`, and there is no shipped
+        # adapter yet, so the rule would start failing on the first one.
+        "import httpx\n\n\ndef fetch(client: httpx.Client) -> httpx.Response:\n"
+        '    return client.get("https://example.test")\n',
+        # And the middleware annotation, which the tree has twice today.
+        "from starlette.responses import Response\n"
+        "from collections.abc import Awaitable, Callable\n"
+        "\n"
+        "Handler = Callable[[object], Awaitable[Response]]\n",
+        # A near-miss identifier.
+        "class JSONResponseBuilder:\n    pass\n",
+    ],
+)
+def test_the_response_rule_stops_short_of_the_word_response(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], source: str
+) -> None:
+    """The false-positive cost of the rule above. `Response` is the collision;
+    the concrete subclasses are not, and none of them exists in `httpx`."""
+    write(tmp_path, "services/svc/src/pkg/adapters/engine.py", source)
+    code, output = run(tmp_path, capsys)
+    assert code == 0, output
+    assert scanned_count(output) == 1
+
+
+# --- an exemption has to be the comment, not a sentence about one -----------
+
+
+def test_a_complete_file_exemption_quoted_inside_prose_grants_nothing(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The substring hole, MEASURED before the anchor: this file reported *no*
+    violations at all. `FILE_ALLOW_PREFIX in text` matched the form quoted
+    inside an English sentence, the reason after it was long enough for rule 7,
+    and rule 5 was switched off for the whole file by a comment that was
+    documentation.
+
+    The bare-marker version of this — `rules-allow-file(` with no closing
+    parenthesis — never reproduced, because it lands in the malformed-exemption
+    branch. It takes a closing parenthesis and a real rule id.
+    """
+    relative = write(
+        tmp_path,
+        "services/svc/src/pkg/quoted.py",
+        "# A `# rules-allow-file(print): reason goes here` comment turns rule 5 off.\n"
+        "def f(name):\n"
+        "    print(name)\n",
+    )
+    code, output = run(tmp_path, capsys)
+    assert code != 0
+    # It did not grant.
+    assert "[print]" in output
+    assert f"{relative}:3" in output
+    # And it is named rather than silently ignored, because a reader of that
+    # sentence cannot otherwise tell whether it is live.
+    assert "[rules-allow]" in output
+    assert f"{relative}:1" in output
+
+
+def test_a_complete_line_exemption_quoted_inside_prose_grants_nothing(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The same hole in the line form. It needs the prose to sit on the very
+    line that violates, so its blast radius is one line rather than a file."""
+    relative = write(
+        tmp_path,
+        "services/svc/src/pkg/quoted_line.py",
+        "def f(name):\n"
+        "    print(name)  # write `# rules-allow(print): a real reason here` to excuse this\n",
+    )
+    code, output = run(tmp_path, capsys)
+    assert code != 0
+    assert "[print]" in output
+    assert "[rules-allow]" in output
+    assert output.count(f"{relative}:2") == 2
+
+
+def test_a_trailing_line_exemption_after_another_comment_still_grants(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The measurement that decided how strict the anchor could be.
+
+    `tokenize` emits **one** COMMENT token for everything after the first `#` on
+    a line, so this whole thing is a single token whose text does not begin with
+    the marker. Fifteen real exemptions in this repository are written exactly
+    like this — `settings.py` in four services, `redaction.py`, both
+    `request_context.py`, both `errors.py` — because the pyright suppression and
+    the reason for it belong on the line they excuse.
+
+    So the line form is anchored to the start of any `#`-delimited segment
+    rather than to the start of the comment. Requiring position 0 would have
+    rejected all fifteen and the real tree would have stopped being clean.
+    """
+    write(
+        tmp_path,
+        "services/svc/src/pkg/trailing.py",
+        f"from typing import cast  # rules-allow(any-type): {GOOD_REASON}\n"
+        "\n"
+        "\n"
+        "def f(rows):\n"
+        '    return cast("int", rows)  '
+        f"# pyright: ignore[reportCallIssue]  # rules-allow(any-type): {GOOD_REASON}\n",
+    )
+    code, output = run(tmp_path, capsys)
+    assert code == 0, output
+    assert scanned_count(output) == 1
+
+
+def test_the_file_form_has_to_start_the_comment_and_says_so(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The file form gets the stricter anchor because its blast radius is the
+    whole file, and because the one real use of it in this tree is a comment of
+    its own. It is refused by name rather than downgraded to the line form:
+    guessing which of the two was meant is how a reason answers for more than it
+    was written about."""
+    relative = write(
+        tmp_path,
+        "services/svc/src/pkg/trailing_file.py",
+        f"value = 1  # noqa  # rules-allow-file(print): {GOOD_REASON}\n"
+        "\n"
+        "\n"
+        "def f(name):\n"
+        "    print(name)\n",
+    )
+    code, output = run(tmp_path, capsys)
+    assert code != 0
+    assert "must start the comment" in output
+    assert f"{relative}:1" in output
+    # And it granted nothing.
+    assert "[print]" in output
+    assert f"{relative}:5" in output
+
+
+@pytest.mark.parametrize(
+    "comment",
+    [
+        # The lead's version of the report, which never reproduced: no closing
+        # parenthesis, so it names no rule and could never have granted one.
+        "# never write rules-allow-file( in a comment",
+        # Names a rule that does not exist.
+        "# a `# rules-allow(printing): reason enough` would not work either",
+        # Names a real rule, but the comment ends before rule 7's floor. MEASURED
+        # while writing this: the reason runs to the end of the comment, so prose
+        # *after* the quoted form is the reason. `# a `# rules-allow(print):
+        # nope` is refused by rule 7` therefore carries a 25-character reason and
+        # would have granted, which is why it is not in this list.
+        "# see `# rules-allow(print): nope`",
+        # The word, with no form attached.
+        "# the rules-allow machinery is documented in the gate",
+    ],
+)
+def test_a_mention_that_could_never_have_granted_anything_is_left_alone(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], comment: str
+) -> None:
+    """The false-positive cost of the anchor. A gate that made every sentence
+    about itself an error is a gate whose documentation gets deleted, so the
+    report is limited to text that *would have granted* — a real rule id, a
+    closing parenthesis and a reason long enough for rule 7."""
+    write(tmp_path, "services/svc/src/pkg/mention.py", f"{comment}\nvalue = 1\n")
+    code, output = run(tmp_path, capsys)
+    assert code == 0, output
+    assert scanned_count(output) == 1
+
+
+def test_a_docstring_that_quotes_the_form_was_never_an_exemption(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Only COMMENT tokens are read, so the module docstring of a file that
+    documents the gate cannot switch a rule off. This held before the anchor and
+    has to keep holding: it is why the gate's own docstring can spell both forms
+    out in full."""
+    relative = write(
+        tmp_path,
+        "services/svc/src/pkg/documented.py",
+        f'"""Write `# rules-allow-file(print): {GOOD_REASON}` to excuse this."""\n'
+        "\n"
+        "\n"
+        "def f(name):\n"
+        "    print(name)\n",
+    )
+    code, output = run(tmp_path, capsys)
+    assert code != 0
+    assert "[print]" in output
+    assert f"{relative}:5" in output
+    assert "[rules-allow]" not in output
+
+
+def test_a_stream_write_can_be_excused_by_the_print_rule_it_belongs_to(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The stream rule reports under `print` rather than under a rule id of its
+    own, so the exemption vocabulary does not grow a second word for one
+    decision. An author who has a reason writes the reason once."""
+    write(
+        tmp_path,
+        "services/svc/src/pkg/excused.py",
+        "import sys\n"
+        "\n"
+        "\n"
+        "def f(v):\n"
+        f"    sys.stdout.write(v)  # rules-allow(print): {GOOD_REASON}\n",
+    )
+    code, output = run(tmp_path, capsys)
+    assert code == 0, output
+    assert scanned_count(output) == 1
 
 
 # --- the clean case ---------------------------------------------------------

@@ -56,8 +56,8 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import engine_from_config, pool, text
 
+from titlepipe_core.db.engine import DENY_SENTINEL_OPTIONS
 from titlepipe_core.db.models import Base
-from titlepipe_core.db.session import DENY_SENTINEL_OPTIONS
 
 # `roles.sql` creates it; `tests/test_roles.py` proves nothing else can become
 # it. Spelled here rather than imported from `conftest.py`, which is test-only
@@ -216,7 +216,7 @@ def run_migrations_online() -> None:
     # on some drivers and keep a lock on `alembic_version` alive with it.
     #
     # 🔴 `connect_args` IS THE DENY PIN, AND ALEMBIC HAS TO ASK FOR IT ITSELF.
-    # `titlepipe_core.db.session` pins the tenant GUC at the empty-string deny
+    # `titlepipe_core.db.engine` pins the tenant GUC at the empty-string deny
     # sentinel in `make_engine`'s `connect_args`, and its docstring used to claim
     # that pin covered "every connection" including this one. It does not, and
     # cannot: this engine is built here, by `engine_from_config`, and never goes
@@ -247,7 +247,7 @@ def run_migrations_online() -> None:
     # this line removes.
     #
     # IMPORTED RATHER THAN RESPELLED. A second `-c app.current_tenant=` literal
-    # here would be a second thing to keep in step with `session.py`, and the copy
+    # here would be a second thing to keep in step with `engine.py`, and the copy
     # that drifts is the one with no test pointed at it.
     connectable = engine_from_config(
         configuration,

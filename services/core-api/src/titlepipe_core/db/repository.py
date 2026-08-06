@@ -61,6 +61,15 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from titlepipe_core.db.models import Base
+from titlepipe_core.db.session import TENANT_SCOPED_MARK
+
+_UNSCOPED_SESSION = (
+    "TenantRepository was constructed over a session that did not come from "
+    "titlepipe_core.db.tenant_session, so no tenant has been established on it and "
+    "nothing it reads or writes is scoped. Open the session with "
+    "`async with tenant_session(sessionmaker, tenant) as session:` and build the "
+    "repository inside that block."
+)
 
 
 class TenantRepository[T: Base]:
@@ -73,6 +82,32 @@ class TenantRepository[T: Base]:
     """
 
     def __init__(self, session: AsyncSession, model: type[T]) -> None:
+        """Refuse a session that did not come out of `tenant_session`.
+
+        🔴 THIS CLASS USED TO *OFFER* SCOPING RATHER THAN FORCE IT. The annotation
+        says `AsyncSession` and every `AsyncSession` satisfies it, including one
+        called straight off an `async_sessionmaker` — which `db.__all__` exports,
+        because an application builds one at startup and hands it to
+        `tenant_session` per request. That session has no `after_begin` listener,
+        so no tenant is ever applied to it.
+
+        The mark is the cheapest thing that tells the two apart. `tenant_session`
+        writes `TENANT_SCOPED_MARK` into `Session.info` — one dict write — and
+        this is the one read. It is a WIRING check and not a security boundary:
+        the security boundary is the GUC, and this cannot see the GUC without a
+        round trip to the server inside a constructor that is not `async`. What it
+        catches is the mistake — a repository built over the wrong session — one
+        line after it is made, instead of as an empty result set or a `42501` from
+        somewhere else entirely.
+
+        `RuntimeError` and not a `DomainError`. This is a defect in how the
+        application is wired, the same shape as
+        `lifespan.py`'s "application resources are not configured", and a
+        `DomainError` would be given an HTTP status by `api/errors.py` — turning a
+        programming error into a response the caller is invited to interpret.
+        """
+        if TENANT_SCOPED_MARK not in session.info:
+            raise RuntimeError(_UNSCOPED_SESSION)
         self._session = session
         self._model = model
 
