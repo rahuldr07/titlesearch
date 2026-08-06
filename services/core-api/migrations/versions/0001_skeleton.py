@@ -306,12 +306,38 @@ def _create_append_only_trigger() -> None:
 
     THE QUALIFICATION IS REAL AND IS NOT A CODE CHANGE. A superuser can set
     `session_replication_role = 'replica'`, under which ordinary triggers do not
-    fire, and then `DELETE` freely. That GUC is `SUSET`: both `titlepipe_app` and
-    `titlepipe_migration` get `42501 insufficient_privilege` on it, and no
-    TitlePipe role is a superuser (`tests/test_roles.py` asserts `rolsuper` is
-    false for all five). So the trigger is a complete control against every role
-    this system connects as, and is not a control against whoever administers the
-    cluster. Nothing in a database can be.
+    fire, and then `DELETE` freely. That GUC is `SUSET`, so an IN-SESSION `SET`
+    of it by `titlepipe_app` or `titlepipe_migration` is refused with
+    `42501 insufficient_privilege`, and no TitlePipe role is a superuser
+    (`tests/test_roles.py` asserts `rolsuper` is false for all five).
+
+    🔴 THAT ARGUMENT WAS THE WHOLE ARGUMENT AND IT WAS NOT SUFFICIENT. This
+    docstring used to conclude from the two sentences above that "the trigger is
+    a complete control against every role this system connects as". It is not,
+    because `SUSET` governs the in-session `SET` and says nothing about a
+    PER-ROLE DEFAULT, which is applied at CONNECT and never checked at use.
+    MEASURED 2026-08-05 against postgres:18.4, on a database holding this
+    revision's `audit_log`:
+
+        ALTER ROLE titlepipe_app SET session_replication_role='replica';
+        <rerun roles.sql>                       -> exit 0, setting untouched
+        fresh connection as titlepipe_app       -> mode_at_connect = replica
+        before=3  ->  DELETE FROM audit_log  ->  after=0
+
+    `rolsuper` being false for all five is not the control that closes that: the
+    setting is planted by whoever can `ALTER ROLE`, and from then on the role
+    that connects needs no privilege at all. What closes it is
+    `migrations/sql/roles.sql`, which now converges `pg_db_role_setting` in BOTH
+    scopes — `ALTER ROLE r RESET ALL` clears only the cluster-wide row
+    (`setdatabase = 0`), and the database-scoped row is a separate one that
+    survives it — and `tests/test_roles.py::test_no_titlepipe_role_carries_a_per
+    _role_setting_default`, which reads both scopes back and requires zero rows.
+    This revision was never amended for that fix; the paragraph above is.
+
+    So: the trigger is a control against every role this system connects as
+    PROVIDED `roles.sql` has run and no per-role default survived it, and it is
+    not a control against whoever administers the cluster. Nothing in a database
+    can be.
 
     🔴 `CREATE FUNCTION`, NOT `CREATE OR REPLACE`, AND THAT IS DELIBERATE. With
     `OR REPLACE`, a `downgrade()` that forgot its `DROP FUNCTION` would leave the

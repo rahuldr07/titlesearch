@@ -6,10 +6,19 @@ database back exactly as it found it. Nothing here is skipped: if Docker or
 `psql` is unavailable these tests FAIL, because "we did not check the seam today"
 and "the seam holds" must never render the same way in a test report.
 
-Everything below connects as `titlepipe_app`, which is a non-owner LOGIN role
-with no `BYPASSRLS`. The superuser is used for SEEDING only — it bypasses
+Every ASSERTION below is made as `titlepipe_app`, which is a non-owner LOGIN
+role with no `BYPASSRLS`. The superuser is used for SEEDING only — it bypasses
 row-level security unconditionally, so an assertion made through it would prove
 nothing about a policy.
+
+🔴 THIS READ "Everything below connects as `titlepipe_app`", AND ONE TEST DOES
+NOT. `test_the_alembic_engine_is_pinned_at_the_deny_sentinel_even_under
+_pgoptions` drives a real `alembic current`, which connects as
+`titlepipe_migration` and then `SET ROLE titlepipe_owner` — that is the whole
+point of it, and the paragraph below already announces the test by describing
+"the connection `migrations/env.py` opens". It is still not an assertion made
+through a privileged role: what it reads back is the tenant GUC, which no role
+can be privileged over, because a custom GUC carries no ACL.
 
 ## 🔴 WHAT THIS FILE IS NOT
 
@@ -54,10 +63,35 @@ and one is the behaviour under test, and no denial can tell them apart.
 `test_the_positive_control_a_tenant_session_sees_that_tenants_own_row` is what
 distinguishes them. It seeds two committed rows through the superuser, opens a
 session as one tenant, and requires that tenant's own row to come back. Remove
-the `after_begin` listener from `session.py` and every denial in this file stays
-green while that one test goes red — which is precisely the shape of defect that
+the `after_begin` listener from `session.py` and every DENIAL in this file stays
+green while that test goes red — which is precisely the shape of defect that
 made Task 2's cardinality floor insufficient and Task 3's enum test compare a
 constant to itself.
+
+🔴 IT IS NOT THE ONLY TEST THAT GOES RED, WHICH IS WHAT THIS PARAGRAPH AND THE
+POSITIVE CONTROL'S OWN DOCSTRING BOTH SAID. MEASURED 2026-08-06, the
+`event.listen(...)` line in `titlepipe_core.db.session.tenant_session` deleted,
+whole suite, `197 passed` -> **10 failed**:
+
+    tests/test_tenant_session.py      6 of 11
+      test_tenant_session_applies_the_guc_inside_the_transaction
+      test_the_positive_control_a_tenant_session_sees_that_tenants_own_row
+      test_a_row_written_in_one_tenant_session_is_readable_from_the_next
+      test_an_exception_escaping_the_block_leaves_the_flushed_write_behind_it
+      test_the_tenant_does_not_survive_the_commit_onto_the_pooled_connection
+      test_the_repository_reads_and_writes_through_the_scoped_session
+    tests/test_tenant_isolation.py    4 of 7
+      test_1_the_tenant_does_not_survive_the_pool_checkout_into_the_next_session
+      test_1b_the_positive_control_each_tenant_sees_its_own_rows_in_every_table
+      test_2_a_write_carrying_another_tenants_id_is_refused_with_42501
+      test_4_a_savepoint_rolled_back_leaves_the_tenant_established
+
+Every one of them either reads the GUC back or WRITES, and a write with no
+tenant established fails the policy's `WITH CHECK` rather than reading zero
+rows. The claim that survives — and it is the one that matters — is that no
+test in this file which asserts `0 rows` can tell the listener's absence from
+its presence. The positive control is the cheapest thing that can; it is not
+the only thing that does.
 """
 
 from __future__ import annotations
@@ -393,10 +427,17 @@ async def test_the_positive_control_a_tenant_session_sees_that_tenants_own_row(
     wrong row as readily as by the right one, and the whole point of a control is
     that it fails for the reasons the denials cannot.
 
-    Remove the `after_begin` listener from `session.py` and this is the only test
-    in the file that goes red: the session then runs at the deny sentinel, sees
-    nothing, and every "0 rows" assertion elsewhere is *more* satisfied than
-    before.
+    Remove the `after_begin` listener from `session.py` and this goes red: the
+    session then runs at the deny sentinel, sees nothing, and every "0 rows"
+    assertion elsewhere is *more* satisfied than before.
+
+    IT IS NOT THE ONLY ONE THAT DOES, which is what this said. MEASURED
+    2026-08-06 with that line deleted: 10 failures, 6 in this file and 4 of the
+    7 in `tests/test_tenant_isolation.py` — the module docstring lists them by
+    name. What is true is narrower and is the reason this test exists: no
+    assertion in this file that reads a COUNT OF ZERO can tell the listener's
+    absence from its presence, and without this one the file's denials would all
+    still pass against a seam that establishes no tenant at all.
     """
     engine = make_engine(app_dsn)
     try:

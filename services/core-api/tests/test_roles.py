@@ -704,15 +704,28 @@ def test_roles_sql_refuses_and_names_every_variable_it_is_missing(
 
     Three cases, three different mechanisms, all measured against psql 18.4:
 
-      * UNSET — `\\getenv` leaves the psql variable undefined, which `\\if
-        :{?name}` can see;
-      * EXPORTED EMPTY — `\\getenv` sets it to the empty string, which `\\if`
-        CANNOT tell from a real value. A guard written with `\\if` alone would
-        accept `TITLEPIPE_APP_PASSWORD=` and create a role with an empty
-        password;
+      * UNSET — `\\getenv` leaves the psql variable undefined;
+      * EXPORTED EMPTY — `\\getenv` sets it to the empty string, which nothing
+        on the psql side can tell from a real value. A guard that only asked
+        whether the variable was DEFINED would accept
+        `TITLEPIPE_APP_PASSWORD=` and create a role with an empty password;
       * WHITESPACE-ONLY — `TITLEPIPE_APP_PASSWORD='   '` is a typo, not a
-        credential, and it used to produce five roles and exit 0. `btrim` in the
-        guard is what stops it.
+        credential, and it used to produce five roles and exit 0.
+
+    🔴 WHAT STOPS ALL THREE IS A SHELL PROBE, AND THIS DOCSTRING NAMED TWO
+    MECHANISMS THAT ARE NOT IN `roles.sql`. It credited the third case to
+    "`btrim` in the guard" and described the first as something "`\\if :{?name}`
+    can see". There is no `\\if` anywhere in `migrations/sql/roles.sql`, and the
+    only `btrim` in it is inside a comment. The guard is four
+    `\\set <name> \\`case "$VAR" in *[!' ']*) printf PRESENT;; *) printf
+    ABSENT;; esac\\`` probes — psql handing the shell the variable's NAME, never
+    its value — followed by a `SELECT … WHERE state <> 'PRESENT'` that raises.
+    `btrim` is named in that file's comment only to argue that `*[!' ']*` and
+    `length(btrim(v)) = 0` agree character for character; it is the
+    justification, not the implementation. The probe is also what makes the
+    three cases ONE mechanism rather than three: unset, empty and whitespace-only
+    all come back `ABSENT`, and so does a psql that cannot run `sh` at all, which
+    is the fail-closed reading.
 
     Naming the OTHER variables is asserted negatively. A refusal that listed all
     four whatever was wrong would satisfy a positive check while telling the
@@ -1164,12 +1177,23 @@ def test_a_table_created_after_set_role_belongs_to_the_owner(
 
     THIS IS OPTION (a), AND THE ALTERNATIVE IS WHY. The plan also asked for
     "every table in `public` has `relowner = titlepipe_owner`" and "no LOGIN
-    role is any table's `relowner`". There are no tables — the schema is Task 3
-    — so both would pass over zero rows while proving nothing, which is the same
-    defect `MINIMUM_TITLEPIPE_ROLES` exists to catch one file up. Deferring them
-    to Task 3 (option (b)) would have left the mechanism unproved until then.
-    So the table is created here, through the same two steps `env.py` will take:
-    connect as `titlepipe_migration`, `SET ROLE titlepipe_owner`, `CREATE TABLE`.
+    role is any table's `relowner`". At Task 2 there were no tables — the schema
+    was Task 3 — so both would have passed over zero rows while proving nothing,
+    which is the same defect `MINIMUM_TITLEPIPE_ROLES` exists to catch one file
+    up. Deferring them to Task 3 (option (b)) would have left the mechanism
+    unproved in the meantime. So the table is created here, through the same two
+    steps `env.py` takes: connect as `titlepipe_migration`, `SET ROLE
+    titlepipe_owner`, `CREATE TABLE`.
+
+    🔴 TASK 3 THEN DELIVERED BOTH, AND THIS PARAGRAPH USED TO READ AS AN OPEN
+    DEFERRAL ("would have left the mechanism unproved until then"). They are
+    `tests/test_schema_migration.py::test_every_table_is_owned_by_the_owner_and
+    _no_login_role_owns_one`, which reads `_table_owners` off the migrated
+    catalog and asserts `relowner` and `rolcanlogin is False` for all eight
+    relations — over an asserted table SET first, because both claims are `for`
+    loops. This test is not thereby redundant: those run against a schema that
+    already exists, and this one is the only place the CREATE PATH itself is
+    exercised.
 
     `alembic_version` is created BY NAME rather than only the generic probe
     table, because Task 3 depends on that specific one. It is the first table
@@ -1254,7 +1278,7 @@ def test_the_libpq_environment_refuses_a_dsn_that_reaches_the_local_cluster(
 
 
 def test_roles_sql_keeps_the_passwords_out_of_the_server_log(roles_sql_path: Path) -> None:
-    """The three suppression `SET`s are in the file. A SOURCE check, and only that.
+    """The four suppression `SET`s are in the file. A SOURCE check, and only that.
 
     MEASURED 2026-08-05 with `log_statement = 'all'` against a fresh
     postgres:18.4: each password reached the server log FIVE times, not the
@@ -1266,7 +1290,7 @@ def test_roles_sql_keeps_the_passwords_out_of_the_server_log(roles_sql_path: Pat
     SELECT that generates `CREATE ROLE`, the executed `CREATE ROLE`, the SELECT
     that generates `ALTER ROLE`, the executed `ALTER ROLE`.
 
-    `log_min_error_statement` is the third assertion and the newest hole.
+    `log_min_error_statement` is one of the four and was the newest hole.
     `log_statement = 'none'` only covers statements that SUCCEED; a statement
     that FAILS is logged in full at `log_min_error_statement`, whose default is
     `error`. MEASURED 2026-08-05, with the other two already in force:
@@ -1275,6 +1299,32 @@ def test_roles_sql_keeps_the_passwords_out_of_the_server_log(roles_sql_path: Pat
         -> STATEMENT:  ALTER ROLE <missing role> PASSWORD 'ERRCANARY-777';
 
         ...and with SET log_min_error_statement = 'panic' first: nothing.
+
+    🔴 THIS DOCSTRING SAID "The three suppression `SET`s" AND THE BODY ASSERTED
+    THREE. `roles.sql` emits FOUR. MEASURED 2026-08-06: deleting
+    `SET pg_stat_statements.track = 'none'` from `roles.sql` left the whole suite
+    at **`197 passed`** — the one setting aimed at an extension that records
+    utility statements VERBATIM (`CREATE ROLE … PASSWORD 'x'` among them) was the
+    one nothing held, and it is the only reference to that extension anywhere in
+    the repository. The fourth assertion is below.
+
+    IT STAYS A SOURCE CHECK, AND THAT IS FORCED RATHER THAN CHOSEN.
+    `test_no_password_reaches_the_log_of_a_server_that_logs_everything` covers
+    the other three behaviourally by reading `docker logs`; it cannot cover this
+    one, because the extension is not loaded on the image this suite runs.
+    MEASURED 2026-08-06 against a stock `postgres:18.4` container:
+
+        current_setting('shared_preload_libraries')                     -> ''
+        pg_available_extensions where name='pg_stat_statements'         -> 1
+        pg_extension        where extname='pg_stat_statements'          -> 0
+        current_setting('pg_stat_statements.track', true)               -> NULL
+        to_regclass('pg_stat_statements')                               -> NULL
+
+    So there is no view for a canary to be absent from, and an assertion written
+    against one would report the same pass for "suppressed" as for "the extension
+    was never there". The NULL on the fourth line is also why the `SET` is
+    harmless: PostgreSQL accepts an unrecognised DOTTED name as a placeholder GUC
+    rather than erroring, which is what `roles.sql`'s own comment claims.
 
     THIS TEST IS THE SOURCE HALF. It catches the realistic regression — somebody
     deleting a line that looks like noise. The BEHAVIOURAL half, which the
@@ -1291,6 +1341,12 @@ def test_roles_sql_keeps_the_passwords_out_of_the_server_log(roles_sql_path: Pat
     assert "SET log_statement = ''none''" in code
     assert "SET log_min_duration_statement = -1" in code
     assert "SET log_min_error_statement = ''panic''" in code
+    assert "SET pg_stat_statements.track = ''none''" in code, (
+        "roles.sql no longer suppresses pg_stat_statements. That extension "
+        "normalises constants in ordinary statements but records UTILITY "
+        "statements verbatim, and every CREATE ROLE / ALTER ROLE below carries a "
+        "password as a literal. Nothing else in this repository mentions it."
+    )
 
 
 def test_no_password_reaches_the_log_of_a_server_that_logs_everything(
@@ -1373,9 +1429,14 @@ def test_a_table_created_without_set_role_is_refused_outright(
     """🔴 THE TASK 3 HAND-OFF, ENFORCED BY THE DATABASE RATHER THAN REQUESTED.
 
     `migrations/env.py` MUST issue `SET ROLE titlepipe_owner` immediately after
-    connecting and BEFORE `context.begin_transaction()`. Alembic is not
-    initialised yet — Task 3 owns that, and this task does not scaffold it. This
-    test is what makes forgetting it impossible to miss.
+    connecting and BEFORE `context.begin_transaction()`. It does, at
+    `migrations/env.py:255`. This test is what makes DELETING it impossible to
+    miss, from the roles side, without a schema.
+
+    (This read "Alembic is not initialised yet — Task 3 owns that, and this task
+    does not scaffold it." Task 3 landed. Nothing about the test changes: it
+    still creates the table by hand rather than through Alembic, which is what
+    keeps it runnable with no migration applied.)
 
     THE HISTORY IS THE ARGUMENT. Under the default `INHERIT`, this same
     statement SUCCEEDED and produced a table owned by `titlepipe_migration` — a

@@ -10,8 +10,31 @@
 tenant GUC into handlers already written is the leak ADR-0001 finding 4 records
 as verified in the wild.
 
-**Every SQL claim below was executed against PostgreSQL 18.4 on 2026-08-05 and
-produced the stated result.** Surprises are recorded where they happened.
+**Claims marked as measured were measured** — most against PostgreSQL 18.4 on
+2026-08-05, the rest against this repository's pinned toolchain. **Several were
+later found false. Every correction is recorded inline, at the sentence that was
+wrong.** Surprises are recorded where they happened.
+
+> **Correction, 2026-08-06.** This header used to read: *"Every SQL claim below
+> was executed against PostgreSQL 18.4 on 2026-08-05 and produced the stated
+> result."* That is a blanket warrant over the whole document, and by the time
+> the eight tasks landed it was false three ways.
+>
+> **Not every claim was SQL,** so "executed against PostgreSQL" could not have
+> covered them. Task 1's `<2.1` cap on sqlalchemy is a claim about uv's
+> resolver; Task 1's `TITLEPIPE_` prefix rule is a claim about
+> pydantic-settings. Both were written as measured fact and **both were wrong**
+> — see the corrections in that task.
+>
+> **Claims that were SQL got overtaken rather than mismeasured.** Task 4's
+> schema `USAGE` grant moved to `roles.sql`; Task 6's seeding contract
+> contradicted its own opening line. A warrant reading "produced the stated
+> result" gives a reader no way to tell a live measurement from a stale one.
+>
+> **And it pushed the reader the wrong way.** A sentence whose function is *stop
+> checking* is the exact failure `00-HOW-TO-EXECUTE.md` §1 exists to prevent.
+> Verify the claim you are about to act on. The corrections below are what that
+> verification produced the several times someone did it.
 
 ---
 
@@ -27,6 +50,75 @@ this file**, so they hold whatever the subagent chose.
 
 Where a decision genuinely cannot be derived — a ruling, a credential — it is a
 🔴 HUMAN GATE and you stop.
+
+---
+
+## What eight tasks taught this plan about injections
+
+**Read this before writing an injection into any later plan.** It is the most
+transferable thing Plan 01 produced. It was spread across seventeen commit
+messages until it was collected here on 2026-08-06.
+
+**Seven of this plan's eight injections did not work as written.** Five could
+not fail at all; a sixth did not exist; the seventh passed on every spelling it
+tested while three one-token changes walked through the gate untouched. Each was
+written by someone who believed it. Each was found only because the executing
+agent tried to run it.
+
+| task | what the injection said | why it did not work |
+|---|---|---|
+| 0 | violate each of the seven rules | **it tested only the canonical spelling.** All ten injections passed against a gate that `from sqlalchemy import text as sql`, `_emit = print` and `savepoint = session.begin_nested` walked straight through |
+| 1 | point `TP_TEST_DATABASE_URL` at port 5432, "16.14 on the dev box" | **could not fail on the machine it ran on.** WSL's 5432 *is* 18.4 and no 16 is installed, so the version test passes and a green run gets recorded as evidence |
+| 2 | `ALTER ROLE … BYPASSRLS` in a transaction you roll back | **could not fail across the connection it was checked on.** `ALTER ROLE` is transactional DDL and the catalog test runs on a *separate* connection, which reads `rolbypassrls = false` and passes |
+| 3 | "the second `upgrade` must succeed" | **it restated the third clause of its own PROOF.** Nothing is broken and nothing is required to fail |
+| 4 | drop `FORCE`, connect as `titlepipe_owner` | **it required connecting as a role Task 2 deliberately makes `NOLOGIN`** — for exactly the reason `FORCE` exists. And the check it asked for reads `pg_class.relforcerowsecurity`, which any connection can see, so it never needed that login |
+| 5 | remove the `after_begin` listener; "Task 6 assertion 1b must fail" | **it forward-referenced a task that must not exist yet.** A task whose proof lives in a later task has no proof |
+| 7 | — | **it did not exist.** Neither did the PROOF |
+
+**Task 6's is the one that held**, and it is worth reading for the shape: it
+names a *specific* assertion that must fail, in the *same* task, through a
+change reachable on the machine, surviving the connection the check runs on.
+Even so, running it found a weak assertion — assertion 4 passed under the
+superuser injection, because a cardinality floor, an `after == before` and a GUC
+string are all true of a connection that bypasses RLS. **The injection caught
+it. Nothing else in the suite would have.**
+
+### Three separate times, the fix was the same: add a positive control
+
+1. **Task 2's cardinality floor** — satisfied by five decoy roles exactly as
+   readily as by the five real ones.
+2. **Task 3's enum test** — compared a constant against a value derived from
+   that same constant, so renaming `NOT_PRESENT` to `NA` in both the model and
+   the migration left the suite green.
+3. **Task 5, and Task 6's assertion 1b** — every assertion of the form *"this
+   tenant sees nothing"* is satisfied by a system that denies everyone, by a
+   broken DSN, and by an empty table.
+
+The pattern under all three: **a suite of denials cannot tell *isolated* from
+*broken*.** Nor can a catalog sweep tell *compliant* from *empty*, nor a
+derived-against-derived test tell *correct* from *consistently wrong*. Each
+needs one assertion pointing the other way — one that would fail if the subject
+were simply absent.
+
+**And the control must cover the whole derived set, not one member of it.** The
+isolation proof's positive control covered `orders` alone. Six tables plus
+`tenants` could then be respelled to hand every established tenant every other
+tenant's rows, and the suite reported `192 passed` (`9ddeefc`).
+
+### The checklist this produces
+
+An injection is only an injection if all of these hold:
+
+- it names the **specific assertion** that must fail, not "the test";
+- that assertion lives in **this** task, not a later one;
+- the change is **reachable** — no role that cannot log in, no server version
+  that is not installed, no fixture from a task not yet written;
+- it survives the **transaction and the connection** the check actually runs on;
+- it is not the PROOF restated;
+- it breaks the **behaviour**, not one spelling of it — inject the alias, the
+  rebinding and the near-miss path, not only the textbook form;
+- and where the proof is a set of denials or a catalog sweep, at least one
+  injection must break the **positive control** rather than another denial.
 
 ---
 
@@ -89,18 +181,57 @@ string is the only correct sentinel, and only because the policy wraps it in
 
 `scripts/check_backend_rules.py` exits non-zero on any of:
 
-| rule | scope |
-|---|---|
-| `Any`, `# type: ignore`, `cast(` | `src/` |
-| `begin_nested(` | `src/` — a SAVEPOINT unwinds the tenant GUC |
-| `text(` / `exec_driver_sql(` | `src/` **except** `*/db/` |
-| `HTTPException` | `src/` except `api/errors.py` |
-| `print(` | `src/` |
-| file > 400 lines | `src/` |
-| `rules-allow:` with a reason under 12 chars | everywhere |
+| rule id | what it catches | scope |
+|---|---|---|
+| `any-type` | `Any`, `cast(`, `# type: ignore`, `# pyright: ignore`, `# pyright: basic`/`standard`, `# pyright: report…=false`, and `Any` inside a PEP-484 type comment | `src/` |
+| `savepoint` | `begin_nested(` — a SAVEPOINT unwinds the tenant GUC | `src/` |
+| `raw-sql` | `text`, `literal_column`, `exec_driver_sql`, `raw_connection` | `src/` **except** the `db` package directly inside a distribution package |
+| `http-exception` | `HTTPException` | `src/` except each package's own `api/errors.py` |
+| `print` | `print(` | `src/` |
+| `file-length` | file > 400 lines | `src/` |
+| — | `rules-allow(<id>)` / `rules-allow-file(<id>)` with a reason under 12 chars, and the rule-less `rules-allow:` form | everywhere |
+
+> **Correction, 2026-08-06 — the gate is stricter than this table was, which is
+> the wrong direction for a contract to be wrong in.** The table used to list
+> only `Any`, `# type: ignore`, `cast(` on row 1 and `text(` / `exec_driver_sql(`
+> on row 3, and it named no rule ids at all. Three enforced rules were absent:
+> **`# pyright: ignore`** (this repo type-checks with pyright, and six were
+> sitting in scanned `src/` when the rule was written — the task's own INJECTION
+> section already demanded it, and the table was never updated to match),
+> **`literal_column`** and **`raw_connection`**. Verified against
+> `scripts/check_backend_rules.py:336-370` (`NAME_RULES`) and `:567-590`
+> (`_comment_suppressions`).
+>
+> Two more corrections in the same table. The `raw-sql` carve-out is **not**
+> `*/db/` as a substring — that spelling hands the raw-SQL exemption to a `db`
+> directory at any depth, including `api/db/`, where route handlers live. The
+> gate matches `module[:1] == ("db",)`, the `db` package directly inside the
+> distribution package (`_path_exemption`, `:409-428`). And `rules-allow` is
+> **rule-scoped in both forms**, `rules-allow(<id>)` and
+> `rules-allow-file(<id>)`; the rule-less `rules-allow:` is recognised only so
+> that writing it earns an explanation rather than being swallowed (`:311-316`).
+> The reason floor is `MIN_ALLOW_REASON_LENGTH = 12` (`:278`).
 
 Scan roots resolve from the **repo root**, not `cwd`: `services/*/src`,
-`libs/*/src`. **`tests/` is never scanned** — later tasks require raw SQL there.
+`libs/*/src` (`SCAN_ROOT_GLOBS`, `:269`). Test code is out of scope **by
+location**: this repository's tests live at `services/*/tests` and
+`libs/*/tests`, *beside* `src/` and outside the scan roots entirely. Later tasks
+require raw SQL there.
+
+> **Correction, 2026-08-06.** This line used to read: *"**`tests/` is never
+> scanned** — later tasks require raw SQL there."* It is no longer true, and the
+> reason it was ever written was wrong. `tests` was a member of
+> `SKIPPED_DIRECTORY_NAMES` and **is deliberately gone** — see
+> `scripts/check_backend_rules.py:280-292`. Skipping the *name* was never what
+> exempted this repo's tests; their *location* outside `services/*/src` was. What
+> the name skip actually achieved was excusing a real shipped package:
+> `…/src/titlepipe_probe/tests/queries.py` scanned clean with a `text(…)` and a
+> `print(…)` in it while the identical body one directory over was caught.
+>
+> **A `tests` package inside `src/` is scanned now**, like any other module,
+> because it imports and runs like any other module. One that genuinely needs
+> raw SQL can earn a `rules-allow-file`. Do not write an injection that assumes
+> the old behaviour.
 
 **⚠ The gate will not be clean on the current tree.** Existing code predates
 these rules. Part of this task is to bring `services/*/src` and `libs/*/src` into
@@ -159,10 +290,33 @@ over assertion.
 
 **CONTRACT**
 
-`services/core-api` depends on `sqlalchemy>=2.0.51,<2.1` (the `<2.1` cap is
-required — `2.1.0b3` is on PyPI and is *newer* than stable),
+`services/core-api` depends on `sqlalchemy[asyncio]>=2.0.51,<2.1`,
 `psycopg[binary,pool]>=3.3.4,<3.4`, `alembic>=1.18.5,<1.19`, and dev
 `testcontainers[postgres]>=4.15.0,<5.0`. `uv.lock` regenerated and committed.
+
+> **Correction, 2026-08-06 — the cap is right and the stated reason is not.**
+> This line used to read: *"`sqlalchemy>=2.0.51,<2.1` (the `<2.1` cap is
+> required — `2.1.0b3` is on PyPI and is *newer* than stable)"*. Commit
+> `4adfa5b`'s message claims this was corrected in the plan's text; it changed
+> zero lines of this file. **Re-measured here, 2026-08-06:**
+>
+> ```
+> uv pip compile <<< 'sqlalchemy>=2.0.51'                     ->  sqlalchemy==2.0.51
+> uv pip compile --prerelease=allow <<< 'sqlalchemy>=2.0.51'  ->  sqlalchemy==2.1.0b3
+> ```
+>
+> `2.1.0b3` is indeed on PyPI and does sort newer than every 2.0 release — but
+> uv, like pip, **never selects a pre-release while a stable satisfies the
+> range**, so a bare `>=2.0.51` would not pull it. The cap is not required for
+> that. What `<2.1` actually buys is **exclusion of 2.1.0 *stable***, an
+> unreviewed major-minor that would otherwise arrive on its release day through
+> a plain `uv lock`. `services/core-api/pyproject.toml:13-21` carries this
+> reasoning verbatim; the plan was the only place still asserting the beta
+> story.
+>
+> The extra is also part of the pin: **`[asyncio]`**, without which greenlet is
+> undeclared on `arm64` and the first `create_async_engine` call is an
+> `ImportError` (`pyproject.toml:23-42`).
 
 `services/core-api/tests/conftest.py` exposes session-scoped fixtures giving
 **three distinct DSNs**, because they are three different privilege levels:
@@ -176,16 +330,48 @@ required — `2.1.0b3` is on PyPI and is *newer* than stable),
 **Fixtures must live in `conftest.py`.** pytest does not collect fixtures from
 arbitrary modules such as `tests/db.py`.
 
-**Three traps, all verified:**
+**Three traps — two real, and the third is not a trap at all.** *(This heading
+used to read "Three traps, all verified." It was three-for-three only in the
+sense that nobody had checked the third.)*
 
 - `PostgresContainer.get_connection_url()` returns **`postgresql+psycopg2://`**
   by default. psycopg2 is deliberately not a dependency. Pass
   `driver="psycopg"`.
 - `testcontainers[postgres]`'s extra is **empty** and installs no driver;
   `psycopg[binary]` is what makes it connect.
-- The override env var **must not start with `TITLEPIPE_`**. `settings.py` sets
-  `env_prefix="TITLEPIPE_"` with `extra="forbid"`, so `CoreApiSettings` would
-  reject its own test variable. Use `TP_TEST_DATABASE_URL`.
+- The override env var is **`TP_TEST_DATABASE_URL`**, and it deliberately does
+  not start with `TITLEPIPE_` — but not for the reason this plan gave. See the
+  correction directly below.
+
+> **Correction, 2026-08-06 — this trap does not exist, and it was never a trap.**
+> The third bullet used to read: *"The override env var **must not start with
+> `TITLEPIPE_`**. `settings.py` sets `env_prefix="TITLEPIPE_"` with
+> `extra="forbid"`, so `CoreApiSettings` would reject its own test variable."*
+> Commit `4adfa5b`'s message claims this was corrected in the plan's text;
+> `git show --numstat 4adfa5b -- docs/` is **empty**. It changed zero plan lines.
+>
+> **Re-measured here, 2026-08-06** against pydantic-settings 2.14.2, with
+> `TITLEPIPE_BOGUS_UNKNOWN=1` exported (and `TITLEPIPE_ENVIRONMENT` supplied,
+> because `environment` has no default):
+>
+> ```
+> CoreApiSettings()   ->  constructs cleanly
+> ```
+>
+> `EnvSettingsSource` walks the **model's fields** and looks each one up in the
+> environment. It never walks the environment, so a `TITLEPIPE_`-prefixed
+> variable matching no field is invisible and `extra="forbid"` never sees it.
+> Both spellings construct. The config is real —
+> `services/core-api/src/titlepipe_core/settings.py:77,79` — the inference from
+> it was not.
+>
+> **The name is still `TP_TEST_DATABASE_URL`, on the reason that survives
+> measurement:** a harness variable that does not share the application's prefix
+> cannot be read as application configuration — by a person, or by some later
+> settings source that *does* walk the environment. There is no test for that,
+> because there is nothing to assert. The comment above
+> `DATABASE_URL_OVERRIDE` in `services/core-api/tests/conftest.py` records the
+> same correction at the constant.
 
 **PROOF** A test reads `SELECT current_setting('server_version')` and asserts it
 starts with `18.`, **and** asserts `180000 <= server_version_num < 190000`.
@@ -484,12 +670,59 @@ instead of it.* Without them `titlepipe_app` gets `permission denied` — and a
 read test would pass for entirely the wrong reason:
 
 ```sql
-GRANT USAGE ON SCHEMA public TO titlepipe_app, titlepipe_worker;
-GRANT SELECT, INSERT, UPDATE ON <all seven tables> TO titlepipe_app;
-GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO titlepipe_app;
+GRANT SELECT, INSERT, UPDATE ON <the six tenant tables + tenants> TO titlepipe_app;
+GRANT SELECT, INSERT         ON audit_log                         TO titlepipe_app;
 ```
 
 Include `tenants` — the seed and the FK checks need it.
+
+> **Correction, 2026-08-06 — this contract was overtaken by three separate
+> measurements and never amended. All three are now in the code.** The block
+> used to read:
+>
+> ```sql
+> GRANT USAGE ON SCHEMA public TO titlepipe_app, titlepipe_worker;
+> GRANT SELECT, INSERT, UPDATE ON <all seven tables> TO titlepipe_app;
+> GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO titlepipe_app;
+> ```
+>
+> **1. The schema `USAGE` grant is not `0002`'s to make.** Schema `public`
+> belongs to `pg_database_owner` from PostgreSQL 15 on. `migrations/env.py` runs
+> every statement as `titlepipe_owner`, which is not the database owner and
+> holds no grant option, so its `GRANT` is a `WARNING: no privileges were
+> granted for "public"` and an **exit 0**. Commit `9ddeefc` moved the grant to
+> `migrations/sql/roles.sql`, which runs as the operator and can land it, and
+> widened it to three roles — `GRANT USAGE ON SCHEMA public TO titlepipe_owner,
+> titlepipe_app, titlepipe_worker`. The measurement and the reasoning are in
+> that file's header section **"WHY `GRANT USAGE ON SCHEMA public` IS HERE, AND
+> WHICH THREE ROLES IT NAMES"**.
+>
+> `0002` still **issues** the statement — `upgrade()`'s
+> `GRANT USAGE ON SCHEMA public TO {SCHEMA_USAGE_ROLES}` in
+> `migrations/versions/0002_forced_rls_and_grants.py` — but only so that its
+> read-back, **`_require_schema_usage`**, can refuse a cluster where the
+> privilege is genuinely absent. Do not read that line as the place the grant
+> lands.
+>
+> **2. `audit_log` gets `SELECT, INSERT` and never `UPDATE`.** "All seven
+> tables" contradicted `0001`'s append-only trigger. The trigger refuses UPDATE
+> and DELETE whatever the ACL says, so the grant changed no behaviour and only
+> misstated the intent — an ACL reading `arwU` on the one table this system
+> promises never to edit in place. Ruled in `19f2638`, written in `upgrade()`
+> under the comment *"🔴 `audit_log` GETS NO `UPDATE`, AND IT IS THE ONE GRANT
+> THAT DIFFERS"*, and asserted by
+> `tests/test_forced_rls_and_grants.py:810::test_audit_log_is_granted_insert_but_never_update`
+> — which requires `UPDATE is False` and `DELETE is False`. **The Done section
+> still demanded the opposite until 2026-08-06; see the correction there.**
+>
+> **3. The sequence grant is deliberately omitted.** Every PK defaults to
+> `gen_random_uuid()`; `pg_class` holds zero relations of kind `S` in `public`,
+> so the statement would grant nothing to nobody while reading like a covered
+> case. See `upgrade()`'s *"🔴 NO `GRANT USAGE, SELECT ON ALL SEQUENCES`"*
+> comment, with
+> `tests/test_forced_rls_and_grants.py:956::test_there_are_no_sequences_for_a_sequence_grant_to_reach`
+> asserting the count is zero — which is what will notice the day a `serial`
+> column arrives.
 
 **Two corrections to earlier drafts, both proven, both counter-intuitive:**
 
@@ -506,13 +739,53 @@ Include `tenants` — the seed and the FK checks need it.
 column — derive it, do not hardcode):
 - `relrowsecurity AND relforcerowsecurity` for each;
 - a `tenant_isolation` policy exists on each;
-- **the policy's `qual` from `pg_policies` contains `nullif`** — Task 0's whole
-  argument for the empty-string sentinel is that the policy wraps it. Nothing in
-  Task 0 can enforce that; `test_tenancy.py` can only compare one string literal
-  to another. Write the policy without `nullif` and an unset GUC hits
-  `''::uuid`, which *raises* — a 500 in place of a clean denial. This assertion
-  is where that claim finally becomes checkable, so it is not optional;
+- **the policy's `qual` from `pg_policies` matches the whole predicate,
+  anchored** — not "contains `nullif`". See the correction below; this is the
+  one assertion in Plan 01 that was measured to let a leaking database ship
+  green;
 - `has_table_privilege('titlepipe_app', t, 'SELECT')` and `'INSERT'` for each.
+
+> **Correction, 2026-08-06 — this bullet specified the weak assertion, and the
+> weak assertion was measured to pass over a database leaking six of seven
+> tables.** It used to read: *"**the policy's `qual` from `pg_policies` contains
+> `nullif`** — Task 0's whole argument for the empty-string sentinel is that the
+> policy wraps it … This assertion is where that claim finally becomes
+> checkable, so it is not optional."* The motivation is right and the assertion
+> it produces is not.
+>
+> Measured in `9ddeefc` with `0002::_isolate` patched so `orders` keeps its real
+> predicate and the other six plus `tenants` get
+>
+> ```sql
+> USING (nullif(current_setting('app.current_tenant', true), '') IS NOT NULL)
+> ```
+>
+> — TRUE for every row as soon as *any* tenant is established, i.e. handing
+> every established tenant every other tenant's rows. It contains `nullif`, so
+> this assertion passed. It denies an unestablished session, so every deny
+> assertion passed. **`192 passed`.** *"Contains `nullif`"* never asks whether
+> the predicate compares the key column to anything.
+>
+> **What it must be instead.** `pg_policies.qual` is the server's *deparse* of
+> the expression tree, so it is canonical and the whole thing can be matched:
+>
+> ```
+> (tenant_id = (NULLIF(current_setting('app.current_tenant'::text, true), ''::text))::uuid)
+> ```
+>
+> Anchor at both ends (`\A`/`\Z`) so nothing can hide in a gap; normalise
+> whitespace only; extract the **key column** and the **GUC name** as named
+> groups and compare them case-**sensitively** against the expected column and
+> the `tenant_guc` fixture, so `re.IGNORECASE` covers only SQL's own
+> upper-casing of its keywords. `TENANT_PREDICATE_SHAPE` and
+> `_tenant_predicate_fault` in `tests/test_forced_rls_and_grants.py` are the
+> landed form, with the measurement above recorded beside them.
+>
+> **Injection 4 below inherits the defect** — "remove `nullif` from one policy's
+> `USING`" only ever exercised the substring test. Add the mutation that
+> actually shipped green: leave `nullif` in place and replace the comparison
+> with `IS NOT NULL` on one table. That must fail the `qual` assertion **and**
+> the positive control.
 
 **Cardinality floor — these proofs pass on an empty database.** Enumerating from
 `pg_class` and asserting a property of every row returned is vacuously true when
@@ -544,8 +817,22 @@ Task 2's membership convergence exists to keep to one role.
 | 4 | remove `nullif` from one policy's `USING` | the `pg_policies` assertion, **and** a session with the GUC set to `''` must raise `invalid input syntax for type uuid: ""` rather than deny |
 | 5 | revoke `SELECT` on one table from `titlepipe_app` | the privilege assertion. *RLS is evaluated **after** the privilege check* — without the grants a read test passes for entirely the wrong reason |
 
-**Squawk will not catch any of this** — it lints lock safety and has no rules for
-GRANT, POLICY, RLS or roles.
+**No migration linter runs anywhere in this repository, and none is claimed.**
+The catalog assertions above are the only thing that would catch any of this.
+
+> **Correction, 2026-08-06 — Squawk survived the commit that deleted it.** This
+> line used to read: *"**Squawk will not catch any of this** — it lints lock
+> safety and has no rules for GRANT, POLICY, RLS or roles."* Commit `9ddeefc`
+> states *"Squawk is deleted from the plan"* and removed Task 7's three
+> paragraphs about it — but missed this sentence, which sits in Task 4.
+>
+> The observation was true and is now beside the point: **Squawk is configured
+> nowhere in this repository.** It has no config file, no pre-commit hook and no
+> workflow step; the only surviving mention is a comment in
+> `.github/workflows/backend.yml:219-222` explaining why there is no migration
+> linter. It also could not read these migrations if it were installed — it
+> lints `.sql`, and `0001`/`0002` are Python. Naming a tool the reader cannot
+> find invites them to go looking for it.
 
 ### Measured before this task was written. All of it applies to `0002`.
 
@@ -578,8 +865,28 @@ A throwaway `0002` doing exactly this task was built and run against 18.4 on
   grants, or accept documented debris.
 - **`titlepipe_owner` has no `USAGE` grant on schema `public`** — it inherits it
   from `PUBLIC`. On a hardened cluster (`REVOKE USAGE ON SCHEMA public FROM
-  PUBLIC`) migrations break. This task grants `USAGE` to `titlepipe_app` and
-  `titlepipe_worker`; add the owner.
+  PUBLIC`) migrations break. **RESOLVED 2026-08-06, and not by this task:** the
+  finding is real and the fix is `roles.sql`'s
+  `GRANT USAGE ON SCHEMA public TO titlepipe_owner, titlepipe_app,
+  titlepipe_worker`, which names all three.
+
+  > **Correction, 2026-08-06.** This bullet used to end: *"This task grants
+  > `USAGE` to `titlepipe_app` and `titlepipe_worker`; add the owner."* It
+  > cannot. Measured in `9ddeefc` against a hardened `postgres:18.4`, one
+  > throwaway container per run, with `REVOKE USAGE ON SCHEMA public FROM
+  > PUBLIC` applied before anything else touched it: `0002`'s grant runs as
+  > `titlepipe_owner`, which holds no grant option on a schema owned by
+  > `pg_database_owner`, so it is a `WARNING` and a no-op. End to end —
+  >
+  > ```
+  > before   alembic exit=1; titlepipe_app: 42P01 relation "orders" does not exist
+  > after    alembic exit=0; titlepipe_app sees orders
+  > ```
+  >
+  > — where "after" is `roles.sql` naming the three roles. `0002`'s
+  > `_require_schema_usage` read-back stays: it is what catches an *operator*
+  > that could not grant. Naming the roles in `roles.sql` is what stops it
+  > firing. See the correction under this task's GRANT block.
 - **Default privileges belong in `roles.sql`, not here.** It already converges
   `pg_default_acl`, and a grant this task makes to a role will be silently
   widened by any default-ACL drift `roles.sql` does not repair.
@@ -709,9 +1016,31 @@ enum test compare a constant to itself.
 as `postgres`, a correctly forced table still returned every tenant's rows.* An
 isolation test on the admin DSN passes while proving nothing.
 
-**CONTRACT — the fixture.** A session-scoped fixture on `admin_dsn` seeds, before
-any app-role connection opens: tenants **A** and **B**, **two** orders for A,
-**exactly one** for B.
+**CONTRACT — the fixture.** A **module-scoped** fixture on `admin_dsn` seeds,
+before any app-role connection in the module opens: tenants **A** and **B**,
+**two** orders for A, **exactly one** for B.
+
+> **Correction, 2026-08-06 — this said *session*-scoped, and pytest refuses it.**
+> The seed must follow `alembic upgrade head`, so it depends on
+> `migrated_database` — and *that* fixture is module-scoped for a reason of its
+> own: session scope leaves `alembic_version` in place and
+> `tests/test_roles.py::test_a_table_created_after_set_role_belongs_to_the_owner`
+> then fails with `DuplicateTable` (see the `migrated_database` fixture in
+> `services/core-api/tests/conftest.py`). A session-scoped fixture may not
+> request a module-scoped one. **Measured against pytest 9.1.1**, the seed
+> respelled `scope="session"` and nothing else changed:
+>
+> ```
+> ScopeMismatch: You tried to access the module scoped fixture
+> migrated_database with a session scoped request object.
+> ```
+>
+> Module scope delivers the property this contract is actually about — the seed
+> is committed **before any app-role connection in the module opens**, because
+> every test in the module requests it and pytest builds it first. Widening it
+> further buys nothing: the tables do not outlive the module. The
+> `_isolation_seed_result` fixture in `conftest.py` records the deviation in its
+> own docstring; this is the amendment the plan was missing.
 
 > **Correction, 2026-08-06.** This contract used to add: *"Seeding must set the
 > tenant GUC per tenant — proven: even the migration role, inheriting the owner,
@@ -796,11 +1125,37 @@ own, and every database proof in Tasks 1–6 actually executes there.
 > the one line this task most needs.
 
 **Also unresolved:** `scripts/` is type-checked by nothing. CI runs `pyright` per
-uv project and `scripts/` is not one — 1,121 lines including two security
-controls. Measured: `include = [..., "scripts"]` does **not** work (29 strict
-errors in `scripts/tests`, 248 in the `gate0` archive); `include = [...,
-"../../scripts/*.py"]` reports 0 errors over 31 files. The clean answer is a
+uv project and `scripts/` is not one — **4,536 lines of Python** across 13
+files, including two security controls. Measured: `include = [..., "scripts"]`
+does **not** work (29 strict errors in `scripts/tests`, 248 in the `gate0`
+archive); `include = [..., "../../scripts/*.py"]` reports 0 errors, but **that
+glob reaches only the four top-level scripts**. The clean answer is a
 `scripts/pyproject.toml` and a seventh matrix entry.
+
+> **Correction, 2026-08-06 — the figure was stale when it was written, and it
+> counted the wrong thing.** This paragraph used to say *"1,121 lines"*.
+> Recounted here:
+>
+> | | files | lines |
+> |---|---|---|
+> | `scripts/*.py` (top level) | 4 | **1,211** |
+> | `scripts/tests/` | 4 | **1,947** |
+> | `scripts/gate0/` | 5 | **1,378** |
+> | **total** | **13** | **4,536** |
+>
+> 1,211 is `116 + 847 + 67 + 181`. **1,121 was the correct total at commit
+> `160fcff`**, when `check_backend_rules.py` was 757 lines; it grew to 847 at
+> `6df3eaa`, seven commits before `3a5a652` wrote this paragraph. The other
+> three scripts have not changed size since.
+>
+> **And the proposed `include` reaches neither subdirectory.** Measured from
+> `services/core-api`: `../../scripts/*.py` matches exactly 4 paths — a single
+> `*` does not recurse — while `../../scripts/**/*.py` matches 13. The "31 files"
+> pyright reported is source plus followed imports, not the 31 files of
+> `scripts/`. So the `include` line would leave `scripts/tests` (1,947 lines,
+> and the only test of the rules gate) and `scripts/gate0` (1,378) exactly as
+> unchecked as they are now. A `scripts/pyproject.toml` is the answer for that
+> reason too, not only for tidiness.
 
 **PROOF — this task had none, which is why it is written out here.**
 
@@ -850,8 +1205,27 @@ Plus, and these are the ones that matter:
 - every tenant table has `relrowsecurity AND relforcerowsecurity` and is owned by
   `titlepipe_owner`;
 - no LOGIN role is superuser, bypassrls, or owns a table;
-- `titlepipe_app` holds SELECT/INSERT/UPDATE on all seven tables;
+- `titlepipe_app` holds SELECT/INSERT/UPDATE on the six tenant tables and
+  `tenants`, and **SELECT/INSERT only on `audit_log`** — no UPDATE, no DELETE;
 - **every injection was run and observed to fail**, named in the commit message.
+
+> **Correction, 2026-08-06 — this acceptance criterion demanded the opposite of
+> what the code deliberately does.** It used to read: *"`titlepipe_app` holds
+> SELECT/INSERT/UPDATE on all seven tables"*.
+>
+> `0002` grants `SELECT, INSERT` on `audit_log` and nothing more —
+> `op.execute("GRANT SELECT, INSERT ON audit_log TO titlepipe_app")` in
+> `migrations/versions/0002_forced_rls_and_grants.py::upgrade` — and
+> `tests/test_forced_rls_and_grants.py:810::test_audit_log_is_granted_insert_but_never_update`
+> asserts `UPDATE is False` and `DELETE is False`. The decision is recorded in
+> commit `19f2638` and reasoned in the *"🔴 `audit_log` GETS NO `UPDATE`"*
+> comment beside the statement: `0001`'s append-only trigger refuses UPDATE and
+> DELETE whatever the ACL says, so the grant would change no behaviour and only
+> misstate the intent.
+>
+> **Anyone checking Plan 01 against its own Done section concluded it had
+> failed.** The acceptance list was never amended when the contract was; see the
+> matching correction in Task 4.
 
 **Not in this plan:** any HTTP route, WorkOS, R2, Procrastinate, OTel. Those land
 at the gate that first needs them, so an unused dependency never reaches a

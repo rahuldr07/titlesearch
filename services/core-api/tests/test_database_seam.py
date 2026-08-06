@@ -1,6 +1,15 @@
 """The database seam: a real server, at a known major, reachable three ways.
 
-No production code exists behind this yet — no engine, no session, no models.
+🔴 "No production code exists behind this yet — no engine, no session, no
+models." That was the second line of this docstring and it stopped being true
+with Task 3: this file carries `from titlepipe_core.db.models import Base` among
+its imports below, for `test_migration_tables_matches_the_model_metadata`, and
+`titlepipe_core.db` now holds the engine, the sessionmaker and `tenant_session`
+as well. What is
+still true is the narrower claim the line was standing in for — NOTHING BELOW
+ASSERTS ANYTHING ABOUT THAT CODE. The seam under test is the harness, and the
+one import is a source of truth to compare a hand-maintained list against.
+
 What is proved here is that the harness can reach PostgreSQL at all, that it is
 the major version the rest of Plan 01 assumes, that the three DSNs really are
 three different logins rather than three names for the superuser, and that
@@ -365,12 +374,23 @@ def test_an_unparseable_override_is_rejected_by_name(
 # the test would be reported by the very mechanism under test, and the test
 # would be hiding from itself.
 #
-# It is also the ONLY credential-shaped literal in this file or in conftest.py.
-# The reviewer's shell check greps a poisoned run for the password it exported,
-# and a docstring quoting an example password is printed by the same traceback
-# machinery as a real leak — so the grep would return hits that are not leaks
-# and stop being a detector. Every reference below describes the value instead
-# of spelling it.
+# It is the only credential-shaped literal that is ever EXPORTED or handed to
+# `roles.sql`, and there is none at all in `conftest.py`. The reviewer's shell
+# check greps a poisoned run for the password it exported, and a docstring
+# quoting an example password is printed by the same traceback machinery as a
+# real leak — so the grep would return hits that are not leaks and stop being a
+# detector. Every reference below describes the value instead of spelling it.
+#
+# 🔴 THIS SAID "the ONLY credential-shaped literal in this file or in
+# conftest.py", AND THE COUNT IS LOAD-BEARING BECAUSE THE POINT IS THAT GREP
+# STAYS A DETECTOR. Half of it holds: `conftest.py` contains none. This file
+# contains several — COUNTED 2026-08-06: `"generated-for-this-assertion"` passed
+# to `postgres_container_factory`, `adminpw` and `throwaway` in the `_role_dsn`
+# test, and `pw` in six DSN strings handed to `libpq_environment`. None of them
+# is ever exported, so none can be confused with a real leak by the grep; what
+# the exclusivity claim was actually protecting is that no literal reaches an
+# ENVIRONMENT, and that is what is stated above now. A blanket "only one in two
+# files" invites the next person to add a second and quietly falsify it.
 LEAK_CANARY = "s3cr3t-must-never-be-printed"
 
 
@@ -778,8 +798,17 @@ def test_roles_sql_that_never_returns_is_bounded_and_names_only_the_host(
 # --- PGOPTIONS, which presets the thing Task 6 has to prove -----------------
 
 
-# A tenant that is syntactically valid and belongs to nobody. It exists to be
-# smuggled in through `PGOPTIONS` and then found absent.
+# The tenant smuggled in through `PGOPTIONS` and then required to be absent.
+#
+# 🔴 IT IS NOT "a tenant that belongs to nobody", WHICH IS WHAT THIS COMMENT
+# USED TO CALL IT. `2222…` is `ISOLATION_TENANT_B` in `conftest.py` and
+# `TENANT_TWO` in `tests/test_forced_rls_and_grants.py` and
+# `tests/test_tenant_session.py`, and `conftest.py`'s isolation-seed section
+# states that the 1111/2222 pair is shared across the files ON PURPOSE, so that
+# a reader moving between them does not have to work out whether a different
+# uuid means something. Nothing here depends on the value being unused — the
+# assertion is that the GUC does not carry it, whoever it is — and calling it
+# unowned would send the next reader looking for a uuid that must not collide.
 POISON_TENANT = "22222222-2222-2222-2222-222222222222"
 
 # Set in the child pytest below so that, if the node id ever stops selecting

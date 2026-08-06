@@ -52,10 +52,21 @@ SKELETON_TABLES = frozenset(
 IDENTITY_COLUMNS = frozenset({"id", "created_at"})
 
 # 🔴 `tenants` HAS NO `tenant_id` AND THAT IS THE CONTRACT, not an omission. It
-# is the registry: its primary key *is* the tenant id, so Task 4's policy keys on
-# `id` there. Task 4 derives which tables are tenant tables from the presence of
-# this column, so an extra one here would silently give the registry the wrong
-# policy.
+# is the registry: its primary key *is* the tenant id, so `0002`'s policy keys on
+# `id` there.
+#
+# WHO ACTUALLY DERIVES FROM THIS COLUMN, CORRECTED. These lines used to say
+# "Task 4 derives which tables are tenant tables from the presence of this
+# column". `0002` does not derive anything: `upgrade()` is seven hardcoded
+# `_isolate(...)` calls with `tenants` first and keyed on `id`, and it says so
+# itself ("Written out per table rather than generated from a list"). The
+# derivations are in the TESTS and the harness —
+# `tests/test_forced_rls_and_grants.py::_tenant_tables` and
+# `tests/conftest.py::_isolation_tables` both ask the catalog which tables carry
+# `tenant_id`. The consequence is unchanged and is why the note is here: giving
+# the registry a `tenant_id` would move it into the derived set and change which
+# assertions and which seed rows it gets, silently. It just would not change
+# `0002`.
 EXPECTED_COLUMNS: dict[str, frozenset[str]] = {
     "tenants": IDENTITY_COLUMNS,
     "orders": IDENTITY_COLUMNS | {"tenant_id"},
@@ -104,8 +115,18 @@ EXPECTED_TRIGGERS = frozenset({"audit_log_append_only", "audit_log_no_truncate"}
 TRIGGER_ENABLED = "O"
 
 # The two server defaults every skeleton table carries, as PostgreSQL renders
-# them back. Read from the catalog rather than assumed: `tenants` is seeded by
-# Task 6, which supplies no `id`, so its default is the only thing producing one.
+# them back. Read from the catalog rather than assumed.
+#
+# 🔴 THE REASON GIVEN HERE WAS BACKWARDS. It read: "`tenants` is seeded by Task
+# 6, which supplies no `id`, so its default is the only thing producing one."
+# `tests/conftest.py::_seed_isolation_rows` writes
+# `INSERT INTO tenants (id) VALUES (:tenant)` — it must, because the registry's
+# PRIMARY KEY *is* the tenant id, so there is no other column to say which tenant
+# a row is. `tenants` is the ONE table in the seed whose `id` default is never
+# reached. The six tenant-keyed tables are the ones that rely on
+# `gen_random_uuid()`: the seed inserts `(tenant_id)` on each of them and takes
+# the generated `id` back through `RETURNING id`, which the isolation proof then
+# compares by value. Dropping the default would surface there.
 UUID_DEFAULT = "gen_random_uuid()"
 NOW_DEFAULT = "now()"
 
@@ -187,10 +208,14 @@ class ColumnFacts(NamedTuple):
     """Type, nullability and server default — the three things a skeleton column is.
 
     `default` was not read at all until review pointed it out, so six of seven
-    tables' defaults were unverified. It is not decoration: Task 6 seeds
-    `tenants` without supplying an `id`, so `gen_random_uuid()` is the only thing
-    producing one, and a migration that dropped the default would surface there
-    as a `NOT NULL` violation in somebody else's task.
+    tables' defaults were unverified. It is not decoration: Task 6's seed writes
+    the SIX tenant-keyed tables by naming only `tenant_id`, so `gen_random_uuid()`
+    is the only thing producing their `id`, and a migration that dropped the
+    default would surface as a `NOT NULL` violation in somebody else's task.
+
+    (This said "Task 6 seeds `tenants` without supplying an `id`". It supplies
+    one — `INSERT INTO tenants (id) VALUES (:tenant)` — and cannot do otherwise,
+    because that table's primary key IS the tenant id. See `UUID_DEFAULT`.)
     """
 
     type_name: str
@@ -387,7 +412,7 @@ def _sqlstate(error: DBAPIError) -> str | None:
 
 
 def test_the_first_revision_id_is_the_literal_0001(alembic_config: Callable[[str], Config]) -> None:
-    """Task 4's `0002` sets `down_revision = "0001"`, so the id is a contract.
+    """`0002` sets `down_revision = "0001"`, so the id is a contract.
 
     Alembic's default is a random hash. A hash would work exactly as well for
     Alembic and not at all for the person writing `0002`, who would have to look
@@ -396,11 +421,17 @@ def test_the_first_revision_id_is_the_literal_0001(alembic_config: Callable[[str
     🔴 THIS ASSERTS THE IDENTITY OF `0001`, NOT THE HEAD OF THE CHAIN, AND THE
     DIFFERENCE IS THE ENTIRE VALUE OF THE TEST. It used to read
     `scripts.get_current_head() == FIRST_REVISION`, which is the head of the
-    whole chain — so the moment Task 4 lands `0002`, this Task 3 test goes red
-    with `assert '0002' == '0001'`. MEASURED with a `0002` stub. A test written
-    to give Task 4's author a literal to read would instead have handed them a
-    failure in somebody else's file, naming the head and saying nothing about
-    `0001`, and left them to work out whether their own revision id was wrong.
+    whole chain — so it would have gone red with `assert '0002' == '0001'` the
+    day Task 4 landed `0002`. MEASURED against a `0002` stub before that, and
+    `0002` has since landed for real. A test written to give Task 4's author a
+    literal to read would instead have handed them a failure in somebody else's
+    file, naming the head and saying nothing about `0001`, and left them to work
+    out whether their own revision id was wrong.
+
+    (The tense here was future — "the moment Task 4 lands `0002`" — while the
+    same file's `test_a_failed_upgrade_leaves_no_partial_schema_behind` says
+    "Task 4 landed a real `0002`" in the past. Both describe the same event and
+    only one could be right.)
 
     `get_base()` is the assertion that stays true forever: `0001` is the base of
     the chain however many revisions follow it. `down_revision is None` is the
@@ -508,8 +539,10 @@ def test_every_tenant_table_carries_its_own_tenant_id_and_the_registry_does_not(
         )
 
     assert "tenant_id" not in columns["tenants"], (
-        "tenants is the registry: its primary key IS the tenant id, and Task 4 "
-        "derives the tenant tables from the presence of a tenant_id column"
+        "tenants is the registry: its primary key IS the tenant id. 0002 keys its "
+        "policy on id here, and test_forced_rls_and_grants.py and conftest.py both "
+        "derive the tenant tables from the presence of a tenant_id column, so "
+        "adding one moves the registry into a set that expects a different key"
     )
 
     # 🔴 NULLABLE, AND THE NULLABILITY IS THE POINT. An engine with no coordinate

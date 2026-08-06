@@ -213,8 +213,12 @@ APPEND_ONLY_GRANTED_VERBS = ("SELECT", "INSERT")
 def _expected_grants(table: str) -> tuple[Sequence[str], Sequence[str]]:
     """`(granted, withheld)` for one table — every verb this file knows about.
 
-    🔴 THE WITHHELD LIST IS DERIVED FROM THE GRANTED ONE rather than written out,
-       and that is what closes F6.
+    🔴 THE WITHHELD LIST IS DERIVED FROM THE GRANTED ONE rather than written out.
+
+    (This ended "and that is what closes F6." Nothing in this repository defines
+    an `F6` — the review that numbered it was never committed — so the tag was a
+    citation of a document a reader cannot open. The finding itself is the
+    paragraph below, which is what it was standing in for.)
 
     The loop this feeds used to read `for verb in GRANTED_VERBS[:2]` — SELECT and
     INSERT — so `UPDATE` was fetched into `privileges` on all six tenant tables
@@ -766,7 +770,10 @@ def test_the_registry_is_forced_and_isolated_on_its_own_id(
     `_assert_tenant_isolation_policy` so that "identical" is a shared assertion
     rather than a claim in a docstring.
 
-    WHAT THIS TEST USED TO MISS, and it missed it in both of F1(a)'s directions:
+    WHAT THIS TEST USED TO MISS, and it missed it in both directions (this said
+    "in both of F1(a)'s directions"; no document here defines an `F1(a)`, the
+    review that numbered it was never committed, and the two directions are
+    spelled out below anyway):
     it read `"nullif" in qual.lower()` plus `"tenant_id" not in qual`, which the
     tenant-blind predicate `nullif(current_setting(…), '') IS NOT NULL` satisfies
     on both counts — it contains `nullif` and it does not contain `tenant_id`. And
@@ -808,7 +815,7 @@ def test_the_registry_is_forced_and_isolated_on_its_own_id(
 
 
 def test_audit_log_is_granted_insert_but_never_update(
-    migrated_database: str, seam_engine: Callable[[str], Engine], app_role: str
+    migrated_database: str, app_dsn: str, seam_engine: Callable[[str], Engine], app_role: str
 ) -> None:
     """🔴 THE ONE GRANT THAT DIFFERS, PINNED SO IT CANNOT BE TIDIED BACK.
 
@@ -819,11 +826,30 @@ def test_audit_log_is_granted_insert_but_never_update(
     granted; this makes the two append-only verbs consistent.
 
     WHAT IT COSTS, ASSERTED RATHER THAN ONLY WRITTEN DOWN: the trigger's UPDATE
-    branch is now unreachable for `titlepipe_app`, exactly as its DELETE branch
-    already was, because the privilege check runs first. So this test reads
-    `42501` from that role — and the second half then shows the trigger is not
-    thereby decoration, by reaching the table as the superuser (who bypasses the
-    ACL and RLS alike) and getting `0A000` from the trigger itself.
+    branch is unreachable for `titlepipe_app`, exactly as its DELETE branch
+    already was, because the privilege check runs FIRST. So an `UPDATE` issued
+    as that role comes back `42501 permission denied for table audit_log`, not
+    the trigger's `0A000`, and the second half of that claim —
+    that the trigger is not thereby decoration — is
+    `test_the_append_only_trigger_still_answers_for_the_paths_the_acl_does_not`
+    immediately below, which reaches the table as the superuser (who bypasses
+    the ACL and RLS alike) and gets `0A000` from the trigger itself.
+
+    🔴 UNTIL 2026-08-06 THAT PARAGRAPH WAS A DESCRIPTION OF A TEST THAT DID NOT
+    EXIST. It said "this test reads `42501` from that role — and the second half
+    then …", and the body was four `has_table_privilege` calls: it executed no
+    statement, had no second half, and NO TEST ANYWHERE ASSERTED THE `42501`
+    that `0002` states three times as the cost of withholding `UPDATE`. The
+    catalog assertions cannot stand in for it — `has_table_privilege` answers
+    about the ACL, and what a caller in Plans 02-06 will actually receive is a
+    SQLSTATE. The statement below is that assertion.
+
+    THE MESSAGE IS ASSERTED ALONGSIDE THE SQLSTATE, for the reason
+    `INSUFFICIENT_PRIVILEGE_SQLSTATE` records: PostgreSQL uses `42501` both for
+    "you may not touch this table" and for "this query would be affected by a
+    row-level security policy", and this connection is at the deny sentinel, so
+    both are live explanations for the same five characters. `permission denied`
+    is the privilege one; the RLS one reads `query would be affected by`.
     """
     engine = seam_engine(migrated_database)
     try:
@@ -839,6 +865,26 @@ def test_audit_log_is_granted_insert_but_never_update(
         "grant only misstates the intent of an append-only table."
     )
     assert privileges["DELETE"] is False
+
+    app = seam_engine(app_dsn)
+    try:
+        with app.connect() as connection:
+            with pytest.raises(DBAPIError) as raised:
+                connection.execute(text("UPDATE audit_log SET tenant_id = tenant_id"))
+            connection.rollback()
+    finally:
+        app.dispose()
+
+    assert _sqlstate(raised.value) == INSUFFICIENT_PRIVILEGE_SQLSTATE, (
+        f"expected {INSUFFICIENT_PRIVILEGE_SQLSTATE} for {app_role} updating "
+        f"audit_log, got {_sqlstate(raised.value)}: {raised.value}. "
+        f"{APPEND_ONLY_SQLSTATE} here would mean the grant came back."
+    )
+    assert "permission denied" in str(raised.value), (
+        f"42501 came back for some other reason than the missing grant — this "
+        f"session is at the deny sentinel, so a row-level security refusal "
+        f"carries the same SQLSTATE: {raised.value}"
+    )
 
 
 def test_the_grants_name_the_app_role_explicitly_and_reach_no_other_role(

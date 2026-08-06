@@ -17,9 +17,19 @@ does not move when a revision is added. *Verified 2026-08-05: a migration
 carrying a `print(`, an `Any` and a bare `text(...)` reported clean.* That
 default is defensible — a migration is mostly raw SQL by nature, which is what
 the `db/` carve-out exists for — but it means **the structural rules here are
-held by review and by pyright, not by the gate**. Widening the scan roots
-touches `scripts/` and belongs to Task 7. Stated here so nobody reads the gate's
-silence as approval.
+held by review and by pyright, not by the gate**. Stated here so nobody reads
+the gate's silence as approval.
+
+🔴 AND IT HAS NO OWNER. This paragraph used to end "Widening the scan roots
+touches `scripts/` and belongs to Task 7." Task 7 landed — it is CI, commits
+`3a5a652` and `9ddeefc` — and it did not widen them. `SCAN_ROOT_GLOBS` is still
+`("services/*/src", "libs/*/src")` and has not been edited since the commit that
+introduced it (`160fcff`). Nor was it ever Task 7's: Plan 01's Task 4 section
+asks for "either widen the scan roots … or state in the migration package's
+`__init__.py` that it is deliberately outside the gate", and this docstring IS
+the second branch. The requirement is met and the widening has no owner — which
+is a different thing from work that is queued, and a forward reference to a task
+that has already shipped reads as the second while being the first.
 
 The rules the gate would have applied still hold here, and the two that matter
 most in a migration are:

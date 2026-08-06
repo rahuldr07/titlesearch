@@ -457,15 +457,39 @@ def _normalise_override_dsn(url: URL) -> str:
     RESIDUAL, STATED IN FULL. The earlier version of this paragraph said only
     that an explicit host "is the operator's to get right", which understated
     what an accepted DSN authorises. Behind this validator run, against whatever
-    server it lets through: `migrations/sql/roles.sql` (`CREATE ROLE`,
-    `ALTER ROLE`, `REVOKE`, `GRANT` — including
-    `ALTER ROLE titlepipe_owner LOGIN BYPASSRLS PASSWORD …` and a `dba` role),
+    server it lets through: `migrations/sql/roles.sql` — which creates five
+    cluster-wide roles and `ALTER ROLE`s all five on every run (four of them with
+    a `PASSWORD` taken from the environment), REVOKEs every membership edge that
+    touches a `titlepipe\\_%` role, `ALTER ROLE … RESET ALL`s each of them in the
+    cluster-wide AND the per-database scope, revokes their default privileges,
+    and GRANTs `CREATE` and `USAGE` on schema `public` —
     `alembic upgrade head` and `downgrade base`, and — on EVERY module teardown,
     unconditionally, whether or not anything failed — `_scrub_migration_objects`:
     eight `DROP TABLE IF EXISTS`, one `DROP TYPE IF EXISTS`, one
     `DROP FUNCTION IF EXISTS`. Naming a server here is authorising all of that,
     which is why loopback now needs a second variable and why the container is
     the default.
+
+    🔴 THE LIST ABOVE USED TO ATTRIBUTE TWO STATEMENTS TO `roles.sql` THAT IT
+    DOES NOT CONTAIN, and they were the two that made it frightening: it read
+    "`migrations/sql/roles.sql` (`CREATE ROLE`, `ALTER ROLE`, `REVOKE`, `GRANT` —
+    including `ALTER ROLE titlepipe_owner LOGIN BYPASSRLS PASSWORD …` and a `dba`
+    role)". Neither is executable anywhere in that file. The first appears once,
+    at `migrations/sql/roles.sql:591`, as the by-hand mutation the `PASSWORD
+    NULL` beside it exists to repair — `roles.sql` creates the owner `NOLOGIN
+    NOSUPERUSER NOBYPASSRLS … PASSWORD NULL` and converges it that way on every
+    run, which `MANAGED_ROLES` above states in its own words. `dba` appears in
+    that file only inside two comments describing a second grantor.
+
+    BOTH DO HAPPEN BEHIND AN ACCEPTED DSN, WHICH IS WHY THE POINT SURVIVES THE
+    CORRECTION — they are just somewhere else.
+    `tests/test_roles.py::test_roles_sql_converges_a_cluster_somebody_has_meddled
+    _with` creates a `LOGIN CREATEROLE` role literally named `dba` and a decoy
+    role, and plants `SUPERUSER BYPASSRLS CREATEDB CREATEROLE REPLICATION
+    NOINHERIT VALID UNTIL … CONNECTION LIMIT 0` plus a password on the owner, in
+    order to prove a rerun repairs them. It drops them in a `finally`, and it is
+    safe only because the target is an ephemeral container. Naming a real server
+    here is authorising that too.
     """
     # Masked from here on. Everything that can reach a message or a traceback
     # goes through this rather than through the URL's own password field.
@@ -902,8 +926,15 @@ def role_passwords() -> Mapping[str, str]:
 
     THIS MAPPING IS THE SEAM TASK 2 CONSUMES. `roles.sql` needs the same values
     to `CREATE ROLE ... PASSWORD`, and requesting this fixture is how it gets
-    them — no redesign required. Adding a role means adding it to
-    `MANAGED_ROLES`; nothing else here changes.
+    them — no redesign required.
+
+    ADDING A ROLE MEANS EDITING TWO MAPS, NOT ONE. This used to say "Adding a
+    role means adding it to `MANAGED_ROLES`; nothing else here changes."
+    `ROLE_PASSWORD_VARIABLES` above is a second hand-maintained map, from role to
+    the environment variable `roles.sql` reads its password from, and
+    `_apply_roles_sql` indexes it by role — so a role added to `MANAGED_ROLES`
+    alone reaches that lookup and raises `KeyError`, from inside a subprocess
+    helper, with nothing in the message about the map that is short an entry.
 
     RESIDUAL, ACCEPTED AND STATED: on a FAILURE, pytest prints each frame's
     arguments, so a failing test that takes `app_dsn`, `migration_dsn` or this
@@ -948,13 +979,21 @@ def admin_dsn(_no_libpq_environment: None) -> Iterator[str]:
 
 @pytest.fixture(scope="session")
 def migration_dsn(admin_dsn: str, role_passwords: Mapping[str, str]) -> str:
-    """`titlepipe_migration` — Alembic, and nothing else. Not connectable yet."""
+    """`titlepipe_migration` — Alembic, and nothing else.
+
+    CONNECTABLE, once `roles_applied` has run. This said "Not connectable yet."
+    until Task 2, which is the task that created the role; `roles_applied`'s
+    docstring below records the inversion and why a test taking only this
+    fixture, without `roles_applied`, gets `password authentication failed`
+    rather than a missing-dependency error.
+    """
     return _role_dsn(admin_dsn, MIGRATION_ROLE, role_passwords[MIGRATION_ROLE])
 
 
 @pytest.fixture(scope="session")
 def app_dsn(admin_dsn: str, role_passwords: Mapping[str, str]) -> str:
-    """`titlepipe_app` — every isolation assertion. Not connectable yet."""
+    """`titlepipe_app` — every isolation assertion. Connectable once
+    `roles_applied` has run; see `migration_dsn` for the same correction."""
     return _role_dsn(admin_dsn, APP_ROLE, role_passwords[APP_ROLE])
 
 
@@ -983,9 +1022,20 @@ def roles_applied(admin_dsn: str, role_passwords: Mapping[str, str]) -> str:
     latent green — it would have survived until someone added a filename sorting
     between the two, ran a subset, or enabled `pytest-randomly` or xdist.
 
-    Both tests in `test_database_seam.py` now request this fixture, so the
-    result is identical in either direction. Verified in both orders, and with
-    each file alone.
+    The two INVERTED tests in `test_database_seam.py` now request this fixture,
+    so the result is identical in either direction. Verified in both orders, and
+    with each file alone.
+
+    (This read "Both tests in `test_database_seam.py` now request this fixture",
+    which was true when that file held two tests that touched roles and is not a
+    description of the file. COUNTED 2026-08-06: `test_database_seam.py` defines
+    28 tests and FIVE of them take `roles_applied` — the two inversions
+    (`test_the_three_dsns_are_three_privilege_levels`,
+    `test_the_role_dsns_connect_as_their_own_role`) plus
+    `test_a_fresh_connection_starts_at_the_deny_sentinel_even_under_pgoptions`
+    and the two teardown tests. The other 23 never open a role connection, which
+    is why they do not need it — not requesting it is a bug only for a test that
+    does.)
 
     `autouse` was considered and REJECTED. It would make the dependency
     impossible to forget, but it would also start a Docker container for
@@ -1254,9 +1304,18 @@ def migrated_database(roles_applied: str, migration_dsn: str) -> Iterator[str]:
     **`upgrade` is INSIDE the `try`.** It used to be outside, so an upgrade that
     failed part way — three tables created, the fourth raising — got no teardown
     at all and left the debris for the next module. Nothing here relies on the
-    upgrade being atomic; the teardown covers a partial one either way, which is
-    what `test_a_failed_upgrade_leaves_no_partial_schema_behind` then proves
-    independently.
+    upgrade being atomic; the teardown covers a partial one either way.
+
+    🔴 AND NOTHING PROVES THAT. This paragraph used to end "…which is what
+    `test_a_failed_upgrade_leaves_no_partial_schema_behind` then proves
+    independently." It does not, and that test says so itself, in capitals: its
+    docstring's "WHAT THIS TEST DOES **NOT** DO" section records that it drives
+    its own failing upgrade from a TEST BODY, long after this fixture's setup has
+    succeeded, and that moving `command.upgrade` out of the `try` changes nothing
+    about it. What that test proves is a different property — that a chain of
+    revisions applied by one `upgrade` is one transaction. The position of
+    `command.upgrade` here is `_teardown_migrated_database`'s "mutation 2", which
+    both files record as uncovered.
 
     **The scrub removes the TYPE and the FUNCTION too**, not only the tables.
     `alembic downgrade base` is not the only way this fixture leaves debris, and
@@ -1619,13 +1678,27 @@ def isolation_key_columns(
 
 @pytest.fixture(scope="session")
 def isolation_tenant_a() -> UUID:
-    """The tenant with TWO seeded orders. Writes, and is the reference for denials."""
+    """The tenant with TWO seeded rows in each of the six tenant-keyed tables.
+
+    "TWO seeded orders" is what this said, and it described the seed before
+    2026-08-06, when `orders` and `tenants` were the only tables written — the
+    hole recorded at the head of the isolation-seed section above. The seed now
+    writes every derived table; `tenants` is the exception at one row, because
+    its primary key IS the tenant id. This tenant writes, and is the reference
+    for denials.
+    """
     return ISOLATION_TENANT_A
 
 
 @pytest.fixture(scope="session")
 def isolation_tenant_b() -> UUID:
-    """The tenant with EXACTLY ONE seeded order. The positive control's subject."""
+    """EXACTLY ONE seeded row per tenant-keyed table. The positive control's subject.
+
+    Also "one seeded order" until 2026-08-06 — see `isolation_tenant_a`. The
+    asymmetry against A's two is the point and is unchanged: a count of one that
+    is true for both tenants would be satisfied by a session that had leaked into
+    the other's rows, so B's count is a statement about B.
+    """
     return ISOLATION_TENANT_B
 
 

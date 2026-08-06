@@ -147,14 +147,25 @@ TENANT_GUC = "app.current_tenant"
 
 # The three roles that must be able to see INTO schema `public`.
 #
-# `titlepipe_owner` is in the list and it is the one that looks redundant. It is
-# not: it holds `CREATE` on `public` from `roles.sql` and USAGE only from
-# `PUBLIC`, so on a cluster hardened with `REVOKE USAGE ON SCHEMA public FROM
-# PUBLIC` every migration breaks. MEASURED 2026-08-05 against postgres:18.4 with
-# exactly that revoke in place, as `titlepipe_owner`:
+# `titlepipe_owner` is in the list and it is the one that looks redundant. What
+# it is NOT redundant against is a cluster hardened with `REVOKE USAGE ON SCHEMA
+# public FROM PUBLIC`, on which every migration breaks. MEASURED 2026-08-05
+# against postgres:18.4 with exactly that revoke in place, as `titlepipe_owner`:
 #
 #     SELECT count(*) FROM orders;      -> ERROR: relation "orders" does not exist
 #     CREATE TABLE hardened_probe (…);  -> ERROR: no schema has been selected to create in
+#
+# 🔴 THE REASON GIVEN HERE FOR KEEPING IT WAS FALSIFIED ON 2026-08-06 AND THE
+# LINE STAYS ANYWAY. It read: the owner "holds `CREATE` on `public` from
+# `roles.sql` and USAGE only from `PUBLIC`". The second half stopped being true
+# when `roles.sql` started granting `USAGE` explicitly —
+# `migrations/sql/roles.sql:942` names `titlepipe_owner`, `titlepipe_app` and
+# `titlepipe_worker`, and the read-back immediately below it REFUSES the run
+# when any of the three has no EXPLICIT entry in `pg_namespace.nspacl`. So on a
+# cluster `roles.sql` has finished on, the owner's USAGE is its own and not
+# `PUBLIC`'s. Naming the owner here is now belt-and-braces plus a statement of
+# who has to see into the schema, which is what this constant is for; the
+# read-back in `_require_schema_usage` is what would notice if it were not there.
 #
 # `titlepipe_blind` is deliberately absent. It belongs to blind-svc, which is
 # intended to live in a SEPARATE database — see `roles.sql`'s header.
@@ -318,7 +329,11 @@ def upgrade() -> None:
     # absent, and this makes the two consistent rather than leaving one of the
     # append-only verbs granted and the other not.
     #
-    # WHAT IT COSTS, STATED: for `titlepipe_app` the trigger's UPDATE branch is
+    # WHAT IT COSTS, STATED HERE AND ASSERTED SINCE 2026-08-06 IN
+    # `tests/test_forced_rls_and_grants.py::test_audit_log_is_granted_insert_but
+    # _never_update`, which issues the UPDATE as that role and reads the SQLSTATE
+    # back. Until then this cost was stated three times in this file and asserted
+    # nowhere. For `titlepipe_app` the trigger's UPDATE branch is
     # now unreachable, exactly as its DELETE branch already was. The privilege
     # check runs first, so that role now gets `42501 permission denied for table
     # audit_log` where it used to get `0A000 audit_log is append-only`. The
@@ -373,6 +388,17 @@ def downgrade() -> None:
     is for — which, by its own header, deliberately does not converge
     object-level grants either. So nothing in this repository converges them,
     and that is a stated gap rather than a covered one.
+
+    🔴 ONE CLAUSE ABOVE READS OFF A STALE ENUMERATION. `roles.sql`'s header used
+    to end its ownership list with "roles, memberships, per-role settings and
+    default privileges, and claims exactly that much", and that is the sentence
+    this paragraph leans on. Since 2026-08-06 that file also issues, and REFUSES
+    the whole run over, `GRANT CREATE` and `GRANT USAGE` on schema `public` — so
+    it is not true that it stays away from schema grants. What survives is the
+    part this paragraph actually needs: neither file CONVERGES a table grant, so
+    a `GRANT SELECT ON orders TO titlepipe_app` issued by a third party outlives
+    both. The gap is unchanged; the reason given for it was one revision out of
+    date.
     """
     op.execute("REVOKE SELECT, INSERT ON audit_log FROM titlepipe_app")
     op.execute("REVOKE SELECT, INSERT, UPDATE ON field_readings FROM titlepipe_app")

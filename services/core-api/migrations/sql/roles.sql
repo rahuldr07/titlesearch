@@ -85,15 +85,21 @@
 --     has to carry.
 --
 --
--- 🔴 HAND-OFF TO TASK 3 (Alembic). READ THIS BEFORE WRITING `migrations/env.py`.
+-- 🔴 THE CONTRACT WITH `migrations/env.py`. READ THIS BEFORE CHANGING EITHER.
 -- -----------------------------------------------------------------------------
--- Alembic does not exist yet; Task 3 initialises it. When it does, `env.py`
--- MUST issue
+-- `env.py` MUST issue
 --
 --     SET ROLE titlepipe_owner;
 --
 -- on the connection immediately after connecting and BEFORE
--- `context.begin_transaction()`.
+-- `context.begin_transaction()`. It does, at `migrations/env.py:255`.
+--
+-- (This block used to open "Alembic does not exist yet; Task 3 initialises it.
+-- When it does, `env.py` MUST issue…". Task 3 landed. The same facts are stated
+-- in the present tense twice more in this file — see the `titlepipe_migration`
+-- entry under the `USAGE` heading below, and the comment above the `GRANT USAGE`
+-- statement itself — so the future tense here was the odd one out rather than
+-- the only record.)
 --
 -- THE DATABASE NOW ENFORCES THIS RATHER THAN ASKING FOR IT. The membership at
 -- the bottom is granted `WITH INHERIT FALSE, SET TRUE`, so `titlepipe_migration`
@@ -110,7 +116,8 @@
 -- 2026-08-05 before the change: the migration succeeded, the catalog was wrong,
 -- and nothing complained.
 --
--- THREE MORE THINGS TASK 3 WILL HIT. All measured 2026-08-05 against 18.4:
+-- THREE MORE THINGS `env.py` HITS (this read "TASK 3 WILL HIT"; it has). All
+-- measured 2026-08-05 against 18.4:
 --
 --   1. `SET ROLE` must be CONNECTION-scoped and must never be `SET LOCAL` or
 --      followed by `RESET ROLE`. After `RESET ROLE`, `titlepipe_migration`
@@ -121,8 +128,9 @@
 --   2. `CREATE SCHEMA` as `titlepipe_owner` fails with **`permission denied for
 --      database <db>`**. The owner has `CREATE ON SCHEMA public` (granted at the
 --      bottom) but no `CREATE ON DATABASE`, so a first migration that creates a
---      non-`public` schema breaks. If Task 3 wants one, the grant belongs here
---      and gets its own test;
+--      non-`public` schema breaks. `0001` and `0002` both stay in `public`; a
+--      later revision that wants a schema needs the grant HERE, with its own
+--      test, and `migrations/env.py`'s hand-off 3 says the same thing;
 --   3. this file is not Alembic's to run. It creates the role Alembic
 --      authenticates as, so it must have been applied before `alembic upgrade`
 --      is called at all.
@@ -135,10 +143,20 @@
 --
 -- Proved in `tests/test_roles.py`:
 -- `test_a_table_created_after_set_role_belongs_to_the_owner` is the path
--- `env.py` must take (and asserts `alembic_version` by name, because Task 3
+-- `env.py` takes (and asserts `alembic_version` by name, because `env.py`
 -- depends on it), `test_a_table_created_without_set_role_is_refused_outright` is
 -- the refusal, and `test_only_the_migration_role_can_become_the_owner` is the
--- membership convergence. Task 3 must keep all three green.
+-- MEMBERSHIP CONTRACT — the edge SET is exactly one edge, with `INHERIT FALSE,
+-- SET TRUE` on it.
+--
+-- 🔴 THAT LAST TEST USED TO BE NAMED HERE AS "the membership convergence", AND
+-- IT IS NOT THAT. It reads the catalog back; it never reruns this file, so it
+-- cannot tell "this file repaired a planted edge" from "nobody ever planted
+-- one". The convergence — that a rerun REPAIRS drift rather than merely never
+-- creating it — is `test_roles_sql_converges_a_cluster_somebody_has_meddled
+-- _with`, which is what `test_roles.py` itself says at the foot of
+-- `test_no_titlepipe_role_carries_a_per_role_setting_default`. All four must
+-- stay green.
 --
 --
 -- WHAT IS *NOT* CONVERGED, STATED SO NOBODY READS SILENCE AS A GUARANTEE
@@ -146,7 +164,16 @@
 -- `titlepipe_blind` is intended for a separate database, and NOTHING IN THIS
 -- FILE ENFORCES THAT. MEASURED 2026-08-05: pointed at the core database it
 -- connects, holds `CONNECT` and `USAGE ON SCHEMA public` from `PUBLIC`, and can
--- `CREATE TEMP TABLE`. `REVOKE CONNECT` and the separate database are Task 4's.
+-- `CREATE TEMP TABLE`.
+--
+-- 🔴 AND NOTHING ELSE ENFORCES IT EITHER. This line used to end "`REVOKE
+-- CONNECT` and the separate database are Task 4's." Task 4 landed as
+-- `migrations/versions/0002_forced_rls_and_grants.py` and did neither: the only
+-- `REVOKE CONNECT` in the repository is the two words in this sentence, and
+-- `0002` creates no database. So this is an OPEN residual with no owner, not a
+-- forward reference — the header is otherwise honest that nothing here closes
+-- it, and a pointer at a task that has already shipped reads as though somebody
+-- else has it in hand.
 --
 -- **OBJECT-LEVEL GRANTS ARE NOT CONVERGED.** An earlier version of this header
 -- said `titlepipe_blind` "cannot read TitlePipe's tables — no table grant
@@ -154,9 +181,25 @@
 -- as a guarantee. MEASURED 2026-08-05: `GRANT SELECT ON <table> TO
 -- titlepipe_blind` survives every rerun of this file, and always will —
 -- CONVERGING table, sequence and schema grants would mean this file DELETING the
--- grants Task 4's migrations are going to write, on every rerun. Task 4 owns
--- object-level grants; this file owns roles, memberships, per-role settings and
--- default privileges, and claims exactly that much.
+-- grants Task 4's migrations are going to write, on every rerun. `0002` owns
+-- TABLE grants; this file owns roles, memberships, per-role settings, default
+-- privileges — and, since 2026-08-06, TWO SCHEMA GRANTS.
+--
+-- 🔴 THAT LAST CLAUSE IS NEW AND THE SENTENCE USED TO END "and claims exactly
+-- that much", enumerating four things. It owns five. `GRANT CREATE ON SCHEMA
+-- public TO titlepipe_owner` and `GRANT USAGE ON SCHEMA public TO
+-- titlepipe_owner, titlepipe_app, titlepipe_worker` are both issued at the
+-- bottom of this file, and each has a read-back that REFUSES the whole run —
+-- rolling the transaction back — when the privilege is not there afterwards.
+-- That is a stronger claim than the four, not a weaker one, and a reader who
+-- takes the four-item list literally concludes this file cannot be the reason a
+-- schema grant is missing. `0002`'s `downgrade` docstring reasons from the old
+-- enumeration and is corrected there too.
+--
+-- The GRANTS are still not CONVERGED, and the distinction is the one this
+-- section is about: nothing here revokes a stray `GRANT USAGE ON SCHEMA public
+-- TO titlepipe_blind`. This file makes the three privileges PRESENT and refuses
+-- if they are not; it does not make the ACL exact.
 --
 -- `pg_default_acl` is the exception, and the reason it is worth the asymmetry is
 -- that it is the only one of these that reaches objects THAT DO NOT EXIST YET.
@@ -413,7 +456,14 @@ WHERE :VERSION_NUM < 150000 OR current_setting('server_version_num')::int < 1600
 --     4. the SELECT that generates ALTER ROLE
 --     5. the executed ALTER ROLE
 --
--- `log_min_error_statement` is the fourth `SET` and it is not decoration.
+-- FOUR `SET`s ARE EMITTED BELOW, IN THIS ORDER: `log_statement`,
+-- `log_min_error_statement`, `log_min_duration_statement`,
+-- `pg_stat_statements.track`.
+--
+-- `log_min_error_statement` is the SECOND of them and it is not decoration.
+-- (This line used to call it "the fourth". It is fourth in neither the list
+-- above nor the `VALUES` below; the number appears to have been copied from the
+-- count of the settings rather than from a position.)
 -- `log_statement = 'none'` covers statements that SUCCEED. A statement that
 -- FAILS is logged in full at `log_min_error_statement`, whose default is
 -- `error`. MEASURED 2026-08-05, with `log_statement='none'` and
@@ -432,9 +482,22 @@ WHERE :VERSION_NUM < 150000 OR current_setting('server_version_num')::int < 1600
 -- PANIC, so it is the setting that suppresses ALL of it.
 --
 -- `pg_stat_statements.track` is included because that extension normalises
--- constants but records utility statements verbatim; MEASURED, setting it is
--- harmless when the extension is not loaded — PostgreSQL accepts a dotted name
--- it does not recognise as a placeholder GUC.
+-- constants but records utility statements verbatim, and every `CREATE ROLE` and
+-- `ALTER ROLE` below carries a password as a literal. Setting it is harmless
+-- when the extension is not loaded — PostgreSQL accepts a dotted name it does
+-- not recognise as a placeholder GUC. MEASURED 2026-08-06 on a stock
+-- postgres:18.4: `shared_preload_libraries` is `''`, the extension is available
+-- but not installed, and `current_setting('pg_stat_statements.track', true)` is
+-- NULL.
+--
+-- IT IS ASSERTED NOW, AND WAS NOT UNTIL 2026-08-06. MEASURED: deleting this one
+-- line left the whole suite at `197 passed`, because
+-- `test_roles_sql_keeps_the_passwords_out_of_the_server_log` checked only the
+-- other three. It checks four. The check is a SOURCE check and cannot be
+-- anything else here — with the extension unloaded there is no
+-- `pg_stat_statements` view for a behavioural probe to read, so a probe would
+-- pass on "never installed" exactly as on "suppressed"; that test's docstring
+-- carries the measurement.
 SELECT suppress.statement
 FROM (
     VALUES
@@ -761,7 +824,10 @@ HAVING count(*) > 0
 -- MEMBERSHIP CONVERGENCE. Every edge that touches a `titlepipe_*` role is
 -- revoked, then the one edge that should exist is granted.
 --
--- THE FILTER MATCHES EITHER SIDE, and that is the R1 fix. `WHERE owner.rolname =
+-- THE FILTER MATCHES EITHER SIDE. (This said "and that is the R1 fix". No
+-- document in this repository defines an `R1`; the review that produced the
+-- label was never committed, so the tag pointed at nothing a reader could open.
+-- What it meant is the sentence that follows.) `WHERE owner.rolname =
 -- 'titlepipe_owner'` converged members of the owner and missed paths to it; see
 -- the header for the two-hop measurement. Matching the MEMBER side as well also
 -- catches `GRANT pg_read_all_data TO titlepipe_app` and every other predefined

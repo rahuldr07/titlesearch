@@ -192,7 +192,7 @@ I have not verified it."*
 
 | plan | ships | status |
 |---|---|---|
-| [`01-postgres-correctness.md`](./01-postgres-correctness.md) | schema, roles, forced RLS, the tenant-isolation proof | ready |
+| [`01-postgres-correctness.md`](./01-postgres-correctness.md) | schema, roles, forced RLS, the tenant-isolation proof | **done** — eight tasks, seventeen execution commits (`160fcff`…`4b878c5`) on `rahuldr07/backend-plan01` |
 | 02 — first vertical slice | `GET /api/rules` through the whole spine | not written |
 | 03 — identity | WorkOS sessions, server-evaluated authz | not written |
 | 04 — order reads | context, queue, fields with provenance | not written |
@@ -201,6 +201,13 @@ I have not verified it."*
 
 Plans 02–06 are written after 01 lands, so each is informed by what actually
 happened rather than what was predicted.
+
+> **Correction, 2026-08-06.** Plan 01's status read **`ready`** until this line
+> was written. It has been done since `9ddeefc`, and the row was never updated —
+> the same class of defect as the plan's own stale acceptance criteria. Before
+> writing Plan 02, read **"What eight tasks taught this plan about injections"**
+> near the top of Plan 01: seven of its eight injections did not work as
+> written, and the taxonomy of *how* is the transferable part.
 
 **Canonical context:** [`docs/backend/BUILD-PLAN.md`](../../../backend/BUILD-PLAN.md)
 — architecture, pinned versions and the traps behind each. Read it before Task 0.

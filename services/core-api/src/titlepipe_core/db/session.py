@@ -76,22 +76,33 @@ queue worker bypass this listener entirely.** They are not thereby unscoped —
 they are denied, and a path that skips the ORM sees nothing rather than seeing
 everything, which is the direction to fail in.
 
-🔴 BUT NOT ALL OF THEM ARE DENIED FOR THE SAME REASON, AND AN EARLIER VERSION OF
-THIS PARAGRAPH SAID THEY WERE — that `DENY_SENTINEL_OPTIONS` below "pins every
-connection at the deny sentinel". The pin is a property of `make_engine`'s
-`connect_args`, so it reaches exactly the engines built by `make_engine`.
-`migrations/env.py` builds its own with `engine_from_config(...)` and never calls
-`make_engine`, so ALEMBIC IS NOT DENIED BY THE PIN. It is denied because its GUC
-is UNSET: `current_setting(…, true)` answers NULL, `nullif` leaves it NULL, and
-no policy row matches. MEASURED 2026-08-06 against postgres:18.4 by driving a
-real `alembic current` and reading `current_setting(…, true)` off the connection
-`run_migrations_online` itself opened, `env.py` carrying no `connect_args`:
+🔴 EVERY ONE OF THEM IS DENIED, BUT NOT BY THE SAME LINE OF CODE, AND AN EARLIER
+VERSION OF THIS PARAGRAPH SAID `DENY_SENTINEL_OPTIONS` BELOW "pins every
+connection at the deny sentinel". It does not: the pin is a property of
+`make_engine`'s `connect_args`, so on its own it reaches exactly the engines
+`make_engine` builds. `migrations/env.py` builds its own with
+`engine_from_config(...)` and never calls `make_engine`, so it gets nothing from
+that line.
+
+ALEMBIC IS PINNED ANYWAY, AND ONLY BECAUSE IT ASKS. `migrations/env.py:247`
+passes `connect_args={"options": DENY_SENTINEL_OPTIONS}` to its own
+`engine_from_config`, importing the constant from this module rather than
+respelling it, so Alembic's GUC is the `''` sentinel and not the NULL it used to
+be. That was a FIX, dated 2026-08-06, and the paragraph a reader stops on used
+to describe the world before it: it read "ALEMBIC IS NOT DENIED BY THE PIN. It
+is denied because its GUC is UNSET". Both halves were true of `env.py` as it
+then stood and neither is true of `env.py` now. MEASURED 2026-08-06 against
+postgres:18.4 by driving a real `alembic current` and reading
+`current_setting(…, true)` off the connection `run_migrations_online` itself
+opened, WITH THAT `connect_args` ABSENT:
 
     no PGOPTIONS exported                      ->  NULL
     PGOPTIONS='-c app.current_tenant=1111…'    ->  '11111111-1111-1111-1111-…'
 
-An unset GUC and the `''` sentinel are the same denial only because `0002` spells
-the predicate with `nullif` — see the next section. A VALID TENANT IS NEITHER.
+The second line is why the pin had to be added rather than the unset GUC being
+relied on. An unset GUC and the `''` sentinel are the same denial only because
+`0002` spells the predicate with `nullif` — see the next section — and a
+`PGOPTIONS` export makes the connection neither. A VALID TENANT IS NOT A DENIAL.
 
 **What that second line costs a data migration.** Measured in the same session
 against the same database, which held one `orders` row for each of two tenants,

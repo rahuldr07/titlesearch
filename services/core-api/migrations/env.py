@@ -94,7 +94,16 @@ config = context.config
 # `config_file_name is not None` ALONE WAS NOT THAT TEST, and the difference was
 # not academic. `tests/conftest.py::_alembic_config` does
 # `Config(str(ALEMBIC_INI))`, so `config_file_name` is always set and this block
-# ran on all sixteen `command.*` calls in the suite.
+# ran on every programmatic entry to this file.
+#
+# HOW MANY THAT IS, MEASURED 2026-08-06 by counting entries to this gate over one
+# full `uv run pytest` of this service: **29**, plus one more from the `alembic`
+# CLI test, which is the only run where `cmd_opts` is set. This comment used to
+# say "all sixteen `command.*` calls in the suite". Sixteen is the number of
+# `command.*` CALL SITES in `tests/test_schema_migration.py` alone; the suite has
+# 24 of them (conftest 2, test_schema_migration 16, test_forced_rls_and_grants 5,
+# test_tenant_session 1), and neither number is the run count, because
+# `conftest.py`'s two sit in a MODULE-scoped fixture and repeat per module.
 #
 # WHAT IT DID EACH TIME, MEASURED 2026-08-05 with a handler of our own attached
 # to the root logger before a programmatic `command.check`:
