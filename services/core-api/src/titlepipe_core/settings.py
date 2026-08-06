@@ -111,6 +111,59 @@ class CoreApiSettings(BaseSettings):
     cookie_seal_password: SecretStr = SecretStr(DEVELOPMENT_SEAL_PASSWORD)
     mock_auth_enabled: bool = False
 
+    # --- database ---------------------------------------------------------
+    # The DSN the REQUEST PATH connects with. Read by `lifespan.py`, which builds
+    # the engine and the sessionmaker from it when the service starts.
+    #
+    # 🔴 IT IS `TITLEPIPE_APP_DATABASE_URL` AND DELIBERATELY NOT
+    # `TITLEPIPE_DATABASE_URL`, WHICH IS ALREADY TAKEN AND MEANS SOMETHING ELSE.
+    # `migrations/env.py` reads that name (`DATABASE_URL_VARIABLE`) and
+    # `.env.example` documents it as the MIGRATION role's DSN, because
+    # `alembic upgrade head` runs DDL and only `titlepipe_migration` can
+    # `SET ROLE titlepipe_owner`. Sharing one variable between the two would
+    # point every request at the role that owns the schema — and it would not
+    # even fail cleanly: `roles.sql` grants `titlepipe_migration` the owner
+    # `WITH INHERIT FALSE` and no table privileges of its own, so the first read
+    # comes back as a permission error naming a table that plainly exists.
+    # `.env.example` already reserves `TITLEPIPE_MIGRATION_DATABASE_URL` and
+    # `TITLEPIPE_WORKER_DATABASE_URL`; this is the third name in that set and the
+    # first one a running service reads.
+    #
+    # `SecretStr` because a DSN carries the app role's password. This module's
+    # opening states the rule — settings objects are never logged — and a plain
+    # `str` here would put the credential into any `repr` of the model, which is
+    # exactly what `cookie_seal_password` is a `SecretStr` to prevent.
+    #
+    # OPTIONAL OUTSIDE A DEPLOYED ENVIRONMENT, AND REQUIRED INSIDE ONE. The
+    # refusal is in `_deployed_environments_refuse_unsafe_configuration` below,
+    # beside the others, and `mock_auth_enabled` is the shape it copies:
+    # harmless locally, refused when deployed.
+    #
+    # Locally the `None` is load-bearing. `TITLEPIPE_ENVIRONMENT=development`
+    # alone still boots this service with no database at all, which
+    # `apps/web-v2/e2e-live` depends on — its whole premise is a core-api
+    # reachable from a browser before any storage exists — and
+    # `lifespan.readiness` reports a database check only when one is configured,
+    # so `/ready` stays 200 there.
+    #
+    # 🔴 IT WAS OPTIONAL EVERYWHERE, AND THE ARGUMENT FOR THAT WAS WRONG. It ran:
+    # reporting the check as `False` when unconfigured would 503 every developer,
+    # and requiring a DSN would make every deployed-configuration fixture carry an
+    # invented one. The first is a false dilemma — this validator is precisely the
+    # mechanism for holding deployed environments to a stricter bar than local
+    # ones, which is why `debug`, `reload` and `mock_auth_enabled` are all
+    # permissive here and refused there. The second is a fixture cost, not a
+    # design argument.
+    #
+    # What the cost actually was: a deployed replica with no DSN is invisible on
+    # BOTH surfaces an operator watches. `/health` is green because liveness
+    # never consults a dependency; `/ready` is green because, by the conditional
+    # above, a missing DSN is not a FAILED check — it is NO check. The only
+    # symptom is `GET /api/rules` answering 503 and telling the caller to retry
+    # something that will never succeed. Refusing at startup turns that into an
+    # incident during deploy, which is this module's opening rule.
+    app_database_url: SecretStr | None = None
+
     # --- observability ----------------------------------------------------
     log_level: str = "INFO"
     log_renderer: LogRenderer | None = None
@@ -213,6 +266,18 @@ class CoreApiSettings(BaseSettings):
             )
         if self.cookie_seal_password.get_secret_value() in PLACEHOLDER_SECRETS:
             unsafe.append("cookie_seal_password is a placeholder")
+        if self.app_database_url is None:
+            # The one refusal here whose absence is invisible at RUNTIME rather
+            # than merely dangerous. Every other knob in this list produces a
+            # service that works and is unsafe; this one produces a service that
+            # reports itself healthy AND ready on both probes while answering
+            # every product request with a retryable 503 that will never
+            # succeed. See the field's own comment for the two surfaces.
+            unsafe.append(
+                "app_database_url is not set; the service would report itself ready "
+                "on /health and /ready while answering every product request with a "
+                "503 the caller is invited to retry"
+            )
         if self.host == "127.0.0.1":
             unsafe.append("host is loopback-only and unreachable behind a proxy")
         if not self.allowed_hosts:

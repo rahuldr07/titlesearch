@@ -47,6 +47,25 @@ from titlepipe_test_support import FrozenClock, SequenceIdFactory
 DEPLOYED_SEAL_PASSWORD = "YS1yZWFsLWRlcGxveWVkLXNlYWwtc2VjcmV0LTMyYnk="
 DEPLOYED_BASE_URL = "https://app.titlepipe.example"  # must match allowed_hosts
 
+# A DSN NOTHING EVER CONNECTS WITH. `CoreApiSettings` refuses to construct for a
+# deployed environment without `app_database_url` — see
+# `_deployed_environments_refuse_unsafe_configuration` — so every
+# deployed-configuration fixture has to carry one, and this is it.
+#
+# It is inert by construction and that is the whole design of the value. The
+# host is `db.titlepipe.example`, which is under a reserved TLD (RFC 2606) and
+# resolves nowhere; the only thing that reads it is Pydantic. Nothing in this
+# suite builds an engine from a deployed settings object: the tests that reach a
+# real server take `app_dsn` or `migration_dsn`, which come from the container.
+#
+# The password segment is a sentence rather than a random string ON PURPOSE. A
+# credential-shaped literal in a checked-in file is one somebody eventually
+# wonders about; this one answers the question in its own text, exactly as
+# `DEVELOPMENT_SEAL_PASSWORD` does in `settings.py`.
+DEPLOYED_DATABASE_URL = (
+    "postgresql+psycopg://titlepipe_app:this-dsn-never-connects@db.titlepipe.example:5432/titlepipe"
+)
+
 
 @pytest.fixture
 def deployed_base_url() -> str:
@@ -91,6 +110,10 @@ def production_settings() -> CoreApiSettings:
         cors_allowed_origins=("https://app.titlepipe.example",),
         allowed_hosts=("app.titlepipe.example",),
         cookie_seal_password=SecretStr(DEPLOYED_SEAL_PASSWORD),
+        # Required when deployed. See `DEPLOYED_DATABASE_URL` — no engine is ever
+        # built from it, and every test here that reaches a real server takes a
+        # container DSN instead.
+        app_database_url=SecretStr(DEPLOYED_DATABASE_URL),
     )
 
 
@@ -1957,6 +1980,22 @@ def migration_role() -> str:
 @pytest.fixture(scope="session")
 def app_role() -> str:
     return APP_ROLE
+
+
+@pytest.fixture(scope="session")
+def worker_role() -> str:
+    """`titlepipe_worker`, which holds NOTHING on any table and is useful for it.
+
+    `migrations/versions/0003_rules.py` grants `SELECT ON rules` to
+    `titlepipe_app` and says in as many words that the worker gets nothing here;
+    `tests/test_forced_rls_and_grants.py` asserts the grantee set on the seven
+    tenant tables is exactly `{titlepipe_owner, titlepipe_app}`. That makes this
+    the role to connect as when a test needs a database that is UP and REFUSES —
+    the failure a dead port cannot produce. Reached through this rather than
+    through `managed_roles[2]`, because an index into a tuple is a reference that
+    silently moves when somebody adds a role in front of it.
+    """
+    return WORKER_ROLE
 
 
 @pytest.fixture(scope="session")

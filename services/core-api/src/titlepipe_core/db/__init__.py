@@ -35,6 +35,7 @@ CONNECTION-lifetime half of the tenant seam — and `session.py` holds
 `tenant_session`, the only scoped way to open a session. `repository.py` holds
 the base every later repository is built on, plus the unscoped-session refusal
 both of them make; `rules.py` holds `RuleRepository`, the one global table's.
+`health.py` holds `check_database`, the one statement `/ready` runs.
 
 🔴 `RuleRepository` WAS IN `repository.py` AND MOVED OUT ON 2026-08-06, the second
 split in this package forced by rule 6 of `scripts/check_backend_rules.py` — that
@@ -43,10 +44,14 @@ module that owns the tenancy check, which is the trade `engine.py` was split out
 of `session.py` to refuse. No caller's import line changed, for the same reason it
 did not then: the name is re-exported here.
 
-THE LIST BELOW IS SIX NAMES AND WAS FIVE, and the sixth is the first one added
-since the list was called deliberate. `RuleRepository` earns it on the same
-test as the other five: `api/routers/rules.py` — Plan 02's Task 4 — has to reach
-the database, and this file re-exports what a caller needs in order to REACH it.
+THE LIST BELOW IS SEVEN NAMES AND WAS FIVE. `RuleRepository` was the sixth and
+`check_database` — `health.py`, Plan 02's Task 4 again — is the seventh. Both
+earn it on the same test as the original five: `api/routers/rules.py` has to
+reach the database and `lifespan.py` has to ask whether it is there, and this
+file re-exports what a caller needs in order to REACH it. `check_database` is
+the sharper case of the two, because the reason it cannot live where it is
+called is rule 3 itself: `SELECT 1` is a `text(...)`, `lifespan.py` is not in
+this package, and the carve-out is the whole reason the statement is in here.
 It is NOT a widening of the rule. `DENY_SENTINEL_OPTIONS` is still absent for the
 reason two paragraphs down, and a name that is only interesting inside `db/`
 (`refuse_unscoped_session`, `TENANT_SCOPED_MARK`) stays where it is: both are
@@ -100,6 +105,7 @@ and is what actually closes the path.
 """
 
 from titlepipe_core.db.engine import make_engine, make_sessionmaker
+from titlepipe_core.db.health import check_database
 from titlepipe_core.db.models import Base
 from titlepipe_core.db.repository import TenantRepository
 from titlepipe_core.db.rules import RuleRepository
@@ -109,6 +115,7 @@ __all__ = [
     "Base",
     "RuleRepository",
     "TenantRepository",
+    "check_database",
     "make_engine",
     "make_sessionmaker",
     "tenant_session",
