@@ -29,11 +29,38 @@ measurement where the test used to be. The workaround outlived the thing it
 worked around, and the citation was the one test reference in this tree that
 resolved to nothing.
 
-`models.py` holds `Base` and the seven skeleton tables. `engine.py` holds
+`models.py` holds `Base`, the seven skeleton tables and `Rule`. `engine.py` holds
 `make_engine`, the pool's `checkin` listener and `make_sessionmaker` — the
 CONNECTION-lifetime half of the tenant seam — and `session.py` holds
 `tenant_session`, the only scoped way to open a session. `repository.py` holds
-the base every later repository is built on.
+the base every later repository is built on, plus the unscoped-session refusal
+both of them make; `rules.py` holds `RuleRepository`, the one global table's.
+
+🔴 `RuleRepository` WAS IN `repository.py` AND MOVED OUT ON 2026-08-06, the second
+split in this package forced by rule 6 of `scripts/check_backend_rules.py` — that
+file had reached 416 lines and the alternative was a `rules-allow-file` on the
+module that owns the tenancy check, which is the trade `engine.py` was split out
+of `session.py` to refuse. No caller's import line changed, for the same reason it
+did not then: the name is re-exported here.
+
+THE LIST BELOW IS SIX NAMES AND WAS FIVE, and the sixth is the first one added
+since the list was called deliberate. `RuleRepository` earns it on the same
+test as the other five: `api/routers/rules.py` — Plan 02's Task 4 — has to reach
+the database, and this file re-exports what a caller needs in order to REACH it.
+It is NOT a widening of the rule. `DENY_SENTINEL_OPTIONS` is still absent for the
+reason two paragraphs down, and a name that is only interesting inside `db/`
+(`refuse_unscoped_session`, `TENANT_SCOPED_MARK`) stays where it is: both are
+imported by module path between the files here, which is what an intra-package
+name looks like. `refuse_unscoped_session` lost its underscore when `rules.py` was
+split out and needed it — a private name read across modules is a pyright strict
+error and the gate bans the ignore — but crossing a module boundary INSIDE this
+package is not the same as being part of its public surface.
+
+`RuleRepository` does NOT extend `TenantRepository`, and `repository.py` argues
+why — including why the plan's stated reason for the same conclusion is false.
+Both are exported because both are constructed by callers outside this package;
+the pair being visible together is also the cheapest way for a reader to notice
+that the second is not a kind of the first.
 
 🔴 `make_engine` AND `make_sessionmaker` MOVED OUT OF `session.py` ON 2026-08-06
 AND NO CALLER'S IMPORT LINE CHANGED, which is the whole point of re-exporting
@@ -75,10 +102,12 @@ and is what actually closes the path.
 from titlepipe_core.db.engine import make_engine, make_sessionmaker
 from titlepipe_core.db.models import Base
 from titlepipe_core.db.repository import TenantRepository
+from titlepipe_core.db.rules import RuleRepository
 from titlepipe_core.db.session import tenant_session
 
 __all__ = [
     "Base",
+    "RuleRepository",
     "TenantRepository",
     "make_engine",
     "make_sessionmaker",
