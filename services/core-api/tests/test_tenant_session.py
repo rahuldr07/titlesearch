@@ -18,8 +18,15 @@ cross-tenant write, no chain of seven tables — that is Task 6, and duplicating
 half of it here would mean two places to update the day a policy changes. What
 this file proves is the SEAM: that the GUC is applied inside the transaction,
 that it does not survive the transaction, that a fresh pooled connection starts
-denied, and that the two public constructors carry the parameters their callers
-depend on.
+denied, that the connection `migrations/env.py` opens starts denied too, that a
+write made inside a block is still there after it, and that the two public
+constructors carry — AND FORWARD — the parameters their callers depend on.
+
+The last three of those were added 2026-08-06, each after a mutation showed the
+property was unpinned: `env.py`'s engine picked up `PGOPTIONS` and nothing
+noticed; `await session.commit()` could be deleted and the suite stayed green;
+and both pool bounds could be accepted and discarded and it stayed green again.
+Each mutation is recorded on the test that now closes it.
 
 ## The positive control, and why the denials are worthless without it
 
@@ -43,8 +50,11 @@ from inspect import Parameter, signature
 from uuid import UUID
 
 import pytest
-from sqlalchemy import Engine, Select, func, select, text
+from alembic import command
+from alembic.config import Config
+from sqlalchemy import Connection, Engine, Select, create_engine, event, func, select, text
 from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.pool import QueuePool
 
 from titlepipe_core.db import TenantRepository, make_engine, make_sessionmaker, tenant_session
 from titlepipe_core.db.models import Order
@@ -64,6 +74,34 @@ POISON_TENANT = "33333333-3333-3333-3333-333333333333"
 # The two rows `_seed_two_tenants` writes. A floor, so that the positive control
 # cannot be satisfied by a seed that silently wrote nothing.
 SEEDED_TENANTS = 2
+
+# A DSN for the one test that needs an ENGINE and no server.
+# `create_async_engine` resolves the URL and builds the pool eagerly but does not
+# connect, so the pool bounds are readable without a container — and port 1 on
+# loopback with a role that does not exist means a test that accidentally starts
+# connecting fails immediately and loudly rather than reaching anything real.
+UNREACHABLE_DSN = "postgresql+psycopg://nobody@127.0.0.1:1/none"
+
+# `QueuePool._max_overflow`, named as a string because it is PRIVATE and there is
+# no public reader — see
+# `test_make_engine_exposes_the_pool_bounds_and_forwards_both_of_them` for the
+# enumeration of the public surface that establishes that.
+#
+# THE INDIRECTION IS FORCED, NOT PREFERRED. `pool._max_overflow` written out is a
+# pyright strict error — MEASURED 2026-08-06, `"_max_overflow" is protected and
+# used outside of the class in which it is declared (reportPrivateUsage)` — and
+# the alternative was a `# pyright: ignore`, which this repository's gate treats
+# as a suppression to be justified rather than a fix. Reading it through a named
+# constant keeps the checker honest about everything else in the file and puts
+# the reason in one place. If SQLAlchemy renames the attribute, `getattr` raises
+# `AttributeError` and the test fails loudly, which is the same outcome the
+# direct spelling would have given.
+MAX_OVERFLOW_ATTRIBUTE: str = "_max_overflow"
+
+
+def get_max_overflow(pool: QueuePool) -> object:
+    """The pool's overflow ceiling, read off the only attribute that carries it."""
+    return getattr(pool, MAX_OVERFLOW_ATTRIBUTE)
 
 
 def _seed_two_tenants(engine: Engine) -> dict[UUID, UUID]:
@@ -199,6 +237,101 @@ async def test_make_engine_pins_a_fresh_connection_at_the_deny_sentinel_even_und
     )
 
 
+def test_the_alembic_engine_is_pinned_at_the_deny_sentinel_even_under_pgoptions(
+    monkeypatch: pytest.MonkeyPatch,
+    migrated_database: str,
+    migration_dsn: str,
+    tenant_guc: str,
+    tenant_deny_sentinel: str,
+    alembic_config: Callable[[str], Config],
+) -> None:
+    """🔴 THE SIBLING ABOVE PROVES NOTHING ABOUT ALEMBIC, AND `session.py` SAID IT DID.
+
+    That claim — that the pin covers "every connection", Alembic's included — was
+    false in the way that matters: the pin lives in `make_engine`'s
+    `connect_args`, and `migrations/env.py` builds its engine with
+    `engine_from_config(...)` and never calls `make_engine`. MEASURED 2026-08-06
+    against the tree as it stood, `PGOPTIONS='-c app.current_tenant=1111…'`
+    exported, reading `current_setting` off the connection `run_migrations_online`
+    actually opened: `'11111111-1111-1111-1111-111111111111'`. With the variable
+    unset the same read is NULL, which is the state Alembic is genuinely denied
+    by.
+
+    THE POISON IS A REAL, SEEDED TENANT — `TENANT_ONE` and not the unseeded
+    `POISON_TENANT` the sibling uses — because the harm is not that the GUC holds
+    a string. It is that a data migration then runs scoped to ONE tenant and
+    reports a non-zero `UPDATE`, which reads as success. Measured in the same
+    session, as `titlepipe_owner`: `UPDATE orders SET tenant_id = tenant_id` gave
+    `UPDATE 1` and `SELECT count(*)` gave `1` under the poison, against `UPDATE 0`
+    and `0` with the pin. `0002`'s docstring states that invariant
+    unconditionally as 0.
+
+    ## How the reading is taken, and why it is not a copy of `env.py`
+
+    `env.py` CANNOT BE IMPORTED — its last statement runs a migration, which is
+    why `conftest.py` respells its constants rather than importing them. So the
+    engine is not reachable from here as an object, and rebuilding one the way
+    `env.py` does would be a test of this file's copy of that code and of nothing
+    else.
+
+    Instead a listener is attached to the `Engine` CLASS, which catches whatever
+    engine `env.py` builds without naming it, and a real `alembic` command is
+    driven so that `env.py` runs for real. `engine_connect` rather than the pool's
+    `connect`: it hands over a SQLAlchemy `Connection`, so the reading is taken
+    with the same `_read_the_guc` select every other test here uses instead of
+    through a raw DBAPI cursor. The listener is removed in a `finally`, because a
+    listener on the class outlives this test and would otherwise fire inside every
+    later one.
+
+    `command.current` because it is READ-ONLY and still goes through
+    `run_migrations_online` — it connects, `SET ROLE`s and reads
+    `alembic_version`, which is everything this test needs and nothing it does
+    not. `migrated_database` is requested so that there is a migrated database
+    under it, and so that `roles_applied` has run: `titlepipe_migration` must
+    exist before anything can authenticate as it.
+
+    THE CAPTURED LIST IS ASSERTED WHOLE, not just its contents. An empty list is
+    what a broken listener, a command that never connected, or an `env.py` that
+    stopped using `engine_from_config` all produce, and `all(x == sentinel for x
+    in [])` is true.
+    """
+    monkeypatch.setenv("PGOPTIONS", f"-c {tenant_guc}={TENANT_ONE}")
+    read = _read_the_guc(tenant_guc)
+
+    unpinned = create_engine(migration_dsn)
+    try:
+        with unpinned.connect() as connection:
+            poisoned = connection.execute(read).scalar_one()
+    finally:
+        unpinned.dispose()
+
+    assert poisoned == str(TENANT_ONE), (
+        f"the control failed: PGOPTIONS did not reach an unpinned connection to "
+        f"this server ({poisoned!r}), so this test cannot show that env.py's "
+        f"connect_args are what make the difference"
+    )
+
+    captured: list[object] = []
+
+    def _capture(connection: Connection) -> None:
+        captured.append(connection.execute(read).scalar_one())
+
+    event.listen(Engine, "engine_connect", _capture)
+    try:
+        command.current(alembic_config(migration_dsn))
+    finally:
+        event.remove(Engine, "engine_connect", _capture)
+
+    assert captured == [tenant_deny_sentinel], (
+        f"the connection migrations/env.py opened carried {captured!r} rather than "
+        f"exactly [{tenant_deny_sentinel!r}]. A data migration run from that "
+        f"connection is scoped to whatever tenant PGOPTIONS named: it touches that "
+        f"tenant's rows, skips every other tenant's, and reports a non-zero UPDATE "
+        f"that reads as success. An empty list here means env.py never connected "
+        f"through an Engine, so nothing was checked at all."
+    )
+
+
 @pytest.mark.asyncio
 async def test_tenant_session_applies_the_guc_inside_the_transaction(
     migrated_database: str, app_dsn: str, tenant_guc: str
@@ -262,6 +395,72 @@ async def test_the_positive_control_a_tenant_session_sees_that_tenants_own_row(
         f"{seeded_orders[TENANT_ONE]} and the other tenant's is "
         f"{seeded_orders[TENANT_TWO]}."
     )
+
+
+@pytest.mark.asyncio
+async def test_a_row_written_in_one_tenant_session_is_readable_from_the_next(
+    migrated_database: str, app_dsn: str
+) -> None:
+    """🔴 THE COMMIT. NOTHING ELSE READS A `tenant_session` WRITE FROM OUTSIDE ITS BLOCK.
+
+    `tenant_session` commits on clean exit, and Plan 01 records that as amendment
+    2 to the Task 5 contract that Plans 02-06 are written against. It was
+    unpinned. MEASURED 2026-08-06 on this branch as it stood before this test
+    existed, with `await session.commit()` deleted and the
+    `finally: await session.close()` left alone: `193 passed`, twice, nothing red.
+    (`193` rather than the `192` this branch opened on, because a sibling task
+    added a test to `test_roles.py` the same day. It is the whole suite either
+    way.)
+
+    BOTH OF THE TESTS THAT LOOK LIKE THEY COVER IT DO NOT.
+    `test_the_tenant_does_not_survive_the_commit_onto_the_pooled_connection`
+    survives because `close()` ROLLS BACK, and a GUC set with `is_local => true`
+    reverts at rollback exactly as it does at commit — so the residual it reads is
+    `''` either way, and the test is about the GUC rather than about the data.
+    `test_the_repository_reads_and_writes_through_the_scoped_session` asserts its
+    write is readable, but only from INSIDE the block that made it, where an
+    uncommitted row is visible to its own transaction.
+
+    So this one crosses the boundary: write, EXIT THE BLOCK, then open a second
+    `tenant_session` for the same tenant and require the row back. A second
+    session is a second transaction, so a row that was rolled back by `close()`
+    is not there — which is a silent removal of the whole persistence layer, with
+    every handler in Plans 02-06 still returning 200.
+
+    Same tenant on both sides, deliberately. A different tenant would make a
+    missing row ambiguous between "never committed" and "committed and correctly
+    invisible", and this test is about the first of those only. The cross-tenant
+    half is `test_the_repository_reads_and_writes_through_the_scoped_session`'s
+    third assertion and Task 6's.
+
+    `seeded_orders` is NOT requested. Every other reader here needs it because a
+    denial against an empty table proves nothing; this test asserts a row is
+    PRESENT, which no empty table satisfies. Requesting it would also mean this
+    test's own row was deleted out from under a later one's seed for no reason.
+    """
+    engine = make_engine(app_dsn)
+    try:
+        sessionmaker = make_sessionmaker(engine)
+
+        async with tenant_session(sessionmaker, TENANT_ONE) as session:
+            written = Order(tenant_id=TENANT_ONE)
+            await TenantRepository(session, Order).add(written)
+            written_id = written.id
+
+        async with tenant_session(sessionmaker, TENANT_ONE) as session:
+            found = await TenantRepository(session, Order).get(written_id)
+    finally:
+        await engine.dispose()
+
+    assert found is not None, (
+        f"order {written_id}, written and flushed inside one tenant_session, was "
+        f"not there when a second tenant_session for {TENANT_ONE} asked for it. "
+        f"tenant_session is not committing on clean exit, so `close()` rolled the "
+        f"write back — every write in Plans 02-06 disappears and every handler "
+        f"still answers 200."
+    )
+    assert found.id == written_id
+    assert found.tenant_id == TENANT_ONE
 
 
 @pytest.mark.asyncio
@@ -371,26 +570,56 @@ async def test_the_tenant_does_not_survive_the_commit_onto_the_pooled_connection
     )
 
 
-def test_make_engine_exposes_the_pool_bounds_a_reuse_test_cannot_do_without() -> None:
-    """`pool_size` and `max_overflow`, both keyword-only, both on the signature.
+@pytest.mark.asyncio
+async def test_make_engine_exposes_the_pool_bounds_and_forwards_both_of_them() -> None:
+    """`pool_size` and `max_overflow`: on the signature, keyword-only, AND FORWARDED.
 
-    A SIGNATURE TEST RATHER THAN A BEHAVIOURAL ONE, and the honest reason is that
-    `QueuePool` publishes no reader for `max_overflow` — `size()`, `overflow()`,
-    `checkedin()` and `checkedout()` are the public surface, and none of them
-    distinguishes a ceiling of 0 from a ceiling of 10 on an idle pool. Proving the
-    ceiling would mean holding a connection open and waiting out `pool_timeout`,
-    which is 30 seconds by default and is not a parameter this function exposes.
+    🔴 THIS TEST USED TO BE A SIGNATURE CHECK AND NOTHING ELSE, AND ITS DOCSTRING
+    CARRIED TWO FALSE CLAIMS. Both are corrected here.
 
-    So what is pinned here is the EXPOSURE, which is the thing that actually gets
-    lost: `create_async_engine` accepts `max_overflow` whether or not this
-    wrapper forwards it, so dropping the parameter breaks no call inside `src/`
-    and produces no type error anywhere until a caller passes it.
-    `test_the_tenant_does_not_survive_the_commit_onto_the_pooled_connection` is
-    that caller, and it is a `TypeError` at collection-adjacent runtime rather
-    than a readable failure — hence this test, which names the missing parameter.
+    **"`pool.size()` is asserted as well, because a signature that accepts an
+    argument and discards it would satisfy everything above."** It was not. The
+    body was `signature(make_engine).parameters` and three assertions over it;
+    `make_engine` was never called. MEASURED 2026-08-06 with both parameters kept
+    on the signature and NEITHER forwarded to `create_async_engine`, on this
+    branch as it stood before the assertions below existed: `193 passed`, and
+    `test_the_tenant_does_not_survive_the_commit_onto_the_pooled_connection` —
+    whose `pg_backend_pid()` equality is documented as where the ceiling earns its
+    keep — was one of them. It passes at the defaults anyway, because its two checkouts are
+    SEQUENTIAL and a pool of five hands the same connection back to the second one
+    regardless of what the ceiling is. That is the hole this test now closes.
 
-    `pool.size()` is asserted as well, because a signature that accepts an
-    argument and discards it would satisfy everything above.
+    **"`QueuePool` publishes no reader for `max_overflow`."** True of the PUBLIC
+    surface and false as a statement about what is readable. MEASURED 2026-08-06,
+    `make_engine("postgresql+psycopg://…")` and
+    `make_engine(…, pool_size=1, max_overflow=0)`, both `AsyncAdaptedQueuePool`:
+
+        default      -> size() == 5, _max_overflow == 10
+        1 and 0      -> size() == 1, _max_overflow == 0
+
+    THE PUBLIC SURFACE REALLY DOES NOT OFFER IT, and that was checked rather than
+    assumed. Every non-underscore name on the pool object is `checkedin`,
+    `checkedout`, `connect`, `dispatch`, `dispose`, `echo`, `logger`,
+    `logging_name`, `overflow`, `recreate`, `size`, `status` and `timeout`.
+    `overflow()` answers `-pool_size` on an idle pool (`-5` and `-1` for the two
+    above), which tracks the SIZE and not the ceiling, and `status()` renders only
+    size, checked-in, overflow and checked-out. `_max_overflow` is the only
+    reader, so this test reaches for a private attribute deliberately: a private
+    read that fails loudly the day SQLAlchemy renames it is worth more than a
+    ceiling nothing checks. Proving the ceiling behaviourally instead would mean
+    holding a connection and waiting out `pool_timeout` — 30 seconds by default,
+    and not a parameter `make_engine` exposes.
+
+    NO DATABASE IS TOUCHED. `create_async_engine` resolves the URL and builds the
+    pool without connecting, so an unreachable DSN is enough and this stays a unit
+    test. `dispose()` in a `finally` all the same: nothing was checked out, so it
+    is a formality, but an engine left undisposed in a test is a habit rather than
+    a one-off.
+
+    The signature assertions are kept. Forwarding is what this file needs today;
+    KEYWORD-ONLY is what stops `make_engine(dsn, 1, 0)` from becoming
+    `make_engine(dsn, 0, 1)` in a later refactor, and no runtime assertion about a
+    built pool can see the difference.
     """
     parameters = signature(make_engine).parameters
 
@@ -407,6 +636,39 @@ def test_make_engine_exposes_the_pool_bounds_a_reuse_test_cannot_do_without() ->
         assert parameters[name].default == default, (
             f"{name!r} defaults to {parameters[name].default!r}, not {default!r}"
         )
+
+    # The defaults are built too, and not only the explicit pair. A wrapper that
+    # forwards what it is given while ignoring its own defaults would satisfy the
+    # second case and leave every caller that passes nothing on SQLAlchemy's
+    # numbers rather than on the ones this signature promises.
+    at_defaults = make_engine(UNREACHABLE_DSN)
+    at_the_reuse_bounds = make_engine(UNREACHABLE_DSN, pool_size=1, max_overflow=0)
+
+    try:
+        for engine, size, overflow in ((at_defaults, 5, 10), (at_the_reuse_bounds, 1, 0)):
+            built = engine.pool
+            assert isinstance(built, QueuePool), (
+                f"make_engine built a {type(built).__name__}, which publishes "
+                f"neither size() nor _max_overflow; the pool bounds cannot be read "
+                f"back at all and this test would prove nothing"
+            )
+            assert built.size() == size, (
+                f"make_engine was asked for pool_size={size} and built a pool of "
+                f"{built.size()}. The parameter is on the signature and is not "
+                f"reaching create_async_engine."
+            )
+            # PRIVATE ON PURPOSE — see the docstring. Every public name on this
+            # object was enumerated and none of them reads the ceiling.
+            ceiling = get_max_overflow(built)
+            assert ceiling == overflow, (
+                f"make_engine was asked for max_overflow={overflow} and built a "
+                f"pool whose ceiling is {ceiling}. Task 6's reuse test then gets a "
+                f"SECOND, UNPOISONED connection for its second checkout and passes "
+                f"for the wrong reason."
+            )
+    finally:
+        await at_defaults.dispose()
+        await at_the_reuse_bounds.dispose()
 
 
 def test_tenant_repository_takes_its_model_as_a_required_argument() -> None:

@@ -19,7 +19,27 @@ dependencies = [
     # it would; that was wrong. What `<2.1` actually buys is exclusion of 2.1.0
     # STABLE, an unreviewed major-minor that would otherwise arrive on its
     # release day through a plain `uv lock`.
-    "sqlalchemy>=2.0.51,<2.1",
+    #
+    # `[asyncio]` IS NOT DECORATION, AND IT IS NOT SATISFIED BY THE PLATFORM
+    # MARKER. `titlepipe_core.db` uses `create_async_engine`, `AsyncEngine`,
+    # `AsyncSession` and `async_sessionmaker`, all of which import greenlet at
+    # first use. SQLAlchemy declares greenlet twice, and the unconditional
+    # declaration is architecture-gated. MEASURED 2026-08-06,
+    # `importlib.metadata.requires("sqlalchemy")` against the installed 2.0.51:
+    #
+    #     greenlet>=1; platform_machine == "aarch64" or (platform_machine ==
+    #     "ppc64le" or (platform_machine == "x86_64" or (platform_machine ==
+    #     "amd64" or (platform_machine == "AMD64" or (platform_machine ==
+    #     "win32" or platform_machine == "WIN32")))))
+    #     greenlet>=1; extra == "asyncio"
+    #
+    # `arm64` — what Apple Silicon macOS reports for `platform_machine` — is not
+    # in that list. Nothing is broken on this box or on any x86_64/aarch64
+    # runner (greenlet 3.5.4 is installed either way), so this is a declaration
+    # fix rather than a repair: without the extra, a macOS/arm64 developer gets
+    # an ImportError at the first async engine call, from a dependency nobody
+    # declared. The extra adds the same `greenlet>=1` with no marker at all.
+    "sqlalchemy[asyncio]>=2.0.51,<2.1",
     # `[binary]` ships the libpq wheel, which is also what makes testcontainers
     # able to connect at all — its own `[postgres]` extra installs no driver.
     # `[pool]` is the connection pool the engine will want from Task 4 on.

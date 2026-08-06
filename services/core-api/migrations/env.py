@@ -57,6 +57,7 @@ from alembic import context
 from sqlalchemy import engine_from_config, pool, text
 
 from titlepipe_core.db.models import Base
+from titlepipe_core.db.session import DENY_SENTINEL_OPTIONS
 
 # `roles.sql` creates it; `tests/test_roles.py` proves nothing else can become
 # it. Spelled here rather than imported from `conftest.py`, which is test-only
@@ -204,7 +205,47 @@ def run_migrations_online() -> None:
     # `NullPool` because this process opens one connection, runs one migration
     # and exits. A pooled engine would hold the connection open past `dispose()`
     # on some drivers and keep a lock on `alembic_version` alive with it.
-    connectable = engine_from_config(configuration, prefix="sqlalchemy.", poolclass=pool.NullPool)
+    #
+    # 🔴 `connect_args` IS THE DENY PIN, AND ALEMBIC HAS TO ASK FOR IT ITSELF.
+    # `titlepipe_core.db.session` pins the tenant GUC at the empty-string deny
+    # sentinel in `make_engine`'s `connect_args`, and its docstring used to claim
+    # that pin covered "every connection" including this one. It does not, and
+    # cannot: this engine is built here, by `engine_from_config`, and never goes
+    # near `make_engine`.
+    #
+    # Unpinned, this connection's tenant is whatever `PGOPTIONS` says. MEASURED
+    # 2026-08-06 against postgres:18.4 by driving a real `alembic current` and
+    # reading `current_setting(…, true)` off the connection opened below, with
+    # this `connect_args` absent:
+    #
+    #     no PGOPTIONS                              ->  NULL
+    #     PGOPTIONS='-c app.current_tenant=1111…'   ->  '11111111-1111-1111-…'
+    #
+    # And what that costs, measured in the same session against a database
+    # holding one `orders` row for each of two tenants, on a connection to the
+    # same server as titlepipe_migration and then `SET ROLE titlepipe_owner` —
+    # the two privilege steps this function takes below:
+    #
+    #     PGOPTIONS,    no connect_args:  guc '1111…',  UPDATE 1,  count 1
+    #     PGOPTIONS,    connect_args:     guc ''     ,  UPDATE 0,  count 0
+    #     no PGOPTIONS, no connect_args:  guc NULL   ,  UPDATE 0,  count 0
+    #
+    # `0002`'s docstring states the post-`0002` invariant for a data migration
+    # unconditionally — it touches 0 rows and says nothing. Under an exported
+    # `PGOPTIONS` it instead touches exactly ONE tenant's rows and reports a
+    # non-zero `UPDATE`, which reads as success while every other tenant has been
+    # silently skipped. That is the worse of the two failures, and it is the one
+    # this line removes.
+    #
+    # IMPORTED RATHER THAN RESPELLED. A second `-c app.current_tenant=` literal
+    # here would be a second thing to keep in step with `session.py`, and the copy
+    # that drifts is the one with no test pointed at it.
+    connectable = engine_from_config(
+        configuration,
+        prefix="sqlalchemy.",
+        poolclass=pool.NullPool,
+        connect_args={"options": DENY_SENTINEL_OPTIONS},
+    )
 
     try:
         with connectable.connect() as connection:

@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import ipaddress
 import os
+import re
 import secrets
 import shutil
 import subprocess
@@ -28,7 +29,7 @@ from alembic.config import Config
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
-from sqlalchemy import URL, Engine, create_engine, make_url, text
+from sqlalchemy import URL, Connection, Engine, create_engine, make_url, text
 from sqlalchemy.exc import ArgumentError, SQLAlchemyError
 
 # `testcontainers.postgres` is a deprecated shim that warns on import; the
@@ -222,8 +223,19 @@ LOOPBACK_ACKNOWLEDGEMENT = "TP_TEST_DATABASE_URL_LOOPBACK_IS_DELIBERATE"
 
 # The tenant GUC, and the value that means "no tenant established".
 #
-# Task 6 owns the policies; what is owned HERE is the floor they stand on.
-# `models.py` writes every tenant predicate as
+# CORRECTED 2026-08-06, two false claims in the paragraph that used to be here.
+# It said "Task 6 owns the policies" — TASK 4 does, and Task 6 is the isolation
+# proof that reads them (`docs/superpowers/plans/backend/01-postgres-correctness.md`
+# §"Task 4 · Forced RLS and the grants" against §"Task 6 · The isolation proof").
+# And it said "`models.py` writes every tenant predicate as `nullif(...)`" —
+# `models.py` WRITES NO PREDICATE AT ALL. `grep -n "nullif" src/titlepipe_core/db/models.py`
+# returns nothing; the only mention of the expression there is prose inside
+# `_TenantRow`'s docstring describing what Task 4 would go on to write.
+# `migrations/versions/0002_forced_rls_and_grants.py::_tenant_predicate` is the
+# one place the string is built.
+#
+# What is owned HERE is the floor those policies stand on. `0002` writes every
+# tenant predicate as
 # `nullif(current_setting('app.current_tenant', true), '')::uuid`, so the whole
 # invariant is: nothing established -> `''` -> `nullif` -> NULL -> no row
 # matches -> deny.
@@ -1267,11 +1279,31 @@ def migrated_database(roles_applied: str, migration_dsn: str) -> Iterator[str]:
 
 # --- the isolation seed -----------------------------------------------------
 #
-# Two tenants and THREE orders, split two-to-one. The asymmetry is the whole
-# design: a seed of one row each makes "exactly 1" true for both tenants, so a
-# positive control reading `1` would be satisfied by a session that had leaked
-# into the other tenant's row. Two for A and one for B means B's count is a
-# statement about B.
+# Two tenants, and rows for BOTH OF THEM IN EVERY TENANT-KEYED TABLE.
+#
+# ---------------------------------------------------------------------------
+# 🔴 THIS SEED USED TO WRITE `orders` AND `tenants` AND NOTHING ELSE, AND THAT
+#    IS WHAT MADE THE ISOLATION PROOF A PROOF ABOUT ONE TABLE.
+# ---------------------------------------------------------------------------
+# The other five tenant tables — and the registry — were then read only in the
+# DENY state, where "this policy denies everyone" and "this policy leaks to
+# everyone" produce the identical answer: zero rows for a session that has
+# established no tenant. MEASURED 2026-08-06 on this tree, `0002::_isolate`
+# patched so that `orders` keeps its real predicate and the other six plus
+# `tenants` get
+#
+#     USING (nullif(current_setting('app.current_tenant', true), '') IS NOT NULL)
+#
+# — a predicate that hands every established tenant every other tenant's rows:
+# `192 passed`. The whole suite, green, against a database leaking six of seven
+# tables. The seed is the half of that hole that lives here; the other half was
+# a catalog assertion that read the predicate's substring instead of its shape,
+# and is fixed in `tests/test_forced_rls_and_grants.py`.
+#
+# The asymmetry is retained and is the whole design of the counts: a seed of one
+# row each makes "exactly 1" true for both tenants, so a positive control
+# reading `1` would be satisfied by a session that had leaked into the other
+# tenant's row. Two for A and one for B means B's count is a statement about B.
 #
 # 1111/2222 rather than a fresh pair, deliberately. `test_tenant_session.py` and
 # `test_forced_rls_and_grants.py` already use exactly these two literals and say
@@ -1281,22 +1313,122 @@ def migrated_database(roles_applied: str, migration_dsn: str) -> Iterator[str]:
 ISOLATION_TENANT_A = UUID("11111111-1111-1111-1111-111111111111")
 ISOLATION_TENANT_B = UUID("22222222-2222-2222-2222-222222222222")
 
-# tenant -> how many `orders` rows it gets. Ordered A then B, and `dict` in
-# CPython preserves insertion order, so the seed writes A's rows first — which
-# is what makes an off-by-one in the reader legible in a failure message.
-ISOLATION_ORDER_COUNTS: Mapping[UUID, int] = MappingProxyType(
+# tenant -> how many rows it gets in each TENANT-KEYED table. Ordered A then B,
+# and `dict` in CPython preserves insertion order, so the seed writes A's rows
+# first — which is what makes an off-by-one in the reader legible in a failure
+# message.
+ISOLATION_ROW_COUNTS: Mapping[UUID, int] = MappingProxyType(
     {ISOLATION_TENANT_A: 2, ISOLATION_TENANT_B: 1}
 )
 
+# The registry gets ONE row per tenant and cannot get two, which is a property of
+# the schema rather than a choice made here: `tenants`' primary key IS the tenant
+# id (`titlepipe_core.db.models.Tenant`), so a second row for the same tenant is
+# the same row. The positive control therefore leans on SET EQUALITY on this
+# table rather than on the two-and-one asymmetry — A must see `{A}` and B must
+# see `{B}`, and a policy that leaks shows each of them both.
+ISOLATION_REGISTRY_ROWS = 1
 
-def _seed_isolation_tenants(engine: Engine) -> Mapping[UUID, tuple[UUID, ...]]:
-    """Two tenants and their orders, committed, written AS THE SUPERUSER.
+# The two key columns, and the rule for choosing between them: a table carrying
+# `tenant_id` is keyed on it, and a table that does not is keyed on `id`. That is
+# the same split `0002` makes and the same one
+# `tests/test_forced_rls_and_grants.py` derives, and it is DERIVED here too —
+# see `_isolation_tables`.
+ISOLATION_TENANT_KEY = "tenant_id"
+ISOLATION_REGISTRY_KEY = "id"
+
+# The floor under the derivation, for the reason `test_forced_rls_and_grants.py`
+# records at length: everything the seed and the positive control do is a LOOP,
+# and a loop over an empty set writes nothing, reads nothing and passes.
+MINIMUM_ISOLATION_TABLES = 7
+
+# 🔴 THE ONE TABLE THE SEED CANNOT CLEAR. `0001` puts TWO triggers on
+# `audit_log` — `audit_log_append_only` (`BEFORE UPDATE OR DELETE`) and
+# `audit_log_no_truncate` (`BEFORE TRUNCATE`) — and a trigger is not an ACL, so
+# the container superuser is refused by both exactly as `titlepipe_app` is.
+# There is no statement that empties this table.
+#
+# It does not need one: `migrated_database` is MODULE-scoped and creates every
+# table fresh, so `audit_log` starts empty for each module that seeds. That is an
+# argument, not a measurement, so `_seed_isolation_rows` READS THE ROW COUNT BACK
+# for every table including this one and refuses a table holding more than it
+# just wrote — which is the only thing that would notice the day the argument
+# stops being true.
+ISOLATION_UNCLEARABLE_TABLE = "audit_log"
+
+# Every table and column name the seed interpolates into SQL is checked against
+# this before it is used. The names come from `pg_class`/`pg_attribute` on the
+# container rather than from a literal in this file, and a derivation that reads
+# identifiers out of the catalog and pastes them into a statement should say out
+# loud what it will accept. Lower-case, because everything this schema creates is
+# unquoted and therefore folded.
+ISOLATION_IDENTIFIER = re.compile(r"\A[a-z_][a-z0-9_]*\Z")
+
+
+def _isolation_tables(connection: Connection) -> Mapping[str, str]:
+    """table -> the column its `tenant_isolation` policy keys on. DERIVED.
+
+    Every ordinary table in `public` except Alembic's own version table, keyed on
+    `tenant_id` where the column exists and on `id` where it does not.
+
+    DERIVED RATHER THAN LISTED, for the reason `test_forced_rls_and_grants.py`
+    gives for the same derivation: a hardcoded list is satisfied by a migration
+    that adds an eighth tenant table and forgets to isolate it, because the list
+    does not mention it and so nothing looks. A new table has to opt OUT of being
+    seeded and read by deliberately not being a table, rather than opt IN by
+    being remembered.
+
+    `alembic_version` is excluded BY NAME even though the `tenant_id` half of the
+    rule would not reach it, because the `id` half would: it is an ordinary table
+    in `public`, and a naive "keyed on `id` otherwise" sweeps it in. It has no
+    `id` column, so the seed would fail on it rather than corrupt it — but
+    failing in the seed is a worse place to learn this than a named exclusion.
+
+    `attnum > 0 AND NOT attisdropped` is what makes the `tenant_id` test a
+    question about the table's LIVE columns: `pg_attribute` also holds system
+    columns at negative `attnum`, and a dropped column keeps its row with
+    `attisdropped` set and a mangled name.
+    """
+    result = connection.execute(
+        text(
+            "SELECT c.relname, EXISTS ("
+            "  SELECT 1 FROM pg_attribute a "
+            "  WHERE a.attrelid = c.oid AND a.attname = :tenant_key "
+            "    AND a.attnum > 0 AND NOT a.attisdropped) "
+            "FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace "
+            "WHERE n.nspname = 'public' AND c.relkind = 'r' "
+            "  AND c.relname <> :version_table"
+        ),
+        {"tenant_key": ISOLATION_TENANT_KEY, "version_table": ALEMBIC_VERSION_TABLE},
+    )
+
+    keyed: dict[str, str] = {}
+    for row in result:
+        table = str(row[0])
+        if not ISOLATION_IDENTIFIER.match(table):
+            raise RuntimeError(
+                f"the isolation seed derived the table name {table!r} from the "
+                f"catalog, which is not the plain lower-case identifier "
+                f"{ISOLATION_IDENTIFIER.pattern} that every name it interpolates "
+                f"into SQL has to be"
+            )
+        keyed[table] = ISOLATION_TENANT_KEY if bool(row[1]) else ISOLATION_REGISTRY_KEY
+    return MappingProxyType(keyed)
+
+
+def _seed_isolation_rows(
+    engine: Engine,
+) -> tuple[Mapping[str, str], Mapping[str, Mapping[UUID, tuple[UUID, ...]]]]:
+    """Both tenants' rows in every derived table, committed, AS THE SUPERUSER.
+
+    Returns the derived table -> key-column mapping alongside
+    table -> tenant -> the ids written for it.
 
     🔴 NO TENANT GUC IS SET HERE, AND THAT IS NOT AN OMISSION. A SUPERUSER
        BYPASSES ROW-LEVEL SECURITY UNCONDITIONALLY — `FORCE` removes the
-       OWNER's exemption, not a superuser's — so every policy on `tenants` and
-       `orders` is simply not consulted on this connection and one session can
-       write both tenants' rows.
+       OWNER's exemption, not a superuser's — so no policy on any of these
+       tables is consulted on this connection and one session can write both
+       tenants' rows.
 
     That is the same fact that makes an isolation assertion on `admin_dsn`
     worthless, and it is worth having the two consequences of it written down in
@@ -1315,11 +1447,17 @@ def _seed_isolation_tenants(engine: Engine) -> Mapping[UUID, tuple[UUID, ...]]:
     connection and an uncommitted row is invisible to one. A denial measured
     against a row that was never there is not a denial.
 
-    `DELETE` first — `orders` then `tenants` — so the contents are a function of
-    this call rather than of whatever ran before it. There is no foreign key
-    between the two, so the order is legibility rather than necessity;
-    `audit_log` is deliberately untouched because `0001`'s append-only trigger
-    refuses a DELETE against it.
+    `DELETE` FIRST, ON EVERY TABLE THAT PERMITS ONE, so the contents are a
+    function of this call rather than of whatever ran before it. There are no
+    foreign keys between these tables, so the order is legibility rather than
+    necessity. `audit_log` is the exception and it is not a choice — see
+    `ISOLATION_UNCLEARABLE_TABLE` for the two triggers and for the read-back that
+    covers it instead.
+
+    THE ROW COUNT IS READ BACK for every table, and it is the assertion that
+    turns the argument about `audit_log` into a check. A table holding more rows
+    than this call wrote is a table the positive control's set comparison would
+    fail on later, several tests away from the reason.
 
     RETURNING PER ROW RATHER THAN ONE MULTI-ROW INSERT, AND THAT IS MEASURED
     RATHER THAN CAUTIOUS. A `text()` construct executed with a LIST of parameter
@@ -1335,34 +1473,53 @@ def _seed_isolation_tenants(engine: Engine) -> Mapping[UUID, tuple[UUID, ...]]:
     The ids are what the tests assert on — a count of one is satisfied by the
     wrong row as readily as by the right one — so they have to come back, and a
     loop is how they do.
+
+    S608 is suppressed on the three interpolated statements. A table name cannot
+    be a bind parameter in any dialect, so interpolation is forced; what makes it
+    safe is that every name comes from `_isolation_tables`, which reads
+    `pg_class` on this suite's own container and refuses anything that is not a
+    plain lower-case identifier. The VALUES are bound, always.
     """
-    seeded: dict[UUID, tuple[UUID, ...]] = {}
+    seeded: dict[str, Mapping[UUID, tuple[UUID, ...]]] = {}
     with engine.begin() as connection:
-        connection.execute(text("DELETE FROM orders"))
-        connection.execute(text("DELETE FROM tenants"))
-        for tenant, count in ISOLATION_ORDER_COUNTS.items():
-            connection.execute(
-                text("INSERT INTO tenants (id) VALUES (:tenant)"), {"tenant": tenant}
-            )
-            seeded[tenant] = tuple(
-                UUID(
-                    str(
-                        connection.execute(
-                            text("INSERT INTO orders (tenant_id) VALUES (:tenant) RETURNING id"),
-                            {"tenant": tenant},
-                        ).scalar_one()
-                    )
+        keyed = _isolation_tables(connection)
+
+        for table in sorted(keyed):
+            if table != ISOLATION_UNCLEARABLE_TABLE:
+                connection.execute(text(f"DELETE FROM {table}"))  # noqa: S608
+
+        for table, key_column in sorted(keyed.items()):
+            insert = f"INSERT INTO {table} ({key_column}) VALUES (:tenant) RETURNING id"  # noqa: S608
+            per_tenant: dict[UUID, tuple[UUID, ...]] = {}
+            for tenant, count in ISOLATION_ROW_COUNTS.items():
+                rows = ISOLATION_REGISTRY_ROWS if key_column == ISOLATION_REGISTRY_KEY else count
+                per_tenant[tenant] = tuple(
+                    UUID(str(connection.execute(text(insert), {"tenant": tenant}).scalar_one()))
+                    for _ in range(rows)
                 )
-                for _ in range(count)
-            )
-    return MappingProxyType(seeded)
+            seeded[table] = MappingProxyType(per_tenant)
+
+        for table, written_ids in sorted(seeded.items()):
+            count_rows = f"SELECT count(*) FROM {table}"  # noqa: S608
+            present = int(connection.execute(text(count_rows)).scalar_one())
+            written = sum(len(ids) for ids in written_ids.values())
+            if present != written:
+                raise RuntimeError(
+                    f"the isolation seed wrote {written} rows into {table} and the "
+                    f"table now holds {present}. Rows this call did not write are "
+                    f"rows the positive control's set comparison will fail on, "
+                    f"several tests away from the reason. {ISOLATION_UNCLEARABLE_TABLE} "
+                    f"is the table this can actually happen to: nothing can empty it."
+                )
+
+    return keyed, MappingProxyType(seeded)
 
 
 @pytest.fixture(scope="module")
-def isolation_seed(
+def _isolation_seed_result(
     migrated_database: str, seam_engine: Callable[[str], Engine]
-) -> Mapping[UUID, tuple[UUID, ...]]:
-    """tenant -> its committed `orders` ids. A: two rows, B: one.
+) -> tuple[Mapping[str, str], Mapping[str, Mapping[UUID, tuple[UUID, ...]]]]:
+    """The seed, run once per module, behind the two fixtures that expose it.
 
     ---------------------------------------------------------------------------
     🔴 MODULE-SCOPED, NOT SESSION-SCOPED, AND THE SCOPE IS FORCED RATHER THAN
@@ -1384,26 +1541,80 @@ def isolation_seed(
     every test there requests this fixture and pytest builds it first. Widening
     it further would buy nothing: the tables do not outlive the module.
 
-    THE FLOOR IS ASSERTED HERE rather than in each test, for the reason
-    `test_forced_rls_and_grants.py` gives about derivations. A seed that wrote
-    nothing makes every "0 rows" assertion in the isolation proof true and
-    vacuous at the same time, without changing a single line of it. The
-    asymmetry is checked too, not just the total: two-and-one is what makes the
-    positive control's `1` a statement about B rather than about either tenant.
+    ONE FIXTURE BEHIND TWO, rather than two fixtures each opening a connection:
+    the key-column mapping and the seeded ids are two halves of one derivation,
+    and deriving them twice is two chances for them to disagree about which
+    tables exist.
+
+    THE FLOOR AND THE COUNTS ARE ASSERTED HERE rather than in each test, for the
+    reason `test_forced_rls_and_grants.py` gives about derivations. A seed that
+    wrote nothing makes every "0 rows" assertion in the isolation proof true and
+    vacuous at the same time, without changing a single line of it. Both are
+    checked: the number of TABLES, because every loop below passes over an empty
+    set, and the number of ROWS PER TENANT PER TABLE, because two-and-one is what
+    makes the positive control's `1` a statement about B rather than about either
+    tenant.
     """
     engine = seam_engine(migrated_database)
     try:
-        seeded = _seed_isolation_tenants(engine)
+        keyed, seeded = _seed_isolation_rows(engine)
     finally:
         engine.dispose()
 
-    written = {tenant: len(ids) for tenant, ids in seeded.items()}
-    assert written == dict(ISOLATION_ORDER_COUNTS), (
-        f"the seed wrote {written}, not {dict(ISOLATION_ORDER_COUNTS)}. Every "
-        f"denial in the isolation proof would then be a statement about an empty "
-        f"table, and the positive control's expected count would be wrong."
+    assert len(seeded) >= MINIMUM_ISOLATION_TABLES, (
+        f"the seed derived {len(seeded)} tables, fewer than the "
+        f"{MINIMUM_ISOLATION_TABLES} this schema has: {sorted(seeded)}. Every "
+        f"assertion in the isolation proof is a loop over this set, and a loop "
+        f"over a short one reports success for the tables it never visited."
     )
-    return seeded
+
+    expected = {
+        table: {
+            tenant: (
+                ISOLATION_REGISTRY_ROWS
+                if keyed[table] == ISOLATION_REGISTRY_KEY
+                else ISOLATION_ROW_COUNTS[tenant]
+            )
+            for tenant in ISOLATION_ROW_COUNTS
+        }
+        for table in seeded
+    }
+    written = {
+        table: {tenant: len(ids) for tenant, ids in per_tenant.items()}
+        for table, per_tenant in seeded.items()
+    }
+    assert written == expected, (
+        f"the seed wrote {written}, not {expected}. Every denial in the isolation "
+        f"proof would then be a statement about an empty table, and the positive "
+        f"control's expected sets would be wrong."
+    )
+
+    return keyed, seeded
+
+
+@pytest.fixture(scope="module")
+def isolation_seed(
+    _isolation_seed_result: tuple[Mapping[str, str], Mapping[str, Mapping[UUID, tuple[UUID, ...]]]],
+) -> Mapping[str, Mapping[UUID, tuple[UUID, ...]]]:
+    """table -> tenant -> its committed ids. Two rows for A and one for B.
+
+    `tenants` is the exception at one row each, because its primary key IS the
+    tenant id — see `ISOLATION_REGISTRY_ROWS`.
+    """
+    return _isolation_seed_result[1]
+
+
+@pytest.fixture(scope="module")
+def isolation_key_columns(
+    _isolation_seed_result: tuple[Mapping[str, str], Mapping[str, Mapping[UUID, tuple[UUID, ...]]]],
+) -> Mapping[str, str]:
+    """table -> the column its policy keys on, as the seed derived it.
+
+    The write side of the isolation proof needs this: an INSERT that carries
+    another tenant's id has to name the column that identifies the tenant, and
+    that column is `id` on the registry and `tenant_id` on everything else.
+    """
+    return _isolation_seed_result[0]
 
 
 @pytest.fixture(scope="session")
@@ -1458,7 +1669,12 @@ def seam_engine() -> Callable[[str], Engine]:
 
 @pytest.fixture(scope="session")
 def tenant_guc() -> str:
-    """`app.current_tenant` — the setting Task 6's policies read."""
+    """`app.current_tenant` — the setting `0002`'s policies read.
+
+    CORRECTED 2026-08-06: this said "Task 6's policies". The policies are Task
+    4's, written by `migrations/versions/0002_forced_rls_and_grants.py`; Task 6
+    is the proof that reads them back.
+    """
     return TENANT_GUC
 
 

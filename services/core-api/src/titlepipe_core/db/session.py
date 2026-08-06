@@ -7,8 +7,35 @@ deliberate statement that the work is allowed to see nothing.
 
 The tenant is not carried in a `WHERE` clause. It is carried in the session GUC
 `app.current_tenant`, which revision `0002`'s `tenant_isolation` policies read on
-all seven tables — so the scoping survives a query somebody forgot to filter, and
-it survives a query nobody in this repository wrote.
+all seven tables — so the scoping survives a query somebody forgot to filter.
+
+🔴 IT DOES NOT SURVIVE A QUERY SOMEBODY CONCATENATED, and an earlier version of
+this paragraph claimed it did ("it survives a query nobody in this repository
+wrote"). A custom placeholder GUC carries no ACL, so `set_config` on it is
+callable by every role — `0002` already records "any role can `SET` its own
+custom GUC" as the argument against a migration-bypass policy, and the same fact
+reaches this way too. MEASURED 2026-08-06 against postgres:18.4 as
+`titlepipe_app`, tenant `1111…` established by the listener below, in ONE
+statement with no stacked queries and no second round trip:
+
+    -- one line earlier, same session: SELECT id FROM orders
+    --   -> ['eb1b546f-af92-40a7-8cb8-e3537c1ec5d2']   (this tenant's only row)
+    SELECT id, tenant_id FROM orders
+      WHERE (SELECT set_config('app.current_tenant', '2222…', true)) IS NOT NULL;
+    -> 5d16bcc1-ff11-4439-9088-94aed0a963b0 | 22222222-…
+    -- and afterwards, still inside the block:
+    current_setting('app.current_tenant', true)  -> '2222…'
+
+That row belongs to the other tenant, and the session went on holding the other
+tenant's id for the rest of the transaction. There is no PostgreSQL-side fix: a
+custom GUC has no ACL to revoke, so nothing can be taken away from
+`titlepipe_app` to close it.
+
+So state the guarantee at the size it is. RLS here defends against a FORGOTTEN
+`WHERE` clause, not against a concatenated one. Parameterisation in Plans 02-06
+is load-bearing on its own rather than belt-and-braces on top of a policy, and a
+review that waves an injection through because "RLS would catch it" is waving
+through a cross-tenant read.
 
 ## The four things that go wrong here, each measured
 
@@ -46,9 +73,61 @@ MEASURED 2026-08-05 against SQLAlchemy 2.0.51 — `after_begin` is absent from b
 list can conclude they are covered at Core level and not be. Nothing below the
 ORM applies the tenant, so **a raw `engine.connect()`, Alembic, and any future
 queue worker bypass this listener entirely.** They are not thereby unscoped —
-they are DENIED, because `_DENY_SENTINEL_OPTIONS` below pins every connection at
-the deny sentinel the moment libpq opens it. A path that skips the ORM sees
-nothing rather than seeing everything, which is the direction to fail in.
+they are denied, and a path that skips the ORM sees nothing rather than seeing
+everything, which is the direction to fail in.
+
+🔴 BUT NOT ALL OF THEM ARE DENIED FOR THE SAME REASON, AND AN EARLIER VERSION OF
+THIS PARAGRAPH SAID THEY WERE — that `DENY_SENTINEL_OPTIONS` below "pins every
+connection at the deny sentinel". The pin is a property of `make_engine`'s
+`connect_args`, so it reaches exactly the engines built by `make_engine`.
+`migrations/env.py` builds its own with `engine_from_config(...)` and never calls
+`make_engine`, so ALEMBIC IS NOT DENIED BY THE PIN. It is denied because its GUC
+is UNSET: `current_setting(…, true)` answers NULL, `nullif` leaves it NULL, and
+no policy row matches. MEASURED 2026-08-06 against postgres:18.4 by driving a
+real `alembic current` and reading `current_setting(…, true)` off the connection
+`run_migrations_online` itself opened, `env.py` carrying no `connect_args`:
+
+    no PGOPTIONS exported                      ->  NULL
+    PGOPTIONS='-c app.current_tenant=1111…'    ->  '11111111-1111-1111-1111-…'
+
+An unset GUC and the `''` sentinel are the same denial only because `0002` spells
+the predicate with `nullif` — see the next section. A VALID TENANT IS NEITHER.
+
+**What that second line costs a data migration.** Measured in the same session
+against the same database, which held one `orders` row for each of two tenants,
+on a connection to the same server as `titlepipe_migration` and then
+`SET ROLE titlepipe_owner` — the two privilege steps `env.py` takes:
+
+    PGOPTIONS exported, no connect_args (as env.py stood):
+        current_setting                             ->  '11111111-…'
+        UPDATE orders SET tenant_id = tenant_id     ->  UPDATE 1
+        SELECT count(*) FROM orders                 ->  1
+    PGOPTIONS exported, connect_args pinned:
+        current_setting                             ->  ''
+        UPDATE orders SET tenant_id = tenant_id     ->  UPDATE 0
+        SELECT count(*) FROM orders                 ->  0
+    no PGOPTIONS, no connect_args:
+        current_setting                             ->  NULL
+        UPDATE orders SET tenant_id = tenant_id     ->  UPDATE 0
+        SELECT count(*) FROM orders                 ->  0
+
+THIS IS WORSE THAN THE FAILURE `0002` DOCUMENTS, not a smaller version of it.
+`0001`'s header (`UPDATE orders SET tenant_id = tenant_id; -> UPDATE 0`),
+`0002`'s docstring, and
+`tests/test_forced_rls_and_grants.py::test_a_migration_shaped_write_is_a_silent_
+no_op_until_it_says_so` all state the post-`0002` invariant unconditionally: a
+data migration touches **0** rows. Under an exported `PGOPTIONS` it touches exactly
+ONE TENANT'S rows and reports `UPDATE 1` — a non-zero count, which reads as
+success, having silently skipped every other tenant. `UPDATE 0` is at least loud
+once you know to look for it.
+
+So `migrations/env.py` imports `DENY_SENTINEL_OPTIONS` from this module and hands
+it to its own engine. A shared constant rather than a second literal: two copies
+of a libpq `options` string are two things to keep in step, and the one that
+drifts is the one nobody has a test pointed at.
+`tests/test_tenant_session.py::test_the_alembic_engine_is_pinned_at_the_deny_
+sentinel_even_under_pgoptions` drives a real `alembic` command with the variable
+exported and reads the GUC off the connection `env.py` opened.
 
 **4. `PGOPTIONS` can preset the GUC to a valid tenant.** MEASURED 2026-08-05
 against postgres:18.4, connected as `titlepipe_app`:
@@ -78,8 +157,10 @@ request after the first. `''::uuid` raises `invalid input syntax for type uuid:
 ""`, which is a 500 where a denial belongs; `nullif` is what makes the two
 absences one.
 
-`_DENY_SENTINEL_OPTIONS` moves a *fresh* connection into the `''` case as well,
+`DENY_SENTINEL_OPTIONS` moves a *fresh* connection into the `''` case as well,
 so the two are the same state rather than two states a reader has to keep apart.
+That is true of `make_engine`'s connections and, since the fix recorded in point
+3, of `migrations/env.py`'s as well.
 """
 
 from __future__ import annotations
@@ -105,7 +186,15 @@ from titlepipe_domain import TENANT_GUC, TenantId, tenant_guc_value
 #
 # libpq's `options` CONNECTION PARAMETER is the thing `PGOPTIONS` is merely the
 # DEFAULT for, which is the mechanism that makes this win — see point 4 above.
-_DENY_SENTINEL_OPTIONS: Final = f"-c {TENANT_GUC}="
+#
+# PUBLIC, AND THE UNDERSCORE CAME OFF FOR A CALLER OUTSIDE THIS PACKAGE.
+# `migrations/env.py` imports it: Alembic builds its own engine and so gets no
+# pin from `make_engine`, which is point 3 above. It is deliberately NOT
+# re-exported from `titlepipe_core.db.__init__`, whose docstring states that what
+# it re-exports is what a caller needs in order to reach the database — this is
+# not that. It is one connection parameter, wanted by one module that has to
+# construct an engine this file did not build.
+DENY_SENTINEL_OPTIONS: Final = f"-c {TENANT_GUC}="
 
 # `set_config(setting_name text, new_value text, is_local boolean)` — PostgreSQL
 # defines EXACTLY ONE signature. There is no two-argument form. MEASURED
@@ -152,7 +241,7 @@ def make_engine(dsn: str, *, pool_size: int = 5, max_overflow: int = 10) -> Asyn
         dsn,
         pool_size=pool_size,
         max_overflow=max_overflow,
-        connect_args={"options": _DENY_SENTINEL_OPTIONS},
+        connect_args={"options": DENY_SENTINEL_OPTIONS},
     )
 
 
@@ -235,10 +324,30 @@ async def tenant_session(
     ## Commit on exit, rollback on anything else
 
     The block is a unit of work. A clean exit commits; an exception propagates
-    with the transaction discarded by `close()`. This is not decoration: it is
-    what makes `is_local=True` observable, because a GUC set with `is_local` only
-    reverts at COMMIT, and a session that never committed would never exercise the
-    reuse case that `tests/test_tenant_session.py` pins.
+    with the transaction discarded by `close()`.
+
+    🔴 THE COMMIT IS LOAD-BEARING AND AN EARLIER VERSION OF THIS PARAGRAPH
+    DEFENDED IT WITH THE WRONG REASON. It said the commit "is what makes
+    `is_local=True` observable, because a GUC set with `is_local` only reverts at
+    COMMIT, and a session that never committed would never exercise the reuse
+    case". That does not hold: `is_local` reverts at ROLLBACK too, and
+    `close()` rolls back — so
+    `test_the_tenant_does_not_survive_the_commit_onto_the_pooled_connection`
+    reads the same `''` residual either way. MEASURED 2026-08-06 on this branch
+    as it stood BEFORE the test named below existed, with `await session.commit()`
+    deleted and the `finally: await session.close()` left in place: `193 passed`,
+    twice — the whole suite green, that reuse test among them.
+
+    The real reason is Plan 01's amendment 2 to the Task 5 contract, which Plans
+    02-06 read: this block COMMITS ON CLEAN EXIT. If it silently stops, every
+    write in those plans is rolled back by `close()` and every handler still
+    returns 200 — a mutation that removes the whole persistence layer and changes
+    no response. `test_a_row_written_in_one_tenant_session_is_readable_from_the_
+    next` is the test that fails for it: it writes through one block, exits, and
+    requires the row back from a SEPARATE session. It is the only test that can:
+    every other `tenant_session` write in the suite is asserted from inside its
+    own block, or — in `tests/test_tenant_isolation.py` — rolled back on purpose,
+    which is why deleting the commit disturbed none of them.
 
     `close()` is in a `finally` and runs whatever happened, including when
     `commit()` is what raised.

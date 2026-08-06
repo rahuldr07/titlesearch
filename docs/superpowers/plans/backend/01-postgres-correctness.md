@@ -802,21 +802,6 @@ errors in `scripts/tests`, 248 in the `gate0` archive); `include = [...,
 "../../scripts/*.py"]` reports 0 errors over 31 files. The clean answer is a
 `scripts/pyproject.toml` and a seventh matrix entry.
 
-**Squawk lints `.sql`, and the migrations are Python.** Either emit SQL with
-`alembic upgrade head --sql` and lint that, or scope Squawk to
-`migrations/sql/` — and **say which in the workflow**. Do not leave a CI line
-implying coverage that does not exist.
-
-State in the workflow that **Squawk does not cover GRANT, POLICY, RLS or
-roles** — Tasks 2 and 4's catalog tests do.
-
-**Squawk is not configured anywhere in this repository.** Checked 2026-08-06: no
-reference in any workflow, `pyproject.toml`, pre-commit config or CI file. So
-this whole paragraph is about a tool that does not run. Either add it — with the
-scoping decision above made explicitly — or delete the paragraph. **Do not leave
-a plan describing lint coverage that does not exist**, which is the same defect
-the paragraph itself warns against.
-
 **PROOF — this task had none, which is why it is written out here.**
 
 A workflow cannot be run locally, so the proof cannot be "CI passed". It must be

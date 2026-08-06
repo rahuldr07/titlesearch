@@ -35,11 +35,31 @@ Both, because neither catches the other's failure:
 * **the exact set** catches the SIX WRONG TABLES. A cardinality of six is
   satisfied by six decoys as readily as by the six that exist, which is precisely
   the shape that defeated Task 2's role floor.
+
+## 🔴 TWO ASSERTIONS HERE USED TO PASS AGAINST A BROKEN MIGRATION
+
+Both were measured on this tree, one mutation at a time, whole suite each time,
+and both shipped **`192 passed`**:
+
+* **the predicate was checked as a SUBSTRING, not as a shape.** `"nullif" in
+  qual.lower()` never asked whether the policy compares the key column to
+  anything, so `USING (nullif(current_setting(…), '') IS NOT NULL)` — which hands
+  every established tenant every other tenant's rows — satisfied it on six of
+  seven tables. `TENANT_PREDICATE_SHAPE` and `_tenant_predicate_fault` replace it
+  with a whole-predicate match that pulls the key column and the GUC out as named
+  groups and compares both against what this table and `conftest.py` say they
+  should be;
+* **`UPDATE` was granted, read, and never asserted.** The loop read
+  `GRANTED_VERBS[:2]`. Narrowing `0002`'s `GRANT SELECT, INSERT, UPDATE` to
+  `GRANT SELECT, INSERT` on the five tenant tables that are not `audit_log` was
+  green. `_expected_grants` derives the withheld list from the granted one so a
+  verb cannot be absent from both.
 """
 
 from __future__ import annotations
 
-from collections.abc import Callable
+import re
+from collections.abc import Callable, Mapping, Sequence
 from typing import NamedTuple
 from uuid import UUID
 
@@ -65,18 +85,108 @@ MINIMUM_TENANT_TABLES = 6
 REGISTRY_TABLE = "tenants"
 POLICY_NAME = "tenant_isolation"
 
+# The column each policy keys on: `tenant_id` on the six, `id` on the registry
+# whose primary key IS a tenant id.
+TENANT_KEY_COLUMN = "tenant_id"
+REGISTRY_KEY_COLUMN = "id"
+
+# ---------------------------------------------------------------------------
+# 🔴 THE SHAPE OF A `tenant_isolation` PREDICATE, AND WHY IT IS A SHAPE RATHER
+#    THAN A SUBSTRING.
+# ---------------------------------------------------------------------------
+# What used to stand here was `assert "nullif" in facts.qual.lower()`, and that
+# is satisfied by a predicate which does not mention the key column at all.
+# MEASURED 2026-08-06 on this tree, `0002::_isolate` patched so that `orders`
+# keeps its real predicate and the other six plus `tenants` get
+#
+#     USING (nullif(current_setting('app.current_tenant', true), '') IS NOT NULL)
+#
+# — a predicate that is TRUE for every row as soon as any tenant is established,
+# i.e. one that hands every established tenant every other tenant's rows. It
+# contains `nullif`, so this assertion passed; it denies an unestablished session,
+# so every deny-state assertion passed; and the isolation proof only ever read
+# `orders` with a tenant established, so that passed too. `192 passed`, against a
+# database leaking six of seven tables.
+#
+# HOW THIS PARSES IT. `pg_policies.qual` is the SERVER's deparse of the expression
+# tree — `pg_get_expr` on `pg_policy.polqual` — not the text anybody typed, so it
+# is normalised, fully parenthesised, and rendered with the function name in
+# UPPER CASE. MEASURED 2026-08-06 against postgres:18.4, `orders`:
+#
+#     (tenant_id = (NULLIF(current_setting('app.current_tenant'::text, true), ''::text))::uuid)
+#
+# and `tenants` identically but for `id` in place of `tenant_id`. Because the
+# deparse is canonical, the whole predicate can be matched — anchored at both ends
+# with `\A`/`\Z`, so there is no gap for anything else to hide in — rather than
+# searched for a fragment.
+#
+# THE UPPER-CASE DEPARSE IS SURVIVED BY `re.IGNORECASE`, AND THAT COSTS NOTHING
+# HERE BECAUSE THE TWO VALUES THAT CARRY MEANING ARE NOT MATCHED BY THE PATTERN
+# AT ALL. `IGNORECASE` is what lets `NULLIF` match `nullif` (and would let a
+# future release respell `current_setting` or `true`); the key column and the GUC
+# name are pulled out as NAMED GROUPS and compared with `==`, case-sensitively,
+# against the expected column and against the `tenant_guc` FIXTURE. So the
+# tolerance applies only to SQL's own rendering of its keywords, and never to the
+# two strings a wrong policy would get wrong.
+#
+# WHITESPACE IS NORMALISED BEFORE MATCHING (`_normalised_qual`), so a deparse that
+# breaks or pads a line differently is still matched on its structure. Nothing
+# else is normalised: the `::text` casts PostgreSQL adds to the two literals are
+# REQUIRED by the pattern, because they are what it emits and a predicate missing
+# them is a predicate this file has never seen.
+TENANT_PREDICATE_SHAPE = re.compile(
+    r"\A\("
+    r"(?P<key>[a-z_][a-z0-9_]*) = "
+    r"\(NULLIF\(current_setting\('(?P<guc>[^']+)'::text, true\), ''::text\)\)::uuid"
+    r"\)\Z",
+    re.IGNORECASE,
+)
+
 APP_ROLE = "titlepipe_app"
 WORKER_ROLE = "titlepipe_worker"
 OWNER_ROLE = "titlepipe_owner"
 MIGRATION_ROLE = "titlepipe_migration"
 
-# The verbs `0002` grants on the six ordinary tenant tables, and the ones it must
-# never grant anywhere. `DELETE` is in the second list on all seven: the contract
-# is SELECT/INSERT/UPDATE, and a stray `GRANT ALL` would satisfy every positive
-# assertion in this file while handing `titlepipe_app` the ability to erase a
-# tenant's data.
+# The verbs `0002` grants, and the ones it must never grant anywhere. `DELETE` is
+# in the second list on all seven: the contract is SELECT/INSERT/UPDATE, and a
+# stray `GRANT ALL` would satisfy every positive assertion in this file while
+# handing `titlepipe_app` the ability to erase a tenant's data.
 GRANTED_VERBS = ("SELECT", "INSERT", "UPDATE")
 REFUSED_VERBS = ("DELETE", "TRUNCATE")
+
+# 🔴 `audit_log` IS THE ONE TABLE THAT GETS TWO VERBS RATHER THAN THREE, AND IT IS
+# A TASK 4 RULING RATHER THAN A GAP. `0001`'s `audit_log_append_only` trigger
+# refuses UPDATE whatever the ACL says, so `GRANT UPDATE ON audit_log` would
+# change no behaviour and would MISSTATE THE INTENT of the one table this system
+# promises never to edit in place. `test_audit_log_is_granted_insert_but_never
+# _update` holds it from its own side; this constant is what keeps the derived
+# loop below from contradicting it.
+APPEND_ONLY_TABLE = "audit_log"
+APPEND_ONLY_GRANTED_VERBS = ("SELECT", "INSERT")
+
+
+def _expected_grants(table: str) -> tuple[Sequence[str], Sequence[str]]:
+    """`(granted, withheld)` for one table — every verb this file knows about.
+
+    🔴 THE WITHHELD LIST IS DERIVED FROM THE GRANTED ONE rather than written out,
+       and that is what closes F6.
+
+    The loop this feeds used to read `for verb in GRANTED_VERBS[:2]` — SELECT and
+    INSERT — so `UPDATE` was fetched into `privileges` on all six tenant tables
+    and asserted on none of them. MEASURED 2026-08-06: `0002`'s
+    `GRANT SELECT, INSERT, UPDATE` narrowed to `GRANT SELECT, INSERT` on the five
+    tenant tables that are not `audit_log` shipped **`192 passed`**. Plan 01
+    Task 4's contract is SELECT/INSERT/UPDATE on all seven, and a migration that
+    silently drops UPDATE is `42501` out of every update handler in Plans 02-06.
+
+    Deriving `withheld` means a verb can never be silently absent from both
+    lists, which is exactly how `UPDATE` came to be unasserted: it was in
+    `GRANTED_VERBS`, it was read, and no assertion mentioned it.
+    """
+    granted = APPEND_ONLY_GRANTED_VERBS if table == APPEND_ONLY_TABLE else GRANTED_VERBS
+    withheld = tuple(verb for verb in (*GRANTED_VERBS, *REFUSED_VERBS) if verb not in granted)
+    return granted, withheld
+
 
 # `feature_not_supported`, raised by `0001`'s append-only trigger.
 APPEND_ONLY_SQLSTATE = "0A000"
@@ -183,6 +293,95 @@ def _table_privileges(connection: Connection, role: str, table: str) -> dict[str
     return {str(row[0]): bool(row[1]) for row in result}
 
 
+def _normalised_qual(qual: str) -> str:
+    """`qual` with every run of whitespace collapsed to one space, and trimmed.
+
+    The only normalisation applied before `TENANT_PREDICATE_SHAPE` is matched.
+    See that constant for what is deliberately NOT normalised.
+    """
+    return " ".join(qual.split())
+
+
+def _tenant_predicate_fault(qual: str, key_column: str, tenant_guc: str) -> str | None:
+    """`None` if `qual` is the right predicate, else a sentence saying what it is not.
+
+    Three separate questions, answered in order and reported separately, because
+    each one has a different wrong policy behind it:
+
+    1. does it PARSE as `<column> = (NULLIF(current_setting(<guc>, true), ''))::uuid`
+       at all? A predicate that does not is the tenant-blind shape measured at
+       `TENANT_PREDICATE_SHAPE` — or any other expression somebody wrote;
+    2. is the compared column the one this table is keyed on? `tenant_id` on the
+       six, `id` on the registry. A policy keyed on the wrong column of the right
+       shape isolates by something that is not the tenant;
+    3. is the GUC the one the application actually sets? This is compared against
+       the `tenant_guc` FIXTURE — `conftest.py` owns the name, `make_engine` pins
+       it at connect time and `tenant_session` writes it, so a policy reading a
+       different setting denies every row to every session forever. Nothing in the
+       catalog could tell you that, because a policy reading `app.tenant` is as
+       well-formed as one reading `app.current_tenant`.
+
+    Returning a reason rather than asserting keeps the table name in the caller's
+    message and keeps this usable from both catalog tests.
+    """
+    normalised = _normalised_qual(qual)
+    match = TENANT_PREDICATE_SHAPE.match(normalised)
+    if match is None:
+        return (
+            "it is not `<key> = (NULLIF(current_setting('<guc>'::text, true), "
+            "''::text))::uuid` in any spelling. A predicate that merely CONTAINS "
+            "`nullif` — `nullif(current_setting(…), '') IS NOT NULL`, say — denies "
+            "an unestablished session and hands every established one every other "
+            "tenant's rows"
+        )
+    if match["key"] != key_column:
+        return (
+            f"it compares {match['key']!r} rather than {key_column!r}, so whatever "
+            f"it isolates by is not this table's tenant"
+        )
+    if match["guc"] != tenant_guc:
+        return (
+            f"it reads the setting {match['guc']!r} rather than {tenant_guc!r}, "
+            f"which is the one make_engine pins and tenant_session writes. A policy "
+            f"on any other setting denies every row to every session"
+        )
+    return None
+
+
+def _assert_tenant_isolation_policy(
+    policies: Mapping[tuple[str, str], PolicyFacts],
+    table: str,
+    key_column: str,
+    tenant_guc: str,
+) -> None:
+    """The whole `tenant_isolation` contract for one table: presence, cmd, permissive, qual.
+
+    `ALL` and `PERMISSIVE` are asserted here rather than only on the six, which is
+    the second thing the registry's own test was missing: a `tenant_isolation`
+    policy declared `FOR SELECT` leaves INSERT, UPDATE and DELETE entirely
+    unpoliced, and reads exactly like isolation to anything that only reads.
+    """
+    assert (table, POLICY_NAME) in policies, (
+        f"{table} has row-level security on and no {POLICY_NAME} policy. "
+        f"Policies present: {sorted(name for owner, name in policies if owner == table)}"
+    )
+    facts = policies[(table, POLICY_NAME)]
+
+    assert facts.command_name == "ALL", (
+        f"{table}'s {POLICY_NAME} covers {facts.command_name}, not ALL. Every verb "
+        f"it does not cover is unpoliced."
+    )
+    assert facts.permissive == "PERMISSIVE", (
+        f"{table}'s {POLICY_NAME} is {facts.permissive}. A RESTRICTIVE-only "
+        f"policy set denies every row, which reads as isolation and is an outage."
+    )
+
+    fault = _tenant_predicate_fault(facts.qual, key_column, tenant_guc)
+    assert fault is None, (
+        f"{table}'s {POLICY_NAME} predicate is wrong: {fault}. Live qual: {facts.qual}"
+    )
+
+
 def _sqlstate(error: DBAPIError) -> str | None:
     """The five-character SQLSTATE psycopg attached, if it attached one.
 
@@ -227,6 +426,7 @@ def test_every_tenant_table_is_forced_isolated_and_reachable_by_the_app(
     alembic_version_table: str,
     seam_engine: Callable[[str], Engine],
     app_role: str,
+    tenant_guc: str,
 ) -> None:
     """🔴 THE CATALOG PROOF. Derived, floored, set-checked, then asserted per table.
 
@@ -236,33 +436,36 @@ def test_every_tenant_table_is_forced_isolated_and_reachable_by_the_app(
       table's OWNER, and the owner is `titlepipe_owner` — the role every
       migration runs as. The two are separate `pg_class` columns and are read
       separately;
-    * a policy called `tenant_isolation` exists. RLS enabled with NO policy denies
-      every row to every non-bypassing role, which looks like isolation working
-      and is actually the application being broken;
-    * **the policy's `qual` contains `nullif`.** This is the assertion Task 0's
-      empty-string sentinel argument has been waiting for and nothing until now
-      could make. `current_setting('app.current_tenant', true)` answers NULL for a
-      GUC that was never set and `''` for one that was set and reverted —
-      MEASURED 2026-08-05 — and `''::uuid` RAISES `invalid input syntax for type
-      uuid: ""`. A policy without the `nullif` therefore returns a 500 where a
-      clean denial belongs, and `conftest.py::SEAM_CONNECT_ARGS` pins every
-      connection in this suite at `''`, so that is the ordinary state rather than
-      an exotic one;
-    * `has_table_privilege(titlepipe_app, …, 'SELECT')` and `'INSERT'`. RLS is
-      evaluated AFTER the privilege check, never instead of it. Without the
+    * a policy called `tenant_isolation` exists, covering `ALL` and `PERMISSIVE`.
+      RLS enabled with NO policy denies every row to every non-bypassing role,
+      which looks like isolation working and is actually the application being
+      broken;
+    * **the policy's `qual` HAS THE RIGHT SHAPE** —
+      `<this table's key column> = (NULLIF(current_setting(<the tenant_guc
+      fixture>'::text, true), ''::text))::uuid`, matched whole. This assertion
+      used to read `"nullif" in facts.qual.lower()`, and `TENANT_PREDICATE_SHAPE`
+      holds the measurement of what that let through: a predicate containing
+      `nullif` and comparing nothing, which leaks six of seven tables and ships
+      `192 passed`.
+
+      The `nullif` itself is still the reason the expression is shaped this way.
+      `current_setting('app.current_tenant', true)` answers NULL for a GUC that
+      was never set and `''` for one that was set and reverted — MEASURED
+      2026-08-05 — and `''::uuid` RAISES `invalid input syntax for type uuid: ""`.
+      A policy without it returns a 500 where a clean denial belongs, and
+      `conftest.py::SEAM_CONNECT_ARGS` pins every connection in this suite at
+      `''`, so that is the ordinary state rather than an exotic one;
+    * `has_table_privilege(titlepipe_app, …)` for **SELECT, INSERT and UPDATE**.
+      RLS is evaluated AFTER the privilege check, never instead of it. Without the
       grants the role gets `42501 permission denied for table orders` — MEASURED
-      — and a read test would report zero rows and call it isolation.
+      — and a read test would report zero rows and call it isolation. `audit_log`
+      is the one table at two verbs rather than three; see `_expected_grants` for
+      the ruling and for what the missing UPDATE assertion used to let through.
 
-    THE `nullif` COMPARISON IS CASE-INSENSITIVE, and that is a measurement rather
-    than caution. `pg_policies.qual` is the server's own deparse of the
-    expression tree, not the text anybody typed, and it renders the function name
-    in UPPER CASE: `(tenant_id = (NULLIF(current_setting('app.current_tenant'::
-    text, true), ''::text))::uuid)`. An exact-case `"nullif" in qual` fails
-    against a perfectly correct policy.
-
-    `DELETE` and `TRUNCATE` are asserted ABSENT on every table. The contract is
-    three verbs; a `GRANT ALL` would satisfy every positive assertion here and
-    hand `titlepipe_app` the ability to erase a tenant's data.
+    `DELETE` and `TRUNCATE` are asserted ABSENT on every table, and so is `UPDATE`
+    on `audit_log`. The contract is three verbs; a `GRANT ALL` would satisfy every
+    positive assertion here and hand `titlepipe_app` the ability to erase a
+    tenant's data.
     """
     engine = seam_engine(migrated_database)
     try:
@@ -298,46 +501,47 @@ def test_every_tenant_table_is_forced_isolated_and_reachable_by_the_app(
             f"writes every tenant's rows."
         )
 
-        assert (table, POLICY_NAME) in policies, (
-            f"{table} has row-level security on and no {POLICY_NAME} policy. "
-            f"Policies present: {sorted(name for owner, name in policies if owner == table)}"
-        )
-        facts = policies[(table, POLICY_NAME)]
-        assert facts.command_name == "ALL", (
-            f"{table}'s {POLICY_NAME} covers {facts.command_name}, not ALL"
-        )
-        assert facts.permissive == "PERMISSIVE", (
-            f"{table}'s {POLICY_NAME} is {facts.permissive}. A RESTRICTIVE-only "
-            f"policy set denies every row, which reads as isolation and is an outage."
-        )
-        assert "nullif" in facts.qual.lower(), (
-            f"{table}'s {POLICY_NAME} does not wrap current_setting in nullif, so a "
-            f"session whose tenant GUC is the empty string hits ''::uuid and gets "
-            f"`invalid input syntax for type uuid` — a 500 where a denial belongs: "
-            f"{facts.qual}"
-        )
+        _assert_tenant_isolation_policy(policies, table, TENANT_KEY_COLUMN, tenant_guc)
 
-        for verb in GRANTED_VERBS[:2]:  # SELECT and INSERT — the two the proof names
+        granted, withheld = _expected_grants(table)
+        for verb in granted:
             assert privileges[table][verb] is True, (
                 f"{app_role} has no {verb} on {table}. RLS runs after the privilege "
                 f"check, so this role gets `permission denied for table {table}` and "
                 f"an isolation test would read zero rows for the wrong reason."
             )
-        for verb in REFUSED_VERBS:
+        for verb in withheld:
             assert privileges[table][verb] is False, (
                 f"{app_role} holds {verb} on {table}, which 0002 never grants"
             )
 
 
 def test_the_registry_is_forced_and_isolated_on_its_own_id(
-    migrated_database: str, seam_engine: Callable[[str], Engine], app_role: str
+    migrated_database: str,
+    seam_engine: Callable[[str], Engine],
+    app_role: str,
+    tenant_guc: str,
 ) -> None:
     """`tenants` is not in the derived set, and it still has to be locked down.
 
     Its primary key IS a tenant id, so it carries no `tenant_id` column and the
     derivation above cannot see it — which is exactly why it gets its own test
     rather than being folded in. The policy keys on `id`; everything else about it
-    is identical to the six.
+    is identical to the six, and it goes through the same
+    `_assert_tenant_isolation_policy` so that "identical" is a shared assertion
+    rather than a claim in a docstring.
+
+    WHAT THIS TEST USED TO MISS, and it missed it in both of F1(a)'s directions:
+    it read `"nullif" in qual.lower()` plus `"tenant_id" not in qual`, which the
+    tenant-blind predicate `nullif(current_setting(…), '') IS NOT NULL` satisfies
+    on both counts — it contains `nullif` and it does not contain `tenant_id`. And
+    it asserted neither `cmd` nor `permissive`, both of which the six were already
+    getting.
+
+    `tenant_id` is still asserted absent, redundantly with the shape check that
+    now requires `id`. It is the assertion whose FAILURE MESSAGE says why: the
+    registry has no such column, so a policy naming one is a policy that would
+    have to be written against a different table.
     """
     engine = seam_engine(migrated_database)
     try:
@@ -351,18 +555,21 @@ def test_the_registry_is_forced_and_isolated_on_its_own_id(
     assert enabled is True
     assert forced is True, f"{REGISTRY_TABLE} is ENABLE but not FORCE"
 
-    assert (REGISTRY_TABLE, POLICY_NAME) in policies
+    _assert_tenant_isolation_policy(policies, REGISTRY_TABLE, REGISTRY_KEY_COLUMN, tenant_guc)
+
     qual = policies[(REGISTRY_TABLE, POLICY_NAME)].qual
-    assert "nullif" in qual.lower(), qual
-    assert "tenant_id" not in qual, (
-        f"{REGISTRY_TABLE}'s policy names tenant_id, and the registry has no such "
-        f"column — its own id IS the tenant id: {qual}"
+    assert TENANT_KEY_COLUMN not in qual, (
+        f"{REGISTRY_TABLE}'s policy names {TENANT_KEY_COLUMN}, and the registry has "
+        f"no such column — its own id IS the tenant id: {qual}"
     )
 
-    for verb in GRANTED_VERBS:
+    granted, withheld = _expected_grants(REGISTRY_TABLE)
+    for verb in granted:
         assert privileges[verb] is True, f"{app_role} has no {verb} on {REGISTRY_TABLE}"
-    for verb in REFUSED_VERBS:
-        assert privileges[verb] is False
+    for verb in withheld:
+        assert privileges[verb] is False, (
+            f"{app_role} holds {verb} on {REGISTRY_TABLE}, which 0002 never grants"
+        )
 
 
 def test_audit_log_is_granted_insert_but_never_update(
@@ -665,11 +872,51 @@ def test_downgrading_only_0002_removes_every_policy_grant_and_force(
         command.upgrade(config, "head")
 
 
+def _schema_usage_grantees(connection: Connection) -> set[str]:
+    """Every grantee holding `USAGE` on schema `public`, with `PUBLIC` spelled out.
+
+    `aclexplode` on `pg_namespace.nspacl` rather than `has_schema_privilege`,
+    because the two answer different questions and only this one can be restored
+    from. `has_schema_privilege('titlepipe_owner', 'public', 'USAGE')` is TRUE on
+    a stock cluster whether or not anything ever granted the owner USAGE, because
+    `PUBLIC` holds it — so it cannot tell an EXPLICIT ACL entry from one inherited
+    through `PUBLIC`, and a teardown that reads it back cannot know what to put
+    back. MEASURED 2026-08-06 on this container after `roles.sql`:
+
+        nspacl -> {pg_database_owner=UC/pg_database_owner,
+                   =U/pg_database_owner,
+                   titlepipe_owner=UC/pg_database_owner}
+
+    The middle entry, with an empty grantee, is `PUBLIC`; the third is the
+    explicit grant `roles.sql` makes to the owner.
+
+    `grantee = 0` is `PUBLIC` in `aclexplode`'s output and renders as `-` through
+    `regrole`, so it is translated by name here rather than left as a hyphen that
+    a `GRANT ... TO -` would then fail on.
+
+    `coalesce(nspacl, acldefault('n', nspowner))` because `nspacl` is NULL on a
+    schema nobody has ever granted anything on, and `aclexplode(NULL)` returns no
+    rows — which would read as "nobody holds USAGE" rather than "the defaults
+    apply".
+    """
+    result = connection.execute(
+        text(
+            "SELECT CASE WHEN a.grantee = 0 THEN 'PUBLIC' ELSE a.grantee::regrole::text END "
+            "FROM pg_namespace n, "
+            "     aclexplode(coalesce(n.nspacl, acldefault('n', n.nspowner))) AS a "
+            "WHERE n.nspname = 'public' AND a.privilege_type = 'USAGE'"
+        )
+    )
+    return {str(row[0]) for row in result}
+
+
 def test_the_migration_refuses_when_the_schema_grant_did_not_land(
     migrated_database: str,
     alembic_config: Callable[[str], Config],
     migration_dsn: str,
     seam_engine: Callable[[str], Engine],
+    owner_role: str,
+    managed_roles: tuple[str, ...],
 ) -> None:
     """🔴 A `GRANT` THAT DOES NOTHING IS A WARNING, SO `0002` READS THE RESULT BACK.
 
@@ -681,23 +928,63 @@ def test_the_migration_refuses_when_the_schema_grant_did_not_land(
     for its own `GRANT CREATE`, and it is answered the same way.
 
     THE STATE THIS TEST BUILDS IS THE REALISTIC HARDENED ONE, not a contrivance:
-    `REVOKE USAGE ON SCHEMA public FROM PUBLIC`, with USAGE granted explicitly to
-    the two roles that run migrations. The DDL then all works, the grant to
+    no USAGE on `public` for the application roles, with USAGE held by the two
+    roles that run migrations. The DDL then all works, the grant to
     `titlepipe_app` silently does nothing, and MEASURED in that state
     `titlepipe_app` holds SELECT on `orders` and is told
     `relation "orders" does not exist`. A migration exiting 0 onto a completely
     unusable application role.
 
-    Restoration is in a `finally` and is ASSERTED, not assumed. Leaving `public`
-    hardened would take out every test after this one in a way whose message
-    ("relation … does not exist") names nothing to do with schema privileges.
+    ---------------------------------------------------------------------------
+    🔴 IT BUILT THAT STATE BY REVOKING FROM `PUBLIC` **ONLY**, AND THAT ENCODED A
+       DEFECT INTO A TEST — WHICH IS WHY THE HARDENING IS NOW EXHAUSTIVE.
+    ---------------------------------------------------------------------------
+    `titlepipe_app` and `titlepipe_worker` reach USAGE on `public` through
+    `PUBLIC` today, so revoking `PUBLIC`'s entry alone was enough to strip them.
+    But that made the test's hardened state depend on `roles.sql` NOT granting
+    them USAGE explicitly — and the moment it does, the revoke leaves their own
+    ACL entries standing, `_require_schema_usage` finds nothing missing and this
+    test fails with `Failed: DID NOT RAISE RuntimeError`. A test that fails when
+    the cluster gets SAFER is a test blocking a fix. It blocked exactly one: the
+    cleanup pass could not extend `roles.sql`'s
+    `GRANT USAGE ON SCHEMA public TO titlepipe_owner` to the app and worker roles.
+
+    The revoke now names `PUBLIC` **and every role `roles.sql` creates**, so the
+    state is hardened whatever `roles.sql` granted, and the guard fires because
+    the roles genuinely lack the privilege rather than because one particular
+    grant happened to be absent.
+
+    ---------------------------------------------------------------------------
+    🔴 RESTORATION PUTS BACK EXACTLY WHAT WAS THERE, WHICH THE OLD `finally` DID
+       NOT.
+    ---------------------------------------------------------------------------
+    It ran `GRANT USAGE … TO PUBLIC` and `REVOKE USAGE … FROM titlepipe_owner,
+    titlepipe_migration` — and the owner's entry is not this test's to revoke:
+    `roles.sql` creates it (`GRANT USAGE ON SCHEMA public TO titlepipe_owner`,
+    with its own read-back). The teardown destroyed it on every run. Nothing
+    noticed because `PUBLIC`'s USAGE, restored on the line above, masks its
+    absence from `has_schema_privilege` — which is the same blind spot that made
+    the assertion below unable to see it.
+
+    The grantee list is therefore SNAPSHOTTED from `pg_namespace.nspacl` before
+    anything is touched and restored to exactly that set, and the snapshot is
+    asserted equal afterwards. Leaving `public` hardened would take out every test
+    after this one in a way whose message ("relation … does not exist") names
+    nothing to do with schema privileges; leaving it subtly different is worse,
+    because nothing at all would say so.
     """
+    hardened_roles = ", ".join(["PUBLIC", *sorted({owner_role, *managed_roles})])
+
     config = alembic_config(migration_dsn)
     admin = seam_engine(migrated_database)
     command.downgrade(config, "0001")
+
+    with admin.connect() as connection:
+        before = _schema_usage_grantees(connection)
+
     try:
         with admin.begin() as connection:
-            connection.execute(text("REVOKE USAGE ON SCHEMA public FROM PUBLIC"))
+            connection.execute(text(f"REVOKE USAGE ON SCHEMA public FROM {hardened_roles}"))
             connection.execute(
                 text(f"GRANT USAGE ON SCHEMA public TO {OWNER_ROLE}, {MIGRATION_ROLE}")
             )
@@ -706,14 +993,16 @@ def test_the_migration_refuses_when_the_schema_grant_did_not_land(
             command.upgrade(config, "head")
     finally:
         with admin.begin() as connection:
-            connection.execute(text("GRANT USAGE ON SCHEMA public TO PUBLIC"))
-            connection.execute(
-                text(f"REVOKE USAGE ON SCHEMA public FROM {OWNER_ROLE}, {MIGRATION_ROLE}")
-            )
+            # Back to a clean slate first, then exactly the snapshot. Granting the
+            # snapshot on top of the hardened state would leave the two roles this
+            # test granted USAGE to holding it afterwards.
+            connection.execute(text(f"REVOKE USAGE ON SCHEMA public FROM {hardened_roles}"))
+            connection.execute(text(f"GRANT USAGE ON SCHEMA public TO {', '.join(sorted(before))}"))
         command.upgrade(config, "head")
 
     try:
         with admin.connect() as connection:
+            after = _schema_usage_grantees(connection)
             restored = connection.execute(
                 text(
                     "SELECT role, has_schema_privilege(role, 'public', 'USAGE') "
@@ -741,4 +1030,11 @@ def test_the_migration_refuses_when_the_schema_grant_did_not_land(
     assert all(bool(row[1]) for row in restored), (
         f"schema public was left hardened; every later test will fail with "
         f"`relation … does not exist`: {[(str(row[0]), bool(row[1])) for row in restored]}"
+    )
+    assert after == before, (
+        f"the teardown did not restore the ACL on schema public. It held USAGE for "
+        f"{sorted(before)} before this test and {sorted(after)} after. "
+        f"has_schema_privilege cannot see this — PUBLIC's USAGE masks every missing "
+        f"explicit entry — which is how the old teardown destroyed roles.sql's grant "
+        f"to {OWNER_ROLE} on every run without anything failing."
     )

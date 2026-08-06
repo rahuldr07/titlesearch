@@ -39,7 +39,7 @@ from __future__ import annotations
 
 import re
 import subprocess
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 from typing import NamedTuple
 
@@ -115,6 +115,16 @@ DECOY_ROLE = "titlepipexdecoy"
 # somebody else cannot be reproduced without somebody else.
 SECOND_GRANTOR_ROLE = "dba"
 SECOND_GRANTOR_PASSWORD = "dba-throwaway"
+
+# 🔴 THE ONE ROLE NAME THIS MODULE SPELLS, and it is a literal only because
+# there is no fixture for it. `conftest.py` exposes `owner_role`, `app_role` and
+# `migration_role`; it has no `worker_role`, and `managed_roles` is a tuple whose
+# ORDER is not part of any contract, so indexing it would be worse than writing
+# the name. `test_schema_public_grants_usage_to_the_owner_and_both_service_roles`
+# asserts this string is IN `managed_roles` before it uses it, so a rename in
+# `conftest.py` fails on that line — naming the mismatch — rather than in a
+# catalog comparison against a role nobody creates.
+WORKER_ROLE = "titlepipe_worker"
 
 # Every role attribute `roles.sql` converges, in the spelling `ALTER ROLE`
 # takes, paired with the drifted value the convergence test plants. `CREATE ROLE`
@@ -370,6 +380,69 @@ def _relation_owner(connection: Connection, relation: str) -> str:
         {"relation": relation},
     )
     return str(result.scalar_one())
+
+
+def _explicit_schema_usage_grantees(connection: Connection) -> set[str]:
+    """Every grantee with an EXPLICIT `USAGE` entry on schema `public`.
+
+    🔴 `aclexplode(nspacl)` AND NOT `has_schema_privilege`, and the difference
+    is the entire point of reading it this way. `has_schema_privilege` answers
+    about the EFFECTIVE privilege, so on a stock cluster `PUBLIC`'s own `USAGE`
+    makes it return `t` for a role that was granted nothing at all — MEASURED
+    2026-08-06 against postgres:18.4, `nspacl` at its default
+    `{pg_database_owner=UC/pg_database_owner,=U/pg_database_owner}`:
+
+        has_schema_privilege('titlepipe_owner','public','USAGE') -> t
+
+    An assertion written on that function would therefore pass over a `GRANT`
+    that produced `WARNING: no privileges were granted for "public"` and did
+    nothing, and would only start failing on the day somebody ran `REVOKE USAGE
+    ON SCHEMA public FROM PUBLIC` — which is the day there is no operator
+    watching. `roles.sql`'s own read-back is written the same way and for the
+    same reason; this is the test-side half of that decision.
+
+    `grantee = 0` is `PUBLIC` in `aclexplode`'s output and renders as `-`
+    through `regrole`, so it is spelled out by name here.
+
+    `coalesce(nspacl, acldefault('n', nspowner))` because `nspacl` is NULL on a
+    schema nobody has granted anything on and `aclexplode(NULL)` yields no rows,
+    which would read as "nobody holds USAGE" rather than "the defaults apply".
+    """
+    result = connection.execute(
+        text(
+            "SELECT CASE WHEN a.grantee = 0 THEN 'PUBLIC' "
+            "ELSE a.grantee::regrole::text END "
+            "FROM pg_namespace n "
+            "CROSS JOIN LATERAL aclexplode(coalesce(n.nspacl, "
+            "    acldefault('n', n.nspowner))) AS a "
+            "WHERE n.nspname = 'public' AND a.privilege_type = 'USAGE'"
+        )
+    )
+    return {str(row[0]) for row in result}
+
+
+def _effective_schema_usage(connection: Connection, roles: Sequence[str]) -> dict[str, bool]:
+    """`has_schema_privilege(role, 'public', 'USAGE')` for each of `roles`.
+
+    The other question, asked deliberately beside the one above: not "is there
+    an ACL entry" but "can this role actually see into the schema right now".
+    Both are needed — the catalog entry is what `roles.sql` is responsible for,
+    and the effective answer is what a connection experiences.
+
+    `CAST(... AS text[])` is not decoration. psycopg sends a Python list as an
+    untyped array parameter and `unnest` is overloaded on `anyarray` and
+    `anymultirange`, so without the cast PostgreSQL answers `42725 function
+    unnest(unknown) is not unique`. MEASURED — `migrations/versions/
+    0002_forced_rls_and_grants.py` records the same thing for the same reason.
+    """
+    result = connection.execute(
+        text(
+            "SELECT role, has_schema_privilege(role, 'public', 'USAGE') "
+            "FROM unnest(CAST(:roles AS text[])) AS role"
+        ),
+        {"roles": list(roles)},
+    )
+    return {str(row[0]): bool(row[1]) for row in result}
 
 
 def test_roles_sql_reads_every_password_from_a_named_environment_variable(
@@ -1339,6 +1412,280 @@ def test_a_table_created_without_set_role_is_refused_outright(
         engine.dispose()
 
     assert "permission denied for schema public" in str(raised.value)
+
+
+def test_the_owner_can_use_schema_public_when_public_cannot(
+    roles_applied: str,
+    role_passwords: Mapping[str, str],
+    apply_roles_sql: Callable[[str, Mapping[str, str]], subprocess.CompletedProcess[str]],
+    migration_dsn: str,
+    owner_role: str,
+    migration_role: str,
+) -> None:
+    """🔴 `GRANT USAGE ON SCHEMA public TO titlepipe_owner`, on a HARDENED cluster.
+
+    THE ASSERTION HAS TO BE MADE WITH `PUBLIC`'S OWN `USAGE` REVOKED, or it is
+    not an assertion about `roles.sql` at all. `has_schema_privilege` answers
+    about the EFFECTIVE privilege, and on a default database `PUBLIC` holds
+    `USAGE` on `public` — so the same call returns `t` for a role that was never
+    granted anything. MEASURED 2026-08-06 against postgres:18.4 in the database
+    of a `LOGIN CREATEROLE` operator, with `nspacl` still at its default
+    `{pg_database_owner=UC/pg_database_owner,=U/pg_database_owner}`:
+
+        has_schema_privilege('titlepipe_owner','public','USAGE') -> t
+
+    So this test builds the state the grant exists FOR — the hardening a
+    security review asks for, `REVOKE USAGE ON SCHEMA public FROM PUBLIC` — and
+    asserts three things in it:
+
+      1. THE HARDENING LANDED. `PUBLIC` (grantee oid 0 in `aclexplode`) no
+         longer holds `USAGE`. Without this the two assertions below are
+         satisfied by a revoke that silently did nothing, which is the same
+         class of vacuous pass the rest of this file exists to refuse;
+      2. `titlepipe_owner` STILL HAS `USAGE`, and it can only be coming from
+         `roles.sql`'s explicit grant;
+      3. `titlepipe_migration` DOES NOT. It is not granted `USAGE` on purpose —
+         `migrations/env.py` issues `SET ROLE titlepipe_owner` as its first
+         statement and runs everything as the owner — and the membership is
+         `INHERIT FALSE`, so nothing reaches it sideways either. This is the
+         same shape as the `CREATE` assertion in
+         `test_only_the_migration_role_can_become_the_owner`, one privilege
+         over.
+
+    THEN THE BEHAVIOUR, because the catalog is not the claim. `CREATE` without
+    `USAGE` is INERT and the error does not name a privilege: MEASURED in the
+    hardened state with `CREATE` granted and `USAGE` not, `CREATE TABLE` as
+    `titlepipe_owner` fails with `ERROR: no schema has been selected to create
+    in`. That is what `roles.sql` would otherwise ship on any hardened cluster,
+    and it is why this grant is not a duplicate of the `CREATE` one.
+
+    `roles.sql` IS RE-APPLIED FIRST, and that is not belt-and-braces.
+    `tests/test_forced_rls_and_grants.py` sorts before this module, and its
+    hardening test revokes `USAGE` on schema `public` from `PUBLIC` and from
+    every role `roles.sql` creates. CORRECTED 2026-08-06: that test now
+    snapshots `pg_namespace.nspacl` first and restores exactly the grantee set
+    it found, so it no longer damages this one. It did when this paragraph was
+    written — its teardown ended with `REVOKE USAGE ON SCHEMA public FROM
+    titlepipe_owner, titlepipe_migration` and destroyed the very ACL entry this
+    test is about, on every run, invisibly, because the `GRANT USAGE ... TO
+    PUBLIC` on the line above it keeps `has_schema_privilege` reading `t`.
+    Re-applying is what keeps this test's result independent of collection order
+    and of another module's teardown, and it is kept for that reason rather than
+    for the specific defect that is now fixed.
+
+    Safe only because the database is an ephemeral container; `PUBLIC`'s `USAGE`
+    is restored in the `finally` and proved restored afterwards, because every
+    later test in the session would otherwise fail with `relation … does not
+    exist`, which names nothing to do with schema privileges.
+    """
+    applied = apply_roles_sql(roles_applied, role_passwords)
+    assert applied.returncode == 0, f"roles.sql exited {applied.returncode}:\n{applied.stderr}"
+
+    admin = create_engine(roles_applied)
+    try:
+        with admin.begin() as connection:
+            connection.execute(text("REVOKE USAGE ON SCHEMA public FROM PUBLIC"))
+
+        with admin.connect() as connection:
+            observed = connection.execute(
+                text(
+                    "SELECT EXISTS ("
+                    "  SELECT 1 FROM pg_namespace n "
+                    "  CROSS JOIN LATERAL aclexplode(n.nspacl) AS a "
+                    "  WHERE n.nspname = 'public' AND a.grantee = 0 "
+                    "    AND a.privilege_type = 'USAGE'), "
+                    "has_schema_privilege(:owner, 'public', 'USAGE'), "
+                    "has_schema_privilege(:migration, 'public', 'USAGE')"
+                ),
+                {"owner": owner_role, "migration": migration_role},
+            ).one()
+
+        assert bool(observed[0]) is False, (
+            "PUBLIC still holds USAGE on schema public, so this cluster is not "
+            "hardened and the two assertions below prove nothing"
+        )
+        assert bool(observed[1]) is True, (
+            f"{owner_role} has no USAGE on schema public once PUBLIC's is gone. "
+            f"roles.sql's GRANT CREATE is then inert — CREATE TABLE fails with "
+            f"`no schema has been selected to create in`, which names no privilege."
+        )
+        assert bool(observed[2]) is False, (
+            f"{migration_role} holds USAGE on schema public directly. It is "
+            f"supposed to reach the schema only through SET ROLE {owner_role}."
+        )
+
+        migration = create_engine(migration_dsn)
+        try:
+            with migration.connect() as connection:
+                connection.execute(text(f"SET ROLE {owner_role}"))
+                connection.execute(text(f"CREATE TABLE {OWNERSHIP_PROBE_TABLE} (id integer)"))
+                assert _relation_owner(connection, OWNERSHIP_PROBE_TABLE) == owner_role
+                connection.rollback()
+        finally:
+            migration.dispose()
+    finally:
+        # NESTED, for the reason the test below records: the restoring statement
+        # is a statement over a connection and can raise, and flat it would take
+        # `dispose()` with it.
+        try:
+            with admin.begin() as connection:
+                connection.execute(text("GRANT USAGE ON SCHEMA public TO PUBLIC"))
+        finally:
+            admin.dispose()
+
+    # Proved restored rather than assumed. See the docstring.
+    restored = create_engine(roles_applied)
+    try:
+        with restored.connect() as connection:
+            assert bool(
+                connection.execute(
+                    text(
+                        "SELECT EXISTS ("
+                        "  SELECT 1 FROM pg_namespace n "
+                        "  CROSS JOIN LATERAL aclexplode(n.nspacl) AS a "
+                        "  WHERE n.nspname = 'public' AND a.grantee = 0 "
+                        "    AND a.privilege_type = 'USAGE')"
+                    )
+                ).scalar_one()
+            ), "schema public was left hardened; every later test in this session will fail"
+    finally:
+        restored.dispose()
+
+
+def test_schema_public_grants_usage_to_the_owner_and_both_service_roles(
+    roles_applied: str,
+    role_passwords: Mapping[str, str],
+    apply_roles_sql: Callable[[str, Mapping[str, str]], subprocess.CompletedProcess[str]],
+    owner_role: str,
+    app_role: str,
+    migration_role: str,
+    managed_roles: tuple[str, ...],
+) -> None:
+    """🔴 `GRANT USAGE ON SCHEMA public` NAMES EXACTLY `titlepipe_owner`, `_app`, `_worker`.
+
+    THIS GRANT CANNOT LIVE IN A MIGRATION, which is the whole reason it is
+    `roles.sql`'s to make and this file's to assert. Schema `public` belongs to
+    `pg_database_owner` from PostgreSQL 15 on. `migrations/env.py` runs every
+    migration statement as `titlepipe_owner`, which is not the database owner
+    and holds no grant option on the schema, so the `GRANT USAGE` in `0002` is a
+    `WARNING: no privileges were granted for "public"` and a no-op. MEASURED
+    2026-08-06 against postgres:18.4, as `titlepipe_migration` after
+    `SET ROLE titlepipe_owner`, on a cluster where `roles.sql` had already run:
+
+        GRANT USAGE ON SCHEMA public TO titlepipe_blind;
+        WARNING:  01007: no privileges were granted for "public"
+        GRANT
+        nspacl -> unchanged
+
+    `0002` keeps its read-back (`_require_schema_usage`) because an operator
+    that could not grant must still be refused; this test is what keeps that
+    guard from ever having to fire.
+
+    🔴 THE CATALOG HALF IS READ FROM `nspacl` AND NOT FROM
+    `has_schema_privilege`. See `_explicit_schema_usage_grantees`: the effective
+    privilege is `t` for every role on a stock cluster, because `PUBLIC` holds
+    `USAGE`, so a test written on it would pass over a `GRANT` that did nothing
+    and would only start failing the day somebody hardened the cluster.
+
+    THE EXACT SET, not containment, and the two roles it EXCLUDES are as much
+    the contract as the three it requires:
+
+      * `titlepipe_migration` — it reaches the schema only through `SET ROLE
+        titlepipe_owner`, and its membership is `INHERIT FALSE` so nothing
+        arrives sideways. A standing grant would hand a LOGIN role the access
+        the un-`SET ROLE` trap exists to deny;
+      * `titlepipe_blind` — a separate database is Task 4's, and until then the
+        one thing this file can promise is that it grants it nothing here.
+
+    Comparison is restricted to the five roles `roles.sql` creates, because
+    `pg_database_owner` and `PUBLIC` are the cluster's business and not this
+    file's. `PUBLIC`'s entry is asserted in the hardened block below, where its
+    absence is what makes the other three assertions mean anything.
+
+    `roles.sql` IS RE-APPLIED FIRST for the reason
+    `test_the_owner_can_use_schema_public_when_public_cannot` records: an
+    earlier module's teardown can reach this ACL, and a test whose result
+    depends on collection order is worse than no test.
+
+    Hardening the schema is safe only because the database is an ephemeral
+    container. `PUBLIC`'s `USAGE` is restored in the `finally` and proved
+    restored afterwards — left hardened, every later test in the session fails
+    with `relation ... does not exist`, which names nothing to do with schema
+    privileges.
+    """
+    assert WORKER_ROLE in managed_roles, (
+        f"{WORKER_ROLE} is not one of the roles conftest.py says roles.sql "
+        f"creates ({sorted(managed_roles)}), so this test is asserting a grant "
+        f"to a role that does not exist"
+    )
+    five = set(managed_roles) | {owner_role}
+    expected = {owner_role, app_role, WORKER_ROLE}
+
+    applied = apply_roles_sql(roles_applied, role_passwords)
+    assert applied.returncode == 0, f"roles.sql exited {applied.returncode}:\n{applied.stderr}"
+
+    admin = create_engine(roles_applied)
+    try:
+        with admin.connect() as connection:
+            granted = _explicit_schema_usage_grantees(connection)
+
+        assert granted & five == expected, (
+            f"roles.sql must leave an EXPLICIT USAGE entry on schema public for "
+            f"{sorted(expected)} and for no other role it creates; nspacl holds "
+            f"{sorted(granted & five)}. {migration_role} reaches the schema only "
+            f"through SET ROLE {owner_role}, and the blind role belongs in a "
+            f"separate database."
+        )
+
+        # THE BEHAVIOURAL HALF, in the state the grant exists FOR. An ACL entry
+        # that nothing reads is not a privilege, and on a stock cluster every
+        # role would answer `t` here through PUBLIC — so the hardening is what
+        # makes these four answers about roles.sql rather than about defaults.
+        with admin.begin() as connection:
+            connection.execute(text("REVOKE USAGE ON SCHEMA public FROM PUBLIC"))
+
+        with admin.connect() as connection:
+            hardened = _explicit_schema_usage_grantees(connection)
+            effective = _effective_schema_usage(connection, sorted(five))
+
+        assert "PUBLIC" not in hardened, (
+            "PUBLIC still holds USAGE on schema public, so this cluster is not "
+            "hardened and every assertion below is satisfied by the default ACL"
+        )
+        for role in sorted(expected):
+            assert effective[role] is True, (
+                f"{role} has no USAGE on schema public once PUBLIC's is gone. "
+                f"For {owner_role} that makes roles.sql's GRANT CREATE inert — "
+                f"CREATE TABLE fails with `no schema has been selected to create "
+                f"in`. For {app_role} and {WORKER_ROLE} it means every table they "
+                f"hold SELECT on answers `relation ... does not exist`, off the "
+                f"back of a migration that exited 0."
+            )
+        for role in sorted(five - expected):
+            assert effective[role] is False, (
+                f"{role} holds USAGE on schema public. It is granted none by "
+                f"roles.sql on purpose; see this test's docstring."
+            )
+    finally:
+        # NESTED, for the reason the two tests below record: the restoring
+        # statement runs over a connection and can raise, and flat it would take
+        # `dispose()` with it.
+        try:
+            with admin.begin() as connection:
+                connection.execute(text("GRANT USAGE ON SCHEMA public TO PUBLIC"))
+        finally:
+            admin.dispose()
+
+    # Proved restored rather than assumed. See the docstring.
+    restored = create_engine(roles_applied)
+    try:
+        with restored.connect() as connection:
+            assert "PUBLIC" in _explicit_schema_usage_grantees(connection), (
+                "schema public was left hardened; every later test in this "
+                "session will fail with `relation ... does not exist`"
+            )
+    finally:
+        restored.dispose()
 
 
 def test_the_owner_cannot_create_without_the_schema_grant(

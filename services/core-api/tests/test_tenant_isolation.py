@@ -29,8 +29,10 @@ database that denies everything to everybody — a revoked grant, a policy with 
 are outages and one is the behaviour under test, and no denial can tell them
 apart.
 
-`test_1b_the_positive_control_...` is what distinguishes them: tenant B, with its
-own tenant established, must see **exactly one** row and not zero.
+`test_1b_the_positive_control_...` is what distinguishes them: in **every one of
+the seven tables**, tenant B with its own tenant established must see exactly the
+one row committed for it and not zero, and tenant A must see every row committed
+for it and none of B's.
 
 MEASURED 2026-08-06 by deleting the `event.listen(..., "after_begin", ...)` line
 from `src/titlepipe_core/db/session.py` and changing nothing else — every session
@@ -55,11 +57,34 @@ positive.
 
 ## What the seed is, and what the asymmetry buys
 
-`isolation_seed` (in `conftest.py`) commits two tenants and three orders — **two
-for A, exactly one for B** — as the superuser, before any app-role connection in
-this module opens. One row each would make "exactly 1" true of both tenants, so
-a control that read `1` would be equally satisfied by a session that had leaked
-into the other tenant's row. Two-and-one makes B's count a statement about B.
+`isolation_seed` (in `conftest.py`) commits rows for both tenants in **every
+tenant-keyed table and in the registry** — two for A and exactly one for B in
+each of the six, one each in `tenants`, whose primary key IS a tenant id — as the
+superuser, before any app-role connection in this module opens. One row each
+would make "exactly 1" true of both tenants, so a control that read `1` would be
+equally satisfied by a session that had leaked into the other tenant's row.
+Two-and-one makes B's count a statement about B.
+
+## 🔴 THE PROOF USED TO COVER ONE TABLE, AND THE WHOLE SUITE PASSED WITHOUT THE
+   OTHER SIX
+
+Assertions 1b, 2, 4 and 5 all read or wrote `orders` and nothing else, and
+assertions 3 and 5 read the other tables — when they read them at all — only in
+the DENY state, where "this policy denies everyone" and "this policy leaks to
+everyone" are the same zero. MEASURED 2026-08-06, `0002::_isolate` patched so
+that `orders` keeps its real predicate and the other six plus `tenants` get
+
+    USING (nullif(current_setting('app.current_tenant', true), '') IS NOT NULL)
+
+— which hands every established tenant every other tenant's rows: **`192
+passed`**. A database leaking six of seven tables, reported as a green suite.
+
+Two changes close it and both are needed. `isolation_seed` now writes A and B
+rows into all seven tables, and assertion 1b is a LOOP over the derived set
+rather than a statement about `orders`; assertion 2 is the same loop on the write
+side. The catalog half of the same hole — an assertion that read the predicate's
+substring rather than its structure — is fixed in
+`tests/test_forced_rls_and_grants.py`.
 
 ## Provenance of the seven
 
@@ -78,7 +103,7 @@ the exemption exists: the SAVEPOINT trap cannot be proved without a SAVEPOINT.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from uuid import UUID
 
 import pytest
@@ -116,6 +141,28 @@ RLS_REFUSAL_FRAGMENT = "row-level security policy"
 # asserted only the sentence would be a test of the container's locale.
 SET_ROLE_REFUSAL_FRAGMENT = "permission denied to set role"
 
+# 🔴 WRITTEN OUT, NOT DERIVED, AND IT SITS BESIDE A DERIVATION ON PURPOSE. The
+# loops below iterate over the tables `isolation_seed` derived from the catalog;
+# these two literals are what says the derivation found the right ones.
+#
+# The pattern and the reason are `test_forced_rls_and_grants.py`'s, which learned
+# both from Task 2:
+#
+#   * THE FLOOR catches a derivation that stopped working. Every assertion in the
+#     positive control and in assertion 2 is a `for`, and a `for` over nothing
+#     passes — so a short set reports success for the tables it never visited;
+#   * THE EXACT SET catches SEVEN WRONG TABLES. A cardinality of seven is
+#     satisfied by seven decoys as readily as by the seven that exist, which is
+#     precisely the shape that defeated Task 2's role floor.
+#
+# `tenants` is in the set. It is not a tenant table — it is the registry, keyed on
+# `id` — but it is one of the seven `0002` writes a policy on, and leaving it out
+# of the proof is how it came to be read only in the deny state.
+EXPECTED_ISOLATION_TABLES = frozenset(
+    {"tenants", "orders", "packages", "pages", "fields", "field_readings", "audit_log"}
+)
+MINIMUM_ISOLATION_TABLES = 7
+
 
 @pytest.fixture
 def isolation_dsn(app_dsn: str) -> str:
@@ -140,14 +187,22 @@ def isolation_dsn(app_dsn: str) -> str:
     return app_dsn
 
 
-def _order_ids(seed: Mapping[UUID, tuple[UUID, ...]], tenant: UUID) -> set[UUID]:
-    """The ids the seed committed for `tenant`, as a set.
+Seed = Mapping[str, Mapping[UUID, tuple[UUID, ...]]]
+
+
+def _seeded_ids(seed: Seed, table: str, tenant: UUID) -> set[UUID]:
+    """The ids the seed committed for `tenant` in `table`, as a set.
 
     A SET rather than a list, because nothing here promises an ordering: the
     assertions are about WHICH rows are visible, and a `SELECT` with no
     `ORDER BY` is entitled to answer in any order it likes.
     """
-    return set(seed[tenant])
+    return set(seed[table][tenant])
+
+
+def _every_seeded_id(seed: Seed, table: str) -> set[UUID]:
+    """Every id the seed committed in `table`, for either tenant."""
+    return {row for ids in seed[table].values() for row in ids}
 
 
 async def _visible_order_ids(engine: AsyncEngine, tenant: TenantId | None) -> set[UUID]:
@@ -160,6 +215,89 @@ async def _visible_order_ids(engine: AsyncEngine, tenant: TenantId | None) -> se
     sessionmaker = make_sessionmaker(engine)
     async with tenant_session(sessionmaker, tenant) as session:
         return set((await session.scalars(select(Order.id))).all())
+
+
+async def _visible_ids_per_table(
+    engine: AsyncEngine, tenant: TenantId | None, tables: Iterable[str]
+) -> dict[str, set[UUID]]:
+    """table -> every `id` a session established as `tenant` can see in it.
+
+    ONE SESSION FOR ALL SEVEN READS, which is the state the application is
+    actually in: a request establishes its tenant once and then touches whatever
+    tables it needs. Seven sessions would additionally be seven `after_begin`
+    firings, and a listener that worked on the first checkout and not the rest
+    would be invisible to it.
+
+    RAW SQL RATHER THAN THE MAPPED CLASSES, because the table set is DERIVED. A
+    loop over `Order`, `Package`, `Page`, … is a hardcoded list wearing an ORM
+    costume: it would pass unchanged on the day a migration adds an eighth tenant
+    table and forgets to isolate it, which is the failure the derivation exists to
+    catch.
+
+    S608 is suppressed for the reason `conftest.py::_seed_isolation_rows` records
+    at its own three: a table name cannot be a bind parameter in any dialect, and
+    every name here comes from `isolation_seed`'s derivation, which reads
+    `pg_class` on this suite's own container and refuses anything that is not a
+    plain lower-case identifier.
+    """
+    sessionmaker = make_sessionmaker(engine)
+    async with tenant_session(sessionmaker, tenant) as session:
+        return {
+            table: {
+                row[0]
+                for row in (
+                    await session.execute(text(f"SELECT id FROM {table}"))  # noqa: S608
+                ).all()
+            }
+            for table in sorted(tables)
+        }
+
+
+# What `_cross_tenant_insert_refusals` records for a table that took the row. It
+# is a message rather than an exception because "which table accepted it" is the
+# whole content of that failure, and a `pytest.raises` that does not fire reports
+# `DID NOT RAISE DBAPIError` and names nothing.
+ACCEPTED = "the INSERT was accepted rather than refused"
+
+
+async def _cross_tenant_insert_refusals(
+    dsn: str, key_columns: Mapping[str, str], writer: TenantId, other: UUID
+) -> dict[str, tuple[str | None, str]]:
+    """table -> (SQLSTATE, message) for `writer` inserting a row keyed to `other`.
+
+    One session per table, each established as `writer`, each rolled back. The
+    rollback matters twice: a refused INSERT leaves the transaction aborted so
+    `tenant_session`'s own commit on exit would be a second and less legible
+    failure, and an ACCEPTED one must not be allowed to commit — a leaked row
+    would then be visible to every assertion that runs after this test.
+
+    `sqlstate` is narrowed with `isinstance` rather than compared straight out of
+    `getattr`: comparing `Any` to a string passes for a `None` as readily as for a
+    code.
+
+    S608 is suppressed for the reason recorded at `_visible_ids_per_table`.
+    """
+    outcomes: dict[str, tuple[str | None, str]] = {}
+    engine = make_engine(dsn)
+    try:
+        sessionmaker = make_sessionmaker(engine)
+        for table, key_column in sorted(key_columns.items()):
+            insert = f"INSERT INTO {table} ({key_column}) VALUES (:other)"  # noqa: S608
+            async with tenant_session(sessionmaker, writer) as session:
+                try:
+                    await session.execute(text(insert), {"other": other})
+                except DBAPIError as error:
+                    sqlstate = getattr(error.orig, "sqlstate", None)
+                    outcomes[table] = (
+                        sqlstate if isinstance(sqlstate, str) else None,
+                        str(error),
+                    )
+                else:
+                    outcomes[table] = (None, ACCEPTED)
+                await session.rollback()
+    finally:
+        await engine.dispose()
+    return outcomes
 
 
 def _read_the_guc(tenant_guc: str) -> Select[tuple[str | None]]:
@@ -181,7 +319,7 @@ def _read_the_guc(tenant_guc: str) -> Select[tuple[str | None]]:
 @pytest.mark.asyncio
 async def test_1_the_tenant_does_not_survive_the_pool_checkout_into_the_next_session(
     isolation_dsn: str,
-    isolation_seed: Mapping[UUID, tuple[UUID, ...]],
+    isolation_seed: Seed,
     isolation_tenant_a: UUID,
     tenant_guc: str,
 ) -> None:
@@ -257,13 +395,13 @@ async def test_1_the_tenant_does_not_survive_the_pool_checkout_into_the_next_ses
 
 
 @pytest.mark.asyncio
-async def test_1b_the_positive_control_tenant_b_sees_its_own_single_row(
+async def test_1b_the_positive_control_each_tenant_sees_its_own_rows_in_every_table(
     isolation_dsn: str,
-    isolation_seed: Mapping[UUID, tuple[UUID, ...]],
+    isolation_seed: Seed,
     isolation_tenant_b: UUID,
     isolation_tenant_a: UUID,
 ) -> None:
-    """🔴 ASSERTION 1b — THE POSITIVE CONTROL. NOT OPTIONAL.
+    """🔴 ASSERTION 1b — THE POSITIVE CONTROL. NOT OPTIONAL, AND NOT ABOUT `orders`.
 
     Assertions 1, 3 and 5 are each satisfied by a database that denies everything
     to everyone. Without this, the file cannot tell "isolated" from "broken", and
@@ -278,42 +416,108 @@ async def test_1b_the_positive_control_tenant_b_sees_its_own_single_row(
     checks. That is not an argument for the control in the abstract; it is the
     actual result on this tree.
 
-    THE ASSERTION IS ON THE ID SET, NOT ON A COUNT. `len(visible) == 1` is
-    satisfied by the wrong row as readily as by the right one, and A's rows are
-    right there to be the wrong one. The count is asserted separately anyway,
-    because `exactly 1, not 0` is the contract and a set comparison reports a
-    difference rather than a cardinality.
+    ---------------------------------------------------------------------------
+    🔴 IT WAS A CONTROL FOR `orders` AND FOR `orders` ONLY, AND THAT IS WHY IT IS
+       NOW A LOOP OVER THE DERIVED SET.
+    ---------------------------------------------------------------------------
+    A positive control on one table says nothing about the other six. MEASURED
+    2026-08-06, `0002::_isolate` patched so `orders` keeps its real predicate and
+    the other six plus `tenants` get
+    `USING (nullif(current_setting(…), '') IS NOT NULL)` — every established
+    tenant seeing every other tenant's rows in six of seven tables: **`192
+    passed`**. This loop is what takes that down.
 
-    `isolation_tenant_a` is requested only so the failure message can name the
-    rows this session must NOT have seen.
+    THE TABLE SET IS DERIVED, NOT LISTED. `isolation_seed` asks the catalog which
+    tables exist and which column each is keyed on, so a migration that adds an
+    eighth tenant table and forgets to isolate it is caught rather than
+    forgotten. The floor and the exact-set check above the loop are what say the
+    derivation itself still works — see `EXPECTED_ISOLATION_TABLES`.
+
+    THE TWO TENANTS ARE ASSERTED DIFFERENTLY, AND THE ASYMMETRY IS AN ORDERING
+    PROPERTY RATHER THAN A PREFERENCE:
+
+    * **B is exact.** Nothing in this file commits a row for B — assertion 2 tries
+      and is refused — so `visible == seeded` holds under every ordering, and it
+      is the strongest statement available: not a count, which the wrong row
+      satisfies as readily as the right one, but the id set itself;
+    * **A is a floor plus disjointness.** Assertion 1 COMMITS an `orders` row for
+      A on purpose, and `isolation_seed` is module-scoped, so how many rows A owns
+      by the time this runs depends on whether assertion 1 has run yet. `after ==
+      seeded` for A would be a test of collection order. The floor (every seeded
+      row visible) plus `B's rows ∩ visible == ∅` holds under every ordering and
+      still fails the moment the policy stops filtering — which is exactly what
+      the mutation above produces.
+
+    `len(seeded_b) == 1` is asserted per table because `exactly 1, not 0` is the
+    contract the seed's two-and-one asymmetry exists to make meaningful.
     """
+    tenant_a = TenantId(isolation_tenant_a)
+    tenant_b = TenantId(isolation_tenant_b)
+
     engine = make_engine(isolation_dsn)
     try:
-        visible = await _visible_order_ids(engine, TenantId(isolation_tenant_b))
+        seen_by_a = await _visible_ids_per_table(engine, tenant_a, isolation_seed)
+        seen_by_b = await _visible_ids_per_table(engine, tenant_b, isolation_seed)
     finally:
         await engine.dispose()
 
-    expected = _order_ids(isolation_seed, isolation_tenant_b)
-    assert len(expected) == 1, (
-        f"the seed gave tenant B {len(expected)} orders, not the one this control "
-        f"is written around: {sorted(expected)}"
+    # THE FLOOR FIRST. Everything below is a `for` loop, and a `for` over nothing
+    # passes. The exact set does not subsume it — see EXPECTED_ISOLATION_TABLES.
+    assert len(isolation_seed) >= MINIMUM_ISOLATION_TABLES, (
+        f"the seed covered {len(isolation_seed)} tables, fewer than the "
+        f"{MINIMUM_ISOLATION_TABLES} this schema has: {sorted(isolation_seed)}. "
+        f"The control below is a loop, so it reports success for every table it "
+        f"never visited."
     )
-    assert visible != set(), (
-        f"tenant {isolation_tenant_b} established its own tenant and saw NOTHING "
-        f"while {sorted(expected)} was committed for it. Every `0 rows` assertion "
-        f"in this file is now satisfied by a database that denies everybody, and "
-        f"none of them can tell you that."
+    assert set(isolation_seed) == set(EXPECTED_ISOLATION_TABLES), (
+        f"the seeded tables are {sorted(isolation_seed)}, not "
+        f"{sorted(EXPECTED_ISOLATION_TABLES)}. A count of "
+        f"{MINIMUM_ISOLATION_TABLES} is satisfied by seven decoys just as readily."
     )
-    assert visible == expected, (
-        f"tenant {isolation_tenant_b} saw {sorted(visible)}, not {sorted(expected)}. "
-        f"Tenant A's rows are {sorted(_order_ids(isolation_seed, isolation_tenant_a))}."
-    )
+
+    for table in sorted(isolation_seed):
+        seeded_a = _seeded_ids(isolation_seed, table, isolation_tenant_a)
+        seeded_b = _seeded_ids(isolation_seed, table, isolation_tenant_b)
+        visible_a = seen_by_a[table]
+        visible_b = seen_by_b[table]
+
+        assert len(seeded_b) == 1, (
+            f"the seed gave tenant B {len(seeded_b)} rows in {table}, not the one "
+            f"this control is written around: {sorted(seeded_b)}"
+        )
+
+        assert visible_b != set(), (
+            f"tenant {isolation_tenant_b} established its own tenant and saw "
+            f"NOTHING in {table} while {sorted(seeded_b)} was committed for it. "
+            f"Every `0 rows` assertion in this file is now satisfied by a database "
+            f"that denies everybody, and none of them can tell you that."
+        )
+        assert visible_b == seeded_b, (
+            f"tenant {isolation_tenant_b} saw {sorted(visible_b)} in {table}, not "
+            f"{sorted(seeded_b)}. Tenant A's rows there are {sorted(seeded_a)}."
+        )
+
+        assert seeded_a <= visible_a, (
+            f"tenant {isolation_tenant_a} saw {sorted(visible_a)} in {table}, which "
+            f"is missing {sorted(seeded_a - visible_a)} of the rows committed for "
+            f"it. This is a floor rather than an equality because assertion 1 "
+            f"commits an extra row for A; falling below it means the session is "
+            f"scoped to the wrong tenant or to none."
+        )
+        assert visible_a & seeded_b == set(), (
+            f"tenant {isolation_tenant_a} saw {sorted(visible_a & seeded_b)} in "
+            f"{table}, which belongs to tenant {isolation_tenant_b}. This "
+            f"connection is not filtered on {table} — a predicate that ignores the "
+            f"key column and only asks whether SOME tenant is established passes "
+            f"every other assertion in this file."
+        )
 
 
 @pytest.mark.asyncio
 async def test_2_a_write_carrying_another_tenants_id_is_refused_with_42501(
     isolation_dsn: str,
-    isolation_seed: Mapping[UUID, tuple[UUID, ...]],
+    isolation_seed: Seed,
+    isolation_key_columns: Mapping[str, str],
     isolation_tenant_a: UUID,
     isolation_tenant_b: UUID,
 ) -> None:
@@ -352,6 +556,44 @@ async def test_2_a_write_carrying_another_tenants_id_is_refused_with_42501(
     The explicit `rollback()` clears the aborted transaction so that the block's
     own commit on exit is a clean no-op rather than a second, less legible
     failure.
+
+    ---------------------------------------------------------------------------
+    🔴 THE SECOND HALF: THE SAME QUESTION ON ALL SEVEN TABLES, AND IT IS THE SAME
+       HOLE THE POSITIVE CONTROL HAD.
+    ---------------------------------------------------------------------------
+    The ORM half above writes to `orders` and to nothing else, so an explicit
+    `WITH CHECK (true)` on the other six — or the tenant-blind predicate measured
+    in this module's docstring, which PostgreSQL reuses as the `WITH CHECK` — let
+    every cross-tenant INSERT through and this test stayed green. The loop is the
+    same derived set the positive control walks, on the write side.
+
+    THE KEY COLUMN COMES FROM THE DERIVATION, not from a branch on the table
+    name: `tenants` is keyed on `id` and the other six on `tenant_id`, and
+    `isolation_key_columns` is where that split is worked out once.
+
+    B'S OWN ID IS USED ON THE REGISTRY TOO, AND IT COULD HAVE COME BACK AS A
+    DUPLICATE-KEY ERROR INSTEAD. `tenants` has `PRIMARY KEY (id)` and the seed
+    has already committed B's row, so the INSERT collides on the key as well as
+    on the policy — and `models.py::_TenantRow` records the measurement that
+    unique enforcement can be reached before a policy's `WITH CHECK`. MEASURED
+    2026-08-06 against postgres:18.4, `titlepipe_app` established as A:
+
+        INSERT INTO tenants (id) VALUES ('2222…');   -- B, already committed
+        -> 42501 new row violates row-level security policy for table "tenants"
+
+        INSERT INTO tenants (id) VALUES (<an id nobody holds>);
+        -> 42501 new row violates row-level security policy for table "tenants"
+
+    Both are the policy, so no special case is needed and none is written. The
+    measurement is recorded because the alternative answer (`23505`) would have
+    been a refusal for the wrong reason wearing the right outcome.
+
+    A TRY/EXCEPT RATHER THAN `pytest.raises` IN THE LOOP, deliberately: a
+    `pytest.raises` that does not fire reports `DID NOT RAISE DBAPIError` and
+    names no table, and "which table let the write through" is the entire content
+    of this failure. The outcome is recorded per table and asserted after, so a
+    table that accepted the row is reported as such alongside every table that
+    refused it.
     """
     engine = make_engine(isolation_dsn)
     try:
@@ -376,11 +618,37 @@ async def test_2_a_write_carrying_another_tenants_id_is_refused_with_42501(
         f"INSERT grant returns the identical code: {raised.value}"
     )
 
+    refusals = await _cross_tenant_insert_refusals(
+        isolation_dsn, isolation_key_columns, TenantId(isolation_tenant_a), isolation_tenant_b
+    )
+
+    assert set(refusals) == set(EXPECTED_ISOLATION_TABLES), (
+        f"the write side was attempted on {sorted(refusals)}, not on "
+        f"{sorted(EXPECTED_ISOLATION_TABLES)}. Every assertion below is a loop "
+        f"over this set."
+    )
+    assert len(refusals) >= MINIMUM_ISOLATION_TABLES, (
+        f"only {len(refusals)} tables were written to: {sorted(refusals)}"
+    )
+
+    for table, (code, message) in sorted(refusals.items()):
+        assert code == INSUFFICIENT_PRIVILEGE_SQLSTATE, (
+            f"tenant {isolation_tenant_a} wrote a row keyed to "
+            f"{isolation_tenant_b} into {table} and got {code!r} rather than "
+            f"{INSUFFICIENT_PRIVILEGE_SQLSTATE!r}. A code of None means the write "
+            f"was ACCEPTED — one tenant writing rows into another's account at "
+            f"will and never seeing them again: {message}"
+        )
+        assert RLS_REFUSAL_FRAGMENT in message, (
+            f"{table} answered 42501 for some reason other than the policy — a "
+            f"missing INSERT grant returns the identical code: {message}"
+        )
+
 
 @pytest.mark.asyncio
 async def test_3_a_session_with_no_tenant_reads_zero_rows_rather_than_raising(
     isolation_dsn: str,
-    isolation_seed: Mapping[UUID, tuple[UUID, ...]],
+    isolation_seed: Seed,
     tenant_deny_sentinel: str,
     tenant_guc: str,
 ) -> None:
@@ -413,7 +681,7 @@ async def test_3_a_session_with_no_tenant_reads_zero_rows_rather_than_raising(
     finally:
         await engine.dispose()
 
-    committed = {order for ids in isolation_seed.values() for order in ids}
+    committed = _every_seeded_id(isolation_seed, "orders")
 
     assert established == tenant_deny_sentinel, (
         f"this session carries {established!r} rather than the deny sentinel, so "
@@ -434,7 +702,7 @@ async def test_3_a_session_with_no_tenant_reads_zero_rows_rather_than_raising(
 @pytest.mark.asyncio
 async def test_4_a_savepoint_rolled_back_leaves_the_tenant_established(
     isolation_dsn: str,
-    isolation_seed: Mapping[UUID, tuple[UUID, ...]],
+    isolation_seed: Seed,
     isolation_tenant_a: UUID,
     tenant_guc: str,
 ) -> None:
@@ -491,8 +759,8 @@ async def test_4_a_savepoint_rolled_back_leaves_the_tenant_established(
        injection takes this test down with the other six.
     """
     engine = make_engine(isolation_dsn)
-    seeded = _order_ids(isolation_seed, isolation_tenant_a)
-    not_mine = {order for ids in isolation_seed.values() for order in ids} - seeded
+    seeded = _seeded_ids(isolation_seed, "orders", isolation_tenant_a)
+    not_mine = _every_seeded_id(isolation_seed, "orders") - seeded
     try:
         sessionmaker = make_sessionmaker(engine)
         async with tenant_session(sessionmaker, TenantId(isolation_tenant_a)) as session:
@@ -545,7 +813,7 @@ async def test_4_a_savepoint_rolled_back_leaves_the_tenant_established(
 @pytest.mark.asyncio
 async def test_5_a_raw_core_connection_establishes_no_tenant_and_sees_nothing(
     isolation_dsn: str,
-    isolation_seed: Mapping[UUID, tuple[UUID, ...]],
+    isolation_seed: Seed,
     tenant_deny_sentinel: str,
     tenant_guc: str,
 ) -> None:
@@ -580,7 +848,7 @@ async def test_5_a_raw_core_connection_establishes_no_tenant_and_sees_nothing(
     finally:
         await engine.dispose()
 
-    committed = {order for ids in isolation_seed.values() for order in ids}
+    committed = _every_seeded_id(isolation_seed, "orders")
 
     assert established == tenant_deny_sentinel, (
         f"a raw Core connection carries {established!r} rather than the deny "

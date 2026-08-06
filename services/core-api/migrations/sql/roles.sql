@@ -43,7 +43,7 @@
 --     alternative reading would be "present", and a run that got that wrong
 --     would set an empty password on four roles.
 --
--- Roles are CLUSTER-wide; the `GRANT ... ON SCHEMA public` at the bottom is
+-- Roles are CLUSTER-wide; the two `GRANT ... ON SCHEMA public` at the bottom are
 -- DATABASE-scoped, so this file must be run once per database that TitlePipe
 -- owns tables in. `titlepipe_blind` belongs to blind-svc, which is intended to
 -- live in a SEPARATE database; creating that database is not this file's job.
@@ -172,9 +172,108 @@
 -- PostgreSQL 15 revoked `CREATE` on schema `public` from `PUBLIC`. Without the
 -- grant at the bottom of this file, `CREATE TABLE` as `titlepipe_owner` fails
 -- with `permission denied for schema public` — proved by
--- `test_the_owner_cannot_create_without_the_schema_grant`. `USAGE` is not
--- granted here: `PUBLIC` still holds it on a default database, and schema
--- privileges beyond the one that is load-bearing belong to Task 4.
+-- `test_the_owner_cannot_create_without_the_schema_grant`.
+--
+--
+-- WHY `GRANT USAGE ON SCHEMA public` IS HERE, AND WHICH THREE ROLES IT NAMES
+-- ---------------------------------------------------------------------------
+-- This file used to say `USAGE` was NOT granted here because "`PUBLIC` still
+-- holds it on a default database". That was a statement about a default
+-- database dressed up as a decision, and it made the `GRANT CREATE` above
+-- conditional on a privilege nobody in this system owns. MEASURED 2026-08-06
+-- against postgres:18.4, in the database of a `LOGIN CREATEROLE` operator,
+-- after `REVOKE USAGE ON SCHEMA public FROM PUBLIC`:
+--
+--     has_schema_privilege('titlepipe_owner','public','CREATE') -> t
+--     has_schema_privilege('titlepipe_owner','public','USAGE')  -> f
+--     SET ROLE titlepipe_owner; CREATE TABLE hardened_probe (id int);
+--     -> ERROR:  no schema has been selected to create in
+--
+-- `CREATE` without `USAGE` is inert, and the error does not name a privilege.
+-- So the owner's `USAGE` is part of THIS file's contract, not Task 4's.
+--
+-- 🔴 IT CANNOT BE GRANTED FROM A MIGRATION, and that is the whole reason it
+-- moved. Schema `public` belongs to `pg_database_owner` from PostgreSQL 15 on.
+-- `titlepipe_owner` is not the database owner and holds NO GRANT OPTION on the
+-- schema, so a `GRANT` it issues is a WARNING and a no-op. MEASURED in the same
+-- session, as `titlepipe_owner`:
+--
+--     GRANT USAGE ON SCHEMA public TO titlepipe_app;
+--     WARNING:  no privileges were granted for "public"
+--     GRANT
+--     -- nspacl unchanged
+--
+-- This file runs as the OPERATOR, which can. MEASURED, as a `LOGIN CREATEROLE`
+-- role owning the database — the shape RDS, Cloud SQL, Neon and Supabase hand
+-- you, and the same shape the ruling below is written for:
+--
+--     GRANT USAGE ON SCHEMA public TO titlepipe_owner, titlepipe_app,
+--                                     titlepipe_worker;
+--     GRANT                            -- no warning
+--     nspacl -> …,titlepipe_owner=UC/pg_database_owner,
+--               titlepipe_app=U/pg_database_owner,
+--               titlepipe_worker=U/pg_database_owner
+--
+-- So the operator needs no `rolsuper` gate here, exactly as it needs none for
+-- `GRANT CREATE`. The statement is unconditional and the read-back is what
+-- catches an operator that could not, in fact, grant it.
+--
+-- WHO IS NAMED, AND WHO IS NOT:
+--
+--   * `titlepipe_owner` — yes, for the measurement above;
+--   * 🔴 `titlepipe_app` and `titlepipe_worker` — YES, ADDED 2026-08-06. This
+--     used to read "NOT YET, AND THIS IS A KNOWN OPEN HOLE". `0002` issues the
+--     same grant and CANNOT LAND IT: `migrations/env.py` runs every migration
+--     statement as `titlepipe_owner`, which is the role the measurement above
+--     shows holds no grant option on the schema. `0002` therefore carries a
+--     read-back of its own, `_require_schema_usage`, which raises on a hardened
+--     cluster. That guard is correct and STAYS — it is what catches an operator
+--     that could not grant. Naming the two roles here is what stops it firing.
+--
+--     MEASURED 2026-08-06 against postgres:18.4, one throwaway container per
+--     run, hardened before anything else touched it, operator `rolsuper = f`:
+--
+--         REVOKE USAGE ON SCHEMA public FROM PUBLIC;
+--         nspacl -> {pg_database_owner=UC/pg_database_owner}
+--
+--       BEFORE, with only `titlepipe_owner` named in the statement below:
+--         roles.sql                -> exit 0
+--         nspacl                   -> ...,titlepipe_owner=UC/pg_database_owner
+--         alembic upgrade head     -> 0001 ok, then RuntimeError out of 0002:
+--                                     "could not give titlepipe_app,
+--                                      titlepipe_worker USAGE on schema public"
+--         as titlepipe_app: SELECT count(*) FROM orders;
+--         -> ERROR:  42P01: relation "orders" does not exist
+--
+--       AFTER, with all three named:
+--         roles.sql                -> exit 0
+--         nspacl                   -> ...,titlepipe_owner=UC/pg_database_owner,
+--                                       titlepipe_app=U/pg_database_owner,
+--                                       titlepipe_worker=U/pg_database_owner
+--         alembic upgrade head     -> exit 0, 0001 then 0002
+--         as titlepipe_app: SELECT count(*) FROM orders;   -> 0, no error
+--
+--     THE MOVE WAS BLOCKED UNTIL 2026-08-06 BY A TEST THAT ENCODED THE DEFECT.
+--     `tests/test_forced_rls_and_grants.py::test_the_migration_refuses_when_the
+--     _schema_grant_did_not_land` built its hardened state by revoking `USAGE`
+--     from `PUBLIC` ONLY. `titlepipe_app` and `titlepipe_worker` reached `USAGE`
+--     through `PUBLIC` and nowhere else, so that was enough to strip them —
+--     until this file granted them the privilege explicitly, at which point
+--     their own ACL entries survived the revoke, `_require_schema_usage` found
+--     nothing missing, and the test failed with `Failed: DID NOT RAISE
+--     RuntimeError`. It now revokes from `PUBLIC` AND from every role this file
+--     creates, and restores the grantee set it snapshotted from
+--     `pg_namespace.nspacl`, so its hardened state no longer depends on what
+--     this file granted;
+--   * `titlepipe_migration` — NO. `migrations/env.py` issues `SET ROLE
+--     titlepipe_owner` as its first statement on the connection and never
+--     resets it, so every migration statement runs as the owner and uses the
+--     owner's `USAGE`. Granting it directly would give a LOGIN role standing
+--     access to the schema it is deliberately kept out of until it says
+--     `SET ROLE`. `test_the_owner_can_use_schema_public_when_public_cannot`
+--     asserts it does NOT have it, on a cluster where `PUBLIC` does not either;
+--   * `titlepipe_blind` — NO. It belongs to blind-svc, which is intended to
+--     live in a SEPARATE database; see the isolation note above.
 --
 --
 -- 🔴 RUNNING THIS AS A NON-SUPERUSER. THE RULING, AND WHAT IT COSTS.
@@ -834,6 +933,14 @@ HAVING count(*) > 0
 -- See the header: PostgreSQL 15 took this away from `PUBLIC`.
 GRANT CREATE ON SCHEMA public TO titlepipe_owner;
 
+-- ...and `USAGE`, which is a DIFFERENT privilege and is not implied by
+-- `CREATE`. See "WHY `GRANT USAGE ON SCHEMA public` IS HERE" in the header for
+-- the measurement and for which three roles are named. The two application
+-- roles are here rather than in `0002` because `0002` runs as
+-- `titlepipe_owner`, which holds no grant option on schema `public` and
+-- therefore cannot land the grant at all — its `GRANT` is a WARNING.
+GRANT USAGE ON SCHEMA public TO titlepipe_owner, titlepipe_app, titlepipe_worker;
+
 -- ...and PROVED, because PostgreSQL does not fail that statement when it does
 -- nothing. MEASURED 2026-08-05 as a `CREATEROLE` operator running this file
 -- against a database it does not own:
@@ -861,6 +968,65 @@ SELECT format(
            )
        )
 WHERE NOT has_schema_privilege('titlepipe_owner', 'public', 'CREATE')
+\gexec
+
+-- The same read-back for `USAGE`, and it CANNOT be written the same way.
+--
+-- `has_schema_privilege('titlepipe_owner', 'public', 'USAGE')` is TRUE on a
+-- default cluster whether or not the `GRANT` above landed, because `PUBLIC`
+-- still holds `USAGE` and `has_schema_privilege` answers about the EFFECTIVE
+-- privilege. MEASURED 2026-08-06 against postgres:18.4, in the database of a
+-- `LOGIN CREATEROLE` operator, with no grant to `titlepipe_owner` at all:
+--
+--     nspacl -> {pg_database_owner=UC/pg_database_owner,=U/pg_database_owner}
+--     has_schema_privilege('titlepipe_owner','public','USAGE') -> t
+--
+-- A guard written on `has_schema_privilege` would therefore pass over a `GRANT`
+-- that WARNed and did nothing, and would only start failing on the day somebody
+-- ran `REVOKE USAGE ON SCHEMA public FROM PUBLIC` — which is precisely the day
+-- there is no operator watching. So the ACL is read directly and the question
+-- asked is "is there an EXPLICIT `USAGE` entry for this role", which is the
+-- thing the `GRANT` is supposed to have created.
+--
+-- `aclexplode` over a NULL `nspacl` yields no rows and this therefore RAISES,
+-- which is the fail-closed direction. `'name'::regrole` resolves to the role's
+-- oid and errors if the role is missing; all five are created above, so all
+-- five exist by this point.
+--
+-- THE THREE ROLES BELOW ARE THE THREE THE `GRANT` NAMES, and they are spelled
+-- out again rather than derived, because the whole job of this block is to
+-- disagree with the statement above it when the statement did nothing. Only the
+-- roles that are actually MISSING reach the message — `WHERE NOT EXISTS`
+-- filters row by row and `string_agg` runs over what is left — so the refusal
+-- names the roles that failed rather than the roles it asked about.
+SELECT format(
+           'DO $usage$ BEGIN RAISE EXCEPTION %L; END $usage$',
+           format(
+               'roles.sql: refusing to finish — schema public in database %s has '
+               'no explicit USAGE grant for %s. PostgreSQL reports a GRANT from '
+               'a role that holds no grant option as a WARNING rather than an '
+               'error, and PUBLIC''s own USAGE hides the result from '
+               'has_schema_privilege, so this run would otherwise have '
+               'succeeded and left a cluster that breaks the moment USAGE is '
+               'revoked from PUBLIC. Run this file as a superuser, or as the '
+               'owner of the database (schema public belongs to '
+               'pg_database_owner from PostgreSQL 15 on).',
+               current_database(),
+               string_agg(wanted.role, ', ' ORDER BY wanted.role)
+           )
+       )
+FROM (
+    VALUES ('titlepipe_owner'), ('titlepipe_app'), ('titlepipe_worker')
+) AS wanted (role)
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_namespace n
+    CROSS JOIN LATERAL aclexplode(n.nspacl) AS a
+    WHERE n.nspname = 'public'
+      AND a.grantee = wanted.role::regrole
+      AND a.privilege_type = 'USAGE'
+)
+HAVING count(*) > 0
 \gexec
 
 
