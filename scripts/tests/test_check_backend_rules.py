@@ -495,6 +495,21 @@ def test_a_tests_package_inside_src_is_scanned_like_any_other_module(
         assert f"{relative}:6" in output, output
 
 
+# The exempt module's body, kept out of the f-string below. Prefixing an
+# implicit concatenation with an f-string makes ruff read the whole run as one
+# interpolated string and raise S608 on the SQL literal inside it — the same
+# literal is fine in `PROBE_MODULE` above, which is a plain concatenation. The
+# fixture is a string written to a temp file, never a query, so the finding is
+# spurious either way; separating the two keeps that obvious without a noqa.
+EXEMPT_PROBE_MODULE = (
+    "from sqlalchemy import text\n"
+    "\n"
+    "\n"
+    "def all_orders(session):\n"
+    '    return session.execute(text("SELECT * FROM orders")).all()\n'
+)
+
+
 def test_a_tests_package_inside_src_can_still_earn_an_exemption(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -504,12 +519,7 @@ def test_a_tests_package_inside_src_can_still_earn_an_exemption(
     write(
         tmp_path,
         "services/probe/src/titlepipe_probe/tests/queries.py",
-        f"# rules-allow-file(raw-sql): {GOOD_REASON}\n"
-        "from sqlalchemy import text\n"
-        "\n"
-        "\n"
-        "def all_orders(session):\n"
-        '    return session.execute(text("SELECT * FROM orders")).all()\n',
+        f"# rules-allow-file(raw-sql): {GOOD_REASON}\n" + EXEMPT_PROBE_MODULE,
     )
     code, output = run(tmp_path, capsys)
     assert code == 0, output
@@ -1605,7 +1615,13 @@ def test_the_default_root_is_the_repository_and_not_the_working_directory(
     assert scanned_count(capsys.readouterr().out) > 0
 
     script = Path(__file__).resolve().parent.parent / "check_backend_rules.py"
-    elsewhere = subprocess.run(
+    # The S603 suppression below is deliberate: the argv is `sys.executable`
+    # plus a path derived from this file's own location, so there is no
+    # untrusted input to check. S603 fires on every subprocess call regardless
+    # of its arguments, so there is nothing to fix; suppressing it here rather
+    # than repo-wide keeps the rule live for the service tests, where a
+    # subprocess call would be worth a second look.
+    elsewhere = subprocess.run(  # noqa: S603
         [sys.executable, str(script)],
         cwd=tmp_path,
         capture_output=True,

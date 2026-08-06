@@ -142,4 +142,3 @@ test("the queue's pass refusal nudges too", async ({ page }) => {
   await page.locator("input:focus").press("Enter");
   await expect(page.getByTestId("nudge")).toContainText("a pass needs its why");
 });
-

@@ -97,7 +97,7 @@ GATE 3 - FIRST VERTICAL CONTRACT SLICE (GET /api/rules)
 Add an Alembic migration (as the migration role) for:
 - rules and rule_versions per IMPLEMENTATION_PLAN §17: immutable rule_versions; each rule/version carries origin, provenance tag, jurisdiction scope, status (pending/live/retired) and evidence reference.
 - Apply the tenancy decision from "resolve before coding". If tenant-scoped, enable+force RLS and a policy exactly as Gate 2 tables do (the new-table RLS guard must stay green). If shared reference data, document why it is exempt and make the guard aware of the exemption explicitly — never by weakening the guard.
-- PENDING rules must be excludable by a query predicate (IMPLEMENTATION_PLAN §17: PENDING rules are inert; RuleContext selects only live versions). 
+- PENDING rules must be excludable by a query predicate (IMPLEMENTATION_PLAN §17: PENDING rules are inert; RuleContext selects only live versions).
 - Add a small deterministic set of synthetic seed rules (safe, non-client) for local development and tests only — via a seed script, not committed client data.
 
 3B. REPOSITORY / SERVICE / ROUTER
@@ -105,7 +105,7 @@ Add an Alembic migration (as the migration role) for:
 - repositories/: SQLAlchemy query for rules under the Gate 2 tenant context (or global read if shared reference data). Persistence mechanics only; no business decisions.
 - services/: the command/query that applies rule selection semantics (e.g. never returns PENDING as live). Receives an authenticated Principal; never reads identity from the request.
 - schemas/: Pydantic request/response models; response is contract-equivalent to the Zod shape. Provenance fields are present on emitted values.
-- api/: a thin router under base path /api. Validation and translation only; no state-machine logic in the router. Map failures through the existing global error-mapping layer (stable code + safe message + request_id). 
+- api/: a thin router under base path /api. Validation and translation only; no state-machine logic in the router. Map failures through the existing global error-mapping layer (stable code + safe message + request_id).
 - auth: a dependency-injected test Principal (user_id, tenant_id, membership, roles/capabilities). It is dev/test ONLY. It must refuse to load in a deployed environment (reuse the environment fail-closed pattern from settings.py). There is no header-based or query-based production auth bypass.
 
 3C. OPENAPI + TS CLIENT

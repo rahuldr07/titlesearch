@@ -232,7 +232,7 @@ I have not verified it."*
 
 | plan | ships | status |
 |---|---|---|
-| [`01-postgres-correctness.md`](./01-postgres-correctness.md) | schema, roles, forced RLS, the tenant-isolation proof | **done** — eight tasks, seventeen execution commits (`160fcff`…`4b878c5`) on `rahuldr07/backend-plan01` |
+| [`01-postgres-correctness.md`](./01-postgres-correctness.md) | schema, roles, forced RLS, the tenant-isolation proof | **done and merged to `main`** — eight tasks, twenty commits (`160fcff`…the close-out). **Its handover is [`01-WHAT-HAPPENED.md`](./01-WHAT-HAPPENED.md)** |
 | 02 — first vertical slice | `GET /api/rules` through the whole spine | not written |
 | 03 — identity | WorkOS sessions, server-evaluated authz | not written |
 | 04 — order reads | context, queue, fields with provenance | not written |
@@ -242,12 +242,30 @@ I have not verified it."*
 Plans 02–06 are written after 01 lands, so each is informed by what actually
 happened rather than what was predicted.
 
+**Plan 02 is already written** ([`02-first-vertical-slice.md`](./02-first-vertical-slice.md)).
+Read [`01-WHAT-HAPPENED.md`](./01-WHAT-HAPPENED.md) before *executing* it, and before
+writing Plan 03.**
+It is the "what actually happened" this paragraph promises, collected in one
+place instead of nineteen commit messages: the exact interface Plans 02–06 call
+and where it now lives, the measured constraints a later plan will hit, what the
+structural gate refuses (including the rules added after Plan 01's Task 0
+described them), and the items Plan 01 is handing over unfinished. Read it
+alongside **"What eight tasks taught this plan about injections"** near the top
+of Plan 01 — seven of its eight injections did not work as written, and the
+taxonomy of *how* is the transferable part.
+
 > **Correction, 2026-08-06.** Plan 01's status read **`ready`** until this line
 > was written. It has been done since `9ddeefc`, and the row was never updated —
-> the same class of defect as the plan's own stale acceptance criteria. Before
-> writing Plan 02, read **"What eight tasks taught this plan about injections"**
-> near the top of Plan 01: seven of its eight injections did not work as
-> written, and the taxonomy of *how* is the transferable part.
+> the same class of defect as the plan's own stale acceptance criteria.
+>
+> **Second correction, later the same day.** The row was then updated to
+> "seventeen execution commits (`160fcff`…`4b878c5`)", which went stale within
+> the hour: `a9a973a` and `7e6165a` landed after it, and neither was an execution
+> commit in the sense the row implied. The count is nineteen, and only eight of
+> the nineteen built a task — the rest corrected the plan before a task could run
+> or closed a review's findings after one had. A commit range written into prose
+> ages the moment the next commit lands; if you update this row, update it to the
+> branch tip.
 
 **Canonical context:** [`docs/backend/BUILD-PLAN.md`](../../../backend/BUILD-PLAN.md)
 — architecture, pinned versions and the traps behind each. Read it before Task 0.

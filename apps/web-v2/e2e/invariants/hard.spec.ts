@@ -82,4 +82,3 @@ test("chord keys typed inside an input never navigate", async ({ page }) => {
   await expect(page.getByTestId("key-map")).toHaveCount(0);
   await expect(input).toHaveValue("gd?");
 });
-

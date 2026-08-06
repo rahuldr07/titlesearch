@@ -90,4 +90,3 @@ test("the engineer gate's confirm affordance exists only for its holders", async
   await page.keyboard.press("Escape");
   await expect(page.getByTestId("rule-confirm-btn")).toBeVisible();
 });
-
