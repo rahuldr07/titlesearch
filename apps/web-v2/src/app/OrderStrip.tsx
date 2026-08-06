@@ -62,10 +62,15 @@ export function OrderStrip() {
      * 1600px window — 900px from the order it counts. The drawing reads left to
      * right as one sentence: WHICH order · WHAT is in it · then, after the
      * spacer, WHERE it stands and WHO is holding it.
+     *
+     * THE SENTENCE MAY NOT WRAP, so below `lg` it tightens and then scrolls.
+     * Wrapping would put WHERE-it-stands on a second line under WHICH-order and
+     * break the left-to-right reading the strip is built on; `overflow-x-auto`
+     * keeps the one line and lets the last clause be reached instead.
      */
     <div
       data-testid="order-strip"
-      className="flex items-center gap-9 border-b border-line-strong bg-surface-panel px-14 py-6.5"
+      className="flex items-center gap-4 overflow-x-auto border-b border-line-strong bg-surface-panel px-6 py-4 lg:gap-9 lg:px-14 lg:py-6.5"
     >
       {/*
         OFF AN ORDER, THIS SLOT IS EMPTY — not the product name.
