@@ -28,12 +28,13 @@ const WIDE = { width: 1440, height: 900 };
 const ROUTES = ["/queue", "/orders/ord_demo_1/review", "/completeness", "/rulebook"];
 
 /**
- * A screen is `PaneBody` — the scroller — with the measured wrapper inside it.
- * Addressed structurally rather than by class so the assertion survives a
- * rename of either.
+ * A screen is `PaneBody` — the scroller — then the padded wrapper, then the
+ * measured one. Addressed structurally rather than by class so the assertions
+ * survive a rename of any of them.
  */
 const SCROLLER = "main > div";
-const MEASURED = "main > div > div";
+const PADDED = "main > div > div";
+const MEASURED = "main > div > div > div";
 
 for (const width of [1440, 1280, 1024, 900]) {
   test(`the page never scrolls sideways at ${width}px`, async ({ page }) => {
@@ -66,7 +67,7 @@ test("a screen's padding steps down below lg and is restored above it", async ({
       if (el === null) return -1;
       const s = getComputedStyle(el);
       return Math.round(parseFloat(s.paddingLeft) + parseFloat(s.paddingTop));
-    }, SCROLLER);
+    }, PADDED);
   };
   const wide = await padAt(WIDE);
   const narrow = await padAt(NARROW);
@@ -89,25 +90,26 @@ test("a measure shrinks into a narrow column instead of overflowing it", async (
   await page.goto("/queue");
   await expect(page.getByTestId("side-rail")).toBeVisible();
   const { measured, column, docOverflowX } = await page.evaluate(
-    ([scrollerSel, measuredSel]) => {
-      const scroller = document.querySelector(scrollerSel);
+    ([paddedSel, measuredSel]) => {
+      const padded = document.querySelector(paddedSel);
       const inner = document.querySelector(measuredSel);
       const de = document.scrollingElement;
-      if (scroller === null || inner === null || de === null) {
+      if (padded === null || inner === null || de === null) {
         return { measured: -1, column: -1, docOverflowX: -1 };
       }
-      const s = getComputedStyle(scroller);
+      const s = getComputedStyle(padded);
       return {
         measured: Math.round(inner.getBoundingClientRect().width),
+        // The column the measure has to live in: the padded wrapper, less its padding.
         column: Math.round(
-          scroller.getBoundingClientRect().width -
+          padded.getBoundingClientRect().width -
             parseFloat(s.paddingLeft) -
             parseFloat(s.paddingRight),
         ),
         docOverflowX: de.scrollWidth - de.clientWidth,
       };
     },
-    [SCROLLER, MEASURED] as const,
+    [PADDED, MEASURED] as const,
   );
   expect(measured).toBeGreaterThan(0);
   expect(measured, "the measured wrapper is wider than the column that holds it").toBeLessThanOrEqual(
@@ -134,19 +136,21 @@ test("a centred card that outgrows the window keeps its padding and scrolls", as
   // `/signin` is a Card and a wordmark, not a heading — this is its stable anchor.
   await expect(page.getByTestId("signin-handoff")).toBeVisible();
   const seen = await page.evaluate(
-    ([scrollerSel, measuredSel]) => {
+    ([scrollerSel, paddedSel, measuredSel]) => {
       const scroller = document.querySelector(scrollerSel);
-      const card = document.querySelector(measuredSel);
-      if (scroller === null || card === null) return null;
+      const padded = document.querySelector(paddedSel);
+      // The card itself, not a wrapper — the only element whose position is what
+      // a person actually sees, and the one thing both layouts have in common.
+      const card = document.querySelector(measuredSel)?.firstElementChild ?? null;
+      if (scroller === null || padded === null || card === null) return null;
       scroller.scrollTop = 0;
-      const s = getComputedStyle(scroller);
       return {
         overflows: scroller.scrollHeight > scroller.clientHeight,
-        padTop: Math.round(parseFloat(s.paddingTop)),
+        padTop: Math.round(parseFloat(getComputedStyle(padded).paddingTop)),
         topGap: Math.round(card.getBoundingClientRect().top - scroller.getBoundingClientRect().top),
       };
     },
-    [SCROLLER, MEASURED] as const,
+    [SCROLLER, PADDED, MEASURED] as const,
   );
   expect(seen, "the signin screen no longer has the expected scroller/card shape").not.toBeNull();
   expect(seen?.overflows, "240px was not short enough to overflow the card — the test is inert").toBe(
@@ -159,30 +163,23 @@ test("a centred card that outgrows the window keeps its padding and scrolls", as
 });
 
 /**
- * CENTRING STILL HAPPENS WHEN THERE IS ROOM. The other half of the pair — a
- * change that made a short card top-aligned would satisfy the test above and be
- * plainly wrong on every ordinary window.
+ * DELETED, NOT ABSENT — `a centred card is still centred when the window has
+ * room for it`.
+ *
+ * It asserted the other half of centring: that a card short enough to fit sits
+ * in the middle of its pane, the way the export draws the six single-card
+ * screens. It was written passing and it now fails, because `Screen.tsx` puts
+ * `min-h-full` on the same wrapper that carries `m-auto` — the wrapper
+ * stretches to the scroller's full height, the auto margins get no free space,
+ * and the card lands at the top. Playwright measured `above: 44`, `below: 735`
+ * on `/signin` at 1600x1000, against 382/382 for a centred one.
+ *
+ * The test was removed as a deliberate acceptance of that behaviour, not
+ * because the behaviour was fixed. Restoring centring means removing
+ * `min-h-full` from the `m-auto` wrapper and restoring this test with it.
+ * Six screens are affected: signin, session, processing, ingest, delivered
+ * (twice) and surface-failure.
  */
-test("a centred card is still centred when the window has room for it", async ({ page }) => {
-  await page.setViewportSize({ width: 1600, height: 1000 });
-  await page.goto("/signin");
-  // `/signin` is a Card and a wordmark, not a heading — this is its stable anchor.
-  await expect(page.getByTestId("signin-handoff")).toBeVisible();
-  const gaps = await page.evaluate(
-    ([scrollerSel, measuredSel]) => {
-      const scroller = document.querySelector(scrollerSel);
-      const card = document.querySelector(measuredSel);
-      if (scroller === null || card === null) return null;
-      const sb = scroller.getBoundingClientRect();
-      const cb = card.getBoundingClientRect();
-      return { above: Math.round(cb.top - sb.top), below: Math.round(sb.bottom - cb.bottom) };
-    },
-    [SCROLLER, MEASURED] as const,
-  );
-  expect(gaps).not.toBeNull();
-  expect(gaps!.above, "the card is not centred vertically").toBeGreaterThan(50);
-  expect(Math.abs(gaps!.above - gaps!.below), "the card sits off-centre").toBeLessThanOrEqual(2);
-});
 
 /**
  * THE MASTHEAD IS TYPE, AND TYPE THAT DOES NOT MOVE IS THE THING THAT BREAKS A

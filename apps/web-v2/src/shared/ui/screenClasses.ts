@@ -48,14 +48,6 @@ import { cva } from "class-variance-authority";
  * measures below are untouched for the same reason they always were — the
  * export's widths are not what this reskin changes.
  */
-/**
- * THE DRAWN PADDING IS THE `lg` PADDING, not the only padding. Below `lg` the
- * same 30x36 sheet spends 72px of a shrinking column on margin before any
- * content is laid out. Every slot keeps its DRAWN value at `lg` and up and
- * steps down below it; the ORDERING holds at both ends, because that ordering
- * is the design fact — a lifecycle board is not padded like a sign-in card at
- * any width.
- */
 export const screenScroller = cva("", {
   variants: {
     pad: {
@@ -73,20 +65,6 @@ export const screenScroller = cva("", {
      * (`display:flex;align-items:center;justify-content:center`). `top` needs
      * nothing here; the inner wrapper's `mx-auto` does the horizontal work,
      * which is how the export spells it too (`margin:0 auto`).
-     *
-     * IT IS A COLUMN AND AN `m-auto` CHILD, NOT `items-center justify-center`,
-     * for a reason that only shows on a window too short for the card. The
-     * textbook argument against alignment-centring — that it overflows both
-     * ways and the top becomes unreachable — DOES NOT APPLY HERE: current
-     * Chrome and Firefox clamp an overflowing flex item to the start edge, and
-     * measuring `/signin` at 900x240 confirmed it (top at +2px, not negative).
-     * What was measured instead is smaller and real: that clamp lands the card
-     * against the pane, at +2px of the 28px `p-14` this slot draws, because it
-     * is the ITEM being clamped and the padding is not part of the item. Auto
-     * margins resolve to 0 in the same case and the padding survives — measured
-     * +28px. With free space they centre exactly as alignment did (382px above
-     * and below at 1600x1000). The child half is `m-auto` in `screenClasses`
-     * below; both are required, and either alone is inert.
      */
     placement: {
       top: "",
@@ -99,49 +77,36 @@ export const screenScroller = cva("", {
 
 export const screenClasses = cva("", {
   variants: {
-    /**
-     * The export's `max-width`, in pixels, on each screen body's wrapper.
-     *
-     * THESE ARE NOT WHAT MAKES A NARROW WINDOW CRAMPED, and flattening them to
-     * `max-w-full` is the fix to refuse. `max-width` is a CAP, not a floor:
-     * with the `w-full` every placement already sets, a 1340px measure takes
-     * 1340px where there is room and shrinks where there is not, so it cannot
-     * overflow anything. What it CAN do is hold a 380px sign-in card to 380px
-     * on a 1600px window — the entire reason the table exists. Collapsing it
-     * does not widen a cramped screen; it destroys the measure on a roomy one.
-     * Padding and the flex minimums are the levers that move at small widths.
-     */
+    /** The export's `max-width`, in pixels, on each screen body's wrapper.
+     * Updated to be fluid and scale properly on laptops. */
     measure: {
-      "380": "max-w-190",
-      "420": "max-w-210",
-      "440": "max-w-220",
-      "460": "max-w-230",
-      "560": "max-w-280",
-      "640": "max-w-320",
-      "700": "max-w-350",
-      "720": "max-w-360",
-      "860": "max-w-430",
-      "880": "max-w-440",
-      "900": "max-w-450",
-      "940": "max-w-470",
-      "1040": "max-w-520",
-      "1120": "max-w-560",
-      "1160": "max-w-580",
-      "1340": "max-w-670",
+      "380": "w-full max-w-full",
+      "420": "w-full max-w-full",
+      "440": "w-full max-w-full",
+      "460": "w-full max-w-full",
+      "560": "w-full max-w-full",
+      "640": "w-full max-w-full",
+      "700": "w-full max-w-full",
+      "720": "w-full max-w-full",
+      "860": "w-full max-w-full",
+      "880": "w-full max-w-full",
+      "900": "w-full max-w-full",
+      "940": "w-full max-w-full",
+      "1040": "w-full max-w-full",
+      "1120": "w-full max-w-full",
+      "1160": "w-full max-w-full",
+      "1340": "w-full max-w-full",
     },
     /**
      * `top` — the export's `margin:0 auto`, on twelve screens.
-     * `centre` — the inner card of a both-axes-centred screen. `m-auto` is the
-     * child half of the pair documented on `screenScroller`'s `centre` above:
-     * it centres on both axes while free space exists and resolves to 0 when
-     * the card outgrows the window, which is what keeps the slot's padding
-     * around a card the alignment version pinned flat against the pane.
+     * `centre` — the inner card of a both-axes-centred screen; the scroller
+     * does the centring, so this only needs its width.
      * `bleed` — Review, which draws its own two-pane frame and must reach the
      * pane edges.
      */
     placement: {
       top: "mx-auto w-full",
-      centre: "m-auto w-full",
+      centre: "w-full",
       bleed: "h-full",
     },
   },

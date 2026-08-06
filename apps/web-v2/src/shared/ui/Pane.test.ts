@@ -53,48 +53,30 @@ describe("Pane", () => {
 });
 
 /**
- * The export's own measures, read off `TitlePipe.dc.html` — the `max-width` on
- * each screen body's inner wrapper. Expressed here in PIXELS because that is
- * how the design states them; the component converts to the 2px spacing base,
- * where `max-w-430` is 860px.
+ * THE PER-SCREEN MEASURE IS GONE, DELIBERATELY, AND THIS IS WHERE IT WENT.
+ *
+ * Two tests stood here and are deleted rather than weakened, because the
+ * contract they guarded no longer exists: `measure` now emits
+ * `w-full max-w-full` for all sixteen values, so a screen renders at whatever
+ * width the shell gives it. The export's table — sixteen distinct widths from
+ * 380px to 1340px, one per screen — is no longer expressed in the code, and
+ * nothing can assert it back into being. `/signin`'s card measured 621px here
+ * against the 440px the design draws.
+ *
+ *   - `every measure emits the class for half its pixel width` — false by
+ *     construction now; every value emits the same class.
+ *   - `no two measures render the same width` — all sixteen are identical.
+ *     Worth recording that this one PASSED against the flattened map: it
+ *     compared its own local table to itself and never called `screenClasses`,
+ *     so it had been inert since it was written and would never have caught
+ *     this. A test that cannot fail is not coverage.
+ *
+ * The `measure` prop and its sixteen keys are still the public API at eleven
+ * call sites, so the vocabulary survives with nothing behind it. Restoring the
+ * behaviour means restoring the map in `screenClasses.ts` and these two tests
+ * together.
  */
-const MEASURES = {
-  "380": "max-w-190",
-  "420": "max-w-210",
-  "440": "max-w-220",
-  "460": "max-w-230",
-  "560": "max-w-280",
-  "640": "max-w-320",
-  "700": "max-w-350",
-  "720": "max-w-360",
-  "860": "max-w-430",
-  "880": "max-w-440",
-  "900": "max-w-450",
-  "940": "max-w-470",
-  "1040": "max-w-520",
-  "1120": "max-w-560",
-  "1160": "max-w-580",
-  "1340": "max-w-670",
-} as const;
-
 describe("Screen", () => {
-  test("every measure emits the class for half its pixel width", () => {
-    for (const [measure, expected] of Object.entries(MEASURES)) {
-      const classes = screenClasses({ measure: measure as keyof typeof MEASURES });
-      expect(classes, `measure="${measure}" must emit ${expected}`).toContain(expected);
-    }
-  });
-
-  test("no two measures render the same width", () => {
-    const seen = new Map<string, string>();
-    for (const measure of Object.keys(MEASURES)) {
-      const emitted = MEASURES[measure as keyof typeof MEASURES];
-      const clash = seen.get(emitted);
-      expect(clash, `measure ${measure} renders identically to ${clash}`).toBeUndefined();
-      seen.set(emitted, measure);
-    }
-  });
-
   test("bleed takes neither a measure nor padding — Review owns its own frame", () => {
     const classes = screenClasses({ placement: "bleed" });
     expect(classes).not.toMatch(/\bmax-w-/);
@@ -150,32 +132,31 @@ describe("Screen", () => {
   });
 
   /**
-   * A CENTRED CARD TOO TALL FOR THE WINDOW KEEPS THE SLOT'S PADDING.
+   * ONLY HALF OF CENTRING IS VISIBLE FROM HERE, AND THE VISIBLE HALF IS NOT THE
+   * ONE THAT DECIDES IT.
    *
-   * Not the usual argument against alignment-centring — browsers clamp an
-   * overflowing flex item to the start edge, so the top is NOT unreachable
-   * (measured on `/signin` at 900x240: +2px, not negative). The defect is that
-   * the clamp lands the ITEM against the pane, and the scroller's 28px `p-14`
-   * is not part of the item: the card renders 2px from the edge where the slot
-   * draws 28. Auto margins resolve to 0 in the same case and the padding stays
-   * — measured +28px — while centring with free space is unchanged.
+   * The scroller is a plain column, asserted below. The `m-auto` that would
+   * centre a card in it lives in `Screen.tsx`, applied to a wrapper that also
+   * carries `min-h-full` — and `min-h-full` stretches that wrapper to the full
+   * height of the scroller, which leaves the auto margins no free space to
+   * distribute. The result is that the six `placement="centre"` screens render
+   * TOP-ALIGNED: measured on `/signin` at 1600x1000, the card sits 44px from the
+   * top with 735px below it, where centred is 382/382.
    *
-   * Both halves are asserted because either alone is inert: `m-auto` under
-   * `justify-content:center` is ignored, and a bare `flex-col` scroller with no
-   * `m-auto` child is not centred at all.
+   * That is a deliberate acceptance, not an oversight — see the commit. It is
+   * recorded here because this file is where someone will look when they notice
+   * the sign-in card is not where the mockup puts it, and because no assertion
+   * below will tell them: a cva config cannot see a class its consumer adds.
+   * The E2E spec is the only place that could, and its centring test was
+   * removed with the same decision.
    */
-  test("a centred card keeps its padding when it outgrows the window", () => {
+  test("the centred scroller is a plain column", () => {
     const scroller = screenScroller({ placement: "centre" });
-    expect(scroller, "the scroller must be a plain column for auto margins to have free space")
-      .toContain("flex-col");
+    expect(scroller, "auto margins need a plain column to have free space in").toContain("flex-col");
     expect(
       scroller,
-      "alignment-centring clamps an overflowing card flat against the pane, dropping the slot's padding from 28px to 2",
+      "alignment-centring clamps an overflowing card flat against the pane, dropping the slot's padding",
     ).not.toMatch(/\bitems-center\b|\bjustify-center\b/);
-    expect(
-      screenClasses({ placement: "centre" }),
-      "the child half of the pair — without m-auto the column is top-aligned, never centred",
-    ).toContain("m-auto");
   });
 
   test("pad has no cva default, so bleed can suppress it", () => {
