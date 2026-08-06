@@ -11,7 +11,11 @@ compares the workflow against a list written out here. A hardcoded list would be
 a constant checked against itself: it passes for as long as nobody updates
 either side, which is exactly the window in which drift happens.
 
-Four things are checked:
+Six things are checked. The first four are about `.github/workflows/backend.yml`;
+5 and 6 hold `.github/workflows/migration-harness.yml` — the one workflow whose
+path filter spans both the browser app and the services — to the SAME four rules,
+because it makes the same kind of integrity claim in its own header and nothing
+was checking it either:
 
 1. the workflow is valid YAML, and every job in it has steps;
 2. every hook in the `repo: local` block of `.pre-commit-config.yaml` is
@@ -24,7 +28,14 @@ Four things are checked:
 4. the `project` matrix covers exactly the set of directories holding a
    `pyproject.toml`. This is the direction that actually happens: a package is
    added, and nothing lints, type-checks or tests it because nobody remembered
-   the matrix.
+   the matrix;
+5. the migration harness workflow INVOKES `pnpm test:e2e:live` from an ENFORCING
+   step — it boots core-api and installs a browser, so it looks busy whether or
+   not it runs an assertion, and a green tick from it is quoted as evidence that
+   the browser app still works against the backend;
+6. that workflow's `paths` filter still names `apps/**`, `packages/**` AND
+   `services/**`, on both `push` and `pull_request`. Losing one of them silently
+   restores the gap the workflow was created to close.
 
 ## 🔴 CHECK 2 USED TO ASK WHETHER A NAME APPEARED IN *SOME* `run:` STRING, AND
    FIVE DIFFERENT WORKFLOWS THAT RUN NO GATE AT ALL SATISFIED IT
@@ -119,6 +130,25 @@ REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 WORKFLOW = REPO_ROOT / ".github" / "workflows" / "backend.yml"
 PRE_COMMIT = REPO_ROOT / ".pre-commit-config.yaml"
 
+# The migration harness — the one workflow whose path filter spans both the
+# browser app and the services, and therefore the only thing that runs the e2e
+# suite on a backend change. Held to the same `_step_enforces` rules as the
+# gates above, because it makes the same kind of claim in its own header:
+# "There is no continue-on-error in this file, and the harness step's exit
+# status is the job's." That sentence is precisely the artefact class the module
+# docstring's five injections are about, so it is asserted rather than believed.
+HARNESS_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "migration-harness.yml"
+
+# The pnpm script that IS the harness. A job that boots core-api, installs a
+# browser and then runs nothing would satisfy every other check in this file.
+HARNESS_SCRIPT = "test:e2e:live"
+
+# Both sides of the migration, plus the package the wire contract lives in. The
+# entire value of this workflow is that a change to ONE of these runs against
+# the others; a filter that lost `services/**` would leave the browser suite
+# exactly as blind to a backend change as it was before the workflow existed.
+HARNESS_REQUIRED_PATHS = ("apps/**", "packages/**", "services/**")
+
 # The job whose matrix is supposed to enumerate every Python project.
 PROJECT_JOB = "project"
 
@@ -207,17 +237,24 @@ def load_yaml(path: Path) -> Any:
         raise AssertionError(f"{rel(path)} is not valid YAML:\n{exc}") from exc
 
 
-def workflow() -> dict[str, Any]:
-    document = load_yaml(WORKFLOW)
-    assert isinstance(document, dict), f"{rel(WORKFLOW)} did not parse to a mapping"
+def workflow(path: Path = WORKFLOW) -> dict[str, Any]:
+    """A parsed workflow. Defaults to `backend.yml`, which most checks here mean.
+
+    The parameter exists because the four `_step_enforces` rules are about what
+    GitHub does with a step, not about which file the step is in — so any
+    workflow making an integrity claim can be held to them. `migration-harness.yml`
+    is the second caller; see the tests at the end of this module.
+    """
+    document = load_yaml(path)
+    assert isinstance(document, dict), f"{rel(path)} did not parse to a mapping"
     return document
 
 
-def jobs() -> dict[str, Any]:
-    document = workflow()
+def jobs(path: Path = WORKFLOW) -> dict[str, Any]:
+    document = workflow(path)
     found = document.get("jobs")
-    assert isinstance(found, dict), f"{rel(WORKFLOW)} defines no jobs mapping"
-    assert found, f"{rel(WORKFLOW)} defines no jobs"
+    assert isinstance(found, dict), f"{rel(path)} defines no jobs mapping"
+    assert found, f"{rel(path)} defines no jobs"
     return found
 
 
@@ -292,11 +329,11 @@ def _step_enforces(job: dict[str, Any], step: dict[str, Any]) -> bool:
     return condition is None or _expression(condition) == CANCELLED_GUARD
 
 
-def enforcing_run_blocks() -> tuple[str, ...]:
+def enforcing_run_blocks(path: Path = WORKFLOW) -> tuple[str, ...]:
     """The `run:` blocks whose failure would fail the workflow. See `_step_enforces`."""
     return tuple(
         step["run"]
-        for job in jobs().values()
+        for job in jobs(path).values()
         for step in (job.get("steps") or [])
         if isinstance(step, dict) and isinstance(step.get("run"), str) and _step_enforces(job, step)
     )
@@ -551,7 +588,92 @@ def test_the_project_matrix_covers_every_python_project() -> None:
     )
 
 
+def triggers(path: Path) -> dict[str, Any]:
+    """A workflow's `on:` block.
+
+    THREE SPELLINGS, and every one of them occurs here. YAML 1.1 — which PyYAML
+    implements — resolves a bare `on` to the BOOLEAN `True`, so `document["on"]`
+    finds nothing. And when PyYAML is unavailable this module reparses through
+    `uv run --with pyyaml` and JSON, where that boolean key becomes the STRING
+    `"true"`. MEASURED: a first version of this helper read only `True` and
+    `"on"`, passed under a local PyYAML and failed under the JSON fallback that
+    CI actually takes. A quoted `"on":` in the workflow would give the third.
+
+    Getting this wrong is not a loud failure in general — a lookup that finds no
+    triggers leaves an assertion with nothing to object to.
+    """
+    document = workflow(path)
+    for key in (True, "on", "true"):
+        found = document.get(key)
+        if isinstance(found, dict):
+            return found
+    raise AssertionError(f"{rel(path)} has no `on:` mapping of triggers")
+
+
+def test_the_migration_harness_workflow_runs_the_harness_from_an_enforcing_step() -> None:
+    """`migration-harness.yml` actually invokes the live suite, and its failure counts.
+
+    The four rules are `backend.yml`'s, unchanged and imported rather than
+    restated — see `_step_enforces` and `_invocations`. This workflow is worth
+    holding to them for the same reason `backend.yml` is: it boots a service and
+    installs a browser, so it LOOKS busy whether or not it runs an assertion,
+    and it is the only job in the repository that reaches both sides of the
+    migration. A green tick from it is quoted as evidence that the browser app
+    still works against core-api.
+    """
+    for name, job in jobs(HARNESS_WORKFLOW).items():
+        assert job.get("steps"), f"{rel(HARNESS_WORKFLOW)}: job {name!r} has no steps"
+
+    enforcing = enforcing_run_blocks(HARNESS_WORKFLOW)
+    assert enforcing, (
+        f"{rel(HARNESS_WORKFLOW)} has no run: step whose failure would fail the run — "
+        "every one of them is conditional, continue-on-error, or in a job carrying "
+        "an if:. The assertion below would then be looking at an empty list."
+    )
+
+    commands = [command for block in enforcing for command in _invocations(block)]
+    assert _is_invoked(HARNESS_SCRIPT, commands), (
+        f"{rel(HARNESS_WORKFLOW)} never invokes {HARNESS_SCRIPT!r} from a step whose "
+        f"failure would fail the run. A step satisfies this only when it RUNS the "
+        f"harness — named as shell tokens rather than printed or commented out — and "
+        f"only when its result counts: no continue-on-error, no if: other than "
+        f"{CANCELLED_GUARD}, and no if: on its job. Otherwise the workflow boots "
+        f"core-api, installs a browser, and proves nothing."
+    )
+
+
+def test_the_migration_harness_workflow_watches_both_sides_of_the_migration() -> None:
+    """Its path filter spans the app AND the services, on push and on pull_request.
+
+    This is the whole reason the file exists. `frontend.yml` watches `apps/**`
+    and `packages/**`; `backend.yml` watches `services/**`, `libs/**`, `infra/**`
+    and `scripts/**`; they do not overlap, so before this workflow no job ran the
+    browser suite on a backend change. A filter that quietly lost `services/**`
+    would restore that gap while leaving the workflow looking correct.
+    """
+    on = triggers(HARNESS_WORKFLOW)
+
+    for event in ("push", "pull_request"):
+        block = on.get(event)
+        assert isinstance(block, dict), (
+            f"{rel(HARNESS_WORKFLOW)} has no {event} trigger — a workflow that does not "
+            f"run on {event} cannot gate one"
+        )
+        paths = block.get("paths")
+        assert isinstance(paths, list), (
+            f"{rel(HARNESS_WORKFLOW)}: the {event} trigger declares no paths filter"
+        )
+        missing = [wanted for wanted in HARNESS_REQUIRED_PATHS if wanted not in paths]
+        assert not missing, (
+            f"{rel(HARNESS_WORKFLOW)}: the {event} paths filter is missing {missing}. "
+            f"The point of this workflow is that a change to one side of the migration "
+            f"runs against the other; without all of {list(HARNESS_REQUIRED_PATHS)} it "
+            f"is a second frontend or backend job with extra steps."
+        )
+
+
 def test_this_suite_is_running_the_repository_it_is_checking() -> None:
     """Guards the path arithmetic above, which every other test here depends on."""
     assert WORKFLOW.is_file(), f"{rel(WORKFLOW)} not found from {Path(__file__)} on {sys.platform}"
     assert PRE_COMMIT.is_file(), f"{rel(PRE_COMMIT)} not found"
+    assert HARNESS_WORKFLOW.is_file(), f"{rel(HARNESS_WORKFLOW)} not found"

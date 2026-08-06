@@ -14,6 +14,8 @@ Read `CLAUDE.md` at repo root first (doc order: docs/HANDOFF.md → docs/CONTEXT
 - Typecheck all: `pnpm typecheck`
 - Lint: `pnpm --filter web-v2 lint` (eslint)
 - E2E: `pnpm --filter web-v2 test:e2e` (Playwright, `apps/web-v2/e2e`)
+- Live migration harness: `pnpm --filter web-v2 test:e2e:live` (Playwright, `apps/web-v2/e2e-live`) — needs core-api running: `cd services/core-api && TITLEPIPE_ENVIRONMENT=development uv run uvicorn titlepipe_core.app:create_app --factory --port 8000`. Override its address with `VITE_API_PROXY_TARGET`.
+- `VITE_API_MODE` picks the backend at BUILD time: `mock` (default) starts MSW and configures no proxy; `live` starts no worker and proxies `/api` to core-api. Any other value refuses to boot, on screen.
 - Unit: `pnpm --filter web-v2 test` (Vitest) · Rules gate: `pnpm --filter web-v2 check:rules` · Dead code: `pnpm --filter web-v2 knip`
 - Backend (from `services/core-api`, as CI runs it): `uv run ruff check .` · `uv run ruff format --check .` · `uv run pyright` · `uv run pytest`
 

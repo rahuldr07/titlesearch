@@ -1,0 +1,148 @@
+name: migration harness
+
+# THE ONE JOB WHOSE PATH FILTER SPANS BOTH SIDES OF THE MIGRATION.
+#
+# Before this file existed there was no overlap at all: `frontend.yml` watches
+# `apps/**` and `packages/**`, `backend.yml` watches `services/**`, `libs/**`,
+# `infra/**` and `scripts/**`, and nothing ran the browser suite on a backend
+# change. `docs/backend/BUILD-PLAN.md` §5.2 records the consequence — the
+# "keep the frontend tests green while migrating endpoint by endpoint" loop had
+# no execution path, so "we will notice when an endpoint moves and breaks the
+# app" was a plan rather than a mechanism.
+#
+# Every step here runs a real command. `docs/superpowers/plans/backend/
+# 01-WHAT-HAPPENED.md` §5 records five separate ways a CI check shipped green
+# while proving nothing — the check's name inside an `echo`, `if: false`,
+# `continue-on-error`, an `if:` naming a trigger that does not exist, and the
+# name in a shell comment. There is no `continue-on-error` in this file, and the
+# harness step's exit status is the job's.
+
+on:
+  push:
+    branches: [main]
+    paths: &harness-paths
+      # Both sides, deliberately. The whole value of this workflow is that a
+      # change to ONE of them runs against the other.
+      - "apps/**"
+      - "packages/**"
+      - "services/**"
+      - "libs/**"
+      # The enforcement surface: the workspace wiring the harness builds
+      # through, and this file itself.
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "package.json"
+      - ".github/workflows/migration-harness.yml"
+  pull_request:
+    paths: *harness-paths
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: migration-harness-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  UV_VERSION: "0.11.26"
+  PYTHON_VERSION: "3.13"
+  PNPM_VERSION: "10.33.2"
+  CORE_API_PORT: "8000"
+
+jobs:
+  live-slice:
+    name: browser app against core-api
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+
+      - name: Install Python ${{ env.PYTHON_VERSION }}
+        run: uv python install ${{ env.PYTHON_VERSION }}
+
+      - name: Install the workspace
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright chromium
+        run: pnpm --filter web-v2 exec playwright install --with-deps chromium
+
+      # --frozen so a drifted lock fails here rather than producing a core-api
+      # that is not the one under test.
+      - name: Install core-api
+        working-directory: services/core-api
+        run: uv sync --frozen --all-groups
+
+      # NO DATABASE. core-api boots on `TITLEPIPE_ENVIRONMENT=development`
+      # alone; Plan 01's tenant seam is deliberately not wired to the app yet,
+      # and standing up Postgres here would be scope this job does not need.
+      #
+      # The wait loop fails with the server's own log rather than falling
+      # through, so a core-api that dies at startup reports as that instead of
+      # as three confusing browser assertions.
+      - name: Start core-api
+        working-directory: services/core-api
+        env:
+          TITLEPIPE_ENVIRONMENT: development
+        run: |
+          set -euo pipefail
+          nohup uv run uvicorn titlepipe_core.app:create_app --factory \
+            --host 127.0.0.1 --port "${CORE_API_PORT}" > core-api.log 2>&1 &
+          for _ in $(seq 1 60); do
+            if curl -fsS "http://127.0.0.1:${CORE_API_PORT}/health" >/dev/null 2>&1; then
+              curl -fsS "http://127.0.0.1:${CORE_API_PORT}/health"
+              echo
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::core-api never answered /health"
+          cat core-api.log
+          exit 1
+
+      # The harness itself: three assertions, and the middle one is the reason
+      # the other two mean anything. See playwright.live.config.ts.
+      #
+      #   live-reaches-core-api       core-api's own 404 envelope and its
+      #                               x-request-id arrive IN THE BROWSER
+      #   live-halts-without-core-api the rulebook halts, showing no mock rows
+      #   mock-serves-the-rulebook    VITE_API_MODE=mock is unchanged
+      #
+      # Only the first fails when the switch, the proxy or the build is broken —
+      # the other two pass against an app that does not work at all, which is
+      # the pure-denial trap `docs/superpowers/plans/backend/
+      # 00-HOW-TO-EXECUTE.md` §1.1 measured on Plan 01.
+      - name: Live migration harness
+        working-directory: apps/web-v2
+        env:
+          VITE_API_PROXY_TARGET: http://127.0.0.1:${{ env.CORE_API_PORT }}
+        run: pnpm test:e2e:live
+
+      - name: core-api log
+        if: ${{ failure() }}
+        working-directory: services/core-api
+        run: cat core-api.log
+
+      - name: Playwright report
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-harness-report
+          path: apps/web-v2/test-results
+          retention-days: 7
+          if-no-files-found: ignore

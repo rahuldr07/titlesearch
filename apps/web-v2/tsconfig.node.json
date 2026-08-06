@@ -20,10 +20,21 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
+  /*
+   * An explicit list, so a config file that is not on it is not type-checked by
+   * anything. MEASURED: `playwright.live.config.ts` was absent, and appending
+   * `const BROKEN: number = "not a number";` to it left `pnpm typecheck` at
+   * exit 0. Every config file in this package belongs here.
+   *
+   * `e2e/` and `e2e-live/` are still outside — their `page.evaluate` bodies run
+   * in the browser and need the DOM lib this project does not have. That gap
+   * predates the live harness and is stated rather than quietly inherited.
+   */
   "include": [
     "vite.config.ts",
     "vitest.config.ts",
     "playwright.config.ts",
+    "playwright.live.config.ts",
     "vocabulary.test.ts",
     "authz.test.ts"
   ]
