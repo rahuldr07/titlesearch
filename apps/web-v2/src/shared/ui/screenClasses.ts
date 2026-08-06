@@ -52,13 +52,13 @@ export const screenScroller = cva("", {
   variants: {
     pad: {
       /** the export's ordinary screen → the mockup's sheet, 30x36 */
-      "28x32": "py-15 px-18",
-      "32x40": "py-17 px-22",
-      "26x30": "py-14 px-17",
-      "24x28": "py-13 px-16",
-      "36x40": "py-19 px-22",
+      "28x32": "py-10 px-12 lg:py-15 lg:px-18",
+      "32x40": "py-12 px-14 lg:py-17 lg:px-22",
+      "26x30": "py-8 px-10 lg:py-14 lg:px-17",
+      "24x28": "py-8 px-10 lg:py-13 lg:px-16",
+      "36x40": "py-12 px-14 lg:py-19 lg:px-22",
       /** the six centred single-card screens; one symmetric value, so +4 */
-      "40": "p-22",
+      "40": "p-14 lg:p-22",
     },
     /**
      * `centre` — the six single-card screens the export centres on BOTH axes
@@ -68,7 +68,7 @@ export const screenScroller = cva("", {
      */
     placement: {
       top: "",
-      centre: "flex items-center justify-center",
+      centre: "flex flex-col",
       bleed: "overflow-hidden",
     },
   },
@@ -77,24 +77,25 @@ export const screenScroller = cva("", {
 
 export const screenClasses = cva("", {
   variants: {
-    /** The export's `max-width`, in pixels, on each screen body's wrapper. */
+    /** The export's `max-width`, in pixels, on each screen body's wrapper.
+     * Updated to be fluid and scale properly on laptops. */
     measure: {
-      "380": "max-w-190",
-      "420": "max-w-210",
-      "440": "max-w-220",
-      "460": "max-w-230",
-      "560": "max-w-280",
-      "640": "max-w-320",
-      "700": "max-w-350",
-      "720": "max-w-360",
-      "860": "max-w-430",
-      "880": "max-w-440",
-      "900": "max-w-450",
-      "940": "max-w-470",
-      "1040": "max-w-520",
-      "1120": "max-w-560",
-      "1160": "max-w-580",
-      "1340": "max-w-670",
+      "380": "w-full max-w-full",
+      "420": "w-full max-w-full",
+      "440": "w-full max-w-full",
+      "460": "w-full max-w-full",
+      "560": "w-full max-w-full",
+      "640": "w-full max-w-full",
+      "700": "w-full max-w-full",
+      "720": "w-full max-w-full",
+      "860": "w-full max-w-full",
+      "880": "w-full max-w-full",
+      "900": "w-full max-w-full",
+      "940": "w-full max-w-full",
+      "1040": "w-full max-w-full",
+      "1120": "w-full max-w-full",
+      "1160": "w-full max-w-full",
+      "1340": "w-full max-w-full",
     },
     /**
      * `top` — the export's `margin:0 auto`, on twelve screens.

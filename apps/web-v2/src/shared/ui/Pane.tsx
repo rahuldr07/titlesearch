@@ -49,8 +49,14 @@ export const paneClasses = {
    * document's scroll area out to 3,153px on Review: a page that scrolled
    * 2,150px of blank ground past content that was itself correctly clipped.
    * Nothing was visible, so nothing looked wrong — only the scrollbar knew.
+   *
+   * `min-w-0` is the same argument on the other axis. The shell sets it on the
+   * content column and on `main` today, so a pane nested there is already safe
+   * — but the class costs one word and the failure it prevents is the same
+   * silent one, so it lives here rather than depending on every future caller
+   * having read `rootRoute`.
    */
-  body: "relative min-h-0 flex-1 overflow-y-auto",
+  body: "relative min-h-0 min-w-0 flex-1 overflow-y-auto",
   footer: "flex-none",
 } as const;
 
