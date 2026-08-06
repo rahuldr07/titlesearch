@@ -711,8 +711,25 @@ isolation test on the admin DSN passes while proving nothing.
 
 **CONTRACT — the fixture.** A session-scoped fixture on `admin_dsn` seeds, before
 any app-role connection opens: tenants **A** and **B**, **two** orders for A,
-**exactly one** for B. Seeding must set the tenant GUC per tenant — *proven: even
-the migration role, inheriting the owner, is refused by policy under `FORCE`.*
+**exactly one** for B.
+
+> **Correction, 2026-08-06.** This contract used to add: *"Seeding must set the
+> tenant GUC per tenant — proven: even the migration role, inheriting the owner,
+> is refused by policy under `FORCE`."* Both halves are now wrong.
+>
+> `admin_dsn` is the **container superuser**, and this task's own opening line
+> says superusers bypass RLS unconditionally. A superuser seeding two tenants
+> needs no GUC at all — the requirement contradicts the sentence above it.
+>
+> And "the migration role, inheriting the owner" describes a grant that no
+> longer exists: Task 2 now grants membership `WITH INHERIT FALSE, SET TRUE`, so
+> `titlepipe_migration` inherits nothing and must `SET ROLE` explicitly. Having
+> done so it *is* refused by policy under `FORCE` — Task 4 measured exactly that
+> — but for a different reason than the sentence gives.
+>
+> **Seed as the superuser and say in the fixture why no GUC is needed.** If you
+> seed any other way, the GUC becomes mandatory and the reason must be the
+> measured one, not the stale one.
 
 **Engine: `pool_size=1, max_overflow=0`.** With a larger pool, B may get a fresh
 connection and pass for the wrong reason.
