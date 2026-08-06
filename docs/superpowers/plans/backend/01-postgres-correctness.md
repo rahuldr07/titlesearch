@@ -765,10 +765,42 @@ non-superuser and produced exactly these results.*
 
 ## Task 7 · CI
 
-**CONTRACT** `.github/workflows/backend.yml` gains a `postgres:18.4` service,
-runs `roles.sql` before Alembic, `alembic upgrade head`, the core-api suite,
-**the `libs/domain` suite** (otherwise Task 0's proof never runs), and the rules
-gate.
+**CONTRACT** `.github/workflows/backend.yml` runs the rules gate as a step of its
+own, and every database proof in Tasks 1–6 actually executes there.
+
+> **Three premises in the original contract are stale or wrong. Checked
+> 2026-08-06.**
+>
+> **"gains a `postgres:18.4` service" — probably not.** Every database test
+> starts its own `postgres:18.4` through **testcontainers**, and GitHub's
+> `ubuntu-24.04` runner has Docker. A service container is redundant unless
+> `TP_TEST_DATABASE_URL` points at it — and if it does, the Task-1 validator
+> **refuses it**, because a service container answers on `localhost` and loopback
+> now requires `TP_TEST_DATABASE_URL_LOOPBACK_IS_DELIBERATE`. Decide, and if you
+> add a service, say why testcontainers was not enough and set the
+> acknowledgement variable deliberately rather than discovering it.
+>
+> **"runs `roles.sql` before Alembic, `alembic upgrade head`" — the suite already
+> does both.** `roles_applied` runs `roles.sql`; `migrated_database` runs
+> `upgrade head` and `downgrade base`. A separate CI step would run them against
+> a *different* database from the one under test, or the same one twice.
+>
+> **"the `libs/domain` suite (otherwise Task 0's proof never runs)" — it already
+> runs.** The `project` matrix has carried `libs/domain` since before this plan
+> was written. Verified.
+>
+> **What is genuinely missing is the rules gate.** It reaches CI only through
+> `uvx pre-commit run --all-files` in the `hygiene` job — real, but that job is
+> currently red on `main` for unrelated whitespace in `apps/web-v2` and
+> `design-export`, so a new violation lands in existing noise. A direct step is
+> the one line this task most needs.
+
+**Also unresolved:** `scripts/` is type-checked by nothing. CI runs `pyright` per
+uv project and `scripts/` is not one — 1,121 lines including two security
+controls. Measured: `include = [..., "scripts"]` does **not** work (29 strict
+errors in `scripts/tests`, 248 in the `gate0` archive); `include = [...,
+"../../scripts/*.py"]` reports 0 errors over 31 files. The clean answer is a
+`scripts/pyproject.toml` and a seventh matrix entry.
 
 **Squawk lints `.sql`, and the migrations are Python.** Either emit SQL with
 `alembic upgrade head --sql` and lint that, or scope Squawk to
@@ -777,6 +809,41 @@ implying coverage that does not exist.
 
 State in the workflow that **Squawk does not cover GRANT, POLICY, RLS or
 roles** — Tasks 2 and 4's catalog tests do.
+
+**Squawk is not configured anywhere in this repository.** Checked 2026-08-06: no
+reference in any workflow, `pyproject.toml`, pre-commit config or CI file. So
+this whole paragraph is about a tool that does not run. Either add it — with the
+scoping decision above made explicitly — or delete the paragraph. **Do not leave
+a plan describing lint coverage that does not exist**, which is the same defect
+the paragraph itself warns against.
+
+**PROOF — this task had none, which is why it is written out here.**
+
+A workflow cannot be run locally, so the proof cannot be "CI passed". It must be
+that **the workflow and the local gate cannot drift apart silently**:
+
+- a test parses `.github/workflows/backend.yml` and asserts every gate the repo
+  defines appears as a step — **derived by parsing, not compared to a hardcoded
+  list**, or it becomes the same constant-against-itself defect that let Task 3's
+  enum test pass while the two NA states were collapsed;
+- the YAML parses and every command it names exists and is runnable;
+- the `project` matrix covers every directory that has a `pyproject.toml`, so a
+  new package cannot be added and silently go unchecked.
+
+**INJECTION — this task had none either. All four must fail:**
+
+| # | break | must fail |
+|---|---|---|
+| 1 | delete the rules-gate step from the workflow | the drift test |
+| 2 | remove one project from the `project` matrix | the matrix-coverage test |
+| 3 | add a directory with a `pyproject.toml` and no matrix entry | the same test — this is the direction that actually happens |
+| 4 | corrupt the workflow YAML | the parse test, with a message naming the file |
+
+**The `hygiene` job is red on `main` for reasons predating this plan** — trailing
+whitespace in `apps/web-v2` and `design-export`, plus four container jobs and the
+security job. Fixing those is out of scope for Plan 01, but **say so in the
+report**: a green Plan 01 sitting inside a red workflow is not the same thing as
+a green pipeline, and nobody should discover that later.
 
 ---
 
