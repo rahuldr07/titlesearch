@@ -50,7 +50,7 @@ export const paneClasses = {
    * 2,150px of blank ground past content that was itself correctly clipped.
    * Nothing was visible, so nothing looked wrong — only the scrollbar knew.
    */
-  body: "relative min-h-0 flex-1 overflow-y-auto",
+  body: "relative min-h-0 min-w-0 flex-1 overflow-y-auto",
   footer: "flex-none",
 } as const;
 

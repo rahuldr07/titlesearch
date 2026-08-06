@@ -65,7 +65,7 @@ export function OrderStrip() {
      */
     <div
       data-testid="order-strip"
-      className="flex items-center gap-9 border-b border-line-strong bg-surface-panel px-14 py-6.5"
+      className="flex items-center gap-4 lg:gap-9 border-b border-line-strong bg-surface-panel px-6 lg:px-14 py-4 lg:py-6.5 overflow-x-auto"
     >
       {/*
         OFF AN ORDER, THIS SLOT IS EMPTY — not the product name.

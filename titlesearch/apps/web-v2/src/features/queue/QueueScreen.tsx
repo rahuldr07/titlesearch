@@ -104,7 +104,8 @@ export function QueueScreen() {
              site only has to mean it. */
           title={
             <>
-              Work comes <em>to you.</em>
+              <span className="whitespace-nowrap">Work comes</span>{" "}
+              <em className="whitespace-nowrap">to you.</em>
             </>
           }
           lede={
