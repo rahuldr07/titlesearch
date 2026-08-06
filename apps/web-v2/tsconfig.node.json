@@ -36,6 +36,7 @@
     "playwright.config.ts",
     "playwright.live.config.ts",
     "vocabulary.test.ts",
-    "authz.test.ts"
+    "authz.test.ts",
+    "contract-parity.test.ts"
   ]
 }

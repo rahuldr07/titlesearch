@@ -10,12 +10,17 @@ name: migration harness
 # no execution path, so "we will notice when an endpoint moves and breaks the
 # app" was a plan rather than a mechanism.
 #
+# It now carries a SECOND gate for the same reason: the contract-parity vitest
+# project, which compares core-api's Pydantic response fixture against the real Zod
+# schemas. `frontend.yml` runs it but does not watch `services/**`, so a backend
+# change that regenerates the fixture would never have reached it. See the step.
+#
 # Every step here runs a real command. `docs/superpowers/plans/backend/
 # 01-WHAT-HAPPENED.md` §5 records five separate ways a CI check shipped green
 # while proving nothing — the check's name inside an `echo`, `if: false`,
 # `continue-on-error`, an `if:` naming a trigger that does not exist, and the
-# name in a shell comment. There is no `continue-on-error` in this file, and the
-# harness step's exit status is the job's.
+# name in a shell comment. There is no `continue-on-error` in this file, and both
+# gate steps' exit statuses are the job's.
 
 on:
   push:
@@ -27,6 +32,12 @@ on:
       - "packages/**"
       - "services/**"
       - "libs/**"
+      # The wire fixture both sides are answerable to. It is the artifact the two
+      # contract gates share and it belongs to neither tree, so before it was
+      # named here a PR editing only `contract-fixtures/` triggered NO workflow:
+      # `frontend.yml` watches `apps/**` and `packages/**`, `backend.yml` the
+      # services side, and neither reaches a file at the repository root.
+      - "contract-fixtures/**"
       # The enforcement surface: the workspace wiring the harness builds
       # through, and this file itself.
       - "pnpm-lock.yaml"
@@ -78,6 +89,28 @@ jobs:
 
       - name: Install the workspace
         run: pnpm install --frozen-lockfile
+
+      # THE CONTRACT GATE, AND THIS IS THE ONLY WORKFLOW THAT CAN RUN IT ON EITHER
+      # SIDE'S CHANGE.
+      #
+      # `contract-parity.test.ts` reads `contract-fixtures/rules-response.json` —
+      # produced by core-api's Pydantic models — and parses it with the real Zod
+      # schemas. It is in `frontend.yml` too (as part of `pnpm --filter web-v2
+      # test`), but that workflow's filter names `apps/**` and `packages/**` and NOT
+      # `services/**`. So the change class this gate exists for — edit
+      # `api/schemas/rules.py`, regenerate the fixture — ran `backend.yml` alone,
+      # where the Python side passes BY CONSTRUCTION because the fixture was just
+      # regenerated from the new models, and the only check that can say "the
+      # contract refuses this shape" never executed.
+      #
+      # `--project gates` and not `pnpm --filter web-v2 test`: the `storybook`
+      # project is a real browser suite, and dragging it onto every backend commit
+      # is the cost this workflow exists to avoid. The gates project is node-env and
+      # needs no browser, so it runs BEFORE the chromium install below and fails
+      # fast. Adding `services/**` to `frontend.yml` would have been the other way
+      # to close the hole and would have had exactly that cost.
+      - name: Contract parity (Pydantic fixture vs the real Zod schemas)
+        run: pnpm --filter web-v2 exec vitest run --project gates
 
       - name: Install Playwright chromium
         run: pnpm --filter web-v2 exec playwright install --with-deps chromium
