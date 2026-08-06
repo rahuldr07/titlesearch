@@ -8,16 +8,25 @@
 the real browser app instead of the mock. Plus the switch that makes every later
 endpoint migratable.
 
-### 🔴 DO NOT START UNTIL PLAN 01'S PROOF HAS RUN
+### ✅ ENTRY GATE CLOSED — Plan 01 is proven (2026-08-05)
 
-As of writing, Plan 01's seven isolation assertions have **never been executed
-against a real database** by anyone. The static gate is green; that is not the
-same thing. This plan consumes `tenant_session` and `TenantRepository` directly,
-so if tenancy is broken, everything built here inherits it and nothing here would
-notice.
+**Nine assertions** (the branch grew two beyond the plan's seven), all passing as
+`titlepipe_app` against an ephemeral `postgres:18.4` container, with
+`pool_size=1, max_overflow=0` and `pg_backend_pid()` asserted equal across
+checkouts — so tenant B genuinely reuses A's connection rather than getting a
+fresh one and passing for the wrong reason.
 
-**Gate to enter:** paste the seven assertions passing, plus both injections
-failing, from a real PostgreSQL 18.4. Then start.
+Both injections behaved:
+
+- **connect as the superuser → all 9 fail.** A surviving assertion would have
+  been one that never depended on isolation.
+- **remove the `after_begin` listener → 6 fail, 3 pass**, and the three
+  survivors are exactly the pure-denial assertions. See
+  [`00-HOW-TO-EXECUTE §1.1`](./00-HOW-TO-EXECUTE.md) — that result is the
+  strongest evidence in this repo for why positive controls are mandatory.
+
+Assertions 4 (savepoint) and 5 (raw Core connection) had never been executed
+before that branch; Plan 01 recorded them as predictions.
 
 ---
 
@@ -39,25 +48,25 @@ Three reasons, and the third is the one that matters:
 
 ## 🔴 HUMAN GATES
 
-| gate | why you cannot decide it |
+| gate | status |
 |---|---|
-| **Plan 01 proven** | see above |
-| **Is the rulebook global or per-tenant?** | it decides the table, the policy, and whether this endpoint needs a principal at all |
-| **Who may read a PENDING rule?** | `RuleStatus` is `live \| pending \| retired`, and a PENDING rule must not affect the pipeline. Whether it is *visible* is a separate question nobody has answered |
+| Plan 01 proven | ✅ **closed 2026-08-05** — nine assertions, both injections |
+| Is the rulebook global or per-tenant? | ✅ **RULED 2026-08-05: GLOBAL** |
+| **Who may read a PENDING rule?** | 🔴 **still open.** `RuleStatus` is `live \| pending \| retired`, and a PENDING rule must not affect the pipeline. Whether it is *visible* — and to whom — is a separate question nobody has answered. Ask before Task 3 |
 
-### The tenancy ruling, stated so it can be answered in one line
+### The tenancy ruling — RULED GLOBAL, 2026-08-05
 
 `packages/contract/src/entities.ts:153-163` defines `Rule` with **no `tenant_id`**,
 and `jurisdiction_scope` instead. `packages/mocks/src/handlers.ts:1407` serves one
 global `ruleStore` to everyone. Plan 01 built no `rules` table.
 
-**Recommendation: the rulebook is GLOBAL, not tenant-scoped.** It is the shop's
+**RULED: the rulebook is GLOBAL, not tenant-scoped.** It is the shop's
 own body of rules (R13–R24), engineer-confirmed, scoped by *jurisdiction* rather
 than by customer. Two firms searching Clayton County are governed by the same
 rule. Making it tenant-scoped would mean every tenant maintains a private copy of
 the rulebook, which is neither what the contract says nor what the product means.
 
-**Consequence if that is the ruling:** `rules` is the first table that is
+**Consequence, now binding:** `rules` is the first table that is
 deliberately **not** a `_TenantRow`. It gets RLS-exempt treatment and the catalog
 tests must be told so explicitly — otherwise Plan 01's "every table in `public`
 is forced and tenant-scoped" assertions fail on it, and someone will "fix" that
@@ -99,7 +108,7 @@ every endpoint works.*
 
 ## Task 1 · The `rules` table
 
-**Depends on the tenancy ruling.** Under the recommendation:
+**The tenancy ruling is made — `rules` is global.**
 
 **CONTRACT** Migration `0003_rules.py`. Columns matching
 `packages/contract/src/entities.ts:153-163` exactly: `id`, `code`, `text`,

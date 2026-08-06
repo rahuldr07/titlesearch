@@ -26,6 +26,46 @@ This is not cynicism, it is the measured behaviour of this repo's own history:
 So: **you run the gate. Not the subagent.** A task is done when *you* have seen
 the commands pass in your own tool output, and seen the injection fail.
 
+### 1.1 Why every proof needs a positive control — measured, 2026-08-05
+
+Plan 01's isolation suite was run against a real `postgres:18.4` with the tenant
+mechanism **torn out** — the `after_begin` listener removed entirely, so no
+tenant is ever established.
+
+Six of nine assertions failed, as they should. **Three passed.** They were:
+
+```
+test_3   a session with no tenant reads zero rows rather than raising
+test_5   a raw core connection establishes no tenant and sees nothing
+test_6   the app role cannot become the owner
+```
+
+Look at what those three have in common: **every one of them is satisfied by a
+database that denies everybody everything.** They are pure-denial assertions. A
+system with no tenant scoping at all — and a system with perfect tenant scoping —
+both pass all three.
+
+Without the positive controls (`1b`, each tenant sees its *own* rows across every
+table; `2b`, an own-tenant write *succeeds*), ripping out the entire tenant
+mechanism would have produced what looked like a clean run.
+
+**So: for every proof you write, ask what a broken-in-the-obvious-way system
+would score on it.** If the answer is "full marks", you have written a denial
+test and called it an isolation test. The suite must be able to tell *isolated*
+from *broken*, and only a control that FAILS when the mechanism is removed can do
+that.
+
+It took three rounds to get right on Plan 01: `1b` covered only `orders` until a
+review caught it, `1a` could not observe a pool checkout at all until it was
+rewritten to read the residual off a raw `engine.connect()`, and `2b` did not
+exist until the day the suite was finished.
+
+### 1.2 A small trap that will waste your time
+
+`services/core-api/pyproject.toml` sets `addopts = "-q"`. **pytest's verbosity is
+a counter**, so a `-v` on the command line is cancelled by that `-q` and you get
+quiet output while believing you asked for verbose. Use `-vv`.
+
 ---
 
 ## 2. The loop, per task
