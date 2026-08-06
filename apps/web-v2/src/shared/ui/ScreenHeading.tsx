@@ -49,9 +49,9 @@ const heading = cva(
     variants: {
       size: {
         /** the masthead the design draws on most screens (30px) */
-        "22": "text-5xl opsz-120",
+        "22": "text-3xl sm:text-5xl opsz-120",
         /** the few it draws larger — the queue and upload are the clearest (38px) */
-        "26": "text-6xl opsz-144",
+        "26": "text-4xl sm:text-6xl opsz-144",
       },
     },
     defaultVariants: { size: "22" },

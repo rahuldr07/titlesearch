@@ -26,6 +26,10 @@ describe("Pane", () => {
       paneClasses.body,
       "min-h-0 is what lets a flex child shrink below its content; without it the page grows instead of the box scrolling",
     ).toContain("min-h-0");
+    expect(
+      paneClasses.body,
+      "min-w-0 is the same guarantee on the other axis; without it a wide child pushes the pane past its column instead of scrolling inside it",
+    ).toContain("min-w-0");
   });
 
   test("the body is a containing block, so sr-only labels cannot escape the frame", () => {
@@ -110,10 +114,28 @@ describe("Screen", () => {
    * base, and the default slot is the one the mockup actually draws.
    */
   test("the padding scale matches the mockup's sheet, on the 2px base", () => {
-    expect(screenScroller({ pad: "28x32" })).toContain("py-15");
-    expect(screenScroller({ pad: "28x32" })).toContain("px-18");
-    expect(screenScroller({ pad: "32x40" })).toContain("py-17");
-    expect(screenScroller({ pad: "40" })).toContain("p-22");
+    expect(screenScroller({ pad: "28x32" })).toContain("lg:py-15");
+    expect(screenScroller({ pad: "28x32" })).toContain("lg:px-18");
+    expect(screenScroller({ pad: "32x40" })).toContain("lg:py-17");
+    expect(screenScroller({ pad: "40" })).toContain("lg:p-22");
+  });
+
+  /**
+   * THE DRAWN VALUE IS THE `lg` VALUE, and every slot has a smaller one below
+   * it. Asserted as a pair because either half alone is a bug that looks fine
+   * in review: a slot with no `lg:` has silently lost the mockup's padding at
+   * full width, and a slot with only `lg:` has none at all on a narrow one.
+   */
+  test("every padding slot steps down below lg and restores the drawn value at lg", () => {
+    for (const pad of ["28x32", "32x40", "26x30", "24x28", "36x40", "40"] as const) {
+      const emitted = screenScroller({ pad });
+      const base = emitted.match(/(?:^|\s)p[xy]?-\d+(?:\.\d+)?/g) ?? [];
+      const wide = emitted.match(/lg:p[xy]?-\d+(?:\.\d+)?/g) ?? [];
+      expect(base.length, `pad="${pad}" has no unprefixed padding, so a narrow window gets none`)
+        .toBeGreaterThan(0);
+      expect(wide.length, `pad="${pad}" has no lg: padding, so it never reaches the drawn value`)
+        .toBe(base.length);
+    }
   });
 
   /**
@@ -125,6 +147,35 @@ describe("Screen", () => {
   test("padding never eats the measure — they are different elements", () => {
     expect(screenClasses({ measure: "860" })).not.toMatch(/\bp[xy]?-\d/);
     expect(screenScroller({ pad: "28x32" })).not.toMatch(/\bmax-w-/);
+  });
+
+  /**
+   * A CENTRED CARD TOO TALL FOR THE WINDOW KEEPS THE SLOT'S PADDING.
+   *
+   * Not the usual argument against alignment-centring — browsers clamp an
+   * overflowing flex item to the start edge, so the top is NOT unreachable
+   * (measured on `/signin` at 900x240: +2px, not negative). The defect is that
+   * the clamp lands the ITEM against the pane, and the scroller's 28px `p-14`
+   * is not part of the item: the card renders 2px from the edge where the slot
+   * draws 28. Auto margins resolve to 0 in the same case and the padding stays
+   * — measured +28px — while centring with free space is unchanged.
+   *
+   * Both halves are asserted because either alone is inert: `m-auto` under
+   * `justify-content:center` is ignored, and a bare `flex-col` scroller with no
+   * `m-auto` child is not centred at all.
+   */
+  test("a centred card keeps its padding when it outgrows the window", () => {
+    const scroller = screenScroller({ placement: "centre" });
+    expect(scroller, "the scroller must be a plain column for auto margins to have free space")
+      .toContain("flex-col");
+    expect(
+      scroller,
+      "alignment-centring clamps an overflowing card flat against the pane, dropping the slot's padding from 28px to 2",
+    ).not.toMatch(/\bitems-center\b|\bjustify-center\b/);
+    expect(
+      screenClasses({ placement: "centre" }),
+      "the child half of the pair — without m-auto the column is top-aligned, never centred",
+    ).toContain("m-auto");
   });
 
   test("pad has no cva default, so bleed can suppress it", () => {
