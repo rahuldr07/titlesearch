@@ -20,6 +20,7 @@ from collections.abc import Callable, Iterator, Mapping
 from datetime import UTC, datetime
 from pathlib import Path
 from types import MappingProxyType
+from uuid import UUID
 
 import pytest
 from alembic import command
@@ -1262,6 +1263,159 @@ def migrated_database(roles_applied: str, migration_dsn: str) -> Iterator[str]:
         yield roles_applied
     finally:
         _teardown_migrated_database(config, roles_applied, upgraded)
+
+
+# --- the isolation seed -----------------------------------------------------
+#
+# Two tenants and THREE orders, split two-to-one. The asymmetry is the whole
+# design: a seed of one row each makes "exactly 1" true for both tenants, so a
+# positive control reading `1` would be satisfied by a session that had leaked
+# into the other tenant's row. Two for A and one for B means B's count is a
+# statement about B.
+#
+# 1111/2222 rather than a fresh pair, deliberately. `test_tenant_session.py` and
+# `test_forced_rls_and_grants.py` already use exactly these two literals and say
+# in their comments that they do so on purpose — a reader moving between the
+# three files should not have to work out whether a different uuid means
+# something. What differs here is the ROW COUNT, not the identity.
+ISOLATION_TENANT_A = UUID("11111111-1111-1111-1111-111111111111")
+ISOLATION_TENANT_B = UUID("22222222-2222-2222-2222-222222222222")
+
+# tenant -> how many `orders` rows it gets. Ordered A then B, and `dict` in
+# CPython preserves insertion order, so the seed writes A's rows first — which
+# is what makes an off-by-one in the reader legible in a failure message.
+ISOLATION_ORDER_COUNTS: Mapping[UUID, int] = MappingProxyType(
+    {ISOLATION_TENANT_A: 2, ISOLATION_TENANT_B: 1}
+)
+
+
+def _seed_isolation_tenants(engine: Engine) -> Mapping[UUID, tuple[UUID, ...]]:
+    """Two tenants and their orders, committed, written AS THE SUPERUSER.
+
+    🔴 NO TENANT GUC IS SET HERE, AND THAT IS NOT AN OMISSION. A SUPERUSER
+       BYPASSES ROW-LEVEL SECURITY UNCONDITIONALLY — `FORCE` removes the
+       OWNER's exemption, not a superuser's — so every policy on `tenants` and
+       `orders` is simply not consulted on this connection and one session can
+       write both tenants' rows.
+
+    That is the same fact that makes an isolation assertion on `admin_dsn`
+    worthless, and it is worth having the two consequences of it written down in
+    one place: the superuser is the only role that can SEED both tenants, and it
+    is the one role that must never READ through a policy. Everything in
+    `tests/test_tenant_isolation.py` connects as `titlepipe_app`.
+
+    An earlier revision of this contract asked for a per-tenant `SET LOCAL` here
+    and justified it with "even the migration role, inheriting the owner, is
+    refused". That justification no longer describes this cluster: `roles.sql`
+    makes the membership `INHERIT FALSE`, so the migration role inherits nothing
+    and the seed does not run as it in any case. Neither the GUC nor the
+    justification is reinstated.
+
+    COMMITTED rather than rolled back, because every reader is a DIFFERENT
+    connection and an uncommitted row is invisible to one. A denial measured
+    against a row that was never there is not a denial.
+
+    `DELETE` first — `orders` then `tenants` — so the contents are a function of
+    this call rather than of whatever ran before it. There is no foreign key
+    between the two, so the order is legibility rather than necessity;
+    `audit_log` is deliberately untouched because `0001`'s append-only trigger
+    refuses a DELETE against it.
+
+    RETURNING PER ROW RATHER THAN ONE MULTI-ROW INSERT, AND THAT IS MEASURED
+    RATHER THAN CAUTIOUS. A `text()` construct executed with a LIST of parameter
+    dictionaries is an executemany, and SQLAlchemy's insertmanyvalues machinery
+    — which is what makes RETURNING work for a batch — applies to compiled
+    `Insert` constructs, not to raw textual SQL. MEASURED 2026-08-06 against
+    postgres:18.4 / SQLAlchemy 2.0.51, two parameter dictionaries through one
+    `INSERT … RETURNING id`:
+
+        ResourceClosedError: This result object does not return rows. It has
+        been closed automatically.
+
+    The ids are what the tests assert on — a count of one is satisfied by the
+    wrong row as readily as by the right one — so they have to come back, and a
+    loop is how they do.
+    """
+    seeded: dict[UUID, tuple[UUID, ...]] = {}
+    with engine.begin() as connection:
+        connection.execute(text("DELETE FROM orders"))
+        connection.execute(text("DELETE FROM tenants"))
+        for tenant, count in ISOLATION_ORDER_COUNTS.items():
+            connection.execute(
+                text("INSERT INTO tenants (id) VALUES (:tenant)"), {"tenant": tenant}
+            )
+            seeded[tenant] = tuple(
+                UUID(
+                    str(
+                        connection.execute(
+                            text("INSERT INTO orders (tenant_id) VALUES (:tenant) RETURNING id"),
+                            {"tenant": tenant},
+                        ).scalar_one()
+                    )
+                )
+                for _ in range(count)
+            )
+    return MappingProxyType(seeded)
+
+
+@pytest.fixture(scope="module")
+def isolation_seed(
+    migrated_database: str, seam_engine: Callable[[str], Engine]
+) -> Mapping[UUID, tuple[UUID, ...]]:
+    """tenant -> its committed `orders` ids. A: two rows, B: one.
+
+    ---------------------------------------------------------------------------
+    🔴 MODULE-SCOPED, NOT SESSION-SCOPED, AND THE SCOPE IS FORCED RATHER THAN
+       CHOSEN. Task 6's contract asks for session scope; pytest refuses it.
+    ---------------------------------------------------------------------------
+    The seed has to happen after `alembic upgrade head`, so it depends on
+    `migrated_database` — and that fixture is MODULE-scoped for a reason its own
+    docstring records: session scope leaves `alembic_version` in place and
+    `tests/test_roles.py::test_a_table_created_after_set_role_belongs_to_the_owner`
+    then fails with `DuplicateTable`. A session-scoped fixture may not request a
+    module-scoped one. MEASURED 2026-08-06 against pytest 9.1.1, this fixture
+    respelled `scope="session"` and nothing else changed:
+
+        ScopeMismatch: You tried to access the module scoped fixture
+        migrated_database with a session scoped request object.
+
+    Module scope delivers the property the contract is actually about — the seed
+    is committed BEFORE ANY APP-ROLE CONNECTION IN THE MODULE OPENS, because
+    every test there requests this fixture and pytest builds it first. Widening
+    it further would buy nothing: the tables do not outlive the module.
+
+    THE FLOOR IS ASSERTED HERE rather than in each test, for the reason
+    `test_forced_rls_and_grants.py` gives about derivations. A seed that wrote
+    nothing makes every "0 rows" assertion in the isolation proof true and
+    vacuous at the same time, without changing a single line of it. The
+    asymmetry is checked too, not just the total: two-and-one is what makes the
+    positive control's `1` a statement about B rather than about either tenant.
+    """
+    engine = seam_engine(migrated_database)
+    try:
+        seeded = _seed_isolation_tenants(engine)
+    finally:
+        engine.dispose()
+
+    written = {tenant: len(ids) for tenant, ids in seeded.items()}
+    assert written == dict(ISOLATION_ORDER_COUNTS), (
+        f"the seed wrote {written}, not {dict(ISOLATION_ORDER_COUNTS)}. Every "
+        f"denial in the isolation proof would then be a statement about an empty "
+        f"table, and the positive control's expected count would be wrong."
+    )
+    return seeded
+
+
+@pytest.fixture(scope="session")
+def isolation_tenant_a() -> UUID:
+    """The tenant with TWO seeded orders. Writes, and is the reference for denials."""
+    return ISOLATION_TENANT_A
+
+
+@pytest.fixture(scope="session")
+def isolation_tenant_b() -> UUID:
+    """The tenant with EXACTLY ONE seeded order. The positive control's subject."""
+    return ISOLATION_TENANT_B
 
 
 @pytest.fixture(scope="session")
