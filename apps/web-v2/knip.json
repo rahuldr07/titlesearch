@@ -28,6 +28,9 @@
     "@testing-library/react",
     "@axe-core/playwright"
   ],
+  "ignoreBinaries": [
+    "psql"
+  ],
   "rules": {
     "types": "warn",
     "enumMembers": "warn"

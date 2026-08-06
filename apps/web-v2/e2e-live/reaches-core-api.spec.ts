@@ -4,71 +4,82 @@ import { expect, test } from "@playwright/test";
  * THE POSITIVE CONTROL. Everything else in this directory is a denial, and a
  * denial passes just as happily against an app that is simply broken.
  *
- * What is asserted is core-api's FINGERPRINT, arriving in the browser:
- *
- *   - the error envelope its exception handlers emit, carrying a STABLE `code`,
- *     and
- *   - the `x-request-id` its correlation middleware stamps on every response,
- *     holding the same value the envelope reports.
- *
- * No other party in this system produces that pair. MSW's `GET /api/rules`
- * answers 200 with `{ rules: [...] }` and stamps no header; a proxy aimed at
- * nothing answers 500 from Vite with no envelope at all; a proxy that was never
- * configured gets the preview server's own 404, which is HTML. So this test
- * fails when the switch is removed, when the proxy is wrong, and when MSW is
- * left running — which is the only reason the other two tests mean anything.
- *
  * ---------------------------------------------------------------------------
- * 🔴 THE 404 ERA ENDED. This asserted `404` / `NOT_FOUND` and explained that
- *    "`/api/rules` is a 404 TODAY… core-api serves no product endpoint yet",
- *    adding that "when the endpoint lands, this assertion changes to the rows
- *    and stops being a control." The endpoint landed — Plan 02 Task 4 — and this
- *    file failed on exactly that line, `Expected: 404 / Received: 503`.
+ * 🔴 THE 404 ERA ENDED, THEN THE 503 ERA ENDED. Both are recorded because the
+ *    shape of the correction repeated.
+ *
+ *    This file first asserted `404` / `NOT_FOUND` and explained that core-api
+ *    "serves no product endpoint yet". Task 4 landed `GET /api/rules` and it
+ *    failed with `Expected: 404 / Received: 503`. It was rewritten to assert
+ *    `DEPENDENCY_UNAVAILABLE`, and said in its own words that whether the
+ *    harness gains a database "is Task 5's decision, not this file's", and that
+ *    the day it did, "rows would arrive and `rules` would be present" — which is
+ *    exactly what fails first.
+ *
+ *    TASK 5 DECIDED: THE HARNESS GETS A DATABASE. `migration-harness.yml` now
+ *    stands up Postgres, migrates it and seeds the rulebook from
+ *    `packages/mocks`, because the deliverable of Plan 02 is a real screen
+ *    rendering real rows and there is no way to show that against a service
+ *    whose only honest answer is an outage.
  * ---------------------------------------------------------------------------
  *
- * IT DID NOT STOP BEING A CONTROL, AND THE NEW FINGERPRINT IS STRONGER THAN THE
- * OLD ONE. A 404 is what any HTTP server on earth answers for a path it does not
- * have, so the old assertion leaned entirely on the envelope and the header
- * beside it. `DEPENDENCY_UNAVAILABLE` is a code only this service's own
- * `DOMAIN_ERROR_STATUS` produces, and it is reached by core-api actually
- * attempting the read and failing — a route that exists, a handler that ran.
- * The 404 was evidence about WHO answered; this is evidence about who answered
- * AND that the endpoint under migration is the one that answered.
+ * ## What is asserted now, and why it is the strongest of the three
  *
- * WHY 503 AND NOT THE ROWS: THE HARNESS HAS NO DATABASE, ON PURPOSE.
- * `migration-harness.yml` boots core-api on `TITLEPIPE_ENVIRONMENT=development`
- * alone and says so in its own comment — "NO DATABASE… standing up Postgres here
- * would be scope this job does not need." Under Task 4 that is no longer a gap
- * in the endpoint, it is the endpoint working: `app_database_url` is unset, so
- * `api/routers/rules.py` raises `DependencyUnavailableError` and `api/errors.py`
- * renders the envelope below. **Whether this harness gains a database so the
- * screen can render real rows is Task 5's decision, not this file's.** Do not
- * add one here, and do not read the 503 as something to fix.
+ * The 404 was evidence about WHO answered. The 503 added that the endpoint under
+ * migration is the one that answered — but it was still core-api FAILING, and a
+ * failure is a thin thing to certify a migration on. This asserts core-api
+ * SUCCEEDING, in the browser, with the rows on screen.
  *
- * Measured against a core-api booted from this tree with no database:
+ * The trap that creates is that MSW serves the same rulebook: `demoRules` is
+ * what `e2e-live/seedRulebook.mjs` seeds FROM, deliberately, so the frozen specs
+ * in `apps/web-v2/e2e` can name `R13` and pass on either side. So "R13 is on
+ * screen" no longer distinguishes live from mock at all, and this file cannot
+ * rest on it. THREE THINGS SEPARATE THEM, and none is imitable by the mock:
  *
- *   HTTP/1.1 503 Service Unavailable
- *   x-request-id: 0cc23a8b-620b-4b61-95c7-961604a83ebb
- *   {"error":{"code":"DEPENDENCY_UNAVAILABLE","message":"The rulebook is
- *    temporarily unavailable. Try again shortly.","request_id":"0cc23a8b-…",
- *    "details":{}}}
+ *   `x-request-id`   stamped by core-api's correlation middleware on EVERY
+ *                    response, success included — verified against the 200 here,
+ *                    not assumed from the error path. MSW stamps nothing.
+ *   the ids          `seedRulebook.mjs` writes no `id`; Postgres mints one from
+ *                    `gen_random_uuid()`. MSW answers `rule_r13`, `rule_r22`,
+ *                    `rule_tax_vintage`, `rule_draft_hoa` — literal strings that
+ *                    match no UUID. THIS IS THE LOAD-BEARING ONE: it is the only
+ *                    assertion here that survives somebody teaching MSW to stamp
+ *                    a request id, and it says the row came out of a table.
+ *   no worker        `VITE_API_MODE=live` registers none.
+ *
+ * Measured against a core-api booted from this tree with the seeded database:
+ *
+ *   HTTP/1.1 200 OK
+ *   x-request-id: 711d98a8-21b5-4ca2-b7e2-92b6d72684da
+ *   {"rules":[{"id":"71923834-329b-4275-9d32-58e20102f890","code":"DRAFT-HOA-AGE",…
  */
-test("core-api answers /api/rules in the browser, and MSW is not running", async ({
+
+/**
+ * `demoRules`' four codes, and this is a LITERAL rather than an import of the
+ * fixture. Importing it would make the seed and the assertion the same
+ * statement, so a seed that wrote the wrong table, wrote nothing, or wrote rows
+ * the endpoint then dropped would agree with itself. Written out, the list is an
+ * independent claim about what must arrive.
+ *
+ * Sorted, because `db/rules.py::list_all` chooses the order and this file is not
+ * the place to pin it — `services/core-api/tests/test_rule_repository.py` is.
+ */
+const SEEDED_CODES = ["DRAFT-HOA-AGE", "ESC-TAX-01", "R13", "R22"];
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+test("core-api's rows reach the browser's rulebook, and MSW is not running", async ({
   page,
 }) => {
   await page.goto("/rulebook");
 
-  // The screen halts, because a 503 is not a rulebook. Asserted here as well as
-  // in the denial spec so this test also covers "live mode never renders mocks"
-  // with the backend genuinely reachable — the case a dead port cannot produce.
-  //
-  // NOTE that this half no longer DISTINGUISHES this test from
-  // `halts-without-core-api.spec.ts`: an unreachable core-api and a reachable one
-  // with no database now paint the same screen. That was already true of the old
-  // 404 and is why that spec's own docstring says it "proves very little" alone.
-  // Everything below is what separates them.
-  await expect(page.getByRole("alert")).toHaveText("Rulebook unavailable.");
-  await expect(page.getByTestId("rule-row-R13")).toHaveCount(0);
+  // THE SCREEN, FIRST. A wire assertion alone would pass against an app that
+  // fetched correctly and rendered nothing, which is the failure this whole plan
+  // is about. The book opens on LIVE, so R13 and R22 are the two visible rows;
+  // the pending draft is behind its own filter and `authz.spec.ts` drives it.
+  await expect(page.getByTestId("rule-row-R13")).toBeVisible();
+  await expect(page.getByTestId("rule-row-R22")).toBeVisible();
+  await expect(page.getByRole("alert")).toHaveCount(0);
 
   // IN-PAGE, not through Playwright's request context. A service worker
   // intercepts the browser's fetch and nothing else, so only a fetch the page
@@ -80,33 +91,30 @@ test("core-api answers /api/rules in the browser, and MSW is not running", async
     return {
       status: response.status,
       requestId: response.headers.get("x-request-id"),
-      body: (await response.json()) as unknown,
+      body: (await response.json()) as { rules?: { id: string; code: string }[] },
     };
   });
 
-  expect(answer.status).toBe(503);
+  expect(answer.status).toBe(200);
   expect(
     answer.requestId,
-    "core-api stamps x-request-id on every response; nothing else here does",
-  ).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+    "core-api stamps x-request-id on every response, success included; nothing else here does",
+  ).toMatch(UUID);
 
-  // The header and the envelope must agree. A hand-written 503 could carry one
-  // or the other; only the real middleware pair produces the same id in both.
-  //
-  // `DEPENDENCY_UNAVAILABLE` is asserted by name rather than accepting any code:
-  // the whole point of the envelope is that `code` is stable and machine-
-  // readable, and a test that took whatever code arrived would pass against a
-  // route answering `INTERNAL_ERROR` — which is what a bare `HTTPException` in
-  // the handler produces, and is a real defect this file should catch.
-  expect(answer.body).toMatchObject({
-    error: { code: "DEPENDENCY_UNAVAILABLE", request_id: answer.requestId },
-  });
+  const rules = answer.body.rules ?? [];
+  expect([...rules.map((rule) => rule.code)].sort()).toEqual(SEEDED_CODES);
 
-  // And it is not the mock's shape, stated directly rather than implied by the
-  // status — MSW could in principle be made to answer 503 too. This is also what
-  // fails first on the day the harness DOES get a database and nobody updates
-  // this file: rows would arrive and `rules` would be present.
-  expect(answer.body).not.toHaveProperty("rules");
+  // 🔴 THE ROWS CAME OUT OF POSTGRES. `seedRulebook.mjs` writes no `id` and lets
+  // `gen_random_uuid()` mint one, precisely so this line can exist: MSW's own
+  // answer to the same request carries `rule_r13` and friends, and no amount of
+  // making the mock look like a server changes that without editing the fixture
+  // the frozen specs depend on.
+  for (const rule of rules) {
+    expect(
+      rule.id,
+      `${rule.code} arrived with id ${rule.id} — MSW's spelling, not a database's`,
+    ).toMatch(UUID);
+  }
 
   // The contract's own words: `live` starts no worker. This is a check ON a
   // guard rather than the guard itself — `main.tsx` now REFUSES to boot when it

@@ -10,7 +10,7 @@ import { defineConfig } from "@playwright/test";
  * `apps/web-v2/e2e` is the mock suite and MUST NOT CHANGE. This is its sibling
  * so the same specs can later be pointed at a live backend by config alone.
  *
- * FIVE PROJECTS, and the first is the reason the rest mean anything:
+ * SIX PROJECTS, and the first is the reason the rest mean anything:
  *
  *   live-reaches-core-api     live build, proxy aimed at core-api. THE POSITIVE
  *                             CONTROL. Asserts core-api's own answer arrives in
@@ -24,6 +24,26 @@ import { defineConfig } from "@playwright/test";
  *   refuses-invalid-mode      a bundle built from a typo'd mode, asserting the
  *                             refusal is legible on screen rather than a white
  *                             page and a console line nobody opens.
+ *   live-frozen-rulebook      `apps/web-v2/e2e` itself — the frozen mock suite,
+ *                             unmodified — pointed at the live build. BREADTH,
+ *                             NOT PROOF. See the selection block below.
+ *
+ * 🔴 `live-reaches-core-api` IS THE ONLY PROJECT THAT FAILS WHEN THE SWITCH, THE
+ *    PROXY OR THE BUILD IS BROKEN. That is a fact about all five of the others,
+ *    and it is stated here in the plain form because a softer version of it was
+ *    in this file and was wrong. The label on `live-frozen-rulebook` read "THE
+ *    DELIVERABLE"; MEASURED 2026-08-06, changing that project's `baseURL` from
+ *    `LIVE_PORT` to `MOCK_PORT` — one line, and exactly the "MSW left running"
+ *    state this whole harness exists to catch — leaves it 7 of 7 GREEN. It is
+ *    satisfied by any HTTP server that returns `{rules:[…]}` in the right shape,
+ *    and establishes nothing about core-api, Postgres, or the switch.
+ *
+ * THE HARNESS NOW HAS A DATABASE, decided in Plan 02 Task 5 and previously
+ * deferred by `reaches-core-api.spec.ts`. Its positive control asserted a 503
+ * because core-api was booted with no `TITLEPIPE_APP_DATABASE_URL`; a service
+ * whose only honest answer is an outage cannot show a screen rendering rows, and
+ * rows are what Plan 02 exists to deliver. `e2e-live/seedRulebook.mjs` fills that
+ * database from `packages/mocks`, and `migration-harness.yml` stands it up.
  *
  * A denial alone would be satisfied by a working switch, a broken proxy, a
  * typo'd URL and an app that simply does not run — the pure-denial trap that
@@ -60,6 +80,109 @@ const NOWHERE = process.env.VITE_API_UNREACHABLE_TARGET ?? "http://127.0.0.1:839
 const LIVE_DIR = "dist-harness/live";
 const MOCK_DIR = "dist-harness/mock";
 const INVALID_DIR = "dist-harness/invalid";
+
+/**
+ * ---------------------------------------------------------------------------
+ * THE FROZEN SPECS THAT RUN AGAINST core-api, and the ones that cannot.
+ * ---------------------------------------------------------------------------
+ *
+ * `apps/web-v2/e2e` IS NOT MODIFIED BY THIS AND MUST NEVER BE. The `live-frozen-
+ * rulebook` project below points that directory at the live preview server and
+ * selects a subset of it; a spec that needed an edit to pass would be a contract
+ * mismatch or a product change, and either is a finding rather than a chore.
+ *
+ * 🔴 WHAT THIS PROJECT PROVES, AND WHAT IT DOES NOT.
+ *
+ * IT PROVES the frozen specs pass UNMODIFIED AGAINST THE LIVE BUILD. That is
+ * Task 5's stated CONTRACT and it is worth having: a contract mismatch or a
+ * product change would show up here as a spec that could not pass without being
+ * edited, and that is a finding rather than a chore.
+ *
+ * IT PROVES NOTHING ABOUT core-api, POSTGRES, OR THE SWITCH, and two comments in
+ * this repository used to say the opposite. MEASURED 2026-08-06, twice:
+ *
+ *   * point this project's `baseURL` at `MOCK_PORT` — one line, and precisely
+ *     the "MSW left running" state Task 0 exists to catch — and all 7 PASS;
+ *   * stop core-api entirely and 6 OF THE 7 STILL PASS. Only `authz` fails.
+ *     A stub answering `{"rules":[]}` gives the same 6.
+ *
+ * So it is BREADTH. `e2e-live/reaches-core-api.spec.ts` is the only thing in
+ * this directory that separates core-api from anything else that speaks JSON,
+ * and it does it on the row ids — Postgres mints UUIDs, MSW answers `rule_r13`.
+ *
+ * FIVE FROZEN SPEC FILES NAVIGATE TO `/rulebook`, AND NONE IS A PURE
+ * RULEBOOK-READ SPEC. Five, not six: an earlier version of this paragraph said
+ * six and claimed to have measured it. `review-refusals.spec.ts` was the sixth,
+ * and it NEVER GOES THERE — every `page.goto` in it is `/orders/{id}/review`,
+ * and the two occurrences of the word "rulebook" are prose at `:17` and `:178`.
+ * The count came from a grep and was then reported as a run. The exclusions
+ * below are not "it failed"; each names what the test actually needs.
+ *
+ * ## Runs, and what each one is worth
+ *
+ *   authz.spec.ts   `the engineer gate's confirm affordance…` — the only one
+ *                   that READS A RULE ROW. It opens the Pending filter, clicks
+ *                   `rule-row-DRAFT-HOA-AGE` and drives the confirm affordance
+ *                   across three roles, so it is the one test here that fails
+ *                   when the rulebook is empty. It needs no migrated endpoint
+ *                   beyond `GET /api/rules` because `canDo` is a CLIENT-side
+ *                   table and `ActingAs` is a client-side preview control — the
+ *                   screen asks the server for rules and for nothing else. It
+ *                   still cannot tell core-api from MSW: both serve `demoRules`.
+ *
+ *   routes.spec.ts  `renders /rulebook` — no uncaught error, no not-found card.
+ *   shell-frame     `the rail is a full-height column…` — navigates /rulebook
+ *                   and measures the chrome around it.
+ *   responsive      `the page never scrolls sideways at …px`, four widths.
+ *                   `/rulebook` IS ONE OF FOUR ROUTES EACH WALKS, and the other
+ *                   three — `/queue`, `/orders/ord_demo_1/review`,
+ *                   `/completeness` (`responsive-frame.spec.ts:28`) — are
+ *                   unmigrated. Under `live` each of these tests therefore
+ *                   spends three quarters of its time asserting that ERROR
+ *                   SCREENS do not scroll sideways. That is not worthless — the
+ *                   shell is the same shell — but it is not what the title says.
+ *
+ * Those last six pass with the backend stopped, per the measurement above.
+ *
+ * ## Excluded, with the reason
+ *
+ *   authz.spec.ts:20,45   forge a role with `x-mock-role` and POST
+ *   hard.spec.ts:20       `/api/engines/routing`, `/api/escalations/{id}/resolve`,
+ *                         `/api/bugs`, `/api/me/permissions`. **core-api
+ *                         implements no auth at all** — Plan 03 brings WorkOS,
+ *                         and `api/routers/rules.py` says in its own docstring
+ *                         that nothing here anticipates it — and none of those
+ *                         four endpoints is migrated. `/rulebook` appears in
+ *                         them only as a readiness gate.
+ *   hard.spec.ts:46,67    `/orders/{id}/review` and the escalation resolve
+ *                         endpoint. Unmigrated; not a rulebook test.
+ *   review-refusals       every test navigates to `/orders/{id}/review`. The
+ *                         file never reaches `/rulebook` at all.
+ *   shell-frame:175       navigates to `/queue` and never reaches `/rulebook`.
+ *                         (This entry previously blamed a 404 on
+ *                         `/api/me/preferences`. The route is the real reason.)
+ *   responsive:189        the masthead, measured on `/queue`. Unmigrated, and
+ *                         `/rulebook` is not in it.
+ */
+const FROZEN_RULEBOOK_FILES = [
+  /invariants\/authz\.spec\.ts$/,
+  /invariants\/responsive-frame\.spec\.ts$/,
+  /invariants\/shell-frame\.spec\.ts$/,
+  /smoke\/routes\.spec\.ts$/,
+];
+
+/**
+ * `testMatch` alone would drag in every OTHER test in those four files, so the
+ * titles are named too. Spelled as anchored patterns rather than a loose
+ * substring: `renders /rulebook` unanchored also matches nothing else today, and
+ * would quietly widen the day a route is named `/rulebook-archive`.
+ */
+const FROZEN_RULEBOOK_TESTS = [
+  /the engineer gate's confirm affordance exists only for its holders$/,
+  /renders \/rulebook$/,
+  /the rail is a full-height column, not a page-sticky element$/,
+  /the page never scrolls sideways at \d+px$/,
+];
 
 /** Newest mtime under `dir`, recursively; 0 when the directory is absent. */
 function newestMtime(dir: string): number {
@@ -162,6 +285,31 @@ export default defineConfig({
       name: "refuses-invalid-mode",
       testMatch: /refuses-invalid-mode\.spec\.ts$/,
       use: { baseURL: `http://localhost:${INVALID_PORT}` },
+    },
+    {
+      /*
+       * THE FROZEN SPECS, RUN LIVE — `apps/web-v2/e2e` pointed at core-api by
+       * CONFIG ALONE, which is the sentence at the top of this file finally
+       * cashed. Nothing in that directory is read differently, renamed or
+       * touched; this project supplies a different `baseURL` and nothing else.
+       *
+       * BREADTH, NOT PROOF, and the block above the two lists below carries the
+       * measurement: this project is 7 of 7 green against the MOCK bundle, and 6
+       * of 7 green with core-api stopped. `live-reaches-core-api` is the only
+       * project in this file that fails when the switch, the proxy or the build
+       * is broken. What this one shows is that the frozen specs pass UNMODIFIED
+       * against the live build — Task 5's contract, and a real one.
+       *
+       * Selection was made by RUNNING the frozen specs that navigate to
+       * `/rulebook`, not by reading them. What runs is every frozen test that
+       * exercises the rulebook screen and depends on no endpoint core-api has
+       * not migrated; the exclusions are listed with what each one needs.
+       */
+      name: "live-frozen-rulebook",
+      testDir: "./e2e",
+      testMatch: FROZEN_RULEBOOK_FILES,
+      grep: FROZEN_RULEBOOK_TESTS,
+      use: { baseURL: `http://localhost:${LIVE_PORT}` },
     },
   ],
   webServer: [

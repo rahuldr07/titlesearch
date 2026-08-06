@@ -12,7 +12,7 @@
     "format": "prettier --write .",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "test:e2e:live": "node e2e-live/buildBundles.mjs && playwright test --config playwright.live.config.ts",
+    "test:e2e:live": "node e2e-live/buildBundles.mjs && node e2e-live/seedRulebook.mjs && playwright test --config playwright.live.config.ts",
     "storybook": "storybook dev -p 6007",
     "build-storybook": "storybook build",
     "check:rules": "node scripts/check-rules.mjs",

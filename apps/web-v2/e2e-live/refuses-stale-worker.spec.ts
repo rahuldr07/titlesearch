@@ -21,7 +21,16 @@ test("live mode refuses to start when a mock worker is still registered", async 
   await page.goto("/rulebook");
   // A clean live load must NOT refuse, or the assertion below would pass for
   // the wrong reason — this is what makes the refusal specific to the worker.
-  await expect(page.getByRole("alert")).toHaveText("Rulebook unavailable.");
+  //
+  // THIS USED TO ASSERT `Rulebook unavailable.`, which was the same intent said
+  // badly: the harness had no database, so the clean load's alert was the
+  // rulebook's own 503 halt and "not the WORKER refusal" was the most this line
+  // could claim. Task 5 gave the harness a database, so the clean load now
+  // renders rows and there is no alert of any kind — a stronger baseline, and
+  // one that fails if the live path breaks for any reason at all rather than
+  // only if it breaks in a new way.
+  await expect(page.getByTestId("rule-row-R13")).toBeVisible();
+  await expect(page.getByRole("alert")).toHaveCount(0);
 
   await page.evaluate(async () => {
     await navigator.serviceWorker.register("/mockServiceWorker.js");
