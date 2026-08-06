@@ -52,7 +52,13 @@ Three reasons, and the third is the one that matters:
 |---|---|
 | Plan 01 proven | ✅ **closed 2026-08-05** — nine assertions, both injections |
 | Is the rulebook global or per-tenant? | ✅ **RULED 2026-08-05: GLOBAL** |
-| **Who may read a PENDING rule?** | 🔴 **still open.** `RuleStatus` is `live \| pending \| retired`, and a PENDING rule must not affect the pipeline. Whether it is *visible* — and to whom — is a separate question nobody has answered. Ask before Task 3 |
+| **Who may read a PENDING rule?** | ✅ **RULED 2026-08-06: VISIBLE TO EVERYONE.** Only an engineer may CONFIRM one. "Cannot affect the pipeline" is a statement about **effect, not visibility**, so `GET /api/rules` returns every status and nothing filters on read. Corroborated in the harvested invariants: `apps/web-v2/e2e/invariants/authz.spec.ts:84-85` asserts a **reviewer** — not an engineer — sees the `PENDING` chip while `rule-confirm-btn` has count 0, so the status is visible and only the affordance is role-locked; and `packages/mocks/src/handlers.ts:1407` serves `ruleStore` unfiltered |
+
+> **This row read `🔴 still open` until 2026-08-06**, by which time Task 1 had
+> already been built against the ruling and cited it as settled in five places
+> (`0003_rules.py`, `db/models.py`, and three assertions). A stale gate row is
+> worse than a missing one: the next executor reads the table, not the commits.
+> Same defect class as `00-HOW-TO-EXECUTE.md` §9's own two corrections.
 
 ### The tenancy ruling — RULED GLOBAL, 2026-08-05
 

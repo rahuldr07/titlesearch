@@ -123,6 +123,41 @@ MINIMUM_TENANT_TABLES = 6
 REGISTRY_TABLE = "tenants"
 POLICY_NAME = "tenant_isolation"
 
+# ---------------------------------------------------------------------------
+# 🔴 THE EXEMPTION, NAMED. THE RULING BEHIND IT IS STATED ONCE, IN
+#    `migrations/versions/0003_rules.py` — the frozen record of the decision.
+# ---------------------------------------------------------------------------
+# In one line so this constant is readable on its own: `rules` is GLOBAL, so it
+# has no `tenant_id`, no `tenant_isolation` policy and no row-level security, and
+# all three are the ruling rather than an omission. Read `0003`'s module docstring
+# for why, and do not restate it here — `01-WHAT-HAPPENED.md` §3.5 records what
+# four copies of one reason cost when two of them drifted.
+#
+# WHY A LITERAL SET IS NEEDED WHEN THE DERIVATION ABOVE IS DELIBERATELY NOT ONE.
+# `_tenant_tables` asks the catalog which tables carry `tenant_id`, and that is
+# right: a new TENANT table has to opt out of these assertions by not having the
+# column, rather than opt in by being remembered. But the same predicate makes a
+# table WITHOUT the column disappear from this file entirely — silently, with no
+# assertion anywhere about its grants, its RLS state or its readability. Left at
+# that, `rules` would have shipped completely unasserted here, and so would every
+# global table after it.
+#
+# So this set is compared against the catalog's answer to "tables in `public`,
+# `relkind = 'r'`, excluding `alembic_version`, that carry no `tenant_id` and are
+# not the registry". A second global table then cannot appear without a
+# deliberate edit to this line, which is what "named as an exception" has to mean
+# operationally.
+#
+# `tenants` is excluded from that derivation by name and not by predicate,
+# because it genuinely has no `tenant_id` either — its own `id` IS a tenant id,
+# it carries a `tenant_isolation` policy keyed on that column, and
+# `test_the_registry_is_forced_and_isolated_on_its_own_id` is where it is
+# asserted. Folding it in here would make this set mean "not a tenant table",
+# which is a different and much weaker claim than "outside tenancy altogether".
+EXPECTED_GLOBAL_TABLES = frozenset({"rules"})
+
+RULES_TABLE = "rules"
+
 # The column each policy keys on: `tenant_id` on the six, `id` on the registry
 # whose primary key IS a tenant id.
 TENANT_KEY_COLUMN = "tenant_id"
@@ -209,6 +244,20 @@ REFUSED_VERBS = ("DELETE", "TRUNCATE")
 APPEND_ONLY_TABLE = "audit_log"
 APPEND_ONLY_GRANTED_VERBS = ("SELECT", "INSERT")
 
+# 🔴 `rules` IS THE ONE TABLE AT A SINGLE VERB, AND THE NARROWNESS IS A PLAN 02
+# RULING RATHER THAN A GAP. Task 4 is `GET /api/rules` — read-only. Rule CREATION
+# and the engineer-confirm write arrive in Plan 05 and will add their own grants
+# beside their own refusal tests, because "who may write a rule" is a domain
+# question with an answer (CLAUDE.md: escalation resolution is refused without a
+# rule; judgments never auto-confirm in v1) and not a privilege to hand out ahead
+# of the code that enforces it.
+#
+# `INSERT` and `UPDATE` are therefore in the WITHHELD list here, alongside
+# `DELETE` and `TRUNCATE`, and `_expected_grants` derives that list rather than
+# repeating it — so the day Plan 05 grants one of them, this file goes red and
+# says which.
+RULES_GRANTED_VERBS = ("SELECT",)
+
 
 def _expected_grants(table: str) -> tuple[Sequence[str], Sequence[str]]:
     """`(granted, withheld)` for one table — every verb this file knows about.
@@ -231,8 +280,20 @@ def _expected_grants(table: str) -> tuple[Sequence[str], Sequence[str]]:
     Deriving `withheld` means a verb can never be silently absent from both
     lists, which is exactly how `UPDATE` came to be unasserted: it was in
     `GRANTED_VERBS`, it was read, and no assertion mentioned it.
+
+    THE TWO SPECIAL CASES ARE WRITTEN OUT AS BRANCHES rather than looked up in a
+    mapping, for the reason `0002` gives for its own eight `GRANT` lines: each one
+    gets a reviewable line naming the table it is about, and the constants above
+    hold the ruling behind each. `audit_log` is at two verbs because `0001`'s
+    trigger refuses UPDATE whatever the ACL says; `rules` is at one because this
+    plan ships a read.
     """
-    granted = APPEND_ONLY_GRANTED_VERBS if table == APPEND_ONLY_TABLE else GRANTED_VERBS
+    if table == APPEND_ONLY_TABLE:
+        granted: Sequence[str] = APPEND_ONLY_GRANTED_VERBS
+    elif table == RULES_TABLE:
+        granted = RULES_GRANTED_VERBS
+    else:
+        granted = GRANTED_VERBS
     withheld = tuple(verb for verb in (*GRANTED_VERBS, *REFUSED_VERBS) if verb not in granted)
     return granted, withheld
 
@@ -310,6 +371,38 @@ def _tenant_tables(connection: Connection, version_table: str) -> set[str]:
             "                AND a.attnum > 0 AND NOT a.attisdropped)"
         ),
         {"version_table": version_table},
+    )
+    return {str(row[0]) for row in result}
+
+
+def _global_tables(connection: Connection, version_table: str) -> set[str]:
+    """Tables in `public` that are outside tenancy altogether. THE COMPLEMENT ABOVE.
+
+    The same shape as `_tenant_tables` with the `EXISTS` negated, plus `tenants`
+    removed by name — see `EXPECTED_GLOBAL_TABLES` for why the registry is not a
+    global table despite having no `tenant_id`.
+
+    `alembic_version` is excluded by name for `_tenant_tables`' reason, and here
+    the exclusion is doing MORE work rather than less: that table genuinely has no
+    `tenant_id`, so without the name it would land in this set and every assertion
+    below would be run against Alembic's own bookkeeping.
+
+    Written as its own query rather than as `_tables(...) - _tenant_tables(...)`
+    in Python, so that the predicate a reader has to trust is one SQL expression
+    with `attnum > 0 AND NOT attisdropped` in it — the same clause, and therefore
+    the same answer about a dropped column, as the derivation it complements.
+    """
+    result = connection.execute(
+        text(
+            "SELECT c.relname FROM pg_class c "
+            "JOIN pg_namespace n ON n.oid = c.relnamespace "
+            "WHERE n.nspname = 'public' AND c.relkind = 'r' "
+            "  AND c.relname NOT IN (:version_table, :registry_table) "
+            "  AND NOT EXISTS (SELECT 1 FROM pg_attribute a "
+            "                  WHERE a.attrelid = c.oid AND a.attname = 'tenant_id' "
+            "                    AND a.attnum > 0 AND NOT a.attisdropped)"
+        ),
+        {"version_table": version_table, "registry_table": REGISTRY_TABLE},
     )
     return {str(row[0]) for row in result}
 
@@ -635,8 +728,8 @@ def _sqlstate(error: DBAPIError) -> str | None:
     return sqlstate if isinstance(sqlstate, str) else None
 
 
-def _seed_two_tenants(engine: Engine) -> None:
-    """Two committed `orders` rows, one per tenant, written as the superuser.
+def _seed_two_tenants(engine: Engine) -> dict[UUID, UUID]:
+    """Two committed `orders` rows, one per tenant, as the superuser. Returns id -> tenant.
 
     Committed rather than rolled back because the readers below are OTHER
     connections — an uncommitted row is invisible to them, and a test that read
@@ -651,13 +744,424 @@ def _seed_two_tenants(engine: Engine) -> None:
 
     The rows are left behind. `migrated_database` is MODULE-scoped and its
     teardown drops every table, so they cannot reach another test file.
+
+    ---------------------------------------------------------------------------
+    🔴 IT RETURNS WHAT IT WROTE, AND IT DID NOT UNTIL 2026-08-06. THE CALLER THAT
+       NEEDED IT WAS ASSERTING A DENIAL AGAINST A TABLE IT COULD NOT PROVE WAS
+       POPULATED.
+    ---------------------------------------------------------------------------
+    `test_the_rulebook_is_readable_with_no_tenant_established` uses these rows as
+    the CONTRAST half of a positive control — one connection, one state, `rules`
+    returning everything and `orders` returning nothing. With this function
+    returning `None` there was nothing for that test to check the seed against,
+    so its `orders` assertion was a bare `count(*) == 0`. MEASURED 2026-08-06,
+    this call replaced by a bare `DELETE FROM orders`: that test reported
+    **`1 passed`**. A contrast satisfied by an empty table is
+    `00-HOW-TO-EXECUTE.md` §1.1's exact failure — the assertion the whole control
+    was built around was a pure denial.
+
+    `RETURNING` per row rather than one multi-row `INSERT`, for the reason
+    `tests/conftest.py::_seed_isolation_rows` measured: a `text()` construct
+    executed with a LIST of parameter dictionaries is an executemany, and
+    RETURNING does not come back from one — `ResourceClosedError: This result
+    object does not return rows`. The ids are the point, so a loop is how they
+    come back.
     """
+    written: dict[UUID, UUID] = {}
     with engine.begin() as connection:
         connection.execute(text("DELETE FROM orders"))
-        connection.execute(
-            text("INSERT INTO orders (tenant_id) VALUES (:one), (:two)"),
-            {"one": TENANT_ONE, "two": TENANT_TWO},
+        for tenant in (TENANT_ONE, TENANT_TWO):
+            row_id = connection.execute(
+                text("INSERT INTO orders (tenant_id) VALUES (:tenant) RETURNING id"),
+                {"tenant": tenant},
+            ).scalar_one()
+            written[UUID(str(row_id))] = tenant
+    return written
+
+
+def _seed_rules(engine: Engine) -> dict[UUID, str]:
+    """Three committed rulebook rows, one per `status`. Returns id -> status.
+
+    ONE OF EACH STATUS, AND `pending` IS THE ONE THAT CARRIES A RULING. The owner
+    has ruled that a PENDING rule is VISIBLE to everyone and that only an engineer
+    may CONFIRM one — CLAUDE.md's "PENDING rules cannot affect the pipeline" is
+    about EFFECT, not visibility. So the positive control below reads a set that
+    contains a `pending` row, and a `WHERE status = 'live'` appearing anywhere
+    between the table and the caller fails it by name rather than by a count.
+
+    Committed and written as the SUPERUSER, for `_seed_two_tenants`' reasons: the
+    reader is a different connection, so an uncommitted row is invisible to it,
+    and `titlepipe_app` holds no INSERT on this table by design.
+
+    `DELETE` first, so the contents are a function of this call rather than of
+    whatever ran before it. `rules` has no append-only trigger, so unlike
+    `audit_log` it can actually be cleared.
+
+    `RETURNING id` per row rather than one multi-row INSERT: `tests/conftest.py
+    ::_seed_isolation_rows` measured that a `text()` construct executed with a
+    LIST of parameter dictionaries is an executemany, and RETURNING does not come
+    back from one. The ids are what the control asserts on — a COUNT of three is
+    satisfied by three wrong rows — so they have to come back.
+
+    `version` is 1 on all three and means nothing here; it is `NOT NULL` and the
+    seed has to say something.
+    """
+    seeded: dict[UUID, str] = {}
+    with engine.begin() as connection:
+        connection.execute(text("DELETE FROM rules"))
+        for code, status in (("R13", "live"), ("R14", "pending"), ("R15", "retired")):
+            row_id = connection.execute(
+                text(
+                    "INSERT INTO rules (code, text, origin, status, version) "
+                    "VALUES (:code, :body, 'spec', :status, 1) RETURNING id"
+                ),
+                {
+                    "code": code,
+                    "body": f"{code} exists so that this control has a row",
+                    "status": status,
+                },
+            ).scalar_one()
+            seeded[UUID(str(row_id))] = status
+    return seeded
+
+
+def test_the_tables_outside_tenancy_are_exactly_the_ones_named_as_exceptions(
+    migrated_database: str,
+    alembic_version_table: str,
+    seam_engine: Callable[[str], Engine],
+) -> None:
+    """🔴 THE EXEMPTION, PINNED BY NAME, BECAUSE THE DERIVATION CANNOT SEE IT.
+
+    `_tenant_tables` asks the catalog for tables carrying `tenant_id`. That is the
+    right derivation and this test does not touch it — but its consequence is that
+    a table WITHOUT the column vanishes from this file completely, with no
+    assertion anywhere about its grants, its RLS state or its readability. There
+    is no exception list to leave a table off; the predicate simply never mentions
+    it.
+
+    So this is the complement, asserted as an EXACT SET against a literal. What it
+    buys, concretely:
+
+    * a SECOND global table cannot appear silently. It has to be added here, which
+      is a diff a reviewer reads, rather than being invisible by construction;
+    * a `tenant_id` added to `rules` — the accidental way the tenancy ruling gets
+      reversed, by somebody "fixing" a table in `public` with no policy on it —
+      fails HERE naming `rules`, and fails
+      `test_every_tenant_table_is_forced_isolated_and_reachable_by_the_app`
+      naming it too, because it would then be in the derived tenant set;
+    * it gives the three assertions below a set to be about. Each of them names
+      `rules` directly, and this is what says the catalog agrees that `rules` is
+      the whole of what they have to cover.
+
+    NO CARDINALITY FLOOR HERE, unlike the derived tenant set, and the omission is
+    deliberate: equality against a one-element frozenset is already unsatisfiable
+    by an empty derivation, so a floor would be a second spelling of the same
+    check. The tenant assertions need one because their exact-set comparison is
+    followed by `for` loops that pass over nothing.
+    """
+    engine = seam_engine(migrated_database)
+    try:
+        with engine.connect() as connection:
+            derived = _global_tables(connection, alembic_version_table)
+    finally:
+        engine.dispose()
+
+    assert derived == set(EXPECTED_GLOBAL_TABLES), (
+        f"the tables in public outside tenancy are {sorted(derived)}, not "
+        f"{sorted(EXPECTED_GLOBAL_TABLES)}. Every table here has NO tenant_id and "
+        f"is therefore invisible to _tenant_tables, so nothing else in this file "
+        f"would ever mention it. A new name means a table that carries no tenancy "
+        f"at all: give it one, or name it here with the ruling that says why not."
+    )
+
+
+def test_the_rulebook_is_deliberately_outside_row_level_security(
+    migrated_database: str, seam_engine: Callable[[str], Engine]
+) -> None:
+    """🔴 RLS OFF, FORCE OFF, AND NO POLICY — ALL THREE ASSERTED, ALL THREE MEANT.
+
+    THE POINT OF ASSERTING AN ABSENCE. `rules` reads, in the catalog, exactly like
+    a table somebody forgot to isolate: `relrowsecurity` false, no `tenant_isolation`
+    policy, nothing. The two states are indistinguishable to a reader of the
+    schema, and the difference matters — one is a ruling and the other is a
+    cross-tenant leak. This test is the difference, written down where the catalog
+    is.
+
+    The ruling is `migrations/versions/0003_rules.py`'s to state; the short of it
+    is that there is no tenant on this table for a policy to key on. The failure
+    messages below DO spell it out, and that is not a fifth copy by accident: a
+    reader meeting this red has the assertion in front of them and not the
+    migration, and is about to decide whether the rulebook should be
+    tenant-scoped after all.
+
+    ALL THREE RATHER THAN ONE, because they are independent catalog facts and each
+    breaks differently:
+
+    * `relrowsecurity` and `relforcerowsecurity` are separate `pg_class` columns
+      and neither clears the other — `_row_security` records the measurement. A
+      `FORCE` with no `ENABLE` is inert today and becomes total denial the moment
+      anyone enables RLS;
+    * the policy set is read from `pg_policies` and required EMPTY, not merely
+      free of `tenant_isolation`. RLS off means a policy has no effect, so an
+      orphaned one is not a leak — it is a statement about intent that would
+      become live the instant somebody enabled RLS "to be consistent with the
+      other seven".
+
+    THE PAIR OF FAILURE MESSAGES IS THE DELIVERABLE. Whoever reads this red is
+    about to decide whether the rulebook should be tenant-scoped after all, and
+    the answer has to be in front of them rather than in a plan document.
+    """
+    engine = seam_engine(migrated_database)
+    try:
+        with engine.connect() as connection:
+            enabled, forced = _row_security(connection)[RULES_TABLE]
+            policies = {name for (table, name) in _policies(connection) if table == RULES_TABLE}
+    finally:
+        engine.dispose()
+
+    assert (enabled, forced) == (False, False), (
+        f"{RULES_TABLE} has (relrowsecurity, relforcerowsecurity) = "
+        f"{(enabled, forced)}, and both must be false. This is DELIBERATE: the "
+        f"rulebook is GLOBAL (ruled 2026-08-05), scoped by jurisdiction rather "
+        f"than by customer, so there is no tenant column for a policy to key on. "
+        f"Enabling RLS here with no policy denies every row to titlepipe_app and "
+        f"takes GET /api/rules down; enabling it WITH a tenant policy reverses a "
+        f"ruling. If the rulebook should be tenant-scoped, that is a decision to "
+        f"make out loud, not a line to add to a migration."
+    )
+    assert policies == set(), (
+        f"{RULES_TABLE} carries the policies {sorted(policies)}, and it must carry "
+        f"none. They do nothing while RLS is off, which is exactly the hazard: "
+        f"they are a statement of intent that goes live the day somebody enables "
+        f"row-level security here for consistency with the other seven tables."
+    )
+
+
+def test_the_rulebook_grants_select_to_the_app_role_and_nothing_more(
+    migrated_database: str,
+    seam_engine: Callable[[str], Engine],
+    app_role: str,
+) -> None:
+    """The grantee set for `rules`, asserted the way `0002`'s seven already are.
+
+    `aclexplode` through `_table_grantees` and NOT `has_table_privilege`, for the
+    reason that helper records at length: `has_*_privilege` answers about the
+    EFFECTIVE privilege, so a `GRANT … TO PUBLIC` satisfies it and reads
+    identical to a grant naming the role. Who the ACL NAMES is a separate
+    question and `0002`'s eight grants respelled `TO PUBLIC` once shipped
+    `195 passed` against exactly that.
+
+    THE HELPER IS REUSED RATHER THAN RE-IMPLEMENTED, and `_expected_grantees`
+    derives this table's expectation from `_expected_grants` — so `SELECT` being
+    the only granted verb here is stated once, at `RULES_GRANTED_VERBS`, and
+    `INSERT`, `UPDATE`, `DELETE` and `TRUNCATE` fall out as withheld rather than
+    being listed a second time.
+
+    WHY ONLY `SELECT`, AND WHY THAT IS WORTH A RED TEST LATER. Plan 02 ships a
+    read. Rule creation and the engineer-confirm write are Plan 05's, and they
+    arrive with the refusals that make them safe — `CLAUDE.md`: escalation
+    resolution is refused without a rule, judgments never auto-confirm in v1. A
+    grant that lands before the enforcement is a grant nothing is checking.
+
+    `titlepipe_worker` is asserted to hold NOTHING, which is the negative control
+    `test_the_grants_name_the_app_role_explicitly_and_reach_no_other_role` already
+    runs for the other seven and could not run for this one: that test loops the
+    DERIVED tenant set, which `rules` is not in.
+    """
+    engine = seam_engine(migrated_database)
+    try:
+        with engine.connect() as connection:
+            grantees = _table_grantees(connection)
+            worker = _table_privileges(connection, WORKER_ROLE, RULES_TABLE)
+    finally:
+        engine.dispose()
+
+    for verb, expected in sorted(_expected_grantees(RULES_TABLE).items()):
+        held = grantees.get((RULES_TABLE, verb), set())
+        public = " PUBLIC is every role on this cluster." if PUBLIC_GRANTEE in held else ""
+        assert held == expected, (
+            f"{verb} on {RULES_TABLE} is held by {sorted(held)}, not "
+            f"{sorted(expected)}.{public} {OWNER_ROLE} is in every set because it "
+            f"OWNS the table, not because 0003 granted it anything. "
+            f"has_table_privilege cannot see this: it reports the EFFECTIVE "
+            f"privilege, so {app_role} reads TRUE whether 0003 named it or handed "
+            f"the grant to everybody."
         )
+
+    for verb, allowed in sorted(worker.items()):
+        assert allowed is False, (
+            f"{WORKER_ROLE} holds {verb} on {RULES_TABLE}, and 0003 grants it "
+            f"nothing. This table has no row-level security at all, so a privilege "
+            f"reaching that role by any route is unfiltered access to the whole "
+            f"rulebook rather than to one tenant's slice of it."
+        )
+
+
+def test_the_rulebook_is_readable_with_no_tenant_established(
+    migrated_database: str,
+    app_dsn: str,
+    seam_engine: Callable[[str], Engine],
+    tenant_deny_sentinel: str,
+) -> None:
+    """🔴 THE POSITIVE CONTROL FOR GLOBALITY. THE WHOLE RULING RESTS ON THIS ROW SET.
+
+    Everything else about `rules` in this file is a catalog read, and a catalog
+    read cannot tell you what a caller receives. This connects as `titlepipe_app`
+    on a session that has established NO TENANT — the deny sentinel `''` that
+    `conftest.py::SEAM_CONNECT_ARGS` pins on every connection in this suite — and
+    requires EVERY seeded row back.
+
+    ---------------------------------------------------------------------------
+    🔴 THE CONTRAST IS ASSERTED ON THE SAME CONNECTION, AND IT IS WHAT MAKES THIS
+       A CONTROL RATHER THAN A DENIAL DRESSED UP AS ONE.
+    ---------------------------------------------------------------------------
+    `00-HOW-TO-EXECUTE.md` §1.1 records the measurement this is written against:
+    Plan 01's isolation suite was run with the tenant mechanism torn out and three
+    assertions still passed, every one of them satisfied by a database that denies
+    everybody everything. A test that only read `rules` and got three rows would
+    be the mirror of that — satisfied by a database with no isolation anywhere.
+    So `orders` is seeded with two tenants' rows and read on the SAME connection,
+    in the SAME state, and must come back EMPTY. One statement returns everything
+    and the next returns nothing, and only a working `tenant_isolation` policy on
+    one table and a deliberate absence of one on the other produces that pair.
+
+    ---------------------------------------------------------------------------
+    🔴 AND THE CONTRAST HALF NEEDED ITS OWN CONTROL, BECAUSE `count(*) == 0` IS
+       TRUE OF AN EMPTY TABLE.
+    ---------------------------------------------------------------------------
+    The paragraph above was written before this one and was, for a while, exactly
+    what it warns against. MEASURED 2026-08-06 on this tree, `_seed_two_tenants`
+    replaced by a bare `DELETE FROM orders` — one mutation, this test alone:
+    **`1 passed`.** "The app sees zero orders" is equally true of isolation
+    working, of an empty table, of a broken DSN and of a role with no grant, which
+    is §1.1's finding restated inside the assertion that cites §1.1.
+
+    So the seed now returns the two rows it wrote and they are READ BACK ON THE
+    ADMIN CONNECTION FIRST — by id and by tenant, not by count, because two rows
+    is satisfied by two wrong rows. The superuser bypasses RLS unconditionally, so
+    that read is a statement about what is IN the table rather than about what any
+    policy allows. Only after the rows are proved present does the app session's
+    zero mean "isolation removed them".
+
+    ---------------------------------------------------------------------------
+    🔴 AND THE PREMISE NEEDED A CARDINALITY FLOOR, BECAUSE `{} == {}` IS TRUE.
+    ---------------------------------------------------------------------------
+    Found by running the injection above against the FIX for it. With the seed
+    replaced by a bare `DELETE FROM orders`, `seeded_orders` and `present_orders`
+    are both empty, `visible` and `seeded` are both empty, and every comparison in
+    this test is an equality between two empty mappings: **`1 passed` again.**
+    Comparing what the seed wrote against what the table holds says nothing at all
+    when the seed wrote nothing — which is the same defect one level up, and is
+    exactly why `00-HOW-TO-EXECUTE.md` §1.1 says to ask what a broken-in-the-
+    obvious-way system would score.
+
+    So both seeds are asserted to have written a KNOWN NUMBER of rows, as
+    LITERALS, before anything is compared. Two orders because there are two
+    tenants; three rules because there are three statuses. And `pending` is
+    asserted present BY NAME rather than left to the count, because it is the one
+    row carrying the owner's visibility ruling and a seed that quietly stopped
+    writing it would leave that ruling unpinned while the counts still matched.
+
+    THE ORDER OF THE ASSERTIONS IS A DIAGNOSTIC DECISION. The sentinel first,
+    because every read below is about a state it defines; then what the seeds
+    wrote, because that is the premise of the premise; then that the rows are
+    really in the tables; then the two reads. A failure therefore names the
+    earliest thing that stopped being true.
+
+    **THIS IS THE ASSERTION THAT FAILS THE DAY ANYBODY GIVES `rules` A POLICY.**
+    A `tenant_isolation`-shaped policy would make this session — which is every
+    session, since `GET /api/rules` needs no principal — read zero rules, and the
+    rulebook screen would go blank with no error naming a policy, because the rows
+    simply match none.
+
+    THE IDS ARE COMPARED, NOT THE COUNT. A count of three is satisfied by three
+    wrong rows; `_seed_rules` returns what it wrote so the comparison is by value.
+
+    **AND THE STATUSES ARE COMPARED WITH THEM**, which pins the owner's other
+    ruling: PENDING rules are VISIBLE to everyone and only an engineer may confirm
+    one. "Cannot affect the pipeline" is about effect, not visibility. A
+    `WHERE status = 'live'` anywhere between the table and this caller fails here
+    naming the row it hid.
+    """
+    admin = seam_engine(migrated_database)
+    try:
+        seeded = _seed_rules(admin)
+        seeded_orders = _seed_two_tenants(admin)
+        with admin.connect() as connection:
+            # As the SUPERUSER, which bypasses RLS unconditionally — so this is
+            # what is in the table, not what a policy permits.
+            present_orders = {
+                UUID(str(row[0])): UUID(str(row[1]))
+                for row in connection.execute(text("SELECT id, tenant_id FROM orders"))
+            }
+    finally:
+        admin.dispose()
+
+    engine = seam_engine(app_dsn)
+    try:
+        with engine.connect() as connection:
+            established = connection.execute(
+                text("SELECT current_setting('app.current_tenant', true)")
+            ).scalar_one()
+            visible = {
+                UUID(str(row[0])): str(row[1])
+                for row in connection.execute(text("SELECT id, status FROM rules"))
+            }
+            tenant_rows = connection.execute(text("SELECT count(*) FROM orders")).scalar_one()
+    finally:
+        engine.dispose()
+
+    assert established == tenant_deny_sentinel, (
+        f"this connection did not start at the deny sentinel but at {established!r}, "
+        f"so neither assertion below is about the state they are written for"
+    )
+
+    # 🔴 THE FLOOR UNDER BOTH PREMISES, AS LITERALS. Every comparison below is an
+    # equality between what a seed wrote and what a session saw, and every one of
+    # them is trivially true when the seed wrote nothing. Two orders, one per
+    # tenant; three rules, one per status.
+    assert len(seeded_orders) == 2, (
+        f"the orders seed wrote {len(seeded_orders)} rows, not one per tenant. "
+        f"The contrast below compares that mapping against what the app session "
+        f"sees, and an empty seed makes every comparison in this test an equality "
+        f"between two empty mappings."
+    )
+    assert len(seeded) == 3, (
+        f"the rulebook seed wrote {len(seeded)} rows, not one per status. Same "
+        f"trap: `visible == seeded` is satisfied by two empty mappings."
+    )
+    assert "pending" in seeded.values(), (
+        f"the rulebook seed wrote no `pending` row, so this test no longer pins "
+        f"the owner's ruling that a PENDING rule is VISIBLE to everyone — a "
+        f"`WHERE status = 'live'` between the table and the caller would pass. "
+        f"Seeded statuses: {sorted(seeded.values())}"
+    )
+
+    assert present_orders == seeded_orders, (
+        f"the superuser — which bypasses RLS unconditionally — saw "
+        f"{present_orders} in orders, not the {seeded_orders} the seed wrote. "
+        f"This is the PREMISE of the contrast below, and it is asserted because "
+        f"without it `count(*) == 0` on the app session is satisfied by an empty "
+        f"table, a broken DSN and a missing grant just as readily as by tenant "
+        f"isolation. Compared by id and tenant rather than by count: two rows is "
+        f"satisfied by two wrong rows."
+    )
+    assert visible == seeded, (
+        f"an app session with no tenant established saw {len(visible)} of "
+        f"{len(seeded)} seeded rules. The rulebook is GLOBAL: nothing scopes it "
+        f"and nothing filters it on read, so every row must come back. Missing "
+        f"rows mean a policy has been added to this table — under which every "
+        f"session reads zero rules, because GET /api/rules has no principal and "
+        f"establishes no tenant. saw={visible} seeded={seeded}"
+    )
+    assert tenant_rows == 0, (
+        f"the SAME connection, in the SAME state, saw {tenant_rows} of "
+        f"{len(seeded_orders)} rows in orders, which the assertion above has just "
+        f"proved are there. That is the contrast this control exists for: without "
+        f"it, 'rules returns every row' is equally true of a database with no "
+        f"tenant isolation anywhere, which is the exact failure "
+        f"00-HOW-TO-EXECUTE.md §1.1 measured."
+    )
 
 
 def test_every_tenant_table_is_forced_isolated_and_reachable_by_the_app(
