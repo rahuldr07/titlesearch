@@ -233,8 +233,8 @@ I have not verified it."*
 | plan | ships | status |
 |---|---|---|
 | [`01-postgres-correctness.md`](./01-postgres-correctness.md) | schema, roles, forced RLS, the tenant-isolation proof | **done and merged to `main`** — eight tasks, twenty commits (`160fcff`…the close-out). **Its handover is [`01-WHAT-HAPPENED.md`](./01-WHAT-HAPPENED.md)** |
-| 02 — first vertical slice | `GET /api/rules` through the whole spine | not written |
-| 03 — identity | WorkOS sessions, server-evaluated authz | not written |
+| [`02-first-vertical-slice.md`](./02-first-vertical-slice.md) | `GET /api/rules` through the whole spine, plus the migration harness | **executed on `rahuldr07/backend-plan02`** (PR #7), six tasks, seven commits. **Its handover is [`02-WHAT-HAPPENED.md`](./02-WHAT-HAPPENED.md)** — read its §5 before writing any proof |
+| [`03-identity.md`](./03-identity.md) | WorkOS sessions, server-evaluated authz | **DRAFT — four human gates open.** Not executable until they are ruled |
 | 04 — order reads | context, queue, fields with provenance | not written |
 | 05 — domain core + mutations | the five-state machine, seven refusals | not written |
 | 06 — ingest + queue | R2 presigned upload, Procrastinate | not written |
