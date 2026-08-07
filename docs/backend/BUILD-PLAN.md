@@ -239,7 +239,11 @@ feature.
 ### 2.4 Auth and storage
 
 ```toml
-workos   = "==10.1.0"     # PIN EXACT — four breaking majors in eleven weeks (7/8/9/10)
+workos   = "==10.1.1"     # PIN EXACT — four breaking majors in eleven weeks (7/8/9/10)
+                          # NOT 10.1.0: 10.1.1 bumps cryptography to ~=50.0 for
+                          # CVE-2026-69247, so the older pin pins a vulnerable floor.
+                          # NOT ~=10.1 either: `feat(generated)!` releases bump the
+                          # major whenever the OpenAPI generator drops a symbol.
 boto3    = "==1.43.63"
 botocore = "==1.43.63"    # pin it too, to keep R2 checksum behaviour deterministic
 ```
@@ -493,9 +497,16 @@ live consumer in `web-v2`; building them buys no verification.
 
 ---
 
-## 5. Three things to fix before Plan 01
+## 5. Three things to fix before Plan 01 — ✅ ALL THREE CLOSED
 
-### 5.1 The seal-password length check is wrong — confirmed defect
+> **Closed 2026-08-07.** 5.1 in `settings.py` (with a correction to its own
+> remedy — see below); **5.2 by backend Plan 02 Task 0**, which built the
+> `VITE_API_MODE` switch, the dev/preview proxy and
+> `.github/workflows/migration-harness.yml`; 5.3's stale lint line corrected
+> in place. The findings are kept because the reasoning is still the
+> justification for what was built.
+
+### 5.1 The seal-password length check is wrong — ✅ CLOSED
 
 `services/core-api/src/titlepipe_core/settings.py:29` sets
 `SEAL_PASSWORD_LENGTH = 32` and line 125 enforces it exactly. **Fernet keys are 44
@@ -504,7 +515,38 @@ characters.** Real WorkOS credentials will be rejected at startup.
 Replace the length check with a constructive `Fernet(secret)` in a try/except —
 then the library defines validity and no magic number can drift.
 
-### 5.2 The migration safety net does not exist
+> ✅ **CLOSED.** `settings.py` now enforces 44 characters, valid url-safe base64,
+> decoding to exactly 32 bytes — length, alphabet and byte count, because a
+> truncated paste and a non-urlsafe base64 variant are both 44 characters.
+>
+> **The finding above was right, and its remedy needed one correction: the
+> constructive `Fernet(secret)` check is only correct because WorkOS genuinely
+> uses Fernet, and that had never been verified.** VERIFIED 2026-08-07 against the
+> installed `workos==10.1.1` wheel: `workos.session.seal_data` calls `Fernet(key)`
+> **directly, with no KDF**. So Fernet does define validity here.
+>
+> **Where the 32 came from, so it is not reintroduced a third time:** WorkOS's own
+> documentation says the cookie password must be "at least 32 characters". That is
+> the **Node/iron-session** requirement — iron-session runs a KDF over an arbitrary
+> passphrase; Python does not. The 32 is 32 *bytes of entropy*, not a string
+> length. `openssl rand -base64 32` — the command WorkOS documents — emits **44
+> characters**.
+>
+> `GATE_1_FOUNDATION.md:425` carried the wrong number until 2026-08-07 and is now
+> corrected there too.
+
+### 5.2 The migration safety net does not exist — ✅ CLOSED by Plan 02 Task 0
+
+> ✅ **BUILT.** `VITE_API_MODE` gates the MSW start (`mock` default, `live`
+> starts no worker), `/api` proxies to core-api under `live`, and
+> `migration-harness.yml` is the CI job whose path filter spans `apps/**`,
+> `packages/**`, `services/**`, `libs/**` **and** `contract-fixtures/**`. It
+> stands up Postgres, migrates, seeds and runs the browser suite against a
+> real core-api — verified green in CI on PR #7.
+>
+> **Read `02-WHAT-HAPPENED.md` §5 before trusting it.** The harness's own
+> breadth project passes 7 of 7 against MSW; only
+> `e2e-live/reaches-core-api.spec.ts` distinguishes live from mock.
 
 Both prior plans gate on "keep the frontend tests green while migrating
 endpoint-by-endpoint". **That has no execution path.** Verified:
@@ -540,7 +582,8 @@ One packaging blocker: `openapi-typescript@7.13.0` declares peer `typescript: ^5
 while `apps/web-v2` pins `~6.0.3`. Needs a pnpm `peerDependencyRules` override
 until upstream #2723 lands.
 
-Finally, `.claude/CLAUDE.md:14` says lint is `pnpm --filter web lint (oxlint)`.
+Finally, `.claude/CLAUDE.md:14` said lint was `pnpm --filter web lint (oxlint)`
+— ✅ **corrected since; it now reads `pnpm --filter web-v2 lint` (eslint)**.
 It is `eslint .` on `web-v2`. Both the tool and the filter are wrong.
 
 ---
