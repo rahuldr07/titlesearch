@@ -31,13 +31,38 @@ under real conditions — if any of it is wrong, Plan 03 is where that surfaces.
 
 | gate | why it blocks |
 |---|---|
-| **1. WorkOS credentials and environment** | `workos` is pinned nowhere in the tree today. `BUILD-PLAN §2.4` says pin **exactly** `==10.1.0` — four breaking majors in eleven weeks. Nothing can be executed without a real client id, secret and redirect URI, and inventing them is forbidden by `00-HOW-TO-EXECUTE §5` |
-| **2. Does `/api/rules` require a session?** | Plan 02 established the rulebook needs no **principal**. It did **not** establish it needs no **authentication**. Those are different claims, and this plan makes `/api` an authenticated prefix. If `GET /api/rules` must 401 without a session, Plan 02's live harness breaks and `e2e-live/reaches-core-api.spec.ts` changes with it |
-| **3. Missing session → 401 or 403?** | And the same question for a *forged* one. The mock's harvested invariants assert a forged role is refused; they do not fix the status for an absent session |
-| **4. Where sessions live** | `cookie_seal_password` is a validated Fernet key (44 chars, constructive check — `BUILD-PLAN §5.1`'s defect is already fixed). Whether the session is a sealed cookie alone, or a row, is unruled — and a row interacts with the deny sentinel on a pooled connection, which is Plan 01's territory |
+| **1. WorkOS credentials and environment** | `workos` is pinned nowhere in the tree today. Nothing can be executed without a real client id, secret and a **Dashboard-registered redirect URI** — the code exchange fails otherwise — and inventing them is forbidden by `00-HOW-TO-EXECUTE §5` |
+| **2. Does `/api/rules` require a session?** | Plan 02 established the rulebook needs no **principal**. It did **not** establish it needs no **authentication**. Different claims, and this plan makes `/api` an authenticated prefix. If `GET /api/rules` must 401 without a session, Plan 02's live harness breaks and `e2e-live/reaches-core-api.spec.ts` changes with it |
+| **3. Missing session → 401 or 403?** | And the same for a *forged* one. The harvested invariants assert a forged role is refused; they do not fix the status for an **absent** session |
+| **4. What identity-revocation latency is acceptable?** | **Narrowed by research 2026-08-07 — see below.** No longer "where do sessions live"; that is settled. What remains is a product decision about how long a revoked user may keep working |
 
 **Do not pick a side of any of these.** A plan that stalls at a human gate is
 working correctly.
+
+### What research closed, 2026-08-07 — verified against the real `workos==10.1.1` wheel
+
+**Gate 4 was mis-stated.** `ARCHITECTURE_REVIEW.md:189` calls sealed sessions and
+"independent PyJWT/JWKS verification" *"two competing implementations"* and says
+to choose one. **That is a false dichotomy.** `Session.authenticate()` **is** JWKS
+verification — it Fernet-decrypts the cookie, takes `access_token`, then does
+`PyJWKClient.get_signing_key_from_jwt()` + `jwt.decode(algorithms=["RS256"])`.
+Sealing is not an alternative to verifying a JWT; it is JWT verification **plus
+encrypted custody of the refresh token**. The genuine choice is only whether you
+hold the refresh token, and three documents already converge on sealed HttpOnly
+cookies (`HANDOFF.md:90`, `IMPLEMENTATION_PLAN.md:90`, `ARCHITECTURE_REVIEW §6`).
+
+**What actually needs ruling is the revocation window.** MEASURED:
+`authenticate()` makes **zero network calls to WorkOS**. A session revoked via
+`revoke_session()` or logout keeps passing `authenticate()` until the access
+token's `exp`. Only `refresh()` observes revocation. So the window equals the
+access-token TTL, set in the WorkOS Dashboard.
+
+Our architecture already neutralises the *authorization* half — Postgres owns
+permissions, so a permission change takes effect on the next request regardless
+of stale JWT claims. **The identity half is not covered:** a revoked or offboarded
+user survives until token expiry. Closing it needs a `sid`-based check against our
+own table on each request; nothing in the session helper does it for you.
+**That trade — a per-request lookup versus a revocation window — is the owner's.**
 
 ---
 
@@ -93,15 +118,64 @@ none does, this plan has reproduced the hole it exists to retire.
 
 🔴 **Blocked on gate 1.**
 
-**CONTRACT** `workos==10.1.0`, pinned exactly, in `services/core-api`. The adapter
-is the only module that imports it. Cost and latency recorded per call, as
-`CLAUDE.md` requires of every external engine.
+**CONTRACT** `workos==10.1.1`, **pinned exactly**, in `services/core-api`. The
+adapter is the **only** module that imports it — `libs/domain` must never see it
+(`GATE_1_FOUNDATION.md:102`). Cost and latency recorded per call.
 
-**PROOF** A session minted by the real provider validates; one minted by a
-different key does not.
+**Not `10.1.0`, which `BUILD-PLAN §2.4` names.** `10.1.1` (2026-08-04) is a
+one-line bump of `cryptography` to `~=50.0` for **CVE-2026-69247**; pinning
+`10.1.0` pins a known-vulnerable floor. Not `~=10.1` either: releases tagged
+`feat(generated)!` auto-bump the major whenever the OpenAPI generator drops a
+symbol, which is why the majors move so fast.
+
+### 🔴 THE OFFICIAL WORKOS DOCS DO NOT COMPILE AGAINST v10
+
+Both [the AuthKit Python guide](https://workos.com/docs/authkit/vanilla/python)
+and WorkOS's own [FastAPI blog post](https://workos.com/blog/securing-a-fastapi-server-with-workos-authkit)
+still show the v9 shape. **Copying them produces code that fails at runtime.**
+VERIFIED against the installed 10.1.1 wheel:
+
+| the docs show | v10 actually has |
+|---|---|
+| `authenticate_with_code(..., session={"seal_session": True, ...})` | no `session` parameter |
+| `auth_response.sealed_session` | **no such field.** `AuthenticateResponse` is `user, access_token, refresh_token, organization_id, authkit_authorization_code, authentication_method, impersonator, oauth_tokens` |
+| `load_sealed_session(sealed_session=…)` | `load_sealed_session(*, session_data: str, cookie_password: str)` |
+
+Sealing is now an explicit, separate module-level call:
+`workos.session.seal_session_from_auth_response(*, access_token, refresh_token, user, impersonator=None, cookie_password)`.
+
+**Write the adapter from the installed source, not from the docs.** Do not skip
+this and then debug it.
+
+**Two more measured traps:**
+
+- **`AsyncSession.authenticate()` is `def`, not `async def`** — verified,
+  `inspect.iscoroutinefunction` is False — and its docstring claims it *"only
+  performs local operations"*. **That is not true.** `Session.__init__` builds a
+  `PyJWKClient` whose defaults are `cache_jwk_set=True, lifespan=300, timeout=30`,
+  fetching over **blocking `urllib`**. So roughly once every 300 seconds a request
+  makes a blocking call of up to 30 seconds **inside the event loop**. Run it
+  through `anyio.to_thread.run_sync`, or prewarm and refresh the JWKS on a
+  background task. The SDK `lru_cache`s the client per JWKS URL, so it is one
+  shared client — that bounds the frequency, not the blocking.
+- **`get_logout_url()` calls `authenticate()` internally and raises `ValueError`
+  on an invalid session.** Logging out an already-expired session throws rather
+  than returning a URL. Unwrapped, that is a 500 on logout.
+
+Also: `jwt.decode` is called with `algorithms=["RS256"]` and
+`options={"verify_aud": False}` hardcoded — **the audience is not checked.** If
+audience binding matters, do it yourself.
+
+**PROOF** A session sealed by the real provider validates; one sealed with a
+different key does not. **And the positive control:** the validated session yields
+a principal carrying the fields Task 2 needs — asserted, not assumed.
 
 **INJECTION** Point the adapter at the wrong issuer. The validation test must
 fail. *If it passes, the signature is not being checked.*
+
+**Second injection:** feed `authenticate()` a cookie sealed with a different
+`cookie_password`. It must fail as a **refusal**, not as an unhandled
+`InvalidToken` reaching the error envelope as a 500.
 
 ---
 
@@ -113,11 +187,31 @@ today — Plan 02 measured that `authz.spec.ts:62` passes against a live backend
 *because* `canDo` is client-side. That is a **preview affordance**, and this task
 is what makes the server the authority.
 
+**The principal is buildable with no second network call**, verified against the
+wheel. `AuthenticateWithSessionCookieSuccessResponse` carries `session_id` (the
+`sid` claim, the only non-optional identity field), `organization_id`, and
+`user` — from which `user["id"]` is the WorkOS user id. Note `sub` is **not**
+surfaced as a field; the user id reaches you through the sealed cookie payload.
+
+**`user` is an untyped `dict[str, Any]`.** Parse it through a Pydantic model at
+that boundary. An unvalidated dict crossing into the domain is exactly what this
+repo's contract rules exist to catch, and it is the one untyped surface the SDK
+hands you.
+
+**IGNORE `role`, `roles`, `permissions`, `entitlements` and `feature_flags` from
+the session.** They are stale JWT claims and **Postgres owns authorization**. That
+is not a preference — it is what makes a permission change take effect on the next
+request instead of at token expiry.
+
 **PROOF** A caller whose client-side table says yes and whose server-side row says
 no is **refused by the server**. Assert the refusal, not the hidden button.
 
 **INJECTION** Grant the permission client-side only. The refusal must still fire.
 *The UI hiding a button is courtesy; the refusal is the rule.*
+
+**Second injection:** put the permission in the **JWT claim** and not in the
+database. The refusal must still fire. *If it does not, the server is trusting the
+stale claim, and the whole "Postgres owns authorization" design is decorative.*
 
 ---
 
