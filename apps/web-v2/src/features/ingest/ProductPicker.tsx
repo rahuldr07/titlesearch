@@ -67,9 +67,8 @@ export function ProductPicker() {
       {chosen?.derivation === "update" ? <PriorEffectiveDate /> : null}
 
       <p className="text-tiny leading-body text-state-attend-ink">
-        CONTRACT GAP &middot; the order carries no product field yet, so this
-        choice is not sent. The question is asked here because intake is where
-        it is answered.
+        CONTRACT GAP &middot; the order carries no product field yet, so this choice is
+        not sent. The question is asked here because intake is where it is answered.
       </p>
     </fieldset>
   );

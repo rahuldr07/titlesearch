@@ -49,7 +49,9 @@ test("VITE_API_MODE=mock still serves the rulebook from MSW", async ({ page }) =
  * resting on the header alone; the default is the spelling that produces an
  * answer core-api cannot imitate.
  */
-test("an /api call MSW does not handle stays on the preview server", async ({ page }) => {
+test("an /api call MSW does not handle stays on the preview server", async ({
+  page,
+}) => {
   await page.goto("/rulebook");
 
   const answer = await page.evaluate(async () => {
@@ -63,7 +65,10 @@ test("an /api call MSW does not handle stays on the preview server", async ({ pa
 
   // core-api's fingerprint, absent. On its own this is a denial, and would pass
   // just as well against a browser that could not fetch anything at all.
-  expect(answer.requestId, "an x-request-id here means mock mode reached core-api").toBeNull();
+  expect(
+    answer.requestId,
+    "an x-request-id here means mock mode reached core-api",
+  ).toBeNull();
 
   // So the preview server's OWN answer is required too: it serves index.html for
   // any unmatched path, which is a thing only this server does.

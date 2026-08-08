@@ -41,9 +41,7 @@ test("no pace indicators or throughput language renders", async ({ page }) => {
 });
 
 // TODO(rebuild) [ORPHAN RULE] — rule: a pass is refused without its reason, and escape keeps the order.
-test("pass without a reason is refused; esc keeps the order", async ({
-  page,
-}) => {
+test("pass without a reason is refused; esc keeps the order", async ({ page }) => {
   await page.goto("/queue");
   await expect(page.getByTestId("order-ref")).toHaveText("4176034-1");
   await page.keyboard.press("p");
@@ -57,18 +55,14 @@ test("pass without a reason is refused; esc keeps the order", async ({
 });
 
 // TODO(rebuild) [INVARIANT] — rule: a reasoned pass records and the server serves the next order.
-test("pass with a reason records and advances to the next order", async ({
-  page,
-}) => {
+test("pass with a reason records and advances to the next order", async ({ page }) => {
   await page.goto("/queue");
   await expect(page.getByTestId("order-ref")).toHaveText("4176034-1");
   await page.keyboard.press("p");
   const input = page.getByPlaceholder(/why are you passing/);
   await input.fill("never done a Cobb Co. tax card");
   await input.press("Enter");
-  await expect(page.getByTestId("passed-note")).toContainText(
-    "passed 4176034-1",
-  );
+  await expect(page.getByTestId("passed-note")).toContainText("passed 4176034-1");
   await expect(page.getByTestId("order-ref")).toHaveText("4176052-7");
 });
 

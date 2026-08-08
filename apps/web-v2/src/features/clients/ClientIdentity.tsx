@@ -56,8 +56,8 @@ export function ClientIdentity({
 
       {canAuthor ? (
         <p className="text-xs leading-body text-ink-muted">
-          CONTRACT GAP: the client roster is READ ONLY. Creating, editing and
-          retiring a client are server writes with no endpoint.
+          CONTRACT GAP: the client roster is READ ONLY. Creating, editing and retiring a
+          client are server writes with no endpoint.
         </p>
       ) : null}
     </div>

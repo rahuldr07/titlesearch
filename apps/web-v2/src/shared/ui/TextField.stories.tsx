@@ -22,8 +22,12 @@ export const Sizes: Story = {
   args: {},
   render: () => (
     <div className="flex flex-col gap-8 max-w-140">
-      <Field label="Compact"><TextField size="sm" defaultValue="Clayton" /></Field>
-      <Field label="Standard"><TextField size="md" defaultValue="Clayton" /></Field>
+      <Field label="Compact">
+        <TextField size="sm" defaultValue="Clayton" />
+      </Field>
+      <Field label="Standard">
+        <TextField size="md" defaultValue="Clayton" />
+      </Field>
     </div>
   ),
 };
@@ -37,7 +41,9 @@ export const Emphasis: Story = {
   args: {},
   render: () => (
     <div className="flex flex-col gap-8 max-w-140">
-      <Field label="Resting"><TextField placeholder="1px, neutral" /></Field>
+      <Field label="Resting">
+        <TextField placeholder="1px, neutral" />
+      </Field>
       <Field label="Required, unanswered">
         <TextField tone="halt" emphasis placeholder="1.5px, halt" />
       </Field>
@@ -55,7 +61,9 @@ export const Disabled: Story = {
   args: {},
   render: () => (
     <div className="flex flex-col gap-8 max-w-140">
-      <Field label="Disabled"><TextField disabled defaultValue="Frozen on the order" /></Field>
+      <Field label="Disabled">
+        <TextField disabled defaultValue="Frozen on the order" />
+      </Field>
     </div>
   ),
 };

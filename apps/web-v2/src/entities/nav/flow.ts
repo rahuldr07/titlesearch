@@ -58,7 +58,9 @@ export interface FlowPosition {
  * Delivered as six.
  */
 export function flowFor(role: Role): FlowPosition[] {
-  return FLOW.map((step, i) => ({ step, n: i + 1 })).filter(({ step }) => canOpen(role, step.path));
+  return FLOW.map((step, i) => ({ step, n: i + 1 })).filter(({ step }) =>
+    canOpen(role, step.path),
+  );
 }
 
 /**

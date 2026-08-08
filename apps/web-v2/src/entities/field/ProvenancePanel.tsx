@@ -45,8 +45,8 @@ export function ProvenancePanel({
 
         {!hasCoordinates ? (
           <p className="mt-4 text-xs text-state-attend-ink">
-            This engine declared no coordinates, so there is no highlight on the
-            page. The quoted text above is the citation.
+            This engine declared no coordinates, so there is no highlight on the page.
+            The quoted text above is the citation.
           </p>
         ) : null}
       </CardBody>

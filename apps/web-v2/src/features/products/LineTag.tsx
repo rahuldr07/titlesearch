@@ -19,7 +19,8 @@ import { cn } from "../../shared/ui/classNames";
 const TONES = {
   neutral: "border-line-strong bg-surface-app text-ink-secondary",
   action: "border-action-border bg-action-surface text-action-ink font-semibold",
-  settled: "border-state-settled-border bg-state-settled-surface text-state-settled-ink",
+  settled:
+    "border-state-settled-border bg-state-settled-surface text-state-settled-ink",
   attend: "border-state-attend-border bg-state-attend-surface text-state-attend-ink",
 } as const;
 

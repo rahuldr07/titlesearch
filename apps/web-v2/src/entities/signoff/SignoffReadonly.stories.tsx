@@ -18,7 +18,9 @@ export const Signed: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(canvas.getByText("R. Delacroix (abstractor)")).toBeInTheDocument();
-    await expect(canvas.getByText(/No plat or survey was in the package/)).toBeInTheDocument();
+    await expect(
+      canvas.getByText(/No plat or survey was in the package/),
+    ).toBeInTheDocument();
     // CONTRACT GAP: no amendment endpoint. A control over a signed, append-only
     // record offers an act the server cannot accept.
     await expect(canvas.queryAllByRole("button")).toHaveLength(0);
@@ -36,7 +38,9 @@ export const FooterCountsAnsweredLines: Story = {
   args: { signoff: SIGNED_SIGNOFF },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(canvas.getByText("3 of 3 answered · 1 disclosed as NO.")).toBeInTheDocument();
+    await expect(
+      canvas.getByText("3 of 3 answered · 1 disclosed as NO."),
+    ).toBeInTheDocument();
   },
 };
 
@@ -47,14 +51,19 @@ export const PartiallyAnswered: Story = {
       ...SIGNED_SIGNOFF,
       lines: [
         signoffLine(1),
-        signoffLine(2, { answer: "NO", comment: "Package is short the 1994 assignment." }),
+        signoffLine(2, {
+          answer: "NO",
+          comment: "Package is short the 1994 assignment.",
+        }),
         signoffLine(3, { answer: null }),
       ],
     },
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(canvas.getByText("2 of 3 answered · 1 disclosed as NO.")).toBeInTheDocument();
+    await expect(
+      canvas.getByText("2 of 3 answered · 1 disclosed as NO."),
+    ).toBeInTheDocument();
     await expect(canvas.getByText("NOT ANSWERED")).toBeInTheDocument();
   },
 };
@@ -72,7 +81,9 @@ export const UnsignedPolicyPrefill: Story = {
       canvas.getByText("No line has been answered — nothing here is signed."),
     ).toBeInTheDocument();
     await expect(canvas.getByText("NOT SIGNED · POLICY PREFILL")).toBeInTheDocument();
-    await expect(canvas.getByText(/Policy can suggest; only a person can sign/)).toBeInTheDocument();
+    await expect(
+      canvas.getByText(/Policy can suggest; only a person can sign/),
+    ).toBeInTheDocument();
   },
 };
 

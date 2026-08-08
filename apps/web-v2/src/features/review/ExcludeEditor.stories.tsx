@@ -33,7 +33,10 @@ export const PendingEnterFilesNothing: Story = {
   args: { pending: true },
   play: async ({ args, canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.type(canvas.getByTestId("exclude-reason"), `${REASON}{Enter}{Enter}`);
+    await userEvent.type(
+      canvas.getByTestId("exclude-reason"),
+      `${REASON}{Enter}{Enter}`,
+    );
     await expect(args.onSubmit).not.toHaveBeenCalled();
   },
 };

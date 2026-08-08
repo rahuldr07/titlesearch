@@ -61,7 +61,9 @@ export function DeliveredScreen({
   const [reopenOpen, setReopenOpen] = useState(reopen);
 
   if (isError) {
-    return <p className="text-base text-state-halt-ink">Delivery record unavailable.</p>;
+    return (
+      <p className="text-base text-state-halt-ink">Delivery record unavailable.</p>
+    );
   }
   if (isPending) {
     return <p className="text-base text-ink-secondary">Loading the delivery record…</p>;

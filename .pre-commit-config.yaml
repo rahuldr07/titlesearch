@@ -82,6 +82,25 @@ repos:
         pass_filenames: false
         files: '^(services|libs|scripts)/'
 
+      # A Markdown link to a repo path must resolve. Two reference documents
+      # were cited by six files while existing in no commit; this is the typed
+      # version of that lesson. Prose citations of known-absent docs belong in
+      # docs/INDEX.md's "Missing documents" table, not in link syntax.
+      - id: doc-links
+        name: markdown links resolve
+        entry: python scripts/check_doc_links.py
+        language: system
+        types: [markdown]
+
+      # CLAUDE.md and AGENTS.md are one guide under the two filenames the
+      # different agent harnesses read. Byte-identical or the commit is refused.
+      - id: agents-sync
+        name: CLAUDE.md and AGENTS.md are identical
+        entry: python scripts/check_agents_sync.py
+        language: system
+        pass_filenames: false
+        files: '^(CLAUDE|AGENTS)\.md$'
+
       # The guard is a security control, so it has tests and they run here.
       - id: guard-tests
         name: client-data guard tests

@@ -32,7 +32,10 @@ export const PendingEnterSendsNothing: Story = {
   args: { pending: true },
   play: async ({ args, canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.type(canvas.getByTestId("escalate-input"), `${QUESTION}{Enter}{Enter}`);
+    await userEvent.type(
+      canvas.getByTestId("escalate-input"),
+      `${QUESTION}{Enter}{Enter}`,
+    );
     await expect(args.onSubmit).not.toHaveBeenCalled();
   },
 };

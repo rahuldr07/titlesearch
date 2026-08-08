@@ -48,10 +48,10 @@ export function ConfigHeader({
         title="Configuration"
         lede={
           <p>
-            Editable without a release. Records (products, clients) create
-            directly; behaviour config (line wording, baseline cells, overrides)
-            publishes a new config version on save. Nothing is deleted — things
-            retire. Never reaches an order already in flight.
+            Editable without a release. Records (products, clients) create directly;
+            behaviour config (line wording, baseline cells, overrides) publishes a new
+            config version on save. Nothing is deleted — things retire. Never reaches an
+            order already in flight.
           </p>
         }
         actions={<VersionStamp configVersion={configVersion} frozen={frozen} />}
@@ -73,9 +73,8 @@ export function ConfigHeader({
           data-testid="config-read-only"
           className="px-7 py-5 text-xs leading-body text-state-attend-ink"
         >
-          Viewing only. Authoring is limited to admin and engineer — the server
-          enforces this independently. Switch role via the account menu to
-          preview editing.
+          Viewing only. Authoring is limited to admin and engineer — the server enforces
+          this independently. Switch role via the account menu to preview editing.
         </Card>
       )}
     </div>
@@ -122,11 +121,16 @@ function VersionStamp({
         </Chip>
       </span>
       {frozen ? (
-        <p className="mt-2 text-tiny font-semibold text-ink-secondary" data-testid="config-frozen">
+        <p
+          className="mt-2 text-tiny font-semibold text-ink-secondary"
+          data-testid="config-frozen"
+        >
           frozen — the next accepted edit mints a new version
         </p>
       ) : null}
-      <p className="mt-2 text-tiny text-ink-muted">current · applies to new orders only</p>
+      <p className="mt-2 text-tiny text-ink-muted">
+        current · applies to new orders only
+      </p>
     </div>
   );
 }

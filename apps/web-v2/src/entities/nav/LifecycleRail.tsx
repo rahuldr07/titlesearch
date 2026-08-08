@@ -45,7 +45,11 @@ export interface LifecycleRailProps {
 export function LifecycleRail({ stages, collapsed, onNavigate }: LifecycleRailProps) {
   if (stages.length === 0) return null;
   return (
-    <nav aria-label="Order lifecycle" data-testid="lifecycle-rail" className="flex flex-col">
+    <nav
+      aria-label="Order lifecycle"
+      data-testid="lifecycle-rail"
+      className="flex flex-col"
+    >
       {stages.map((stage, i) => {
         // The stage BEHIND this one owns the segment above it — see `StageLink`.
         const behind = stages[i - 1];

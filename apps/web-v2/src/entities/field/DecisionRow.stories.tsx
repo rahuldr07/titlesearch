@@ -88,6 +88,9 @@ export const Selected: Story = {
   ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(canvas.getByTestId("row-owner.zip")).toHaveAttribute("aria-current", "true");
+    await expect(canvas.getByTestId("row-owner.zip")).toHaveAttribute(
+      "aria-current",
+      "true",
+    );
   },
 };

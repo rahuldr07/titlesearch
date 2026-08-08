@@ -159,6 +159,14 @@ jobs:
         if: ${{ !cancelled() }}
         run: git ls-files -z | xargs -0 python scripts/check_no_client_data.py
 
+      - name: Markdown links resolve
+        if: ${{ !cancelled() }}
+        run: git ls-files -z '*.md' | xargs -0 python scripts/check_doc_links.py
+
+      - name: CLAUDE.md and AGENTS.md are identical
+        if: ${{ !cancelled() }}
+        run: python scripts/check_agents_sync.py
+
       - name: Pre-commit (all files)
         if: ${{ !cancelled() }}
         run: uvx pre-commit run --all-files --show-diff-on-failure

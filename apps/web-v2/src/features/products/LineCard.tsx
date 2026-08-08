@@ -32,19 +32,24 @@ export function LineCard({
   onEdit: () => void;
 }) {
   return (
-    <Card
-      data-testid={`line-${line.id}`}
-      className={line.retired ? "opacity-55" : ""}
-    >
+    <Card data-testid={`line-${line.id}`} className={line.retired ? "opacity-55" : ""}>
       <div className="px-7 py-6">
         <div className="flex flex-wrap items-baseline gap-5">
-          <span className="font-mono text-xs font-semibold text-ink-muted">{line.id}</span>
+          <span className="font-mono text-xs font-semibold text-ink-muted">
+            {line.id}
+          </span>
           <span className="min-w-80 flex-1 text-md font-medium text-ink-primary">
             {line.label}
           </span>
-          <Chip tone="neutral" size="micro">{line.group}</Chip>
+          <Chip tone="neutral" size="micro">
+            {line.group}
+          </Chip>
           <span className="font-mono text-tiny text-ink-muted">v{line.version}</span>
-          {line.retired ? <Chip tone="neutral" size="micro">Retired</Chip> : null}
+          {line.retired ? (
+            <Chip tone="neutral" size="micro">
+              Retired
+            </Chip>
+          ) : null}
         </div>
 
         <div className="mt-4 flex flex-wrap items-center gap-4">
@@ -52,7 +57,9 @@ export function LineCard({
           <LineTag>
             {line.comment_on_no ? "Comment required on NO" : "Comment optional on NO"}
           </LineTag>
-          {line.period_scoped ? <LineTag tone="action">carries the order period</LineTag> : null}
+          {line.period_scoped ? (
+            <LineTag tone="action">carries the order period</LineTag>
+          ) : null}
           {line.machine_check === null ? (
             <LineTag tone="attend">○ human-answered only</LineTag>
           ) : (

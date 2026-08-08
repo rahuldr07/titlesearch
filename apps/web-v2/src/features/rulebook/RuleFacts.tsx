@@ -28,20 +28,21 @@ export function RuleFacts({ rule }: { rule: Rule }) {
 
       <Fact label="Condition">
         <span className="text-ink-muted">
-          Not carried by the contract — a rule arrives as one statement, not as
-          a condition and an outcome.
+          Not carried by the contract — a rule arrives as one statement, not as a
+          condition and an outcome.
         </span>
       </Fact>
 
       <Fact label="Outcome">
-        <span className="text-ink-muted">Not carried by the contract — see Condition.</span>
+        <span className="text-ink-muted">
+          Not carried by the contract — see Condition.
+        </span>
       </Fact>
 
       <Fact label="Citation">
         {rule.source_doc_ref === null ? (
           <span className="text-state-halt-ink">
-            No source on file. A rule with no authority behind it cannot be
-            confirmed.
+            No source on file. A rule with no authority behind it cannot be confirmed.
           </span>
         ) : (
           <span className="font-quote">{rule.source_doc_ref}</span>

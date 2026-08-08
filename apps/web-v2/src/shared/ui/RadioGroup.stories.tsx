@@ -32,7 +32,9 @@ export const Disabled: Story = {
   render: () => (
     <RadioGroup defaultValue="a" aria-label="Disabled example">
       <Radio value="a">Available</Radio>
-      <Radio value="b" disabled>Requires the engineer gate</Radio>
+      <Radio value="b" disabled>
+        Requires the engineer gate
+      </Radio>
     </RadioGroup>
   ),
 };

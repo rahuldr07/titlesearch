@@ -11,7 +11,11 @@ import { mockServer } from "@titlepipe/mocks/node";
 
 describe("Preferences schema carries a theme", () => {
   test("defaults to titlepipe when absent", () => {
-    const p = Preferences.parse({ nav_collapsed: false, reduced_motion: false, default_zoom: 1 });
+    const p = Preferences.parse({
+      nav_collapsed: false,
+      reduced_motion: false,
+      default_zoom: 1,
+    });
     expect(p.theme).toBe("titlepipe");
   });
 
@@ -52,12 +56,16 @@ describe("nav_collapsed can say the user never chose", () => {
   const base = { reduced_motion: false, default_zoom: 1 };
 
   test("null parses, and means untouched", () => {
-    expect(Preferences.parse({ ...base, nav_collapsed: null }).nav_collapsed).toBeNull();
+    expect(
+      Preferences.parse({ ...base, nav_collapsed: null }).nav_collapsed,
+    ).toBeNull();
   });
 
   test("both booleans still parse — a real choice stays expressible", () => {
     for (const value of [true, false]) {
-      expect(Preferences.parse({ ...base, nav_collapsed: value }).nav_collapsed).toBe(value);
+      expect(Preferences.parse({ ...base, nav_collapsed: value }).nav_collapsed).toBe(
+        value,
+      );
     }
   });
 
@@ -66,8 +74,12 @@ describe("nav_collapsed can say the user never chose", () => {
   });
 
   test("a PATCH may set it, and an omitted key is not a null", () => {
-    expect(UpdatePreferencesRequest.parse({ nav_collapsed: true }).nav_collapsed).toBe(true);
-    expect(UpdatePreferencesRequest.parse({ nav_collapsed: null }).nav_collapsed).toBeNull();
+    expect(UpdatePreferencesRequest.parse({ nav_collapsed: true }).nav_collapsed).toBe(
+      true,
+    );
+    expect(
+      UpdatePreferencesRequest.parse({ nav_collapsed: null }).nav_collapsed,
+    ).toBeNull();
     expect(UpdatePreferencesRequest.parse({}).nav_collapsed).toBeUndefined();
   });
 });
@@ -95,10 +107,14 @@ describe("the mock persists theme across GET after PATCH", () => {
     });
     expect(patched.ok).toBe(true);
     const patchedBody: unknown = await patched.json();
-    expect((patchedBody as { preferences: { theme: string } }).preferences.theme).toBe("mocha");
+    expect((patchedBody as { preferences: { theme: string } }).preferences.theme).toBe(
+      "mocha",
+    );
 
     const got = await fetch("http://localhost/api/me/preferences");
     const gotBody: unknown = await got.json();
-    expect((gotBody as { preferences: { theme: string } }).preferences.theme).toBe("mocha");
+    expect((gotBody as { preferences: { theme: string } }).preferences.theme).toBe(
+      "mocha",
+    );
   });
 });

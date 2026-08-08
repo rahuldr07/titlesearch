@@ -71,10 +71,7 @@ export function QueueBand({
             other number in this product. The words after it are the server's
             own and are printed in the case it sent — CSS caps would be the
             screen restyling a sentence it did not write. */}
-        <span
-          data-testid="band-note"
-          className="tnum font-mono text-xs text-ink-muted"
-        >
+        <span data-testid="band-note" className="tnum font-mono text-xs text-ink-muted">
           {count === undefined ? note : `${count} ${note}`}
         </span>
         {/* `line-strong`, not the mockup's `--line-soft`: the mockup rules its

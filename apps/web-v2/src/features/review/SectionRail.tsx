@@ -1,6 +1,11 @@
 import { useState } from "react";
 import type { Field } from "@titlepipe/contract";
-import { SECTION_HEADING, needsYouCountOf, sectionAnchor, sectionsOf } from "./reportSections";
+import {
+  SECTION_HEADING,
+  needsYouCountOf,
+  sectionAnchor,
+  sectionsOf,
+} from "./reportSections";
 import { Chip } from "../../shared/ui/Chip";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
 import { cn } from "../../shared/ui/classNames";

@@ -27,7 +27,9 @@ export function OrderRail({ orderId }: { orderId: string }) {
     <Card data-testid="order-rail">
       <CardBody className="flex flex-col gap-4">
         <Eyebrow variant="caption">This order</Eyebrow>
-        <span className="font-mono text-md font-semibold text-ink-primary">{orderId}</span>
+        <span className="font-mono text-md font-semibold text-ink-primary">
+          {orderId}
+        </span>
 
         {stillQueued ? (
           <Chip tone="attend" size="sm" bordered>

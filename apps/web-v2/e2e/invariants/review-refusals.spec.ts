@@ -64,7 +64,9 @@ const postsMatching = async (page: Page, match: string) =>
   (await apiLog(page)).filter((c) => c.method === "POST" && c.url.includes(match));
 
 // BLOCKER 1 — rule: a 409 on a CORRECTION is an answer, surfaced verbatim.
-test("a refused correction surfaces the server's message verbatim", async ({ page }) => {
+test("a refused correction surfaces the server's message verbatim", async ({
+  page,
+}) => {
   await interceptApi(page, {
     method: "POST",
     match: "/correct",
@@ -83,7 +85,9 @@ test("a refused correction surfaces the server's message verbatim", async ({ pag
 });
 
 // BLOCKER 1 — rule: a 409 on an ESCALATION is an answer, surfaced verbatim.
-test("a refused escalation surfaces the server's message verbatim", async ({ page }) => {
+test("a refused escalation surfaces the server's message verbatim", async ({
+  page,
+}) => {
   await interceptApi(page, {
     method: "POST",
     match: "/escalate",
@@ -152,9 +156,7 @@ test("three clicks on the correction submit file exactly one correction", async 
   await submit.click({ force: true });
   await submit.click({ force: true });
   await expect(page.getByTestId(JUDGMENT_ROW)).toBeVisible();
-  await expect
-    .poll(async () => (await postsMatching(page, "/correct")).length)
-    .toBe(1);
+  await expect.poll(async () => (await postsMatching(page, "/correct")).length).toBe(1);
 });
 
 // BLOCKER 2 — rule: the same holds for the Enter-only editors, which have no
@@ -170,9 +172,7 @@ test("repeated Enter on an exclude files exactly one suppression", async ({ page
   await reason.press("Enter");
   await reason.press("Enter");
   await reason.press("Enter");
-  await expect
-    .poll(async () => (await postsMatching(page, "/exclude")).length)
-    .toBe(1);
+  await expect.poll(async () => (await postsMatching(page, "/exclude")).length).toBe(1);
 });
 
 // BLOCKER 3 — rule: the chord obeys the rulebook gate the button obeys.

@@ -6,9 +6,8 @@ import { readingsOf } from "../../entities/field/fieldLabel";
 import { ReviewStandin } from "./ReviewStandin";
 import { DocumentPane } from "./DocumentPane";
 import { FieldsPane } from "./FieldsPane";
-import { offersExclude } from "./excludeGate";
+import { useReviewBindings } from "./useReviewBindings";
 import { useReviewEditor } from "./useReviewEditor";
-import { useReviewKeys } from "./useReviewKeys";
 import { useReviewSelection } from "./useReviewSelection";
 import { useReviewWrites } from "./useReviewWrites";
 import { Screen } from "../../shared/ui/Screen";
@@ -55,41 +54,37 @@ export function ReviewScreen() {
   const writes = useReviewWrites(orderId);
 
   const fields: Field[] = data?.fields ?? [];
-  const { selected, select, step, advance } = useReviewSelection(orderId, fields, fieldParam);
-
-  const { mode, setMode, pinned, setPinned, seed, blankNote, setBlankNote, reselect, adopt, openCorrect } =
-    useReviewEditor(select);
-
-  const submitConfirm = () => {
-    if (selected === null) return;
-    writes.confirm(selected.id, selected.value, advance);
-  };
-
-  useReviewKeys(
-    {
-      next: () => step(1),
-      previous: () => step(-1),
-      // `c` NEVER ACCEPTS A BLANK (`ux.spec` O9). Confirm moved off ⏎ onto `c`
-      // in the design remap; the rule moved with it. A missing field demands an
-      // explicit click — the only keyboard-layer defence against bulk-accepting
-      // absences by holding the confirm key down. The button (`act-confirm`)
-      // calls `submitConfirm` directly, so the explicit click still accepts N/A.
-      confirm: () => (selected?.value == null ? setBlankNote(true) : submitConfirm()),
-      // `e` OPENS the correction field; it never commits (that is Enter, inside
-      // the field). Escalate has no hotkey — it is `act-escalate`, a button.
-      correct: openCorrect,
-      // `x` OBEYS THE SAME RULEBOOK GATE THE BUTTON DOES (R13). It was bound
-      // unconditionally, so on `owner.zip` — where `✕ Not our party` is
-      // correctly absent — the chord opened the editor anyway and the exclude
-      // posted 200. An excluded row is GONE (`conflicts.md` C18).
-      exclude: () => setMode("exclude"),
-      pass: () => setMode("pass"),
-    },
-    {
-      enabled: mode === "idle" && selected !== null,
-      excludable: selected !== null && offersExclude(selected.path),
-    },
+  const { selected, select, step, advance } = useReviewSelection(
+    orderId,
+    fields,
+    fieldParam,
   );
+
+  const {
+    mode,
+    setMode,
+    pinned,
+    setPinned,
+    seed,
+    blankNote,
+    setBlankNote,
+    reselect,
+    adopt,
+    openCorrect,
+  } = useReviewEditor(select);
+
+  // The key rules (`c` never accepts a blank, `x` obeys the R13 gate, `e` only
+  // opens) live with their bindings in `useReviewBindings`.
+  const { submitConfirm } = useReviewBindings({
+    selected,
+    mode,
+    writes,
+    advance,
+    step,
+    setMode,
+    setBlankNote,
+    openCorrect,
+  });
 
   // The three states with no workstation to draw live in `ReviewStandin`,
   // which also states why only the empty one keeps the order's history.
@@ -101,7 +96,11 @@ export function ReviewScreen() {
   return (
     <Screen placement="bleed">
       <div className="flex h-full min-h-0">
-        <DocumentPane orderId={orderId} field={selected} pinned={pinned?.reading ?? null} />
+        <DocumentPane
+          orderId={orderId}
+          field={selected}
+          pinned={pinned?.reading ?? null}
+        />
 
         <FieldsPane
           orderId={orderId}
@@ -119,8 +118,12 @@ export function ReviewScreen() {
           onConfirm={submitConfirm}
           onCorrect={openCorrect}
           onMode={setMode}
-          onCorrectSubmit={(value, reason) => writes.correct(selected.id, value, reason, advance)}
-          onEscalateSubmit={(question) => writes.escalate(selected.id, question, advance)}
+          onCorrectSubmit={(value, reason) =>
+            writes.correct(selected.id, value, reason, advance)
+          }
+          onEscalateSubmit={(question) =>
+            writes.escalate(selected.id, question, advance)
+          }
           onExcludeSubmit={(reason) => writes.exclude(selected.id, reason, advance)}
           onPassSubmit={(reason) => writes.pass(reason, () => setMode("idle"))}
           onSelect={reselect}

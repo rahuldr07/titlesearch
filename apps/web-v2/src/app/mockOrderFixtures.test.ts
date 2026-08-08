@@ -47,7 +47,8 @@ async function read<T>(path: string, schema: Parser<T>, role?: string): Promise<
 
 const board = (role?: string) => read("/api/lifecycle", LifecycleResponse, role);
 const signoff = (id: string) => read(`/api/orders/${id}/signoff`, OrderSignoffResponse);
-const pipeline = (id: string) => read(`/api/orders/${id}/pipeline`, OrderPipelineResponse);
+const pipeline = (id: string) =>
+  read(`/api/orders/${id}/pipeline`, OrderPipelineResponse);
 const completeness = (id: string) =>
   read(`/api/orders/${id}/completeness`, OrderCompletenessResponse);
 
@@ -105,7 +106,9 @@ describe("the lifecycle board", () => {
     const data = await board();
     expect(data.stages.map((stage) => stage.id)).not.toContain("failed");
     expect(data.failed).toBeGreaterThan(0);
-    const flagged = data.stages.flatMap((stage) => stage.orders.filter((order) => order.failed));
+    const flagged = data.stages.flatMap((stage) =>
+      stage.orders.filter((order) => order.failed),
+    );
     expect(flagged.length).toBeGreaterThan(0);
   });
 
@@ -189,7 +192,9 @@ describe("the processing pipeline", () => {
   });
 
   test("the gate rows name what they check", async () => {
-    const byId = new Map((await pipeline(LIVE)).stages.map((stage) => [stage.id, stage]));
+    const byId = new Map(
+      (await pipeline(LIVE)).stages.map((stage) => [stage.id, stage]),
+    );
     expect(byId.get("gate")?.label).toBe(
       "Completeness gate — checks the package against your sign-off",
     );
@@ -205,7 +210,9 @@ describe("the processing pipeline", () => {
   });
 
   test("a waiting row says why it has not run", async () => {
-    const byId = new Map((await pipeline(LIVE)).stages.map((stage) => [stage.id, stage]));
+    const byId = new Map(
+      (await pipeline(LIVE)).stages.map((stage) => [stage.id, stage]),
+    );
     expect(byId.get("extract")?.detail).toBe(
       "Held — an incomplete package never reaches extraction.",
     );
@@ -231,7 +238,9 @@ describe("the product's thirteen sign-off lines", () => {
   test("there are thirteen, numbered 1..13, ids L01..L13", async () => {
     const lines = (await signoff(LIVE)).lines;
     expect(lines).toHaveLength(13);
-    expect(lines.map((line) => line.n)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]);
+    expect(lines.map((line) => line.n)).toEqual([
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13,
+    ]);
     expect(lines[0]?.line_id).toBe("L01");
     expect(lines[12]?.line_id).toBe("L13");
   });
@@ -239,7 +248,14 @@ describe("the product's thirteen sign-off lines", () => {
   test("six lines admit N/A; the other seven are YES/NO only", async () => {
     const lines = (await signoff(LIVE)).lines;
     const admitNa = lines.filter((line) => line.answers.includes("N/A"));
-    expect(admitNa.map((line) => line.line_id)).toEqual(["L01", "L04", "L06", "L08", "L10", "L11"]);
+    expect(admitNa.map((line) => line.line_id)).toEqual([
+      "L01",
+      "L04",
+      "L06",
+      "L08",
+      "L10",
+      "L11",
+    ]);
     expect(lines.length - admitNa.length).toBe(7);
     for (const line of lines) {
       expect(line.answers.slice(0, 2)).toEqual(["YES", "NO"]);
@@ -270,7 +286,8 @@ describe("the product's thirteen sign-off lines", () => {
     for (const id of await everyOrderId()) {
       for (const line of (await signoff(id)).lines) {
         if (line.answer !== null) expect(line.answers).toContain(line.answer);
-        if (line.policy_suggestion !== null) expect(line.answers).toContain(line.policy_suggestion);
+        if (line.policy_suggestion !== null)
+          expect(line.answers).toContain(line.policy_suggestion);
       }
     }
   });
@@ -278,7 +295,8 @@ describe("the product's thirteen sign-off lines", () => {
   test("a NO carries its comment wherever the line requires one", async () => {
     for (const id of await everyOrderId()) {
       for (const line of (await signoff(id)).lines) {
-        if (line.answer === "NO" && line.comment_required) expect(line.comment).not.toBeNull();
+        if (line.answer === "NO" && line.comment_required)
+          expect(line.comment).not.toBeNull();
       }
     }
   });
@@ -355,7 +373,9 @@ describe("the completeness gate", () => {
   });
 
   test("the period gap offers three ways out, so the three-across row is drawn", async () => {
-    const period = (await completeness(LIVE)).gaps.find((gap) => gap.kind === "period_short");
+    const period = (await completeness(LIVE)).gaps.find(
+      (gap) => gap.kind === "period_short",
+    );
     expect(period?.close_options.map((option) => option.kind)).toEqual([
       "upload",
       "root_of_title",
@@ -371,8 +391,13 @@ describe("the completeness gate", () => {
 
   test("an amendable gap offers exactly the two ways out that fit it", async () => {
     const gate = await completeness(LIVE);
-    for (const gap of gate.gaps.filter((candidate) => candidate.kind !== "period_short")) {
-      expect(gap.close_options.map((option) => option.kind)).toEqual(["upload", "amend"]);
+    for (const gap of gate.gaps.filter(
+      (candidate) => candidate.kind !== "period_short",
+    )) {
+      expect(gap.close_options.map((option) => option.kind)).toEqual([
+        "upload",
+        "amend",
+      ]);
     }
   });
 

@@ -45,20 +45,24 @@ export function GateOpenBanner() {
       </div>
 
       <p className="mb-6 text-base leading-open text-state-halt-ink">
-        The pipeline halted right after segmentation, before extraction. Nothing
-        has been extracted yet, so re-running costs nothing. Close every gap
-        below to resume.
+        The pipeline halted right after segmentation, before extraction. Nothing has
+        been extracted yet, so re-running costs nothing. Close every gap below to
+        resume.
       </p>
 
       <div className="flex flex-wrap items-center gap-4 font-mono text-tiny">
         <span className="rounded-4 border border-state-settled-border bg-state-settled-surface px-4 py-2 text-state-settled-ink">
           ✓ classify &amp; segment
         </span>
-        <span aria-hidden className="text-ink-muted">→</span>
+        <span aria-hidden className="text-ink-muted">
+          →
+        </span>
         <span className="rounded-4 bg-state-halt px-4 py-2 text-ink-on-action">
           ✕ completeness gate · halted
         </span>
-        <span aria-hidden className="text-ink-muted">→</span>
+        <span aria-hidden className="text-ink-muted">
+          →
+        </span>
         <span className="rounded-4 border border-line-strong bg-surface-app px-4 py-2 text-ink-muted">
           extract fields · held
         </span>
@@ -81,8 +85,8 @@ export function GateClosedBanner() {
         ✓
       </span>
       <p className="text-md leading-body text-state-settled-ink">
-        Package complete — every gap is closed. Resume to run extraction on the
-        full package.
+        Package complete — every gap is closed. Resume to run extraction on the full
+        package.
       </p>
     </Card>
   );

@@ -27,11 +27,12 @@ export function PageFacsimile({
   if (!page.read_in_full) {
     return (
       <div className="flex flex-col gap-3 rounded-5 border border-dashed border-line-strong bg-surface-sunken p-8">
-        <Eyebrow variant="caption" tone="strong">p{page.n} · not read in full</Eyebrow>
+        <Eyebrow variant="caption" tone="strong">
+          p{page.n} · not read in full
+        </Eyebrow>
         <p className="text-xs leading-body text-ink-secondary">
-          The classifier found nothing here the report needs, so no reader typed
-          this page. It is part of the package — it just did not contribute a
-          value.
+          The classifier found nothing here the report needs, so no reader typed this
+          page. It is part of the package — it just did not contribute a value.
         </p>
       </div>
     );

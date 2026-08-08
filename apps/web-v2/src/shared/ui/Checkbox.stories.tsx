@@ -10,7 +10,15 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const Row = ({ id, label, children }: { id: string; label: string; children: React.ReactNode }) => (
+const Row = ({
+  id,
+  label,
+  children,
+}: {
+  id: string;
+  label: string;
+  children: React.ReactNode;
+}) => (
   <label htmlFor={id} className="flex items-center gap-5 text-base">
     {children}
     <span>{label}</span>

@@ -63,7 +63,9 @@ export function compareRecordingDates(a: string, b: string): number {
   // strings put garbage silently at the end of a chain of title, which reads
   // as "most recent instrument" — the worst possible place for it.
   if (!ISO_DATE.test(a) || !ISO_DATE.test(b)) {
-    throw new Error(`compareRecordingDates needs YYYY-MM-DD; got ${JSON.stringify([a, b])}`);
+    throw new Error(
+      `compareRecordingDates needs YYYY-MM-DD; got ${JSON.stringify([a, b])}`,
+    );
   }
   return a < b ? -1 : a > b ? 1 : 0;
 }

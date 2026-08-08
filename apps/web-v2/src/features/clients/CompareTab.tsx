@@ -4,8 +4,11 @@ import { EmptyPanel } from "../../shared/ui/EmptyPanel";
 import { cn } from "../../shared/ui/classNames";
 
 import {
-  ABSENT_LABEL, ABSENT_SYMBOL, COMPARE_LEGEND,
-  type CompareColumn, type CompareMark,
+  ABSENT_LABEL,
+  ABSENT_SYMBOL,
+  COMPARE_LEGEND,
+  type CompareColumn,
+  type CompareMark,
 } from "./compare";
 import { CompareMatrix } from "./CompareMatrix";
 import { CompareStacked } from "./CompareStacked";
@@ -84,10 +87,9 @@ export function CompareTab({
   return (
     <div className="flex flex-col gap-6">
       <p className="max-w-prose text-base leading-body text-ink-secondary">
-        Every client the server has resolved against one product baseline. A dot
-        means that client takes the baseline as written — so the marks are the
-        entire set of differences, and a column of dots is a client with nothing
-        special about it.
+        Every client the server has resolved against one product baseline. A dot means
+        that client takes the baseline as written — so the marks are the entire set of
+        differences, and a column of dots is a client with nothing special about it.
       </p>
 
       <ProductChips products={products} value={product.id} onChange={onSelectProduct} />
@@ -101,7 +103,12 @@ export function CompareTab({
       */}
       <ul className="flex flex-wrap gap-7">
         {COMPARE_LEGEND.map((l) => (
-          <LegendItem key={l.mark} symbol={l.symbol} label={l.label} swatch={SWATCH[l.mark]} />
+          <LegendItem
+            key={l.mark}
+            symbol={l.symbol}
+            label={l.label}
+            swatch={SWATCH[l.mark]}
+          />
         ))}
         <LegendItem
           symbol={ABSENT_SYMBOL}

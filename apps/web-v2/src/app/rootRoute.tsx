@@ -1,8 +1,8 @@
 import { createRootRoute, Outlet } from "@tanstack/react-router";
-import { GlobalKeys } from "./GlobalKeys";
-import { AppChrome } from "./AppChrome";
-import { OrderStrip } from "./OrderStrip";
-import { NotFound } from "./Placeholders";
+import { GlobalKeys } from "./chrome/GlobalKeys";
+import { AppChrome } from "./chrome/AppChrome";
+import { OrderStrip } from "./chrome/OrderStrip";
+import { NotFound } from "./chrome/Placeholders";
 
 /**
  * Routes are guards and wiring only — no logic (BRIEF §7).

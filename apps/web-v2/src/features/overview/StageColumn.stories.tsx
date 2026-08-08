@@ -55,8 +55,12 @@ export const HeaderCarriesTheServersFourLines: Story = {
   args: { stage: INTAKE },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(canvas.getByTestId("stage-label")).toHaveTextContent("Intake & sign-off");
-    await expect(canvas.getByTestId("stage-sub")).toHaveTextContent("answering the lines");
+    await expect(canvas.getByTestId("stage-label")).toHaveTextContent(
+      "Intake & sign-off",
+    );
+    await expect(canvas.getByTestId("stage-sub")).toHaveTextContent(
+      "answering the lines",
+    );
     // "ON" is literal in the markup; the actor stays the server's word and is
     // only cased by the eyebrow, which is why this asserts the class too.
     const on = canvas.getByTestId("stage-waiting-on");
@@ -103,7 +107,9 @@ export const MachineOwnedIsAWordNotAHatch: Story = {
     const canvas = within(canvasElement);
     await expect(canvas.getByText("MACHINE")).toBeVisible();
     await expect(canvas.queryByText("STOPPED")).toBeNull();
-    await expect(canvas.getByTestId("stage-sub")).toHaveTextContent("extracting fields");
+    await expect(canvas.getByTestId("stage-sub")).toHaveTextContent(
+      "extracting fields",
+    );
     // Resolved and empty, never *not loaded* — and italic is what says so.
     const note = canvas.getByText("Nothing here");
     await expect(note.className).toContain("italic");

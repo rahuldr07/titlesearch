@@ -113,10 +113,14 @@ describe("Screen", () => {
       const emitted = screenScroller({ pad });
       const base = emitted.match(/(?:^|\s)p[xy]?-\d+(?:\.\d+)?/g) ?? [];
       const wide = emitted.match(/lg:p[xy]?-\d+(?:\.\d+)?/g) ?? [];
-      expect(base.length, `pad="${pad}" has no unprefixed padding, so a narrow window gets none`)
-        .toBeGreaterThan(0);
-      expect(wide.length, `pad="${pad}" has no lg: padding, so it never reaches the drawn value`)
-        .toBe(base.length);
+      expect(
+        base.length,
+        `pad="${pad}" has no unprefixed padding, so a narrow window gets none`,
+      ).toBeGreaterThan(0);
+      expect(
+        wide.length,
+        `pad="${pad}" has no lg: padding, so it never reaches the drawn value`,
+      ).toBe(base.length);
     }
   });
 
@@ -152,7 +156,10 @@ describe("Screen", () => {
    */
   test("the centred scroller is a plain column", () => {
     const scroller = screenScroller({ placement: "centre" });
-    expect(scroller, "auto margins need a plain column to have free space in").toContain("flex-col");
+    expect(
+      scroller,
+      "auto margins need a plain column to have free space in",
+    ).toContain("flex-col");
     expect(
       scroller,
       "alignment-centring clamps an overflowing card flat against the pane, dropping the slot's padding",

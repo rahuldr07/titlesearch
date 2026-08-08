@@ -48,7 +48,9 @@ describe("every severity register is separable without colour", () => {
     // would render an unmarked block, which is the collapse wearing a new hat.
     const known = new Set<string>(GALLERY_ACCENTS);
     for (const state of GALLERY_STATES) {
-      expect(known.has(state.accent), `${state.id} has accent ${state.accent}`).toBe(true);
+      expect(known.has(state.accent), `${state.id} has accent ${state.accent}`).toBe(
+        true,
+      );
     }
   });
 

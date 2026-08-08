@@ -45,8 +45,7 @@ export function RetireBlock({ mayRetire }: { mayRetire: boolean }) {
           of how much of it there is, which is not.
         */}
         <p className="flex-1 text-sm text-ink-secondary">
-          Reports that already used this rule keep it — retirement is
-          forward-only.{" "}
+          Reports that already used this rule keep it — retirement is forward-only.{" "}
           <button
             type="button"
             data-testid="used-by-toggle"
@@ -81,8 +80,12 @@ export function RetireBlock({ mayRetire }: { mayRetire: boolean }) {
           <ul className="mt-4 flex flex-col gap-2">
             {USED_BY.map((order) => (
               <li key={order} className="flex flex-wrap items-baseline gap-5 text-xs">
-                <span className="font-mono font-semibold text-ink-primary">{order}</span>
-                <span className="text-ink-muted">delivered · v1 unchanged by retirement</span>
+                <span className="font-mono font-semibold text-ink-primary">
+                  {order}
+                </span>
+                <span className="text-ink-muted">
+                  delivered · v1 unchanged by retirement
+                </span>
               </li>
             ))}
           </ul>

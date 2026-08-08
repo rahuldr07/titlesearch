@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { Card, CardBody } from "../../shared/ui/Card";
-import { buttonClasses } from "../../shared/ui/Button";
+import { buttonClasses } from "../../shared/ui/buttonClasses";
 
 /**
  * The Clients tab is a DOOR, not a second copy of the clients screen.
@@ -23,8 +23,7 @@ export function ClientsLink() {
           Clients &amp; overrides live on their own screen
         </p>
         <p className="mt-2 text-sm leading-body text-ink-secondary">
-          Add clients, set sign-off defaults, and author overrides against the
-          baseline.
+          Add clients, set sign-off defaults, and author overrides against the baseline.
         </p>
         {/*
           A plain anchor, not a typed <Link>: `/clients` is registered by whoever

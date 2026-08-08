@@ -1,9 +1,6 @@
 {
   "files": [],
-  "references": [
-    { "path": "./tsconfig.app.json" },
-    { "path": "./tsconfig.node.json" }
-  ],
+  "references": [{ "path": "./tsconfig.app.json" }, { "path": "./tsconfig.node.json" }],
   /*
    * A solution-style config compiles nothing, so these options are inert for
    * `tsc -b` — they are here for TOOLS that read the project's root tsconfig

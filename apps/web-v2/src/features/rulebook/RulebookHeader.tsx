@@ -53,16 +53,25 @@ export function RulebookHeader({
       title="Extraction rules"
       lede={
         <p>
-          A rule is inert until an engineer or admin confirms it. Writing a rule
-          and enabling it are separate acts. Nothing is ever deleted — rules
-          retire.
+          A rule is inert until an engineer or admin confirms it. Writing a rule and
+          enabling it are separate acts. Nothing is ever deleted — rules retire.
         </p>
       }
       actions={
         <>
           <CensusTile size="strip" tone="settled" value={counts.live} caption="Live" />
-          <CensusTile size="strip" tone="attend" value={counts.pending} caption="Pending" />
-          <CensusTile size="strip" tone="muted" value={counts.retired} caption="Retired" />
+          <CensusTile
+            size="strip"
+            tone="attend"
+            value={counts.pending}
+            caption="Pending"
+          />
+          <CensusTile
+            size="strip"
+            tone="muted"
+            value={counts.retired}
+            caption="Retired"
+          />
           <Button size="md" data-testid="new-rule" onClick={onNewRule}>
             ＋ New rule
           </Button>

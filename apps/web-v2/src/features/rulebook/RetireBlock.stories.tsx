@@ -29,7 +29,9 @@ export const RetirePreviewStatesItsAbsence: Story = {
       /no retire preview has been run|what reverts is unknown/i,
     );
     // The confirm control stays inert — no retire endpoint exists.
-    await expect(canvas.getByRole("button", { name: /Confirm.*RETIRE/ })).toBeDisabled();
+    await expect(
+      canvas.getByRole("button", { name: /Confirm.*RETIRE/ }),
+    ).toBeDisabled();
   },
 };
 
@@ -39,6 +41,8 @@ export const RestrictedRoleSeesNoRetireControl: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(canvas.queryByTestId("arm-retire")).not.toBeInTheDocument();
-    await expect(canvas.getByText(/restricted to engineer and admin/)).toBeInTheDocument();
+    await expect(
+      canvas.getByText(/restricted to engineer and admin/),
+    ).toBeInTheDocument();
   },
 };

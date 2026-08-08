@@ -39,8 +39,14 @@ export const IMPACT = {
   match: 9,
   mismatch: 3,
   cases: [
-    { order: "gold-031", detail: "Deed states 'undivided one-third'; rule labelled it 1/2." },
-    { order: "gold-047", detail: "Life estate, not a fractional fee — rule mis-fires." },
+    {
+      order: "gold-031",
+      detail: "Deed states 'undivided one-third'; rule labelled it 1/2.",
+    },
+    {
+      order: "gold-047",
+      detail: "Life estate, not a fractional fee — rule mis-fires.",
+    },
     { order: "gold-052", detail: "Full 100% conveyance wrongly flagged as partial." },
   ] as const satisfies readonly ImpactCase[],
 } as const;
@@ -64,8 +70,18 @@ export interface VersionEntry {
  * version log that collapses to "current" erases exactly that.
  */
 export const VERSIONS = [
-  { v: "v2", note: "Scope narrowed to Arizona only", who: "R. Okafor", when: "2025-11-02" },
-  { v: "v1", note: "Original — all states (retired)", who: "R. Okafor", when: "2025-06-14" },
+  {
+    v: "v2",
+    note: "Scope narrowed to Arizona only",
+    who: "R. Okafor",
+    when: "2025-11-02",
+  },
+  {
+    v: "v1",
+    note: "Original — all states (retired)",
+    who: "R. Okafor",
+    when: "2025-06-14",
+  },
 ] as const satisfies readonly VersionEntry[];
 
 /** The conflicting counterpart the design pairs against a pending rule. */

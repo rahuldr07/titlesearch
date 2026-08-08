@@ -45,7 +45,9 @@ export const Disabled: Story = {
   render: () => (
     <ToggleGroup defaultValue={["a"]} aria-label="Disabled example">
       <Toggle value="a">Available</Toggle>
-      <Toggle value="b" disabled>Blocked on a ruling</Toggle>
+      <Toggle value="b" disabled>
+        Blocked on a ruling
+      </Toggle>
     </ToggleGroup>
   ),
 };

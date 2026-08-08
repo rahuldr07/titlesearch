@@ -60,7 +60,9 @@ describe("the mock serves one order set", () => {
 
   describe("GET /api/queue/bands", () => {
     test("a senior is served four bands, in the export's order and copy", async () => {
-      const body = QueueBandsResponse.parse(await getJson("/api/queue/bands", "senior"));
+      const body = QueueBandsResponse.parse(
+        await getJson("/api/queue/bands", "senior"),
+      );
       expect(body.bands.map((band) => [band.id, band.title, band.note])).toEqual([
         ["mine", "Mine", "in progress"],
         ["held", "Held", "stopped · needs someone"],
@@ -70,12 +72,16 @@ describe("the mock serves one order set", () => {
     });
 
     test("a reviewer is served no in-flight band at all — absent, not empty", async () => {
-      const body = QueueBandsResponse.parse(await getJson("/api/queue/bands", "reviewer"));
+      const body = QueueBandsResponse.parse(
+        await getJson("/api/queue/bands", "reviewer"),
+      );
       expect(body.bands.map((band) => band.id)).toEqual(["mine", "held", "delivered"]);
     });
 
     test("a reviewer's held list narrows to their own work", async () => {
-      const body = QueueBandsResponse.parse(await getJson("/api/queue/bands", "reviewer"));
+      const body = QueueBandsResponse.parse(
+        await getJson("/api/queue/bands", "reviewer"),
+      );
       const held = body.bands.find((band) => band.id === "held");
       expect(held?.orders.every((order) => order.mine)).toBe(true);
       expect(held?.orders.map((order) => order.order_ref)).toEqual([
@@ -85,8 +91,12 @@ describe("the mock serves one order set", () => {
     });
 
     test("the census does not shrink with your permissions", async () => {
-      const asSenior = QueueBandsResponse.parse(await getJson("/api/queue/bands", "senior"));
-      const asReviewer = QueueBandsResponse.parse(await getJson("/api/queue/bands", "reviewer"));
+      const asSenior = QueueBandsResponse.parse(
+        await getJson("/api/queue/bands", "senior"),
+      );
+      const asReviewer = QueueBandsResponse.parse(
+        await getJson("/api/queue/bands", "reviewer"),
+      );
       const seniorHeld = asSenior.bands.find((band) => band.id === "held");
       const reviewerHeld = asReviewer.bands.find((band) => band.id === "held");
       // Same served count on both sides; only the row list narrowed. A count
@@ -115,7 +125,14 @@ describe("the mock serves one order set", () => {
       const rows = raw.bands.flatMap((band) => band.orders);
       expect(rows.length).toBeGreaterThan(0);
       for (const row of rows) {
-        for (const key of ["claim", "assign", "assigned_to", "take", "priority", "rate"]) {
+        for (const key of [
+          "claim",
+          "assign",
+          "assigned_to",
+          "take",
+          "priority",
+          "rate",
+        ]) {
           expect(key in row).toBe(false);
         }
       }
@@ -130,7 +147,9 @@ describe("the mock serves one order set", () => {
      * fixture against itself.
      */
     async function servedOrderIds(): Promise<string[]> {
-      const bands = QueueBandsResponse.parse(await getJson("/api/queue/bands", "admin"));
+      const bands = QueueBandsResponse.parse(
+        await getJson("/api/queue/bands", "admin"),
+      );
       const next = QueueNextResponse.parse(await getJson("/api/queue/next"));
       const ids = bands.bands.flatMap((band) => band.orders.map((order) => order.id));
       const served = next.order?.id;
@@ -141,7 +160,9 @@ describe("the mock serves one order set", () => {
       const ids = await servedOrderIds();
       expect(ids.length).toBeGreaterThan(0);
       for (const id of ids) {
-        const parsed = OrderContextResponse.safeParse(await getJson(`/api/orders/${id}/context`));
+        const parsed = OrderContextResponse.safeParse(
+          await getJson(`/api/orders/${id}/context`),
+        );
         expect(parsed.success).toBe(true);
         expect(parsed.success && parsed.data.order_id).toBe(id);
         expect(parsed.success && parsed.data.order_ref.length).toBeGreaterThan(0);
@@ -149,7 +170,9 @@ describe("the mock serves one order set", () => {
     });
 
     test("names the human ref the URL id cannot supply, with a decided stamp", async () => {
-      const body = OrderContextResponse.parse(await getJson("/api/orders/ord_demo_1/context"));
+      const body = OrderContextResponse.parse(
+        await getJson("/api/orders/ord_demo_1/context"),
+      );
       expect(body.order_ref).toBe("4176034-1");
       expect(body.product).toBe("40-Year Search");
       expect(body.period_label).toBe("40-year period · 07/18/1986 – 07/18/2026");

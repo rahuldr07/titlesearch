@@ -1,6 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 import { OrderCompletenessResponse } from "@titlepipe/contract";
-import { FLOW_ORDERS } from "../../app/flowOrders";
+import { FLOW_ORDERS } from "../../entities/nav/flowOrders";
 import { get } from "../../shared/api";
 
 /**
@@ -31,6 +31,7 @@ export const COMPLETENESS_ORDER_ID = FLOW_ORDERS["/completeness"];
 export function orderCompletenessQuery(orderId: string) {
   return queryOptions({
     queryKey: ["orders", orderId, "completeness"],
-    queryFn: () => get(`/api/orders/${orderId}/completeness`, OrderCompletenessResponse),
+    queryFn: () =>
+      get(`/api/orders/${orderId}/completeness`, OrderCompletenessResponse),
   });
 }

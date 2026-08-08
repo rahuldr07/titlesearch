@@ -71,7 +71,11 @@ function focusOwnsTheKey(target: EventTarget | null): boolean {
  * `false` short-circuits — that path never attaches a listener. Hence boolean
  * `enabled` for the hold, and a hand-called `preventDefault` where we act.
  */
-export function useScreenHotkey(keys: string, act: () => void, deps: readonly unknown[]): void {
+export function useScreenHotkey(
+  keys: string,
+  act: () => void,
+  deps: readonly unknown[],
+): void {
   const held = useGlobalKeysHold();
   useHotkeys(
     keys,

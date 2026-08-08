@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { buttonClasses } from "../../shared/ui/Button";
+import { buttonClasses } from "../../shared/ui/buttonClasses";
 import { Card } from "../../shared/ui/Card";
 import { Screen } from "../../shared/ui/Screen";
 import { Wordmark } from "../../shared/ui/Wordmark";
@@ -56,13 +56,17 @@ export function SigninScreen() {
           Abstractor Review · internal
         </div>
 
-        <Link to="/" data-testid="signin-handoff" className={cn(buttonClasses({ size: "xl" }))}>
+        <Link
+          to="/"
+          data-testid="signin-handoff"
+          className={cn(buttonClasses({ size: "xl" }))}
+        >
           Sign in
         </Link>
 
         <p className="mt-8 text-xs leading-open text-ink-muted">
-          Sign-in, passwords, and MFA are handled by your identity provider on
-          its own page. This tool never sees your credentials.
+          Sign-in, passwords, and MFA are handled by your identity provider on its own
+          page. This tool never sees your credentials.
         </p>
       </Card>
     </Screen>

@@ -49,15 +49,22 @@ export function SignoffDefaults({
   return (
     <Card>
       <CardHeader className="flex-col items-start gap-1">
-        <Eyebrow variant="section" as="h2">Sign-off suggestion defaults</Eyebrow>
+        <Eyebrow variant="section" as="h2">
+          Sign-off suggestion defaults
+        </Eyebrow>
         <p className="text-xs leading-body text-ink-secondary">
           Prefill the intake questions for {clientName} —{" "}
-          <span className="font-semibold">the abstractor still answers every line.</span>
+          <span className="font-semibold">
+            the abstractor still answers every line.
+          </span>
         </p>
       </CardHeader>
       <CardBody>
         {entries.length === 0 ? (
-          <p data-testid="no-defaults" className="text-sm leading-body text-ink-secondary">
+          <p
+            data-testid="no-defaults"
+            className="text-sm leading-body text-ink-secondary"
+          >
             No prefill defaults. Every line reaches this client&rsquo;s intake
             unanswered.
           </p>
@@ -69,16 +76,20 @@ export function SignoffDefaults({
                 data-testid={`default-${d.key}`}
                 className="flex items-center gap-4 rounded-5 border border-line-strong bg-surface-app px-5 py-3 text-sm"
               >
-                <span className="flex-1 leading-close text-ink-secondary">{d.label}</span>
-                <span className="font-mono text-xs font-semibold text-action">{d.value}</span>
+                <span className="flex-1 leading-close text-ink-secondary">
+                  {d.label}
+                </span>
+                <span className="font-mono text-xs font-semibold text-action">
+                  {d.value}
+                </span>
               </li>
             ))}
           </ul>
         )}
         <p className="mt-5 text-xs leading-body text-ink-muted">
-          CONTRACT GAP: defaults are served read-only — the values are not
-          editable here, because a suggestion the server never received would
-          prefill nothing at intake.
+          CONTRACT GAP: defaults are served read-only — the values are not editable
+          here, because a suggestion the server never received would prefill nothing at
+          intake.
         </p>
       </CardBody>
     </Card>

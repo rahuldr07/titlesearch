@@ -64,7 +64,9 @@ if (which === undefined) {
 const chosen = which === "all" ? Object.keys(SCREENS) : [which];
 for (const key of chosen) {
   if (!(key in SCREENS)) {
-    console.error(`unknown screen "${key}" — one of: ${Object.keys(SCREENS).join(" ")}`);
+    console.error(
+      `unknown screen "${key}" — one of: ${Object.keys(SCREENS).join(" ")}`,
+    );
     process.exit(1);
   }
 }
@@ -142,4 +144,5 @@ for (const key of chosen) {
 }
 
 await browser.close();
-if (appErrors.length > 0) console.log("APP PAGE ERRORS:\n" + [...new Set(appErrors)].join("\n"));
+if (appErrors.length > 0)
+  console.log("APP PAGE ERRORS:\n" + [...new Set(appErrors)].join("\n"));

@@ -1,5 +1,5 @@
 import type { Preview } from "@storybook/react-vite";
-import "../src/index.css";
+import "../src/styles/index.css";
 
 /**
  * The tokens load via index.css, so a story renders in the real register — a

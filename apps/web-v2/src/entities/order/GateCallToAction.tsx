@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router"; // rules-allow: §6 bans a FETCH in entities/, and a <Link> is markup — the same precedent ScreenHeading sets; handing the anchor back to the caller would put this button's copy in two folders, which is the duplication the promotion removes
-import { buttonClasses } from "../../shared/ui/Button";
+import { buttonClasses } from "../../shared/ui/buttonClasses";
 import { cn } from "../../shared/ui/classNames";
 
 /**
@@ -34,7 +34,10 @@ export function GateCallToAction({
 }) {
   if (halted) {
     return (
-      <Link to="/completeness" className={cn(buttonClasses({ size: "xl", tone: "halt" }))}>
+      <Link
+        to="/completeness"
+        className={cn(buttonClasses({ size: "xl", tone: "halt" }))}
+      >
         Resolve completeness gate →
       </Link>
     );

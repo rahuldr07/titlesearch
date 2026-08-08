@@ -37,8 +37,7 @@ export function QuietState() {
         <span className="font-semibold text-ink-primary">
           Nothing assigned, nothing waiting on you.
         </span>{" "}
-        That&rsquo;s the good outcome — take the next order when you&rsquo;re
-        ready.
+        That&rsquo;s the good outcome — take the next order when you&rsquo;re ready.
       </p>
     </Card>
   );

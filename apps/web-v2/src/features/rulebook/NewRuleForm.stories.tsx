@@ -33,9 +33,7 @@ export const PendingBannerReadsDesignCopy: Story = {
 export const CitationFieldIsPresentAndRequired: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(
-      canvas.getByLabelText(/Citation — required/),
-    ).toBeInTheDocument();
+    await expect(canvas.getByLabelText(/Citation — required/)).toBeInTheDocument();
   },
 };
 

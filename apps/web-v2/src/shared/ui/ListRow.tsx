@@ -12,8 +12,10 @@ import { cn } from "./classNames";
  * condition happens to be true. Naming the boundary is what stops that: rows,
  * and nothing else, are children of a `DividedSection`.
  */
-export interface DividedSectionProps
-  extends Omit<HTMLAttributes<HTMLElement>, "className"> {
+export interface DividedSectionProps extends Omit<
+  HTMLAttributes<HTMLElement>,
+  "className"
+> {
   /** `ul` for a real list; `div` only where a list element cannot go. */
   as?: "ul" | "div";
   className?: string;
@@ -93,7 +95,13 @@ export interface ListRowProps extends Omit<HTMLAttributes<HTMLElement>, "classNa
   children: ReactNode;
 }
 
-export function ListRow({ as = "li", interactive, dense, className, ...rest }: ListRowProps) {
+export function ListRow({
+  as = "li",
+  interactive,
+  dense,
+  className,
+  ...rest
+}: ListRowProps) {
   const Tag: ElementType = as;
   return <Tag className={cn(listRow({ interactive, dense }), className)} {...rest} />;
 }

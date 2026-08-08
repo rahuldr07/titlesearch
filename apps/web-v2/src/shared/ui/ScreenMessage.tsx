@@ -27,7 +27,11 @@ export interface ScreenMessageProps {
   measure: ScreenMeasure;
 }
 
-export function ScreenMessage({ children, tone = "muted", measure }: ScreenMessageProps) {
+export function ScreenMessage({
+  children,
+  tone = "muted",
+  measure,
+}: ScreenMessageProps) {
   return (
     <Screen measure={measure}>
       {/*

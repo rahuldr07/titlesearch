@@ -27,7 +27,10 @@ export function VersionLog() {
 
       <ul className="mt-4 flex flex-col gap-1">
         {VERSIONS.map((entry) => (
-          <li key={entry.v} className="flex flex-wrap items-baseline gap-5 py-2 text-xs">
+          <li
+            key={entry.v}
+            className="flex flex-wrap items-baseline gap-5 py-2 text-xs"
+          >
             <span className="font-mono font-semibold text-ink-primary">{entry.v}</span>
             <span className="flex-1 text-ink-secondary">{entry.note}</span>
             <span className="text-ink-muted">

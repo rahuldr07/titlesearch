@@ -6,11 +6,7 @@
     "e2e-live/**/*.spec.ts",
     "*.test.ts"
   ],
-  "project": [
-    "src/**/*.{ts,tsx}",
-    ".storybook/**/*.ts",
-    "scripts/*.mjs"
-  ],
+  "project": ["src/**/*.{ts,tsx}", ".storybook/**/*.ts", "scripts/*.mjs"],
   "ignoreDependencies": [
     "@titlepipe/ui-tokens",
     "tailwindcss",
@@ -28,14 +24,10 @@
     "@testing-library/react",
     "@axe-core/playwright"
   ],
-  "ignoreBinaries": [
-    "psql"
-  ],
+  "ignoreBinaries": ["psql"],
   "rules": {
     "types": "warn",
     "enumMembers": "warn"
   },
-  "ignore": [
-    "src/components/ui/**"
-  ]
+  "ignore": ["src/components/ui/**"]
 }

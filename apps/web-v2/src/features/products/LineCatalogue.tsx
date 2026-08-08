@@ -37,7 +37,9 @@ export function LineCatalogue({
   return (
     <section className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center gap-5">
-        <Eyebrow variant="section" as="h2">Sign-off lines</Eyebrow>
+        <Eyebrow variant="section" as="h2">
+          Sign-off lines
+        </Eyebrow>
         <Button
           size="sm"
           fill="outlined"
@@ -56,9 +58,9 @@ export function LineCatalogue({
       </div>
 
       <p className="text-xs leading-body text-ink-muted">
-        The vocabulary every product and client draws from. A new line lands in
-        the grid as <span className="font-semibold">not applicable everywhere</span>{" "}
-        — inert until a product opts in.
+        The vocabulary every product and client draws from. A new line lands in the grid
+        as <span className="font-semibold">not applicable everywhere</span> — inert
+        until a product opts in.
       </p>
 
       {/*
@@ -82,7 +84,9 @@ export function LineCatalogue({
               <Button size="lg" fill="tinted" tone="action" disabled>
                 Start from the standard 13
               </Button>
-              <Button size="lg" onClick={onNew}>＋ Write a line</Button>
+              <Button size="lg" onClick={onNew}>
+                ＋ Write a line
+              </Button>
             </>
           }
         />
@@ -95,9 +99,9 @@ export function LineCatalogue({
       )}
 
       <p className="text-xs leading-body text-ink-muted">
-        CONTRACT GAP: the sign-off-line endpoint is READ ONLY. The catalogue is
-        the server's, but editing opens a drawer that cannot save and no version
-        here can be minted from this screen.
+        CONTRACT GAP: the sign-off-line endpoint is READ ONLY. The catalogue is the
+        server's, but editing opens a drawer that cannot save and no version here can be
+        minted from this screen.
       </p>
     </section>
   );

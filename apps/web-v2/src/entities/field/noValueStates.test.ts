@@ -43,11 +43,14 @@ describe("the six renders are distinct", () => {
 
 describe("document states are separated from pipeline states", () => {
   test("the four NaReason members are document statements", () => {
-    expect([...NA_REASONS]).toEqual(["not_present", "not_found", "silent", "unreadable"]);
+    expect([...NA_REASONS]).toEqual([
+      "not_present",
+      "not_found",
+      "silent",
+      "unreadable",
+    ]);
     for (const kind of NA_REASONS) {
-      const v = (kind === "unreadable"
-        ? { kind, page: 1 }
-        : { kind }) as NoValueKind;
+      const v = (kind === "unreadable" ? { kind, page: 1 } : { kind }) as NoValueKind;
       expect(describeNoValue(v).isPipelineState).toBe(false);
     }
   });

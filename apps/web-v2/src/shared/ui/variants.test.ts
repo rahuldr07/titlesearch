@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { buttonClasses } from "./Button";
+import { buttonClasses } from "./buttonClasses";
 import { cardClasses, type CardTone } from "./Card";
 import { noValueClasses } from "../../entities/field/NoValue";
 
@@ -91,8 +91,12 @@ describe("Button's disabled treatment is a surface swap, never opacity", () => {
     for (const fill of ["solid", "outlined", "tinted", "ghost"] as const) {
       const classes = buttonClasses({ fill, tone: "neutral" });
       expect(classes, `${fill} lost disabled:bg`).toContain("disabled:bg-surface-app");
-      expect(classes, `${fill} lost disabled:text`).toContain("disabled:text-ink-muted");
-      expect(classes, `${fill} lost the cursor`).toContain("disabled:cursor-not-allowed");
+      expect(classes, `${fill} lost disabled:text`).toContain(
+        "disabled:text-ink-muted",
+      );
+      expect(classes, `${fill} lost the cursor`).toContain(
+        "disabled:cursor-not-allowed",
+      );
     }
   });
 
@@ -148,7 +152,9 @@ describe("Card's ground and its stripe are separate axes", () => {
       const classes = cardClasses({ tone: tone as CardTone });
       expect(classes, `${tone} lost its ground`).toContain(`bg-${family}-surface`);
       expect(classes, `${tone} lost its hairline`).toContain(`border-${family}-border`);
-      expect(classes, `${tone} kept the neutral panel`).not.toContain("bg-surface-panel");
+      expect(classes, `${tone} kept the neutral panel`).not.toContain(
+        "bg-surface-panel",
+      );
     }
     expect(cardClasses({ tone: "none" })).toContain("bg-surface-panel");
   });
@@ -198,9 +204,10 @@ describe("Card's ground and its stripe are separate axes", () => {
     for (const tone of CARD_TONES) {
       for (const accent of CARD_TONES) {
         const c = cardClasses({ tone, accent });
-        expect(seen.has(c), `tone=${tone}/accent=${accent} duplicates another pair`).toBe(
-          false,
-        );
+        expect(
+          seen.has(c),
+          `tone=${tone}/accent=${accent} duplicates another pair`,
+        ).toBe(false);
         seen.add(c);
       }
     }

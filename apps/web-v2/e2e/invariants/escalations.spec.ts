@@ -41,28 +41,24 @@ test("citing an existing rule resolves the cluster", async ({ page }) => {
 });
 
 // TODO(rebuild) [INVARIANT] — rule: a drafted rule lands PENDING and renders visibly inert — it cannot affect the pipeline until an engineer confirms.
-test("a drafted rule lands PENDING and renders visibly inert", async ({
-  page,
-}) => {
+test("a drafted rule lands PENDING and renders visibly inert", async ({ page }) => {
   await page.goto("/escalations");
   await page.getByTestId("cluster-liens.hoa_age").click();
-  await page
-    .getByTestId("ruling-input")
-    .fill("Age alone never drops an HOA lien.");
+  await page.getByTestId("ruling-input").fill("Age alone never drops an HOA lien.");
   await page.getByTestId("mode-draft").check();
   await page
     .getByTestId("draft-input")
     .fill("HOA liens report regardless of age unless cancelled of record.");
   await page.getByTestId("resolve-btn").click();
   await expect(
-    page.getByText(/PENDING — CANNOT AFFECT THE PIPELINE UNTIL AN ENGINEER CONFIRMS/).first(),
+    page
+      .getByText(/PENDING — CANNOT AFFECT THE PIPELINE UNTIL AN ENGINEER CONFIRMS/)
+      .first(),
   ).toBeVisible();
 });
 
 // TODO(rebuild) [ORPHAN RULE] — rule: the escalation inbox has no triage furniture — no category, no priority, no assignee. Just the rule.
-test("no priority, category, or assignee affordances exist", async ({
-  page,
-}) => {
+test("no priority, category, or assignee affordances exist", async ({ page }) => {
   await page.goto("/escalations");
   // the only controls on the resolve card are the ruling, the rule choice,
   // and the cite/draft inputs — nothing to triage with

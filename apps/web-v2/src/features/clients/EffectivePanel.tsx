@@ -48,7 +48,11 @@ export function EffectivePanel({
         <Eyebrow variant="section" as="h2">
           Effective sign-off · baseline behind, overrides on top
         </Eyebrow>
-        <ProductChips products={products} value={product.id} onChange={onSelectProduct} />
+        <ProductChips
+          products={products}
+          value={product.id}
+          onChange={onSelectProduct}
+        />
       </CardHeader>
 
       {checklist === undefined ? (
@@ -62,9 +66,9 @@ export function EffectivePanel({
             No resolved checklist for {client.name} against {product.full}.
           </p>
           <p className="mt-3 text-xs leading-body text-ink-muted">
-            Resolution is server work — one resolver has to serve both intake and
-            this screen or they disagree. The server has not resolved this
-            pairing, and nothing is guessed on its behalf.
+            Resolution is server work — one resolver has to serve both intake and this
+            screen or they disagree. The server has not resolved this pairing, and
+            nothing is guessed on its behalf.
           </p>
         </CardBody>
       ) : (
@@ -102,9 +106,9 @@ export function EffectivePanel({
           </DividedSection>
 
           <CardFooter className="leading-body">
-            Every effective line carries its origin — a line with no traceable
-            source is a config defect, the same discipline as field provenance.
-            At intake this resolves to a frozen checklist stamped{" "}
+            Every effective line carries its origin — a line with no traceable source is
+            a config defect, the same discipline as field provenance. At intake this
+            resolves to a frozen checklist stamped{" "}
             <span className="font-mono font-semibold text-action">{configVersion}</span>{" "}
             on the order; later config edits never change an order in flight.
             {/*

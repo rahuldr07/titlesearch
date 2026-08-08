@@ -24,8 +24,7 @@ export async function interceptApi(
             ? input.url
             : String(input);
       const method = (
-        init?.method ??
-        (input instanceof Request ? input.method : "GET")
+        init?.method ?? (input instanceof Request ? input.method : "GET")
       ).toUpperCase();
       if (method === o.method.toUpperCase() && url.includes(o.match)) {
         return new Response(JSON.stringify(o.body), {
@@ -56,8 +55,7 @@ export async function trackApi(page: Page): Promise<void> {
             ? input.url
             : String(input);
       const method = (
-        init?.method ??
-        (input instanceof Request ? input.method : "GET")
+        init?.method ?? (input instanceof Request ? input.method : "GET")
       ).toUpperCase();
       log.push({ method, url });
       return orig(input, init);

@@ -40,11 +40,15 @@ export function PeopleScreen() {
             organisation and stops at its edge, which is the difference between
             an authorisation list you can trust and a directory you cannot.
           */
-          title={<>Everyone <em>in this organisation</em></>}
+          title={
+            <>
+              Everyone <em>in this organisation</em>
+            </>
+          }
           lede={
             <p>
-              This screen changes authorisation, never credentials. Invitations
-              and passwords hand off to the identity provider.
+              This screen changes authorisation, never credentials. Invitations and
+              passwords hand off to the identity provider.
             </p>
           }
           /* CONTRACT GAP: no invite endpoint. Drawn as designed and disabled —
@@ -93,7 +97,8 @@ export function PeopleScreen() {
               directly beneath the sentence saying nothing loaded.
             */}
             <p className="text-xs text-ink-muted">
-              Role changes and suspensions take effect on the person&apos;s next request.
+              Role changes and suspensions take effect on the person&apos;s next
+              request.
             </p>
           </>
         )}

@@ -112,8 +112,8 @@ export const NoValueStatesStayApart: Story = {
     // PENDING IS NOT AN ANSWER. It must never borrow an NA state's words —
     // "the pipeline has not looked" and "the document does not say it" are
     // opposite claims about the same blank cell.
-    const pending = Array.from(canvasElement.querySelectorAll("span.sr-only")).find((node) =>
-      (node.textContent ?? "").startsWith("Not yet extracted"),
+    const pending = Array.from(canvasElement.querySelectorAll("span.sr-only")).find(
+      (node) => (node.textContent ?? "").startsWith("Not yet extracted"),
     )?.parentElement;
     const pendingText = (pending?.textContent ?? "").toLowerCase();
     await expect(pendingText).not.toBe("");

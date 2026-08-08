@@ -18,10 +18,15 @@ type Story = StoryObj<typeof meta>;
 // silent `?? []` fallback — keeps the assertion below pinned to the REAL
 // fixture instead of quietly asserting against zero.
 const fixture = demoPages.ord_demo_1;
-if (fixture === undefined) throw new Error("ord_demo_1 fixture missing from @titlepipe/mocks");
+if (fixture === undefined)
+  throw new Error("ord_demo_1 fixture missing from @titlepipe/mocks");
 
 /** The single source of truth for the assertion below — same fixture the app serves. */
-const coverage = { order_id: "ord_demo_1", total_pages: fixture.total, pages: fixture.pages };
+const coverage = {
+  order_id: "ord_demo_1",
+  total_pages: fixture.total,
+  pages: fixture.pages,
+};
 
 /**
  * TASK 6's failing-test-turned-story. This repo runs component assertions as

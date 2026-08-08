@@ -27,7 +27,10 @@ const list = cva("flex", {
 });
 
 const tab = cva(
-  ["font-semibold whitespace-nowrap transition-none", "disabled:cursor-not-allowed disabled:text-ink-muted"],
+  [
+    "font-semibold whitespace-nowrap transition-none",
+    "disabled:cursor-not-allowed disabled:text-ink-muted",
+  ],
   {
     variants: {
       variant: {
@@ -69,7 +72,9 @@ export function TabList({
   children: ReactNode;
 }) {
   return (
-    <BaseTabs.List className={cn(list({ variant }), className)}>{children}</BaseTabs.List>
+    <BaseTabs.List className={cn(list({ variant }), className)}>
+      {children}
+    </BaseTabs.List>
   );
 }
 

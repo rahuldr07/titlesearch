@@ -96,7 +96,9 @@ export function ClusterRail({
         <div>
           <Eyebrow variant="caption">Resolved — rules written</Eyebrow>
           <ul className="mt-3 flex flex-col gap-3">
-            {answered.map((cluster) => item(cluster, "answered — the rule is in the book"))}
+            {answered.map((cluster) =>
+              item(cluster, "answered — the rule is in the book"),
+            )}
           </ul>
         </div>
       )}

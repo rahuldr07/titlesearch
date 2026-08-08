@@ -75,12 +75,17 @@ export function CompareMatrix({
         </div>
 
         {rowsOf(columns).map((row) => (
-          <div key={row.line_id} className="flex items-stretch border-t border-line-subtle">
+          <div
+            key={row.line_id}
+            className="flex items-stretch border-t border-line-subtle"
+          >
             <div className={cn(LABEL_CELL, "flex items-baseline gap-5 px-7 py-5")}>
               <span className="shrink-0 font-mono text-tiny font-semibold text-ink-muted">
                 {row.line_id}
               </span>
-              <span className="flex-1 text-sm leading-close text-ink-primary">{row.label}</span>
+              <span className="flex-1 text-sm leading-close text-ink-primary">
+                {row.label}
+              </span>
             </div>
             {columns.map((c) => (
               <MarkCell key={c.client.id} column={c} lineId={row.line_id} />
@@ -90,9 +95,9 @@ export function CompareMatrix({
       </div>
 
       <CardFooter className="leading-body">
-        Resolved through the same function intake uses, so this matrix cannot
-        disagree with what an order actually gets. Open a client to see the
-        conflict the server raised on its pairing, and its acknowledgement.
+        Resolved through the same function intake uses, so this matrix cannot disagree
+        with what an order actually gets. Open a client to see the conflict the server
+        raised on its pairing, and its acknowledgement.
         {/*
           CONTRACT GAP: nothing on the wire marks a line LOAD-BEARING, so the
           grid cannot flag the case worth arguing about — an override on a line

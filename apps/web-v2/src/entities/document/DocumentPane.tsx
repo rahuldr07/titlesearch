@@ -55,7 +55,10 @@ export function DocumentPane({
   return (
     <section
       aria-label={`Source page ${page}`}
-      className={cn("flex h-full flex-col", dark ? "bg-document-bg" : "bg-surface-document")}
+      className={cn(
+        "flex h-full flex-col",
+        dark ? "bg-document-bg" : "bg-surface-document",
+      )}
     >
       <div className="flex-1 overflow-hidden">
         {readInFull ? (
@@ -119,8 +122,8 @@ function NotReadInFull({ page }: { page: number }) {
           Not read in full
         </Eyebrow>
         <p className="mt-3 text-base text-document-ink-soft">
-          Page {page} is in the package but was not captured in full, so there is
-          no raster to show. That is expected for most pages.
+          Page {page} is in the package but was not captured in full, so there is no
+          raster to show. That is expected for most pages.
         </p>
       </div>
     </div>

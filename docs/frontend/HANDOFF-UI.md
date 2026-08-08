@@ -1,5 +1,9 @@
 # UI handoff — read this before writing any code
 
+> **RECORD (2026-07-29).** Describes the frontend before the reskin. The current
+> frontend handoff is [`HANDOFF-2026-08-01.md`](HANDOFF-2026-08-01.md); the
+> approved visual reference is `directions/hybrid.html`, not the export named below.
+
 **Written 2026-07-29.** Supersedes nothing; it sits beside `conflicts.md`,
 `decisions.md` and `design-fidelity.md` and tells you where the frontend
 actually is, what will bite you, and what you are being asked to build.

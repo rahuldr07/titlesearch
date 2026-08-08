@@ -4,7 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "@tanstack/react-router";
 import { createQueryClient } from "./app/queryClient";
 import { createAppRouter } from "./app/router";
-import "./index.css";
+import "./styles/index.css";
 
 /**
  * MSW is the backend until FastAPI lands (BRIEF §7), reusing `packages/mocks`

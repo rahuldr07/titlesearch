@@ -35,7 +35,9 @@ export const configProductsQuery = queryOptions({
 
 const Ack: Validator<{ ok: true }> = {
   safeParse: (input) =>
-    typeof input === "object" && input !== null && (input as { ok?: unknown }).ok === true
+    typeof input === "object" &&
+    input !== null &&
+    (input as { ok?: unknown }).ok === true
       ? { success: true, data: { ok: true } }
       : { success: false, error: { message: "expected { ok: true }" } },
 };

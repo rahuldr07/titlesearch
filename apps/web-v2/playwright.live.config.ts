@@ -189,7 +189,10 @@ function newestMtime(dir: string): number {
   let newest = 0;
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const path = join(dir, entry.name);
-    newest = Math.max(newest, entry.isDirectory() ? newestMtime(path) : statSync(path).mtimeMs);
+    newest = Math.max(
+      newest,
+      entry.isDirectory() ? newestMtime(path) : statSync(path).mtimeMs,
+    );
   }
   return newest;
 }
