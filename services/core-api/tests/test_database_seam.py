@@ -1237,3 +1237,78 @@ def test_a_portless_override_is_refused_at_the_variable_rather_than_at_roles_sql
 
     with pytest.raises(ValueError, match="port"):
         libpq_environment("postgresql+psycopg://operator:pw@db.example/titlepipe")
+
+
+# --- the scrub's OTHER hand-maintained literal -------------------------------
+#
+# 🔴 AT THE END OF THE FILE, AND THE POSITION IS FORCED RATHER THAN CHOSEN. The
+# test below is the sibling of `test_migration_tables_matches_the_model_metadata`
+# and belongs beside it. It cannot go there: it requests `migrated_database`,
+# which is MODULE-scoped, so from its first request until the module ends every
+# table in `MIGRATION_TABLES` exists — and the two teardown tests above create a
+# marker table named `migration_tables[0]` by hand. Requested earlier in the file,
+# this fixture would turn both of those into
+# `DuplicateTable: relation "rules" already exists`. Requested last, the markers
+# are dropped before the migration runs. MEASURED 2026-08-06.
+
+
+def test_migration_enum_types_matches_the_live_catalog(
+    migrated_database: str,
+    migration_enum_types: tuple[str, ...],
+    seam_engine: Callable[[str], Engine],
+) -> None:
+    """The drift guard for the SECOND hand-maintained literal behind the scrub.
+
+    `MIGRATION_TABLES` has one (immediately above, against `Base.metadata`).
+    `MIGRATION_ENUM_TYPES` had none. MEASURED 2026-08-06: dropping `"rule_origin"`
+    from that tuple left the whole suite at **219 passed**.
+
+    THE CATALOG IS THE AUTHORITY HERE, NOT `Base.metadata`, AND THAT IS NOT A
+    PREFERENCE. A `MetaData` knows about an enum only through a COLUMN that uses
+    one, so a type a revision creates and no model references — a type awaiting
+    its column, or one left behind by a half-finished change — is invisible to a
+    metadata comparison and perfectly visible in `pg_type`. Since what this
+    literal has to match is "every type a downgrade would have to drop", the
+    database is the only thing that can answer.
+
+    WHY IT MATTERS AND WHY NOTHING ELSE CATCHES IT. `_scrub_migration_objects` is
+    the cleanup of LAST RESORT — it runs when `alembic downgrade` did not, which
+    is the one path where the type is still there. On the happy path the
+    downgrade drops both types itself and a stale tuple changes nothing, so this
+    cannot be caught behaviourally without breaking a downgrade on purpose.
+    `test_the_teardown_scrubs_even_when_the_downgrade_raises` DOES drive exactly
+    that branch and is still blind to it, because it asserts on
+    `migration_tables[0]` — a table. The symptom of the drift is not a failure
+    here but `type "rule_origin" already exists` in whichever module runs next.
+
+    EXACT SET, BOTH DIRECTIONS, for `test_migration_tables_matches_the_model
+    _metadata`'s reason: a type added by a revision and forgotten here fails, and
+    a stale name left here after a type is dropped fails too. `typtype = 'e'`
+    restricts this to enums — `pg_type` also holds a composite type for every
+    table in the schema, and a set comparison that swept those in would be a
+    statement about `pg_class` wearing a different name.
+    """
+    engine = seam_engine(migrated_database)
+    try:
+        with engine.connect() as connection:
+            live = {
+                str(row[0])
+                for row in connection.execute(
+                    text(
+                        "SELECT t.typname FROM pg_type t "
+                        "JOIN pg_namespace n ON n.oid = t.typnamespace "
+                        "WHERE n.nspname = 'public' AND t.typtype = 'e'"
+                    )
+                )
+            }
+    finally:
+        engine.dispose()
+
+    assert live == set(migration_enum_types), (
+        f"the migrated schema holds the enum types {sorted(live)} and the scrub "
+        f"drops {sorted(migration_enum_types)}. A type missing from that tuple "
+        f"survives a FAILED downgrade — the only path the scrub exists for — and "
+        f'reaches the next module as `type "..." already exists`, several files '
+        f"away from the line that is short a name."
+    )
+    assert len(set(migration_enum_types)) == len(migration_enum_types), "a name is listed twice"

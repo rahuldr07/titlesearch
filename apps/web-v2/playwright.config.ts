@@ -29,6 +29,15 @@ export default defineConfig({
   },
   webServer: {
     command: "pnpm build && pnpm preview --port 4274 --strictPort",
+    /*
+     * PINNED, because this build now reads the environment. `VITE_API_MODE`
+     * left exported in a shell — the obvious state after debugging the live
+     * harness — is inherited by this `pnpm build` and produces a bundle with no
+     * MSW at all. MEASURED: `118 passed` becomes `43 passed` in 6.3 minutes,
+     * failing as ~75 opaque timeouts rather than as anything that names the
+     * cause. This suite is the mock suite by definition, so it says so.
+     */
+    env: { VITE_API_MODE: "mock" },
     port: 4274,
     reuseExistingServer: false,
     timeout: 120_000,

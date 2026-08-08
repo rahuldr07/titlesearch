@@ -52,7 +52,13 @@ Three reasons, and the third is the one that matters:
 |---|---|
 | Plan 01 proven | ✅ **closed 2026-08-05** — nine assertions, both injections |
 | Is the rulebook global or per-tenant? | ✅ **RULED 2026-08-05: GLOBAL** |
-| **Who may read a PENDING rule?** | 🔴 **still open.** `RuleStatus` is `live \| pending \| retired`, and a PENDING rule must not affect the pipeline. Whether it is *visible* — and to whom — is a separate question nobody has answered. Ask before Task 3 |
+| **Who may read a PENDING rule?** | ✅ **RULED 2026-08-06: VISIBLE TO EVERYONE.** Only an engineer may CONFIRM one. "Cannot affect the pipeline" is a statement about **effect, not visibility**, so `GET /api/rules` returns every status and nothing filters on read. Corroborated in the harvested invariants: `apps/web-v2/e2e/invariants/authz.spec.ts:84-85` asserts a **reviewer** — not an engineer — sees the `PENDING` chip while `rule-confirm-btn` has count 0, so the status is visible and only the affordance is role-locked; and `packages/mocks/src/handlers.ts:1407` serves `ruleStore` unfiltered |
+
+> **This row read `🔴 still open` until 2026-08-06**, by which time Task 1 had
+> already been built against the ruling and cited it as settled in five places
+> (`0003_rules.py`, `db/models.py`, and three assertions). A stale gate row is
+> worse than a missing one: the next executor reads the table, not the commits.
+> Same defect class as `00-HOW-TO-EXECUTE.md` §9's own two corrections.
 
 ### The tenancy ruling — RULED GLOBAL, 2026-08-05
 
@@ -242,7 +248,8 @@ python scripts/check_backend_rules.py        clean
 alembic upgrade head → downgrade base → up   no error
 
 pnpm --filter web-v2 test                    green
-pnpm --filter web-v2 test:e2e                green, against LIVE core-api
+pnpm --filter web-v2 test:e2e                green, against LIVE core-api   🔴 SEE CORRECTION
+pnpm --filter web-v2 test:e2e:live           green                          (the gate that replaced it)
 git diff apps/web-v2/e2e                     EMPTY
 ```
 
@@ -250,6 +257,70 @@ Plus:
 - the parity test compares against the real Zod schema, not a Python restatement;
 - `rules` is named as a deliberate RLS exception, with its reason in code;
 - **every injection run and observed to fail**, named in the commit message.
+
+---
+
+### 🔴 CORRECTION (Task 5, 2026-08-06) — the `test:e2e` gate above was never achievable
+
+**What the gate said.** `pnpm --filter web-v2 test:e2e   green, against LIVE
+core-api` — the whole browser suite, 118 tests, passing against core-api.
+
+**Why it could not be met, and why that is a defect in this plan rather than a
+reinterpretation of it.** MEASURED 2026-08-06 — the whole frozen suite pointed at
+the live build, all 118 tests, nothing filtered: **44 passed, 74 failed.** The 74
+depend on endpoints core-api does not serve — `/api/orders/*`,
+`/api/escalations/*`, `/api/bugs`, `/api/me/permissions`,
+`/api/me/preferences`, `/api/engines/routing` — and several also depend on the
+`x-mock-role` header, while **core-api implements no auth at all**. Plan 03
+brings WorkOS, and `api/routers/rules.py` states in its own docstring that
+nothing in it anticipates that.
+
+This plan's own scope line says the same thing two paragraphs down: *"Not in this
+plan: auth, any write endpoint, any order-scoped read."* The gate and the scope
+contradicted each other from the day both were written. No amount of Task 5 could
+reconcile them.
+
+Recording it here rather than quietly redefining the gate, for the reason this
+plan's own paragraph about the stale 🔴 gate row gives.
+
+**What was actually run.** `pnpm --filter web-v2 test:e2e` stays green as the
+MOCK suite (118, unmodified — `git diff apps/web-v2/e2e` is empty, which is the
+line above that DID hold). Against live core-api, a sixth project in
+`apps/web-v2/playwright.live.config.ts` — `live-frozen-rulebook` — points that
+same frozen directory at the live build and runs **7 of the 118**: the frozen
+tests that navigate to `/rulebook` and depend on no unmigrated endpoint. The
+selection, and the reason for each exclusion, is in that file.
+
+**What that run proves.** The frozen specs pass **unmodified against the live
+build**. That is Task 5's stated CONTRACT and it is real: a contract mismatch or
+a product change would surface as a spec that could not pass without an edit.
+
+**What it does NOT prove, measured 2026-08-06.** It says nothing about core-api,
+Postgres, or the mock/live switch.
+
+- Point `live-frozen-rulebook`'s `baseURL` at the MOCK bundle — one line, and
+  exactly the "MSW left running" state Task 0 exists to catch — and **7 of 7
+  still pass**.
+- Stop core-api entirely and **6 of the 7 still pass**; only the `authz` test
+  fails, because it is the only one that reads a rule row.
+- The four `responsive-frame` tests walk `["/queue", "/orders/ord_demo_1/review",
+  "/completeness", "/rulebook"]`. Three of those four are unmigrated, so under
+  `live` each spends three quarters of its time asserting that error screens do
+  not scroll sideways.
+
+**Where the proof actually is.** `apps/web-v2/e2e-live/reaches-core-api.spec.ts`
+is the only assertion in the harness that separates core-api from anything else
+that speaks JSON. It rests on the row ids: the seed writes no `id`, so Postgres
+mints UUIDs, while MSW answers `rule_r13`. Verified to fail in both directions —
+against the MSW bundle (on the absent `x-request-id`) and against a stub that
+stamps a request id and serves the mock's rows (on the UUID check).
+
+**Consequence for the next plan.** "The browser suite runs against core-api"
+cannot be a release gate until the endpoints behind it exist. The honest
+formulation, and the one Plan 03 onward should use, is per-endpoint: as each
+endpoint migrates, the frozen tests that depend on it join
+`FROZEN_RULEBOOK_FILES`/`FROZEN_RULEBOOK_TESTS` (which will need renaming), and
+the count in that project rises toward 118 for a reason that can be pointed at.
 
 **Not in this plan:** auth, any write endpoint, any order-scoped read. `GET
 /api/rules` is one route; the next plan brings the principal that the rest need.

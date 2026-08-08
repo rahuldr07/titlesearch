@@ -14,6 +14,8 @@ Read `CLAUDE.md` at repo root first (doc order: docs/HANDOFF.md → docs/CONTEXT
 - Typecheck all: `pnpm typecheck`
 - Lint: `pnpm --filter web-v2 lint` (eslint)
 - E2E: `pnpm --filter web-v2 test:e2e` (Playwright, `apps/web-v2/e2e`)
+- Live migration harness: `pnpm --filter web-v2 test:e2e:live` (Playwright, `apps/web-v2/e2e-live` **and** selected frozen specs from `e2e/` — see `playwright.live.config.ts`). Needs **three** things, not one, since Plan 02 Task 5: a Postgres with `migrations/sql/roles.sql` applied and `alembic upgrade head` run; a core-api started with **`TITLEPIPE_APP_DATABASE_URL`** (the *app* role) as well as `TITLEPIPE_ENVIRONMENT=development`; and **`TITLEPIPE_DATABASE_URL`** (the *migration* role — a different variable and a different role) exported for the seed step, which the script refuses by name without. Override core-api's address with `VITE_API_PROXY_TARGET`. The workflow `.github/workflows/migration-harness.yml` is the executable version of this list; read it rather than reassembling the commands by hand.
+- `VITE_API_MODE` picks the backend at BUILD time: `mock` (default) starts MSW and configures no proxy; `live` starts no worker and proxies `/api` to core-api. Any other value refuses to boot, on screen.
 - Unit: `pnpm --filter web-v2 test` (Vitest) · Rules gate: `pnpm --filter web-v2 check:rules` · Dead code: `pnpm --filter web-v2 knip`
 - Backend (from `services/core-api`, as CI runs it): `uv run ruff check .` · `uv run ruff format --check .` · `uv run pyright` · `uv run pytest`
 

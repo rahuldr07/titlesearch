@@ -1,6 +1,11 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  "entry": [".storybook/{main,preview}.ts", "e2e/**/*.spec.ts", "*.test.ts"],
+  "entry": [
+    ".storybook/{main,preview}.ts",
+    "e2e/**/*.spec.ts",
+    "e2e-live/**/*.spec.ts",
+    "*.test.ts"
+  ],
   "project": ["src/**/*.{ts,tsx}", ".storybook/**/*.ts", "scripts/*.mjs"],
   "ignoreDependencies": [
     "@titlepipe/ui-tokens",
@@ -18,6 +23,9 @@
     "msw",
     "@testing-library/react",
     "@axe-core/playwright"
+  ],
+  "ignoreBinaries": [
+    "psql"
   ],
   "rules": {
     "types": "warn",

@@ -11,7 +11,13 @@ compares the workflow against a list written out here. A hardcoded list would be
 a constant checked against itself: it passes for as long as nobody updates
 either side, which is exactly the window in which drift happens.
 
-Four things are checked:
+Eight things are checked. The first four are about `.github/workflows/backend.yml`;
+5 and 6 hold `.github/workflows/migration-harness.yml` — the one workflow whose
+path filter spans both the browser app and the services — to the SAME four rules,
+because it makes the same kind of integrity claim in its own header and nothing
+was checking it either. 7 and 8 were added on 2026-08-06, when a review found that
+the wire fixture the two contract gates share was reachable by NO workflow's path
+filter and that the Zod half of that proof never ran on a backend change:
 
 1. the workflow is valid YAML, and every job in it has steps;
 2. every hook in the `repo: local` block of `.pre-commit-config.yaml` is
@@ -24,7 +30,21 @@ Four things are checked:
 4. the `project` matrix covers exactly the set of directories holding a
    `pyproject.toml`. This is the direction that actually happens: a package is
    added, and nothing lints, type-checks or tests it because nobody remembered
-   the matrix.
+   the matrix;
+5. the migration harness workflow INVOKES `pnpm test:e2e:live` from an ENFORCING
+   step — it boots core-api and installs a browser, so it looks busy whether or
+   not it runs an assertion, and a green tick from it is quoted as evidence that
+   the browser app still works against the backend;
+6. that workflow's `paths` filter still names `apps/**`, `packages/**` AND
+   `services/**`, on both `push` and `pull_request`. Losing one of them silently
+   restores the gap the workflow was created to close;
+7. `contract-fixtures/**` is named by `backend.yml` AND by the harness, on both
+   events. The directory holding the fixture is read off the filesystem first, so
+   a glob that has stopped matching anything fails as that rather than as a
+   trigger nobody notices is dead;
+8. the harness INVOKES the contract-parity vitest project from an ENFORCING step.
+   `frontend.yml` runs it too and does not watch `services/**`, so the harness is
+   the only place it can execute on the change class that regenerates the fixture.
 
 ## 🔴 CHECK 2 USED TO ASK WHETHER A NAME APPEARED IN *SOME* `run:` STRING, AND
    FIVE DIFFERENT WORKFLOWS THAT RUN NO GATE AT ALL SATISFIED IT
@@ -119,6 +139,47 @@ REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 WORKFLOW = REPO_ROOT / ".github" / "workflows" / "backend.yml"
 PRE_COMMIT = REPO_ROOT / ".pre-commit-config.yaml"
 
+# The migration harness — the one workflow whose path filter spans both the
+# browser app and the services, and therefore the only thing that runs the e2e
+# suite on a backend change. Held to the same `_step_enforces` rules as the
+# gates above, because it makes the same kind of claim in its own header:
+# "There is no continue-on-error in this file, and the harness step's exit
+# status is the job's." That sentence is precisely the artefact class the module
+# docstring's five injections are about, so it is asserted rather than believed.
+HARNESS_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "migration-harness.yml"
+
+# The pnpm script that IS the harness. A job that boots core-api, installs a
+# browser and then runs nothing would satisfy every other check in this file.
+HARNESS_SCRIPT = "test:e2e:live"
+
+# The directory holding the wire fixture core-api's Pydantic models and
+# `packages/contract`'s Zod schemas are both answerable to. It is DERIVED from the
+# filesystem below rather than believed: if it stops existing, the tests naming it
+# say so instead of asserting a glob nothing matches.
+CONTRACT_FIXTURES_DIR = REPO_ROOT / "contract-fixtures"
+
+# The same directory as a workflow `paths` glob.
+CONTRACT_FIXTURES_GLOB = "contract-fixtures/**"
+
+# Both sides of the migration, plus the package the wire contract lives in, plus
+# the fixture that belongs to NEITHER tree. The entire value of this workflow is
+# that a change to ONE of these runs against the others; a filter that lost
+# `services/**` would leave the browser suite exactly as blind to a backend change
+# as it was before the workflow existed, and one that loses the fixture glob
+# restores the hole where a PR editing only `contract-fixtures/` triggered no
+# workflow anywhere in the repository.
+HARNESS_REQUIRED_PATHS = ("apps/**", "packages/**", "services/**", CONTRACT_FIXTURES_GLOB)
+
+# The vitest project holding the contract-parity gate, as it is invoked. Named by
+# the RUNNER and the PROJECT rather than by the whole `pnpm --filter web-v2 exec …`
+# line, on `local_hook_gates`'s principle: identify a gate by the narrowest thing
+# that is actually it, so the workflow stays free to change how it is wrapped.
+#
+# `--project gates` matters and is not decoration. `pnpm --filter web-v2 test`
+# would satisfy a looser needle and would drag the Storybook BROWSER suite onto
+# every backend commit, which is the cost this workflow was arranged to avoid.
+HARNESS_CONTRACT_GATE = "vitest run --project gates"
+
 # The job whose matrix is supposed to enumerate every Python project.
 PROJECT_JOB = "project"
 
@@ -207,17 +268,24 @@ def load_yaml(path: Path) -> Any:
         raise AssertionError(f"{rel(path)} is not valid YAML:\n{exc}") from exc
 
 
-def workflow() -> dict[str, Any]:
-    document = load_yaml(WORKFLOW)
-    assert isinstance(document, dict), f"{rel(WORKFLOW)} did not parse to a mapping"
+def workflow(path: Path = WORKFLOW) -> dict[str, Any]:
+    """A parsed workflow. Defaults to `backend.yml`, which most checks here mean.
+
+    The parameter exists because the four `_step_enforces` rules are about what
+    GitHub does with a step, not about which file the step is in — so any
+    workflow making an integrity claim can be held to them. `migration-harness.yml`
+    is the second caller; see the tests at the end of this module.
+    """
+    document = load_yaml(path)
+    assert isinstance(document, dict), f"{rel(path)} did not parse to a mapping"
     return document
 
 
-def jobs() -> dict[str, Any]:
-    document = workflow()
+def jobs(path: Path = WORKFLOW) -> dict[str, Any]:
+    document = workflow(path)
     found = document.get("jobs")
-    assert isinstance(found, dict), f"{rel(WORKFLOW)} defines no jobs mapping"
-    assert found, f"{rel(WORKFLOW)} defines no jobs"
+    assert isinstance(found, dict), f"{rel(path)} defines no jobs mapping"
+    assert found, f"{rel(path)} defines no jobs"
     return found
 
 
@@ -292,11 +360,11 @@ def _step_enforces(job: dict[str, Any], step: dict[str, Any]) -> bool:
     return condition is None or _expression(condition) == CANCELLED_GUARD
 
 
-def enforcing_run_blocks() -> tuple[str, ...]:
+def enforcing_run_blocks(path: Path = WORKFLOW) -> tuple[str, ...]:
     """The `run:` blocks whose failure would fail the workflow. See `_step_enforces`."""
     return tuple(
         step["run"]
-        for job in jobs().values()
+        for job in jobs(path).values()
         for step in (job.get("steps") or [])
         if isinstance(step, dict) and isinstance(step.get("run"), str) and _step_enforces(job, step)
     )
@@ -551,7 +619,195 @@ def test_the_project_matrix_covers_every_python_project() -> None:
     )
 
 
+def triggers(path: Path) -> dict[str, Any]:
+    """A workflow's `on:` block.
+
+    THREE SPELLINGS, and every one of them occurs here. YAML 1.1 — which PyYAML
+    implements — resolves a bare `on` to the BOOLEAN `True`, so `document["on"]`
+    finds nothing. And when PyYAML is unavailable this module reparses through
+    `uv run --with pyyaml` and JSON, where that boolean key becomes the STRING
+    `"true"`. MEASURED: a first version of this helper read only `True` and
+    `"on"`, passed under a local PyYAML and failed under the JSON fallback that
+    CI actually takes. A quoted `"on":` in the workflow would give the third.
+
+    Getting this wrong is not a loud failure in general — a lookup that finds no
+    triggers leaves an assertion with nothing to object to.
+    """
+    document = workflow(path)
+    for key in (True, "on", "true"):
+        found = document.get(key)
+        if isinstance(found, dict):
+            return found
+    raise AssertionError(f"{rel(path)} has no `on:` mapping of triggers")
+
+
+def test_the_migration_harness_workflow_runs_the_harness_from_an_enforcing_step() -> None:
+    """`migration-harness.yml` actually invokes the live suite, and its failure counts.
+
+    The four rules are `backend.yml`'s, unchanged and imported rather than
+    restated — see `_step_enforces` and `_invocations`. This workflow is worth
+    holding to them for the same reason `backend.yml` is: it boots a service and
+    installs a browser, so it LOOKS busy whether or not it runs an assertion,
+    and it is the only job in the repository that reaches both sides of the
+    migration. A green tick from it is quoted as evidence that the browser app
+    still works against core-api.
+    """
+    for name, job in jobs(HARNESS_WORKFLOW).items():
+        assert job.get("steps"), f"{rel(HARNESS_WORKFLOW)}: job {name!r} has no steps"
+
+    enforcing = enforcing_run_blocks(HARNESS_WORKFLOW)
+    assert enforcing, (
+        f"{rel(HARNESS_WORKFLOW)} has no run: step whose failure would fail the run — "
+        "every one of them is conditional, continue-on-error, or in a job carrying "
+        "an if:. The assertion below would then be looking at an empty list."
+    )
+
+    commands = [command for block in enforcing for command in _invocations(block)]
+    assert _is_invoked(HARNESS_SCRIPT, commands), (
+        f"{rel(HARNESS_WORKFLOW)} never invokes {HARNESS_SCRIPT!r} from a step whose "
+        f"failure would fail the run. A step satisfies this only when it RUNS the "
+        f"harness — named as shell tokens rather than printed or commented out — and "
+        f"only when its result counts: no continue-on-error, no if: other than "
+        f"{CANCELLED_GUARD}, and no if: on its job. Otherwise the workflow boots "
+        f"core-api, installs a browser, and proves nothing."
+    )
+
+
+def test_the_migration_harness_workflow_watches_both_sides_of_the_migration() -> None:
+    """Its path filter spans the app AND the services, on push and on pull_request.
+
+    This is the whole reason the file exists. `frontend.yml` watches `apps/**`
+    and `packages/**`; `backend.yml` watches `services/**`, `libs/**`, `infra/**`
+    and `scripts/**`; they do not overlap, so before this workflow no job ran the
+    browser suite on a backend change. A filter that quietly lost `services/**`
+    would restore that gap while leaving the workflow looking correct.
+    """
+    on = triggers(HARNESS_WORKFLOW)
+
+    for event in ("push", "pull_request"):
+        block = on.get(event)
+        assert isinstance(block, dict), (
+            f"{rel(HARNESS_WORKFLOW)} has no {event} trigger — a workflow that does not "
+            f"run on {event} cannot gate one"
+        )
+        paths = block.get("paths")
+        assert isinstance(paths, list), (
+            f"{rel(HARNESS_WORKFLOW)}: the {event} trigger declares no paths filter"
+        )
+        missing = [wanted for wanted in HARNESS_REQUIRED_PATHS if wanted not in paths]
+        assert not missing, (
+            f"{rel(HARNESS_WORKFLOW)}: the {event} paths filter is missing {missing}. "
+            f"The point of this workflow is that a change to one side of the migration "
+            f"runs against the other; without all of {list(HARNESS_REQUIRED_PATHS)} it "
+            f"is a second frontend or backend job with extra steps."
+        )
+
+
+def paths_filter(path: Path, event: str) -> list[str]:
+    """A workflow's `paths` list for one trigger, off the PARSED document.
+
+    Parsed and not grepped, deliberately. `01-WHAT-HAPPENED.md` §5 lists five CI
+    checks that shipped green because they matched a NAME somewhere in the YAML —
+    including one that matched a name inside a `#` comment. A `contract-fixtures/**`
+    written in this file's own explanatory comment, or in the workflow's, must not
+    satisfy anything; only an entry in the list GitHub actually evaluates can.
+    """
+    block = triggers(path).get(event)
+    assert isinstance(block, dict), (
+        f"{rel(path)} has no {event} trigger — a workflow that does not run on "
+        f"{event} cannot gate one"
+    )
+    found = block.get("paths")
+    assert isinstance(found, list), (
+        f"{rel(path)}: the {event} trigger declares no paths filter, so it runs on "
+        f"every change and this assertion has nothing to check"
+    )
+    return [str(entry) for entry in found]
+
+
+def test_the_shared_contract_fixture_triggers_the_workflows_that_gate_it() -> None:
+    """A change to `contract-fixtures/` must reach a workflow. It used to reach none.
+
+    🔴 MEASURED 2026-08-06, before this assertion existed. The fixture sits at the
+       repository ROOT because it belongs to neither tree — core-api's Pydantic
+       models produce it and `packages/contract`'s Zod schemas must accept it. That
+       is the right home and it had a consequence nobody had checked:
+
+           frontend.yml   apps/** packages/** + workspace files   -> no match
+           backend.yml    services/** libs/** infra/** scripts/** -> no match
+           harness        apps/** packages/** services/** libs/** -> no match
+
+       A pull request editing ONLY the artifact both contract gates hang off ran
+       nothing. Both of the workflows that can execute a gate over it now name it.
+
+    `frontend.yml` is deliberately NOT in this list. It runs the parity test as part
+    of `pnpm --filter web-v2 test`, and adding `services/**` to it — the other way to
+    close the hole — would put the Storybook browser suite on every backend commit.
+    The harness is where both sides meet, and it is where the gate was added.
+    """
+    assert CONTRACT_FIXTURES_DIR.is_dir(), (
+        f"{rel(CONTRACT_FIXTURES_DIR)} does not exist, so the globs asserted below "
+        f"name nothing. Either the fixture moved — in which case these constants "
+        f"move with it — or it was deleted, in which case the two contract gates "
+        f"have no shared artifact left."
+    )
+    fixtures = sorted(entry.name for entry in CONTRACT_FIXTURES_DIR.iterdir() if entry.is_file())
+    assert fixtures, (
+        f"{rel(CONTRACT_FIXTURES_DIR)} is empty. A path filter naming a directory "
+        f"with nothing in it is a trigger that can never fire."
+    )
+
+    for path in (WORKFLOW, HARNESS_WORKFLOW):
+        for event in ("push", "pull_request"):
+            declared = paths_filter(path, event)
+            assert CONTRACT_FIXTURES_GLOB in declared, (
+                f"{rel(path)}: the {event} paths filter does not name "
+                f"{CONTRACT_FIXTURES_GLOB!r}, so a change to {fixtures} runs nothing "
+                f"here. It declares {declared}."
+            )
+
+
+def test_the_migration_harness_runs_the_contract_gate_from_an_enforcing_step() -> None:
+    """The harness invokes the contract-parity vitest project, and its failure counts.
+
+    🔴 THIS IS THE HOLE THE GATE WAS BUILT WITH, and it is a different one from the
+       path filter above. `contract-parity.test.ts` parses core-api's response
+       fixture with the real Zod schemas — it is the ONLY check that can say "the
+       contract refuses this shape". It runs in `frontend.yml`, whose filter names
+       `apps/**` and `packages/**` and NOT `services/**`.
+
+       So the change class it exists for — edit `api/schemas/rules.py`, regenerate
+       the fixture, open a PR — ran `backend.yml` ALONE. The Python half of the proof
+       passes there BY CONSTRUCTION, because the fixture was regenerated from the
+       models it is being compared against, and the Zod half never executed. Every
+       endpoint Plan 02 Task 4 and later produce is that change class.
+
+    Held to `_step_enforces` and `_invocations`, unchanged and imported rather than
+    restated — so the five injections in the module docstring apply to this step as
+    they do to every other gate in this repository.
+    """
+    enforcing = enforcing_run_blocks(HARNESS_WORKFLOW)
+    assert enforcing, (
+        f"{rel(HARNESS_WORKFLOW)} has no run: step whose failure would fail the run — "
+        "every one of them is conditional, continue-on-error, or in a job carrying "
+        "an if:. The assertion below would then be looking at an empty list."
+    )
+
+    commands = [command for block in enforcing for command in _invocations(block)]
+    assert _is_invoked(HARNESS_CONTRACT_GATE, commands), (
+        f"{rel(HARNESS_WORKFLOW)} never invokes {HARNESS_CONTRACT_GATE!r} from a step "
+        f"whose failure would fail the run. This is the only workflow whose filter "
+        f"spans `services/**` AND `apps/**`, so without this step a backend change "
+        f"that regenerates the wire fixture is checked only against the Python that "
+        f"produced it. A step satisfies this only when it RUNS the gate — named as "
+        f"shell tokens rather than printed or commented out — and only when its "
+        f"result counts: no continue-on-error, no if: other than {CANCELLED_GUARD}, "
+        f"and no if: on its job."
+    )
+
+
 def test_this_suite_is_running_the_repository_it_is_checking() -> None:
     """Guards the path arithmetic above, which every other test here depends on."""
     assert WORKFLOW.is_file(), f"{rel(WORKFLOW)} not found from {Path(__file__)} on {sys.platform}"
     assert PRE_COMMIT.is_file(), f"{rel(PRE_COMMIT)} not found"
+    assert HARNESS_WORKFLOW.is_file(), f"{rel(HARNESS_WORKFLOW)} not found"

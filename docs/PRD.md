@@ -165,7 +165,19 @@ Engine self-confidence: prioritization signal only, never a gate. Router inputs 
 ### 8.4 Engine Leaderboard (screen #15)
 Engine × section × jurisdiction matrix vs golden set; accuracy by tag class; cost/1K pages; p95 latency. Seat changes: engineer-approved, logged with evidence link. `NO TRUTH YET` cells where golden coverage < threshold. No aggregate headline. No auto-promotion.
 
-## 9. API contract (REST, FastAPI; all endpoints tenant-scoped, auth via Clerk session; existing screens already call these paths — gaps marked NEW)
+## 9. API contract (REST, FastAPI; all endpoints tenant-scoped, auth via ~~Clerk~~ **WorkOS AuthKit** session; existing screens already call these paths — gaps marked NEW)
+
+> **Corrected 2026-08-07 — three `Clerk` references in this file were superseded
+> by ADR-0001's signature (2026-08-05, amendment 1) and never updated.** The auth
+> provider is **WorkOS AuthKit**: sealed HttpOnly session cookies, and
+> **PostgreSQL owns authorization** — WorkOS's own role/permission claims are
+> deliberately ignored, which is what makes a permission change take effect on the
+> next request rather than at token expiry.
+>
+> **Not every endpoint below is tenant-scoped.** `GET /api/rules` is **global** —
+> ruled 2026-08-05, the rulebook is scoped by jurisdiction rather than by customer
+> — and it is the one endpoint served from PostgreSQL today (backend Plan 02).
+> `docs/superpowers/plans/backend/02-WHAT-HAPPENED.md` is its record.
 ```
 POST   /api/orders                    create + upload package        (ingest)
 POST   /api/orders/{id}/accept       explicit accept
@@ -236,7 +248,7 @@ Shapes A (built) and B — Wheeler St (P2, straightforward); programmatic (TRUST
 GLBA NPI + ALTA Pillar 3: WISP documented; TLS everywhere; encryption at rest (managed PG AES-256) + field-level envelope encryption (DOB/bankruptcy); append-only audit log (doubles as SOC 2 evidence); per-tenant retention windows + secure deletion; least-privilege + MFA; vendor due-diligence file for AI subprocessors (zero-retention API tiers; PaddleOCR self-host as the in-house path); no NPI in URLs/logs; `packages/` never in VCS. SOC 2 via Sprinto/Drata when first client requires.
 
 ## 15. Tech stack
-FastAPI (port; 155 tests green throughout) · Postgres managed (Render/Neon) + RLS + tenant_id · Procrastinate queue (graduate to Celery on saturation) · R2/Spaces storage · Render hosting · Clerk auth (sessions; tenant in token) · docxtpl + programmatic shapes · API keys with hard spend caps, Batch + prompt caching · Max plan = development only.
+FastAPI (port; 155 tests green throughout) · Postgres managed (Render/Neon) + RLS + tenant_id · Procrastinate queue (graduate to Celery on saturation) · R2/Spaces storage · Render hosting · ~~Clerk auth~~ **WorkOS AuthKit** (sealed session cookies; **tenant resolved in Postgres, NOT from a token claim** — see §9's correction) · docxtpl + programmatic shapes · API keys with hard spend caps, Batch + prompt caching · Max plan = development only.
 
 ---
 
@@ -250,7 +262,7 @@ FastAPI (port; 155 tests green throughout) · Postgres managed (Render/Neon) + R
 - 20-worst-pages bake-off: all roster engines, free tiers, CSV → first Leaderboard data.
 - Repo: monorepo `api/ workers/ engines/ screens/ docs/`.
 
-**P1 (wk 1–2) — foundation:** FastAPI port module-by-module behind existing contract; Postgres + tenant_id + RLS + Alembic; Procrastinate; engine registry + pdftotext + Tesseract adapters; Clerk; audit log; field-level encryption; fold R13–R24 into spec + schema v2; port 155 tests → target ~200 with ruling validators.
+**P1 (wk 1–2) — foundation:** FastAPI port module-by-module behind existing contract; Postgres + tenant_id + RLS + Alembic; Procrastinate; engine registry + pdftotext + Tesseract adapters; ~~Clerk~~ **WorkOS**; audit log; field-level encryption; fold R13–R24 into spec + schema v2; port 155 tests → target ~200 with ruling validators.
 
 **P2 (wk 2–5) — extraction:** classifier adapter; Reader A (Gemini) + Reader B (LLMWhisperer) + Claude second-opinion adapters; RuleContext prompt generation from rulebook; ensemble router; Leaderboard v1; PaddleOCR eval adapter; Shape B renderer; review-screen dual-value + click-to-source wiring.
 

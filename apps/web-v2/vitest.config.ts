@@ -28,6 +28,10 @@ export default defineConfig({
           include: [
             "vocabulary.test.ts",
             "authz.test.ts",
+            // Backend/contract parity: the committed FastAPI response fixture,
+            // parsed with the real Zod schemas. Node env because it reads a file
+            // off disk; it is a static invariant like the two above, not a screen.
+            "contract-parity.test.ts",
             // Pure-logic entity tests. Kept DOM-free on purpose so rules like
             // no-value exhaustiveness are provable without a browser.
             "src/**/*.test.ts",

@@ -37,6 +37,10 @@ from titlepipe_core.db.models import (
     NA_REASON_LABELS,
     NA_REASON_TYPE_NAME,
     NAMING_CONVENTION,
+    RULE_ORIGIN_LABELS,
+    RULE_ORIGIN_TYPE_NAME,
+    RULE_STATUS_LABELS,
+    RULE_STATUS_TYPE_NAME,
     Base,
 )
 
@@ -47,6 +51,23 @@ from titlepipe_core.db.models import (
 SKELETON_TABLES = frozenset(
     {"tenants", "orders", "packages", "pages", "fields", "field_readings", "audit_log"}
 )
+
+# 🔴 `0003`'s ONE TABLE, KEPT IN ITS OWN CONSTANT RATHER THAN ADDED TO THE SEVEN.
+#
+# `SKELETON_TABLES` is `0001`'s set and its comment says "the exact seven";
+# quietly making it eight would erase the fact that `rules` arrived in a different
+# revision under a different ruling. The assertions below take the UNION, so the
+# exact-set property is unchanged — what changes is that a reader can see which
+# revision put each name there, and a future revision's tables get a third
+# constant rather than being absorbed into `0001`'s.
+#
+# `rules` is GLOBAL: no `tenant_id`, no policy, no row-level security. See
+# `titlepipe_core.db.models.Rule` for the ruling and
+# `tests/test_forced_rls_and_grants.py::EXPECTED_GLOBAL_TABLES` for the assertion
+# that keeps the exemption from spreading to a second table unnoticed.
+RULEBOOK_TABLES = frozenset({"rules"})
+
+MIGRATED_TABLES = SKELETON_TABLES | RULEBOOK_TABLES
 
 # Every skeleton table has these two.
 IDENTITY_COLUMNS = frozenset({"id", "created_at"})
@@ -75,6 +96,23 @@ EXPECTED_COLUMNS: dict[str, frozenset[str]] = {
     "fields": IDENTITY_COLUMNS | {"tenant_id", "na_reason"},
     "field_readings": IDENTITY_COLUMNS | {"tenant_id", "line_coords"},
     "audit_log": IDENTITY_COLUMNS | {"tenant_id"},
+    # 🔴 NO `tenant_id`, AND HERE THAT IS THE RULING RATHER THAN THE REGISTRY'S
+    # SPECIAL CASE. `tenants` above lacks the column because its own `id` IS a
+    # tenant id; `rules` lacks it because the rulebook is GLOBAL — scoped by
+    # `jurisdiction_scope`, not by customer. The nine names after the two identity
+    # columns are `packages/contract/src/entities.ts:153-163` exactly; `created_at`
+    # is the tenth and is storage-only.
+    "rules": IDENTITY_COLUMNS
+    | {
+        "code",
+        "text",
+        "origin",
+        "status",
+        "jurisdiction_scope",
+        "version",
+        "confirmed_by",
+        "source_doc_ref",
+    },
 }
 
 # 🔴 THE PRIMARY KEY OF EVERY TABLE, BY NAME AND BY KEY COLUMNS IN KEY ORDER.
@@ -105,6 +143,14 @@ EXPECTED_PRIMARY_KEYS: dict[str, tuple[str, ...]] = {
     "fields": ("tenant_id", "id"),
     "field_readings": ("tenant_id", "id"),
     "audit_log": ("tenant_id", "id"),
+    # 🔴 `(id)` ALONE, AND IT IS NOT THE OMISSION THE PARAGRAPH ABOVE WARNS
+    # ABOUT. The composite key exists to close an oracle that only exists under a
+    # `tenant_isolation` policy — unique enforcement runs before `WITH CHECK`, so
+    # an insert distinguishes another TENANT's id from nobody's. `rules` has no
+    # tenant and no policy, so there is no second column to prefix `id` with and
+    # nothing for a composite key to close. Same shape as `tenants`, different
+    # reason: the registry's `id` IS a tenant id, the rulebook has no tenant at all.
+    "rules": ("id",),
 }
 
 EXPECTED_TRIGGERS = frozenset({"audit_log_append_only", "audit_log_no_truncate"})
@@ -171,6 +217,14 @@ PLACEHOLDER_DSN = "postgresql+psycopg://unused/unused"
 # _spellings` for what makes a source assertion the honest option there.
 MIGRATION_SOURCE = (
     Path(__file__).resolve().parent.parent / "migrations" / "versions" / "0001_skeleton.py"
+)
+
+# `0003`, read the same way and for the same one reason: it creates TWO enum
+# types, so it carries two `checkfirst` guards that no behavioural test in this
+# file can enter. See `test_the_rules_migration_source_refuses_the_forgiving_enum
+# _spelling`.
+RULES_MIGRATION_SOURCE = (
+    Path(__file__).resolve().parent.parent / "migrations" / "versions" / "0003_rules.py"
 )
 
 
@@ -461,11 +515,17 @@ def test_the_migration_creates_exactly_the_expected_tables(
     A count is satisfied by seven wrong tables and a subset check is satisfied by
     seven right ones plus an eighth nobody meant to create. Five decoy roles
     defeated Task 2's cardinality floor in precisely this shape.
+
+    `MIGRATED_TABLES` is `0001`'s seven plus `0003`'s `rules`, as two constants
+    unioned rather than one list of eight — see `RULEBOOK_TABLES`. Adding a name
+    here because a revision genuinely created a table is what an exact-set
+    assertion is FOR; it is the same edit as `0001`'s seven names, one revision
+    later, and it is the reason a ninth table cannot appear without one.
     """
     engine = seam_engine(migrated_database)
     try:
         with engine.connect() as connection:
-            assert _tables(connection) == SKELETON_TABLES | {alembic_version_table}
+            assert _tables(connection) == MIGRATED_TABLES | {alembic_version_table}
     finally:
         engine.dispose()
 
@@ -493,6 +553,12 @@ def test_every_table_is_owned_by_the_owner_and_no_login_role_owns_one(
 
     The table set is asserted first. Both claims below are `for` loops, and a
     `for` over nothing passes.
+
+    `rules` is in that set and the loop reaches it unchanged, which is worth
+    saying out loud because the argument above is about RLS and `rules` has none.
+    What survives for it is the second claim, not the first: ownership on a
+    NOLOGIN role is why a table nothing isolates is still not a table any
+    authenticatable role can `ALTER`, `DROP` or re-grant.
     """
     engine = seam_engine(migrated_database)
     try:
@@ -501,7 +567,7 @@ def test_every_table_is_owned_by_the_owner_and_no_login_role_owns_one(
     finally:
         engine.dispose()
 
-    assert set(owners) == SKELETON_TABLES | {alembic_version_table}
+    assert set(owners) == MIGRATED_TABLES | {alembic_version_table}
 
     for table, (owner, can_log_in) in sorted(owners.items()):
         assert owner == owner_role, f"{table} is owned by {owner}, not {owner_role}"
@@ -533,10 +599,23 @@ def test_every_tenant_table_carries_its_own_tenant_id_and_the_registry_does_not(
         assert columns[table]["id"] == ColumnFacts("uuid", False, UUID_DEFAULT)
         assert columns[table]["created_at"] == ColumnFacts("timestamptz", False, NOW_DEFAULT)
 
-    for table in sorted(EXPECTED_COLUMNS.keys() - {"tenants"}):
+    # TWO TABLES ARE EXCLUDED AND THEY ARE EXCLUDED FOR DIFFERENT REASONS, each
+    # asserted by name below rather than left as a subtraction a reader has to
+    # interpret. `tenants` is the registry, whose own `id` IS a tenant id.
+    # `rules` is GLOBAL — the rulebook has no tenant at all.
+    for table in sorted(EXPECTED_COLUMNS.keys() - {"tenants"} - RULEBOOK_TABLES):
         assert columns[table]["tenant_id"] == ColumnFacts("uuid", False, None), (
             f"{table}.tenant_id must be uuid NOT NULL; every RLS policy keys on it"
         )
+
+    assert "tenant_id" not in columns["rules"], (
+        "rules is GLOBAL: the rulebook is scoped by jurisdiction, not by customer, "
+        "and two firms searching the same county are governed by the same rule "
+        "(RULED 2026-08-05). A tenant_id here would move it into the derived set "
+        "in test_forced_rls_and_grants.py and conftest.py, where it would then be "
+        "expected to carry a tenant_isolation policy it deliberately does not have "
+        "— which is the accidental way this ruling gets reversed."
+    )
 
     assert "tenant_id" not in columns["tenants"], (
         "tenants is the registry: its primary key IS the tenant id. 0002 keys its "
@@ -552,6 +631,68 @@ def test_every_tenant_table_carries_its_own_tenant_id_and_the_registry_does_not(
     # NULL when the field has a value. This is NOT a third NA state — the two NA
     # states are labels of the enum below.
     assert columns["fields"]["na_reason"] == ColumnFacts(NA_REASON_TYPE_NAME, True, None)
+
+
+def test_the_rulebook_columns_are_the_contracts_nine_and_their_types(
+    migrated_database: str, seam_engine: Callable[[str], Engine]
+) -> None:
+    """🔴 `0003`'s COLUMNS, READ OFF THE LIVE CATALOG, WITH THEIR TYPES.
+
+    The test above already asserts the NAME SET for every table including this
+    one, and that is a different claim: a `code` column of the wrong type, or a
+    `version` that admits NULL, satisfies every name assertion in this file. So
+    the types and the nullability are here, as literals, per column.
+
+    THE NINE ARE `packages/contract/src/entities.ts:153-163` AND THE ORDER OF THIS
+    DICTIONARY IS THAT FILE'S. `id`, `code` and `text` are `z.string()` there;
+    `id` is a uuid here because every table in this schema keys on one and the
+    wire renders it as a string either way. `version` is `z.number().int()`, so
+    `int4` and not `numeric`.
+
+    NULLABILITY IS THE HALF THAT CARRIES MEANING. The three nullable columns are
+    `.nullable()` in the contract and each records a DIFFERENT absence — no
+    jurisdiction narrowing, nobody has confirmed it, no source document — none of
+    which an empty string could express without inventing a fourth state. The
+    five `NOT NULL` ones are the ones a rule cannot be cited without.
+
+    `created_at` is asserted by the test above along with every other table's, and
+    is deliberately NOT in `entities.ts`: it is storage, and Task 3's response
+    does not carry it.
+
+    NO SERVER DEFAULTS ON ANY OF THE NINE. `version` is the one that would be
+    tempting — and a default of 1 would mean a caller who forgot the version gets
+    a rule that claims to be the first one, silently, instead of an error.
+    """
+    engine = seam_engine(migrated_database)
+    try:
+        with engine.connect() as connection:
+            columns = _columns(connection)["rules"]
+    finally:
+        engine.dispose()
+
+    assert columns["code"] == ColumnFacts("text", False, None)
+    assert columns["text"] == ColumnFacts("text", False, None)
+    assert columns["origin"] == ColumnFacts(RULE_ORIGIN_TYPE_NAME, False, None), (
+        "origin must be the rule_origin ENUM, NOT NULL. A text column would make an "
+        "unknown origin a read-time surprise on a screen instead of a write error "
+        "at the moment something invents one."
+    )
+    assert columns["status"] == ColumnFacts(RULE_STATUS_TYPE_NAME, False, None), (
+        "status must be the rule_status ENUM, NOT NULL. It holds every label "
+        "including `pending`: a PENDING rule is VISIBLE to everyone and only an "
+        "engineer may confirm one, so nothing filters this column on read."
+    )
+    assert columns["jurisdiction_scope"] == ColumnFacts("text", True, None), (
+        "jurisdiction_scope is nullable, and it is the column that carries the "
+        "whole tenancy ruling: the rulebook is scoped by jurisdiction rather than "
+        "by customer. NULL means the rule is not narrowed to one."
+    )
+    assert columns["version"] == ColumnFacts("int4", False, None)
+    assert columns["confirmed_by"] == ColumnFacts("text", True, None), (
+        "confirmed_by is nullable because NULL is the state a PENDING rule is in. "
+        "NOT NULL here would make an unconfirmed rule unrepresentable."
+    )
+    assert columns["source_doc_ref"] == ColumnFacts("text", True, None)
 
 
 def test_every_table_has_the_primary_key_it_is_supposed_to_have(
@@ -719,6 +860,133 @@ def test_na_reason_has_exactly_four_labels_in_exactly_this_order(
         f"na_reason has {len(labels)} labels, expected {len(NA_REASON_LABELS)}: {labels}"
     )
     assert labels == NA_REASON_LABELS, f"na_reason labels are out of order: {labels}"
+
+
+def test_the_rulebook_enums_have_exactly_these_labels_in_exactly_this_order(
+    migrated_database: str, seam_engine: Callable[[str], Engine]
+) -> None:
+    """🔴 THE LABELS ARE WRITTEN OUT AS LITERALS, FOR `na_reason`'s REASON EXACTLY.
+
+    The test above records the measurement this one is built from: comparing the
+    live `pg_enum` to `NA_REASON_LABELS` imported from the module under test was
+    derived-against-derived — the live type is created from the migration's
+    verbatim copy of that same tuple — and renaming the labels in BOTH files left
+    the suite green. So the first assertion for each type here is a LITERAL, and
+    its source is `packages/contract/src/enums.ts` (`RuleStatus` at :72,
+    `RuleOrigin` at :75-81), which is what the browser parses these strings
+    against.
+
+    NOTHING ELSE IS COVERING THIS. `alembic check` DOES NOT COMPARE ENUM LABELS —
+    verified in Plan 01 Task 3, recorded in `01-WHAT-HAPPENED.md` §3.11 item 8: a
+    fifth label and a reordering both leave it green. `_columns` reads `udt_name`
+    and so knows only that a column has the type, never what is in it. This
+    assertion is the whole of the coverage for both.
+
+    COUNT AND ORDER STAY SEPARATE, and `RuleOrigin`'s FIVE labels are why that is
+    not pedantry: a sixth leaves the first five in order, so a tuple comparison
+    alone would report an order failure and send the reader looking for a
+    reordering that did not happen. Swapping two leaves the count untouched, so a
+    count alone would not see it at all. `enumsortorder` is the server's own
+    ordering and is what `<`, `ORDER BY` and `MIN()` over these types use.
+
+    THE MIGRATION-VERSUS-MODEL CHECK IS KEPT for what the literal cannot catch: an
+    edit to ONE of the two copies. `0003` repeats both tuples on purpose, because
+    a migration is a frozen snapshot, and nothing but this comparison keeps them
+    honest.
+    """
+    assert RULE_STATUS_LABELS == ("live", "pending", "retired"), (
+        "the three statuses are a contract with packages/contract/src/enums.ts:72, "
+        "not a variable. `pending` in particular is not removable: a PENDING rule "
+        "is visible to everyone and may be confirmed only by an engineer."
+    )
+    assert RULE_ORIGIN_LABELS == (
+        "spec",
+        "escalation",
+        "reconciliation",
+        "complaint",
+        "senior",
+    ), "the five origins are packages/contract/src/enums.ts:75-81 verbatim"
+
+    engine = seam_engine(migrated_database)
+    try:
+        with engine.connect() as connection:
+            status = _enum_labels(connection, RULE_STATUS_TYPE_NAME)
+            origin = _enum_labels(connection, RULE_ORIGIN_TYPE_NAME)
+    finally:
+        engine.dispose()
+
+    assert len(status) == 3, f"rule_status must have exactly three labels, has: {status}"
+    assert status == RULE_STATUS_LABELS, f"rule_status labels are out of order: {status}"
+
+    assert len(origin) == 5, f"rule_origin must have exactly five labels, has: {origin}"
+    assert origin == RULE_ORIGIN_LABELS, f"rule_origin labels are out of order: {origin}"
+
+
+def test_the_rules_migration_source_refuses_the_forgiving_enum_spelling() -> None:
+    """The `checkfirst` guard for `0003`'s two types, and it is a SOURCE assertion.
+
+    `test_the_migration_source_refuses_the_forgiving_spellings` makes this
+    argument in full for `0001` and it applies unchanged, doubled: with
+    `checkfirst=True`, a `downgrade()` missing a `DROP TYPE` leaves the old type
+    behind and the next `upgrade` silently reuses whatever labels it happens to
+    carry. The guard fires only when `downgrade()` is ALREADY broken, and the
+    round trip in this file always downgrades cleanly first, so it cannot be
+    proved behaviourally from here — hence a source read, labelled as one.
+
+    🔴 THE `create` AND `drop` CALL SITES ARE COUNTED SEPARATELY, AND THE FIRST
+       VERSION OF THIS TEST COUNTED THEM TOGETHER WHILE CLAIMING OTHERWISE.
+    It asserted `source.count("checkfirst=False)") == 4` and said that pinned
+    "dropping ONE of the two types". It does not: four `.create(...,
+    checkfirst=False)` calls and zero `.drop(...)` calls satisfy a total of four
+    exactly as well as two of each. The claim was true of the code and not of the
+    assertion — which is `01-WHAT-HAPPENED.md` §5's second family, a check whose
+    stated reason is not what it matches.
+
+    So the two are counted apart, at two each. The BEHAVIOUR is separately covered
+    — removing both `DROP`s, and then one of them, each fails
+    `test_upgrade_downgrade_upgrade_is_clean` with
+    `type "…" already exists` — and that is the real proof; what this adds is that
+    the failure arrives on the second upgrade rather than the first, and a name
+    for which line went missing.
+
+    🔴 AND `"checkfirst=True" not in source` CANNOT CARRY THIS ON ITS OWN, WHICH
+       WAS ALSO UNSTATED. SQLAlchemy DEFAULTS `checkfirst` to `True`, so a call
+    with the keyword simply OMITTED is the forgiving spelling with none of its
+    letters present. The counts are what close that: a `.drop(op.get_bind())` with
+    no keyword takes the drop count to one and fails here. The absence check
+    catches the explicit spelling, the counts catch the omitted one, and neither
+    subsumes the other.
+
+    No database, so no fixture and no container.
+    """
+    source = RULES_MIGRATION_SOURCE.read_text(encoding="utf-8")
+
+    assert "checkfirst=True" not in source, (
+        "0003 creates or drops an enum with checkfirst=True. A type that already "
+        "exists at upgrade time means a previous downgrade failed to drop it, and "
+        "that must be an error rather than a silent reuse of its old labels."
+    )
+
+    # `.create(` / `.drop(` with the argument on the same physical line, which is
+    # how both are written and how `ruff format` keeps them. A call reformatted
+    # across lines fails here rather than passing silently, and that is the right
+    # direction for a source assertion: it can only ever claim what it matched.
+    creates = source.count(".create(op.get_bind(), checkfirst=False)")
+    drops = source.count(".drop(op.get_bind(), checkfirst=False)")
+
+    assert creates == 2, (
+        f"expected exactly two `.create(..., checkfirst=False)` call sites, one per "
+        f"enum type, found {creates}. A type that already exists at upgrade time "
+        f"means a previous downgrade failed to drop it."
+    )
+    assert drops == 2, (
+        f"expected exactly two `.drop(..., checkfirst=False)` call sites, one per "
+        f"enum type, found {drops}. Dropping ONE of the two is the mistake a second "
+        f"enum makes possible and 0001 could not: DROP TABLE does not drop a type, "
+        f"so the survivor makes the SECOND upgrade — the one after a downgrade — "
+        f'die on `type "..." already exists`. Omitting the keyword counts here '
+        f"too, and has to: SQLAlchemy defaults checkfirst to True."
+    )
 
 
 def test_audit_logs_triggers_are_statement_level_before_and_enabled(
@@ -899,8 +1167,15 @@ def test_upgrade_downgrade_upgrade_is_clean(
         command.upgrade(config, "head")
 
         with engine.connect() as connection:
-            assert _tables(connection) == SKELETON_TABLES | {alembic_version_table}
+            assert _tables(connection) == MIGRATED_TABLES | {alembic_version_table}
             assert _enum_labels(connection, NA_REASON_TYPE_NAME) == NA_REASON_LABELS
+            # `0003`'s two types are re-read for the same reason `na_reason` is:
+            # a downgrade that dropped the TABLE and left a type behind makes the
+            # second upgrade die on `type "rule_status" already exists`, and a
+            # downgrade that dropped one of the two and not the other is the
+            # failure only a second enum makes possible.
+            assert _enum_labels(connection, RULE_STATUS_TYPE_NAME) == RULE_STATUS_LABELS
+            assert _enum_labels(connection, RULE_ORIGIN_TYPE_NAME) == RULE_ORIGIN_LABELS
     finally:
         engine.dispose()
 
@@ -1333,6 +1608,22 @@ def test_a_failed_upgrade_leaves_no_partial_schema_behind(
     `down_revision` follows the real head for the same reason: a probe hanging off
     `0001` would fork the chain instead of extending it.
 
+    🔴 AND `down_revision` IS NOW READ FROM THE SCRIPT DIRECTORY RATHER THAN
+    WRITTEN OUT, BECAUSE THE LITERAL WENT STALE THE FIRST TIME IT COULD. It said
+    `"0002"`, which was the head when this test was written; `0003` landing made
+    the probe a SECOND child of `0002`, and this test failed with the very
+    `CommandError: Multiple head revisions are present` that the paragraph above
+    is about — a fork instead of a collision, but the same message and the same
+    uselessness. The literal would have to be edited by every future revision,
+    and nothing would say so until this test went red for a reason unrelated to
+    what it tests. `get_current_head()` cannot go stale.
+
+    That is NOT a value derived from the thing under test. The property here is
+    that a chain of revisions applied by one `upgrade` is one TRANSACTION; where
+    the probe hangs off that chain is scaffolding for reaching it, and a wrong
+    answer from `get_current_head()` cannot make the assertions below pass —
+    it produces a `CommandError` before any DDL runs at all.
+
     🔴 WHAT THIS TEST DOES **NOT** DO, stated because the docstring used to claim
     it did. It said this "demonstrates the case `migrated_database`'s teardown was
     restructured for: an upgrade that fails part way now still gets a teardown,
@@ -1367,10 +1658,14 @@ def test_a_failed_upgrade_leaves_no_partial_schema_behind(
     `CREATE TABLE partial_upgrade_probe` really did run and really was rolled
     back.
     """
-    (tmp_path / "partial_upgrade_probe.py").write_text(_FAILING_REVISION, encoding="utf-8")
-
     real_config = alembic_config(migration_dsn)
     versions = Path(str(real_config.get_main_option("script_location"))) / "versions"
+
+    head = ScriptDirectory.from_config(real_config).get_current_head()
+    assert head is not None, "there is no head revision to hang the probe off"
+    (tmp_path / "partial_upgrade_probe.py").write_text(
+        _FAILING_REVISION.format(down_revision=head), encoding="utf-8"
+    )
 
     probe_config = alembic_config(migration_dsn)
     # `path_separator`, not the older `version_path_separator` — alembic 1.18.5
@@ -1415,6 +1710,13 @@ def test_a_failed_upgrade_leaves_no_partial_schema_behind(
 # A revision that creates something and then fails, used only by the test above.
 # It lives as a string rather than a file in `migrations/versions/` because a
 # real file there would be picked up by every ordinary `upgrade` in the suite.
+#
+# `{down_revision}` is filled in from `ScriptDirectory.get_current_head()` at call
+# time. It was the literal `"0002"` until `0003` landed and made this probe a
+# SECOND child of that revision — a fork, reported as `CommandError: Multiple
+# head revisions are present`, which is this test failing on its own scaffolding.
+# Nothing else in this string is a placeholder, and the two `%`-free `op.execute`
+# lines below are why `str.format` is safe here.
 _FAILING_REVISION = '''"""A revision that fails after creating a table. Test fixture only."""
 
 from __future__ import annotations
@@ -1424,7 +1726,7 @@ from collections.abc import Sequence
 from alembic import op
 
 revision: str = "partial_upgrade_probe"
-down_revision: str | None = "0002"
+down_revision: str | None = "{down_revision}"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
