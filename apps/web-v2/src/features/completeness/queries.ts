@@ -1,6 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 import { OrderCompletenessResponse } from "@titlepipe/contract";
-import { FLOW_ORDERS } from "../../app/flowOrders";
+import { FLOW_ORDERS } from "../../entities/nav/flowOrders";
 import { get } from "../../shared/api";
 
 /**

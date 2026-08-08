@@ -1,8 +1,8 @@
 import { useId, useRef } from "react";
-import type { Door } from "../entities/nav/doors";
-import { useModalDialog } from "../shared/modalDialog";
-import { Card, CardBody } from "../shared/ui/Card";
-import { Eyebrow } from "../shared/ui/Eyebrow";
+import type { Door } from "../../entities/nav/doors";
+import { useModalDialog } from "../../shared/modalDialog";
+import { Card, CardBody } from "../../shared/ui/Card";
+import { Eyebrow } from "../../shared/ui/Eyebrow";
 
 /**
  * The `?` overlay — the whole keyboard layer, written down.

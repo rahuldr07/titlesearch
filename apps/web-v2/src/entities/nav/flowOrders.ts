@@ -1,4 +1,4 @@
-import { orderFromPath } from "./orderFromPath";
+import { orderFromPath } from "../order/orderFromPath";
 
 /**
  * WHICH ORDER EACH FLOW SCREEN IS ABOUT — said once, in `app/`, out loud.

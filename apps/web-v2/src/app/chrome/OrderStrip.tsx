@@ -1,12 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { useRouterState } from "@tanstack/react-router";
-import { screenOrderFor } from "./flowOrders";
+import { screenOrderFor } from "../../entities/nav/flowOrders";
 import { chromeFor } from "./chromeFor";
-import { useTheme } from "./preferences";
-import { orderContextQuery } from "./orderQueries";
+import { useTheme } from "../preferences";
+import { orderContextQuery } from "../orderQueries";
 import { AccountMenu } from "./AccountMenu";
 import { OrderCounts } from "./OrderCounts";
-import { Stamp } from "../shared/ui/Stamp";
+import { Stamp } from "../../shared/ui/Stamp";
 
 /**
  * The full-width top bar (§11 2026-07-30 revision) — `AppChrome`'s sibling in

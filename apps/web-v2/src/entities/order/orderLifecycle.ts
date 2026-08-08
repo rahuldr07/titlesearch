@@ -4,7 +4,7 @@ import type {
   OrderCompletenessResponse,
   OrderFieldsResponse,
 } from "@titlepipe/contract";
-import type { RailBadgeTone } from "../entities/nav/RailBadge";
+import type { RailBadgeTone } from "../nav/RailBadge";
 
 /**
  * READING A SERVED ORDER INTO ONE RAIL STAGE — the pure half of the "THIS

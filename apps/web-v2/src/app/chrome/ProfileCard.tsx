@@ -1,9 +1,9 @@
 import type { Preferences, Role } from "@titlepipe/contract";
 import { ActingAs } from "./ActingAs";
-import { initialsOf } from "./identity";
+import { initialsOf } from "../../shared/identity";
 import { ThemeChoice } from "./ThemeChoice";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
-import { cn } from "../shared/ui/classNames";
+import { cn } from "../../shared/ui/classNames";
 
 /**
  * THE PROFILE CARD — what opens when you click the identity chip in the header.

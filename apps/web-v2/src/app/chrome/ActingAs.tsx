@@ -1,5 +1,5 @@
 import { ROLES, type Role } from "@titlepipe/contract";
-import { cn } from "../shared/ui/classNames";
+import { cn } from "../../shared/ui/classNames";
 
 /**
  * "ACTING AS" — a PREVIEW CONTROL, and the only thing in the chrome that has to

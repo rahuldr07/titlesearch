@@ -1,10 +1,10 @@
 import { useCallback, useEffect } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useHotkeys } from "react-hotkeys-hook";
-import { doorsFor, doorForKey } from "../entities/nav/doors";
-import { useSession } from "../shared/session";
-import { useKeyboardLayer } from "../shared/keyboard";
-import { useNavCollapsed } from "./preferences";
+import { doorsFor, doorForKey } from "../../entities/nav/doors";
+import { useSession } from "../../shared/session";
+import { useKeyboardLayer } from "../../shared/keyboard";
+import { useNavCollapsed } from "../preferences";
 import { KeyMap } from "./KeyMap";
 
 /**

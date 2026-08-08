@@ -1,15 +1,15 @@
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
-import { doorsFor } from "../entities/nav/doors";
-import { Sidebar } from "../entities/nav/Sidebar";
-import { flowFor, flowRoute, flowSectionLabel } from "../entities/nav/flow";
-import type { LifecycleStage } from "../entities/nav/LifecycleRail";
-import { useSession } from "../shared/session";
-import { useAttention, type Attention } from "./attention";
+import { doorsFor } from "../../entities/nav/doors";
+import { Sidebar } from "../../entities/nav/Sidebar";
+import { flowFor, flowRoute, flowSectionLabel } from "../../entities/nav/flow";
+import type { LifecycleStage } from "../../entities/nav/LifecycleRail";
+import { useSession } from "../../shared/session";
+import { useAttention, type Attention } from "../attention";
 import { chromeFor } from "./chromeFor";
-import { useNavCollapsed, useTheme } from "./preferences";
-import { screenOrderFor } from "./flowOrders";
+import { useNavCollapsed, useTheme } from "../preferences";
+import { screenOrderFor } from "../../entities/nav/flowOrders";
 import { railSections } from "./railSections";
 import { SidebarBrand } from "./SidebarBrand";
 import {
@@ -18,8 +18,8 @@ import {
   orderCompletenessQuery,
   orderFieldsQuery,
   orderContextQuery,
-} from "./orderQueries";
-import { stageAugmentFor, reviewAugment } from "./orderLifecycle";
+} from "../orderQueries";
+import { stageAugmentFor, reviewAugment } from "../../entities/order/orderLifecycle";
 
 /**
  * The chrome — the SMART wrapper around the presentational left rail. It owns

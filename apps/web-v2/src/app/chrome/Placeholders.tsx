@@ -1,5 +1,5 @@
-import { Card, CardBody } from "../shared/ui/Card";
-import { Eyebrow } from "../shared/ui/Eyebrow";
+import { Card, CardBody } from "../../shared/ui/Card";
+import { Eyebrow } from "../../shared/ui/Eyebrow";
 
 /**
  * A wrong address gets a NAMED state, never a blank page (`errors.spec` #1).

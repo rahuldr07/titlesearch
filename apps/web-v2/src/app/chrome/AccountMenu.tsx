@@ -1,7 +1,7 @@
 import { useNavigate } from "@tanstack/react-router";
 import type { Preferences, Role } from "@titlepipe/contract";
-import { useSession } from "../shared/session";
-import { initialsOf } from "./identity";
+import { useSession } from "../../shared/session";
+import { initialsOf } from "../../shared/identity";
 import { ProfileCard } from "./ProfileCard";
 import {
   DropdownMenu,

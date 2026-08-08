@@ -1,7 +1,7 @@
-import { doorGlyph, doorTitle, type Door } from "../entities/nav/doors";
-import type { LifecycleStage } from "../entities/nav/LifecycleRail";
-import type { SidebarDoorItem, SidebarSection } from "../entities/nav/Sidebar";
-import type { Attention } from "./attention";
+import { doorGlyph, doorTitle, type Door } from "../../entities/nav/doors";
+import type { LifecycleStage } from "../../entities/nav/LifecycleRail";
+import type { SidebarDoorItem, SidebarSection } from "../../entities/nav/Sidebar";
+import type { Attention } from "../attention";
 
 /**
  * THE RAIL'S SECTION LIST — four headers in a fixed order, assembled once.

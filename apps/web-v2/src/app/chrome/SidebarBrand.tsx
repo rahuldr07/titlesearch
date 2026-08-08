@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Wordmark } from "../shared/ui/Wordmark";
+import { Wordmark } from "../../shared/ui/Wordmark";
 
 /**
  * The wordmark `AppChrome` hands the rail as its `brand` slot — the shared

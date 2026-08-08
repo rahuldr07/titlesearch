@@ -2,8 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { queryOptions } from "@tanstack/react-query";
 import type { OrderCensus } from "@titlepipe/contract";
 import { OrderFieldsResponse } from "@titlepipe/contract";
-import { get } from "../shared/api";
-import { CensusTile, type CensusTileProps } from "../shared/ui/CensusTile";
+import { get } from "../../shared/api";
+import { CensusTile, type CensusTileProps } from "../../shared/ui/CensusTile";
 
 /** The tone names `CensusTile` accepts, so the table below states one of them. */
 type CensusTone = NonNullable<CensusTileProps["tone"]>;

@@ -30,10 +30,10 @@ const BANNED_ANYWHERE: readonly string[] = [
 
 /** Each correction, pinned to the file the false claim was found in. */
 const REQUIRED: readonly { file: string; phrase: string }[] = [
-  { file: "src/app/AppChrome.tsx", phrase: "IT RENDERS THE RAIL AND NOTHING ELSE" },
-  { file: "src/app/AppChrome.tsx", phrase: "QUERIES BELOW ARE GATED ON THE ONE `fetches` FLAG" },
-  { file: "src/app/OrderCounts.tsx", phrase: "NO BREAKPOINT HIDES THESE" },
-  { file: "src/app/OrderCounts.tsx", phrase: "EVERY FIGURE IS READ FROM `census`, NEVER COMPUTED HERE" },
+  { file: "src/app/chrome/AppChrome.tsx", phrase: "IT RENDERS THE RAIL AND NOTHING ELSE" },
+  { file: "src/app/chrome/AppChrome.tsx", phrase: "QUERIES BELOW ARE GATED ON THE ONE `fetches` FLAG" },
+  { file: "src/app/chrome/OrderCounts.tsx", phrase: "NO BREAKPOINT HIDES THESE" },
+  { file: "src/app/chrome/OrderCounts.tsx", phrase: "EVERY FIGURE IS READ FROM `census`, NEVER COMPUTED HERE" },
   {
     file: "src/features/processing/StageRow.tsx",
     phrase: "WHERE THE MARKUP AND THE RENDER DISAGREE, THE RENDER GOVERNS",
@@ -91,7 +91,7 @@ test("each corrected claim is stated where the audit found the false one", () =>
  * which is the prompt to strike G1 rather than leave two records disagreeing.
  */
 test("the order counts carry no responsive-visibility utility", () => {
-  const source = readFileSync(join(process.cwd(), "src/app/OrderCounts.tsx"), "utf8");
+  const source = readFileSync(join(process.cwd(), "src/app/chrome/OrderCounts.tsx"), "utf8");
   const markup = source.replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, "");
   expect(markup).not.toMatch(/\b(sm|md|lg|xl|2xl|max-[a-z]+):(hidden|flex|block|inline-flex)\b/);
 });
@@ -104,7 +104,7 @@ test("the order counts carry no responsive-visibility utility", () => {
  * (hard rule 3) and one no screen can cite (principle 6).
  */
 test("the order counts compute no figure of their own", () => {
-  const source = readFileSync(join(process.cwd(), "src/app/OrderCounts.tsx"), "utf8");
+  const source = readFileSync(join(process.cwd(), "src/app/chrome/OrderCounts.tsx"), "utf8");
   const code = source.replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, "");
   for (const forbidden of [".filter(", ".length", ".reduce(", "=== null", "!== null"]) {
     expect(code, `OrderCounts must not ${forbidden}`).not.toContain(forbidden);

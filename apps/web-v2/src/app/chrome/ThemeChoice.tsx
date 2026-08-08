@@ -1,5 +1,5 @@
 import type { Preferences } from "@titlepipe/contract";
-import { cn } from "../shared/ui/classNames";
+import { cn } from "../../shared/ui/classNames";
 
 /**
  * THEME AS A STATE YOU CAN READ, not an instruction you have to invert.
