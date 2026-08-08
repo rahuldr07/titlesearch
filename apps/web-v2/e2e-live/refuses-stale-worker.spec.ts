@@ -17,7 +17,9 @@ import { expect, test } from "@playwright/test";
  * The sequence below is that sequence: load the live app once (clean, so it
  * boots), register the worker the mock build would have registered, reload.
  */
-test("live mode refuses to start when a mock worker is still registered", async ({ page }) => {
+test("live mode refuses to start when a mock worker is still registered", async ({
+  page,
+}) => {
   await page.goto("/rulebook");
   // A clean live load must NOT refuse, or the assertion below would pass for
   // the wrong reason — this is what makes the refusal specific to the worker.

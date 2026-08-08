@@ -60,12 +60,11 @@ same commit.
 | `plans/backend/00-HOW-TO-EXECUTE.md` | AUTHORITATIVE | How backend plans are written and run |
 | `plans/backend/01-postgres-correctness.md` | RECORD | Plan 01 as issued (executed, merged) |
 | `plans/backend/01-WHAT-HAPPENED.md` | RECORD | Plan 01 handover — required reading before Plan 02+ work |
-| `plans/backend/02-first-vertical-slice.md` | RECORD | Plan 02 as issued (in execution on PR #7) |
+| `plans/backend/02-first-vertical-slice.md` | RECORD | Plan 02 as issued (executed, merged via PR #7) |
+| `plans/backend/02-WHAT-HAPPENED.md` | RECORD | Plan 02 handover — §5 is the transferable part; read before Plan 03 work |
+| `plans/backend/03-identity.md` | AUTHORITATIVE | Plan 03 DRAFT — four human gates open; not executable until ruled |
 | `plans/2026-07-28-titlepipe-revised-design.md` + six `2026-07-30-design-fidelity-*` + `2026-07-30-consistency-audit.md` | RECORD | The design-fidelity wave plans, as executed |
 | `specs/2026-07-30-design-fidelity-design.md` | RECORD | The wave spec |
-
-PR #7 (`rahuldr07/backend-plan02`) adds `02-WHAT-HAPPENED.md` and `03-identity.md`
-and amends `BUILD-PLAN.md`; fold them in here when it merges.
 
 ## docs/frontend/
 

@@ -59,7 +59,8 @@ function rawRules(payload: unknown): JsonObject[] {
   const rules: unknown = (payload as JsonObject).rules;
   if (!Array.isArray(rules)) throw new Error("fixture has no `rules` array");
   return rules.map((rule: unknown) => {
-    if (typeof rule !== "object" || rule === null) throw new Error("a rule is not an object");
+    if (typeof rule !== "object" || rule === null)
+      throw new Error("a rule is not an object");
     return rule as JsonObject;
   });
 }
@@ -98,8 +99,11 @@ describe("GET /api/rules — the Pydantic body against the browser's parser", ()
 
   test("the envelope is an object wrapping `rules`, not a bare array", () => {
     const payload = readFixture();
-    if (typeof payload !== "object" || payload === null) throw new Error("not an object");
-    expect(Object.keys(payload).sort()).toEqual(Object.keys(RulesResponse.shape).sort());
+    if (typeof payload !== "object" || payload === null)
+      throw new Error("not an object");
+    expect(Object.keys(payload).sort()).toEqual(
+      Object.keys(RulesResponse.shape).sort(),
+    );
   });
 
   test("the fixture exercises every enum label and both sides of every nullable", () => {
