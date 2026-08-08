@@ -2,16 +2,19 @@
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import AsyncGenerator
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from starlette.responses import StreamingResponse
+from starlette.types import Message, Receive, Scope, Send
 
 from titlepipe_core.api.request_context import (
     MAX_INBOUND_REQUEST_ID_LENGTH,
     REQUEST_ID_HEADER,
+    RequestContextMiddleware,
     current_request_id,
     sanitise_inbound_request_id,
 )
@@ -120,3 +123,72 @@ def test_a_mid_stream_failure_does_not_start_a_second_response(app: FastAPI) -> 
     # The context is still torn down on the way out, exactly as for a
     # pre-response failure.
     assert current_request_id() is None
+
+
+def test_a_non_conforming_header_entry_cannot_duplicate_the_request_id() -> None:
+    """`X-Request-ID` goes out once even if the inbound list is malformed.
+
+    Driven against the raw ASGI interface rather than through `TestClient`,
+    because the defect is only reachable from below: Starlette's `Response`
+    encodes every header name to `bytes` on the way out, so no route handler can
+    produce the message this test sends.
+
+    The middleware used to assert `list[tuple[bytes, bytes]]` on whatever the
+    downstream app put in `headers`. Nothing checked it. An app emitting a `str`
+    name made the dedupe compare `str` to `bytes` — always unequal — so the
+    inbound `X-Request-ID` survived the filter, the middleware appended its own,
+    and the header went out twice. That is the exact regression the "Replace,
+    never append" comment in the middleware exists to prevent.
+
+    Every entry below is malformed in a different way, and the `str`-named
+    `x-request-id` is the one that carried the bug.
+    """
+
+    async def downstream(scope: Scope, receive: Receive, send: Send) -> None:
+        await send(
+            {
+                "type": "http.response.start",
+                "status": 200,
+                "headers": [
+                    ("x-request-id", b"downstream-id"),  # a `str` name
+                    (b"x-request-id", "downstream-id"),  # a `str` value
+                    (b"x-request-id",),  # not a pair
+                    b"x-request-id: downstream-id",  # not a tuple at all
+                    (b"content-type", b"text/plain"),  # the only conforming one
+                ],
+            }
+        )
+        await send({"type": "http.response.body", "body": b""})
+
+    sent: list[Message] = []
+
+    async def record(message: Message) -> None:
+        sent.append(message)
+
+    async def receive() -> Message:
+        return {"type": "http.request", "body": b"", "more_body": False}
+
+    middleware = RequestContextMiddleware(downstream, id_factory=SequenceIdFactory("req"))
+    scope: Scope = {"type": "http", "method": "GET", "path": "/", "headers": []}
+    asyncio.run(middleware(scope, receive, record))
+
+    # Exact, because "appears once" is only half of it: the non-conforming
+    # entries must be gone rather than passed through in some other position.
+    assert sent[0]["headers"] == [
+        (b"content-type", b"text/plain"),
+        (b"x-request-id", b"req-000001"),
+    ]
+
+    # And stated the way the defect would have been seen. Counting only the
+    # `bytes` spelling would have scored the duplicate as a pass, because the
+    # entry that survived the broken dedupe was the `str` one.
+    def names_the_request_id(entry: object) -> bool:
+        match entry:
+            case (bytes() as key, object()):
+                return key.lower() == REQUEST_ID_HEADER.lower().encode("latin-1")
+            case (str() as key, object()):
+                return key.lower() == REQUEST_ID_HEADER.lower()
+            case _:
+                return False
+
+    assert sum(1 for entry in sent[0]["headers"] if names_the_request_id(entry)) == 1

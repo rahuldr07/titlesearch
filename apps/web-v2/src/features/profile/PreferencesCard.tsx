@@ -35,7 +35,9 @@ export function PreferencesCard() {
   return (
     <Card>
       <CardBody>
-        <Eyebrow variant="section" as="h2">Preferences</Eyebrow>
+        <Eyebrow variant="section" as="h2">
+          Preferences
+        </Eyebrow>
 
         <div className="mt-6 flex flex-wrap items-center gap-6 py-3">
           <span id="pref-zoom" className="min-w-80 flex-1 text-base text-ink-primary">
@@ -51,7 +53,11 @@ export function PreferencesCard() {
             className="gap-2"
           >
             {ZOOM_CHOICES.map((choice) => (
-              <Toggle key={choice} value={choice} className="rounded-5 px-6 py-3 font-mono text-sm">
+              <Toggle
+                key={choice}
+                value={choice}
+                className="rounded-5 px-6 py-3 font-mono text-sm"
+              >
                 {choice}
               </Toggle>
             ))}
@@ -94,7 +100,9 @@ function PreferenceRow({
 }) {
   return (
     <div className="flex items-center gap-6 border-t border-line-subtle py-5">
-      <span id={id} className="flex-1 text-base text-ink-primary">{label}</span>
+      <span id={id} className="flex-1 text-base text-ink-primary">
+        {label}
+      </span>
       {children}
     </div>
   );

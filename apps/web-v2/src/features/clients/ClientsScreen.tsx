@@ -79,27 +79,38 @@ export function ClientsScreen() {
             the screen — settings are the given, the deltas are the argument —
             so the emphasis lands where the reading does.
           */
-          title={<>Client settings &amp; <em>overrides</em></>}
+          title={
+            <>
+              Client settings &amp; <em>overrides</em>
+            </>
+          }
           lede={
             <p>
-              A client holds only <span className="font-semibold">deltas</span>{" "}
-              against the product baseline — never a copy of the list. That way a
-              baseline change keeps reaching every client, and each difference stays
-              visibly deliberate.
+              A client holds only <span className="font-semibold">deltas</span> against
+              the product baseline — never a copy of the list. That way a baseline
+              change keeps reaching every client, and each difference stays visibly
+              deliberate.
             </p>
           }
         />
 
         {product === undefined ? (
-          <p data-testid="no-products" className="text-base leading-body text-ink-secondary">
-            The configuration carries no products, so there is no baseline to
-            resolve a client against.
+          <p
+            data-testid="no-products"
+            className="text-base leading-body text-ink-secondary"
+          >
+            The configuration carries no products, so there is no baseline to resolve a
+            client against.
           </p>
         ) : (
           <Tabs value={tab} onValueChange={setTab}>
             <TabList variant="standalone">
-              <Tab variant="standalone" value="one">One client in depth</Tab>
-              <Tab variant="standalone" value="compare">Compare all clients</Tab>
+              <Tab variant="standalone" value="one">
+                One client in depth
+              </Tab>
+              <Tab variant="standalone" value="compare">
+                Compare all clients
+              </Tab>
             </TabList>
 
             <TabPanel value="one">

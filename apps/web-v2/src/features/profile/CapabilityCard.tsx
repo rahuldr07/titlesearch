@@ -39,7 +39,9 @@ export function CapabilityCard({
   return (
     <Card>
       <CardBody>
-        <Eyebrow variant="section" as="h2">What I can do</Eyebrow>
+        <Eyebrow variant="section" as="h2">
+          What I can do
+        </Eyebrow>
         {state === "failed" ? (
           <p className="mt-5 text-base text-state-halt-ink">
             Your permissions could not be loaded, so nothing is claimed here.
@@ -49,8 +51,13 @@ export function CapabilityCard({
         ) : (
           <ul className="mt-5 flex flex-col gap-4">
             {actions.map((action) => (
-              <li key={action} className="flex items-start gap-4 text-base leading-body text-ink-secondary">
-                <span aria-hidden="true" className="shrink-0 text-action">•</span>
+              <li
+                key={action}
+                className="flex items-start gap-4 text-base leading-body text-ink-secondary"
+              >
+                <span aria-hidden="true" className="shrink-0 text-action">
+                  •
+                </span>
                 <span className="font-mono">{action}</span>
               </li>
             ))}

@@ -46,7 +46,8 @@ export const SIGNED_SIGNOFF: OrderSignoffResponse = {
     signoffLine(2, {
       label: "Easements and restrictions of record reported",
       answer: "NO",
-      comment: "No plat or survey was in the package — only prior deed exhibits could be checked.",
+      comment:
+        "No plat or survey was in the package — only prior deed exhibits could be checked.",
     }),
     signoffLine(3, {
       label: "Assessor parcel data reconciled",

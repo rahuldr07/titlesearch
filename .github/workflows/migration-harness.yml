@@ -1,0 +1,317 @@
+name: migration harness
+
+# THE ONE JOB WHOSE PATH FILTER SPANS BOTH SIDES OF THE MIGRATION.
+#
+# Before this file existed there was no overlap at all: `frontend.yml` watches
+# `apps/**` and `packages/**`, `backend.yml` watches `services/**`, `libs/**`,
+# `infra/**` and `scripts/**`, and nothing ran the browser suite on a backend
+# change. `docs/backend/BUILD-PLAN.md` §5.2 records the consequence — the
+# "keep the frontend tests green while migrating endpoint by endpoint" loop had
+# no execution path, so "we will notice when an endpoint moves and breaks the
+# app" was a plan rather than a mechanism.
+#
+# It now carries a SECOND gate for the same reason: the contract-parity vitest
+# project, which compares core-api's Pydantic response fixture against the real Zod
+# schemas. `frontend.yml` runs it but does not watch `services/**`, so a backend
+# change that regenerates the fixture would never have reached it. See the step.
+#
+# Every step here runs a real command. `docs/superpowers/plans/backend/
+# 01-WHAT-HAPPENED.md` §5 records five separate ways a CI check shipped green
+# while proving nothing — the check's name inside an `echo`, `if: false`,
+# `continue-on-error`, an `if:` naming a trigger that does not exist, and the
+# name in a shell comment. There is no `continue-on-error` in this file, and both
+# gate steps' exit statuses are the job's.
+
+on:
+  push:
+    branches: [main]
+    paths: &harness-paths
+      # Both sides, deliberately. The whole value of this workflow is that a
+      # change to ONE of them runs against the other.
+      - "apps/**"
+      - "packages/**"
+      - "services/**"
+      - "libs/**"
+      # The wire fixture both sides are answerable to. It is the artifact the two
+      # contract gates share and it belongs to neither tree, so before it was
+      # named here a PR editing only `contract-fixtures/` triggered NO workflow:
+      # `frontend.yml` watches `apps/**` and `packages/**`, `backend.yml` the
+      # services side, and neither reaches a file at the repository root.
+      - "contract-fixtures/**"
+      # The enforcement surface: the workspace wiring the harness builds
+      # through, and this file itself.
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "package.json"
+      - ".github/workflows/migration-harness.yml"
+  pull_request:
+    paths: *harness-paths
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: migration-harness-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  UV_VERSION: "0.11.26"
+  PYTHON_VERSION: "3.13"
+  PNPM_VERSION: "10.33.2"
+  CORE_API_PORT: "8000"
+
+  # The database this job stands up, and the four role passwords
+  # `migrations/sql/roles.sql` reads through `\getenv`. It REFUSES when any of
+  # them is unset — fail-closed, so that a missing variable cannot be read as
+  # "no password" and set an empty one on four roles.
+  #
+  # ONE VALUE FOR ALL FOUR, and it is a throwaway. The server is a service
+  # container on this runner's loopback, it is destroyed when the job ends, and
+  # nothing in it outlives the run — the same reasoning as `backend.yml`'s
+  # `SEAL`. Distinct passwords would buy separation between four roles that only
+  # this job can reach, at the cost of four literals to keep in step with two
+  # DSNs. What the roles are actually FOR — the owner cannot log in, the app
+  # holds `SELECT` and nothing else — is enforced by `roles.sql` and by the
+  # migration, and no password here changes any of it.
+  DB_PASSWORD: "harness-only-not-a-real-secret"
+  DB_HOST: "127.0.0.1"
+  DB_PORT: "5432"
+  DB_NAME: "postgres"
+
+jobs:
+  live-slice:
+    name: browser app against core-api
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+
+    # 🔴 THIS JOB NOW HAS A DATABASE, AND IT DID NOT BEFORE.
+    #
+    # The previous version booted core-api on `TITLEPIPE_ENVIRONMENT=development`
+    # alone and said in its own comment that "standing up Postgres here would be
+    # scope this job does not need". That was true while `/api/rules` did not
+    # exist. Once Task 4 landed it, the honest answer core-api could give with no
+    # database was a 503, and `e2e-live/reaches-core-api.spec.ts` asserted exactly
+    # that — a positive control on a service FAILING. Plan 02's deliverable is a
+    # real screen rendering real rows, which no configuration of an outage can
+    # show, so Task 5 spent the scope.
+    #
+    # A SERVICE CONTAINER, not testcontainers. `backend.yml` explains at length
+    # why the Python suite must NOT use one — its conftest drops eight tables on
+    # every module teardown and guards a loopback DSN behind a deliberately
+    # awkward variable name. Nothing here drops anything: the schema is built once
+    # by `alembic upgrade head` and the rulebook is replaced by one seeding
+    # transaction, so the objection does not apply and a service container is the
+    # cheaper mechanism.
+    #
+    # `postgres:18.4` is pinned to the same tag `services/core-api/tests/
+    # conftest.py` starts, so the harness and the unit suite are not proving
+    # things about two different servers.
+    services:
+      postgres:
+        image: postgres:18.4
+        env:
+          # The image's own convention, written literally. The `env` context is
+          # not reliably available in a service's `env:` block, and a superuser
+          # password that only the roles step ever uses is not worth a variable.
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        # Without this the job races the server: `psql` in the roles step would
+        # arrive before the container finished initdb and fail with a connection
+        # refusal that reads like a configuration error.
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+
+      - name: Install Python ${{ env.PYTHON_VERSION }}
+        run: uv python install ${{ env.PYTHON_VERSION }}
+
+      - name: Install the workspace
+        run: pnpm install --frozen-lockfile
+
+      # THE CONTRACT GATE, AND THIS IS THE ONLY WORKFLOW THAT CAN RUN IT ON EITHER
+      # SIDE'S CHANGE.
+      #
+      # `contract-parity.test.ts` reads `contract-fixtures/rules-response.json` —
+      # produced by core-api's Pydantic models — and parses it with the real Zod
+      # schemas. It is in `frontend.yml` too (as part of `pnpm --filter web-v2
+      # test`), but that workflow's filter names `apps/**` and `packages/**` and NOT
+      # `services/**`. So the change class this gate exists for — edit
+      # `api/schemas/rules.py`, regenerate the fixture — ran `backend.yml` alone,
+      # where the Python side passes BY CONSTRUCTION because the fixture was just
+      # regenerated from the new models, and the only check that can say "the
+      # contract refuses this shape" never executed.
+      #
+      # `--project gates` and not `pnpm --filter web-v2 test`: the `storybook`
+      # project is a real browser suite, and dragging it onto every backend commit
+      # is the cost this workflow exists to avoid. The gates project is node-env and
+      # needs no browser, so it runs BEFORE the chromium install below and fails
+      # fast. Adding `services/**` to `frontend.yml` would have been the other way
+      # to close the hole and would have had exactly that cost.
+      - name: Contract parity (Pydantic fixture vs the real Zod schemas)
+        run: pnpm --filter web-v2 exec vitest run --project gates
+
+      - name: Install Playwright chromium
+        run: pnpm --filter web-v2 exec playwright install --with-deps chromium
+
+      # --frozen so a drifted lock fails here rather than producing a core-api
+      # that is not the one under test.
+      - name: Install core-api
+        working-directory: services/core-api
+        run: uv sync --frozen --all-groups
+
+      # THE FIVE ROLES, before any schema exists. `roles.sql` is NOT Alembic's to
+      # run — it creates `titlepipe_migration`, which is the role Alembic connects
+      # AS, so it cannot be a revision. It is idempotent and convergent, and it
+      # refuses outright if any of the four password variables is unset.
+      #
+      # Run as the superuser, which is the only role in a fresh container that can
+      # create the other five and grant on `public`.
+      - name: Create the database roles
+        env:
+          PGPASSWORD: postgres
+          TITLEPIPE_MIGRATION_PASSWORD: ${{ env.DB_PASSWORD }}
+          TITLEPIPE_APP_PASSWORD: ${{ env.DB_PASSWORD }}
+          TITLEPIPE_WORKER_PASSWORD: ${{ env.DB_PASSWORD }}
+          TITLEPIPE_BLIND_PASSWORD: ${{ env.DB_PASSWORD }}
+        run: |
+          psql -h "${DB_HOST}" -p "${DB_PORT}" -U postgres -d "${DB_NAME}" \
+            -v ON_ERROR_STOP=1 -f services/core-api/migrations/sql/roles.sql
+
+      # THE SCHEMA. `TITLEPIPE_DATABASE_URL` is `titlepipe_migration`'s DSN and
+      # `migrations/env.py` refuses any other role — it is the only one that can
+      # `SET ROLE titlepipe_owner`, and the owner is what every object must belong
+      # to. This is a DIFFERENT VARIABLE from the one core-api reads below, which
+      # is `TITLEPIPE_APP_DATABASE_URL`; the two roles hold different privileges
+      # and mixing them up produces a service that can create tables.
+      - name: Migrate the schema
+        working-directory: services/core-api
+        env:
+          TITLEPIPE_DATABASE_URL: postgresql+psycopg://titlepipe_migration:${{ env.DB_PASSWORD }}@${{ env.DB_HOST }}:${{ env.DB_PORT }}/${{ env.DB_NAME }}
+        run: uv run alembic upgrade head
+
+      # core-api, now WITH a database — see the job's `services:` block for why
+      # that changed. `TITLEPIPE_APP_DATABASE_URL` is `titlepipe_app`'s DSN, and
+      # `0003_rules.py` grants that role `SELECT` on `rules` and nothing else, so
+      # this process can read the rulebook and cannot write it. The seeding is
+      # done by `e2e-live/seedRulebook.mjs` over the migration role instead.
+      #
+      # 🔴 THE LOOP WAITS ON `/ready` AND GREPS FOR `database_answers":true`. It
+      # polled `/health` alone, whose stated job is to touch NO dependency, so
+      # the one failure this step exists to catch was the one it could not see: a
+      # typo'd `TITLEPIPE_APP_DATABASE_URL` produces a core-api that starts fine,
+      # answers `/health` 200, and then fails as exactly the screenful of
+      # confusing browser assertions the old comment claimed it prevented.
+      #
+      # A 200 FROM `/ready` IS NOT ENOUGH EITHER, and that is why this greps the
+      # body rather than trusting `curl -f`. `api/routers/health.py` states the
+      # rule in the schema itself: "a key is present only for a dependency this
+      # deployment is CONFIGURED for, so an absent key means 'not configured',
+      # never 'healthy'". MEASURED 2026-08-06 against this tree:
+      #
+      #   DSN unset      /ready 200 {"ready":true,…,"checks":{"startup_complete":true}}
+      #   DSN wrong      /ready 503 {"ready":false,…,"database_answers":false}
+      #   DSN correct    /ready 200 {"ready":true,…,"database_answers":true}
+      #
+      # So `curl -f` catches the typo and sails past the omission. The grep is
+      # what distinguishes all three, and the omission is the likelier mistake —
+      # it is what this job did on purpose until Task 5.
+      #
+      # The loop fails with the server's own log rather than falling through, so
+      # a core-api that dies at startup reports as that.
+      - name: Start core-api
+        working-directory: services/core-api
+        env:
+          TITLEPIPE_ENVIRONMENT: development
+          TITLEPIPE_APP_DATABASE_URL: postgresql+psycopg://titlepipe_app:${{ env.DB_PASSWORD }}@${{ env.DB_HOST }}:${{ env.DB_PORT }}/${{ env.DB_NAME }}
+        run: |
+          set -euo pipefail
+          nohup uv run uvicorn titlepipe_core.app:create_app --factory \
+            --host 127.0.0.1 --port "${CORE_API_PORT}" > core-api.log 2>&1 &
+          for _ in $(seq 1 60); do
+            # `|| true` so a 503 body is still captured rather than aborting the
+            # loop under `set -e` — a not-yet-ready replica is the ordinary case
+            # on the first iterations and must not be fatal.
+            ready="$(curl -sS "http://127.0.0.1:${CORE_API_PORT}/ready" 2>/dev/null || true)"
+            case "${ready}" in
+              *'"database_answers":true'*)
+                echo "${ready}"
+                exit 0
+                ;;
+            esac
+            sleep 1
+          done
+          echo "::error::core-api never reported database_answers:true on /ready"
+          echo "last /ready body: ${ready:-<none>}"
+          cat core-api.log
+          exit 1
+
+      # The harness itself: six projects. See playwright.live.config.ts for what
+      # each is worth; the two that carry the proof are named here.
+      #
+      #   live-reaches-core-api       core-api's ROWS, its x-request-id and its
+      #                               database-minted UUIDs arrive IN THE BROWSER
+      #   live-frozen-rulebook        `apps/web-v2/e2e` ITSELF, unmodified, run
+      #                               against the live build
+      #   live-halts-without-core-api the rulebook halts, showing no mock rows
+      #   live-refuses-stale-worker   a leftover worker refuses the live boot
+      #   mock-serves-the-rulebook    VITE_API_MODE=mock is unchanged
+      #   refuses-invalid-mode        a typo'd mode refuses on screen
+      #
+      # 🔴 ONLY `live-reaches-core-api` FAILS WHEN THE SWITCH, THE PROXY OR THE
+      # BUILD IS BROKEN. This comment used to say "only the first two", naming
+      # `live-frozen-rulebook` as well, and that was FALSE: MEASURED 2026-08-06,
+      # pointing that project's baseURL at the MOCK bundle leaves it 7 of 7
+      # green, and stopping core-api altogether leaves 6 of its 7 green. It shows
+      # the frozen specs pass unmodified against the live build — Task 5's
+      # contract — and it is breadth, not proof.
+      #
+      # The rest pass against an app that does not work at all, which is the
+      # pure-denial trap `docs/superpowers/plans/backend/
+      # 00-HOW-TO-EXECUTE.md` §1.1 measured on Plan 01.
+      #
+      # `TITLEPIPE_DATABASE_URL` is here because `pnpm test:e2e:live` chains
+      # `e2e-live/seedRulebook.mjs`, which writes the rulebook as the migration
+      # role. Without it the seed refuses by name rather than letting the browser
+      # assertions fail against an empty table.
+      - name: Live migration harness
+        working-directory: apps/web-v2
+        env:
+          VITE_API_PROXY_TARGET: http://127.0.0.1:${{ env.CORE_API_PORT }}
+          TITLEPIPE_DATABASE_URL: postgresql+psycopg://titlepipe_migration:${{ env.DB_PASSWORD }}@${{ env.DB_HOST }}:${{ env.DB_PORT }}/${{ env.DB_NAME }}
+        run: pnpm test:e2e:live
+
+      - name: core-api log
+        if: ${{ failure() }}
+        working-directory: services/core-api
+        run: cat core-api.log
+
+      - name: Playwright report
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-harness-report
+          path: apps/web-v2/test-results
+          retention-days: 7
+          if-no-files-found: ignore

@@ -15,7 +15,8 @@ dependencies = [
 # This service must never depend on titlepipe-core-api, titlepipe-extraction-svc
 # or titlepipe-render-svc. Its isolation is topological — separate deployment,
 # separate database, separate object-store credentials — and a shared package
-# would be the first crack in it. tests/test_boundaries.py enforces this.
+# would be the first crack in it. tests/test_blind_boundary.py enforces this;
+# this comment named a tests/test_boundaries.py that has never existed.
 
 [dependency-groups]
 dev = [

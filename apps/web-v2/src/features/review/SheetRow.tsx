@@ -106,7 +106,10 @@ export function SheetRow({
         ) : null}
         <FieldValue field={field} />
         {mark === null ? null : (
-          <span data-testid="row-mark" className="text-xs font-semibold text-state-settled-ink">
+          <span
+            data-testid="row-mark"
+            className="text-xs font-semibold text-state-settled-ink"
+          >
             {mark}
           </span>
         )}

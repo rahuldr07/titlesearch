@@ -69,8 +69,7 @@ const chip = cva("inline-flex items-center uppercase whitespace-nowrap", {
 type ChipVariants = VariantProps<typeof chip>;
 
 export interface ChipProps
-  extends Omit<HTMLAttributes<HTMLSpanElement>, "className">,
-    ChipVariants {
+  extends Omit<HTMLAttributes<HTMLSpanElement>, "className">, ChipVariants {
   children: ReactNode;
   className?: string;
 }

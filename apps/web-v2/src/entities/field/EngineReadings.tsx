@@ -83,7 +83,9 @@ export function EngineReadings({
             </button>
 
             {reading.value === null ? (
-              <span className="font-mono text-base text-ink-muted">— nothing returned</span>
+              <span className="font-mono text-base text-ink-muted">
+                — nothing returned
+              </span>
             ) : (
               <Diffed value={reading.value} against={other} />
             )}

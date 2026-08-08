@@ -33,10 +33,18 @@ export const Sizes: Story = {
   args: { children: "Finalized" },
   render: () => (
     <div className="flex flex-wrap items-center gap-10">
-      <Stamp size="sm" tone="action">Decisions open</Stamp>
-      <Stamp size="md" tone="attend">Session ended</Stamp>
-      <Stamp size="lg" tone="action">Reissued · v2</Stamp>
-      <Stamp size="xl" tone="settled">Finalized</Stamp>
+      <Stamp size="sm" tone="action">
+        Decisions open
+      </Stamp>
+      <Stamp size="md" tone="attend">
+        Session ended
+      </Stamp>
+      <Stamp size="lg" tone="action">
+        Reissued · v2
+      </Stamp>
+      <Stamp size="xl" tone="settled">
+        Finalized
+      </Stamp>
     </div>
   ),
 };

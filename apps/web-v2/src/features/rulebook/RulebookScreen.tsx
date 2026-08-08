@@ -44,8 +44,14 @@ export function RulebookScreen() {
   const [selected, setSelected] = useState<string | null>(null);
   const [drafting, setDrafting] = useState(false);
 
-  if (isError) return <ScreenMessage tone="halt" measure="1160">Rulebook unavailable.</ScreenMessage>;
-  if (isPending) return <ScreenMessage measure="1160">Loading the rulebook…</ScreenMessage>;
+  if (isError)
+    return (
+      <ScreenMessage tone="halt" measure="1160">
+        Rulebook unavailable.
+      </ScreenMessage>
+    );
+  if (isPending)
+    return <ScreenMessage measure="1160">Loading the rulebook…</ScreenMessage>;
 
   const rules = data.rules;
   const visible = filter === "all" ? rules : rules.filter((r) => r.status === filter);

@@ -15,6 +15,18 @@ on:
       # client-data guard, the lock check or the container build context merge
       # without this workflow ever running.
       - "scripts/**"
+      # The wire fixture `services/core-api` and `packages/contract` are both
+      # answerable to. It belongs to NEITHER side, which is why it sits at the
+      # repository root and why it was reachable by no workflow at all: a PR
+      # editing only this file matched `frontend.yml`'s filter, `backend.yml`'s
+      # and the harness's equally — none of them. `scripts/tests/
+      # test_backend_workflow.py` asserts it is named here and in the harness.
+      - "contract-fixtures/**"
+      # Any new Python project, wherever it lands. The matrix-coverage test in
+      # scripts/tests/test_backend_workflow.py fails when a directory holding a
+      # pyproject.toml is missing from the `project` matrix, and this is what
+      # makes that test actually run on the change that introduces one.
+      - "**/pyproject.toml"
       - "ruff.toml"
       - ".pre-commit-config.yaml"
       - ".dockerignore"
@@ -30,6 +42,18 @@ on:
       # client-data guard, the lock check or the container build context merge
       # without this workflow ever running.
       - "scripts/**"
+      # The wire fixture `services/core-api` and `packages/contract` are both
+      # answerable to. It belongs to NEITHER side, which is why it sits at the
+      # repository root and why it was reachable by no workflow at all: a PR
+      # editing only this file matched `frontend.yml`'s filter, `backend.yml`'s
+      # and the harness's equally — none of them. `scripts/tests/
+      # test_backend_workflow.py` asserts it is named here and in the harness.
+      - "contract-fixtures/**"
+      # Any new Python project, wherever it lands. The matrix-coverage test in
+      # scripts/tests/test_backend_workflow.py fails when a directory holding a
+      # pyproject.toml is missing from the `project` matrix, and this is what
+      # makes that test actually run on the change that introduces one.
+      - "**/pyproject.toml"
       - "ruff.toml"
       - ".pre-commit-config.yaml"
       - ".dockerignore"
@@ -64,10 +88,11 @@ env:
 # would be worse than the honest tag.
 
 jobs:
-  # The same hooks a developer runs locally, run as the authority. This is what
-  # executes the client-data guard, the lock check and their tests in CI —
-  # without it those controls were only ever enforced on machines where someone
-  # had installed the hooks.
+  # Every gate this repository defines, run as the authority — the client-data
+  # guard, the lock check, the backend structural rules and their tests. Without
+  # this job those controls were only ever enforced on machines where someone
+  # had installed the hooks. Each is a step of its own here, and then the whole
+  # hook set runs again through pre-commit; the reason for both is at the steps.
   hygiene:
     name: hygiene
     runs-on: ubuntu-24.04
@@ -83,13 +108,68 @@ jobs:
       - name: Install Python ${{ env.PYTHON_VERSION }}
         run: uv python install ${{ env.PYTHON_VERSION }}
 
-      - name: Pre-commit (all files)
-        run: uvx pre-commit run --all-files --show-diff-on-failure
+      # The repository's own gates, one step each, and every one of them
+      # carrying `if: ${{ !cancelled() }}`.
+      #
+      # `uvx pre-commit run --all-files` at the end already runs all of these,
+      # so the duplication is deliberate and the reason is that a single step
+      # reports a single result. Measured on this tree: pre-commit is red for
+      # trailing whitespace in `apps/web-v2` and `design-export`, two Ruff
+      # findings in `scripts/tests`, and 81 tracked files the client-data guard
+      # refuses (77 `.png`, one `.zip`, three `.docx`) — none of it backend
+      # structure, and all of it predating this job. A steps list that stops at
+      # the first failure therefore never reaches the structural rules at all,
+      # and a violation that did arrive through pre-commit would land inside an
+      # already-red step and read as more of the same noise.
+      #
+      # `!cancelled()` is what makes each of these an independent verdict: every
+      # gate runs and reports on every push, whatever the ones before it did.
+      # Ordering below is still deliberate — the gates that are green today come
+      # first — but nothing depends on it.
+      #
+      # `scripts/tests/test_backend_workflow.py` asserts that every hook in the
+      # `repo: local` block of `.pre-commit-config.yaml` is named by some step
+      # in this file. It derives that list by parsing the hook config rather
+      # than holding a copy of it, so a gate added to the hooks and not added
+      # here fails on a developer's machine instead of merging as a workflow
+      # that enforces less than the hooks do.
+
+      - name: Backend structural rules
+        if: ${{ !cancelled() }}
+        run: python scripts/check_backend_rules.py
+
+      # Per-project `uv sync --frozen` below is the authority on lock drift.
+      # This runs the same check across all six projects at once, before any
+      # matrix job has started, so a drifted lock is one failing line here
+      # rather than six failing installs.
+      - name: Locks are current
+        if: ${{ !cancelled() }}
+        run: python scripts/check_locks.py
+
+      # The client-data guard and the rules gate are security and structural
+      # controls, so their own tests run here — including the drift test that
+      # keeps this file honest.
+      - name: Guard and gate tests
+        if: ${{ !cancelled() }}
+        run: uv run --with pytest python -m pytest -q scripts/tests
 
       # Belt and braces: the guard is also run directly over every tracked
       # file, so it holds even if the hook wiring is changed.
       - name: Client-data guard over the whole tree
+        if: ${{ !cancelled() }}
         run: git ls-files -z | xargs -0 python scripts/check_no_client_data.py
+
+      - name: Markdown links resolve
+        if: ${{ !cancelled() }}
+        run: git ls-files -z '*.md' | xargs -0 python scripts/check_doc_links.py
+
+      - name: CLAUDE.md and AGENTS.md are identical
+        if: ${{ !cancelled() }}
+        run: python scripts/check_agents_sync.py
+
+      - name: Pre-commit (all files)
+        if: ${{ !cancelled() }}
+        run: uvx pre-commit run --all-files --show-diff-on-failure
 
   # Each Python project is verified independently. They are separate
   # deployables with separate locks, and a single combined environment would
@@ -137,6 +217,31 @@ jobs:
         working-directory: ${{ matrix.project }}
         run: uv run pyright
 
+      # There is no `postgres` service container here, deliberately.
+      #
+      # `services/core-api/tests/conftest.py` starts its own `postgres:18.4`
+      # through testcontainers (`testcontainers.community.postgres`), and
+      # `ubuntu-24.04` has Docker, so the database every DB test needs is one
+      # the suite builds: `roles_applied` applies
+      # `services/core-api/migrations/sql/roles.sql` and `migrated_database`
+      # runs `alembic upgrade head` and `downgrade base` against it. Separate
+      # workflow steps for those two would run against a different database
+      # from the one under test, or against the same one twice.
+      #
+      # A service container would only become reachable by pointing
+      # `TP_TEST_DATABASE_URL` at it, and that path is refused: a service
+      # answers on `localhost`, and the conftest requires the separately-named
+      # `TP_TEST_DATABASE_URL_LOOPBACK_IS_DELIBERATE` before it accepts a
+      # loopback override — because what runs behind that URL is eight
+      # `DROP TABLE`s on every module teardown. A service container here would
+      # therefore be either unused, or an acknowledgement set to defeat a guard
+      # that exists to stop precisely this.
+      #
+      # No migration linter runs anywhere in this repository, and none is
+      # claimed. Squawk lints lock safety in `.sql` while these migrations are
+      # Python, and it has no rules for GRANT, CREATE POLICY, RLS or role
+      # attributes. Those are asserted directly against `pg_catalog` by the
+      # core-api suite, which is the thing that would actually catch them.
       - name: Tests
         working-directory: ${{ matrix.project }}
         run: uv run pytest --cov --cov-report=term-missing

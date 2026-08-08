@@ -13,19 +13,30 @@ import type { Field } from "@titlepipe/contract";
  * keyboard walking past it is how a reviewer starts re-deciding settled fields,
  * and clicking is a deliberate act that does not accumulate.
  */
-export function useReviewSelection(orderId: string, fields: readonly Field[], fieldParam?: string) {
+export function useReviewSelection(
+  orderId: string,
+  fields: readonly Field[],
+  fieldParam?: string,
+) {
   const navigate = useNavigate();
   const queued = fields.filter((field) => field.state === "needs_review");
   const selected =
     fields.find((field) => field.path === fieldParam) ?? queued[0] ?? fields[0] ?? null;
 
   const select = (path: string) => {
-    void navigate({ to: "/orders/$orderId/review", params: { orderId }, search: { field: path } });
+    void navigate({
+      to: "/orders/$orderId/review",
+      params: { orderId },
+      search: { field: path },
+    });
   };
 
   const step = (delta: number) => {
     if (selected === null || queued.length === 0) return;
-    const at = Math.max(queued.findIndex((field) => field.path === selected.path), 0);
+    const at = Math.max(
+      queued.findIndex((field) => field.path === selected.path),
+      0,
+    );
     const size = queued.length;
     const next = queued[(((at + delta) % size) + size) % size];
     if (next) select(next.path);

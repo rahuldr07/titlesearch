@@ -119,6 +119,36 @@ ALLOWLIST: dict[str, tuple[str, str]] = {
         "e3926563e68894eacec750c08cfd4d2c6c9b433f0a25e3507b5a50ff5fbd504e",
         "UI crop of a PRESENT — UNREADABLE row; all values are packages/mocks fixtures",
     ),
+    # ---------------------------------------------------------------------
+    # Reviewed 2026-08-06; revised 2026-08-08. The 2026-08-06 review admitted
+    # 68 screenshot and document files by hash and REFUSED 13, escalating them
+    # to the owner. The 2026-08-08 reorganization resolved the escalation by
+    # REMOVAL, not admission: `shots-final/` and `shots-w4/` (compare.mjs
+    # review evidence, regenerable, already named by .gitignore's `/shots*/`
+    # rule) and the four `docs/frontend/directions/*-full.png` renders (their
+    # tracked `.html` sources are the reference; a PNG re-renders on demand)
+    # left version control, and their entries left this list with them. The
+    # design-export archive was replaced by its extracted text sources
+    # (`TitlePipe.dc.html`, `support.js`), which are reviewable as text and
+    # which the extension rule does not match.
+    #
+    # The bar for what remains is unchanged: admission on evidence. Every file
+    # below was opened and read in full. Re-inspect before updating a hash —
+    # a file with the same name produced from a real package would look almost
+    # identical and would not be safe.
+    # ---------------------------------------------------------------------
+    "docs/rulebook-source/2_Golden_Rules.docx": (
+        "b8e86d50336d73920bcfe46da1f68d3aaada5dce1437f9d65a2f030dd688af2b",
+        "rulebook rules text only; read in full — no party, property, parcel, amount or recording detail, and no comments/notes/author metadata",
+    ),
+    "docs/rulebook-source/3_Typed_Report_Template.docx": (
+        "2b3c43d4e84bf5826cd82b2333456edfd867fe8e801c68c1c26779e9198e6641",
+        "blank typed-report template; read in full — every field is an empty label, no values of any kind",
+    ),
+    "docs/rulebook-source/Implementation_Rulebook_v1.docx": (
+        "d8619d56f633497dc9424631cdc31558cb82490cf60216f883300ee87931207d",
+        "vendor 66805 typing rulebook (skill source); read in full — no party, property, address or case data; six bare instrument-number format examples and internal cost-model figures only",
+    ),
 }
 
 

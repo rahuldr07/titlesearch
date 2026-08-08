@@ -51,7 +51,10 @@ export function useReviewKeys(handlers: ReviewKeyHandlers, gates: ReviewKeyGates
   const on = gates.enabled && !held;
   const canExclude = on && gates.excludable;
 
-  useHotkeys("j", handlers.next, { enabled: on, preventDefault: true }, [handlers.next, on]);
+  useHotkeys("j", handlers.next, { enabled: on, preventDefault: true }, [
+    handlers.next,
+    on,
+  ]);
   useHotkeys("k", handlers.previous, { enabled: on, preventDefault: true }, [
     handlers.previous,
     on,
@@ -68,5 +71,8 @@ export function useReviewKeys(handlers: ReviewKeyHandlers, gates: ReviewKeyGates
     handlers.exclude,
     canExclude,
   ]);
-  useHotkeys("p", handlers.pass, { enabled: on, preventDefault: true }, [handlers.pass, on]);
+  useHotkeys("p", handlers.pass, { enabled: on, preventDefault: true }, [
+    handlers.pass,
+    on,
+  ]);
 }

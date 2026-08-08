@@ -1,5 +1,11 @@
 import type { Field } from "@titlepipe/contract";
-import { enginesDisagree, fieldLabel, hasNoProvenance, naChip, rowMark } from "./fieldLabel";
+import {
+  enginesDisagree,
+  fieldLabel,
+  hasNoProvenance,
+  naChip,
+  rowMark,
+} from "./fieldLabel";
 import { NoValue } from "./NoValue";
 import { Chip } from "../../shared/ui/Chip";
 import { cn } from "../../shared/ui/classNames";
@@ -78,9 +84,14 @@ export function DecisionRow({
         selected && "bg-surface-sunken",
       )}
     >
-      <span aria-hidden className={cn("size-4 self-center rounded-pill", DOT[field.state])} />
+      <span
+        aria-hidden
+        className={cn("size-4 self-center rounded-pill", DOT[field.state])}
+      />
 
-      <span className="w-56 font-mono text-xs text-ink-secondary">{fieldLabel(field.path)}</span>
+      <span className="w-56 font-mono text-xs text-ink-secondary">
+        {fieldLabel(field.path)}
+      </span>
 
       <span className="flex-1">
         {field.value !== null ? (
@@ -115,7 +126,10 @@ export function DecisionRow({
       ) : null}
 
       {mark === null ? null : (
-        <span data-testid="row-mark" className="text-xs font-semibold text-state-settled-ink">
+        <span
+          data-testid="row-mark"
+          className="text-xs font-semibold text-state-settled-ink"
+        >
           {mark}
         </span>
       )}

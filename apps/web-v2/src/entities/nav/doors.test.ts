@@ -1,6 +1,13 @@
 import { describe, expect, test } from "vitest";
 import { ROLES, type Role } from "@titlepipe/contract";
-import { canOpen, doorGlyph, doorTitle, doorForKey, doorsFor, isRailDoor } from "./doors";
+import {
+  canOpen,
+  doorGlyph,
+  doorTitle,
+  doorForKey,
+  doorsFor,
+  isRailDoor,
+} from "./doors";
 
 /**
  * D2, RE-RULED TWICE. The rail's mark is now the mockup's stored ICON, and the
@@ -40,7 +47,17 @@ describe("the rail's marks are the mockup's icons, and they are distinct", () =>
   });
 
   test("the admin's rail draws the mockup's own icons, in catalogue order", () => {
-    expect(railGlyphsFor("admin")).toEqual(["▤", "◫", "↗", "§", "✎", "⌂", "◉", "≡", "◈"]);
+    expect(railGlyphsFor("admin")).toEqual([
+      "▤",
+      "◫",
+      "↗",
+      "§",
+      "✎",
+      "⌂",
+      "◉",
+      "≡",
+      "◈",
+    ]);
   });
 
   test("no two doors the collapsed rail draws share a mark, for EVERY role", () => {
@@ -54,7 +71,9 @@ describe("the rail's marks are the mockup's icons, and they are distinct", () =>
     // A reviewer holds neither /escalations nor /ingest; the doors it does hold
     // draw the same marks they draw for an admin. A mark that changed meaning on
     // a role switch would be worse than a duplicated one.
-    const admin = new Map(doorsFor("admin").map((door) => [door.path, doorGlyph(door)]));
+    const admin = new Map(
+      doorsFor("admin").map((door) => [door.path, doorGlyph(door)]),
+    );
     for (const door of doorsFor("reviewer")) {
       expect(doorGlyph(door)).toBe(admin.get(door.path));
     }

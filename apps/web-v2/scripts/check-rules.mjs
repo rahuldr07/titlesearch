@@ -142,7 +142,12 @@ for (const file of files) {
   const lines = text.split("\n");
 
   if (BANNED_NAMES.test(basename(file)) || /[\\/]utils?[\\/]index\.tsx?$/i.test(rel)) {
-    add(file, 1, "junk-drawer", "no utils/helpers/common/misc module (§6) — name it for what it does");
+    add(
+      file,
+      1,
+      "junk-drawer",
+      "no utils/helpers/common/misc module (§6) — name it for what it does",
+    );
   }
 
   // §6's limit exists because "a component is missing". A test file
@@ -151,9 +156,19 @@ for (const file of files) {
   // other rule still applies to them.
   const isTest = /\.test\.tsx?$/.test(rel);
   if (!isTest && lines.length > LINE_LIMIT) {
-    add(file, lines.length, "file-too-long", `${lines.length} lines > ${LINE_LIMIT} (§6) — a component is missing`);
+    add(
+      file,
+      lines.length,
+      "file-too-long",
+      `${lines.length} lines > ${LINE_LIMIT} (§6) — a component is missing`,
+    );
   } else if (!isTest && text.length > CHAR_LIMIT) {
-    add(file, lines.length, "file-too-long", `${text.length} chars > ${CHAR_LIMIT} on ${lines.length} lines (§6) — long lines are not a workaround`);
+    add(
+      file,
+      lines.length,
+      "file-too-long",
+      `${text.length} chars > ${CHAR_LIMIT} on ${lines.length} lines (§6) — long lines are not a workaround`,
+    );
   }
 
   // Whole-file so a line-wrapped `new\n  Date(` cannot hide. Comments are
@@ -164,7 +179,12 @@ for (const file of files) {
       (l) => DATE_RE.test(l) && !l.includes("rules-allow:") && !/^\s*[/*]/.test(l),
     );
     if (n >= 0) {
-      add(file, n + 1, "raw-date", `date construction outside ${DATE_UTILITY} (§8) — Date.parse and Date.now carry the same UTC bug as new Date()`);
+      add(
+        file,
+        n + 1,
+        "raw-date",
+        `date construction outside ${DATE_UTILITY} (§8) — Date.parse and Date.now carry the same UTC bug as new Date()`,
+      );
     }
   }
 
@@ -184,7 +204,12 @@ for (const file of files) {
       // The hatch now needs a reason. A bare marker used to silence any rule.
       const reason = raw.split("rules-allow:")[1]?.trim() ?? "";
       if (reason.replace(/[*/\s]+$/, "").length < 12) {
-        add(file, n, "unjustified-exemption", "`rules-allow:` must be followed by a reason of at least 12 characters (§6)");
+        add(
+          file,
+          n,
+          "unjustified-exemption",
+          "`rules-allow:` must be followed by a reason of at least 12 characters (§6)",
+        );
       }
       return;
     }
@@ -213,12 +238,22 @@ for (const file of files) {
         other = m ? m[1] : null;
       }
       if (other && other !== feature) {
-        add(file, n, "cross-feature-import", `features/${feature} imports features/${other} (§7) — go through entities/ or shared/`);
+        add(
+          file,
+          n,
+          "cross-feature-import",
+          `features/${feature} imports features/${other} (§7) — go through entities/ or shared/`,
+        );
       }
     }
 
     if (isPresentational && /^@tanstack\/(react-query|react-router)/.test(spec)) {
-      add(file, n, "presentational-fetches", `${rel.split(sep)[1]}/ must not import ${spec} (§6) — features fetch, components render`);
+      add(
+        file,
+        n,
+        "presentational-fetches",
+        `${rel.split(sep)[1]}/ must not import ${spec} (§6) — features fetch, components render`,
+      );
     }
   });
 }

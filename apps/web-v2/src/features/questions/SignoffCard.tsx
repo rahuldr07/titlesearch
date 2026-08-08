@@ -26,7 +26,9 @@ import { SignoffRow } from "./SignoffRow";
  * onto the strip the moment an order WAS signed, and the list would open with a
  * hairline hanging off nothing on exactly those orders.
  */
-function seedAnswers(lines: readonly OrderSignoffLine[]): Record<string, SignoffAnswer> {
+function seedAnswers(
+  lines: readonly OrderSignoffLine[],
+): Record<string, SignoffAnswer> {
   const seed: Record<string, SignoffAnswer> = {};
   for (const line of lines) {
     if (line.answer !== null) seed[line.line_id] = line.answer;
@@ -52,7 +54,11 @@ export function SignoffCard({ signoff }: { signoff: OrderSignoffResponse }) {
   const ready = lines.every((line) => {
     const answer = answers[line.line_id];
     if (answer === undefined) return false;
-    return !(answer === "NO" && line.comment_required && (comments[line.line_id] ?? "").trim() === "");
+    return !(
+      answer === "NO" &&
+      line.comment_required &&
+      (comments[line.line_id] ?? "").trim() === ""
+    );
   });
 
   /*
@@ -74,8 +80,9 @@ export function SignoffCard({ signoff }: { signoff: OrderSignoffResponse }) {
             Abstractor Sign-off
           </Eyebrow>
           <span className="ml-auto text-xs text-ink-muted">
-            <span className="font-mono">Y</span>/<span className="font-mono">N</span> answer ·{" "}
-            <span className="font-mono">A</span> for N/A · <span className="font-mono">↑↓</span> move
+            <span className="font-mono">Y</span>/<span className="font-mono">N</span>{" "}
+            answer · <span className="font-mono">A</span> for N/A ·{" "}
+            <span className="font-mono">↑↓</span> move
           </span>
         </CardHeader>
 
@@ -97,8 +104,12 @@ export function SignoffCard({ signoff }: { signoff: OrderSignoffResponse }) {
               periodLabel={signoff.period_label}
               answer={answers[line.line_id]}
               comment={comments[line.line_id] ?? ""}
-              onAnswer={(answer) => setAnswers((prev) => ({ ...prev, [line.line_id]: answer }))}
-              onComment={(comment) => setComments((prev) => ({ ...prev, [line.line_id]: comment }))}
+              onAnswer={(answer) =>
+                setAnswers((prev) => ({ ...prev, [line.line_id]: answer }))
+              }
+              onComment={(comment) =>
+                setComments((prev) => ({ ...prev, [line.line_id]: comment }))
+              }
             />
           ))}
         </DividedSection>
@@ -109,7 +120,13 @@ export function SignoffCard({ signoff }: { signoff: OrderSignoffResponse }) {
       </Card>
 
       <div className="flex items-center gap-7">
-        <p className={ready ? "flex-1 text-sm text-state-settled-ink" : "flex-1 text-sm text-ink-secondary"}>
+        <p
+          className={
+            ready
+              ? "flex-1 text-sm text-state-settled-ink"
+              : "flex-1 text-sm text-ink-secondary"
+          }
+        >
           {startNote}
         </p>
         {/* CONTRACT GAP: no sign-off submit and no pipeline-start endpoint.

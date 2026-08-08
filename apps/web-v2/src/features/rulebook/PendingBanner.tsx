@@ -31,8 +31,8 @@ export function PendingBanner() {
           PENDING — AFFECTS NOTHING YET
         </p>
         <p className="mt-1 text-xs leading-body text-state-attend-ink">
-          Saving records this rule. It cannot change a report — confirmation is
-          a separate act by an engineer or admin.
+          Saving records this rule. It cannot change a report — confirmation is a
+          separate act by an engineer or admin.
         </p>
       </div>
     </div>

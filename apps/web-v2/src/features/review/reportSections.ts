@@ -99,7 +99,9 @@ export function sectionsOf(fields: readonly Field[]): [string, Field[]][] {
     groups.set(section, [...(groups.get(section) ?? []), field]);
   }
   const known = SECTION_ORDER.filter((section) => groups.has(section));
-  const unknown = [...groups.keys()].filter((section) => !SECTION_ORDER.includes(section));
+  const unknown = [...groups.keys()].filter(
+    (section) => !SECTION_ORDER.includes(section),
+  );
   return [...known, ...unknown].map((section) => [section, groups.get(section) ?? []]);
 }
 

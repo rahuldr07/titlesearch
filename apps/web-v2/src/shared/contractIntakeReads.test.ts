@@ -1,9 +1,5 @@
 import { describe, expect, test } from "vitest";
-import {
-  CompletenessGap,
-  LifecycleStage,
-  OrderSignoffLine,
-} from "@titlepipe/contract";
+import { CompletenessGap, LifecycleStage, OrderSignoffLine } from "@titlepipe/contract";
 
 /**
  * The intake READ shapes added 2026-07-30 (fidelity Wave 2). Same rule as
@@ -13,7 +9,10 @@ import {
  */
 
 /** Omit one key without `delete` or an unused binding — both are lint errors here. */
-function without(source: Record<string, unknown>, key: string): Record<string, unknown> {
+function without(
+  source: Record<string, unknown>,
+  key: string,
+): Record<string, unknown> {
   return Object.fromEntries(Object.entries(source).filter(([k]) => k !== key));
 }
 
@@ -41,19 +40,29 @@ describe("a sign-off line states which answers it accepts", () => {
 
   test("answers is required — a line may not leave the set to the screen", () => {
     expect(OrderSignoffLine.safeParse(without(LINE, "answers")).success).toBe(false);
-    expect(OrderSignoffLine.safeParse(without(LINE, "policy_suggestion")).success).toBe(false);
+    expect(OrderSignoffLine.safeParse(without(LINE, "policy_suggestion")).success).toBe(
+      false,
+    );
   });
 
   test("only the three declared answers are answers", () => {
-    expect(OrderSignoffLine.safeParse({ ...LINE, answers: ["YES", "NA"] }).success).toBe(false);
-    expect(OrderSignoffLine.safeParse({ ...LINE, answers: ["YES", "MAYBE"] }).success).toBe(false);
+    expect(
+      OrderSignoffLine.safeParse({ ...LINE, answers: ["YES", "NA"] }).success,
+    ).toBe(false);
+    expect(
+      OrderSignoffLine.safeParse({ ...LINE, answers: ["YES", "MAYBE"] }).success,
+    ).toBe(false);
   });
 });
 
 describe("policy names the answer it suggests", () => {
   test("policy_suggestion is an answer, not a boolean", () => {
-    expect(OrderSignoffLine.parse({ ...LINE, policy_suggestion: "N/A" }).policy_suggestion).toBe("N/A");
-    expect(OrderSignoffLine.safeParse({ ...LINE, policy_suggestion: true }).success).toBe(false);
+    expect(
+      OrderSignoffLine.parse({ ...LINE, policy_suggestion: "N/A" }).policy_suggestion,
+    ).toBe("N/A");
+    expect(
+      OrderSignoffLine.safeParse({ ...LINE, policy_suggestion: true }).success,
+    ).toBe(false);
   });
 
   test("null is the honest value where policy suggested nothing", () => {
@@ -77,7 +86,8 @@ describe("a completeness gap cites its sign-off line and its ways out", () => {
   const OPTION = {
     kind: "root_of_title",
     label: "⊢ Root of title reached",
-    consequence: "Asserts the search is complete and nothing older exists. A claim — needs a comment.",
+    consequence:
+      "Asserts the search is complete and nothing older exists. A claim — needs a comment.",
     requires_comment: true,
     min_role: null,
   };
@@ -87,7 +97,8 @@ describe("a completeness gap cites its sign-off line and its ways out", () => {
     line_number: 6,
     line_label: "Deed chain complete",
     claim: "Line 6 requires the search abstracted back to 07/18/1986.",
-    evidence: "The earliest instrument segmented is dated 03/14/2011 — only a 15-year span.",
+    evidence:
+      "The earliest instrument segmented is dated 03/14/2011 — only a 15-year span.",
     close_options: [OPTION],
     closed_by: null,
     closed_note: null,
@@ -99,24 +110,40 @@ describe("a completeness gap cites its sign-off line and its ways out", () => {
   });
 
   test("close_options are structured, and an opaque string is refused", () => {
-    expect(CompletenessGap.safeParse({ ...GAP, close_options: ["Upload the missing pages"] }).success).toBe(false);
+    expect(
+      CompletenessGap.safeParse({ ...GAP, close_options: ["Upload the missing pages"] })
+        .success,
+    ).toBe(false);
   });
 
   test("the four close kinds are closed", () => {
     for (const kind of ["upload", "amend", "root_of_title", "change_product"]) {
-      expect(CompletenessGap.safeParse({ ...GAP, close_options: [{ ...OPTION, kind }] }).success).toBe(true);
+      expect(
+        CompletenessGap.safeParse({ ...GAP, close_options: [{ ...OPTION, kind }] })
+          .success,
+      ).toBe(true);
     }
-    expect(CompletenessGap.safeParse({ ...GAP, close_options: [{ ...OPTION, kind: "resume" }] }).success).toBe(false);
+    expect(
+      CompletenessGap.safeParse({
+        ...GAP,
+        close_options: [{ ...OPTION, kind: "resume" }],
+      }).success,
+    ).toBe(false);
   });
 
   test("every option ranks itself — consequence, comment and role are required", () => {
     for (const key of ["consequence", "requires_comment", "min_role"]) {
       expect(
-        CompletenessGap.safeParse({ ...GAP, close_options: [without(OPTION, key)] }).success,
+        CompletenessGap.safeParse({ ...GAP, close_options: [without(OPTION, key)] })
+          .success,
       ).toBe(false);
     }
-    expect(CompletenessGap.parse({ ...GAP, close_options: [{ ...OPTION, min_role: "senior" }] })
-      .close_options[0]?.min_role).toBe("senior");
+    expect(
+      CompletenessGap.parse({
+        ...GAP,
+        close_options: [{ ...OPTION, min_role: "senior" }],
+      }).close_options[0]?.min_role,
+    ).toBe("senior");
   });
 });
 
@@ -143,7 +170,9 @@ describe("a lifecycle stage says what it is and who it waits on", () => {
   };
 
   test("sub and waiting_on are required — an empty column still describes itself", () => {
-    expect(LifecycleStage.parse({ ...STAGE, orders: [] }).sub).toBe("answering the lines");
+    expect(LifecycleStage.parse({ ...STAGE, orders: [] }).sub).toBe(
+      "answering the lines",
+    );
     for (const key of ["sub", "waiting_on"]) {
       expect(LifecycleStage.safeParse(without(STAGE, key)).success).toBe(false);
     }
@@ -161,11 +190,18 @@ describe("a lifecycle stage says what it is and who it waits on", () => {
   });
 
   test("state_label is a free label and is null when nothing stopped", () => {
-    expect(LifecycleStage.parse({ ...STAGE, orders: [{ ...CARD, state_label: null }] })
-      .orders[0]?.state_label).toBeNull();
+    expect(
+      LifecycleStage.parse({ ...STAGE, orders: [{ ...CARD, state_label: null }] })
+        .orders[0]?.state_label,
+    ).toBeNull();
     // Deliberately NOT an enum: an enum invites a client-side switch, which is
     // the state machine hard rule 3 puts on the server.
-    expect(LifecycleStage.safeParse({ ...STAGE, orders: [{ ...CARD, state_label: "Anything" }] }).success).toBe(true);
+    expect(
+      LifecycleStage.safeParse({
+        ...STAGE,
+        orders: [{ ...CARD, state_label: "Anything" }],
+      }).success,
+    ).toBe(true);
   });
 
   test("count stays beside the rows and is never inferred from them", () => {

@@ -36,7 +36,11 @@ export function ProfileScreen() {
   const profile = useQuery(myProfileQuery);
 
   const actions = permissions.data?.rules.map((granted) => granted.action) ?? [];
-  const state = permissions.isError ? "failed" : permissions.isPending ? "loading" : "ready";
+  const state = permissions.isError
+    ? "failed"
+    : permissions.isPending
+      ? "loading"
+      : "ready";
 
   return (
     <Screen measure="720">
@@ -54,7 +58,11 @@ export function ProfileScreen() {
         ) : profile.isPending ? (
           <p className="text-base text-ink-secondary">Loading your profile…</p>
         ) : (
-          <IdentityCard name={profile.data.name} email={profile.data.email} role={profile.data.role} />
+          <IdentityCard
+            name={profile.data.name}
+            email={profile.data.email}
+            role={profile.data.role}
+          />
         )}
 
         <CapabilityCard actions={actions} state={state} />

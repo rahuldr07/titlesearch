@@ -41,7 +41,6 @@ test("a forged role header is refused — mutations 403, the projection 400", as
   expect(statuses.caseVariant).toBe(400);
 });
 
-
 // TODO(rebuild) [INVARIANT] — rule: a replayed resolution is refused (409) — resolution is not idempotent-repeatable.
 test("resolving the same escalation twice is refused the second time", async ({
   page,
@@ -82,4 +81,3 @@ test("chord keys typed inside an input never navigate", async ({ page }) => {
   await expect(page.getByTestId("key-map")).toHaveCount(0);
   await expect(input).toHaveValue("gd?");
 });
-

@@ -39,7 +39,9 @@ export function AuditRow({ entry }: { entry: AuditEntry }) {
       data-testid={`audit-${entry.id}`}
       className="flex flex-wrap items-start gap-7"
     >
-      <span className="min-w-75 font-mono text-xs text-ink-muted">{whenOf(entry.at)}</span>
+      <span className="min-w-75 font-mono text-xs text-ink-muted">
+        {whenOf(entry.at)}
+      </span>
 
       <span className="min-w-100 flex-1">
         <span className="block text-base text-ink-primary">

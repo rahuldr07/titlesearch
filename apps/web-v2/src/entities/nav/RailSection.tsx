@@ -26,7 +26,13 @@ export interface RailSectionProps {
   children: React.ReactNode;
 }
 
-export function RailSection({ label, note, foot, collapsed, children }: RailSectionProps) {
+export function RailSection({
+  label,
+  note,
+  foot,
+  collapsed,
+  children,
+}: RailSectionProps) {
   return (
     <div
       /*

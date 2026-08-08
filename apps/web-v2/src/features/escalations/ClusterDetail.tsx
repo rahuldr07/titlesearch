@@ -79,7 +79,13 @@ export function ClusterDetail({
               <p className="flex flex-wrap gap-3">
                 {item.order_ids.map((orderId) => (
                   <Link key={orderId} to="/orders/$orderId/review" params={{ orderId }}>
-                    <Chip tone="action" size="sm" shape="mono" bordered className="normal-case">
+                    <Chip
+                      tone="action"
+                      size="sm"
+                      shape="mono"
+                      bordered
+                      className="normal-case"
+                    >
                       {orderId} →
                     </Chip>
                   </Link>

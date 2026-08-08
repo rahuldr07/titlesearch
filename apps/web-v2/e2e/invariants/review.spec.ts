@@ -97,15 +97,13 @@ test("escalation without a question never submits", async ({ page }) => {
   await expect(input).toBeFocused();
   await input.press("Enter");
   await expect(input).toBeVisible(); // still open, nothing sent
-  await expect(
-    page.getByTestId("row-owner.zip").getByTestId("row-mark"),
-  ).toHaveCount(0);
+  await expect(page.getByTestId("row-owner.zip").getByTestId("row-mark")).toHaveCount(
+    0,
+  );
 });
 
 // TODO(rebuild) [INVARIANT] — rule: a recorded escalation marks the row and advances selection to the next queued field.
-test("escalation with a question records and advances selection", async ({
-  page,
-}) => {
+test("escalation with a question records and advances selection", async ({ page }) => {
   await go(page);
   await page.getByTestId("row-owner.zip").click();
   // escalate is a BUTTON now (no hotkey).
@@ -114,9 +112,9 @@ test("escalation with a question records and advances selection", async ({
     .getByTestId("escalate-input")
     .fill("order sheet says 03029 — which source wins?");
   await page.getByTestId("escalate-input").press("Enter");
-  await expect(
-    page.getByTestId("row-owner.zip").getByTestId("row-mark"),
-  ).toHaveText("↗ escalated");
+  await expect(page.getByTestId("row-owner.zip").getByTestId("row-mark")).toHaveText(
+    "↗ escalated",
+  );
   // selection advanced to the next queued field
   await expect(page.getByTestId("sel-label")).toHaveText("MTG 1 — LENDER");
 });
@@ -144,9 +142,7 @@ test("J/K walk the queued fields only", async ({ page }) => {
 });
 
 // TODO(rebuild) [INVARIANT] — rule: provenance coordinates render as a pin on the source page raster.
-test("reader B line pins on the page from its coordinates", async ({
-  page,
-}) => {
+test("reader B line pins on the page from its coordinates", async ({ page }) => {
   await go(page);
   await page.getByTestId("row-mortgages.1.amount").click();
   await page.getByText("llmwhisperer-hq").first().click();
@@ -241,7 +237,9 @@ test("the order strip shows the ref, the four counts, and the sign-off stamp", a
  * that took the label from the server and then picked its own colour would have
  * re-implemented half the state machine while looking obedient.
  */
-test("the strip prints the server's stamp — it does not compose one", async ({ page }) => {
+test("the strip prints the server's stamp — it does not compose one", async ({
+  page,
+}) => {
   await interceptApi(page, {
     method: "GET",
     match: "/api/orders/ord_demo_1/context",

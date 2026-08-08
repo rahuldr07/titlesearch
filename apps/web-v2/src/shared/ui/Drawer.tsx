@@ -94,5 +94,7 @@ export function DrawerClose({
   render?: React.ReactElement;
   children?: ReactNode;
 }) {
-  return <BaseDrawer.Close {...(render ? { render } : {})}>{children}</BaseDrawer.Close>;
+  return (
+    <BaseDrawer.Close {...(render ? { render } : {})}>{children}</BaseDrawer.Close>
+  );
 }

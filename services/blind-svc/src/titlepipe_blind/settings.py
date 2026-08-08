@@ -104,8 +104,18 @@ class BlindApiSettings(BaseSettings):
         argument missing here. pydantic-settings fills it from the environment
         at runtime, and if it is absent that is exactly the startup failure the
         missing default exists to cause.
+
+        There is no `model_config`-aware spelling that avoids the suppression.
+        pyright models this class through pydantic's `dataclass_transform` and
+        synthesises `__init__` from the *fields*; it never sees the real
+        `BaseSettings.__init__`, whose signature ends in `**values: Any` and
+        whose leading parameters are the `_env_file` / `_case_sensitive` knobs.
+        Passing one of those does not satisfy it — pyright answers
+        `No parameter named "_env_file"` on top of the missing-argument report.
+        `model_validate({})` type-checks but is not the same call: the settings
+        sources run from `__init__`, so it would read no environment at all.
         """
-        return cls()  # pyright: ignore[reportCallIssue]
+        return cls()  # pyright: ignore[reportCallIssue]  # rules-allow(any-type): pyright synthesises `__init__` from the fields, so the deliberately default-less `environment` reads as a missing argument; pydantic-settings supplies it from the environment at runtime
 
     @model_validator(mode="after")
     def _seal_password_is_the_right_length(self) -> Self:

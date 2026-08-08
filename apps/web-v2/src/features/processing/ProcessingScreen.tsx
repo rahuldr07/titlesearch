@@ -37,7 +37,12 @@ import { orderPipelineQuery, PIPELINE_ORDER_ID } from "./queries";
 export function ProcessingScreen() {
   const { data, isPending, isError } = useQuery(orderPipelineQuery(PIPELINE_ORDER_ID));
 
-  if (isError) return <ScreenMessage tone="halt" measure="700">Pipeline unavailable.</ScreenMessage>;
+  if (isError)
+    return (
+      <ScreenMessage tone="halt" measure="700">
+        Pipeline unavailable.
+      </ScreenMessage>
+    );
   if (isPending) return <ScreenMessage measure="700">Loading the run…</ScreenMessage>;
 
   return (

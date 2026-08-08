@@ -50,8 +50,8 @@ export function SourcePin({
       </p>
       {boxes === null ? (
         <EmptyNote>
-          This reader declared no line coordinates, so nothing is drawn. The
-          snippet above is the citation.
+          This reader declared no line coordinates, so nothing is drawn. The snippet
+          above is the citation.
         </EmptyNote>
       ) : (
         <div className="relative aspect-[17/22] w-full max-w-96 border border-line-strong bg-surface-document">

@@ -39,9 +39,33 @@ const DOORS = [
 
 const WORLDS: Record<Role, readonly string[]> = {
   reviewer: ["/", "/queue", "/orders", "/account"],
-  senior: ["/", "/escalations", "/reconciliation", "/seed-correction", "/orders", "/account"],
-  ops: ["/", "/dashboard", "/ingest", "/delivery", "/complaints", "/blind-status", "/orders", "/account"],
-  engineer: ["/", "/bench", "/leaderboard", "/seed-correction", "/golden", "/orders", "/account"],
+  senior: [
+    "/",
+    "/escalations",
+    "/reconciliation",
+    "/seed-correction",
+    "/orders",
+    "/account",
+  ],
+  ops: [
+    "/",
+    "/dashboard",
+    "/ingest",
+    "/delivery",
+    "/complaints",
+    "/blind-status",
+    "/orders",
+    "/account",
+  ],
+  engineer: [
+    "/",
+    "/bench",
+    "/leaderboard",
+    "/seed-correction",
+    "/golden",
+    "/orders",
+    "/account",
+  ],
   typist: ["/blind", "/account"],
   admin: [...DOORS],
 };
@@ -72,7 +96,9 @@ describe("canDo — role gates and state conditions", () => {
     expect(canDo("senior", "escalation.resolve")).toBe(true);
     expect(canDo("reviewer", "escalation.resolve")).toBe(false);
     expect(canDo("senior", "escalation.resolve", { resolution: null })).toBe(true);
-    expect(canDo("senior", "escalation.resolve", { resolution: "ruled: ours" })).toBe(false);
+    expect(canDo("senior", "escalation.resolve", { resolution: "ruled: ours" })).toBe(
+      false,
+    );
   });
 
   test("rule.confirm is the engineer gate, PENDING only", () => {
@@ -104,12 +130,20 @@ describe("canDo — role gates and state conditions", () => {
 describe("rulesFor — per-role projection", () => {
   test("a typist's rules never MENTION other worlds (leak test)", () => {
     const serialized = JSON.stringify(rulesFor("typist"));
-    expect(rulesFor("typist").map((g) => g.action).sort()).toEqual([
-      "blind.submit",
-      "screen.account.enter",
-      "screen.blind.enter",
-    ]);
-    for (const word of ["escalation", "dashboard", "golden", "routing", "queue", "reconciliation", "bench"]) {
+    expect(
+      rulesFor("typist")
+        .map((g) => g.action)
+        .sort(),
+    ).toEqual(["blind.submit", "screen.account.enter", "screen.blind.enter"]);
+    for (const word of [
+      "escalation",
+      "dashboard",
+      "golden",
+      "routing",
+      "queue",
+      "reconciliation",
+      "bench",
+    ]) {
       expect(serialized).not.toContain(word);
     }
   });

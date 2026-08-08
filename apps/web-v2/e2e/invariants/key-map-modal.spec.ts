@@ -29,8 +29,12 @@ test("the ? map is a real dialog: named, and focus moves into it", async ({ page
   await expect(map).toHaveAttribute("aria-modal", "true");
   // Named from its own heading — a dialog with no accessible name is
   // unnavigable by screen reader.
-  await expect(page.getByRole("dialog", { name: /KEYBOARD AS NAVIGATION/ })).toBeVisible();
-  expect(await map.evaluate((node) => node.contains(document.activeElement))).toBe(true);
+  await expect(
+    page.getByRole("dialog", { name: /KEYBOARD AS NAVIGATION/ }),
+  ).toBeVisible();
+  expect(await map.evaluate((node) => node.contains(document.activeElement))).toBe(
+    true,
+  );
 });
 
 test("the ? map traps focus — Tab never lands behind the scrim", async ({ page }) => {
@@ -41,7 +45,9 @@ test("the ? map traps focus — Tab never lands behind the scrim", async ({ page
   await expect(map).toBeVisible();
   for (let i = 0; i < 6; i += 1) {
     await page.keyboard.press("Tab");
-    expect(await map.evaluate((node) => node.contains(document.activeElement))).toBe(true);
+    expect(await map.evaluate((node) => node.contains(document.activeElement))).toBe(
+      true,
+    );
   }
   // …and the page underneath is inert, so not even a programmatic focus reaches
   // a control the scrim covers.

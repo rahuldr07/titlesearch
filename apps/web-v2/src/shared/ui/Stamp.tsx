@@ -85,8 +85,7 @@ const stamp = cva(
 type StampVariants = VariantProps<typeof stamp>;
 
 export interface StampProps
-  extends Omit<HTMLAttributes<HTMLSpanElement>, "className">,
-    StampVariants {
+  extends Omit<HTMLAttributes<HTMLSpanElement>, "className">, StampVariants {
   /** Server-supplied. Never computed from other state. */
   children: ReactNode;
   className?: string;

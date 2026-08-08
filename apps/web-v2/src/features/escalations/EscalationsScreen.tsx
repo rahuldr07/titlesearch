@@ -12,7 +12,10 @@ import { ScreenMessage } from "../../shared/ui/ScreenMessage";
 function clusterBy(escalations: readonly Escalation[]): Cluster[] {
   const byPath = new Map<string, Escalation[]>();
   for (const item of escalations) {
-    byPath.set(item.field_path_cluster, [...(byPath.get(item.field_path_cluster) ?? []), item]);
+    byPath.set(item.field_path_cluster, [
+      ...(byPath.get(item.field_path_cluster) ?? []),
+      item,
+    ]);
   }
   return [...byPath.entries()].map(([path, items]) => ({
     path,
@@ -65,7 +68,11 @@ export function EscalationsScreen() {
   const [selected, setSelected] = useState<string | null>(null);
 
   if (escalations.isError) {
-    return <ScreenMessage tone="halt" measure="1340">Inbox unavailable.</ScreenMessage>;
+    return (
+      <ScreenMessage tone="halt" measure="1340">
+        Inbox unavailable.
+      </ScreenMessage>
+    );
   }
   if (escalations.isPending) {
     return <ScreenMessage measure="1340">Loading the inbox…</ScreenMessage>;
@@ -86,13 +93,17 @@ export function EscalationsScreen() {
            * of the masthead here, which is the failure the component exists to
            * prevent. Amber because this screen is HELD work, not a live step.
            */
-          eyebrow={<span className="text-state-attend-ink">Held · escalated · senior review</span>}
+          eyebrow={
+            <span className="text-state-attend-ink">
+              Held · escalated · senior review
+            </span>
+          }
           title="Escalation inbox"
           lede={
             <p>
-              A rules backlog — every item is a reviewer saying &ldquo;I
-              don&rsquo;t know the rule&rdquo;. Answering one order is not the
-              job; writing the rule that answers the next fifty is.
+              A rules backlog — every item is a reviewer saying &ldquo;I don&rsquo;t
+              know the rule&rdquo;. Answering one order is not the job; writing the rule
+              that answers the next fifty is.
             </p>
           }
         />
@@ -104,7 +115,11 @@ export function EscalationsScreen() {
              at 880px. Unmeasured, the resolve card ran to ~840px and its
              instruction ruled one unbroken line across the window. */
           <div className="grid gap-8 lg:grid-cols-[23.75rem_1fr]">
-            <ClusterRail clusters={clusters} selected={current.path} onSelect={setSelected} />
+            <ClusterRail
+              clusters={clusters}
+              selected={current.path}
+              onSelect={setSelected}
+            />
             <ClusterDetail
               cluster={current}
               rules={rules.data?.rules ?? []}

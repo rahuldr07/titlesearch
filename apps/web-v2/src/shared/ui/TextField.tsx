@@ -55,7 +55,8 @@ const field = cva(
 type FieldVariants = VariantProps<typeof field>;
 
 export interface TextFieldProps
-  extends Omit<InputHTMLAttributes<HTMLInputElement>, "className" | "size">,
+  extends
+    Omit<InputHTMLAttributes<HTMLInputElement>, "className" | "size">,
     FieldVariants {
   className?: string;
   /**
@@ -66,25 +67,48 @@ export interface TextFieldProps
   ref?: Ref<HTMLInputElement> | undefined;
 }
 
-export function TextField({ size, tone, emphasis, className, type = "text", ...rest }: TextFieldProps) {
+export function TextField({
+  size,
+  tone,
+  emphasis,
+  className,
+  type = "text",
+  ...rest
+}: TextFieldProps) {
   return (
-    <input type={type} className={cn(field({ size, tone, emphasis }), className)} {...rest} />
+    <input
+      type={type}
+      className={cn(field({ size, tone, emphasis }), className)}
+      {...rest}
+    />
   );
 }
 
 export interface TextAreaProps
-  extends Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, "className">,
+  extends
+    Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, "className">,
     FieldVariants {
   className?: string;
 }
 
-export function TextArea({ size, tone, emphasis, className, rows = 3, ...rest }: TextAreaProps) {
+export function TextArea({
+  size,
+  tone,
+  emphasis,
+  className,
+  rows = 3,
+  ...rest
+}: TextAreaProps) {
   return (
     <textarea
       rows={rows}
       // Every textarea in the design is vertical-only; free resize would let a
       // reviewer drag it over the evidence they are supposed to be reading.
-      className={cn(field({ size, tone, emphasis }), "resize-y leading-body", className)}
+      className={cn(
+        field({ size, tone, emphasis }),
+        "resize-y leading-body",
+        className,
+      )}
       {...rest}
     />
   );

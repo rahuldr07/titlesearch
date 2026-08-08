@@ -32,4 +32,7 @@ reportMissingTypeStubs = false
 
 # This package must never grow a framework dependency. It is imported by the Core
 # API, the Blind API and both workers; anything added here is added to all four.
-# Forbidden imports are enforced by tests/test_boundaries.py in each service.
+# Forbidden imports are enforced by tests/test_import_boundary.py here and by
+# each service's own boundary test (e.g. services/blind-svc/tests/
+# test_blind_boundary.py). This comment named a tests/test_boundaries.py that
+# has never existed in this tree.

@@ -14,7 +14,10 @@ import {
  */
 
 /** Omit one key without `delete` or an unused binding — both are lint errors here. */
-function without(source: Record<string, unknown>, key: string): Record<string, unknown> {
+function without(
+  source: Record<string, unknown>,
+  key: string,
+): Record<string, unknown> {
   return Object.fromEntries(Object.entries(source).filter(([k]) => k !== key));
 }
 
@@ -43,7 +46,12 @@ describe("Order names what was ordered", () => {
   });
 
   test("all three are nullable — an unresolved order asserts nothing", () => {
-    const order = Order.parse({ ...ORDER, product: null, period_label: null, pages: null });
+    const order = Order.parse({
+      ...ORDER,
+      product: null,
+      period_label: null,
+      pages: null,
+    });
     expect(order.product).toBeNull();
     expect(order.pages).toBeNull();
   });
@@ -75,22 +83,37 @@ describe("GET /api/orders/{id}/context", () => {
   });
 
   test("the stamp is the server's word, with a tone the Stamp component takes", () => {
-    for (const label of ["SIGN-OFF OPEN", "DECISIONS OPEN", "PACKAGE INCOMPLETE", "FINALIZED"]) {
-      expect(OrderContextResponse.parse({ ...CONTEXT, stamp: { label, tone: "halt" } }).stamp.label).toBe(label);
+    for (const label of [
+      "SIGN-OFF OPEN",
+      "DECISIONS OPEN",
+      "PACKAGE INCOMPLETE",
+      "FINALIZED",
+    ]) {
+      expect(
+        OrderContextResponse.parse({ ...CONTEXT, stamp: { label, tone: "halt" } }).stamp
+          .label,
+      ).toBe(label);
     }
     for (const tone of ["neutral", "action", "settled", "attend", "halt"]) {
       expect(
-        OrderContextResponse.safeParse({ ...CONTEXT, stamp: { label: "FINALIZED", tone } }).success,
+        OrderContextResponse.safeParse({
+          ...CONTEXT,
+          stamp: { label: "FINALIZED", tone },
+        }).success,
       ).toBe(true);
     }
     expect(
-      OrderContextResponse.safeParse({ ...CONTEXT, stamp: { label: "FINALIZED", tone: "green" } })
-        .success,
+      OrderContextResponse.safeParse({
+        ...CONTEXT,
+        stamp: { label: "FINALIZED", tone: "green" },
+      }).success,
     ).toBe(false);
   });
 
   test("a stamp with no label is refused — there is nothing to print", () => {
-    expect(OrderContextResponse.safeParse({ ...CONTEXT, stamp: { tone: "halt" } }).success).toBe(false);
+    expect(
+      OrderContextResponse.safeParse({ ...CONTEXT, stamp: { tone: "halt" } }).success,
+    ).toBe(false);
   });
 });
 
@@ -122,14 +145,20 @@ describe("GET /api/queue/bands", () => {
   });
 
   test("count is required — a band may not make the screen derive it", () => {
-    expect(QueueBandsResponse.safeParse({ bands: [without(BAND, "count")] }).success).toBe(false);
+    expect(
+      QueueBandsResponse.safeParse({ bands: [without(BAND, "count")] }).success,
+    ).toBe(false);
   });
 
   test("the four band ids are closed; nothing else is a band", () => {
     for (const id of ["mine", "held", "in_flight", "delivered"]) {
-      expect(QueueBandsResponse.safeParse({ bands: [{ ...BAND, id }] }).success).toBe(true);
+      expect(QueueBandsResponse.safeParse({ bands: [{ ...BAND, id }] }).success).toBe(
+        true,
+      );
     }
-    expect(QueueBandsResponse.safeParse({ bands: [{ ...BAND, id: "failed" }] }).success).toBe(false);
+    expect(
+      QueueBandsResponse.safeParse({ bands: [{ ...BAND, id: "failed" }] }).success,
+    ).toBe(false);
   });
 
   test("no row carries a way to take the work", () => {

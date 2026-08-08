@@ -55,9 +55,7 @@ export function ChoiceCardGrid({
   onSelect,
 }: ChoiceCardGridProps) {
   return (
-    <div
-      className={cn("grid gap-4", columns === 2 ? "grid-cols-2" : "grid-cols-3")}
-    >
+    <div className={cn("grid gap-4", columns === 2 ? "grid-cols-2" : "grid-cols-3")}>
       {options.map((option) => (
         <label
           key={option.id}

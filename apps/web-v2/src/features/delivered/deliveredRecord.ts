@@ -91,7 +91,5 @@ function describeDelivery(at: string | null): string | null {
   const date = formatRecordingDate(at.slice(0, 10));
   if (date === null) return null;
   const time = /^\d{4}-\d{2}-\d{2}T(\d{2}:\d{2})/.exec(at)?.[1];
-  return time === undefined
-    ? `Delivered ${date}`
-    : `Delivered ${date} · ${time} UTC`;
+  return time === undefined ? `Delivered ${date}` : `Delivered ${date} · ${time} UTC`;
 }

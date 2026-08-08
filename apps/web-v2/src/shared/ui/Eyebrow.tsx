@@ -100,8 +100,7 @@ type EyebrowVariants = VariantProps<typeof eyebrow>;
  * React drops it harmlessly.
  */
 export interface EyebrowProps
-  extends Omit<LabelHTMLAttributes<HTMLElement>, "className">,
-    EyebrowVariants {
+  extends Omit<LabelHTMLAttributes<HTMLElement>, "className">, EyebrowVariants {
   children: ReactNode;
   /** `label` when it names a control, `h2`/`h3` when it heads a section. */
   as?: ElementType;

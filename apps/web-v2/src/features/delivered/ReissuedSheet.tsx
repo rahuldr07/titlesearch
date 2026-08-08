@@ -44,8 +44,8 @@ export function ReissuedSheet({ orderId }: { orderId: string }) {
         Order {orderId} — <em>amended sheet</em>
       </SheetHeading>
       <p className="mx-auto mb-9 max-w-150 text-base leading-body text-ink-secondary">
-        v1 retained in the record. Only the disputed field was reworked;
-        everything else carried forward as settled.
+        v1 retained in the record. Only the disputed field was reworked; everything else
+        carried forward as settled.
       </p>
 
       <Card className="mb-8 text-left">
@@ -71,7 +71,9 @@ export function ReissuedSheet({ orderId }: { orderId: string }) {
         */}
         <DividedSection as="div">
           <ListRow as="div" className="grid grid-cols-3 items-baseline px-7 py-5">
-            <span className="text-sm text-ink-secondary">{DEMO_AMENDED_FIELD.label}</span>
+            <span className="text-sm text-ink-secondary">
+              {DEMO_AMENDED_FIELD.label}
+            </span>
             <span className="font-mono text-sm text-ink-muted line-through">
               {DEMO_AMENDED_FIELD.v1}
             </span>

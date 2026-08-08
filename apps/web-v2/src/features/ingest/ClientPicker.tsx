@@ -38,8 +38,8 @@ export function ClientPicker({
 
       {clients.isError ? (
         <p role="alert" className="text-xs leading-body text-state-halt-ink">
-          The client list could not be loaded, so no client can be chosen here.
-          The door will refuse the package and name the field.
+          The client list could not be loaded, so no client can be chosen here. The door
+          will refuse the package and name the field.
         </p>
       ) : clients.isPending ? (
         <p className="text-xs leading-body text-ink-secondary">Loading clients…</p>

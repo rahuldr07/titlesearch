@@ -32,7 +32,11 @@ export function NoDisclosureCards({ lines }: { lines: readonly OrderSignoffLine[
   return (
     <div className="flex flex-col gap-5">
       {disclosures.map((line) => (
-        <Card key={line.line_id} accent="attend" data-testid={`no-disclosure-${line.line_id}`}>
+        <Card
+          key={line.line_id}
+          accent="attend"
+          data-testid={`no-disclosure-${line.line_id}`}
+        >
           <CardBody className="flex flex-col gap-4">
             <div className="flex flex-wrap items-center gap-4">
               <Eyebrow variant="caption" tone="attend">
@@ -49,15 +53,27 @@ export function NoDisclosureCards({ lines }: { lines: readonly OrderSignoffLine[
             </p>
 
             <p className="text-xs leading-body text-ink-secondary">
-              You&rsquo;re not re-answering the line — deciding whether the
-              report can ship with this gap disclosed.
+              You&rsquo;re not re-answering the line — deciding whether the report can
+              ship with this gap disclosed.
             </p>
 
             <div className="flex flex-wrap gap-4">
-              <Button size="md" tone="settled" fill="outlined" className="min-w-38 flex-1" disabled>
+              <Button
+                size="md"
+                tone="settled"
+                fill="outlined"
+                className="min-w-38 flex-1"
+                disabled
+              >
                 ✓ Accept as stated
               </Button>
-              <Button size="md" tone="attend" fill="outlined" className="min-w-38 flex-1" disabled>
+              <Button
+                size="md"
+                tone="attend"
+                fill="outlined"
+                className="min-w-38 flex-1"
+                disabled
+              >
                 ↗ Escalate
               </Button>
             </div>

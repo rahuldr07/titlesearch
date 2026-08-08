@@ -46,10 +46,13 @@ export function RetireConfirm({ onCancel }: { onCancel: () => void }) {
         Retire impact preview · what reverts
       </Eyebrow>
 
-      <p data-testid="retire-preview" className="mt-4 text-sm leading-open text-ink-primary">
-        No retire preview has been run for this rule, so what reverts is
-        unknown. Retiring is still permitted — the record will show it went
-        out without a preview.
+      <p
+        data-testid="retire-preview"
+        className="mt-4 text-sm leading-open text-ink-primary"
+      >
+        No retire preview has been run for this rule, so what reverts is unknown.
+        Retiring is still permitted — the record will show it went out without a
+        preview.
       </p>
 
       <p className="mt-5 text-xs leading-body text-ink-muted">

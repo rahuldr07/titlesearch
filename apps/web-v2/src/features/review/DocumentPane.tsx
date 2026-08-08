@@ -13,7 +13,10 @@ import { cn } from "../../shared/ui/classNames";
 /** The reading whose line is pinned, if the reviewer picked one. */
 function coordsFor(field: Field, pinned: FieldReading | null): unknown {
   if (pinned !== null) return pinned.line_coords;
-  return readingsOf(field).find((r) => r.line_coords !== null)?.line_coords ?? field.source_line_coords;
+  return (
+    readingsOf(field).find((r) => r.line_coords !== null)?.line_coords ??
+    field.source_line_coords
+  );
 }
 
 /**
@@ -120,7 +123,11 @@ export function DocumentPane({
         </div>
       </div>
 
-      <OrderCoverageSpine orderId={orderId} currentPage={page.n} onSelect={setOverride} />
+      <OrderCoverageSpine
+        orderId={orderId}
+        currentPage={page.n}
+        onSelect={setOverride}
+      />
     </section>
   );
 }

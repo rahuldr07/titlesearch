@@ -23,7 +23,9 @@ import { expect, test } from "@playwright/test";
  * replace it.
  */
 
-test("Enter on a rail door opens THAT door, never the served order", async ({ page }) => {
+test("Enter on a rail door opens THAT door, never the served order", async ({
+  page,
+}) => {
   await page.goto("/queue");
   await expect(page.getByTestId("order-ref")).toBeVisible();
   await page.getByTestId("rail-door-/overview").focus();

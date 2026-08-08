@@ -27,7 +27,11 @@ export function RuleLifecycle({ status }: { status: RuleStatus }) {
     <ol className="mt-6 flex flex-wrap items-center gap-3 font-mono text-micro">
       {LIFECYCLE.map((stage, index) => (
         <li key={stage} className="flex items-center gap-3">
-          {index === 0 ? null : <span aria-hidden className="text-ink-muted">→</span>}
+          {index === 0 ? null : (
+            <span aria-hidden className="text-ink-muted">
+              →
+            </span>
+          )}
           <span
             aria-current={stage === status}
             className={cn(

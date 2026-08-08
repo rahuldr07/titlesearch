@@ -1,40 +1,9 @@
 import type { Field } from "@titlepipe/contract";
-import { isExcluded, stateLabel } from "../../entities/field/fieldLabel";
+import { stateLabel } from "../../entities/field/fieldLabel";
+import { isAnswered, SEGMENT_CLASS, segmentTone } from "./decisionMeter";
 import { DECISION_STATES } from "./reportSections";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
 import { cn } from "../../shared/ui/classNames";
-
-/**
- * ANSWERED IS EVERY STATE A PERSON PUT THE FIELD INTO — an exclusion included,
- * because an excluded field has left the queue by a decision. `needs_review` is
- * the only thing still owed. The server's `state` is the whole input; nothing
- * here consults confidence.
- */
-function isAnswered(field: Field): boolean {
-  return isExcluded(field) || field.state !== "needs_review";
-}
-
-type SegmentTone = "pending" | "answered" | "current";
-
-/**
- * RULE: the meter is a POSITION, not a scorecard — answered ink, the open
- * decision at full ink, what is left in the track colour. The mockup's three
- * fills are `ink-secondary`, `ink-primary` and `line-strong` to the letter.
- *
- * FAILURE PREVENTED: the band painted one of FOUR state colours per segment —
- * settled green, action red, attend amber — so a worked order rendered as a row
- * of green bars and the screen's one accent was spent eleven times before
- * Confirm asked for it. And colour was its only carrier: green and amber at 4px
- * are one grey in a photocopy. The outcome per field is on the row that shows
- * the field (`DecisionRow`'s dot) and in the finalize gate's sentence; a 4px
- * segment carries "done / here / not yet", and its three fills differ in
- * LUMINANCE, so the bar survives greyscale.
- */
-const SEGMENT_CLASS: Record<SegmentTone, string> = {
-  pending: "bg-line-strong",
-  answered: "bg-ink-secondary",
-  current: "bg-ink-primary",
-};
 
 /**
  * THE DECISION QUEUE'S OWN METER — answered-of-total, one segment per decision,
@@ -110,11 +79,11 @@ export function DecisionDock({
 
   if (needTotal === 0) return null;
 
-  const toneOf = (field: Field): SegmentTone =>
-    field.path === selectedPath ? "current" : isAnswered(field) ? "answered" : "pending";
-
   return (
-    <div data-testid="decision-meter" className="flex flex-none flex-col gap-4 px-9 pb-4 pt-6">
+    <div
+      data-testid="decision-meter"
+      className="flex flex-none flex-col gap-4 px-9 pb-4 pt-6"
+    >
       <div className="flex flex-wrap items-baseline gap-4">
         <Eyebrow variant="section" tone="action">
           Decision queue
@@ -131,11 +100,18 @@ export function DecisionDock({
         </span>
       </div>
 
-      <div className="flex gap-1" role="img" aria-label={`${answered} of ${needTotal} decisions answered`}>
+      <div
+        className="flex gap-1"
+        role="img"
+        aria-label={`${answered} of ${needTotal} decisions answered`}
+      >
         {decisions.map((field) => (
           <span
             key={field.id}
-            className={cn("h-2 flex-1 rounded-1", SEGMENT_CLASS[toneOf(field)])}
+            className={cn(
+              "h-2 flex-1 rounded-1",
+              SEGMENT_CLASS[segmentTone(field, selectedPath)],
+            )}
             /* The SERVER'S word for the state, not the fill's name: the tooltip
                is where the outcome the three fills deliberately stopped
                encoding is still readable, and it must not be a second

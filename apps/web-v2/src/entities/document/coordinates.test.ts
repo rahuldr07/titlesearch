@@ -18,7 +18,10 @@ describe("normalises recognised coordinates", () => {
 
   test("multiple lines all map", () => {
     const boxes = toEvidenceBoxes(
-      [[0, 0, 612, 79.2], [0, 79.2, 612, 158.4]],
+      [
+        [0, 0, 612, 79.2],
+        [0, 79.2, 612, 158.4],
+      ],
       PAGE,
     );
     expect(boxes).toHaveLength(2);
@@ -41,8 +44,12 @@ describe("never a faked box", () => {
 
   test("malformed quads are refused, not repaired", () => {
     for (const bad of [
-      [[1, 2, 3]], [[1, 2, 3, 4, 5]], [["a", 2, 3, 4]],
-      [[Number.NaN, 0, 10, 10]], [[0, 0, Infinity, 10]], [[null, 0, 10, 10]],
+      [[1, 2, 3]],
+      [[1, 2, 3, 4, 5]],
+      [["a", 2, 3, 4]],
+      [[Number.NaN, 0, 10, 10]],
+      [[0, 0, Infinity, 10]],
+      [[null, 0, 10, 10]],
     ]) {
       expect(toEvidenceBoxes(bad, PAGE)).toBeNull();
     }
@@ -74,15 +81,20 @@ describe("never a faked box", () => {
 
   test("ONE bad line invalidates the set, never a partial overlay", () => {
     // A partial overlay silently implies the missing lines were not cited.
-    const mixed = [[0, 0, 100, 50], [1, 2, 3]];
+    const mixed = [
+      [0, 0, 100, 50],
+      [1, 2, 3],
+    ];
     expect(toEvidenceBoxes(mixed, PAGE)).toBeNull();
   });
 
   test("a nonsense page box yields no overlay", () => {
     const quad = [[0, 0, 100, 50]];
     for (const page of [
-      { width: 0, height: 792 }, { width: 612, height: 0 },
-      { width: -612, height: 792 }, { width: Number.NaN, height: 792 },
+      { width: 0, height: 792 },
+      { width: 612, height: 0 },
+      { width: -612, height: 792 },
+      { width: Number.NaN, height: 792 },
     ]) {
       expect(toEvidenceBoxes(quad, page)).toBeNull();
     }

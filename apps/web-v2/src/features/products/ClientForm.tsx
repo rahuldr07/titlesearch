@@ -15,23 +15,33 @@ export function ClientForm({ onCancel }: { onCancel: () => void }) {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <Eyebrow variant="field" as="label" htmlFor="client-name">Client name</Eyebrow>
+        <Eyebrow variant="field" as="label" htmlFor="client-name">
+          Client name
+        </Eyebrow>
         <TextField id="client-name" className="mt-3" />
       </div>
 
       <div>
-        <Eyebrow variant="field" as="label" htmlFor="client-code">Code</Eyebrow>
+        <Eyebrow variant="field" as="label" htmlFor="client-code">
+          Code
+        </Eyebrow>
         <TextField id="client-code" className="mt-3" placeholder="e.g. NWT" />
       </div>
 
       <div>
-        <Eyebrow variant="field" as="label" htmlFor="client-contact">Contact</Eyebrow>
-        <TextField id="client-contact" className="mt-3" placeholder="orders@example.com" />
+        <Eyebrow variant="field" as="label" htmlFor="client-contact">
+          Contact
+        </Eyebrow>
+        <TextField
+          id="client-contact"
+          className="mt-3"
+          placeholder="orders@example.com"
+        />
       </div>
 
       <p className="text-xs leading-body text-ink-muted">
-        Creating a client changes nothing until an order points at it. Sign-off
-        defaults and overrides are set on the Clients screen.
+        Creating a client changes nothing until an order points at it. Sign-off defaults
+        and overrides are set on the Clients screen.
       </p>
 
       {/* CONTRACT GAP: no endpoint accepts a client record. */}
@@ -44,8 +54,8 @@ export function ClientForm({ onCancel }: { onCancel: () => void }) {
         </Button>
       </div>
       <p className="text-xs leading-body text-ink-muted">
-        CONTRACT GAP: the clients endpoint reads only. Save is disabled rather
-        than silently discarding what you typed.
+        CONTRACT GAP: the clients endpoint reads only. Save is disabled rather than
+        silently discarding what you typed.
       </p>
     </div>
   );

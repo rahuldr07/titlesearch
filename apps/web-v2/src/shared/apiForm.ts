@@ -47,7 +47,10 @@ export async function postForm<TOk, TRefusal>(
 
   const parsed = ok.safeParse(body);
   if (!parsed.success) {
-    throw new ApiError(response.status, `Response did not match the contract for ${path}`);
+    throw new ApiError(
+      response.status,
+      `Response did not match the contract for ${path}`,
+    );
   }
   return { ok: true, data: parsed.data };
 }

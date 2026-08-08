@@ -27,15 +27,11 @@ test("a both-found disagreement never claims emptiness — draft leads, labeled"
   // …the headline shows the draft AS a draft, not "Not Available"…
   await expect(page.getByText("draft — nothing settled yet")).toBeVisible();
   // …and nothing claims extraction returned nothing while readings show values
-  await expect(
-    page.getByText("extraction returned nothing at all"),
-  ).toHaveCount(0);
+  await expect(page.getByText("extraction returned nothing at all")).toHaveCount(0);
 });
 
 // TODO(rebuild) [ORPHAN RULE] — rule: ORPHAN — the differing characters between two readings are highlighted, so the reviewer sees WHERE they diverge.
-test("differing characters between readings are highlighted", async ({
-  page,
-}) => {
+test("differing characters between readings are highlighted", async ({ page }) => {
   await go(page);
   await page.getByTestId("row-mortgages.1.lender").click();
   const marks = page.getByTestId("diff-hl");
@@ -66,9 +62,7 @@ test("a reading can be adopted into the correction editor without retyping", asy
 // moved confirm off ⏎ onto `c` (C confirm · E correct); the RULE moved with it.
 // A missing field still demands an explicit click — the only keyboard-layer
 // defence against bulk-accepting absences by holding the confirm key down.
-test("c never accepts a blank — missing fields demand a click", async ({
-  page,
-}) => {
+test("c never accepts a blank — missing fields demand a click", async ({ page }) => {
   await page.goto("/orders/ord_demo_1/review?field=mortgages.1.lender");
   await expect(page.getByTestId("sel-label")).toHaveText("MTG 1 — LENDER");
   await page.keyboard.press("c");
@@ -99,18 +93,16 @@ test("a correction is inert until it differs from the machine read", async ({
   // seeded with the machine read ("30296"): submit is inert, Enter records nothing
   await expect(page.getByTestId("edit-submit")).toBeDisabled();
   await value.press("Enter");
-  await expect(
-    page.getByTestId("row-owner.zip").getByTestId("row-mark"),
-  ).toHaveCount(0);
+  await expect(page.getByTestId("row-owner.zip").getByTestId("row-mark")).toHaveCount(
+    0,
+  );
   // a real change arms the submit
   await value.fill("30999");
   await expect(page.getByTestId("edit-submit")).toBeEnabled();
 });
 
 // TODO(rebuild) [ORPHAN RULE] — rule: ORPHAN — every refusal speaks: escalate, correct and pass each nudge with what is missing. A silent no-op is the defect.
-test("refused submits SAY so — escalate, correct, pass all nudge", async ({
-  page,
-}) => {
+test("refused submits SAY so — escalate, correct, pass all nudge", async ({ page }) => {
   await go(page);
   // empty escalation — escalate is a BUTTON now (no hotkey); its editor still
   // refuses an empty question.
@@ -124,9 +116,7 @@ test("refused submits SAY so — escalate, correct, pass all nudge", async ({
   await page.keyboard.press("e");
   await page.getByTestId("edit-value").fill("30999");
   await page.getByTestId("edit-value").press("Enter");
-  await expect(page.getByTestId("nudge")).toContainText(
-    "both the value and its why",
-  );
+  await expect(page.getByTestId("nudge")).toContainText("both the value and its why");
   await page.keyboard.press("Escape");
   // pass without a reason (review header popover)
   await page.keyboard.press("p");
@@ -142,4 +132,3 @@ test("the queue's pass refusal nudges too", async ({ page }) => {
   await page.locator("input:focus").press("Enter");
   await expect(page.getByTestId("nudge")).toContainText("a pass needs its why");
 });
-

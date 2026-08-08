@@ -7,6 +7,8 @@ still pass if only one of the seven checks survived a refactor.
 
 from __future__ import annotations
 
+import base64
+
 import pytest
 from pydantic import SecretStr, ValidationError
 
@@ -16,7 +18,22 @@ from titlepipe_core.settings import (
 )
 from titlepipe_domain import Environment, LogRenderer
 
-GOOD_SECRET = "a-real-32-character-seal-secret!"
+# A valid Fernet key: urlsafe-base64 of 32 bytes, 44 characters. Not "a 32
+# character string" — that distinction is the bug these tests now pin.
+GOOD_SECRET = "dGVzdC1zZWFsLXNlY3JldC1leGFjdGx5LTMyLWJ5dGU="
+
+# A DSN nothing connects with, for the same reason `GOOD_SECRET` is a key nothing
+# seals with: `deployed()` below is a MODULE-LEVEL helper and cannot request a
+# fixture, so the value is local. `tests/conftest.py::DEPLOYED_DATABASE_URL` is
+# its own copy for its own fixtures — the same split `GOOD_SECRET` and
+# `conftest.DEPLOYED_SEAL_PASSWORD` already are, and deliberately so: two
+# independently written literals cannot drift into agreeing for a wrong reason.
+#
+# `db.titlepipe.example` is under RFC 2606's reserved TLD and resolves nowhere.
+# Nothing in this module builds an engine; only Pydantic reads this.
+DEPLOYED_DATABASE_URL = (
+    "postgresql+psycopg://titlepipe_app:this-dsn-never-connects@db.titlepipe.example:5432/titlepipe"
+)
 
 
 def deployed(**overrides: object) -> CoreApiSettings:
@@ -28,6 +45,12 @@ def deployed(**overrides: object) -> CoreApiSettings:
         "cors_allowed_origins": ("https://app.titlepipe.example",),
         "allowed_hosts": ("app.titlepipe.example",),
         "cookie_seal_password": SecretStr(GOOD_SECRET),
+        # Required when deployed, like every other key in this baseline. Inert:
+        # the host is under RFC 2606's reserved `.example` TLD and nothing in
+        # this module builds an engine. A test that wants the refusal passes
+        # `app_database_url=None` as an override, which is how every other
+        # refusal below is driven.
+        "app_database_url": SecretStr(DEPLOYED_DATABASE_URL),
     }
     base.update(overrides)
     return CoreApiSettings(**base)  # pyright: ignore[reportArgumentType]
@@ -48,6 +71,13 @@ def test_the_baseline_deployed_configuration_is_valid() -> None:
         ({"redaction_enabled": False}, "log redaction is disabled"),
         ({"cors_allowed_origins": ("*",)}, "CORS allows any origin"),
         ({"host": "127.0.0.1"}, "loopback"),
+        # The one whose absence is invisible at runtime rather than merely
+        # dangerous: `/health` and `/ready` both stay green — readiness reports
+        # a database check only when a DSN is configured, so a missing one is
+        # NO check rather than a failed one — while `GET /api/rules` answers a
+        # retryable 503 that can never succeed. `settings.py` carries the
+        # argument; `test_rules_endpoint.py` measures both halves of it.
+        ({"app_database_url": None}, "app_database_url is not set"),
     ],
 )
 def test_production_refuses_each_unsafe_knob(override: dict[str, object], expected: str) -> None:
@@ -97,16 +127,42 @@ def test_development_permits_the_convenient_defaults() -> None:
     assert settings.docs_enabled is True
 
 
-def test_seal_password_must_be_exactly_32_characters() -> None:
-    """WorkOS sealed sessions require it. Fail at startup, not at first login."""
-    with pytest.raises(ValidationError, match="exactly 32 characters"):
+def test_seal_password_must_be_a_44_character_fernet_key() -> None:
+    """WorkOS sealed sessions require it. Fail at startup, not at first login.
+
+    THE NUMBER WAS 32 AND IT WAS WRONG — that is the byte count, not the encoded
+    length. Every real WorkOS credential is 44 characters, so the old check
+    rejected the genuine article and accepted nothing that works.
+    """
+    with pytest.raises(ValidationError, match="44-character"):
         CoreApiSettings(
             environment=Environment.DEVELOPMENT, cookie_seal_password=SecretStr("too-short")
         )
+    # The old value: 32 characters, which used to PASS. It must now fail.
+    with pytest.raises(ValidationError, match="44-character"):
+        CoreApiSettings(
+            environment=Environment.DEVELOPMENT,
+            cookie_seal_password=SecretStr("development-only-seal-password!!"),
+        )
 
 
-def test_the_development_default_satisfies_its_own_length_rule() -> None:
-    assert len(DEVELOPMENT_SEAL_PASSWORD) == 32
+def test_seal_password_of_the_right_length_but_wrong_alphabet_is_refused() -> None:
+    """Length is the cheap half. This is the half that catches a bad paste."""
+    with pytest.raises(ValidationError, match=r"urlsafe-base64|decode to exactly"):
+        CoreApiSettings(
+            environment=Environment.DEVELOPMENT,
+            cookie_seal_password=SecretStr("!" * 44),
+        )
+
+
+def test_the_development_default_satisfies_its_own_rule() -> None:
+    """The default must pass the real validator, not a weaker one.
+
+    It did not before: the placeholder was 32 characters and so was the check,
+    so the only value ever exercised was the one that should have failed.
+    """
+    assert len(DEVELOPMENT_SEAL_PASSWORD) == 44
+    assert len(base64.urlsafe_b64decode(DEVELOPMENT_SEAL_PASSWORD)) == 32
     assert CoreApiSettings(
         environment=Environment.DEVELOPMENT
     ).cookie_seal_password.get_secret_value() == (DEVELOPMENT_SEAL_PASSWORD)

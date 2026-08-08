@@ -57,9 +57,11 @@ export const noValueClasses = cva(
         unsettled:
           "border-(length:--stroke-stamp) border-double border-state-attend-border bg-state-attend-surface text-state-attend-ink",
         // Drawn: solid stroke, solid fill. A closed question.
-        not_present: "border border-na-not-present-border bg-surface-app text-na-not-present-ink",
+        not_present:
+          "border border-na-not-present-border bg-surface-app text-na-not-present-ink",
         // Drawn: dashed stroke, empty, with a leading dash glyph.
-        not_found: "border border-dashed border-na-not-found-border text-na-not-found-ink",
+        not_found:
+          "border border-dashed border-na-not-found-border text-na-not-found-ink",
         // Drawn: sparse dot fill. The pattern is the signal, not the colour.
         silent: "na-dots border border-na-not-found-border text-na-silent-ink",
         // Drawn: diagonal hatch over the attend tint, with a ◑ glyph.

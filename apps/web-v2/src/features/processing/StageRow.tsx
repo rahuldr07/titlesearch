@@ -70,7 +70,9 @@ export function StageRow({ stage }: { stage: PipelineStage }) {
       </span>
 
       <span className="min-w-0 flex-1">
-        <span className={cn("block text-md font-medium", TITLE[stage.phase])}>{stage.label}</span>
+        <span className={cn("block text-md font-medium", TITLE[stage.phase])}>
+          {stage.label}
+        </span>
         <span className="mt-1 block text-xs text-ink-muted">{stage.detail}</span>
       </span>
 

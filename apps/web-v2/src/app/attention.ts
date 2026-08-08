@@ -23,7 +23,10 @@ export type Attention = "halt" | "attend" | null;
  * work, because the person who is stuck is not the person who walks past it.
  */
 export function useAttention(path: string): Attention {
-  const escalationsResult = useQuery({ ...escalations, enabled: path === "/escalations" });
+  const escalationsResult = useQuery({
+    ...escalations,
+    enabled: path === "/escalations",
+  });
 
   if (path === "/escalations") {
     const open = escalationsResult.data?.escalations.some((e) => e.resolution === null);

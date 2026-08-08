@@ -46,7 +46,11 @@ export function SignoffLineNotes({ line }: { line: OrderSignoffLine }) {
               <span className="font-mono font-semibold">{line.policy_suggestion}</span>
             </>
           )}{" "}
-          — <span className="font-semibold text-action-ink">only a person can sign it</span>.
+          —{" "}
+          <span className="font-semibold text-action-ink">
+            only a person can sign it
+          </span>
+          .
         </p>
       ) : null}
     </div>

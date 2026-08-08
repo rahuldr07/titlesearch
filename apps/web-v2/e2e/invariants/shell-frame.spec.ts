@@ -46,7 +46,9 @@ test("main fills the content column rather than shrink-wrapping", async ({ page 
   expect(main.width).toBeGreaterThanOrEqual(1600 - rail.width - 1);
 });
 
-test("the order strip stays put while the screen scrolls under it", async ({ page }) => {
+test("the order strip stays put while the screen scrolls under it", async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 1600, height: 1000 });
   await page.goto("/orders/ord_demo_1/review");
   const strip = page.getByTestId("order-strip");
@@ -55,12 +57,15 @@ test("the order strip stays put while the screen scrolls under it", async ({ pag
   await page.mouse.wheel(0, 1400);
   await page.waitForTimeout(300);
   const after = await boxOf(strip);
-  expect(after.y, "the strip counts the order it sits above; it may not scroll away").toBe(
-    before.y,
-  );
+  expect(
+    after.y,
+    "the strip counts the order it sits above; it may not scroll away",
+  ).toBe(before.y);
 });
 
-test("the rail is a full-height column, not a page-sticky element", async ({ page }) => {
+test("the rail is a full-height column, not a page-sticky element", async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 1600, height: 1000 });
   await page.goto("/rulebook");
   const rail = await boxOf(page.getByTestId("side-rail"));
@@ -68,14 +73,25 @@ test("the rail is a full-height column, not a page-sticky element", async ({ pag
   expect(rail.height).toBe(1000);
 });
 
-test("a screen renders at the width the export draws, not the shell's", async ({ page }) => {
-  await page.setViewportSize({ width: 1600, height: 1000 });
-  // Rulebook is the widest reading column the export draws: 1160px. Before the
-  // fix it had no measure at all and ran to the shell's 1440px cap.
-  await page.goto("/rulebook");
-  const heading = await boxOf(page.getByRole("heading", { level: 1 }).first());
-  expect(heading.x).toBeGreaterThan(300);
-});
+/**
+ * DELETED, NOT ABSENT — `a screen renders at the width the export draws, not
+ * the shell's`.
+ *
+ * It went to the heart of the [INVARIANT] above: Rulebook is the widest reading
+ * column the export draws at 1160px, and the test proved the screen held that
+ * column instead of running to the shell's edge, by asserting the heading was
+ * indented past 300px at a 1600px viewport.
+ *
+ * `screenClasses` no longer emits a per-screen `max-width` — all sixteen
+ * measures are `w-full max-w-full` — so Rulebook fills its column and the
+ * heading starts at the padded left edge. Measured 294px against the 336px it
+ * used to sit at. The invariant it guarded is not violated by accident; it was
+ * given up on purpose, and the reasoning is in the commit that did it.
+ *
+ * This is the third test removed by that decision, with the two in
+ * `Pane.test.ts`, plus the centring one in `responsive-frame.spec.ts`.
+ * Restoring the measure table restores all four.
+ */
 
 test("nobody signed in is shown an ADMIN world", async ({ page }) => {
   await page.goto("/signin");

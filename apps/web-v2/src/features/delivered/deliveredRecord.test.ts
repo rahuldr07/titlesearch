@@ -72,6 +72,12 @@ function delivery(
     attempted_at: at,
     delivered_at: at,
     evidence: null,
-    report: { id: `rep_${id}`, order_id: orderId, version, shape: "A", rendered_at: at },
+    report: {
+      id: `rep_${id}`,
+      order_id: orderId,
+      version,
+      shape: "A",
+      rendered_at: at,
+    },
   };
 }

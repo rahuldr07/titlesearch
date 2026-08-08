@@ -85,7 +85,10 @@ export function useReviewWrites(orderId: string): ReviewWrites {
     pending: all.some((write) => write.isPending),
     confirm: (fieldId, value, done) => {
       if (!claim("confirm", confirm.isPending)) return;
-      confirm.mutate({ fieldId, value }, { onSuccess: done, onSettled: release("confirm") });
+      confirm.mutate(
+        { fieldId, value },
+        { onSuccess: done, onSettled: release("confirm") },
+      );
     },
     correct: (fieldId, value, reason, done) => {
       if (!claim("correct", correct.isPending)) return;
@@ -96,11 +99,17 @@ export function useReviewWrites(orderId: string): ReviewWrites {
     },
     escalate: (fieldId, question, done) => {
       if (!claim("escalate", escalate.isPending)) return;
-      escalate.mutate({ fieldId, question }, { onSuccess: done, onSettled: release("escalate") });
+      escalate.mutate(
+        { fieldId, question },
+        { onSuccess: done, onSettled: release("escalate") },
+      );
     },
     exclude: (fieldId, reason, done) => {
       if (!claim("exclude", exclude.isPending)) return;
-      exclude.mutate({ fieldId, reason }, { onSuccess: done, onSettled: release("exclude") });
+      exclude.mutate(
+        { fieldId, reason },
+        { onSuccess: done, onSettled: release("exclude") },
+      );
     },
     pass: (reason, done) => {
       if (!claim("pass", pass.isPending)) return;

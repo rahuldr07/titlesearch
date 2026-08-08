@@ -59,8 +59,8 @@ export function SignoffReadonly({ signoff }: { signoff: OrderSignoffResponse }) 
           <p className="text-xs leading-body text-ink-secondary">
             Answered by{" "}
             <span className="font-semibold text-ink-primary">{signoff.signed_by}</span>
-            {signoff.signed_at === null ? "" : ` · ${signoff.signed_at}`}. You review the
-            search — you don&rsquo;t re-sign it.
+            {signoff.signed_at === null ? "" : ` · ${signoff.signed_at}`}. You review
+            the search — you don&rsquo;t re-sign it.
           </p>
         ) : (
           <p className="text-xs leading-body text-action-ink">

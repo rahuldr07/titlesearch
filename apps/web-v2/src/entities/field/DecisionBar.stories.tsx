@@ -37,7 +37,9 @@ export const ValueField: Story = {
   ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(canvas.getByTestId("act-confirm")).toHaveTextContent("Confirm as read");
+    await expect(canvas.getByTestId("act-confirm")).toHaveTextContent(
+      "Confirm as read",
+    );
     await expect(canvas.queryByTestId("act-exclude")).not.toBeInTheDocument();
     // Absent, not disabled — and never as a component at all.
     await expect(canvas.queryByText(/approve/i)).not.toBeInTheDocument();

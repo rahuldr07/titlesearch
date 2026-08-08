@@ -28,9 +28,18 @@ const TOKENS = readFileSync(
 );
 
 const SRC = join(process.cwd(), "src");
-const FACSIMILE = readFileSync(join(SRC, "features", "review", "PageFacsimile.tsx"), "utf8");
-const OVERLAY = readFileSync(join(SRC, "entities", "document", "EvidenceOverlay.tsx"), "utf8");
-const FIXTURE = readFileSync(join(SRC, "entities", "document", "pageFixture.ts"), "utf8");
+const FACSIMILE = readFileSync(
+  join(SRC, "features", "review", "PageFacsimile.tsx"),
+  "utf8",
+);
+const OVERLAY = readFileSync(
+  join(SRC, "entities", "document", "EvidenceOverlay.tsx"),
+  "utf8",
+);
+const FIXTURE = readFileSync(
+  join(SRC, "entities", "document", "pageFixture.ts"),
+  "utf8",
+);
 
 /** Slice out the `{ … }` body that follows the first match of `header`. */
 function extractBlock(css: string, header: RegExp): string {
@@ -74,7 +83,9 @@ function classLiteralContaining(src: string, marker: string): string {
     .map((m) => m[1] ?? "")
     .filter((s) => s.split(/\s+/).includes(marker));
   if (hits.length !== 1) {
-    throw new Error(`expected exactly one class literal containing \`${marker}\`, found ${hits.length}`);
+    throw new Error(
+      `expected exactly one class literal containing \`${marker}\`, found ${hits.length}`,
+    );
   }
   return hits[0] as string;
 }
@@ -85,7 +96,8 @@ function classLiteralContaining(src: string, marker: string): string {
  * not `--color-page`, and treating it as a colour would make this test claim a
  * pin it never checked.
  */
-const COLOUR_UTILITY = /^(bg|text|border|fill|stroke|ring|outline|decoration|caret|accent|divide|placeholder)-(.+)$/;
+const COLOUR_UTILITY =
+  /^(bg|text|border|fill|stroke|ring|outline|decoration|caret|accent|divide|placeholder)-(.+)$/;
 
 /** The colour tokens a class string actually resolves against. */
 function tokensOf(classes: string): { cls: string; token: string }[] {
@@ -133,7 +145,12 @@ describe("the page paints itself from the pinned family, never from UI chrome", 
   const degraded = classLiteralContaining(FACSIMILE, "filter-scan-degraded");
   const mark = classLiteralContaining(OVERLAY, "border-border-evidence");
 
-  const parts = { "page sheet": surfaces, "page ink": ink, "degraded ink": degraded, "evidence mark": mark };
+  const parts = {
+    "page sheet": surfaces,
+    "page ink": ink,
+    "degraded ink": degraded,
+    "evidence mark": mark,
+  };
 
   for (const [what, classes] of Object.entries(parts)) {
     const used = tokensOf(classes);
@@ -142,7 +159,10 @@ describe("the page paints itself from the pinned family, never from UI chrome", 
     // every assertion below pass on an empty list — which is exactly how a
     // colour test stops testing colour.
     test(`${what} resolves at least one colour token`, () => {
-      expect(used.map((u) => u.cls), classes).not.toEqual([]);
+      expect(
+        used.map((u) => u.cls),
+        classes,
+      ).not.toEqual([]);
     });
 
     for (const { cls, token } of used) {
@@ -156,11 +176,17 @@ describe("the page paints itself from the pinned family, never from UI chrome", 
   }
 
   test("the sheet carries a background at all", () => {
-    expect(tokensOf(surfaces).some((u) => u.cls.startsWith("bg-")), surfaces).toBe(true);
+    expect(
+      tokensOf(surfaces).some((u) => u.cls.startsWith("bg-")),
+      surfaces,
+    ).toBe(true);
   });
 
   test("the ink carries a text colour at all", () => {
-    expect(tokensOf(ink).some((u) => u.cls.startsWith("text-")), ink).toBe(true);
+    expect(
+      tokensOf(ink).some((u) => u.cls.startsWith("text-")),
+      ink,
+    ).toBe(true);
   });
 
   /** The two specific regressions, named, so the diff that reintroduces them is obvious. */
@@ -211,6 +237,8 @@ describe("the fixture's hard-coded hexes really mirror the tokens they name", ()
 
   test("the fixture only mirrors tokens that are pinned", () => {
     const named = declarations.map((d) => d[3] as string);
-    expect(named.filter((t) => !PINNED.includes(t as (typeof PINNED)[number]))).toEqual([]);
+    expect(named.filter((t) => !PINNED.includes(t as (typeof PINNED)[number]))).toEqual(
+      [],
+    );
   });
 });

@@ -44,26 +44,43 @@ export function OverviewScreen() {
   const { data, isPending, isError } = useQuery(lifecycleQuery);
   const view: OverviewView = narrow ? "rail" : chosen;
 
-  if (isError) return <ScreenMessage tone="halt" measure="1340">Overview unavailable.</ScreenMessage>;
-  if (isPending) return <ScreenMessage measure="1340">Loading the board…</ScreenMessage>;
+  if (isError)
+    return (
+      <ScreenMessage tone="halt" measure="1340">
+        Overview unavailable.
+      </ScreenMessage>
+    );
+  if (isPending)
+    return <ScreenMessage measure="1340">Loading the board…</ScreenMessage>;
 
   const stages = data.stages.map((stage) => ({
     ...stage,
     orders: stage.orders.filter((order) => !order.failed),
   }));
-  const failed = data.stages.flatMap((stage) => stage.orders).filter((order) => order.failed);
+  const failed = data.stages
+    .flatMap((stage) => stage.orders)
+    .filter((order) => order.failed);
 
   return (
     <Screen measure="1340" pad="26x30" placement="top">
       <div className="flex flex-col gap-8">
-        <OverviewHeader view={view} onView={setChosen} narrow={narrow} scopeNote={data.scope_note} />
+        <OverviewHeader
+          view={view}
+          onView={setChosen}
+          narrow={narrow}
+          scopeNote={data.scope_note}
+        />
         <TallyStrip
           total={data.total}
           halted={data.halted}
           moving={data.moving}
           failed={data.failed}
         />
-        {view === "board" ? <StageBoard stages={stages} /> : <StageRail stages={stages} />}
+        {view === "board" ? (
+          <StageBoard stages={stages} />
+        ) : (
+          <StageRail stages={stages} />
+        )}
         <FailedBanner orders={failed} />
       </div>
     </Screen>

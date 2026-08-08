@@ -18,7 +18,7 @@ Two rules hold for every subclass:
 
 from __future__ import annotations
 
-from typing import Any, ClassVar
+from typing import ClassVar
 
 
 class DomainError(Exception):
@@ -26,10 +26,13 @@ class DomainError(Exception):
 
     code: ClassVar[str] = "DOMAIN_ERROR"
 
-    def __init__(self, message: str, *, details: dict[str, Any] | None = None) -> None:
+    def __init__(self, message: str, *, details: dict[str, object] | None = None) -> None:
         super().__init__(message)
         self.message = message
-        self.details: dict[str, Any] = details or {}
+        # `object`, not `Any`: this bag is only ever serialised into the error
+        # envelope, and nothing in the codebase may read a value out of it
+        # without narrowing first.
+        self.details: dict[str, object] = details or {}
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}(code={self.code!r}, message={self.message!r})"

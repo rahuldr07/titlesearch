@@ -31,15 +31,13 @@ test("confirm 409 (different value) surfaces the server's message and never adva
   // no advance — the reviewer stays on the refused field
   await expect(page.getByTestId("sel-label")).toHaveText("OWNER ZIP");
   // server truth repainted: the un-mutated store still says needs_review
-  await expect(
-    page.getByTestId("row-owner.zip").getByTestId("row-mark"),
-  ).toHaveCount(0);
+  await expect(page.getByTestId("row-owner.zip").getByTestId("row-mark")).toHaveCount(
+    0,
+  );
 });
 
 // TODO(rebuild) [INVARIANT] — rule: a terminal-state 409 is answered the same way — surfaced, not swallowed.
-test("confirm 409 (terminal state) is answered, not a dead no-op", async ({
-  page,
-}) => {
+test("confirm 409 (terminal state) is answered, not a dead no-op", async ({ page }) => {
   await interceptApi(page, {
     method: "POST",
     match: "/confirm",

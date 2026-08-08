@@ -30,7 +30,10 @@ const STATUS = {
   live: { tone: "settled", label: "LIVE" },
   pending: { tone: "attend", label: "PENDING" },
   retired: { tone: "neutral", label: "RETIRED" },
-} as const satisfies Record<RuleStatus, { tone: "settled" | "attend" | "neutral"; label: string }>;
+} as const satisfies Record<
+  RuleStatus,
+  { tone: "settled" | "attend" | "neutral"; label: string }
+>;
 
 export function statusTone(status: RuleStatus): "settled" | "attend" | "neutral" {
   return STATUS[status].tone;

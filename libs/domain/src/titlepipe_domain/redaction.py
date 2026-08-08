@@ -43,9 +43,32 @@ is enforced either.
 from __future__ import annotations
 
 import re
-from collections.abc import Iterable
-from typing import Any, Final, cast
+from typing import Final
 from urllib.parse import urlsplit
+
+# One exemption, and one that used to be here.
+#
+# `Any` is gone. This module walks arbitrary log-record values, so `object` — not
+# `Any` — is the correct annotation, and the whole file now carries it: no `Any`,
+# no `cast`, and no file-wide licence to reintroduce either. What survives is
+# three line-scoped exemptions inside `redact_value`, each on the one expression
+# that consumes a container pyright narrowed out of `object`. That narrowing is
+# where the type genuinely stops being knowable: `isinstance(value, dict)` proves
+# the class and says nothing about the key or value types, so pyright infers
+# `dict[Unknown, Unknown]`, and *every* expression that then reads it is reported
+# — including the constructor call that would widen it. Widening by construction,
+# which is what replaced the cast in `api/errors.py`, does not reach this case:
+# there the input type was known and merely too narrow; here the input type is
+# unknown, and the flagged thing is the argument going in, not the value coming
+# out. The suppressions therefore record an absence of information rather than
+# assert a shape, which is why each is a targeted checker suppression naming the
+# one diagnostic it answers, and not a `cast` claiming a type nobody verified.
+#
+# Length: over the 400-line cap. Splitting is not obviously the fix — the
+# module docstring records that this control previously lived in four copies and
+# carried the same two defects in all four, so a split that lets two halves drift
+# is the failure it exists to prevent. Deciding that is a change of its own.
+# rules-allow-file(file-length): splitting a shared compliance control is the drift this module was written to end, so it needs a decision rather than a refactor
 
 REDACTED: Final = "[redacted]"
 MAX_REDACTION_DEPTH: Final = 6
@@ -264,7 +287,7 @@ def is_sensitive_key(key: str, *, extra_parts: frozenset[str] = frozenset()) -> 
     return any(part in normalised for part in SENSITIVE_KEY_PARTS | extra_parts)
 
 
-def is_allowed_key(key: str, value: Any) -> bool:
+def is_allowed_key(key: str, value: object) -> bool:
     """Whether a field may appear in a **deployed** environment's logs.
 
     The allowlist. A field survives only by being named in
@@ -316,12 +339,12 @@ def scrub_text(value: str) -> str:
 
 
 def redact_value(
-    value: Any,
+    value: object,
     *,
     depth: int = 0,
     extra_parts: frozenset[str] = frozenset(),
     allowlist_only: bool = False,
-) -> Any:
+) -> object:
     """Recursively scrub a value kept because its key is permitted.
 
     Depth is bounded: a cyclic or pathologically nested structure must not turn
@@ -333,18 +356,20 @@ def redact_value(
         return scrub_text(value)
     if isinstance(value, dict):
         return redact_mapping(
-            cast("dict[str, Any]", value),
+            value,  # pyright: ignore[reportUnknownArgumentType]  # rules-allow(any-type): isinstance proves `dict`; pyright infers `dict[Unknown, Unknown]` for it and nothing at runtime has checked the key or value types
             depth=depth + 1,
             extra_parts=extra_parts,
             allowlist_only=allowlist_only,
         )
     if isinstance(value, (list, tuple, set, frozenset)):
-        items = cast("Iterable[Any]", value)
-        scrubbed: list[Any] = [
+        scrubbed: list[object] = [
             redact_value(
-                item, depth=depth + 1, extra_parts=extra_parts, allowlist_only=allowlist_only
+                item,  # pyright: ignore[reportUnknownArgumentType]  # rules-allow(any-type): the element type of a container narrowed from `object` is `Unknown`; only the container class was checked
+                depth=depth + 1,
+                extra_parts=extra_parts,
+                allowlist_only=allowlist_only,
             )
-            for item in items
+            for item in value  # pyright: ignore[reportUnknownVariableType]  # rules-allow(any-type): `item` inherits the same `Unknown` element type; the loop itself asserts nothing
         ]
         # A tuple stays a tuple so a caller comparing shapes is not surprised;
         # sets become lists because a scrubbed element may not be hashable.
@@ -353,12 +378,12 @@ def redact_value(
 
 
 def redact_mapping(
-    mapping: dict[str, Any],
+    mapping: dict[str, object],
     *,
     depth: int = 0,
     extra_parts: frozenset[str] = frozenset(),
     allowlist_only: bool = False,
-) -> dict[str, Any]:
+) -> dict[str, object]:
     """Apply every rule across one mapping.
 
     `allowlist_only` inverts the default: a field is dropped unless it is named
@@ -367,7 +392,7 @@ def redact_mapping(
     """
     if depth >= MAX_REDACTION_DEPTH:
         return {"truncated": REDACTED}
-    result: dict[str, Any] = {}
+    result: dict[str, object] = {}
     for key, value in mapping.items():
         if allowlist_only:
             permitted = is_allowed_key(str(key), value) and not is_sensitive_key(

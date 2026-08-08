@@ -55,7 +55,11 @@ export function ReportPane({
     <div className="flex min-h-0 flex-1">
       <div className="flex min-w-0 flex-1 flex-col gap-6 overflow-y-auto px-9 pb-20 pt-8">
         <NoDisclosureCards lines={signoff?.lines ?? []} />
-        <CallBackSheet fields={fields} selectedPath={selectedPath} onSelect={onSelect} />
+        <CallBackSheet
+          fields={fields}
+          selectedPath={selectedPath}
+          onSelect={onSelect}
+        />
         {/*
           THE SIGNATURE A REVIEWER IS WORKING AGAINST, read where they work.
 

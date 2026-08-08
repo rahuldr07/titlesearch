@@ -57,9 +57,8 @@ export function OverviewHeader({
       lede={
         <>
           <p>
-            One column per stage. The machine advances exactly one of them —
-            every other column is an order stopped on a person, which is the
-            design, not a backlog.
+            One column per stage. The machine advances exactly one of them — every other
+            column is an order stopped on a person, which is the design, not a backlog.
           </p>
           {/* Its own line, as the design sets it. The scope note answers a
               different question from the sentence above — "whose orders are
@@ -82,8 +81,12 @@ export function OverviewHeader({
               if (picked === "board" || picked === "rail") onView(picked);
             }}
           >
-            <Toggle value="board" className="rounded-6 px-7 py-4 text-sm">Board</Toggle>
-            <Toggle value="rail" className="rounded-6 px-7 py-4 text-sm">Rail</Toggle>
+            <Toggle value="board" className="rounded-6 px-7 py-4 text-sm">
+              Board
+            </Toggle>
+            <Toggle value="rail" className="rounded-6 px-7 py-4 text-sm">
+              Rail
+            </Toggle>
           </ToggleGroup>
         )
       }

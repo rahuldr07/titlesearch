@@ -20,8 +20,7 @@ export function RuleStamp({ rule }: { rule: Rule | undefined }) {
   if (rule.status === "pending") {
     return (
       <Chip tone="attend" size="sm" bordered>
-        {rule.code} — PENDING — CANNOT AFFECT THE PIPELINE UNTIL AN ENGINEER
-        CONFIRMS
+        {rule.code} — PENDING — CANNOT AFFECT THE PIPELINE UNTIL AN ENGINEER CONFIRMS
       </Chip>
     );
   }

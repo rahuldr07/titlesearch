@@ -10,7 +10,11 @@ import reactRefresh from "eslint-plugin-react-refresh";
  * not duplicates.
  */
 export default tseslint.config(
-  { ignores: ["dist", "storybook-static", "node_modules"] },
+  // `dist-harness` holds the live migration harness's bundles. It is build
+  // output like `dist`, and it is named separately because it deliberately sits
+  // outside `dist/` — see e2e-live/buildBundles.mjs. Flat config does not read
+  // .gitignore, so an ignored directory still has to be listed here.
+  { ignores: ["dist", "dist-harness", "storybook-static", "node_modules"] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.strict],
     files: ["src/**/*.{ts,tsx}", ".storybook/**/*.{ts,tsx}"],
@@ -50,14 +54,27 @@ export default tseslint.config(
             { name: "axios", message: "§4 forbidden — use fetch" },
             { name: "redux", message: "§4 forbidden — Zustand for ephemeral UI only" },
             { name: "@reduxjs/toolkit", message: "§4 forbidden" },
-            { name: "moment", message: "§8 — dates are opaque strings; see src/shared/date.ts" },
-            { name: "dayjs", message: "§8 — dates are opaque strings; see src/shared/date.ts" },
-            { name: "date-fns", message: "§8 — dates are opaque strings; see src/shared/date.ts" },
+            {
+              name: "moment",
+              message: "§8 — dates are opaque strings; see src/shared/date.ts",
+            },
+            {
+              name: "dayjs",
+              message: "§8 — dates are opaque strings; see src/shared/date.ts",
+            },
+            {
+              name: "date-fns",
+              message: "§8 — dates are opaque strings; see src/shared/date.ts",
+            },
             { name: "lodash", message: "§4 forbidden" },
             { name: "framer-motion", message: "§4 forbidden" },
             { name: "next", message: "§4 forbidden — no SSR" },
             { name: "styled-components", message: "§4 forbidden — Tailwind + cva" },
-            { name: "zod", message: "§4 — Valibot in the browser; @titlepipe/contract owns wire shapes" },
+            {
+              name: "zod",
+              message:
+                "§4 — Valibot in the browser; @titlepipe/contract owns wire shapes",
+            },
           ],
           // `paths` matches the exact module name only, so `lodash/merge` and
           // `date-fns/format` both walked past it. The config previously
@@ -66,15 +83,30 @@ export default tseslint.config(
           patterns: [
             {
               group: [
-                "lodash", "lodash/*", "lodash-es", "lodash-es/*",
-                "moment", "moment/*", "dayjs", "dayjs/*",
-                "date-fns", "date-fns/*", "@date-fns/*",
-                "axios", "axios/*",
-                "redux", "redux/*", "@reduxjs/*",
-                "framer-motion", "framer-motion/*",
-                "styled-components", "styled-components/*",
-                "next", "next/*",
-                "zod", "zod/*",
+                "lodash",
+                "lodash/*",
+                "lodash-es",
+                "lodash-es/*",
+                "moment",
+                "moment/*",
+                "dayjs",
+                "dayjs/*",
+                "date-fns",
+                "date-fns/*",
+                "@date-fns/*",
+                "axios",
+                "axios/*",
+                "redux",
+                "redux/*",
+                "@reduxjs/*",
+                "framer-motion",
+                "framer-motion/*",
+                "styled-components",
+                "styled-components/*",
+                "next",
+                "next/*",
+                "zod",
+                "zod/*",
               ],
               message:
                 "§4 forbidden dependency (subpath imports included). Dates: src/shared/date.ts. Wire shapes: @titlepipe/contract.",
@@ -98,7 +130,7 @@ export default tseslint.config(
      * checking them.
      */
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
-    files: ["e2e/**/*.ts", "*.test.ts", "*.config.ts"],
+    files: ["e2e/**/*.ts", "e2e-live/**/*.ts", "*.test.ts", "*.config.ts"],
     languageOptions: { ecmaVersion: 2023, globals: globals.node },
     rules: {
       "@typescript-eslint/no-explicit-any": "error",

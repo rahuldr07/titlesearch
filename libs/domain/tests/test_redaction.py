@@ -6,6 +6,8 @@ why they live beside the code rather than in one service's suite.
 
 from __future__ import annotations
 
+from typing import cast
+
 import pytest
 
 from titlepipe_domain.redaction import (
@@ -22,6 +24,15 @@ SIGNED_URL = (
     "https://packages.r2.example/quarantine/abc123.pdf"
     "?X-Amz-Signature=deadbeef&X-Amz-Credential=AKIA%2F20260722"
 )
+
+# `redact_mapping` walks arbitrary log-record values, so it returns
+# `dict[str, object]` — the honest type, and the reason it no longer needs a
+# file-wide `Any` exemption. A test that reaches inside a redacted record has to
+# say what shape it expects, and the `cast`s below are exactly that and nothing
+# more: they add no runtime check and change no assertion. Each is answered for
+# by the line after it — if the value is not the shape named, the subscript,
+# the `in`, or the attribute access raises and the test fails, which is what a
+# test is for. Nothing here is asserted that the test would not catch.
 
 
 @pytest.mark.parametrize(
@@ -90,13 +101,16 @@ def test_sensitive_values_are_replaced() -> None:
 
 def test_redaction_reaches_into_nested_structures() -> None:
     out = redact_mapping({"order": {"page_count": 3, "parties": {"grantee": "YETTA B"}}})
-    assert out["order"]["parties"]["grantee"] == REDACTED
-    assert out["order"]["page_count"] == 3
+    order = cast("dict[str, object]", out["order"])
+    parties = cast("dict[str, object]", order["parties"])
+    assert parties["grantee"] == REDACTED
+    assert order["page_count"] == 3
 
 
 def test_redaction_reaches_into_lists() -> None:
     out = redact_mapping({"pages": [{"grantor": "X"}, {"grantor": "Y"}]})
-    assert [page["grantor"] for page in out["pages"]] == [REDACTED, REDACTED]
+    pages = cast("list[dict[str, object]]", out["pages"])
+    assert [page["grantor"] for page in pages] == [REDACTED, REDACTED]
 
 
 def test_a_sensitive_container_key_is_replaced_wholesale() -> None:
@@ -111,8 +125,9 @@ def test_redaction_is_depth_bounded() -> None:
 
 def test_a_presigned_url_is_scrubbed_under_any_key() -> None:
     out = redact_mapping({"location": SIGNED_URL})
-    assert "deadbeef" not in out["location"]
-    assert out["location"].startswith("https://packages.r2.example/quarantine/abc123.pdf")
+    location = cast("str", out["location"])
+    assert "deadbeef" not in location
+    assert location.startswith("https://packages.r2.example/quarantine/abc123.pdf")
 
 
 def test_an_ordinary_url_survives() -> None:
@@ -147,7 +162,7 @@ def test_a_credential_is_masked_even_under_an_innocuous_key() -> None:
     """The exact defect found in review: the key rules did not name it, so the
     value went out verbatim."""
     out = redact_mapping({"detail": "connect failed: postgresql://u:hunter2@db/core"})
-    assert "hunter2" not in out["detail"]
+    assert "hunter2" not in cast("str", out["detail"])
 
 
 def test_the_host_survives_credential_masking() -> None:
@@ -235,5 +250,6 @@ def test_a_blocked_key_stays_blocked_even_if_allowlisted_by_suffix() -> None:
 
 def test_allowlist_mode_reaches_into_nested_structures() -> None:
     out = redact_mapping({"checks": {"startup_complete": True, "party": "X"}}, allowlist_only=True)
-    assert out["checks"]["startup_complete"] is True
-    assert out["checks"]["party"] == REDACTED
+    checks = cast("dict[str, object]", out["checks"])
+    assert checks["startup_complete"] is True
+    assert checks["party"] == REDACTED

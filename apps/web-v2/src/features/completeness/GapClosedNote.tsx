@@ -35,8 +35,8 @@ export function GapClosedNote({
           ✓
         </span>
         <p className="text-sm leading-body text-state-settled-ink">
-          <span className="font-bold">{option}.</span> The original claim stays in the record —
-          closing a gap adds to the order&apos;s history, it never rewrites it.
+          <span className="font-bold">{option}.</span> The original claim stays in the
+          record — closing a gap adds to the order&apos;s history, it never rewrites it.
         </p>
       </div>
 
@@ -46,7 +46,9 @@ export function GapClosedNote({
         </p>
       )}
 
-      {by === null ? null : <p className="mt-2 text-tiny text-ink-muted">Recorded by {by}</p>}
+      {by === null ? null : (
+        <p className="mt-2 text-tiny text-ink-muted">Recorded by {by}</p>
+      )}
     </Card>
   );
 }

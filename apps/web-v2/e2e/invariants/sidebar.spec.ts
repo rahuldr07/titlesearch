@@ -109,10 +109,7 @@ test("[ inside a text field is text, not a fold", async ({ page }) => {
   // rule this test exists for is unchanged — the rail did not MOVE — and the
   // state it did not move from is now the one the screen is specified to open
   // in. Nothing was weakened: both this and the pre-press state are pinned.
-  await expect(page.getByTestId("side-rail")).toHaveAttribute(
-    "data-collapsed",
-    "1",
-  );
+  await expect(page.getByTestId("side-rail")).toHaveAttribute("data-collapsed", "1");
 });
 
 // [INVARIANT (mechanism changed)] — the RULE survives: the collapse preference
@@ -130,14 +127,8 @@ test("collapse is a persisted UI preference", async ({ page }) => {
   // survives a reload — via the SERVER preference (GET/PATCH /api/me/preferences).
   // NOT localStorage: BRIEF §9.11 forbids it and check-rules rejects it.
   await page.reload();
-  await expect(page.getByTestId("side-rail")).toHaveAttribute(
-    "data-collapsed",
-    "1",
-  );
+  await expect(page.getByTestId("side-rail")).toHaveAttribute("data-collapsed", "1");
   // and can be expanded again — never a one-way trap
   await page.getByTestId("rail-toggle").click();
-  await expect(page.getByTestId("side-rail")).toHaveAttribute(
-    "data-collapsed",
-    "0",
-  );
+  await expect(page.getByTestId("side-rail")).toHaveAttribute("data-collapsed", "0");
 });

@@ -23,8 +23,13 @@ describe("recording dates never shift by a timezone", () => {
 
   test("refuses anything that is not a plain ISO date, rather than guessing", () => {
     for (const bad of [
-      "2024-3-15", "15/03/2024", "2024-03-15T00:00:00Z",
-      "", "not a date", "2024-03", "20240315",
+      "2024-3-15",
+      "15/03/2024",
+      "2024-03-15T00:00:00Z",
+      "",
+      "not a date",
+      "2024-03",
+      "20240315",
     ]) {
       expect(formatRecordingDate(bad)).toBeNull();
     }
@@ -70,7 +75,9 @@ describe("recording dates never shift by a timezone", () => {
   test("sorts chronologically as strings", () => {
     const dates = ["2024-03-15", "1998-01-01", "2024-01-02"];
     expect([...dates].sort(compareRecordingDates)).toEqual([
-      "1998-01-01", "2024-01-02", "2024-03-15",
+      "1998-01-01",
+      "2024-01-02",
+      "2024-03-15",
     ]);
   });
 });

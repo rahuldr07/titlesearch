@@ -65,7 +65,11 @@ export function GalleryScreen() {
         */}
         <ScreenHeading
           eyebrow="Reference"
-          title={<>States, not just <em>the happy path</em></>}
+          title={
+            <>
+              States, not just <em>the happy path</em>
+            </>
+          }
           lede="Every one of these has to stay visually distinct in production. This is the catalogue."
         />
 
@@ -73,8 +77,17 @@ export function GalleryScreen() {
           <VerdictSamples />
 
           {GALLERY_STATES.map((state) => (
-            <StateCard key={state.id} tag={state.tag} title={state.title} desc={state.desc}>
-              <StateSample accent={state.accent} badge={state.badge} body={state.body} />
+            <StateCard
+              key={state.id}
+              tag={state.tag}
+              title={state.title}
+              desc={state.desc}
+            >
+              <StateSample
+                accent={state.accent}
+                badge={state.badge}
+                body={state.body}
+              />
             </StateCard>
           ))}
 

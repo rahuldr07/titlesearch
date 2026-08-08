@@ -54,7 +54,12 @@ export function ConflictBanner({
             </span>
           ) : (
             /* CONTRACT GAP: an acknowledgement is a signed server record; no endpoint exists. */
-            <Button fill="outlined" tone="halt" disabled data-testid="acknowledge-conflict">
+            <Button
+              fill="outlined"
+              tone="halt"
+              disabled
+              data-testid="acknowledge-conflict"
+            >
               Acknowledge conflict
             </Button>
           )}

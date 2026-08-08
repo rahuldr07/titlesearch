@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { Card } from "../../shared/ui/Card";
 import { Stamp } from "../../shared/ui/Stamp";
-import { buttonClasses } from "../../shared/ui/Button";
+import { buttonClasses } from "../../shared/ui/buttonClasses";
 import { Screen } from "../../shared/ui/Screen";
 import { cn } from "../../shared/ui/classNames";
 
@@ -25,7 +25,11 @@ import { cn } from "../../shared/ui/classNames";
  * authenticated call this screen could make. The caller — the thing that
  * detected the expiry — is the only party that still knows.
  */
-export function SessionEndedScreen({ orderId = DEMO_HELD_ORDER }: { orderId?: string }) {
+export function SessionEndedScreen({
+  orderId = DEMO_HELD_ORDER,
+}: {
+  orderId?: string;
+}) {
   // MEASURE 460, NOT THE EXPORT'S 420. The measure is the width of the CONTENT
   // (`Screen`), and the sheet below spends 28px a side on padding. Held at 420
   // the reassurance sentence broke one word onto its own line — the sheet would
@@ -80,7 +84,10 @@ export function SessionEndedScreen({ orderId = DEMO_HELD_ORDER }: { orderId?: st
           </span>
           <p className="text-base leading-body text-state-settled-ink">
             Order{" "}
-            <span data-testid="held-order" className="font-mono font-semibold text-ink-primary">
+            <span
+              data-testid="held-order"
+              className="font-mono font-semibold text-ink-primary"
+            >
               {orderId}
             </span>{" "}
             is saved exactly where you left it. It&rsquo;s back in{" "}
@@ -88,7 +95,11 @@ export function SessionEndedScreen({ orderId = DEMO_HELD_ORDER }: { orderId?: st
           </p>
         </Card>
 
-        <Link to="/" data-testid="session-handoff" className={cn(buttonClasses({ size: "xl" }))}>
+        <Link
+          to="/"
+          data-testid="session-handoff"
+          className={cn(buttonClasses({ size: "xl" }))}
+        >
           Sign in again
         </Link>
       </Card>

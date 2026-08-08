@@ -46,7 +46,9 @@ describe("every package page gets a cell", () => {
 describe("the four tiers never collapse", () => {
   test("classification consults degraded only once read in full", () => {
     expect(classifyPage(undefined)).toBe("unseen");
-    expect(classifyPage(page(1, { read_in_full: false, degraded: true }))).toBe("partial");
+    expect(classifyPage(page(1, { read_in_full: false, degraded: true }))).toBe(
+      "partial",
+    );
     expect(classifyPage(page(1, { degraded: true }))).toBe("degraded");
     expect(classifyPage(page(1))).toBe("read");
   });

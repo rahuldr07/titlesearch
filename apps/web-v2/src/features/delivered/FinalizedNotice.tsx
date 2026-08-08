@@ -72,9 +72,9 @@ export function FinalizedNotice({
         Order {orderId} <em>delivered</em>
       </SheetHeading>
       <p className="mx-auto mb-11 max-w-172 text-md leading-open text-ink-secondary">
-        The abstractor sign-off was completed at intake, the completeness gate
-        cleared before extraction, and every flagged value was approved by a
-        reviewer, field by field.
+        The abstractor sign-off was completed at intake, the completeness gate cleared
+        before extraction, and every flagged value was approved by a reviewer, field by
+        field.
       </p>
 
       {/*
@@ -94,16 +94,19 @@ export function FinalizedNotice({
       */}
       {product === null ? null : (
         <div className="mb-11 flex justify-center">
-          <OrderContextRow label="PRODUCT" productName={product} periodLabel={periodLabel} />
+          <OrderContextRow
+            label="PRODUCT"
+            productName={product}
+            periodLabel={periodLabel}
+          />
         </div>
       )}
 
       <ArtifactCard filename={demoArtifactName(orderId)} productName={product} />
 
       <p className="mx-auto mt-7 max-w-145 text-xs leading-open text-ink-muted">
-        The sheet declares the sign-off was completed and states the product and
-        period — the 13 operational lines are internal QC, not printed for the
-        client.
+        The sheet declares the sign-off was completed and states the product and period
+        — the 13 operational lines are internal QC, not printed for the client.
       </p>
       {deliveredLabel === null ? null : (
         <p data-testid="delivered-at" className="mt-6 text-xs text-ink-muted">

@@ -10,7 +10,13 @@ import { Button } from "../../shared/ui/Button";
  * corrected on the order rather than by re-uploading — which the door would
  * refuse as a duplicate anyway, correctly.
  */
-export function AcceptedCard({ orderRef, onAnother }: { orderRef: string; onAnother: () => void }) {
+export function AcceptedCard({
+  orderRef,
+  onAnother,
+}: {
+  orderRef: string;
+  onAnother: () => void;
+}) {
   return (
     <Card data-testid="accepted-card" accent="action">
       <CardBody className="flex flex-col gap-4">
@@ -18,8 +24,8 @@ export function AcceptedCard({ orderRef, onAnother }: { orderRef: string; onAnot
           Signed for. Order {orderRef} is queued.
         </p>
         <p className="max-w-2xl text-base leading-body text-ink-secondary">
-          The package is in the pipeline. Nothing on this screen can change that
-          — a mistake here is corrected on the order, not by re-uploading.
+          The package is in the pipeline. Nothing on this screen can change that — a
+          mistake here is corrected on the order, not by re-uploading.
         </p>
         <div>
           <Button size="sm" fill="outlined" tone="neutral" onClick={onAnother}>

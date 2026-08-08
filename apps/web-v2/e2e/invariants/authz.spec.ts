@@ -57,7 +57,6 @@ test("a senior may resolve; an ops role may not — same endpoint, same table", 
   expect(status).toBe(403);
 });
 
-
 // TODO(rebuild) [INVARIANT] — rule: a role-locked affordance is ABSENT, not disabled.
 test("the engineer gate's confirm affordance exists only for its holders", async ({
   page,
@@ -90,4 +89,3 @@ test("the engineer gate's confirm affordance exists only for its holders", async
   await page.keyboard.press("Escape");
   await expect(page.getByTestId("rule-confirm-btn")).toBeVisible();
 });
-

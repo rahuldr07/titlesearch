@@ -1,4 +1,19 @@
+import type { CSSProperties } from "react";
 import type { EvidenceBox } from "./coordinates";
+
+/**
+ * The ONLY inline styles in the app. These four values are per-box geometry
+ * computed from SERVER coordinates — they cannot be class names, and §6's ban
+ * exists to stop styling decisions hiding in markup, not to forbid computed
+ * geometry. A helper rather than an object literal in the JSX so the one
+ * exempted `style=` sits on a single line the gate can read.
+ */
+const boxGeometry = (box: EvidenceBox): CSSProperties => ({
+  left: `${box.x * 100}%`,
+  top: `${box.y * 100}%`,
+  width: `${box.width * 100}%`,
+  height: `${box.height * 100}%`,
+});
 
 /**
  * The highlight drawn over the cited line on a page raster.
@@ -41,16 +56,7 @@ export function EvidenceOverlay({ boxes }: { boxes: readonly EvidenceBox[] }) {
         <span
           key={`${box.x}:${box.y}:${box.width}:${box.height}`}
           className="absolute bg-surface-evidence border border-border-evidence rounded-1"
-          // The ONLY inline styles in the app. These four values are per-box
-          // geometry computed from SERVER coordinates — they cannot be class
-          // names, and §6's ban exists to stop styling decisions hiding in
-          // markup, not to forbid computed geometry.
-          style={{ /* rules-allow: server-computed per-box geometry */
-            left: `${box.x * 100}%`,
-            top: `${box.y * 100}%`,
-            width: `${box.width * 100}%`,
-            height: `${box.height * 100}%`,
-          }}
+          style={boxGeometry(box)} // rules-allow: server-computed per-box geometry
         />
       ))}
     </div>

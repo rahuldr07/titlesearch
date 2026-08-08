@@ -1,8 +1,12 @@
 import { cn } from "../../shared/ui/classNames";
 
 import {
-  ABSENT_SYMBOL, markLabel, markOf, markSymbol,
-  type CompareColumn, type CompareMark,
+  ABSENT_SYMBOL,
+  markLabel,
+  markOf,
+  markSymbol,
+  type CompareColumn,
+  type CompareMark,
 } from "./compare";
 
 /*

@@ -28,7 +28,7 @@ same `request_id` the caller was given.
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any, Final, cast
+from typing import Final
 
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
@@ -36,6 +36,7 @@ from pydantic import BaseModel, Field
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.requests import Request
 from starlette.responses import JSONResponse
+from structlog.typing import FilteringBoundLogger
 
 from titlepipe_core.api.request_context import current_request_id, request_id_for
 from titlepipe_core.telemetry.logging import get_logger
@@ -51,7 +52,8 @@ from titlepipe_domain import (
     ValidationError,
 )
 
-def _log() -> Any:
+
+def _log() -> FilteringBoundLogger:
     """Acquired at call time, never bound at import. A module-level logger pins
     whatever logging configuration was active first and silently ignores a later
     one — see `get_logger`'s own warning. `request_context._log` follows the same
@@ -105,7 +107,10 @@ class ErrorBody(BaseModel):
     code: str = Field(description="Stable machine-readable identifier.")
     message: str = Field(description="Client-safe explanation.")
     request_id: str | None = Field(default=None, description="Correlation id for this request.")
-    details: dict[str, Any] = Field(
+    # `object`, not `Any`. This is a JSON bag on its way out of the process;
+    # nothing reads a value back out of it, and Pydantic validates and
+    # serialises the two identically (same JSON schema, same `model_dump`).
+    details: dict[str, object] = Field(
         default_factory=dict, description="Safe, structured context. Never NPI."
     )
 
@@ -116,13 +121,37 @@ class ErrorEnvelope(BaseModel):
     error: ErrorBody
 
 
-def status_for(error: DomainError) -> int:
-    """Map a domain failure onto HTTP, honouring subclass relationships.
+# What an unregistered failure becomes. 500 and not 503: nothing here knows
+# whether the caller may retry, and the honest answer to "this service raised a
+# failure it has no mapping for" is that the service is at fault.
+UNMAPPED_STATUS: Final = 500
+
+
+def mapped_status_for(error: DomainError) -> int | None:
+    """The REGISTERED status, or `None` when `DOMAIN_ERROR_STATUS` has no entry.
 
     An exact lookup first, then a walk up the MRO, so a future
     `EscalationRequiresRuleError(RefusalError)` maps to 422 without being
-    registered — and an unregistered failure becomes 500 rather than silently
-    reporting success.
+    registered.
+
+    🔴 THE `None` IS THE WHOLE POINT OF THIS FUNCTION EXISTING, and it exists
+    because inferring "unmapped" FROM THE NUMBER was a real defect that shipped.
+    `handle_domain_error` used to read `if status >= 500` and log
+    `domain_error_unmapped` — so `DependencyUnavailableError`, which is
+    registered at 503 six lines above, logged an ERROR saying it was not, every
+    single time. It went unnoticed for exactly as long as nothing raised a
+    registered 5xx: `DOMAIN_ERROR_STATUS` has one, this service had no code path
+    that reached it, and the first one to arrive was Plan 02's
+    `GET /api/rules` failing over to `api/routers/rules.py`'s 503. Found by
+    reading that route's own log output.
+
+    A status is an ANSWER TO THE CALLER and "was there a mapping" is a fact about
+    THIS SERVICE'S configuration; the two happen to overlap on 500 and nowhere
+    else, which is why one could stand in for the other for as long as it did.
+    Separating them is the fix, rather than widening the comparison to
+    `>= 500 and status not in DOMAIN_ERROR_STATUS.values()` — that spelling is
+    wrong again the moment a second 5xx is registered, and it asks the question
+    of the values rather than of the lookup that was actually performed.
     """
     exact = DOMAIN_ERROR_STATUS.get(type(error))
     if exact is not None:
@@ -130,16 +159,28 @@ def status_for(error: DomainError) -> int:
     for base in type(error).__mro__:
         if base in DOMAIN_ERROR_STATUS:
             return DOMAIN_ERROR_STATUS[base]
-    return 500
+    return None
+
+
+def status_for(error: DomainError) -> int:
+    """Map a domain failure onto HTTP, honouring subclass relationships.
+
+    Unchanged in behaviour and kept as the name callers use — an unregistered
+    failure becomes 500 rather than silently reporting success. What moved out
+    of it is the ability to tell "500 because that is the mapping" from "500
+    because there was no mapping", which is now `mapped_status_for`'s `None`.
+    """
+    mapped = mapped_status_for(error)
+    return UNMAPPED_STATUS if mapped is None else mapped
 
 
 def envelope(
     *,
     code: str,
     message: str,
-    details: dict[str, Any] | None = None,
+    details: dict[str, object] | None = None,
     request: Request | None = None,
-) -> dict[str, Any]:
+) -> dict[str, object]:
     """Build the response body, stamping the correlation id.
 
     Resolved from the request where one is available. The contextvar alone is
@@ -160,7 +201,7 @@ def envelope(
     ).model_dump()
 
 
-def sanitise_validation_errors(raw: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def sanitise_validation_errors(raw: list[dict[str, object]]) -> list[dict[str, object]]:
     """Reduce Pydantic errors to a stable code and a field location.
 
     An allowlist, not a denylist. `loc` names *which* field was wrong and `type`
@@ -171,15 +212,27 @@ def sanitise_validation_errors(raw: list[dict[str, Any]]) -> list[dict[str, Any]
     `input` and `ctx` were removed, but a custom validator's message carried the
     submitted value anyway, and on this system that is a party name.
     """
-    cleaned: list[dict[str, Any]] = []
+    cleaned: list[dict[str, object]] = []
     for item in raw:
-        entry: dict[str, Any] = {}
+        entry: dict[str, object] = {}
         for key in _VALIDATION_KEYS_TO_KEEP:
             if key not in item:
                 continue
             value = item[key]
+            # The suppression below is NOT the one that `dict(entry)` replaced two
+            # functions down, and the same technique does not reach it. There, the
+            # incoming type was *known* (a TypedDict) and merely too narrow, so
+            # rebuilding the value widened it at runtime. Here the incoming type is
+            # `object`: `isinstance(value, (list, tuple))` proves the class and says
+            # nothing about the elements, so pyright infers
+            # `list[Unknown] | tuple[Unknown, ...]` and reports every expression that
+            # reads it — including the `list(...)`/helper call that would do the
+            # widening, because the flagged thing is the argument going in, not the
+            # value coming out. Seven rewrites were tried; all seven moved the
+            # diagnostic without removing it. `str(part)` is total on every object,
+            # so nothing about the elements is being claimed.
             if key == "loc" and isinstance(value, (list, tuple)):
-                entry[key] = [str(part) for part in value]  # pyright: ignore[reportUnknownVariableType, reportUnknownArgumentType]
+                entry[key] = [str(part) for part in value]  # pyright: ignore[reportUnknownVariableType, reportUnknownArgumentType]  # rules-allow(any-type): a container narrowed out of `object` has `Unknown` element types and pyright cannot be shown otherwise; `str(part)` asserts nothing about them
             else:
                 entry[key] = str(value)
         cleaned.append(entry)
@@ -203,10 +256,19 @@ def _environment_of(request: Request) -> Environment:
 async def handle_domain_error(request: Request, exc: Exception) -> JSONResponse:
     """Deliberate domain failures and refusals."""
     error = exc if isinstance(exc, DomainError) else DomainError(str(exc))
-    status = status_for(error)
-    if status >= 500:
+    mapped = mapped_status_for(error)
+    status = UNMAPPED_STATUS if mapped is None else mapped
+    if mapped is None:
         # An unmapped domain error is a gap in DOMAIN_ERROR_STATUS, not a
         # caller mistake. Say so loudly enough to be fixed.
+        #
+        # 🔴 THE CONDITION WAS `if status >= 500`, WHICH IS NOT THE SAME
+        # QUESTION. `DependencyUnavailableError` is registered at 503, so every
+        # correctly-mapped dependency failure logged this line claiming it was
+        # unmapped — see `mapped_status_for`, which carries the measurement and
+        # why the fix is a separate return value rather than a wider comparison.
+        # The loud log for a GENUINELY unmapped error is kept: it is worth
+        # having, and narrowing the condition is what makes it mean something.
         _log().error(
             "domain_error_unmapped",
             error_name=type(error).__name__,
@@ -225,9 +287,11 @@ async def handle_domain_error(request: Request, exc: Exception) -> JSONResponse:
 
 async def handle_request_validation(request: Request, exc: Exception) -> JSONResponse:
     """Schema failures, with the submitted values stripped out."""
-    errors: list[dict[str, Any]] = []
+    errors: list[dict[str, object]] = []
     if isinstance(exc, RequestValidationError):
-        errors = sanitise_validation_errors(cast("list[dict[str, Any]]", exc.errors()))
+        # `dict(entry)` rather than a cast: `exc.errors()` yields a TypedDict,
+        # and widening it by construction is checked where a cast is asserted.
+        errors = sanitise_validation_errors([dict(entry) for entry in exc.errors()])
     return JSONResponse(
         status_code=422,
         content=envelope(
@@ -260,7 +324,7 @@ async def handle_unexpected(request: Request, exc: Exception) -> JSONResponse:
     given, and never into the response body of a deployed environment.
     """
     _log().exception("unhandled_exception", exception_name=type(exc).__name__)
-    details: dict[str, Any] = {}
+    details: dict[str, object] = {}
     if not _environment_of(request).is_deployed:
         details = {"exception": type(exc).__name__, "developer_message": str(exc)}
     return JSONResponse(
@@ -286,7 +350,7 @@ def build_unhandled_response(
     """
 
     def build(request_id: str, exc: BaseException) -> JSONResponse:
-        details: dict[str, Any] = {}
+        details: dict[str, object] = {}
         if not environment.is_deployed:
             # Locally the developer message is present: there is no real NPI in
             # a development environment and a blank 500 wastes an afternoon.

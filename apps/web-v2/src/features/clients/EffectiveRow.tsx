@@ -1,4 +1,8 @@
-import type { ClientOverride, EffectiveLine, LineApplication } from "@titlepipe/contract";
+import type {
+  ClientOverride,
+  EffectiveLine,
+  LineApplication,
+} from "@titlepipe/contract";
 
 import { Chip } from "../../shared/ui/Chip";
 import { ListRow } from "../../shared/ui/ListRow";
@@ -19,7 +23,9 @@ import { treatmentLabel } from "./compare";
  * the whole point of the panel is that the difference is visible and deliberate.
  */
 const TONE: Readonly<Record<LineApplication, "neutral" | "attend" | "halt">> = {
-  applies: "neutral", narrowed: "attend", excluded: "halt",
+  applies: "neutral",
+  narrowed: "attend",
+  excluded: "halt",
 };
 
 export function EffectiveRow({
