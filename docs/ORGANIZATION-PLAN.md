@@ -1,6 +1,6 @@
 # Repository organization plan
 
-**Date:** 2026-08-08 · **Status:** PROPOSED — Phase 2 items marked ⚖ need the owner's ruling; everything else is executable as written.
+**Date:** 2026-08-08 · **Status:** EXECUTED 2026-08-08 (this branch), with two corrections found during execution, noted inline. The 13-file escalation was resolved by **removal and text-extraction rather than admission** — see the commit trail on `claude/project-structure-docs-i5eueq`.
 **Scope:** repository structure, documentation hygiene, and the tracked-binary/CI problem. **Not in scope:** any code behavior, any closed decision (ADR-0001, the reskin, the hard rules), the `web-v2 → web` rename (Phase 6 cutover owns it, BRIEF §5).
 
 Every finding below was measured against the working tree at `ed6df25`, not inferred from the docs.
@@ -15,7 +15,9 @@ The repo has no `README.md`. The entry points are `CLAUDE.md`/`AGENTS.md` (agent
 
 ### F-2 — Two authoritative documents are cited everywhere and exist nowhere
 
-`docs/rulings_2026-07.md` (full text of R13–R24) and `docs/spec.md` (the 18-section extraction spec) are cited as reference-of-record by `docs/HANDOFF.md`, `docs/CONTEXT.md`, `docs/PRD.md`, both Gate 0 docs, and the Gate 0/1 execution prompt. **Neither file is in the repository.** The rulebook's full text — the product's core asset, per CONTEXT §9 — survives in VCS only inside `docs/claude rule book/Implementation_Rulebook_v1.docx`, which is one of the 13 files the client-data guard currently refuses (F-4). One escalation away from the R13–R24 text existing only on someone's machine.
+`docs/rulings_2026-07.md` (full text of R13–R24) and `docs/spec.md` (the 18-section extraction spec) are cited as reference-of-record by `docs/HANDOFF.md`, `docs/CONTEXT.md`, `docs/PRD.md`, both Gate 0 docs, and the Gate 0/1 execution prompt. **Neither file is in the repository.**
+
+> **Correction (execution, 2026-08-08).** This finding originally assumed the R13–R24 text survived inside `Implementation_Rulebook_v1.docx`. Extraction disproved that: the docx is the **Vendor 66805 typing rulebook** — its own rule numbering, source material for the abstractor-typing skill — not TitlePipe's pipeline rulings. Both files are therefore genuinely absent from VCS and **the owner must supply them**; they are tracked in `docs/INDEX.md` under "Missing documents". Plan item 3's extraction step was dropped accordingly.
 
 ### F-3 — Superseded and current docs are indistinguishable without reading both
 
