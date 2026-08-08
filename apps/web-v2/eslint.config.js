@@ -10,7 +10,11 @@ import reactRefresh from "eslint-plugin-react-refresh";
  * not duplicates.
  */
 export default tseslint.config(
-  { ignores: ["dist", "storybook-static", "node_modules"] },
+  // `dist-harness` holds the live migration harness's bundles. It is build
+  // output like `dist`, and it is named separately because it deliberately sits
+  // outside `dist/` — see e2e-live/buildBundles.mjs. Flat config does not read
+  // .gitignore, so an ignored directory still has to be listed here.
+  { ignores: ["dist", "dist-harness", "storybook-static", "node_modules"] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.strict],
     files: ["src/**/*.{ts,tsx}", ".storybook/**/*.{ts,tsx}"],
@@ -98,7 +102,7 @@ export default tseslint.config(
      * checking them.
      */
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
-    files: ["e2e/**/*.ts", "*.test.ts", "*.config.ts"],
+    files: ["e2e/**/*.ts", "e2e-live/**/*.ts", "*.test.ts", "*.config.ts"],
     languageOptions: { ecmaVersion: 2023, globals: globals.node },
     rules: {
       "@typescript-eslint/no-explicit-any": "error",

@@ -6,7 +6,10 @@ are the contract the frontend and the refusal tests will branch on.
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+
 import pytest
+import structlog
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from pydantic import BaseModel, field_validator
@@ -23,6 +26,8 @@ from titlepipe_domain import (
     ConflictError,
     DependencyUnavailableError,
     DomainError,
+    Environment,
+    LogRenderer,
     NotFoundError,
     PermissionDeniedError,
     RefusalError,
@@ -120,6 +125,122 @@ def test_an_unregistered_domain_subclass_inherits_its_parents_status() -> None:
 
 def test_a_bare_domain_error_is_treated_as_a_failure_not_a_success() -> None:
     assert status_for(DomainError("x")) == 500
+
+
+@pytest.fixture
+def _restore_structlog() -> Iterator[None]:
+    """structlog's configuration is process-global.
+
+    The two tests below pin `LogRenderer.JSON` so that the assertion does not
+    depend on which renderer happened to be in force, and this puts the process
+    back afterwards. Requested by name rather than `autouse`, so it changes
+    nothing for the other tests in this module — `test_logging_pipeline.py`
+    makes it `autouse` because every test there configures logging, and here
+    only two do.
+    """
+    yield
+    structlog.reset_defaults()
+
+
+@pytest.mark.usefixtures("_restore_structlog")
+def test_only_a_genuinely_unmapped_error_is_logged_as_unmapped(
+    frozen_clock: FrozenClock, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """🔴 A PRE-EXISTING DEFECT, EXPOSED BY THE FIRST CODE PATH THAT REACHED IT.
+
+    `handle_domain_error` read `if status >= 500` and logged
+    `domain_error_unmapped`, whose own comment says "a gap in
+    `DOMAIN_ERROR_STATUS`". But `DependencyUnavailableError: 503` IS in that
+    dict, so every correctly-mapped dependency failure logged an ERROR claiming
+    it was not. It survived because nothing in this service had ever raised a
+    registered 5xx; `GET /api/rules` is the first, and MEASURED against it
+    before the fix, one request to a route with an unreachable database:
+
+        [error] rulebook_read_failed    error_name=OperationalError
+        [error] domain_error_unmapped   error_code=DEPENDENCY_UNAVAILABLE ...
+
+    — the second line naming, as unmapped, the code six lines above its own
+    mapping.
+
+    **BOTH ARMS, AND THE SECOND IS NOT OPTIONAL.** Deleting the log entirely
+    passes a test that only checks the 503 is quiet, and deleting the log is the
+    obvious wrong fix: the loud line for a real gap is the thing worth keeping.
+    So a registered 503 must be SILENT and an unregistered subclass must SHOUT,
+    and one class is used for each rather than one class read twice.
+
+    `LogRenderer.JSON` and `capsys` is `test_logging_pipeline.py`'s idiom; the
+    renderer is pinned explicitly because the console one would still contain
+    the event name and this must not depend on which is in force.
+    """
+
+    class UnregisteredFailureError(DomainError):
+        """Directly under `DomainError`, so the MRO walk finds no entry at all.
+
+        A `RefusalError` subclass would resolve to 422 through its parent, which
+        is the OTHER behaviour and is asserted two tests up.
+        """
+
+        code = "UNREGISTERED_FAILURE"
+
+    settings = CoreApiSettings(environment=Environment.TEST, log_renderer=LogRenderer.JSON)
+    app = create_app(settings, clock=frozen_clock, id_factory=SequenceIdFactory())
+
+    @app.get("/registered-503")
+    async def _registered() -> None:
+        raise DependencyUnavailableError("The rulebook is temporarily unavailable.")
+
+    @app.get("/unregistered")
+    async def _unregistered() -> None:
+        raise UnregisteredFailureError("Nothing maps this.")
+
+    with TestClient(app) as client:
+        registered = client.get("/registered-503")
+        capsys.readouterr()  # discard startup, so what follows is one request's
+        unregistered = client.get("/unregistered")
+        shouted = capsys.readouterr().out
+
+    # Arm one: registered. The status and the code prove the mapping was found,
+    # so a silent log here is silence about a mapping that exists.
+    assert registered.status_code == 503
+    assert registered.json()["error"]["code"] == "DEPENDENCY_UNAVAILABLE"
+
+    # Arm two: unregistered. 500 AND the log, because 500 alone is what the old
+    # condition already produced and is not the thing that regressed.
+    assert unregistered.status_code == 500
+    assert unregistered.json()["error"]["code"] == "UNREGISTERED_FAILURE"
+    assert "domain_error_unmapped" in shouted, (
+        "a DomainError with no entry in DOMAIN_ERROR_STATUS must be reported "
+        "loudly; deleting the log is not the fix for the false positive"
+    )
+
+
+@pytest.mark.usefixtures("_restore_structlog")
+def test_a_registered_503_is_not_reported_as_unmapped(
+    frozen_clock: FrozenClock, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The half of the pair above that the defect actually got wrong, isolated.
+
+    Separate from its partner because the two are separate claims and a reader
+    chasing the regression should be able to run one of them. This is the one
+    that FAILED before `mapped_status_for` existed.
+    """
+    settings = CoreApiSettings(environment=Environment.TEST, log_renderer=LogRenderer.JSON)
+    app = create_app(settings, clock=frozen_clock, id_factory=SequenceIdFactory())
+
+    @app.get("/registered-503")
+    async def _registered() -> None:
+        raise DependencyUnavailableError("The rulebook is temporarily unavailable.")
+
+    with TestClient(app) as client:
+        capsys.readouterr()
+        response = client.get("/registered-503")
+        emitted = capsys.readouterr().out
+
+    assert response.status_code == 503
+    assert "domain_error_unmapped" not in emitted, (
+        f"DependencyUnavailableError is registered at 503 in DOMAIN_ERROR_STATUS "
+        f"and was reported as unmapped anyway: {emitted}"
+    )
 
 
 def test_a_missing_route_uses_the_envelope(client: TestClient) -> None:

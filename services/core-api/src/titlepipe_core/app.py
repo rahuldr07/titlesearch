@@ -5,7 +5,11 @@ lets a test construct an app with staging settings and an injected clock without
 the import graph deciding for it, and it keeps configuration out of module
 scope where it cannot be overridden.
 
-No product `/api/*` route exists at Gate 1. Only liveness and readiness.
+🔴 THIS SAID "No product `/api/*` route exists at Gate 1. Only liveness and
+readiness." IT IS NO LONGER TRUE. `GET /api/rules` is served, and it is the only
+product route: the rulebook is global, so it is the one read that needs no
+principal and could therefore be built before identity exists. Everything else in
+`packages/contract` is tenant-scoped and waits for Plan 03.
 """
 
 from __future__ import annotations
@@ -16,7 +20,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from titlepipe_core.api.errors import build_unhandled_response, register_error_handlers
 from titlepipe_core.api.request_context import RequestContextMiddleware
-from titlepipe_core.api.routers import health
+from titlepipe_core.api.routers import health, rules
 from titlepipe_core.lifespan import build_lifespan, build_resources
 from titlepipe_core.settings import CoreApiSettings
 from titlepipe_core.telemetry.hooks import RequestMetrics
@@ -94,5 +98,12 @@ def create_app(
 
     register_error_handlers(app, environment=settings.environment)
     app.include_router(health.router)
+    # The first product router. `rules` carries its own `/api` prefix and
+    # `health` deliberately carries none — see `api/routers/health.py`, which is
+    # platform surface rather than product surface. Registered AFTER the error
+    # handlers, so a `DomainError` raised in a handler already has somewhere to
+    # be mapped; the order is not load-bearing for FastAPI, but reading it the
+    # other way round invites somebody to assume it is.
+    app.include_router(rules.router)
 
     return app

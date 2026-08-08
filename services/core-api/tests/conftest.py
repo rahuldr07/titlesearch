@@ -47,6 +47,25 @@ from titlepipe_test_support import FrozenClock, SequenceIdFactory
 DEPLOYED_SEAL_PASSWORD = "YS1yZWFsLWRlcGxveWVkLXNlYWwtc2VjcmV0LTMyYnk="
 DEPLOYED_BASE_URL = "https://app.titlepipe.example"  # must match allowed_hosts
 
+# A DSN NOTHING EVER CONNECTS WITH. `CoreApiSettings` refuses to construct for a
+# deployed environment without `app_database_url` — see
+# `_deployed_environments_refuse_unsafe_configuration` — so every
+# deployed-configuration fixture has to carry one, and this is it.
+#
+# It is inert by construction and that is the whole design of the value. The
+# host is `db.titlepipe.example`, which is under a reserved TLD (RFC 2606) and
+# resolves nowhere; the only thing that reads it is Pydantic. Nothing in this
+# suite builds an engine from a deployed settings object: the tests that reach a
+# real server take `app_dsn` or `migration_dsn`, which come from the container.
+#
+# The password segment is a sentence rather than a random string ON PURPOSE. A
+# credential-shaped literal in a checked-in file is one somebody eventually
+# wonders about; this one answers the question in its own text, exactly as
+# `DEVELOPMENT_SEAL_PASSWORD` does in `settings.py`.
+DEPLOYED_DATABASE_URL = (
+    "postgresql+psycopg://titlepipe_app:this-dsn-never-connects@db.titlepipe.example:5432/titlepipe"
+)
+
 
 @pytest.fixture
 def deployed_base_url() -> str:
@@ -91,6 +110,10 @@ def production_settings() -> CoreApiSettings:
         cors_allowed_origins=("https://app.titlepipe.example",),
         allowed_hosts=("app.titlepipe.example",),
         cookie_seal_password=SecretStr(DEPLOYED_SEAL_PASSWORD),
+        # Required when deployed. See `DEPLOYED_DATABASE_URL` — no engine is ever
+        # built from it, and every test here that reaches a real server takes a
+        # container DSN instead.
+        app_database_url=SecretStr(DEPLOYED_DATABASE_URL),
     )
 
 
@@ -1119,11 +1142,17 @@ ALEMBIC_VERSION_TABLE = "alembic_version"
 # cross-file failure the drop existed to prevent, reintroduced by the drop being
 # unreachable. Reproduced 2026-08-05 with two probe modules.
 #
-# Tables first (the enum has a dependent column until `fields` is gone), then the
-# type, then the function. `IF EXISTS` throughout: this runs on the happy path
-# too, where `downgrade` has already removed everything and every statement is a
-# no-op.
+# Tables first (each enum has a dependent column until its table is gone), then
+# the types, then the function. `IF EXISTS` throughout: this runs on the happy
+# path too, where `downgrade` has already removed everything and every statement
+# is a no-op.
+#
+# `rules` is `0003`'s and leads the list in reverse creation order.
+# `test_migration_tables_matches_the_model_metadata` is what made that edit
+# happen rather than be forgotten — it holds this literal against
+# `Base.metadata`, in both directions.
 MIGRATION_TABLES = (
+    "rules",
     "audit_log",
     "field_readings",
     "fields",
@@ -1133,7 +1162,28 @@ MIGRATION_TABLES = (
     "tenants",
     ALEMBIC_VERSION_TABLE,
 )
-MIGRATION_ENUM_TYPE = "na_reason"
+
+# 🔴 THREE TYPES, NOT ONE. This was `MIGRATION_ENUM_TYPE = "na_reason"` until
+# `0003` added `rule_status` and `rule_origin`.
+#
+# WHAT HOLDS IT: `tests/test_database_seam.py::test_migration_enum_types_matches
+# _the_live_catalog`, which reads every `typtype = 'e'` type in `public` off a
+# migrated database and requires exact equality, both directions. It is the
+# sibling of `test_migration_tables_matches_the_model_metadata` above, with the
+# CATALOG as its authority instead of `Base.metadata` — and it has to be, because
+# `Base.metadata` cannot see an enum at all except through a column that uses one,
+# so a type a revision creates and no model references would be invisible to a
+# metadata check.
+#
+# UNTIL 2026-08-06 NOTHING HELD IT, and the comment here explained why nothing
+# could rather than finding the authority that works. MEASURED on this tree with
+# that comment in place: dropping `"rule_origin"` from this tuple left the suite
+# at **219 passed**. `test_the_teardown_scrubs_even_when_the_downgrade_raises`,
+# which exists precisely to drive the failed-downgrade branch this scrub is for,
+# asserts only `migration_tables[0]` — so the one test built for the scenario was
+# blind to it, and the debris would have reached the next module as
+# `type "rule_origin" already exists`.
+MIGRATION_ENUM_TYPES = ("na_reason", "rule_status", "rule_origin")
 MIGRATION_FUNCTION = "audit_log_reject_mutation"
 
 
@@ -1184,7 +1234,7 @@ def _scrub_migration_objects(admin_dsn: str) -> None:
     """
     statements = [
         *(f"DROP TABLE IF EXISTS {table}" for table in MIGRATION_TABLES),
-        f"DROP TYPE IF EXISTS {MIGRATION_ENUM_TYPE}",
+        *(f"DROP TYPE IF EXISTS {enum_type}" for enum_type in MIGRATION_ENUM_TYPES),
         f"DROP FUNCTION IF EXISTS {MIGRATION_FUNCTION}()",
     ]
 
@@ -1423,6 +1473,26 @@ ISOLATION_UNCLEARABLE_TABLE = "audit_log"
 # unquoted and therefore folded.
 ISOLATION_IDENTIFIER = re.compile(r"\A[a-z_][a-z0-9_]*\Z")
 
+# The registry, named rather than reached by "whatever has no `tenant_id`". Its
+# own `id` IS a tenant id, which is why it is keyed on `id` and why it is the ONE
+# table for which that is correct — see `_isolation_tables`.
+ISOLATION_REGISTRY_TABLE = "tenants"
+
+# Tables in `public` that carry no tenancy AT ALL, excluded from the derivation
+# below. See `_isolation_tables` for what the exclusion does and does not license.
+#
+# 🔴 A `frozenset` AND NOT A `str`, AND THE TYPE IS THE POINT. This was
+# `ISOLATION_GLOBAL_TABLE = "rules"`, a single name, which cannot express a second
+# one without somebody changing its type at the moment they are least inclined to
+# think about it. There WILL be a second: `packages/contract/src/entities.ts`
+# already carries entities with no tenant beyond `Rule`. A set that is empty, has
+# one member or has four reads and edits identically.
+#
+# This set does NOT decide anything on its own. `_isolation_tables` honours a name
+# here only while the CATALOG agrees the table has no `tenant_id`, so the
+# exemption expires by itself the moment the table becomes tenant-scoped.
+ISOLATION_GLOBAL_TABLES: frozenset[str] = frozenset({"rules"})
+
 
 def _isolation_tables(connection: Connection) -> Mapping[str, str]:
     """table -> the column its `tenant_isolation` policy keys on. DERIVED.
@@ -1447,6 +1517,69 @@ def _isolation_tables(connection: Connection) -> Mapping[str, str]:
     question about the table's LIVE columns: `pg_attribute` also holds system
     columns at negative `attnum`, and a dropped column keeps its row with
     `attisdropped` set and a mangled name.
+
+    ---------------------------------------------------------------------------
+    🔴 THE "keyed on `id` OTHERWISE" FALLBACK IS GONE. IT WAS A GUESS, AND WHAT
+       IT GUESSED WRONG ABOUT IT REPORTED AS A CROSS-TENANT LEAK.
+    ---------------------------------------------------------------------------
+    `0003` added the first table in this schema carrying NO TENANCY AT ALL — the
+    rulebook is global; the ruling and its consequences are stated once, in
+    `migrations/versions/0003_rules.py`'s module docstring. The `tenant_id` half
+    of the old rule did not reach it and the `id` half swept it straight in, after
+    which the seed wrote tenant ids into `rules.id` and the proof read them back
+    expecting a policy to have filtered them.
+
+    THREE THINGS WERE MEASURED ON 2026-08-06, AND THE THIRD IS WHY THIS FUNCTION
+    NOW RAISES RATHER THAN FALLING THROUGH:
+
+    1. **no exclusion at all.** `sqlalchemy.exc.IntegrityError:
+       (psycopg.errors.NotNullViolation) null value in column "code" of relation
+       "rules" violates not-null constraint` — the seed's
+       `INSERT INTO <table> (<key>) VALUES (:tenant)`, which names one column
+       because every table it was written for has exactly one identifying a
+       tenant. All eight `tests/test_tenant_isolation.py` tests ERRORED in fixture
+       setup;
+    2. **excluded by NAME ALONE**, then `rules` given a `tenant_id` in the model
+       and the migration — the accidental reversal the exemption exists to
+       prevent. All eight isolation tests still **PASSED**: the name excluded the
+       table whatever columns it had grown. Five other tests caught the reversal,
+       so the proof held; this seam did not, and it is the seam a later plan
+       extends;
+    3. **a SECOND global table** (`CREATE TABLE probe_global (id uuid PRIMARY
+       KEY)` added to `0003.upgrade()`): **14 failures**, and among them
+       `test_1b_the_positive_control_each_tenant_sees_its_own_rows_in_every_table`
+       and `test_2_a_write_carrying_another_tenants_id_is_refused_with_42501`
+       failed **REPORTED AS A CROSS-TENANT ISOLATION LEAK** — on a table with no
+       tenancy whatever, because the fallback keyed it on `id` and the seed wrote
+       tenant ids into it. The repair a reader takes from that message is "give it
+       a `tenant_id`", which is precisely the reversal. `01-WHAT-HAPPENED.md` §3.5:
+       the weaker of two statements is the one somebody acts on.
+
+    SO THE RULE IS NOW THREE NAMED CASES AND NO DEFAULT:
+
+    * carries `tenant_id` in the CATALOG -> keyed on it. This is asked FIRST, so a
+      name in `ISOLATION_GLOBAL_TABLES` that has grown the column lands here and
+      is seeded and proved like any other tenant table. **The exemption expires by
+      itself**; that is measurement 2 closed;
+    * named in `ISOLATION_GLOBAL_TABLES` and confirmed column-less -> excluded;
+    * `ISOLATION_REGISTRY_TABLE` -> keyed on `id`, because its own `id` IS a
+      tenant id. Named rather than reached by "whatever is left", because
+      "whatever is left" is the fallback this paragraph is about;
+    * anything else -> **RuntimeError**, naming the table and pointing at the
+      ruling. That is measurement 3 closed, and the message deliberately does not
+      suggest adding a `tenant_id`.
+
+    A NAMED SET AND NOT A WIDENED PREDICATE. "Every table with no `tenant_id`
+    except `tenants`" would sweep the next global table out silently, which is the
+    opposite of what this seam is for: it must fail, loudly, until somebody
+    decides the table belongs on that line.
+    `tests/test_forced_rls_and_grants.py::EXPECTED_GLOBAL_TABLES` is where that
+    decision becomes an assertion, and the two have to agree.
+
+    `alembic_version` stays excluded IN SQL rather than by falling into the raise
+    below. It is not a schema decision anybody makes — Alembic creates it outside
+    every revision — so it is not a table this seam should ever ask a reader
+    about.
     """
     result = connection.execute(
         text(
@@ -1471,7 +1604,32 @@ def _isolation_tables(connection: Connection) -> Mapping[str, str]:
                 f"{ISOLATION_IDENTIFIER.pattern} that every name it interpolates "
                 f"into SQL has to be"
             )
-        keyed[table] = ISOLATION_TENANT_KEY if bool(row[1]) else ISOLATION_REGISTRY_KEY
+
+        # THE CATALOG IS ASKED BEFORE THE NAME IS. A table listed as global that
+        # has since grown a `tenant_id` is a tenant table, and it is seeded and
+        # proved as one — the exemption cannot outlive its own justification.
+        if bool(row[1]):
+            keyed[table] = ISOLATION_TENANT_KEY
+        elif table in ISOLATION_GLOBAL_TABLES:
+            continue
+        elif table == ISOLATION_REGISTRY_TABLE:
+            keyed[table] = ISOLATION_REGISTRY_KEY
+        else:
+            raise RuntimeError(
+                f"{table!r} is in schema public with no {ISOLATION_TENANT_KEY!r} "
+                f"column, and this seam refuses to guess what that means. It used "
+                f"to key such a table on {ISOLATION_REGISTRY_KEY!r} and seed tenant "
+                f"ids into it, which then failed the isolation proof as a "
+                f"CROSS-TENANT LEAK on a table that has no tenancy at all — and the "
+                f"repair that message invites is to add a tenant_id, which for a "
+                f"deliberately global table reverses a ruling. Decide which it is: "
+                f"a TENANT table needs the column (see titlepipe_core.db.models"
+                f"._TenantRow); a GLOBAL one belongs in ISOLATION_GLOBAL_TABLES "
+                f"here AND in EXPECTED_GLOBAL_TABLES in "
+                f"tests/test_forced_rls_and_grants.py, with the reason recorded in "
+                f"the migration that creates it — as "
+                f"migrations/versions/0003_rules.py does for {sorted(ISOLATION_GLOBAL_TABLES)}."
+            )
     return MappingProxyType(keyed)
 
 
@@ -1721,6 +1879,17 @@ def migration_tables() -> tuple[str, ...]:
 
 
 @pytest.fixture(scope="session")
+def migration_enum_types() -> tuple[str, ...]:
+    """Every enum type the scrub drops.
+
+    Exposed for the same reason `migration_tables` is, and for a sharper one: no
+    metadata check can stand in for this. See `MIGRATION_ENUM_TYPES` for the
+    measurement that showed the tuple going stale in silence.
+    """
+    return MIGRATION_ENUM_TYPES
+
+
+@pytest.fixture(scope="session")
 def teardown_migrated_database() -> Callable[[Config, str, bool], None]:
     """`migrated_database`'s teardown, callable, so its structure can be tested.
 
@@ -1811,6 +1980,22 @@ def migration_role() -> str:
 @pytest.fixture(scope="session")
 def app_role() -> str:
     return APP_ROLE
+
+
+@pytest.fixture(scope="session")
+def worker_role() -> str:
+    """`titlepipe_worker`, which holds NOTHING on any table and is useful for it.
+
+    `migrations/versions/0003_rules.py` grants `SELECT ON rules` to
+    `titlepipe_app` and says in as many words that the worker gets nothing here;
+    `tests/test_forced_rls_and_grants.py` asserts the grantee set on the seven
+    tenant tables is exactly `{titlepipe_owner, titlepipe_app}`. That makes this
+    the role to connect as when a test needs a database that is UP and REFUSES —
+    the failure a dead port cannot produce. Reached through this rather than
+    through `managed_roles[2]`, because an index into a tuple is a reference that
+    silently moves when somebody adds a role in front of it.
+    """
+    return WORKER_ROLE
 
 
 @pytest.fixture(scope="session")

@@ -188,6 +188,27 @@ Reference: [FastAPI JSON performance](https://fastapi.tiangolo.com/advanced/cust
 
 ### 6. WorkOS authentication currently has two competing implementations
 
+> 🔴 **CORRECTED 2026-08-07 — THIS FRAMING IS WRONG, AND IT MISLED A PLAN.**
+> Sealed sessions and JWKS verification are **not** alternatives, so there is no
+> "choose one" to make. VERIFIED against the installed `workos==10.1.1` wheel:
+> `Session.authenticate()` Fernet-decrypts the cookie, takes `access_token`, then
+> runs `PyJWKClient.get_signing_key_from_jwt()` + `jwt.decode(algorithms=["RS256"])`.
+> **Sealing IS JWT verification, plus encrypted custody of the refresh token.**
+> The only genuine choice is whether you hold the refresh token — and everything
+> below already says yes.
+>
+> **The question this section should have asked** is the one the framing hid:
+> `authenticate()` makes **zero network calls to WorkOS**, so a session revoked
+> via `revoke_session()` or logout keeps passing until the access token's `exp`.
+> Only `refresh()` observes revocation. The rules below neutralise the
+> *authorization* half — Postgres is rechecked every request — but **not the
+> identity half**: a revoked user survives until token expiry. Closing that costs
+> a per-request `sid` lookup against our own table, and that trade is an open
+> ruling, carried as gate 4 of
+> [`03-identity.md`](../superpowers/plans/backend/03-identity.md).
+>
+> The recommended flow and the rules below are otherwise correct and stand.
+
 The plan mentions both sealed WorkOS sessions and independent PyJWT/JWKS verification. Choose one browser-session architecture.
 
 Recommended flow:

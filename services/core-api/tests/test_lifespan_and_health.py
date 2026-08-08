@@ -162,10 +162,32 @@ def route_paths(app: FastAPI) -> set[str]:
     return set(cast("dict[str, object]", paths)) if isinstance(paths, dict) else set()
 
 
-def test_no_product_api_route_exists_at_this_gate(app: FastAPI) -> None:
+def test_the_rulebook_is_the_only_product_route_and_the_probes_are_not_under_api(
+    app: FastAPI,
+) -> None:
+    """🔴 THIS WAS `test_no_product_api_route_exists_at_this_gate`, WHICH ASSERTED
+    `not [path for path in paths if path.startswith("/api")]`. That gate has
+    passed: `GET /api/rules` is served, so the old assertion is the one thing in
+    this suite that Plan 02 Task 4 had to make false, and it failed exactly there.
+
+    What replaces it is strictly stronger than "no `/api` route" was, because it
+    is falsifiable in both directions. The old line could not tell a service with
+    no product surface from a service whose product surface failed to register;
+    this one names the route that must be there AND keeps the ceiling, so the
+    next endpoint added without a plan behind it fails here rather than shipping.
+
+    `/health` and `/ready` staying out of `/api` is asserted rather than assumed.
+    `api/routers/health.py` argues it — they are platform surface, and Plan 03
+    authenticates a prefix — and an `include_router` that gave the health router
+    a prefix would otherwise be invisible until a probe started getting 401s.
+    """
     paths = route_paths(app)
     assert {"/health", "/ready"} <= paths, f"platform routes missing; saw {sorted(paths)}"
-    assert not [path for path in paths if path.startswith("/api")]
+    # `sorted`, because `route_paths` returns a SET and a comprehension over one
+    # yields str-hash order. With a single `/api` path today the comparison is
+    # accidentally stable; the day a second product route lands it would fail
+    # intermittently, on ordering, in a test about which routes exist.
+    assert sorted(path for path in paths if path.startswith("/api")) == ["/api/rules"]
 
 
 def test_docs_are_absent_when_disabled(

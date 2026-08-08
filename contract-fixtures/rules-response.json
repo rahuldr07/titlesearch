@@ -1,0 +1,59 @@
+{
+  "rules": [
+    {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "code": "R-001",
+      "text": "The grantor is recorded exactly as the instrument spells it.",
+      "origin": "spec",
+      "status": "live",
+      "jurisdiction_scope": "FL",
+      "version": 1,
+      "confirmed_by": "eng_ada",
+      "source_doc_ref": "PRD §7"
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000002",
+      "code": "R-001",
+      "text": "A second version of the same code, awaiting an engineer.",
+      "origin": "escalation",
+      "status": "pending",
+      "jurisdiction_scope": null,
+      "version": 2,
+      "confirmed_by": null,
+      "source_doc_ref": null
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000003",
+      "code": "R-013",
+      "text": "Superseded: a legal description is never abbreviated.",
+      "origin": "reconciliation",
+      "status": "retired",
+      "jurisdiction_scope": "FL/Broward",
+      "version": 1,
+      "confirmed_by": null,
+      "source_doc_ref": null
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000004",
+      "code": "R-021",
+      "text": "A recording date with no year is NOT_PRESENT, not a guess.",
+      "origin": "complaint",
+      "status": "live",
+      "jurisdiction_scope": null,
+      "version": 1,
+      "confirmed_by": "eng_grace",
+      "source_doc_ref": null
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000005",
+      "code": "R-044",
+      "text": "Land and building values are never checked against the total.",
+      "origin": "senior",
+      "status": "retired",
+      "jurisdiction_scope": null,
+      "version": 3,
+      "confirmed_by": null,
+      "source_doc_ref": "CONTEXT §11"
+    }
+  ]
+}

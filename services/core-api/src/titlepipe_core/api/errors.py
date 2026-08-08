@@ -121,13 +121,37 @@ class ErrorEnvelope(BaseModel):
     error: ErrorBody
 
 
-def status_for(error: DomainError) -> int:
-    """Map a domain failure onto HTTP, honouring subclass relationships.
+# What an unregistered failure becomes. 500 and not 503: nothing here knows
+# whether the caller may retry, and the honest answer to "this service raised a
+# failure it has no mapping for" is that the service is at fault.
+UNMAPPED_STATUS: Final = 500
+
+
+def mapped_status_for(error: DomainError) -> int | None:
+    """The REGISTERED status, or `None` when `DOMAIN_ERROR_STATUS` has no entry.
 
     An exact lookup first, then a walk up the MRO, so a future
     `EscalationRequiresRuleError(RefusalError)` maps to 422 without being
-    registered — and an unregistered failure becomes 500 rather than silently
-    reporting success.
+    registered.
+
+    🔴 THE `None` IS THE WHOLE POINT OF THIS FUNCTION EXISTING, and it exists
+    because inferring "unmapped" FROM THE NUMBER was a real defect that shipped.
+    `handle_domain_error` used to read `if status >= 500` and log
+    `domain_error_unmapped` — so `DependencyUnavailableError`, which is
+    registered at 503 six lines above, logged an ERROR saying it was not, every
+    single time. It went unnoticed for exactly as long as nothing raised a
+    registered 5xx: `DOMAIN_ERROR_STATUS` has one, this service had no code path
+    that reached it, and the first one to arrive was Plan 02's
+    `GET /api/rules` failing over to `api/routers/rules.py`'s 503. Found by
+    reading that route's own log output.
+
+    A status is an ANSWER TO THE CALLER and "was there a mapping" is a fact about
+    THIS SERVICE'S configuration; the two happen to overlap on 500 and nowhere
+    else, which is why one could stand in for the other for as long as it did.
+    Separating them is the fix, rather than widening the comparison to
+    `>= 500 and status not in DOMAIN_ERROR_STATUS.values()` — that spelling is
+    wrong again the moment a second 5xx is registered, and it asks the question
+    of the values rather than of the lookup that was actually performed.
     """
     exact = DOMAIN_ERROR_STATUS.get(type(error))
     if exact is not None:
@@ -135,7 +159,19 @@ def status_for(error: DomainError) -> int:
     for base in type(error).__mro__:
         if base in DOMAIN_ERROR_STATUS:
             return DOMAIN_ERROR_STATUS[base]
-    return 500
+    return None
+
+
+def status_for(error: DomainError) -> int:
+    """Map a domain failure onto HTTP, honouring subclass relationships.
+
+    Unchanged in behaviour and kept as the name callers use — an unregistered
+    failure becomes 500 rather than silently reporting success. What moved out
+    of it is the ability to tell "500 because that is the mapping" from "500
+    because there was no mapping", which is now `mapped_status_for`'s `None`.
+    """
+    mapped = mapped_status_for(error)
+    return UNMAPPED_STATUS if mapped is None else mapped
 
 
 def envelope(
@@ -220,10 +256,19 @@ def _environment_of(request: Request) -> Environment:
 async def handle_domain_error(request: Request, exc: Exception) -> JSONResponse:
     """Deliberate domain failures and refusals."""
     error = exc if isinstance(exc, DomainError) else DomainError(str(exc))
-    status = status_for(error)
-    if status >= 500:
+    mapped = mapped_status_for(error)
+    status = UNMAPPED_STATUS if mapped is None else mapped
+    if mapped is None:
         # An unmapped domain error is a gap in DOMAIN_ERROR_STATUS, not a
         # caller mistake. Say so loudly enough to be fixed.
+        #
+        # 🔴 THE CONDITION WAS `if status >= 500`, WHICH IS NOT THE SAME
+        # QUESTION. `DependencyUnavailableError` is registered at 503, so every
+        # correctly-mapped dependency failure logged this line claiming it was
+        # unmapped — see `mapped_status_for`, which carries the measurement and
+        # why the fix is a separate return value rather than a wider comparison.
+        # The loud log for a GENUINELY unmapped error is kept: it is worth
+        # having, and narrowing the condition is what makes it mean something.
         _log().error(
             "domain_error_unmapped",
             error_name=type(error).__name__,

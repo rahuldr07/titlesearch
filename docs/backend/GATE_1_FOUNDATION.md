@@ -422,8 +422,29 @@ and is a cache-poisoning target.
 
 Refusals that apply in **every** environment, including development:
 
-- **Seal password must be exactly 32 characters** (WorkOS sealed sessions). Fail
-  at startup, not at first login.
+- **Seal password must be a 44-character Fernet key** (WorkOS sealed sessions).
+  Fail at startup, not at first login.
+
+  > 🔴 **CORRECTED 2026-08-07. This line read "exactly 32 characters", and a
+  > validator built to it REJECTS EVERY REAL CREDENTIAL.** `BUILD-PLAN.md` §5.1
+  > caught it in the code; the doc was never updated, so the wrong number
+  > survived where the next reader would find it.
+  >
+  > MEASURED against the real `workos==10.1.1` wheel: `session.seal_data` calls
+  > `Fernet(key)` **directly, with no KDF**, so `cookie_password` must be a valid
+  > Fernet key — 32 random bytes as url-safe base64, which is **44 characters**.
+  > A 32-character ASCII string raises `ValueError: Fernet key must be 32
+  > url-safe base64-encoded bytes`. `Fernet.generate_key()` and
+  > `openssl rand -base64 32` both produce 44.
+  >
+  > **Where the 32 comes from:** WorkOS's own docs say "at least 32 characters",
+  > which is the **Node/iron-session** requirement — iron-session runs a KDF over
+  > an arbitrary passphrase. Python does not. The number describes 32 *bytes of
+  > entropy*, not a string length, and copying it into a Python validator is the
+  > mistake this note exists to stop being made a third time.
+  >
+  > `services/core-api/src/titlepipe_core/settings.py` is **correct** and is the
+  > authority: 44 characters, valid url-safe base64, decoding to exactly 32 bytes.
 - **The blind service refuses any Core database URL.** A developer who can reach
   the Core database from the blind service will write code that assumes it, and
   the isolation is already lost by the time staging refuses.

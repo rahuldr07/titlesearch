@@ -15,6 +15,13 @@ on:
       # client-data guard, the lock check or the container build context merge
       # without this workflow ever running.
       - "scripts/**"
+      # The wire fixture `services/core-api` and `packages/contract` are both
+      # answerable to. It belongs to NEITHER side, which is why it sits at the
+      # repository root and why it was reachable by no workflow at all: a PR
+      # editing only this file matched `frontend.yml`'s filter, `backend.yml`'s
+      # and the harness's equally — none of them. `scripts/tests/
+      # test_backend_workflow.py` asserts it is named here and in the harness.
+      - "contract-fixtures/**"
       # Any new Python project, wherever it lands. The matrix-coverage test in
       # scripts/tests/test_backend_workflow.py fails when a directory holding a
       # pyproject.toml is missing from the `project` matrix, and this is what
@@ -35,6 +42,13 @@ on:
       # client-data guard, the lock check or the container build context merge
       # without this workflow ever running.
       - "scripts/**"
+      # The wire fixture `services/core-api` and `packages/contract` are both
+      # answerable to. It belongs to NEITHER side, which is why it sits at the
+      # repository root and why it was reachable by no workflow at all: a PR
+      # editing only this file matched `frontend.yml`'s filter, `backend.yml`'s
+      # and the harness's equally — none of them. `scripts/tests/
+      # test_backend_workflow.py` asserts it is named here and in the harness.
+      - "contract-fixtures/**"
       # Any new Python project, wherever it lands. The matrix-coverage test in
       # scripts/tests/test_backend_workflow.py fails when a directory holding a
       # pyproject.toml is missing from the `project` matrix, and this is what

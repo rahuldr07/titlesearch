@@ -1,4 +1,10 @@
-"""`Base` and the seven skeleton tables Plan 01 needs.
+"""`Base`, the seven skeleton tables Plan 01 needs, and Plan 02's `rules`.
+
+**`rules` IS THE ONE TABLE HERE DELIBERATELY NOT A `_TenantRow`,** and saying so
+at the top is the point: every statement below about "every table" now has an
+exception, and a reader who meets `Rule` first would otherwise read its missing
+`tenant_id` as the omission `_TenantRow` warns about. The ruling that makes it so
+is stated once, in `migrations/versions/0003_rules.py`.
 
 **This is a SKELETON, resolved by the owner 2026-08-05, and the shortness is the
 decision rather than an omission.** `docs/PRD.md` §7 defines 24 tables; this plan
@@ -46,7 +52,7 @@ import uuid
 from datetime import datetime
 from typing import Final
 
-from sqlalchemy import DateTime, MetaData, text
+from sqlalchemy import DateTime, Integer, MetaData, Text, text
 from sqlalchemy.dialects.postgresql import ENUM, JSONB, UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -114,6 +120,42 @@ NA_REASON_LABELS: Final = ("NOT_PRESENT", "NOT_FOUND", "NOT_STATED", "PRESENT_UN
 NA_REASON_TYPE_NAME: Final = "na_reason"
 
 NA_REASON: Final = ENUM(*NA_REASON_LABELS, name=NA_REASON_TYPE_NAME, create_type=False)
+
+# 🔴 THE RULEBOOK'S TWO ENUMS. LABELS AND ORDER ARE `packages/contract/src/enums
+# .ts` VERBATIM — `RuleStatus` at :72, `RuleOrigin` at :75-81 — and the browser
+# parses the same strings through Zod at its own boundary. Lower case there and
+# lower case here on purpose: a database that folded them would make every
+# response a translation rather than a read.
+#
+# ENUMS AND NOT `text` WITH A CHECK, for `na_reason`'s reason one block up: an
+# unknown value becomes a WRITE error the moment something invents one, rather
+# than a read-time surprise on a screen months later.
+#
+# `migrations/versions/0003_rules.py` repeats both tuples verbatim, exactly as
+# `0001` repeats `NA_REASON_LABELS` and for the same reason. NOTHING COMPARES THE
+# TWO SOURCES — this said "separately compares the two copies", and no test reads
+# the migration's tuples at all. They are held together VIA THE LIVE CATALOG, and
+# the two legs catch different things: `tests/test_schema_migration.py::test_the
+# _rulebook_enums_have_exactly_these_labels_in_exactly_this_order` asserts these
+# constants against LITERALS in the test, which is what catches an edit made to
+# BOTH copies at once; and it compares the live `pg_enum` — built by PostgreSQL
+# from the MIGRATION's copy — against these constants, which is what catches an
+# edit to either one alone.
+#
+# `alembic check` DOES NOT COMPARE ENUM LABELS: a fifth label and a reordering
+# both leave it green (Plan 01 Task 3, `01-WHAT-HAPPENED.md` §3.11 item 8). That
+# catalog assertion is the only thing covering either.
+RULE_STATUS_LABELS: Final = ("live", "pending", "retired")
+RULE_ORIGIN_LABELS: Final = ("spec", "escalation", "reconciliation", "complaint", "senior")
+
+RULE_STATUS_TYPE_NAME: Final = "rule_status"
+RULE_ORIGIN_TYPE_NAME: Final = "rule_origin"
+
+# `create_type=False` for `NA_REASON`'s reason, one comment block up: `0003`
+# creates and drops both types as explicit statements, which is the only way they
+# get a `DROP` at all.
+RULE_STATUS: Final = ENUM(*RULE_STATUS_LABELS, name=RULE_STATUS_TYPE_NAME, create_type=False)
+RULE_ORIGIN: Final = ENUM(*RULE_ORIGIN_LABELS, name=RULE_ORIGIN_TYPE_NAME, create_type=False)
 
 # `gen_random_uuid()` is in core PostgreSQL from 13 on; no `pgcrypto` extension
 # and therefore no extension for the migration to create as a privileged role.
@@ -279,3 +321,53 @@ class AuditLog(_TenantRow):
     """
 
     __tablename__ = "audit_log"
+
+
+class Rule(_Row):
+    """One rulebook entry. **GLOBAL, and therefore `_Row` rather than `_TenantRow`.**
+
+    🔴 THE MISSING `tenant_id` IS THE RULING, NOT THE OMISSION `_TenantRow`
+    DESCRIBES. **THE RULING AND ITS CONSEQUENCES ARE STATED ONCE**, in
+    `migrations/versions/0003_rules.py`'s module docstring — the frozen record of
+    the decision — and this docstring cites it rather than restating it. It was
+    written out in full here, in `0003`, in `tests/conftest.py` and in
+    `tests/test_forced_rls_and_grants.py`; `01-WHAT-HAPPENED.md` §3.5 records what
+    four copies of one reason cost when two of them drifted apart, and the rule
+    that a reason lives in one place is that section's.
+
+    WHAT IS LOCAL TO THIS FILE, and is therefore all that is left here:
+
+    `PRIMARY KEY (id)` ALONE, inherited from `_Row`, and it is NOT the key
+    `_TenantRow` measures an existence oracle for. That oracle exists because
+    unique enforcement runs before a policy's `WITH CHECK`, so an insert answers
+    "does this id exist in another tenant?" to a caller who cannot read the row.
+    There is no other tenant here and no policy at all, so there is nothing to
+    prefix `id` with and nothing for a composite key to close.
+
+    **`created_at` IS HERE AND IS NOT ON THE WIRE**, a deliberate divergence from
+    the nine columns `packages/contract/src/entities.ts:153-163` lists: every
+    other table in this file carries it, and the response shape is the router's to
+    choose rather than the schema's to dictate.
+
+    **`status` HOLDS EVERY VALUE INCLUDING `pending`, AND NOTHING FILTERS ON
+    READ.** Ruled by the owner: a PENDING rule is VISIBLE to everyone and only an
+    engineer may confirm one. CLAUDE.md's "PENDING rules cannot affect the
+    pipeline" is about EFFECT, not visibility.
+
+    `Text` and not `String(n)`: nothing in the contract bounds any of these, and a
+    length nobody chose is a migration the first time a rule outgrows it. The
+    three nullable columns mean three different absences — no jurisdiction
+    narrowing, nobody has confirmed it, no source document — none expressible as
+    an empty string without inventing a fourth state.
+    """
+
+    __tablename__ = "rules"
+
+    code: Mapped[str] = mapped_column(Text, nullable=False)
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+    origin: Mapped[str] = mapped_column(RULE_ORIGIN, nullable=False)
+    status: Mapped[str] = mapped_column(RULE_STATUS, nullable=False)
+    jurisdiction_scope: Mapped[str | None] = mapped_column(Text, nullable=True)
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+    confirmed_by: Mapped[str | None] = mapped_column(Text, nullable=True)
+    source_doc_ref: Mapped[str | None] = mapped_column(Text, nullable=True)

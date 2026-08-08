@@ -22,6 +22,19 @@ from titlepipe_domain import Environment, LogRenderer
 # character string" — that distinction is the bug these tests now pin.
 GOOD_SECRET = "dGVzdC1zZWFsLXNlY3JldC1leGFjdGx5LTMyLWJ5dGU="
 
+# A DSN nothing connects with, for the same reason `GOOD_SECRET` is a key nothing
+# seals with: `deployed()` below is a MODULE-LEVEL helper and cannot request a
+# fixture, so the value is local. `tests/conftest.py::DEPLOYED_DATABASE_URL` is
+# its own copy for its own fixtures — the same split `GOOD_SECRET` and
+# `conftest.DEPLOYED_SEAL_PASSWORD` already are, and deliberately so: two
+# independently written literals cannot drift into agreeing for a wrong reason.
+#
+# `db.titlepipe.example` is under RFC 2606's reserved TLD and resolves nowhere.
+# Nothing in this module builds an engine; only Pydantic reads this.
+DEPLOYED_DATABASE_URL = (
+    "postgresql+psycopg://titlepipe_app:this-dsn-never-connects@db.titlepipe.example:5432/titlepipe"
+)
+
 
 def deployed(**overrides: object) -> CoreApiSettings:
     """A production configuration that passes, plus whatever the test breaks."""
@@ -32,6 +45,12 @@ def deployed(**overrides: object) -> CoreApiSettings:
         "cors_allowed_origins": ("https://app.titlepipe.example",),
         "allowed_hosts": ("app.titlepipe.example",),
         "cookie_seal_password": SecretStr(GOOD_SECRET),
+        # Required when deployed, like every other key in this baseline. Inert:
+        # the host is under RFC 2606's reserved `.example` TLD and nothing in
+        # this module builds an engine. A test that wants the refusal passes
+        # `app_database_url=None` as an override, which is how every other
+        # refusal below is driven.
+        "app_database_url": SecretStr(DEPLOYED_DATABASE_URL),
     }
     base.update(overrides)
     return CoreApiSettings(**base)  # pyright: ignore[reportArgumentType]
@@ -52,6 +71,13 @@ def test_the_baseline_deployed_configuration_is_valid() -> None:
         ({"redaction_enabled": False}, "log redaction is disabled"),
         ({"cors_allowed_origins": ("*",)}, "CORS allows any origin"),
         ({"host": "127.0.0.1"}, "loopback"),
+        # The one whose absence is invisible at runtime rather than merely
+        # dangerous: `/health` and `/ready` both stay green — readiness reports
+        # a database check only when a DSN is configured, so a missing one is
+        # NO check rather than a failed one — while `GET /api/rules` answers a
+        # retryable 503 that can never succeed. `settings.py` carries the
+        # argument; `test_rules_endpoint.py` measures both halves of it.
+        ({"app_database_url": None}, "app_database_url is not set"),
     ],
 )
 def test_production_refuses_each_unsafe_knob(override: dict[str, object], expected: str) -> None:
