@@ -4,6 +4,8 @@
 @import "./shadcn-bridge.css";
 /* The utilities Tailwind does not generate; that file states why each exists. */
 @import "./utilities.css";
+/* The navigator's own utilities — split when the scrollbar utility crossed the gate. */
+@import "./rail.css";
 
 /*
  * The spacing grid. DELIBERATELY LOCAL to web-v2 — never move this into
