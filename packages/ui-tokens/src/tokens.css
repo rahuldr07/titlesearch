@@ -407,19 +407,37 @@
   --font-document: "Courier Prime", "Courier New", monospace;
 
   /*
-   * Imposed scale, RE-IMPOSED 2026-08-01 against the mockup's own type panel.
-   * Names unchanged, values moved; the design is denser than the export was
-   * (13px base, not 14) and taller at the top (38px h1, not 22). --text-6xl is
-   * the one addition — there was no slot above 26px and the h1 needs one.
+   * Imposed scale. RE-IMPOSED 2026-08-01 against the mockup's own type panel
+   * (13px base, 38px h1; --text-6xl added because there was no slot above 26px).
+   * RAISED 2026-08-04 on the owner's call — the app read too small on the
+   * machine it is actually used on.
+   *
+   * The bump is GRADED, not a uniform multiply. Reading tiers move most
+   * (`lg`, the default body, 13 -> 15px, ~+15%) because that is what "too small"
+   * meant; display tiers move least (`6xl` 38 -> 40px, ~+5%) because they were
+   * never the complaint and a proportional bump there would have cost the h1 its
+   * relationship to the frame. The scale's SHAPE is therefore deliberately
+   * slightly compressed from the mockup's, which is a departure from it — the
+   * mockup remains the reference for everything except these values.
+   *
+   * The dense-row sizes (`micro`..`sm`, the tracked caps) move a full step each
+   * rather than fractionally: below ~10px the tracked uppercase eyebrow that is
+   * this design's signature stops being legible before it stops being small.
    *
    * ⚠ THESE SET SIZE ONLY, AND TAILWIND STILL SUPPLIES THE LEADING.
    *
    * Tailwind v4 pairs every `--text-*` with a `--text-*--line-height`, and a
    * `text-lg` utility emits BOTH. Overriding the size alone — which is what this
    * block does — leaves each utility carrying the stock ratio for Tailwind's own
-   * step of that name, applied to our value. `text-lg` is 13px here and inherits
-   * the ratio meant for Tailwind's 18px `lg` (1.556), so it renders a 20.2px line
-   * box where the design wants 15.6px.
+   * step of that name, applied to our value. `text-lg` is 15px here and inherits
+   * the ratio meant for Tailwind's 18px `lg` (1.556), so it renders a 23.3px line
+   * box where the design wants 21.8px.
+   *
+   * NOTE ON THE 2026-08-04 BUMP: the stock ratios are unitless (Tailwind emits
+   * them as `calc(1.75 / 1.125)`), so they SCALE with these values rather than
+   * staying fixed. Raising the sizes therefore leaves the leading defect exactly
+   * as proportionally wrong as it was — it neither fixed nor worsened it, and
+   * the paragraph below still stands unchanged.
    *
    * That is not theoretical: the navigator's rows measured 32.2px against the
    * mockup's 27.6px with every padding value correct, and it was found by
@@ -431,20 +449,20 @@
    * screen at once — a change that needs its own pass and its own screenshots,
    * not a side effect of a rail rebuild.
    */
-  --text-micro: 0.59375rem; /* 9.5px  — tracked micro caps: chips, no-value, key labels */
-  --text-tiny: 0.625rem; /* 10px   — mono cite, scope note, legend */
-  --text-xs: 0.65625rem; /* 10.5px — band-head caps, screen eyebrow, the waiting age */
-  --text-sm: 0.6875rem; /* 11px   — meta caps, field label, secondary detail */
-  --text-base: 0.75rem; /* 12px   — dense body, county, row note */
-  --text-md: 0.78125rem; /* 12.5px — mono values, order id, step labels, buttons */
-  --text-lg: 0.8125rem; /* 13px   — THE DEFAULT: body, rows, addresses */
-  --text-census: 0.8125rem; /* 13px — the chrome strip's census numeral (D10), mono */
-  --text-xl: 0.84375rem; /* 13.5px — ledes and section leads */
-  --text-2xl: 1.0625rem; /* 17px   — panel titles */
-  --text-3xl: 1.3125rem; /* 21px   — brand word, admin h2 */
-  --text-4xl: 1.625rem; /* 26px   — the decision question, the as-read value */
-  --text-5xl: 1.875rem; /* 30px   — featured order number, screen h2 */
-  --text-6xl: 2.375rem; /* 38px   — screen h1 */
+  --text-micro: 0.65625rem; /* 10.5px — tracked micro caps: chips, no-value, key labels */
+  --text-tiny: 0.6875rem; /* 11px   — mono cite, scope note, legend */
+  --text-xs: 0.71875rem; /* 11.5px — band-head caps, screen eyebrow, the waiting age */
+  --text-sm: 0.78125rem; /* 12.5px — meta caps, field label, secondary detail */
+  --text-base: 0.84375rem; /* 13.5px — dense body, county, row note */
+  --text-md: 0.875rem; /* 14px   — mono values, order id, step labels, buttons */
+  --text-lg: 0.9375rem; /* 15px   — THE DEFAULT: body, rows, addresses */
+  --text-census: 0.9375rem; /* 15px — the chrome strip's census numeral (D10), mono */
+  --text-xl: 0.96875rem; /* 15.5px — ledes and section leads */
+  --text-2xl: 1.1875rem; /* 19px   — panel titles */
+  --text-3xl: 1.4375rem; /* 23px   — brand word, admin h2 */
+  --text-4xl: 1.75rem; /* 28px   — the decision question, the as-read value */
+  --text-5xl: 2rem; /* 32px   — featured order number, screen h2 */
+  --text-6xl: 2.5rem; /* 40px   — screen h1 */
 
   /* Tracking — the uppercase eyebrow label is a signature of this design, and
      the mockup runs five distinct steps of it. Values re-imposed; names kept. */

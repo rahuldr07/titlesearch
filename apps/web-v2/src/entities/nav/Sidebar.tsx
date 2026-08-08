@@ -7,7 +7,7 @@ import { useForcedCollapse } from "./useForcedCollapse";
 
 /**
  * The collapsible LEFT SIDEBAR (§11) — the navigator, back on the left where
- * the approved design draws it. 264px wide, 78px collapsed; rows are 27.6px
+ * the approved design draws it. 216px wide, 78px collapsed; rows are 27.6px
  * expanded (type + padding, not a fixed height) and 44px collapsed.
  *
  * GROUPED SECTIONS (Task 12) — uppercase headers in a fixed order: WORK, THIS
@@ -80,10 +80,15 @@ export function Sidebar({ collapsed, onToggle, onNavigate, brand, sections, foot
    * the mockup separates sections with space and a tracked caps label, and a
    * rule between every group turned a six-row flow into six fenced boxes.
    *
-   * 264px AND A 24px RHYTHM, the mockup's measurements. It was 232/20, which is
-   * not a small difference here: `products & sign-off` at 13px does not fit
-   * 232px beside a mark and a badge, so the rail's longest label was the one
-   * that truncated. The column now sizes to its content instead of clipping it.
+   * 216px, ON THE OWNER'S CALL 2026-08-04 (the mockup measures 264, which this
+   * held until then). The 24px rhythm is unchanged and still the mockup's.
+   *
+   * ⚠ 204px IS A MEASURED FLOOR. `products & sign-off` needs 131px beside a mark
+   * and a badge: at 203 it truncates, at 204 it does not. That is the defect
+   * that moved this column 232 -> 264 originally, and the floor ROSE with the
+   * 13 -> 15px type bump the same day — width and type pull against each other,
+   * so neither moves without re-measuring the other. The 12px of headroom is
+   * deliberate — labels are route data, one copy edit from clipping.
    */
   return (
     <aside
@@ -91,8 +96,8 @@ export function Sidebar({ collapsed, onToggle, onNavigate, brand, sections, foot
       data-testid="side-rail"
       data-collapsed={isCollapsed ? "1" : "0"}
       className={cn(
-        "sticky top-0 flex h-screen shrink-0 flex-col gap-12 overflow-y-auto border-r border-line-subtle bg-surface-sunken pt-12 pb-13",
-        isCollapsed ? "w-39" : "w-132",
+        "sticky top-0 flex h-screen shrink-0 flex-col gap-12 overflow-y-auto scrollbar-none border-r border-line-subtle bg-surface-sunken pt-12 pb-13",
+        isCollapsed ? "w-39" : "w-108",
       )}
     >
       <div className="flex items-center justify-between gap-2 px-12">
