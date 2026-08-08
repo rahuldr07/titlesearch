@@ -56,7 +56,9 @@ export function StageLink({ to, collapsed, filled }: StageLinkProps) {
         data-done={filled ? "1" : "0"}
         className="flex w-10 justify-center"
       >
-        <span className={cn("h-full w-px", filled ? "bg-state-settled" : "bg-line-strong")} />
+        <span
+          className={cn("h-full w-px", filled ? "bg-state-settled" : "bg-line-strong")}
+        />
       </span>
     </div>
   );

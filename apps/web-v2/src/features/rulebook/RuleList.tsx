@@ -86,7 +86,9 @@ export function RuleList({
               </Chip>
             </span>
 
-            <span className="text-base leading-close text-ink-primary">{rule.text}</span>
+            <span className="text-base leading-close text-ink-primary">
+              {rule.text}
+            </span>
 
             <span className="text-xs text-ink-muted">
               {rule.jurisdiction_scope ?? "All jurisdictions"} · v{rule.version}

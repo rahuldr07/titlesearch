@@ -47,9 +47,14 @@ export interface SignoffLineRowProps {
   raised?: boolean;
 }
 
-export function SignoffLineRow({ line, amendedFrom, raised = false }: SignoffLineRowProps) {
+export function SignoffLineRow({
+  line,
+  amendedFrom,
+  raised = false,
+}: SignoffLineRowProps) {
   const answer = line.answer;
-  const commentMissing = answer === "NO" && line.comment_required && line.comment === null;
+  const commentMissing =
+    answer === "NO" && line.comment_required && line.comment === null;
 
   return (
     <ListRow

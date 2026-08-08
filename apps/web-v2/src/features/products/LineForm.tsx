@@ -64,9 +64,9 @@ export function LineForm({
           tone="attend"
           className="px-6 py-5 text-xs leading-body text-state-attend-ink"
         >
-          Editing the text creates a <span className="font-bold">new version</span>{" "}
-          — it does not correct history. Two orders can be answered against two
-          wordings; each order records which version it used.
+          Editing the text creates a <span className="font-bold">new version</span> — it
+          does not correct history. Two orders can be answered against two wordings;
+          each order records which version it used.
         </Card>
       ) : null}
 
@@ -141,8 +141,8 @@ export function LineForm({
         </Button>
       </div>
       <p className="text-xs leading-body text-ink-muted">
-        CONTRACT GAP: the sign-off-line endpoint reads only. Save is disabled
-        rather than silently discarding what you typed.
+        CONTRACT GAP: the sign-off-line endpoint reads only. Save is disabled rather
+        than silently discarding what you typed.
       </p>
     </div>
   );

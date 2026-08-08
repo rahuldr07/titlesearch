@@ -4,7 +4,9 @@ import { get, post, type Validator } from "../../shared/api";
 
 const Ack: Validator<{ ok: true }> = {
   safeParse: (input) =>
-    typeof input === "object" && input !== null && (input as { ok?: unknown }).ok === true
+    typeof input === "object" &&
+    input !== null &&
+    (input as { ok?: unknown }).ok === true
       ? { success: true, data: { ok: true } }
       : { success: false, error: { message: "expected { ok: true }" } },
 };
@@ -37,7 +39,11 @@ export type RuleChoice = { rule_id: string } | { draft: { text: string } };
 export function useResolveCluster() {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { ids: readonly string[]; ruling: string; rule: RuleChoice }) => {
+    mutationFn: async (input: {
+      ids: readonly string[];
+      ruling: string;
+      rule: RuleChoice;
+    }) => {
       for (const id of input.ids) {
         await post(`/api/escalations/${id}/resolve`, Ack, {
           ruling: input.ruling,

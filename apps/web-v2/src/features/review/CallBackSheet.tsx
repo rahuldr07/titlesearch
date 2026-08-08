@@ -45,8 +45,8 @@ export function CallBackSheet({
     <section data-testid="call-back-sheet" className="flex flex-col gap-5">
       <Eyebrow variant="section">Draft — Abstractor Call Back Sheet</Eyebrow>
       <p className="max-w-2xl text-xs leading-body text-ink-secondary">
-        Section headings match the delivered Word document exactly. Every value
-        cites the page it was read from.
+        Section headings match the delivered Word document exactly. Every value cites
+        the page it was read from.
       </p>
 
       {sectionsOf(fields).map(([section, rows]) => (

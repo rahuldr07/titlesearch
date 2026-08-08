@@ -58,7 +58,9 @@ export function QueueScreen() {
     const failure = next.error ?? bands.error;
     return (
       <Screen measure="1340">
-        <ScreenFailure reference={failure instanceof Error ? failure.message : undefined} />
+        <ScreenFailure
+          reference={failure instanceof Error ? failure.message : undefined}
+        />
       </Screen>
     );
   }
@@ -110,9 +112,9 @@ export function QueueScreen() {
           }
           lede={
             <p>
-              The system hands over the next order by age and priority —
-              there&rsquo;s no list to shop through. Every clock here belongs to an
-              order, never to you.
+              The system hands over the next order by age and priority — there&rsquo;s
+              no list to shop through. Every clock here belongs to an order, never to
+              you.
             </p>
           }
           actions={<QueueViewToggle view={view} onView={setView} />}

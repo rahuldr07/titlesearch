@@ -35,9 +35,9 @@ export function AuditFilters() {
         </ToggleGroup>
       </div>
       <p className="text-xs leading-body text-ink-muted">
-        Filtering is not wired — the audit endpoint takes no query parameters,
-        and narrowing one page of an append-only record on the client would show
-        a partial answer as a complete one.
+        Filtering is not wired — the audit endpoint takes no query parameters, and
+        narrowing one page of an append-only record on the client would show a partial
+        answer as a complete one.
       </p>
     </div>
   );

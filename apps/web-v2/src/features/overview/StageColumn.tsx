@@ -64,7 +64,10 @@ export function StageColumn({ stage }: { stage: LifecycleStage }) {
             {stage.count}
           </span>
         </div>
-        <p data-testid="stage-sub" className="mt-2 text-tiny leading-close text-ink-muted">
+        <p
+          data-testid="stage-sub"
+          className="mt-2 text-tiny leading-close text-ink-muted"
+        >
           {stage.sub}
         </p>
         <div className="mt-4 flex flex-wrap items-center gap-3">

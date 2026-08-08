@@ -60,13 +60,26 @@ export function PersonRow({ person }: { person: Person }) {
         {person.status}
       </Chip>
 
-      <p className={cn("min-w-37 text-center text-tiny font-bold tracking-badge uppercase", mfaTone)}>
+      <p
+        className={cn(
+          "min-w-37 text-center text-tiny font-bold tracking-badge uppercase",
+          mfaTone,
+        )}
+      >
         {MFA_LABEL[person.mfa]}
       </p>
 
       <div className="flex gap-3">
-        <Button size="sm" fill="outlined" tone="neutral" disabled>Change role</Button>
-        <Button size="sm" fill="outlined" tone="neutral" className="text-state-halt-ink" disabled>
+        <Button size="sm" fill="outlined" tone="neutral" disabled>
+          Change role
+        </Button>
+        <Button
+          size="sm"
+          fill="outlined"
+          tone="neutral"
+          className="text-state-halt-ink"
+          disabled
+        >
           Suspend
         </Button>
       </div>

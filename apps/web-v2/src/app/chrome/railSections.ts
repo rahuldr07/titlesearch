@@ -48,7 +48,8 @@ export function railSections({
     active: isActive(door.path),
     attention: attentionFor(door.path),
   });
-  const group = (name: Door["group"]) => doors.filter((d) => d.group === name).map(toItem);
+  const group = (name: Door["group"]) =>
+    doors.filter((d) => d.group === name).map(toItem);
 
   const sections: SidebarSection[] = [];
   const work = group("work");
@@ -73,7 +74,8 @@ export function railSections({
    * opened — which is why REFERENCE claims it only when ADMIN is absent.
    */
   const admin = group("admin");
-  if (admin.length > 0) sections.push({ kind: "doors", label: "ADMIN", doors: admin, foot: true });
+  if (admin.length > 0)
+    sections.push({ kind: "doors", label: "ADMIN", doors: admin, foot: true });
 
   const reference = group("reference");
   if (reference.length > 0) {

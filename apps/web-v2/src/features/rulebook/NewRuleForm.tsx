@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { Button } from "../../shared/ui/Button";
 import { Card } from "../../shared/ui/Card";
-import { Eyebrow } from "../../shared/ui/Eyebrow";
-import { TextArea, TextField } from "../../shared/ui/TextField";
 import { PendingBanner } from "./PendingBanner";
+import { RuleInput } from "./RuleInput";
 import { TagChoice, type AuthorableTag } from "./TagChoice";
 
 const NO_ENDPOINT =
@@ -67,53 +66,37 @@ export function NewRuleForm({ onCancel }: { onCancel: () => void }) {
       <PendingBanner />
 
       <div className="flex flex-col gap-3 p-8">
-        <Eyebrow variant="field" as="label" htmlFor="rule-scope">
-          Scope
-        </Eyebrow>
-        <TextField
+        <RuleInput
           id="rule-scope"
-          size="sm"
+          label="Scope"
           value={scope}
           placeholder="States, counties, clients, sections, fields"
-          onChange={(event) => setScope(event.target.value)}
+          onChange={setScope}
         />
-
-        <Eyebrow variant="field" as="label" htmlFor="rule-condition" className="mt-4">
-          Condition — what must be true in the document
-        </Eyebrow>
-        <TextArea
+        <RuleInput
           id="rule-condition"
-          size="sm"
+          label="Condition — what must be true in the document"
           rows={2}
           value={condition}
           placeholder="e.g. Granting clause contains 'undivided … interest'"
-          onChange={(event) => setCondition(event.target.value)}
+          onChange={setCondition}
         />
-
-        <Eyebrow variant="field" as="label" htmlFor="rule-outcome" className="mt-4">
-          Outcome — what the report should then say or do
-        </Eyebrow>
-        <TextArea
+        <RuleInput
           id="rule-outcome"
-          size="sm"
+          label="Outcome — what the report should then say or do"
           rows={2}
           value={outcome}
           placeholder="e.g. Set Interest Conveyed to the stated fraction"
-          onChange={(event) => setOutcome(event.target.value)}
+          onChange={setOutcome}
         />
-
-        <Eyebrow variant="field" as="label" htmlFor="rule-citation" tone="halt" className="mt-4">
-          Citation — required · the ruling or source
-        </Eyebrow>
-        <TextArea
+        <RuleInput
           id="rule-citation"
-          size="sm"
+          label="Citation — required · the ruling or source"
           rows={2}
-          tone="halt"
-          emphasis
+          required
           value={citation}
           placeholder="A rule with no authority behind it cannot be recorded"
-          onChange={(event) => setCitation(event.target.value)}
+          onChange={setCitation}
         />
 
         <TagChoice value={tag} onChange={setTag} />
@@ -131,7 +114,12 @@ export function NewRuleForm({ onCancel }: { onCancel: () => void }) {
         )}
 
         <div className="mt-2 flex gap-4">
-          <Button fill="outlined" className="flex-1" data-testid="save-pending" onClick={save}>
+          <Button
+            fill="outlined"
+            className="flex-1"
+            data-testid="save-pending"
+            onClick={save}
+          >
             Save as PENDING
           </Button>
           <Button fill="outlined" tone="neutral" onClick={onCancel}>

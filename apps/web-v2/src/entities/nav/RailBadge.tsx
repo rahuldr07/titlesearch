@@ -21,7 +21,8 @@ export const railBadgeClasses = cva(
     variants: {
       tone: {
         neutral: "bg-surface-sunken text-ink-secondary",
-        attend: "border border-state-attend-border bg-state-attend-surface text-state-attend-ink",
+        attend:
+          "border border-state-attend-border bg-state-attend-surface text-state-attend-ink",
         /*
          * SOLID, where attend is a tint. The mockup draws the two rail badges
          * as a filled red pill and an outlined amber one, and the difference is

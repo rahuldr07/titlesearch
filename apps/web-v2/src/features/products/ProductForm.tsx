@@ -30,18 +30,32 @@ const DERIVATION_CHOICES = [
  * APPLICABLE for every line. Creating a product cannot, on its own, start
  * demanding answers — you opt each line in from the baseline grid, deliberately.
  */
-export function ProductForm({ isNew, onCancel }: { isNew: boolean; onCancel: () => void }) {
+export function ProductForm({
+  isNew,
+  onCancel,
+}: {
+  isNew: boolean;
+  onCancel: () => void;
+}) {
   const [kind, setKind] = useState<readonly string[]>(["year"]);
 
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <Eyebrow variant="field" as="label" htmlFor="product-name">Name</Eyebrow>
-        <TextField id="product-name" className="mt-3" placeholder="e.g. 30-Year Search" />
+        <Eyebrow variant="field" as="label" htmlFor="product-name">
+          Name
+        </Eyebrow>
+        <TextField
+          id="product-name"
+          className="mt-3"
+          placeholder="e.g. 30-Year Search"
+        />
       </div>
 
       <div>
-        <Eyebrow variant="field" as="label" htmlFor="product-code">Code</Eyebrow>
+        <Eyebrow variant="field" as="label" htmlFor="product-code">
+          Code
+        </Eyebrow>
         <TextField id="product-code" className="mt-3" placeholder="e.g. 30 Year" />
       </div>
 
@@ -55,7 +69,9 @@ export function ProductForm({ isNew, onCancel }: { isNew: boolean; onCancel: () 
 
       {kind.includes("year") ? (
         <div>
-          <Eyebrow variant="field" as="label" htmlFor="product-years">Years back</Eyebrow>
+          <Eyebrow variant="field" as="label" htmlFor="product-years">
+            Years back
+          </Eyebrow>
           <TextField
             id="product-years"
             inputMode="numeric"
@@ -88,8 +104,8 @@ export function ProductForm({ isNew, onCancel }: { isNew: boolean; onCancel: () 
 
       {isNew ? (
         <p className="text-xs leading-body text-ink-muted">
-          A new product starts <span className="font-semibold">not applicable</span>{" "}
-          for every line — opt each line in from the baseline grid.
+          A new product starts <span className="font-semibold">not applicable</span> for
+          every line — opt each line in from the baseline grid.
         </p>
       ) : null}
 
@@ -103,8 +119,8 @@ export function ProductForm({ isNew, onCancel }: { isNew: boolean; onCancel: () 
         </Button>
       </div>
       <p className="text-xs leading-body text-ink-muted">
-        CONTRACT GAP: the products endpoint reads only. Save is disabled rather
-        than silently discarding what you typed.
+        CONTRACT GAP: the products endpoint reads only. Save is disabled rather than
+        silently discarding what you typed.
       </p>
     </div>
   );

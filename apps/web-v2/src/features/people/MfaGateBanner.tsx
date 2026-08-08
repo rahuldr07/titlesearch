@@ -40,11 +40,9 @@ export function MfaGateBanner({ count }: { count: number }) {
           !
         </span>
         <p className="text-base leading-body text-state-halt-ink">
-          <span className="font-bold">
-            {count} privileged account without MFA.
-          </span>{" "}
-          Admin, engineer, senior and ops accounts must have MFA — this is a
-          production gate.
+          <span className="font-bold">{count} privileged account without MFA.</span>{" "}
+          Admin, engineer, senior and ops accounts must have MFA — this is a production
+          gate.
         </p>
       </CardBody>
     </Card>

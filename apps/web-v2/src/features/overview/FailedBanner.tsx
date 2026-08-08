@@ -43,10 +43,9 @@ export function FailedBanner({ orders }: { orders: readonly LifecycleOrder[] }) 
           Off the pipeline — no stage to sit in
         </Eyebrow>
         <p className="mt-2 max-w-4xl text-xs leading-body text-ink-secondary">
-          A failed order is not late, it is out. It needs a person to put it
-          back, and it will sit here until someone does — which is why it is
-          counted separately from the stages above rather than hidden inside
-          one.
+          A failed order is not late, it is out. It needs a person to put it back, and
+          it will sit here until someone does — which is why it is counted separately
+          from the stages above rather than hidden inside one.
         </p>
         <ul className="mt-5 flex flex-wrap gap-4">
           {orders.map((order) => (

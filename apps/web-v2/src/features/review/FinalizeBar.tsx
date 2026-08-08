@@ -41,12 +41,15 @@ export function FinalizeBar({
   signoffLines: readonly OrderSignoffLine[];
 }) {
   const decisions = fields.filter((field) => DECISION_STATES.has(field.state));
-  const pendingCount = decisions.filter((field) => field.state === "needs_review").length;
+  const pendingCount = decisions.filter(
+    (field) => field.state === "needs_review",
+  ).length;
   const openNo = signoffLines.filter((line) => line.answer === "NO").length;
   const ready = pendingCount === 0 && openNo === 0;
 
   const parts: string[] = [];
-  if (pendingCount > 0) parts.push(`${pendingCount} decision${pendingCount === 1 ? "" : "s"}`);
+  if (pendingCount > 0)
+    parts.push(`${pendingCount} decision${pendingCount === 1 ? "" : "s"}`);
   if (openNo > 0) parts.push(`${openNo} NO disclosure${openNo === 1 ? "" : "s"}`);
 
   const note = ready
@@ -59,7 +62,10 @@ export function FinalizeBar({
       className="flex flex-none flex-wrap items-center gap-6 border-b border-line-strong bg-surface-raised px-9 py-5"
     >
       <span className="text-sm font-semibold text-ink-primary">Finalize</span>
-      <span data-testid="finalize-note" className="min-w-0 flex-1 text-xs text-ink-secondary">
+      <span
+        data-testid="finalize-note"
+        className="min-w-0 flex-1 text-xs text-ink-secondary"
+      >
         {note}
       </span>
       <Button size="md" data-testid="finalize-order-btn" disabled>

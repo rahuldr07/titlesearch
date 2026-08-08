@@ -26,7 +26,13 @@ export const EditLine: Story = {
   args: { children: null },
   render: () => (
     <Drawer>
-      <DrawerTrigger render={<Button fill="outlined" tone="neutral">Edit line</Button>} />
+      <DrawerTrigger
+        render={
+          <Button fill="outlined" tone="neutral">
+            Edit line
+          </Button>
+        }
+      />
       <DrawerPanel
         title="Edit sign-off line"
         description="Changes create a new config version. Orders already accepted keep the version they were frozen against."
@@ -41,9 +47,19 @@ export const EditLine: Story = {
             <TextField defaultValue="Catches a gap before the machine reads the package." />
           </label>
           <div className="flex gap-4">
-            <DrawerClose render={<Button size="lg" block>Save line</Button>} />
             <DrawerClose
-              render={<Button size="lg" fill="outlined" tone="neutral" block>Cancel</Button>}
+              render={
+                <Button size="lg" block>
+                  Save line
+                </Button>
+              }
+            />
+            <DrawerClose
+              render={
+                <Button size="lg" fill="outlined" tone="neutral" block>
+                  Cancel
+                </Button>
+              }
             />
           </div>
         </div>
@@ -56,10 +72,13 @@ export const Open: Story = {
   args: { children: null },
   render: () => (
     <Drawer defaultOpen>
-      <DrawerPanel title="Edit client" description="Overrides are stored as deltas, never as a copy of the baseline.">
+      <DrawerPanel
+        title="Edit client"
+        description="Overrides are stored as deltas, never as a copy of the baseline."
+      >
         <p className="text-base text-ink-secondary">
-          A line with no traceable source is a config defect — the same discipline
-          as field provenance.
+          A line with no traceable source is a config defect — the same discipline as
+          field provenance.
         </p>
       </DrawerPanel>
     </Drawer>

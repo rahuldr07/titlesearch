@@ -46,7 +46,9 @@ test("main fills the content column rather than shrink-wrapping", async ({ page 
   expect(main.width).toBeGreaterThanOrEqual(1600 - rail.width - 1);
 });
 
-test("the order strip stays put while the screen scrolls under it", async ({ page }) => {
+test("the order strip stays put while the screen scrolls under it", async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 1600, height: 1000 });
   await page.goto("/orders/ord_demo_1/review");
   const strip = page.getByTestId("order-strip");
@@ -55,12 +57,15 @@ test("the order strip stays put while the screen scrolls under it", async ({ pag
   await page.mouse.wheel(0, 1400);
   await page.waitForTimeout(300);
   const after = await boxOf(strip);
-  expect(after.y, "the strip counts the order it sits above; it may not scroll away").toBe(
-    before.y,
-  );
+  expect(
+    after.y,
+    "the strip counts the order it sits above; it may not scroll away",
+  ).toBe(before.y);
 });
 
-test("the rail is a full-height column, not a page-sticky element", async ({ page }) => {
+test("the rail is a full-height column, not a page-sticky element", async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 1600, height: 1000 });
   await page.goto("/rulebook");
   const rail = await boxOf(page.getByTestId("side-rail"));

@@ -40,7 +40,10 @@ export function ArtifactCard({
       </span>
 
       <div className="flex-1">
-        <div data-testid="artifact-name" className="font-mono text-md font-medium text-ink-primary">
+        <div
+          data-testid="artifact-name"
+          className="font-mono text-md font-medium text-ink-primary"
+        >
           {filename}
         </div>
         <p className="mt-1.5 text-xs text-ink-muted">

@@ -44,9 +44,16 @@ import { COMPLETENESS_ORDER_ID, orderCompletenessQuery } from "./queries";
  * never touches the banner above it.
  */
 export function CompletenessScreen() {
-  const { data, isPending, isError } = useQuery(orderCompletenessQuery(COMPLETENESS_ORDER_ID));
+  const { data, isPending, isError } = useQuery(
+    orderCompletenessQuery(COMPLETENESS_ORDER_ID),
+  );
 
-  if (isError) return <ScreenMessage tone="halt" measure="720">Completeness gate unavailable.</ScreenMessage>;
+  if (isError)
+    return (
+      <ScreenMessage tone="halt" measure="720">
+        Completeness gate unavailable.
+      </ScreenMessage>
+    );
   if (isPending) return <ScreenMessage measure="720">Loading the gate…</ScreenMessage>;
 
   return <GateBody gate={data} />;
@@ -94,7 +101,9 @@ function GateBody({ gate: data }: { gate: OrderCompletenessResponse }) {
             key={gap.id}
             gap={gap}
             closure={gate.closures[gap.id]}
-            onClose={(option, note) => gate.close(gap.id, { option, note, by: `${actor} (${role})` })}
+            onClose={(option, note) =>
+              gate.close(gap.id, { option, note, by: `${actor} (${role})` })
+            }
           />
         ))}
 
@@ -108,7 +117,9 @@ function GateBody({ gate: data }: { gate: OrderCompletenessResponse }) {
         <div className="flex items-center gap-7">
           <p
             className={
-              openGaps > 0 ? "flex-1 text-sm text-state-halt-ink" : "flex-1 text-sm text-state-settled-ink"
+              openGaps > 0
+                ? "flex-1 text-sm text-state-halt-ink"
+                : "flex-1 text-sm text-state-settled-ink"
             }
           >
             {openGaps > 0

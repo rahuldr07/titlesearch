@@ -40,8 +40,22 @@ export function Screen({ measure, pad, placement, children, className }: ScreenP
   const bleed = placement === "bleed";
   return (
     <PaneBody className={screenScroller({ placement })}>
-      <div className={cn("flex min-h-full min-w-0 flex-col", screenScroller({ pad: bleed ? undefined : (pad ?? "28x32") }), placement === "centre" && "m-auto")}>
-        <div className={cn("flex min-w-0 flex-1 flex-col", screenClasses({ measure, placement }), className)}>{children}</div>
+      <div
+        className={cn(
+          "flex min-h-full min-w-0 flex-col",
+          screenScroller({ pad: bleed ? undefined : (pad ?? "28x32") }),
+          placement === "centre" && "m-auto",
+        )}
+      >
+        <div
+          className={cn(
+            "flex min-w-0 flex-1 flex-col",
+            screenClasses({ measure, placement }),
+            className,
+          )}
+        >
+          {children}
+        </div>
       </div>
     </PaneBody>
   );

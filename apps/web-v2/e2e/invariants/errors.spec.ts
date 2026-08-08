@@ -22,9 +22,7 @@ test("an unknown route renders the not-found card, never a blank page", async ({
 });
 
 // TODO(rebuild) [ORPHAN RULE] — rule: a failed list query renders a named unavailable state.
-test("the escalation inbox says unavailable when the list 500s", async ({
-  page,
-}) => {
+test("the escalation inbox says unavailable when the list 500s", async ({ page }) => {
   await interceptApi(page, {
     method: "GET",
     match: "/api/escalations",
@@ -38,7 +36,6 @@ test("the escalation inbox says unavailable when the list 500s", async ({
     timeout: 20_000,
   });
 });
-
 
 // TODO(rebuild) [ORPHAN RULE] — rule: a partial failure degrades that region only — the order spine still renders its identity.
 test("the order spine survives a timeline failure", async ({ page }) => {

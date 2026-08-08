@@ -53,7 +53,9 @@ describe("decimal strings format without ever becoming a number", () => {
     expect(formatDecimalString("70.10")).toBe("$70.10");
     expect(formatDecimalString("999999999999.99")).toBe("$999,999,999,999.99");
     // Beyond IEEE-754 integer precision — a parseFloat implementation loses this.
-    expect(formatDecimalString("9007199254740993.01")).toBe("$9,007,199,254,740,993.01");
+    expect(formatDecimalString("9007199254740993.01")).toBe(
+      "$9,007,199,254,740,993.01",
+    );
   });
 
   test("LEADING ZEROS ARE REFUSED — the bug that shipped", () => {
@@ -72,8 +74,19 @@ describe("decimal strings format without ever becoming a number", () => {
 
   test("unrecognised input is refused rather than guessed", () => {
     for (const bad of [
-      "", "abc", "1,234.00", "$100", "1.234", "1e5",
-      "1.", ".5", "--5", "1 234", "NaN", "Infinity", "0x10",
+      "",
+      "abc",
+      "1,234.00",
+      "$100",
+      "1.234",
+      "1e5",
+      "1.",
+      ".5",
+      "--5",
+      "1 234",
+      "NaN",
+      "Infinity",
+      "0x10",
     ]) {
       expect(formatDecimalString(bad), `"${bad}" should be refused`).toBeNull();
     }

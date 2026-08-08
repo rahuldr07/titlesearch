@@ -4,8 +4,13 @@ import { DividedSection, ListRow } from "../../shared/ui/ListRow";
 import { cn } from "../../shared/ui/classNames";
 
 import {
-  deltasOf, markLabel, markOf, markSymbol, stackedCountLabel,
-  type CompareColumn, type CompareMark,
+  deltasOf,
+  markLabel,
+  markOf,
+  markSymbol,
+  stackedCountLabel,
+  type CompareColumn,
+  type CompareMark,
 } from "./compare";
 
 const MARK: Readonly<Record<CompareMark, string>> = {
@@ -88,8 +93,8 @@ export function CompareStacked({ columns }: { columns: readonly CompareColumn[] 
                  the sentence that already says so. */
               <div className="px-8 py-6">
                 <EmptyNote>
-                  Nothing special about this client — every line as the baseline
-                  states it.
+                  Nothing special about this client — every line as the baseline states
+                  it.
                 </EmptyNote>
               </div>
             )}

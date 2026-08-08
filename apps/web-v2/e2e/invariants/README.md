@@ -27,10 +27,10 @@ rule is not.
 
 ## Classes
 
-| Tag | Meaning |
-|---|---|
-| `INVARIANT` | asserts a product rule. Survives; selectors change, assertions do not. |
-| `ORPHAN RULE` | asserts a rule written down **nowhere else in this repository**. Deleting one of these deletes the rule. 16 of them. |
+| Tag                             | Meaning                                                                                                                                                                     |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `INVARIANT`                     | asserts a product rule. Survives; selectors change, assertions do not.                                                                                                      |
+| `ORPHAN RULE`                   | asserts a rule written down **nowhere else in this repository**. Deleting one of these deletes the rule. 16 of them.                                                        |
 | `INVARIANT (mechanism changed)` | the rule survives but its implementation must change. Exactly one: `sidebar` #8, whose collapse preference moves from `localStorage` (forbidden, §9.11) to the server (§7). |
 
 ## What is not here

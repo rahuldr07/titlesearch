@@ -33,11 +33,16 @@ export function ImpactPreview() {
       </Eyebrow>
 
       <p className="mt-4 text-md leading-open text-ink-primary">
-        Would change <span className="font-mono font-semibold">{IMPACT.changed}</span> of{" "}
-        <span className="font-mono font-semibold">{IMPACT.total}</span> golden orders.{" "}
-        <span className="font-semibold text-state-settled-ink">{IMPACT.match} match</span>{" "}
+        Would change <span className="font-mono font-semibold">{IMPACT.changed}</span>{" "}
+        of <span className="font-mono font-semibold">{IMPACT.total}</span> golden
+        orders.{" "}
+        <span className="font-semibold text-state-settled-ink">
+          {IMPACT.match} match
+        </span>{" "}
         the known-correct value;{" "}
-        <span className="font-semibold text-state-halt-ink">{IMPACT.mismatch} do not.</span>
+        <span className="font-semibold text-state-halt-ink">
+          {IMPACT.mismatch} do not.
+        </span>
       </p>
 
       <ul className="mt-5">

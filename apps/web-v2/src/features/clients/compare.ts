@@ -48,7 +48,11 @@ export type CompareMark = "baseline" | "narrowed" | "replaced" | "waived" | "add
  * attend amber from the halt red.
  */
 const SYMBOL: Readonly<Record<CompareMark, string>> = {
-  baseline: "●", narrowed: "◐", replaced: "≠", waived: "✕", added: "＋",
+  baseline: "●",
+  narrowed: "◐",
+  replaced: "≠",
+  waived: "✕",
+  added: "＋",
 };
 
 /**
@@ -73,12 +77,17 @@ const LABEL: Readonly<Record<CompareMark, string>> = {
   added: "client-added line",
 };
 
-export const COMPARE_LEGEND: readonly { mark: CompareMark; symbol: string; label: string }[] =
-  (["baseline", "narrowed", "replaced", "waived", "added"] as const).map((mark) => ({
+export const COMPARE_LEGEND: readonly {
+  mark: CompareMark;
+  symbol: string;
+  label: string;
+}[] = (["baseline", "narrowed", "replaced", "waived", "added"] as const).map(
+  (mark) => ({
     mark,
     symbol: SYMBOL[mark],
     label: LABEL[mark],
-  }));
+  }),
+);
 
 export const markSymbol = (mark: CompareMark): string => SYMBOL[mark];
 export const markLabel = (mark: CompareMark): string => LABEL[mark];

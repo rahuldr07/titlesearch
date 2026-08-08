@@ -29,9 +29,7 @@ test("g-sequences jump between screens; ? shows the map", async ({ page }) => {
 });
 
 // TODO(rebuild) [ORPHAN RULE] — rule: ORPHAN O15 — a chord's second key must never ALSO fire a screen action. This is what stops a stray keystroke destroying an in-progress correction. (Promoted by Q3.)
-test("a g-sequence's second key never leaks into screen hotkeys", async ({
-  page,
-}) => {
+test("a g-sequence's second key never leaks into screen hotkeys", async ({ page }) => {
   await page.goto("/orders/ord_demo_1/review");
   await expect(page.getByTestId("sel-label")).toHaveText("OWNER ZIP");
   // g then e must navigate to escalations, NOT open the correction editor
@@ -60,17 +58,11 @@ test("the ? overlay swallows screen keys while open", async ({ page }) => {
 });
 
 // TODO(rebuild) [INVARIANT] — rule: deep links are first-class — ?field= lands on the exact field in context. (BRIEF §7 makes this URL-owned selection.)
-test("?field= deep links land on the exact field in context", async ({
-  page,
-}) => {
+test("?field= deep links land on the exact field in context", async ({ page }) => {
   await page.goto("/orders/ord_demo_1/review?field=judgments.1.case_no");
   await expect(page.getByTestId("sel-label")).toHaveText("JGMT 1 — CASE NO");
-  await expect(page.getByTestId("sel-state")).toContainText(
-    "PRESENT — UNREADABLE",
-  );
+  await expect(page.getByTestId("sel-state")).toContainText("PRESENT — UNREADABLE");
 });
-
-
 
 // TODO(rebuild) [INVARIANT] — rule: the order's states travel with it — the spine shows queue, escalation and delivery state together.
 test("the order spine travels with the order on Review", async ({ page }) => {

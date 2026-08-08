@@ -61,11 +61,13 @@ export function KeyMap({ doors }: { doors: readonly Door[] }) {
               second reason the casing has to be real: a screen reader announces
               what the element contains, not what CSS painted.
             */}
-            <Eyebrow id={titleId} variant="screen">KEYBOARD AS NAVIGATION</Eyebrow>
+            <Eyebrow id={titleId} variant="screen">
+              KEYBOARD AS NAVIGATION
+            </Eyebrow>
             <p className="mt-3 text-base text-ink-secondary">
               Press <span className="font-mono">g</span> then a key.{" "}
-              <span className="font-mono">[</span> folds the navigator. Escape
-              closes this.
+              <span className="font-mono">[</span> folds the navigator. Escape closes
+              this.
             </p>
             <ul className="mt-8 flex flex-col gap-3">
               {doors.map((door) => (

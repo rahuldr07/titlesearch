@@ -26,7 +26,9 @@ export function ChoiceField({
 }) {
   return (
     <div>
-      <Eyebrow variant="field" as="h3">{label}</Eyebrow>
+      <Eyebrow variant="field" as="h3">
+        {label}
+      </Eyebrow>
       <ToggleGroup
         className="mt-3"
         aria-label={label}

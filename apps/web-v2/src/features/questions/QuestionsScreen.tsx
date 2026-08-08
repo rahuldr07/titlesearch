@@ -35,7 +35,12 @@ import { orderSignoffQuery, SIGNOFF_ORDER_ID } from "./queries";
 export function QuestionsScreen() {
   const { data, isPending, isError } = useQuery(orderSignoffQuery(SIGNOFF_ORDER_ID));
 
-  if (isError) return <ScreenMessage tone="halt" measure="640">Sign-off unavailable.</ScreenMessage>;
+  if (isError)
+    return (
+      <ScreenMessage tone="halt" measure="640">
+        Sign-off unavailable.
+      </ScreenMessage>
+    );
   if (isPending) return <ScreenMessage measure="640">Loading sign-off…</ScreenMessage>;
 
   return (
@@ -54,7 +59,11 @@ export function QuestionsScreen() {
         */}
         <ScreenHeading
           eyebrow="Step 2 — Sign-off"
-          title={<>Confirm what you did <em>on this search</em></>}
+          title={
+            <>
+              Confirm what you did <em>on this search</em>
+            </>
+          }
           lede="You answer these before the pipeline runs — this is you claiming your own work at the moment you hand it over, not the QC reviewer vouching for it later. All required. Suggested answers come from this client's reviewed policy; you still answer each line."
         />
 

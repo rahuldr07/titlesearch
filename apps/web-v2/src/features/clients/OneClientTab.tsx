@@ -1,4 +1,8 @@
-import type { ClientsResponse, ConfigProduct, ConfigResponse } from "@titlepipe/contract";
+import type {
+  ClientsResponse,
+  ConfigProduct,
+  ConfigResponse,
+} from "@titlepipe/contract";
 
 import { Button } from "../../shared/ui/Button";
 import { EmptyPanel } from "../../shared/ui/EmptyPanel";
@@ -54,7 +58,9 @@ export function OneClientTab({
           }}
         >
           {data.clients.map((c) => (
-            <Toggle key={c.id} value={c.id} className="rounded-7">{c.name}</Toggle>
+            <Toggle key={c.id} value={c.id} className="rounded-7">
+              {c.name}
+            </Toggle>
           ))}
         </ToggleGroup>
         {canAuthor ? (

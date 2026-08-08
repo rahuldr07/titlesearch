@@ -60,7 +60,10 @@ const THEME_BLOCKS: Record<Theme, string> = {
 
 function token(name: string, theme: Theme = "light"): string {
   const m = new RegExp(`--${name}:\\s*(#[0-9a-fA-F]{6})`).exec(THEME_BLOCKS[theme]);
-  if (!m?.[1]) throw new Error(`token --${name} not found for theme "${theme}" or not a 6-digit hex`);
+  if (!m?.[1])
+    throw new Error(
+      `token --${name} not found for theme "${theme}" or not a 6-digit hex`,
+    );
   return m[1];
 }
 
@@ -73,7 +76,10 @@ function luminance(hex: string): number {
 }
 
 function ratio(a: string, b: string): number {
-  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x) as [number, number];
+  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x) as [
+    number,
+    number,
+  ];
   return (hi + 0.05) / (lo + 0.05);
 }
 
@@ -183,9 +189,10 @@ describe("the document pane has its own ink vocabulary", () => {
   for (const ink of FORBIDDEN_ON_DOCUMENT_LIGHT) {
     test(`light: ${ink} is NOT usable on the document pane`, () => {
       const r = ratio(token(ink, "light"), token("color-surface-document", "light"));
-      expect(r, `${r.toFixed(2)}:1 — chrome ink must not be reached for on the pane`).toBeLessThan(
-        AA_NORMAL,
-      );
+      expect(
+        r,
+        `${r.toFixed(2)}:1 — chrome ink must not be reached for on the pane`,
+      ).toBeLessThan(AA_NORMAL);
     });
   }
 
@@ -198,7 +205,10 @@ describe("the document pane has its own ink vocabulary", () => {
    * 5.76:1 for the quiet tier, the tightest of the three.
    */
   test("mocha: --color-ink-muted DOES clear AA there — the light-theme restriction does not carry over", () => {
-    const r = ratio(token("color-ink-muted", "mocha"), token("color-surface-document", "mocha"));
+    const r = ratio(
+      token("color-ink-muted", "mocha"),
+      token("color-surface-document", "mocha"),
+    );
     expect(r, `${r.toFixed(2)}:1`).toBeGreaterThanOrEqual(AA_NORMAL);
   });
 });
@@ -310,7 +320,10 @@ describe("the primary action and the halt state stay separable in greyscale", ()
    */
   for (const theme of THEMES) {
     test(`--color-state-halt-border reads as a stroke against --color-action-border — ${theme}`, () => {
-      const r = ratio(token("color-state-halt-border", theme), token("color-action-border", theme));
+      const r = ratio(
+        token("color-state-halt-border", theme),
+        token("color-action-border", theme),
+      );
       expect(
         r,
         `halt border vs action border is ${r.toFixed(2)}:1 in ${theme} — the outline cue is gone`,
@@ -325,7 +338,10 @@ describe("the primary action and the halt state stay separable in greyscale", ()
    */
   for (const theme of THEMES) {
     test(`--color-state-halt-border is visible on --color-state-halt-surface — ${theme}`, () => {
-      const r = ratio(token("color-state-halt-border", theme), token("color-state-halt-surface", theme));
+      const r = ratio(
+        token("color-state-halt-border", theme),
+        token("color-state-halt-surface", theme),
+      );
       expect(r, `${r.toFixed(2)}:1`).toBeGreaterThanOrEqual(2);
     });
   }

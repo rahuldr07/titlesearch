@@ -1,7 +1,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ReactElement } from "react";
 import { expect, within } from "storybook/test";
-import { createMemoryHistory, createRootRoute, createRouter, RouterProvider } from "@tanstack/react-router"; // rules-allow: the hub Link needs router context, so the story mounts a one-route router rather than stubbing the behaviour ux.spec #7 exists to protect
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRouter,
+  RouterProvider,
+} from "@tanstack/react-router"; // rules-allow: the hub Link needs router context, so the story mounts a one-route router rather than stubbing the behaviour ux.spec #7 exists to protect
 import { ScreenHeading } from "./ScreenHeading";
 import { Button } from "./Button";
 
@@ -46,7 +51,9 @@ export const Default: Story = {
     await expect(link.tagName).toBe("A");
     await expect(link).toHaveAttribute("href", "/");
     await expect(link).toHaveTextContent("Admin · Rulebook");
-    await expect(canvas.getByRole("heading", { level: 1 })).toHaveTextContent("Extraction rules");
+    await expect(canvas.getByRole("heading", { level: 1 })).toHaveTextContent(
+      "Extraction rules",
+    );
   },
 };
 
@@ -95,9 +102,8 @@ export const SplitLede: Story = {
     lede: (
       <>
         <p>
-          One column per stage. The machine advances exactly one of them — every
-          other column is an order stopped on a person, which is the design, not
-          a backlog.
+          One column per stage. The machine advances exactly one of them — every other
+          column is an order stopped on a person, which is the design, not a backlog.
         </p>
         <p>Showing the orders you are cleared to see.</p>
       </>

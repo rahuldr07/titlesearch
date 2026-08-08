@@ -87,7 +87,11 @@ export function ResolveCard({ ids, rules, onResolved }: ResolveCardProps) {
         />
       </label>
 
-      <RadioGroup aria-label="How this becomes a rule" value={mode} onValueChange={(v) => setMode(String(v))}>
+      <RadioGroup
+        aria-label="How this becomes a rule"
+        value={mode}
+        onValueChange={(v) => setMode(String(v))}
+      >
         <Radio value="cite" testId="mode-cite">
           This is an existing rule people are not finding
         </Radio>
@@ -112,7 +116,10 @@ export function ResolveCard({ ids, rules, onResolved }: ResolveCardProps) {
           onClick={() => {
             const rule: RuleChoice =
               mode === "cite" ? { rule_id: ruleId } : { draft: { text: draft.trim() } };
-            resolve.mutate({ ids, ruling: ruling.trim(), rule }, { onSuccess: onResolved });
+            resolve.mutate(
+              { ids, ruling: ruling.trim(), rule },
+              { onSuccess: onResolved },
+            );
           }}
         >
           {label}

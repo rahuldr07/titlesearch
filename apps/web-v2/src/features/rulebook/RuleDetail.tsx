@@ -78,7 +78,9 @@ export function RuleDetail({
             code already labels. Prefixing it made the header and the log two
             spellings of one field on the same card.
           */}
-          <span className="ml-auto font-mono text-tiny text-ink-muted">{rule.version}</span>
+          <span className="ml-auto font-mono text-tiny text-ink-muted">
+            {rule.version}
+          </span>
         </div>
 
         <p className="mt-4 text-lg leading-close font-semibold text-ink-primary">

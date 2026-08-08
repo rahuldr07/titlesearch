@@ -1,5 +1,9 @@
 import { queryOptions, useMutation, useQueryClient } from "@tanstack/react-query";
-import { QueueBandsResponse, QueueNextResponse, PassOrderResponse } from "@titlepipe/contract";
+import {
+  QueueBandsResponse,
+  QueueNextResponse,
+  PassOrderResponse,
+} from "@titlepipe/contract";
 import { get, post } from "../../shared/api";
 
 /**

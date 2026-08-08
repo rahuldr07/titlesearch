@@ -31,6 +31,7 @@ export const COMPLETENESS_ORDER_ID = FLOW_ORDERS["/completeness"];
 export function orderCompletenessQuery(orderId: string) {
   return queryOptions({
     queryKey: ["orders", orderId, "completeness"],
-    queryFn: () => get(`/api/orders/${orderId}/completeness`, OrderCompletenessResponse),
+    queryFn: () =>
+      get(`/api/orders/${orderId}/completeness`, OrderCompletenessResponse),
   });
 }

@@ -98,9 +98,10 @@ describe("every NaReason is mapped, and the table cannot fall behind", () => {
     // of what the document said.
     for (const reason of REASONS) {
       const kind = noValueFor(reason, PAGE);
-      expect(describeNoValue(kind).isPipelineState, `${reason} drawn as a pipeline state`).toBe(
-        false,
-      );
+      expect(
+        describeNoValue(kind).isPipelineState,
+        `${reason} drawn as a pipeline state`,
+      ).toBe(false);
     }
   });
 });
@@ -125,9 +126,10 @@ describe("noValueFor chooses a DISTINCT render per reason", () => {
     const unreadable = noValueFor("PRESENT_UNREADABLE", PAGE);
     expect(unreadable).toEqual({ kind: "unreadable", page: PAGE });
     for (const reason of REASONS.filter((r) => r !== "PRESENT_UNREADABLE")) {
-      expect(noValueFor(reason, PAGE), `${reason} must be a bare ${EXPECTED[reason].kind}`).toEqual(
-        { kind: EXPECTED[reason].kind },
-      );
+      expect(
+        noValueFor(reason, PAGE),
+        `${reason} must be a bare ${EXPECTED[reason].kind}`,
+      ).toEqual({ kind: EXPECTED[reason].kind });
     }
   });
 });
@@ -154,7 +156,9 @@ describe("naChip says which answer, in the reviewer's own words", () => {
       const chip = naChip(reason);
       expect(chip, `${reason} lost its own word`).toMatch(EXPECTED[reason].chipWord);
       for (const other of REASONS.filter((r) => r !== reason)) {
-        expect(chip, `${reason} reads as ${other}`).not.toMatch(EXPECTED[other].chipWord);
+        expect(chip, `${reason} reads as ${other}`).not.toMatch(
+          EXPECTED[other].chipWord,
+        );
       }
     }
   });
@@ -170,7 +174,9 @@ describe("the chip and the render never contradict each other", () => {
       for (const text of [label, accessibleLabel]) {
         expect(text, `${reason} lost its own word`).toMatch(EXPECTED[reason].labelWord);
         for (const other of REASONS.filter((r) => r !== reason)) {
-          expect(text, `${reason} renders as ${other}`).not.toMatch(EXPECTED[other].labelWord);
+          expect(text, `${reason} renders as ${other}`).not.toMatch(
+            EXPECTED[other].labelWord,
+          );
         }
       }
     }
@@ -242,7 +248,10 @@ describe("the renders stay apart in greyscale, not only in colour", () => {
   test("every render carries at least one non-colour mark", () => {
     // A signature of "" would mean the arm is drawn in colour alone.
     for (const reason of REASONS) {
-      expect(greyscaleSignature(EXPECTED[reason].kind), `${reason} is colour-only`).not.toBe("");
+      expect(
+        greyscaleSignature(EXPECTED[reason].kind),
+        `${reason} is colour-only`,
+      ).not.toBe("");
     }
   });
 });

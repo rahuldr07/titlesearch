@@ -58,7 +58,10 @@ export function StageList({ stages }: { stages: readonly Stage[] }) {
   return (
     <ol className="flex flex-col">
       {stages.map((stage) => (
-        <li key={stage.id} className="flex gap-6 border-t border-line-subtle py-6 first:border-t-0">
+        <li
+          key={stage.id}
+          className="flex gap-6 border-t border-line-subtle py-6 first:border-t-0"
+        >
           <span
             aria-hidden
             className={cn(
@@ -72,7 +75,9 @@ export function StageList({ stages }: { stages: readonly Stage[] }) {
 
           <div className="flex-1">
             <div className="flex flex-wrap items-center gap-4">
-              <span className="text-md font-semibold text-ink-primary">{stage.title}</span>
+              <span className="text-md font-semibold text-ink-primary">
+                {stage.title}
+              </span>
               {/* The phase as TEXT — the pulse is never the only signal. */}
               <Chip tone={BADGE_TONE[stage.phase]} size="micro">
                 {stage.phase}

@@ -48,7 +48,8 @@ export function useModalDialog<D extends HTMLElement, O extends HTMLElement>(
       const back = event.shiftKey;
       const at = stops.indexOf(document.activeElement as HTMLElement);
       const first = back ? stops[stops.length - 1] : stops[0];
-      const next = at === -1 ? first : stops[(at + (back ? -1 : 1) + stops.length) % stops.length];
+      const next =
+        at === -1 ? first : stops[(at + (back ? -1 : 1) + stops.length) % stops.length];
       (next ?? panel).focus();
     };
     panel.addEventListener("keydown", onKeyDown);

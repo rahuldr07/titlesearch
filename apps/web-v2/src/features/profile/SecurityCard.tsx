@@ -36,24 +36,35 @@ export function SecurityCard({
   return (
     <Card>
       <CardBody>
-        <Eyebrow variant="section" as="h2">Security</Eyebrow>
+        <Eyebrow variant="section" as="h2">
+          Security
+        </Eyebrow>
         <ul className="mt-5">
           {sessions.map((session) => (
-            <li key={session.id} className="flex items-center gap-6 border-b border-line-subtle py-4">
+            <li
+              key={session.id}
+              className="flex items-center gap-6 border-b border-line-subtle py-4"
+            >
               <div className="min-w-0 flex-1">
                 <p className="text-base text-ink-primary">{session.device}</p>
                 <p className="mt-0.5 text-xs text-ink-muted">
                   {session.where} · {session.last_seen}
                 </p>
               </div>
-              {session.current ? <Chip tone="settled" size="sm">This device</Chip> : null}
+              {session.current ? (
+                <Chip tone="settled" size="sm">
+                  This device
+                </Chip>
+              ) : null}
             </li>
           ))}
         </ul>
         <div className="mt-6 flex flex-wrap items-center gap-5">
           {/* CONTRACT GAP: no session-revocation endpoint. Drawn as the design
               draws it and disabled until one exists. */}
-          <Button size="md" fill="outlined" tone="neutral" disabled>Sign out everywhere</Button>
+          <Button size="md" fill="outlined" tone="neutral" disabled>
+            Sign out everywhere
+          </Button>
           <p className="flex items-center gap-3 text-sm text-ink-secondary">
             <span
               aria-hidden="true"

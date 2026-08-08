@@ -49,15 +49,19 @@ export function ReopenPanel({
   return (
     <Card data-testid="reopen-panel" accent="attend" className="mb-10 text-left">
       <CardBody className="p-9">
-        <Eyebrow variant="field" tone="attend" className="block text-tiny tracking-eyebrow">
+        <Eyebrow
+          variant="field"
+          tone="attend"
+          className="block text-tiny tracking-eyebrow"
+        >
           Reopen for correction — creates v2
         </Eyebrow>
 
         <p className="mt-3 mb-6 text-md leading-open text-ink-secondary">
           A client dispute reopens order{" "}
-          <span className="font-mono font-semibold text-ink-primary">{orderId}</span>. v1
-          stays readable and is never edited; only the disputed fields come back
-          into play.
+          <span className="font-mono font-semibold text-ink-primary">{orderId}</span>.
+          v1 stays readable and is never edited; only the disputed fields come back into
+          play.
         </p>
 
         <TextArea

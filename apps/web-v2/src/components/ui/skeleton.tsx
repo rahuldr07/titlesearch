@@ -1,4 +1,4 @@
-import { cn } from "@/shared/ui/classNames"
+import { cn } from "@/shared/ui/classNames";
 
 function Skeleton({ className, ...props }: React.ComponentProps<"div">) {
   return (
@@ -7,7 +7,7 @@ function Skeleton({ className, ...props }: React.ComponentProps<"div">) {
       className={cn("animate-pulse rounded-md bg-accent", className)}
       {...props}
     />
-  )
+  );
 }
 
-export { Skeleton }
+export { Skeleton };

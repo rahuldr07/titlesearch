@@ -40,7 +40,8 @@ export function SignoffRow({
   onComment: (comment: string) => void;
 }) {
   const answered = answer !== undefined;
-  const commentMissing = answer === "NO" && line.comment_required && comment.trim() === "";
+  const commentMissing =
+    answer === "NO" && line.comment_required && comment.trim() === "";
 
   const handleKey = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.target instanceof HTMLInputElement) return;
@@ -56,7 +57,8 @@ export function SignoffRow({
     }
     if (key !== "arrowdown" && key !== "arrowup") return;
     const row = event.currentTarget.closest("li");
-    const sibling = key === "arrowdown" ? row?.nextElementSibling : row?.previousElementSibling;
+    const sibling =
+      key === "arrowdown" ? row?.nextElementSibling : row?.previousElementSibling;
     const target = sibling?.querySelector("button");
     if (target instanceof HTMLElement) {
       event.preventDefault();
@@ -83,8 +85,8 @@ export function SignoffRow({
             ? commentMissing
               ? "border-l-state-halt bg-state-halt-surface"
               : "border-l-state-settled bg-surface-panel"
-            // Dashed on every side is safe: only the left edge has a width.
-            : "border-dashed border-l-action bg-action-surface",
+            : // Dashed on every side is safe: only the left edge has a width.
+              "border-dashed border-l-action bg-action-surface",
         )}
       >
         <div className="flex items-center gap-7">
@@ -109,7 +111,11 @@ export function SignoffRow({
               */}
               {line.label}
             </p>
-            <SignoffRowNotes line={line} periodLabel={periodLabel} answered={answered} />
+            <SignoffRowNotes
+              line={line}
+              periodLabel={periodLabel}
+              answered={answered}
+            />
           </div>
 
           <SignoffRowAnswers line={line} answer={answer} onAnswer={onAnswer} />

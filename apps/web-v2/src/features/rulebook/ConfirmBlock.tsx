@@ -58,9 +58,8 @@ export function ConfirmBlock({
 
       <p className="mb-5 text-xs leading-body text-ink-muted">
         Confirming applies this rule only to orders processed{" "}
-        <span className="font-semibold text-ink-secondary">after</span> it goes
-        live. It never re-opens delivered reports and never changes an order
-        mid-flight.
+        <span className="font-semibold text-ink-secondary">after</span> it goes live. It
+        never re-opens delivered reports and never changes an order mid-flight.
       </p>
 
       {mayConfirm ? (

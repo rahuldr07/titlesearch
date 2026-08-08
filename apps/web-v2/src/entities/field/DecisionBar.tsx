@@ -112,7 +112,13 @@ export function DecisionBar({
       >
         ↗ Can&rsquo;t decide — escalate
       </Button>
-      <Button size="sm" fill="ghost" tone="neutral" data-testid="act-pass" onClick={onPass}>
+      <Button
+        size="sm"
+        fill="ghost"
+        tone="neutral"
+        data-testid="act-pass"
+        onClick={onPass}
+      >
         Pass — say why
       </Button>
     </div>

@@ -39,7 +39,8 @@ export function formatDecimalString(value: string): string | null {
   const [, sign, whole, fraction] = m;
   if (whole === undefined) return null;
   // "-0" is not a quantity anyone meant to send.
-  if (sign === "-" && whole === "0" && (fraction ?? "").replace(/0/g, "") === "") return null;
+  if (sign === "-" && whole === "0" && (fraction ?? "").replace(/0/g, "") === "")
+    return null;
   return `${sign}$${group(whole)}.${(fraction ?? "").padEnd(2, "0")}`;
 }
 

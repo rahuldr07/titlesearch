@@ -44,8 +44,14 @@ export function ProductsScreen() {
   const [editing, setEditing] = useState<EditTarget | null>(null);
   const { data, isPending, isError } = useQuery(configQuery);
 
-  if (isError) return <ScreenMessage tone="halt" measure="1040">Configuration unavailable.</ScreenMessage>;
-  if (isPending) return <ScreenMessage measure="1040">Loading configuration…</ScreenMessage>;
+  if (isError)
+    return (
+      <ScreenMessage tone="halt" measure="1040">
+        Configuration unavailable.
+      </ScreenMessage>
+    );
+  if (isPending)
+    return <ScreenMessage measure="1040">Loading configuration…</ScreenMessage>;
 
   // The groups a line may belong to are the ones the catalogue already uses.
   // Offering a fixed list would let the drawer invent a group the server has
@@ -89,7 +95,11 @@ export function ProductsScreen() {
           </TabPanel>
 
           <TabPanel value="grid">
-            <BaselineGrid products={data.products} lines={data.lines} canAuthor={canAuthor} />
+            <BaselineGrid
+              products={data.products}
+              lines={data.lines}
+              canAuthor={canAuthor}
+            />
           </TabPanel>
 
           <TabPanel value="clients">
@@ -98,7 +108,11 @@ export function ProductsScreen() {
         </Tabs>
 
         {editing === null ? null : (
-          <EditDrawer target={editing} groups={groups} onClose={() => setEditing(null)} />
+          <EditDrawer
+            target={editing}
+            groups={groups}
+            onClose={() => setEditing(null)}
+          />
         )}
       </div>
     </Screen>

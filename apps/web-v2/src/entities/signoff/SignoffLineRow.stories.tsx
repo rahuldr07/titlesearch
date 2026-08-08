@@ -24,7 +24,9 @@ type Story = StoryObj<typeof meta>;
 
 /** Answered YES: the record, and nothing about what it might have been. */
 export const Answered: Story = {
-  args: { line: signoffLine(1, { label: "Chain of title searched for the ordered period" }) },
+  args: {
+    line: signoffLine(1, { label: "Chain of title searched for the ordered period" }),
+  },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(canvas.getByText("L01")).toBeInTheDocument();
@@ -44,7 +46,9 @@ export const NoWithItsComment: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(canvas.getByText(/No plat or survey was in the package\./)).toBeInTheDocument();
+    await expect(
+      canvas.getByText(/No plat or survey was in the package\./),
+    ).toBeInTheDocument();
   },
 };
 
@@ -74,13 +78,17 @@ export const Unanswered: Story = {
  */
 export const AmendedAndRaised: Story = {
   args: {
-    line: signoffLine(6, { label: "Judgments and liens searched against every vested owner" }),
+    line: signoffLine(6, {
+      label: "Judgments and liens searched against every vested owner",
+    }),
     amendedFrom: "N/A",
     raised: true,
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(canvas.getByText("AMENDED FROM N/A → YES · RECORDED")).toBeInTheDocument();
+    await expect(
+      canvas.getByText("AMENDED FROM N/A → YES · RECORDED"),
+    ).toBeInTheDocument();
     await expect(
       canvas.getByText("CONTRADICTS EXTRACTION — RAISED AS A DECISION ABOVE"),
     ).toBeInTheDocument();

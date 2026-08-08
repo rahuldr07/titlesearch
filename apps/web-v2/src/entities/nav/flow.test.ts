@@ -27,7 +27,9 @@ describe("the flow is six positions, always", () => {
   });
 
   test("only Review is order-scoped", () => {
-    expect(FLOW.filter((step) => step.orderScoped).map((s) => s.label)).toEqual(["Review"]);
+    expect(FLOW.filter((step) => step.orderScoped).map((s) => s.label)).toEqual([
+      "Review",
+    ]);
   });
 });
 
@@ -58,7 +60,9 @@ describe("every stage passes the same authz gate the doors pass", () => {
   });
 
   test("a filtered stage never renumbers the ones after it", () => {
-    const positions = new Map(flowFor("reviewer").map(({ step, n }) => [step.label, n]));
+    const positions = new Map(
+      flowFor("reviewer").map(({ step, n }) => [step.label, n]),
+    );
     expect(positions.get("Questions")).toBe(2);
     expect(positions.get("Review")).toBe(5);
     expect(positions.get("Delivered")).toBe(6);

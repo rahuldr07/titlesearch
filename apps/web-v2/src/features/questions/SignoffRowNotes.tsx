@@ -45,7 +45,9 @@ export function SignoffRowNotes({
           <Eyebrow variant="caption" tone="action" className="shrink-0">
             SCOPE / PERIOD
           </Eyebrow>
-          <span className="font-mono text-xs font-semibold text-action-ink">{periodLabel}</span>
+          <span className="font-mono text-xs font-semibold text-action-ink">
+            {periodLabel}
+          </span>
         </div>
       ) : null}
 
@@ -64,7 +66,9 @@ export function SignoffRowNotes({
           <Eyebrow variant="caption" tone="attend" className="shrink-0">
             NO MACHINE CHECK
           </Eyebrow>
-          <span className="text-tiny leading-body text-ink-secondary">{NA_UNCHECKED_NOTE}</span>
+          <span className="text-tiny leading-body text-ink-secondary">
+            {NA_UNCHECKED_NOTE}
+          </span>
         </div>
       ) : null}
 
@@ -80,10 +84,16 @@ export function SignoffRowNotes({
               ) : (
                 <>
                   Policy suggests{" "}
-                  <span className="font-mono font-semibold">{line.policy_suggestion}</span>
+                  <span className="font-mono font-semibold">
+                    {line.policy_suggestion}
+                  </span>
                 </>
               )}{" "}
-              — <span className="font-semibold text-action-ink">only your press signs it</span>.
+              —{" "}
+              <span className="font-semibold text-action-ink">
+                only your press signs it
+              </span>
+              .
             </span>
           ) : null}
         </div>

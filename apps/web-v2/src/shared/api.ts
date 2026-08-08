@@ -118,6 +118,10 @@ export function post<T>(
  * domain ("confirm", "escalate", "resolve"), because a generic partial update
  * is a state machine with no vocabulary.
  */
-export function patch<T>(path: string, schema: Validator<T>, body: unknown): Promise<T> {
+export function patch<T>(
+  path: string,
+  schema: Validator<T>,
+  body: unknown,
+): Promise<T> {
   return request(path, schema, { method: "PATCH", body: JSON.stringify(body) });
 }

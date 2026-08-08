@@ -106,10 +106,17 @@
  * over what you cannot transcribe — so it took the attend stripe with it (`.nv.pu`).
  */
 @utility na-hatch {
-  background-image: repeating-linear-gradient(45deg, var(--color-na-unreadable-border) 0 2.5px, transparent 2.5px 6px);
+  background-image: repeating-linear-gradient(
+    45deg,
+    var(--color-na-unreadable-border) 0 2.5px,
+    transparent 2.5px 6px
+  );
 }
 @utility na-dots {
-  background-image: radial-gradient(var(--color-na-silent-hatch) 0.8px, transparent 0.9px);
+  background-image: radial-gradient(
+    var(--color-na-silent-hatch) 0.8px,
+    transparent 0.9px
+  );
   background-size: 6px 6px;
 }
 
@@ -127,5 +134,9 @@
  * value; the colour is a token, so it follows the theme.
  */
 @utility rail-wash {
-  background-image: linear-gradient(90deg, var(--color-rail-active-wash), transparent 70%);
+  background-image: linear-gradient(
+    90deg,
+    var(--color-rail-active-wash),
+    transparent 70%
+  );
 }

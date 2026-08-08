@@ -60,13 +60,18 @@ export function AuthorOverride({
         }}
       >
         {OVERRIDE_ACTIONS.map((a) => (
-          <Toggle key={a.value} value={a.value} className="rounded-5">{a.label}</Toggle>
+          <Toggle key={a.value} value={a.value} className="rounded-5">
+            {a.label}
+          </Toggle>
         ))}
       </ToggleGroup>
 
       {current === "add" ? null : (
         <div className="mt-4">
-          <Select value={line} onValueChange={(v) => setLine(typeof v === "string" ? v : null)}>
+          <Select
+            value={line}
+            onValueChange={(v) => setLine(typeof v === "string" ? v : null)}
+          >
             <SelectTrigger
               aria-label="Baseline line to override"
               placeholder="Choose a baseline line…"
@@ -98,12 +103,11 @@ export function AuthorOverride({
       </Button>
 
       <p className="mt-4 text-tiny leading-body text-ink-muted">
-        Removing an override returns that line to the baseline — “stop
-        differing,” not “remove the line.”
+        Removing an override returns that line to the baseline — “stop differing,” not
+        “remove the line.”
       </p>
       <p className="mt-2 text-tiny leading-body text-ink-muted">
-        CONTRACT GAP: overrides are served read-only. Nothing typed here is
-        submitted.
+        CONTRACT GAP: overrides are served read-only. Nothing typed here is submitted.
       </p>
     </div>
   );

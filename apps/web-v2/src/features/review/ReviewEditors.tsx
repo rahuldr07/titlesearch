@@ -98,11 +98,19 @@ export function ReviewEditors({
       ) : null}
 
       {mode === "escalate" ? (
-        <EscalateEditor pending={writePending} onCancel={onCancel} onSubmit={onEscalate} />
+        <EscalateEditor
+          pending={writePending}
+          onCancel={onCancel}
+          onSubmit={onEscalate}
+        />
       ) : null}
 
       {mode === "exclude" ? (
-        <ExcludeEditor pending={writePending} onCancel={onCancel} onSubmit={onExclude} />
+        <ExcludeEditor
+          pending={writePending}
+          onCancel={onCancel}
+          onSubmit={onExclude}
+        />
       ) : null}
 
       {mode === "pass" ? (

@@ -63,7 +63,11 @@ export const TheyAgree: Story = {
  * because there is nothing to adopt.
  */
 export const OneEngineReturnedNothing: Story = {
-  args: { field: fieldAt("judgments.1.plaintiff_attorney"), onAdopt: noop, onPin: noop },
+  args: {
+    field: fieldAt("judgments.1.plaintiff_attorney"),
+    onAdopt: noop,
+    onPin: noop,
+  },
   render: (args) => (
     <div className="max-w-160">
       <EngineReadings {...args} />

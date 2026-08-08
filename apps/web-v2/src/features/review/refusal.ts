@@ -37,5 +37,7 @@ export function latestRefusal(writes: readonly WriteOutcome[]): string | null {
     if (write.submittedAt === 0) continue;
     if (latest === null || write.submittedAt > latest.submittedAt) latest = write;
   }
-  return latest !== null && latest.error instanceof ApiError ? latest.error.message : null;
+  return latest !== null && latest.error instanceof ApiError
+    ? latest.error.message
+    : null;
 }

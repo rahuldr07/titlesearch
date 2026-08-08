@@ -32,7 +32,13 @@ const PRODUCTS = [
  * "which client", and a screen reader has to be told that too.
  */
 export const TwoColumn: Story = {
-  args: { name: "client", columns: 2, options: CLIENTS, value: null, onSelect: () => {} },
+  args: {
+    name: "client",
+    columns: 2,
+    options: CLIENTS,
+    value: null,
+    onSelect: () => {},
+  },
   render: function Render() {
     const [value, setValue] = useState<string | null>(null);
     return (
@@ -40,7 +46,13 @@ export const TwoColumn: Story = {
         <Eyebrow as="legend" variant="field">
           CLIENT &middot; REQUIRED &middot; RESOLVES THE EFFECTIVE SIGN-OFF
         </Eyebrow>
-        <ChoiceCardGrid name="client" columns={2} options={CLIENTS} value={value} onSelect={setValue} />
+        <ChoiceCardGrid
+          name="client"
+          columns={2}
+          options={CLIENTS}
+          value={value}
+          onSelect={setValue}
+        />
       </fieldset>
     );
   },
@@ -48,7 +60,13 @@ export const TwoColumn: Story = {
 
 /** Six cards, one already chosen — the design's drawn state for the product grid. */
 export const ThreeColumnChosen: Story = {
-  args: { name: "product", columns: 3, options: PRODUCTS, value: "p_y40", onSelect: () => {} },
+  args: {
+    name: "product",
+    columns: 3,
+    options: PRODUCTS,
+    value: "p_y40",
+    onSelect: () => {},
+  },
   render: function Render() {
     const [value, setValue] = useState<string | null>("p_y40");
     return (
@@ -56,7 +74,13 @@ export const ThreeColumnChosen: Story = {
         <Eyebrow as="legend" variant="field">
           PRODUCT ORDERED &middot; SETS THE QUESTIONS AND THE SCOPE
         </Eyebrow>
-        <ChoiceCardGrid name="product" columns={3} options={PRODUCTS} value={value} onSelect={setValue} />
+        <ChoiceCardGrid
+          name="product"
+          columns={3}
+          options={PRODUCTS}
+          value={value}
+          onSelect={setValue}
+        />
       </fieldset>
     );
   },

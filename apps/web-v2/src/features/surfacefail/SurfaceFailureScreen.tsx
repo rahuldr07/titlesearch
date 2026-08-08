@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { ScreenFailure } from "../../shared/ui/ScreenFailure";
-import { buttonClasses } from "../../shared/ui/Button";
+import { buttonClasses } from "../../shared/ui/buttonClasses";
 import { Screen } from "../../shared/ui/Screen";
 import { cn } from "../../shared/ui/classNames";
 
@@ -26,15 +26,19 @@ import { cn } from "../../shared/ui/classNames";
  * person reading it and a gift to anyone else), and a way OUT that does not
  * require guessing which screens still work.
  */
-export function SurfaceFailureScreen({ reference }: { reference?: string | undefined }) {
+export function SurfaceFailureScreen({
+  reference,
+}: {
+  reference?: string | undefined;
+}) {
   return (
     <Screen measure="440" pad="40" placement="centre">
       <div data-testid="surface-failure" className="flex flex-col gap-6">
         <ScreenFailure reference={reference} />
 
         <p className="text-xs leading-open text-ink-muted">
-          The error is in the console with its stack. Reload, or switch to
-          another screen and back.
+          The error is in the console with its stack. Reload, or switch to another
+          screen and back.
         </p>
 
         <div>

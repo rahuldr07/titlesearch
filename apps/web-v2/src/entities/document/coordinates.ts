@@ -46,7 +46,10 @@ export type LineCoords = unknown;
  * does not positively recognise. That is the safe direction: a missing overlay
  * is visibly missing, a wrong overlay is not.
  */
-export function toEvidenceBoxes(coords: LineCoords, page: PageBox): EvidenceBox[] | null {
+export function toEvidenceBoxes(
+  coords: LineCoords,
+  page: PageBox,
+): EvidenceBox[] | null {
   if (!isPositiveSize(page)) return null;
   if (!Array.isArray(coords) || coords.length === 0) return null;
 
@@ -102,7 +105,8 @@ function toBox(quad: unknown, page: PageBox): EvidenceBox | null {
    * over a rounding artefact.
    */
   const MIN_VISIBLE = 0.001;
-  if (width / page.width < MIN_VISIBLE || height / page.height < MIN_VISIBLE) return null;
+  if (width / page.width < MIN_VISIBLE || height / page.height < MIN_VISIBLE)
+    return null;
   // Out-of-bounds means we have misread the payload; refuse the whole set.
   if (left < 0 || top < 0 || left + width > page.width || top + height > page.height) {
     return null;

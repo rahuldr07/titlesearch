@@ -59,7 +59,12 @@ function fieldsQuery(orderId: string) {
  */
 const TILES = [
   { key: "fields", label: "Fields", tone: undefined, muteAtZero: false },
-  { key: "auto_confirmed", label: "Auto-confirmed", tone: "settled", muteAtZero: false },
+  {
+    key: "auto_confirmed",
+    label: "Auto-confirmed",
+    tone: "settled",
+    muteAtZero: false,
+  },
   { key: "needs_review", label: "Need you", tone: "action", muteAtZero: false },
   // Zero no-source is the good outcome, so it recedes; any other figure is the
   // loudest thing on the strip.

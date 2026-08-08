@@ -62,7 +62,11 @@ export function EditDrawer({
         </div>
 
         {target.kind === "line" ? (
-          <LineForm editing={target.mode === "edit"} groups={groups} onCancel={onClose} />
+          <LineForm
+            editing={target.mode === "edit"}
+            groups={groups}
+            onCancel={onClose}
+          />
         ) : null}
         {target.kind === "product" ? (
           <ProductForm isNew={target.mode === "new"} onCancel={onClose} />

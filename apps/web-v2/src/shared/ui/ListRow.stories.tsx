@@ -37,7 +37,9 @@ export const InACard: Story = {
       <Card>
         <CardHeader filled>
           <Eyebrow variant="section">People</Eyebrow>
-          <Chip tone="attend" className="ml-auto">2 gated</Chip>
+          <Chip tone="attend" className="ml-auto">
+            2 gated
+          </Chip>
         </CardHeader>
         <DividedSection>
           {ROSTER.map((person) => (
@@ -46,7 +48,9 @@ export const InACard: Story = {
                 {person.name}
               </span>
               <span className="min-w-60 text-sm text-ink-secondary">{person.role}</span>
-              <Chip tone={person.tone} size="sm" shape="tag">{person.status}</Chip>
+              <Chip tone={person.tone} size="sm" shape="tag">
+                {person.status}
+              </Chip>
             </ListRow>
           ))}
         </DividedSection>
@@ -69,8 +73,13 @@ export const Interactive: Story = {
         <DividedSection>
           {CLUSTERS.map((cluster) => (
             <ListRow key={cluster.path} interactive className="p-0">
-              <button type="button" className="flex w-full flex-col gap-1 px-6 py-4 text-left">
-                <span className="font-mono text-xs text-ink-primary">{cluster.path}</span>
+              <button
+                type="button"
+                className="flex w-full flex-col gap-1 px-6 py-4 text-left"
+              >
+                <span className="font-mono text-xs text-ink-primary">
+                  {cluster.path}
+                </span>
                 <span className="text-tiny text-ink-muted">{cluster.note}</span>
               </button>
             </ListRow>

@@ -30,7 +30,13 @@ describe("a flow route resolves to the order its screen is about", () => {
   });
 
   test("anything else is null — never a plausible stand-in", () => {
-    for (const path of ["/queue", "/ingest", "/delivered", "/orders/ord_demo_1/review", "/"]) {
+    for (const path of [
+      "/queue",
+      "/ingest",
+      "/delivered",
+      "/orders/ord_demo_1/review",
+      "/",
+    ]) {
       expect(flowOrderFor(path), path).toBeNull();
     }
   });
@@ -39,7 +45,11 @@ describe("a flow route resolves to the order its screen is about", () => {
     // Upload CREATES the order — before the press there is none to name.
     // Delivered picks its own record out of `GET /api/deliveries`; a constant
     // here would be a second answer, free to disagree with the receipt shown.
-    expect(Object.keys(FLOW_ORDERS)).toEqual(["/questions", "/processing", "/completeness"]);
+    expect(Object.keys(FLOW_ORDERS)).toEqual([
+      "/questions",
+      "/processing",
+      "/completeness",
+    ]);
   });
 });
 
@@ -63,7 +73,9 @@ describe("the screen's order and the rail's order are the same fact", () => {
 describe("the URL wins wherever the route carries one", () => {
   test("an order-scoped path resolves to ITS order, not a flow constant", () => {
     expect(screenOrderFor("/orders/ord_demo_9/review")).toBe("ord_demo_9");
-    expect(screenOrderFor("/orders/ord_demo_2/review?field=owner.zip")).toBe("ord_demo_2");
+    expect(screenOrderFor("/orders/ord_demo_2/review?field=owner.zip")).toBe(
+      "ord_demo_2",
+    );
   });
 
   test("a flow route falls through to the map", () => {

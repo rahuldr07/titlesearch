@@ -22,7 +22,10 @@ import { AuthorOverride } from "./AuthorOverride";
  * layer's version of a value with no provenance.
  */
 const TONE: Readonly<Record<OverrideType, "halt" | "action">> = {
-  waive: "halt", narrow: "action", replace: "action", add: "action",
+  waive: "halt",
+  narrow: "action",
+  replace: "action",
+  add: "action",
 };
 
 export function OverridesPanel({
@@ -58,7 +61,11 @@ export function OverridesPanel({
         ) : (
           <ul className="mt-5 flex flex-col gap-4">
             {client.overrides.map((o) => (
-              <li key={o.id} data-testid={`override-${o.id}`} className="flex flex-col gap-2">
+              <li
+                key={o.id}
+                data-testid={`override-${o.id}`}
+                className="flex flex-col gap-2"
+              >
                 {/*
                   TWO LINES, BECAUSE THE ROW CARRIES MORE THAN THE EXPORT'S DOES.
                   The design draws one flex row — chip, description, note,
@@ -72,9 +79,13 @@ export function OverridesPanel({
                   second.
                 */}
                 <div className="flex flex-wrap items-baseline gap-5">
-                  <Chip tone={TONE[o.type]} size="micro" bordered>{o.type}</Chip>
+                  <Chip tone={TONE[o.type]} size="micro" bordered>
+                    {o.type}
+                  </Chip>
                   {o.line_id === null ? null : (
-                    <span className="font-mono text-tiny text-ink-muted">{o.line_id}</span>
+                    <span className="font-mono text-tiny text-ink-muted">
+                      {o.line_id}
+                    </span>
                   )}
                   <span className="min-w-0 flex-1 text-base font-medium text-ink-primary">
                     {o.description}

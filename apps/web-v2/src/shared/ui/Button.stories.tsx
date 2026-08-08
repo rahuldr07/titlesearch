@@ -30,11 +30,21 @@ export const Outlined: Story = {
   args: { children: "Escalate" },
   render: () => (
     <Row>
-      <Button fill="outlined" tone="action">Save as PENDING</Button>
-      <Button fill="outlined" tone="settled">✓ Accept as stated</Button>
-      <Button fill="outlined" tone="attend">↗ Escalate</Button>
-      <Button fill="outlined" tone="halt">Acknowledge conflict</Button>
-      <Button fill="outlined" tone="neutral">Cancel</Button>
+      <Button fill="outlined" tone="action">
+        Save as PENDING
+      </Button>
+      <Button fill="outlined" tone="settled">
+        ✓ Accept as stated
+      </Button>
+      <Button fill="outlined" tone="attend">
+        ↗ Escalate
+      </Button>
+      <Button fill="outlined" tone="halt">
+        Acknowledge conflict
+      </Button>
+      <Button fill="outlined" tone="neutral">
+        Cancel
+      </Button>
     </Row>
   ),
 };
@@ -43,10 +53,18 @@ export const Tinted: Story = {
   args: { children: "Go to a page read in full" },
   render: () => (
     <Row>
-      <Button fill="tinted" tone="action">Go to a page read in full</Button>
-      <Button fill="tinted" tone="settled">Confirmed</Button>
-      <Button fill="tinted" tone="attend">Provisional</Button>
-      <Button fill="tinted" tone="halt">Package incomplete</Button>
+      <Button fill="tinted" tone="action">
+        Go to a page read in full
+      </Button>
+      <Button fill="tinted" tone="settled">
+        Confirmed
+      </Button>
+      <Button fill="tinted" tone="attend">
+        Provisional
+      </Button>
+      <Button fill="tinted" tone="halt">
+        Package incomplete
+      </Button>
     </Row>
   ),
 };
@@ -55,8 +73,12 @@ export const Ghost: Story = {
   args: { children: "Profile" },
   render: () => (
     <Row>
-      <Button fill="ghost" tone="neutral">Profile</Button>
-      <Button fill="ghost" tone="halt">Sign out</Button>
+      <Button fill="ghost" tone="neutral">
+        Profile
+      </Button>
+      <Button fill="ghost" tone="halt">
+        Sign out
+      </Button>
     </Row>
   ),
 };
@@ -92,9 +114,15 @@ export const Disabled: Story = {
   render: () => (
     <Row>
       <Button disabled>Start pipeline</Button>
-      <Button fill="outlined" tone="neutral" disabled>Cancel</Button>
-      <Button fill="tinted" tone="action" disabled>View on p7</Button>
-      <Button fill="ghost" tone="neutral" disabled>Profile</Button>
+      <Button fill="outlined" tone="neutral" disabled>
+        Cancel
+      </Button>
+      <Button fill="tinted" tone="action" disabled>
+        View on p7
+      </Button>
+      <Button fill="ghost" tone="neutral" disabled>
+        Profile
+      </Button>
     </Row>
   ),
 };

@@ -10,7 +10,9 @@ export function NotFound() {
   return (
     <Card size="emphasis" accent="halt">
       <CardBody>
-        <Eyebrow variant="screen" tone="halt">Not found</Eyebrow>
+        <Eyebrow variant="screen" tone="halt">
+          Not found
+        </Eyebrow>
         <p data-testid="not-found" className="mt-4 text-md text-ink-primary">
           Nothing lives at this address.
         </p>

@@ -25,7 +25,8 @@ type Story = StoryObj<typeof meta>;
 export const RetireARule: Story = {
   args: {
     trigger: "Retire…",
-    question: "Retiring removes this rule from the live book. Orders already ruled keep their ruling.",
+    question:
+      "Retiring removes this rule from the live book. Orders already ruled keep their ruling.",
     confirmLabel: "Confirm — retire",
     onConfirm: () => {},
   },
@@ -34,7 +35,8 @@ export const RetireARule: Story = {
 export const WithdrawUnresolved: Story = {
   args: {
     trigger: "Withdraw unresolved…",
-    question: "The escalation closes with no rule, and the question can be asked again.",
+    question:
+      "The escalation closes with no rule, and the question can be asked again.",
     confirmLabel: "Confirm — withdraw",
     onConfirm: () => {},
   },

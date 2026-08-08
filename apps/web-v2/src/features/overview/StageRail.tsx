@@ -40,12 +40,21 @@ export function StageRail({ stages }: { stages: readonly LifecycleStage[] }) {
           return (
             <ListRow key={stage.id} className="flex flex-wrap items-start gap-7">
               <div className="flex min-w-0 shrink-0 basis-95 items-stretch gap-5">
-                <span aria-hidden="true" className={cn("w-1.5 shrink-0 rounded-1", tone.bar)} />
+                <span
+                  aria-hidden="true"
+                  className={cn("w-1.5 shrink-0 rounded-1", tone.bar)}
+                />
                 <div className="min-w-0">
-                  <h2 data-testid="stage-label" className="text-xs leading-tight font-bold text-ink-primary">
+                  <h2
+                    data-testid="stage-label"
+                    className="text-xs leading-tight font-bold text-ink-primary"
+                  >
                     {stage.label}
                   </h2>
-                  <p data-testid="stage-sub" className="mt-1 text-tiny leading-close text-ink-muted">
+                  <p
+                    data-testid="stage-sub"
+                    className="mt-1 text-tiny leading-close text-ink-muted"
+                  >
                     {stage.sub}
                   </p>
                   <div className="mt-2 flex flex-wrap items-center gap-3">

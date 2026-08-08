@@ -57,7 +57,9 @@ for (const width of [1440, 1280, 1024, 900]) {
  * assertion is a comparison, not a magic number: the drawn values may move
  * again, but narrow must never be the wider of the two.
  */
-test("a screen's padding steps down below lg and is restored above it", async ({ page }) => {
+test("a screen's padding steps down below lg and is restored above it", async ({
+  page,
+}) => {
   const padAt = async (size: { width: number; height: number }) => {
     await page.setViewportSize(size);
     await page.goto("/queue");
@@ -71,12 +73,14 @@ test("a screen's padding steps down below lg and is restored above it", async ({
   };
   const wide = await padAt(WIDE);
   const narrow = await padAt(NARROW);
-  expect(wide, "the scroller reports no padding — the selector no longer finds it").toBeGreaterThan(
-    0,
-  );
-  expect(narrow, "below lg a screen must not keep the padding drawn for a wide window").toBeLessThan(
+  expect(
     wide,
-  );
+    "the scroller reports no padding — the selector no longer finds it",
+  ).toBeGreaterThan(0);
+  expect(
+    narrow,
+    "below lg a screen must not keep the padding drawn for a wide window",
+  ).toBeLessThan(wide);
 });
 
 /**
@@ -85,7 +89,9 @@ test("a screen's padding steps down below lg and is restored above it", async ({
  * 860px; in a 900px window minus a 232px rail it cannot have it, and the
  * correct behaviour is to shrink silently rather than to overflow.
  */
-test("a measure shrinks into a narrow column instead of overflowing it", async ({ page }) => {
+test("a measure shrinks into a narrow column instead of overflowing it", async ({
+  page,
+}) => {
   await page.setViewportSize(NARROW);
   await page.goto("/queue");
   await expect(page.getByTestId("side-rail")).toBeVisible();
@@ -112,10 +118,14 @@ test("a measure shrinks into a narrow column instead of overflowing it", async (
     [PADDED, MEASURED] as const,
   );
   expect(measured).toBeGreaterThan(0);
-  expect(measured, "the measured wrapper is wider than the column that holds it").toBeLessThanOrEqual(
-    column,
-  );
-  expect(measured, "860px was available and taken — this window cannot supply it").toBeLessThan(860);
+  expect(
+    measured,
+    "the measured wrapper is wider than the column that holds it",
+  ).toBeLessThanOrEqual(column);
+  expect(
+    measured,
+    "860px was available and taken — this window cannot supply it",
+  ).toBeLessThan(860);
   expect(docOverflowX).toBe(0);
 });
 
@@ -130,7 +140,9 @@ test("a measure shrinks into a narrow column instead of overflowing it", async (
  * is 236px — tall enough to overflow, which is the only state that separates
  * the two behaviours.
  */
-test("a centred card that outgrows the window keeps its padding and scrolls", async ({ page }) => {
+test("a centred card that outgrows the window keeps its padding and scrolls", async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 900, height: 240 });
   await page.goto("/signin");
   // `/signin` is a Card and a wordmark, not a heading — this is its stable anchor.
@@ -147,15 +159,21 @@ test("a centred card that outgrows the window keeps its padding and scrolls", as
       return {
         overflows: scroller.scrollHeight > scroller.clientHeight,
         padTop: Math.round(parseFloat(getComputedStyle(padded).paddingTop)),
-        topGap: Math.round(card.getBoundingClientRect().top - scroller.getBoundingClientRect().top),
+        topGap: Math.round(
+          card.getBoundingClientRect().top - scroller.getBoundingClientRect().top,
+        ),
       };
     },
     [SCROLLER, PADDED, MEASURED] as const,
   );
-  expect(seen, "the signin screen no longer has the expected scroller/card shape").not.toBeNull();
-  expect(seen?.overflows, "240px was not short enough to overflow the card — the test is inert").toBe(
-    true,
-  );
+  expect(
+    seen,
+    "the signin screen no longer has the expected scroller/card shape",
+  ).not.toBeNull();
+  expect(
+    seen?.overflows,
+    "240px was not short enough to overflow the card — the test is inert",
+  ).toBe(true);
   expect(
     seen?.topGap,
     "an overflowing centred card was pinned flat against the pane, losing the slot's padding",
@@ -197,5 +215,8 @@ test("the masthead steps down on a narrow window", async ({ page }) => {
   const wide = await sizeAt(1440);
   const narrow = await sizeAt(600);
   expect(wide, "the drawn masthead is 38px").toBeGreaterThan(30);
-  expect(narrow, "the masthead keeps its full drawn size on a 600px window").toBeLessThan(wide);
+  expect(
+    narrow,
+    "the masthead keeps its full drawn size on a 600px window",
+  ).toBeLessThan(wide);
 });

@@ -59,7 +59,10 @@ const PIPELINE_STAGE_ID: Partial<Record<string, string>> = {
   "/completeness": "gate",
 };
 
-function phaseDone(pipeline: OrderPipelineResponse | undefined, stageId: string): boolean {
+function phaseDone(
+  pipeline: OrderPipelineResponse | undefined,
+  stageId: string,
+): boolean {
   return pipeline?.stages.find((stage) => stage.id === stageId)?.phase === "done";
 }
 
@@ -105,7 +108,8 @@ export function reviewAugment(data: {
   const done = phaseDone(data.pipeline, "qc");
   // Same filter `OrderCounts`'s "Need you" tile counts — server-labelled
   // state, never confidence.
-  const needYou = data.fields?.fields.filter((f) => f.state === "needs_review").length ?? 0;
+  const needYou =
+    data.fields?.fields.filter((f) => f.state === "needs_review").length ?? 0;
   // Amber, as the export marks an unanswered review: work waiting on a person
   // is not the same signal as a run that has stopped.
   return { done, badge: needYou > 0 ? String(needYou) : null, badgeTone: "attend" };

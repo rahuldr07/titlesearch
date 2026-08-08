@@ -60,7 +60,12 @@ export function GlobalKeys() {
     [role, navigate],
   );
 
-  useHotkeys("g", () => setArmed(true), { enabled: !onCaptureSeat, preventDefault: true }, [onCaptureSeat]);
+  useHotkeys(
+    "g",
+    () => setArmed(true),
+    { enabled: !onCaptureSeat, preventDefault: true },
+    [onCaptureSeat],
+  );
 
   // Every letter, so an armed chord consumes the second key rather than
   // letting it fall through to a screen hotkey.
@@ -118,7 +123,15 @@ export function GlobalKeys() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [onCaptureSeat, toggleNav]);
 
-  useHotkeys("escape", () => { setMapOpen(false); setArmed(false); }, { enabled: mapOpen || armed }, [mapOpen, armed]);
+  useHotkeys(
+    "escape",
+    () => {
+      setMapOpen(false);
+      setArmed(false);
+    },
+    { enabled: mapOpen || armed },
+    [mapOpen, armed],
+  );
 
   if (!mapOpen) return null;
   return <KeyMap doors={doors} />;

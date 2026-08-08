@@ -11,7 +11,9 @@ import { get, post, type Validator } from "../../shared/api";
  */
 const AckResponse: Validator<{ ok: true }> = {
   safeParse: (input) =>
-    typeof input === "object" && input !== null && (input as { ok?: unknown }).ok === true
+    typeof input === "object" &&
+    input !== null &&
+    (input as { ok?: unknown }).ok === true
       ? { success: true, data: { ok: true } }
       : { success: false, error: { message: "expected { ok: true }" } },
 };
@@ -44,7 +46,8 @@ export const rulesQuery = queryOptions({
 export function useConfirmRule() {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: (ruleId: string) => post(`/api/rules/${ruleId}/confirm`, AckResponse, {}),
+    mutationFn: (ruleId: string) =>
+      post(`/api/rules/${ruleId}/confirm`, AckResponse, {}),
     onSuccess: () => client.invalidateQueries({ queryKey: ["rules"] }),
   });
 }

@@ -70,9 +70,13 @@ export function AccountMenu({
             them does — the mockup sets `.w-name` at 1.2 and `.w-role` at 1. */}
         <span className="text-left leading-tight">
           <span className="block text-sm font-semibold text-ink-primary">{actor}</span>
-          <span className="block text-micro tracking-caps uppercase text-ink-muted">{role}</span>
+          <span className="block text-micro tracking-caps uppercase text-ink-muted">
+            {role}
+          </span>
         </span>
-        <span aria-hidden className="text-micro text-ink-muted">▾</span>
+        <span aria-hidden className="text-micro text-ink-muted">
+          ▾
+        </span>
       </DropdownMenuTrigger>
       {/*
         THE APP'S CARD LANGUAGE, IMPOSED HERE. The vendored content ships

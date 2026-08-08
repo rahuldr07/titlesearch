@@ -24,7 +24,8 @@ const LINES: readonly OrderSignoffLine[] = [
     label: "Easements and restrictions of record reported",
     group: "Legal",
     answer: "NO",
-    comment: "No plat or survey was in the package — only prior deed exhibits could be checked for easement language.",
+    comment:
+      "No plat or survey was in the package — only prior deed exhibits could be checked for easement language.",
     comment_required: true,
     answers: ["YES", "NO", "N/A"],
     policy_suggestion: null,
@@ -55,8 +56,14 @@ export const OneCardPerNoLine: Story = {
     const canvas = within(canvasElement);
     await expect(canvas.getByTestId("no-disclosure-L11")).toBeInTheDocument();
     await expect(canvas.queryByTestId("no-disclosure-L4")).not.toBeInTheDocument();
-    await expect(canvas.getByText(/No plat or survey was in the package/)).toBeInTheDocument();
-    await expect(canvas.getByText("Sign-off line 11 · Easements and restrictions of record reported")).toBeInTheDocument();
+    await expect(
+      canvas.getByText(/No plat or survey was in the package/),
+    ).toBeInTheDocument();
+    await expect(
+      canvas.getByText(
+        "Sign-off line 11 · Easements and restrictions of record reported",
+      ),
+    ).toBeInTheDocument();
   },
 };
 
@@ -68,7 +75,9 @@ export const ControlsAreDisabled: Story = {
   args: { lines: LINES },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(canvas.getByRole("button", { name: /Accept as stated/ })).toBeDisabled();
+    await expect(
+      canvas.getByRole("button", { name: /Accept as stated/ }),
+    ).toBeDisabled();
     await expect(canvas.getByRole("button", { name: /Escalate/ })).toBeDisabled();
   },
 };

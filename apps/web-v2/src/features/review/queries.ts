@@ -11,7 +11,9 @@ import { get, post, type Validator } from "../../shared/api";
 
 const Ack: Validator<{ ok: true }> = {
   safeParse: (input) =>
-    typeof input === "object" && input !== null && (input as { ok?: unknown }).ok === true
+    typeof input === "object" &&
+    input !== null &&
+    (input as { ok?: unknown }).ok === true
       ? { success: true, data: { ok: true } }
       : { success: false, error: { message: "expected { ok: true }" } },
 };
@@ -95,7 +97,8 @@ function useFieldWrite<TBody>(orderId: string, action: string) {
   return useMutation({
     mutationFn: ({ fieldId, ...body }: TBody & { fieldId: string }) =>
       post(`/api/fields/${fieldId}/${action}`, Ack, body),
-    onSuccess: () => client.invalidateQueries({ queryKey: ["orders", orderId, "fields"] }),
+    onSuccess: () =>
+      client.invalidateQueries({ queryKey: ["orders", orderId, "fields"] }),
   });
 }
 
@@ -128,7 +131,8 @@ export function useExcludeField(orderId: string) {
 export function usePassOrder(orderId: string) {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: (reason: string) => post(`/api/orders/${orderId}/pass`, Ack, { reason }),
+    mutationFn: (reason: string) =>
+      post(`/api/orders/${orderId}/pass`, Ack, { reason }),
     onSuccess: () => client.invalidateQueries({ queryKey: ["queue"] }),
   });
 }

@@ -26,7 +26,9 @@ export const NoteCarriesTheServerCount: Story = {
   args: { title: "Held", note: "stopped · needs someone", count: 4, children: null },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(canvas.getByTestId("band-note")).toHaveTextContent("4 stopped · needs someone");
+    await expect(canvas.getByTestId("band-note")).toHaveTextContent(
+      "4 stopped · needs someone",
+    );
   },
 };
 
@@ -64,7 +66,11 @@ export const HeldRowOpensAndDoesNotClaim: Story = {
             /* `neutral`/`outlined`, the mockup's `.btn.line`. The bare
                `<Button>` this was is the wax default, and the wax is spent once
                per screen — on "Take next order", never on a row control. */
-            action={<Button size="sm" tone="neutral" fill="outlined">Open →</Button>}
+            action={
+              <Button size="sm" tone="neutral" fill="outlined">
+                Open →
+              </Button>
+            }
           />
         </DividedSection>
       </Card>
@@ -90,7 +96,12 @@ export const HeldRowOpensAndDoesNotClaim: Story = {
  * rather than printing a zero nobody measured.
  */
 export const UnactionableRowDrawsNoControl: Story = {
-  args: { title: "In flight", note: "processing · senior · ops view", count: 1, children: null },
+  args: {
+    title: "In flight",
+    note: "processing · senior · ops view",
+    count: 1,
+    children: null,
+  },
   render: (args) => (
     <QueueBand {...args}>
       <Card>

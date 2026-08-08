@@ -63,7 +63,8 @@ export function IngestScreen() {
     const form = new FormData();
     for (const field of ORDER_FIELDS) {
       const value = values[field.key];
-      if (value !== undefined && value.trim() !== "") form.append(field.key, value.trim());
+      if (value !== undefined && value.trim() !== "")
+        form.append(field.key, value.trim());
     }
     // Unchosen means UNSENT, never an empty string: the door's refusal names
     // the field it did not receive, and a blank one would be a value.
@@ -90,7 +91,11 @@ export function IngestScreen() {
         {/* NOT a `RefusalNudge`: the server's verdict on the whole request, not a
             control naming what it lacks — there is no control id to describe, and the nudge's own fixed testid would rename the `ingest-banner` gate. */}
         {upload.error instanceof ApiError ? (
-          <p data-testid="ingest-banner" role="alert" className="text-xs font-semibold text-state-halt-ink">
+          <p
+            data-testid="ingest-banner"
+            role="alert"
+            className="text-xs font-semibold text-state-halt-ink"
+          >
             {upload.error.message}
           </p>
         ) : null}
@@ -113,7 +118,9 @@ export function IngestScreen() {
             <ProductPicker />
             <OrderForm
               values={values}
-              onChange={(key, value) => setValues((prev) => ({ ...prev, [key]: value }))}
+              onChange={(key, value) =>
+                setValues((prev) => ({ ...prev, [key]: value }))
+              }
             />
 
             <IngestActs
