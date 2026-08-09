@@ -13,7 +13,7 @@ backend docs. It is retired; the guides above are the source of truth.
 
 - **Document precedence:** `docs/HANDOFF.md` → `docs/CONTEXT.md` §11 → `docs/PRD.md`
   → `docs/backend/BUILD-PLAN.md` (canonical for the backend build since 2026-08-04).
-- **Backend:** six independent uv projects (`services/*`, `libs/*`), each with its own
+- **Backend:** seven independent uv projects (`services/*`, `libs/*`, `scripts/`), each with its own
   committed `uv.lock`. Run tooling from each project directory:
   `uv sync --frozen --all-groups` · `uv run ruff check .` · `uv run ruff format
   --check .` · `uv run pyright` · `uv run pytest`.

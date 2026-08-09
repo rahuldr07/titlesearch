@@ -115,9 +115,12 @@ the only condition that is.
 
 ## On the YAML parser
 
-`scripts/tests` is not a uv project, so this suite runs in whatever environment
-`uv run --with pytest python -m pytest -q scripts/tests` builds — pytest and the
-standard library, no PyYAML. Rather than skip (a skipped drift test is a drift
+CORRECTED 2026-08-08: `scripts/` IS now a uv project (the seventh — see
+`scripts/pyproject.toml`), and inside it PyYAML is a direct dev dependency. The
+paragraph below described the pre-project world and still governs the OTHER way
+this suite runs — the pre-commit hook's bare
+`uv run --with pytest python -m pytest -q scripts/tests`, which builds an
+environment with pytest and the standard library, no PyYAML. Rather than skip (a skipped drift test is a drift
 test that does not exist), `load_yaml` falls back to a real parser in a throwaway
 `uv run --with pyyaml` environment. If neither route is available the tests fail
 and say so; they never pass by default.
@@ -133,7 +136,7 @@ import subprocess
 import sys
 from functools import cache
 from pathlib import Path, PurePosixPath
-from typing import Any
+from typing import Any, cast
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 WORKFLOW = REPO_ROOT / ".github" / "workflows" / "backend.yml"
@@ -268,17 +271,22 @@ def load_yaml(path: Path) -> Any:
         raise AssertionError(f"{rel(path)} is not valid YAML:\n{exc}") from exc
 
 
-def workflow(path: Path = WORKFLOW) -> dict[str, Any]:
+def workflow(path: Path = WORKFLOW) -> dict[object, Any]:
     """A parsed workflow. Defaults to `backend.yml`, which most checks here mean.
 
     The parameter exists because the four `_step_enforces` rules are about what
     GitHub does with a step, not about which file the step is in — so any
     workflow making an integrity claim can be held to them. `migration-harness.yml`
     is the second caller; see the tests at the end of this module.
+
+    Keyed by `object`, not `str`, because that is what a parsed workflow really
+    is: YAML 1.1 resolves a bare `on` to the boolean `True` — see `triggers`.
     """
     document = load_yaml(path)
     assert isinstance(document, dict), f"{rel(path)} did not parse to a mapping"
-    return document
+    # `cast`, not an annotated binding: the parse boundary is where Unknown
+    # enters, and the asserts above are the runtime check the cast leans on.
+    return cast(dict[object, Any], document)
 
 
 def jobs(path: Path = WORKFLOW) -> dict[str, Any]:
@@ -286,7 +294,16 @@ def jobs(path: Path = WORKFLOW) -> dict[str, Any]:
     found = document.get("jobs")
     assert isinstance(found, dict), f"{rel(path)} defines no jobs mapping"
     assert found, f"{rel(path)} defines no jobs"
-    return found
+    return cast(dict[str, Any], found)
+
+
+def _steps(job: Any) -> list[dict[str, Any]]:
+    """A job's step mappings, dropping anything that is not a mapping at all."""
+    return [
+        cast(dict[str, Any], step)
+        for step in cast(list[object], job.get("steps") or [])
+        if isinstance(step, dict)
+    ]
 
 
 def run_blocks() -> tuple[str, ...]:
@@ -302,8 +319,8 @@ def run_blocks() -> tuple[str, ...]:
     return tuple(
         step["run"]
         for job in jobs().values()
-        for step in (job.get("steps") or [])
-        if isinstance(step, dict) and isinstance(step.get("run"), str)
+        for step in _steps(job)
+        if isinstance(step.get("run"), str)
     )
 
 
@@ -365,8 +382,8 @@ def enforcing_run_blocks(path: Path = WORKFLOW) -> tuple[str, ...]:
     return tuple(
         step["run"]
         for job in jobs(path).values()
-        for step in (job.get("steps") or [])
-        if isinstance(step, dict) and isinstance(step.get("run"), str) and _step_enforces(job, step)
+        for step in _steps(job)
+        if isinstance(step.get("run"), str) and _step_enforces(job, step)
     )
 
 
@@ -474,12 +491,13 @@ def local_hook_gates() -> dict[str, tuple[str, ...]]:
     """
     config = load_yaml(PRE_COMMIT)
     assert isinstance(config, dict), f"{rel(PRE_COMMIT)} did not parse to a mapping"
+    parsed = cast(dict[str, Any], config)
 
     gates: dict[str, tuple[str, ...]] = {}
-    for repo in config.get("repos") or []:
+    for repo in cast(list[dict[str, Any]], parsed.get("repos") or []):
         if repo.get("repo") != "local":
             continue
-        for hook in repo.get("hooks") or []:
+        for hook in cast(list[dict[str, Any]], repo.get("hooks") or []):
             entry = hook["entry"]
             named = tuple(
                 token
@@ -607,9 +625,10 @@ def test_the_project_matrix_covers_every_python_project() -> None:
         f"{rel(WORKFLOW)}: the {PROJECT_JOB!r} job has no {PROJECT_JOB} matrix"
     )
     assert matrix, f"{rel(WORKFLOW)}: the {PROJECT_JOB} matrix is empty"
+    entries = cast(list[str], matrix)
 
-    unchecked = sorted(projects - set(matrix))
-    stale = sorted(set(matrix) - projects)
+    unchecked = sorted(projects - set(entries))
+    stale = sorted(set(entries) - projects)
     assert not unchecked, (
         f"these directories hold a pyproject.toml and are absent from the {PROJECT_JOB} matrix "
         f"in {rel(WORKFLOW)}, so nothing lints, type-checks or tests them: {unchecked}"
@@ -637,7 +656,7 @@ def triggers(path: Path) -> dict[str, Any]:
     for key in (True, "on", "true"):
         found = document.get(key)
         if isinstance(found, dict):
-            return found
+            return cast(dict[str, Any], found)
     raise AssertionError(f"{rel(path)} has no `on:` mapping of triggers")
 
 
@@ -690,11 +709,12 @@ def test_the_migration_harness_workflow_watches_both_sides_of_the_migration() ->
             f"{rel(HARNESS_WORKFLOW)} has no {event} trigger — a workflow that does not "
             f"run on {event} cannot gate one"
         )
-        paths = block.get("paths")
+        paths = cast(dict[str, Any], block).get("paths")
         assert isinstance(paths, list), (
             f"{rel(HARNESS_WORKFLOW)}: the {event} trigger declares no paths filter"
         )
-        missing = [wanted for wanted in HARNESS_REQUIRED_PATHS if wanted not in paths]
+        declared = cast(list[str], paths)
+        missing = [wanted for wanted in HARNESS_REQUIRED_PATHS if wanted not in declared]
         assert not missing, (
             f"{rel(HARNESS_WORKFLOW)}: the {event} paths filter is missing {missing}. "
             f"The point of this workflow is that a change to one side of the migration "
@@ -717,12 +737,12 @@ def paths_filter(path: Path, event: str) -> list[str]:
         f"{rel(path)} has no {event} trigger — a workflow that does not run on "
         f"{event} cannot gate one"
     )
-    found = block.get("paths")
+    found = cast(dict[str, Any], block).get("paths")
     assert isinstance(found, list), (
         f"{rel(path)}: the {event} trigger declares no paths filter, so it runs on "
         f"every change and this assertion has nothing to check"
     )
-    return [str(entry) for entry in found]
+    return [str(entry) for entry in cast(list[object], found)]
 
 
 def test_the_shared_contract_fixture_triggers_the_workflows_that_gate_it() -> None:

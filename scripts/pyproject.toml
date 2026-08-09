@@ -1,0 +1,59 @@
+[project]
+name = "titlepipe-scripts"
+version = "0.1.0"
+description = "Repo-wide gates: the client-data guard, the structural rules, the lock and link checks, and the Gate 0 reproduction runner."
+requires-python = ">=3.13,<3.14"
+# Deliberately empty: every gate is standard library only, so the guards run on
+# any 3.13 interpreter with nothing installed — including the pre-commit hooks,
+# which invoke them as `python scripts/<gate>.py`, not through this project.
+dependencies = []
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "ruff==0.15.*",
+    "pyright==1.1.*",
+    "pytest==9.1.*",
+    "pytest-cov==7.*",
+    # test_backend_workflow parses the workflow YAML. It carries a JSON
+    # fallback via `uv run --with pyyaml` for bare interpreters; inside this
+    # project the dependency is direct so the fallback is the exception.
+    "pyyaml==6.*",
+    "types-pyyaml==6.*",
+]
+
+# The gates are deliberately flat top-level modules — `python scripts/x.py`
+# stays the invocation everywhere (hooks, CI, docs). The wheel exists only so
+# `uv build` verifies this project packages like the other six; nothing
+# installs it.
+[tool.hatch.build.targets.wheel]
+include = ["*.py", "gate0/*.py", "tests/*.py"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --strict-markers --strict-config"
+
+[tool.pyright]
+include = ["."]
+# The Gate 0 scripts that import the recovered prototype (`titlepipe.*`) are
+# excluded BY NAME, not because typing is optional there: the prototype lives in
+# the hash-verified archive and is rebuilt into a scratch worktree at run time
+# (see gate0/run_prototype_suite.py), so its package is deliberately absent from
+# this tree and pyright has nothing to resolve those imports against. The frozen
+# reproduction — pinned interpreter, pinned requirements.lock, 177 green tests —
+# is that code's verification. Everything else in gate0/ is checked.
+exclude = [
+    "**/__pycache__",
+    ".venv",
+    "gate0/test_v14_r15.py",
+    "gate0/make_synthetic_reports.py",
+]
+# tests/ and gate0/ import the flat modules beside them via sys.path at run
+# time; these are the matching static search paths.
+extraPaths = [".", "gate0"]
+typeCheckingMode = "strict"
+pythonVersion = "3.13"
+reportMissingTypeStubs = false

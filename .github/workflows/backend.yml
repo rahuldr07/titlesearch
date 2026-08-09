@@ -139,7 +139,7 @@ jobs:
         run: python scripts/check_backend_rules.py
 
       # Per-project `uv sync --frozen` below is the authority on lock drift.
-      # This runs the same check across all six projects at once, before any
+      # This runs the same check across all seven projects at once, before any
       # matrix job has started, so a drifted lock is one failing line here
       # rather than six failing installs.
       - name: Locks are current
@@ -181,6 +181,7 @@ jobs:
       fail-fast: false
       matrix:
         project:
+          - scripts
           - libs/domain
           - libs/test-support
           - services/core-api
