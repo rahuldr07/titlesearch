@@ -10,6 +10,8 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from check_doc_links import broken_links, main
@@ -40,7 +42,9 @@ def test_prose_mentions_are_not_links(tmp_path: Path) -> None:
     assert broken_links(doc) == []
 
 
-def test_main_reports_and_fails_on_a_broken_link(tmp_path: Path, capsys) -> None:  # type: ignore[no-untyped-def]  # rules-allow(no-any): pytest capsys fixture type is pytest-internal
+def test_main_reports_and_fails_on_a_broken_link(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
     doc = tmp_path / "a.md"
     doc.write_text("[gone](gone.md)")
     assert main([str(doc)]) == 1
