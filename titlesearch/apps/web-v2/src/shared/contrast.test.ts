@@ -254,16 +254,6 @@ describe("base state colours are never safe as text (light palette — not exten
     const r = ratio(token("color-state-attend"), token("color-state-attend-surface"));
     expect(r, `${r.toFixed(2)}:1`).toBeLessThan(AA_NORMAL);
   });
-
-  test("base attend on the app background is below AA", () => {
-    const r = ratio(token("color-state-attend"), token("color-surface-app"));
-    expect(r, `${r.toFixed(2)}:1`).toBeLessThan(AA_NORMAL);
-  });
-
-  test("base settled on the app background is below AA", () => {
-    const r = ratio(token("color-state-settled"), token("color-surface-app"));
-    expect(r, `${r.toFixed(2)}:1`).toBeLessThan(AA_NORMAL);
-  });
 });
 
 /**

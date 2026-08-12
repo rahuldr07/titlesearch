@@ -94,11 +94,11 @@
    *     reversal, on the mockup's authority, and it changes which ink family is
    *     legal on that pane.
    */
-  --color-surface-app: #e3dcca; /* the desk — window background behind everything */
-  --color-surface-panel: #faf7ef; /* row containers, cards, primary panels */
-  --color-surface-sunken: #e9e3d2; /* sidebar column, segmented tracks, table caps, inset wells */
-  --color-surface-raised: #fffdf6; /* the open decision card — brightest paper in the system */
-  --color-row-hover: #fffdf6; /* = raised: a hovered row lifts toward the open card */
+  --color-surface-app: #f8f9fa; /* the desk — window background behind everything */
+  --color-surface-panel: #ffffff; /* row containers, cards, primary panels */
+  --color-surface-sunken: #f1f5f9; /* sidebar column, segmented tracks, table caps, inset wells */
+  --color-surface-raised: #ffffff; /* the open decision card — brightest paper in the system */
+  --color-row-hover: #f8f9fa; /* = raised: a hovered row lifts toward the open card */
   /*
    * REVERSES the light document pane. D2 was reversed by the owner in 2026-07-26
    * ("the design-mock pane ships as drawn") to a LIGHT pane; the approved mockup
@@ -115,16 +115,16 @@
   /* page-reference chip — "this value was read from page N". Now the same wax
      family as --color-action; the legacy collision that justified a separate
      hue retired with apps/web. Kept as its own name so it can diverge again. */
-  --color-page-ref: #8a3222;
-  --color-page-ref-ink: #6e2718; /* text sitting ON page-ref-surface — 8.42:1 */
-  --color-page-ref-surface: #f2e1da;
-  --color-page-ref-border: #e4c9bf;
+  --color-page-ref: #2563eb;
+  --color-page-ref-ink: #1e3a8a; /* text sitting ON page-ref-surface */
+  --color-page-ref-surface: #eff6ff;
+  --color-page-ref-border: #bfdbfe;
 
   /* evidence highlight — the marker drawn over a cited line on the page. The
      mockup outlines the cited token in wax over a gold wash, so the border
      leaves the old ochre and joins the accent. Both PINNED (see rule 1 below). */
-  --color-surface-evidence: rgb(240 205 90 / 0.55);
-  --color-border-evidence: #8a3222;
+  --color-surface-evidence: rgb(250 204 21 / 0.55);
+  --color-border-evidence: #2563eb;
   /*
    * The PIN is a weaker mark — "this field points here", vs the highlight's
    * "this is the cited line". Re-derived warm: the accent hue at a fraction of
@@ -132,11 +132,11 @@
    * two unrelated colours. Not hex-testable (rgba token), so a visual judgment
    * call, not a gate-verified one.
    */
-  --color-surface-pin: rgb(138 50 34 / 0.14);
+  --color-surface-pin: rgb(37 99 235 / 0.14);
 
   /* ── ink ──────────────────────────────────────────────────────────────── */
-  --color-ink-primary: #221c13; /* 12.54:1 on app, 16.10:1 on panel */
-  --color-ink-secondary: #5b5342; /* 5.56:1 on app, 7.10:1 on panel */
+  --color-ink-primary: #111827;
+  --color-ink-secondary: #374151;
   /*
    * DARKENED from the mockup's --ink-3 #8D8471, and this is a correctness fix,
    * not a taste call. The mockup's own panel admits the problem ("≈4.2:1 …
@@ -158,26 +158,26 @@
    * NOT available on --color-surface-document (2.00:1) — that pane is dark now
    * and has its own ink vocabulary. Same constraint as before, new arithmetic.
    */
-  --color-ink-muted: #675e4d; /* eyebrow labels, meta, "recede" */
+  --color-ink-muted: #4b5563; /* eyebrow labels, meta, "recede" */
 
   /* ── lines ────────────────────────────────────────────────────────────── */
-  --color-line-strong: #d9d1bc; /* card borders, dividers that must read */
-  --color-line-subtle: #e4ddcb; /* row separators inside a card */
+  --color-line-strong: #e5e7eb; /* card borders, dividers that must read */
+  --color-line-subtle: #f3f4f6; /* row separators inside a card */
   /* The mockup's --ink-4. It draws every DASHED border (the `searched — not
      found` chip) and the scrollbar thumb; a step heavier than the ordinary rule
      is exactly what "dashed" needs to survive being broken into segments. */
-  --color-line-dashed: #b3aa95;
+  --color-line-dashed: #d1d5db;
 
   /* ── action (sealing wax) — the primary affordance, and "your correction" ─ */
   /* The ONLY colour in this palette drawn as a solid fill under light text.
      See the accent/halt resolution in the file header before changing any of
      these four — --color-action-border being a HAIRLINE is load-bearing. */
-  --color-action: #8a3222;
-  --color-action-ink: #6e2718; /* text on action-surface — 8.42:1 */
-  --color-action-surface: #f2e1da;
-  --color-action-border: #e4c9bf; /* HAIRLINE (lum .620) — the greyscale foil to halt's stroke */
-  --color-ink-on-action: #fbf3ee; /* 7.48:1 on action, 5.15:1 on settled, 12.38:1 on halt */
-  --color-key-chip-on-action: rgb(255 255 255 / 0.1);
+  --color-action: #2563eb;
+  --color-action-ink: #1e3a8a; /* text on action-surface */
+  --color-action-surface: #eff6ff;
+  --color-action-border: #bfdbfe; /* HAIRLINE */
+  --color-ink-on-action: #ffffff;
+  --color-key-chip-on-action: rgb(255 255 255 / 0.2);
 
   /*
    * THE RAIL'S ACTIVE WASH — the navigator's marked row, and deliberately NOT
@@ -191,7 +191,7 @@
    * every CSS colour function inside apps/web-v2/src — including color-mix — so
    * the alpha has to be resolved here, where the palette lives.
    */
-  --color-rail-active-wash: rgb(138 50 34 / 0.08);
+  --color-rail-active-wash: rgb(37 99 235 / 0.08);
 
   /* ── state: settled — confirmed, delivered, gate passed ───────────────── */
   --color-state-settled: #45714b;
@@ -203,9 +203,9 @@
   /* Deliberately the same family as action: "this is yours" and "you may act"
      are one signal in this design, and the mockup draws the live decision card
      with the accent. Kept as separate names so they can diverge. */
-  --color-state-decide: #8a3222;
-  --color-state-decide-surface: #f2e1da;
-  --color-state-decide-border: #e4c9bf;
+  --color-state-decide: #2563eb;
+  --color-state-decide-surface: #eff6ff;
+  --color-state-decide-border: #bfdbfe;
 
   /* ── state: attend — escalated, disclosed, narrowed, provisional ──────── */
   /*
@@ -478,9 +478,9 @@
   --radius-5: 5px; /* button — the mockup's --r-btn */
   --radius-6: 6px; /* large button */
   --radius-7: 7px; /* inset well, segmented track, tint panel */
-  --radius-8: 8px; /* card — the mockup's --r-card */
-  --radius-9: 10px; /* the open decision card */
-  --radius-10: 14px; /* app sheet, drawer — the mockup's --r-panel */
+  --radius-8: 12px; /* card — the mockup's --r-card */
+  --radius-9: 14px; /* the open decision card */
+  --radius-10: 16px; /* app sheet, drawer — the mockup's --r-panel */
 
   --radius-pill: 20px; /* pill filter, toggle track */
 
@@ -739,9 +739,9 @@
   --color-page-ref-border: #453f66; /* = action-border */
 
   /* PINNED, extending rule 1 — markers drawn ON the page, not UI chrome. */
-  --color-surface-evidence: rgb(240 205 90 / 0.55); /* PINNED */
-  --color-border-evidence: #8a3222; /* PINNED */
-  --color-surface-pin: rgb(138 50 34 / 0.14); /* PINNED */
+  --color-surface-evidence: rgb(250 204 21 / 0.55); /* PINNED */
+  --color-border-evidence: #2563eb; /* PINNED */
+  --color-surface-pin: rgb(37 99 235 / 0.14); /* PINNED */
 
   /* ── ink ──────────────────────────────────────────────────────────────── */
   --color-ink-primary: #cdd6f4; /* text */

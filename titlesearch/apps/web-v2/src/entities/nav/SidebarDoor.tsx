@@ -23,12 +23,14 @@ import { RailRow, type DoorAttention } from "./RailRow";
  * belongs to `RailRow` and is deliberately NOT repeated here. That repetition is
  * what this file used to be.
  */
+import type { ReactNode } from "react";
+
 export interface SidebarDoorProps {
   /** Route to navigate to; also the door's stable testid suffix. */
   to: string;
   label: string;
   /** The door's pictograph, from `doorGlyph`. Shown in every state. */
-  icon: string;
+  icon: ReactNode;
   /** Hover/AT text: the door and the chord that opens it. Every door has one. */
   title: string;
   collapsed: boolean;
@@ -60,14 +62,9 @@ export function SidebarDoor({
         <span
           aria-hidden
           className={cn(
-            "shrink-0 text-center leading-flat",
-            // 14px is the mockup's `.n-ico` box — a fixed width, so nine
-            // different pictographs of nine different widths still put nine
-            // labels on one left edge. Collapsed there is no label to align to
-            // and the mark is the whole row, so it steps up a size rather than
-            // sitting small in the middle of 78px.
-            collapsed ? "w-12 text-2xl" : "w-7 text-sm",
-            active ? "text-action" : "text-ink-muted",
+            "shrink-0 text-center flex items-center justify-center",
+            collapsed ? "w-22 h-22 text-xl" : "w-9 h-9 [&>svg]:w-full [&>svg]:h-full [&>svg]:stroke-[2px]",
+            active ? "text-slate-700" : "text-[#8c899f]",
           )}
         >
           {icon}

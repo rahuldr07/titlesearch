@@ -1,5 +1,4 @@
 import { cn } from "../../shared/ui/classNames";
-import { Eyebrow } from "../../shared/ui/Eyebrow";
 
 /**
  * ONE LABELLED GROUP IN THE RAIL — the tracked-caps header and the rows under
@@ -42,7 +41,7 @@ export function RailSection({ label, note, foot, collapsed, children }: RailSect
       className={cn("flex flex-col gap-1", foot === true && "mt-auto")}
     >
       {collapsed ? null : (
-        <Eyebrow as="h2" variant="group" className="px-12 pb-3.5">
+        <div className="px-10 mb-4 mt-6 text-[11px] font-bold tracking-wider text-[#79768f] uppercase">
           {label}
           {note === undefined ? null : (
             <>
@@ -57,7 +56,7 @@ export function RailSection({ label, note, foot, collapsed, children }: RailSect
               <span className="font-mono tracking-badge tnum">{note}</span>
             </>
           )}
-        </Eyebrow>
+        </div>
       )}
       {children}
     </div>

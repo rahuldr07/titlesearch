@@ -48,21 +48,27 @@ const seal = cva("shrink-0 rounded-pill border border-action", {
   },
 });
 
-const word = cva("font-display font-strong text-ink-primary opsz-40", {
+const word = cva("font-display font-strong opsz-40", {
   variants: {
     size: {
       rail: "text-3xl leading-flat",
       hero: "text-5xl leading-flat",
     },
+    inverted: {
+      true: "text-white",
+      false: "text-ink-primary",
+    },
   },
+  defaultVariants: { inverted: false },
 });
 
 export interface WordmarkProps {
   size: "rail" | "hero";
+  inverted?: boolean;
   className?: string;
 }
 
-export function Wordmark({ size, className }: WordmarkProps) {
+export function Wordmark({ size, inverted, className }: WordmarkProps) {
   return (
     /*
      * BASELINE, not centre. The seal is a small round object beside a large
@@ -82,7 +88,7 @@ export function Wordmark({ size, className }: WordmarkProps) {
         reason: `<i>` inside the word keeps it one accessible name, where two
         adjacent spans are announced as two words by some readers.
       */}
-      <span className={cn(word({ size }))}>
+      <span className={cn(word({ size, inverted }))}>
         Title<i className="font-book text-action">Pipe</i>
       </span>
     </span>

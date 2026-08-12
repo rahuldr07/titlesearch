@@ -1,4 +1,5 @@
 import { useRef, type ReactNode } from "react";
+import { Menu, X } from "lucide-react";
 import { cn } from "../../shared/ui/classNames";
 import { RailSection } from "./RailSection";
 import { SidebarDoor, type SidebarDoorProps } from "./SidebarDoor";
@@ -91,8 +92,8 @@ export function Sidebar({ collapsed, onToggle, onNavigate, brand, sections, foot
       data-testid="side-rail"
       data-collapsed={isCollapsed ? "1" : "0"}
       className={cn(
-        "sticky top-0 flex h-screen shrink-0 flex-col gap-12 overflow-y-auto border-r border-line-subtle bg-surface-sunken pt-12 pb-13",
-        isCollapsed ? "w-39" : "w-132",
+        "sticky top-0 flex h-screen shrink-0 flex-col gap-6 overflow-y-auto bg-[#1c1a32] pt-6 pb-6 text-white font-sans",
+        isCollapsed ? "w-39" : "w-[260px]",
       )}
     >
       <div className="flex items-center justify-between gap-2 px-12">
@@ -112,9 +113,9 @@ export function Sidebar({ collapsed, onToggle, onNavigate, brand, sections, foot
           aria-pressed={isCollapsed}
           aria-label={isCollapsed ? "Expand the navigator" : "Fold the navigator"}
           onClick={onToggle}
-          className="shrink-0 rounded-3 px-2 py-1 font-mono text-sm text-ink-muted hover:bg-surface-panel hover:text-ink-secondary"
+          className="shrink-0 p-1.5 text-[#8c899f] hover:text-white hover:bg-white/5 rounded-md transition-colors font-mono"
         >
-          {isCollapsed ? "]" : "["}
+          {isCollapsed ? <Menu className="w-5 h-5" strokeWidth={2} /> : "["}
         </button>
       </div>
 
@@ -137,7 +138,7 @@ export function Sidebar({ collapsed, onToggle, onNavigate, brand, sections, foot
       ))}
 
       {foot === undefined ? null : (
-        <div className="mt-auto border-t border-line-subtle px-12 pt-4">{foot}</div>
+        <div className="mt-auto border-t border-white/5 px-12 pt-4">{foot}</div>
       )}
     </aside>
   );

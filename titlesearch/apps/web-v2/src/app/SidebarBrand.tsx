@@ -19,7 +19,7 @@ import { Wordmark } from "../shared/ui/Wordmark";
 export function SidebarBrand() {
   return (
     <Link to="/" className="min-w-0 no-underline">
-      <Wordmark size="rail" />
+      <Wordmark size="rail" inverted={true} />
     </Link>
   );
 }
