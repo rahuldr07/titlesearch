@@ -372,3 +372,94 @@ describe("ink-on-action clears AA on every filled control", () => {
     }
   }
 });
+
+/**
+ * THE NAVIGATOR IS THE SECOND SURFACE WITH ITS OWN INK VOCABULARY, and it is
+ * gated here for the same reason the document pane is: the rail went dark on
+ * 2026-08-13, and a dark column under a light app is exactly the configuration
+ * nobody screenshots. Every failure it hides is total rather than marginal.
+ *
+ * The numbers that made this a gate rather than a note, measured on
+ * `--color-rail-surface` in the light theme:
+ *   --color-ink-primary   1.00:1   identical luminance — the wordmark was blank
+ *   --color-action        2.06:1   the seal, the dot and `Pipe`
+ *   --color-ink-muted     1.70:1   every group header and every resting mark
+ *
+ * A first pass at this rail drew the group headers at #79768f (3.86:1) and the
+ * marked row as a literal `bg-white`/`text-slate-900` pair — under AA, and
+ * frozen against `[data-theme="mocha"]`, which redefines this whole family.
+ * Both are what these tests exist to refuse.
+ */
+describe("the navigator has its own ink vocabulary", () => {
+  /** Inks that stand on the rail COLUMN. Each must clear AA against it. */
+  const ON_RAIL = [
+    "color-rail-ink",
+    "color-rail-ink-secondary",
+    "color-rail-ink-muted",
+    "color-rail-accent",
+  ] as const;
+
+  /**
+   * Inks that stand on the MARKED ROW's band, which is paper (or, in Mocha, a
+   * raised panel) rather than the column. Different ground, so a different
+   * assertion — this is the pairing the rail gets wrong when someone "simplifies"
+   * `rail-ink-active` back to `rail-ink`.
+   */
+  const ON_RAIL_ACTIVE = ["color-rail-ink-active", "color-action"] as const;
+
+  for (const theme of THEMES) {
+    for (const ink of ON_RAIL) {
+      test(`${ink} clears AA on the rail — ${theme}`, () => {
+        const r = ratio(token(ink, theme), token("color-rail-surface", theme));
+        expect(r, `${r.toFixed(2)}:1`).toBeGreaterThanOrEqual(AA_NORMAL);
+      });
+    }
+
+    for (const ink of ON_RAIL_ACTIVE) {
+      test(`${ink} clears AA on the marked row — ${theme}`, () => {
+        const r = ratio(token(ink, theme), token("color-rail-active-surface", theme));
+        expect(r, `${r.toFixed(2)}:1`).toBeGreaterThanOrEqual(AA_NORMAL);
+      });
+    }
+
+    /*
+     * The band has to be VISIBLE as a band, which no ink ratio proves. 3:1 is
+     * the non-text threshold, and the light theme clears it by a mile (a sheet
+     * of paper on a dark column); Mocha cannot — a dark panel on a dark column
+     * is a step, not a slab, which is why the accent bar at the margin is
+     * load-bearing there and is asserted separately below.
+     */
+    test(`the marked row separates from the column — ${theme}`, () => {
+      const r = ratio(
+        token("color-rail-active-surface", theme),
+        token("color-rail-surface", theme),
+      );
+      expect(r, `${r.toFixed(2)}:1`).toBeGreaterThanOrEqual(
+        theme === "light" ? 3 : 1.4,
+      );
+    });
+  }
+
+  /*
+   * THE APP'S INK TIERS ARE NOT AVAILABLE HERE. Same shape as the document
+   * pane's restriction, and same purpose: state the constraint as a test so
+   * that reaching for `text-ink-primary` on the rail fails a build instead of
+   * shipping a blank column. Light theme only — in Mocha the app inks are light
+   * colours and clear the dark column by construction, so asserting it there
+   * would encode a false claim (the pane's block above makes the identical
+   * distinction, for the identical reason).
+   */
+  for (const ink of [
+    "color-ink-primary",
+    "color-ink-secondary",
+    "color-ink-muted",
+  ] as const) {
+    test(`light: ${ink} is NOT usable on the rail`, () => {
+      const r = ratio(token(ink, "light"), token("color-rail-surface", "light"));
+      expect(
+        r,
+        `${r.toFixed(2)}:1 — app ink must not be reached for on the rail`,
+      ).toBeLessThan(AA_NORMAL);
+    });
+  }
+});
