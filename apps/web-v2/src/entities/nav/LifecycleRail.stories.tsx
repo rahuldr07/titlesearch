@@ -2,9 +2,17 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
 import { LifecycleRail, type LifecycleStage } from "./LifecycleRail";
 
+/** On the rail's ground — see the note in `RailRow.stories.tsx`, same reason. */
 const meta = {
   title: "Nav/LifecycleRail",
   component: LifecycleRail,
+  decorators: [
+    (Story) => (
+      <div className="bg-rail-surface p-6">
+        <Story />
+      </div>
+    ),
+  ],
 } satisfies Meta<typeof LifecycleRail>;
 
 export default meta;

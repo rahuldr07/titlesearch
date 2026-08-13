@@ -1,5 +1,6 @@
 import { useRef, type ReactNode } from "react";
 import { cn } from "../../shared/ui/classNames";
+import { RailFold } from "./RailFold";
 import { RailSection } from "./RailSection";
 import { SidebarDoor, type SidebarDoorProps } from "./SidebarDoor";
 import { LifecycleRail, type LifecycleStage } from "./LifecycleRail";
@@ -68,11 +69,20 @@ export function Sidebar({ collapsed, onToggle, onNavigate, brand, sections, foot
   const isCollapsed = useForcedCollapse(ref) || collapsed;
 
   /*
-   * WARM PAPER ONE TONE OFF THE SHEET, and a hairline instead of a rule. The
-   * mockup's rail is `--sheet-dim` against `--card` panels, the quietest legible
-   * separation the paper ladder has: the navigator is furniture, and a
-   * panel-white column fenced by the strong line competed with the screen it
-   * frames.
+   * A DARK COLUMN, 2026-08-13, and a hairline of its own light instead of a
+   * rule. It was warm paper one tone off the sheet (`--color-surface-sunken`)
+   * against `--color-surface-panel` screens — the quietest legible separation
+   * the paper ladder has. The approved navigator inverts that: the chrome goes
+   * dark so the paper is spent on the WORK, and the rail stops competing with
+   * the screen it frames by leaving the paper ladder entirely rather than by
+   * sitting one rung down it.
+   *
+   * ⚠ THE RAIL HAS ITS OWN INK VOCABULARY, and it is not optional. Every colour
+   * on this column comes from a `rail-*` token (`tokens.css`, "the navigator's
+   * own ink family"): `--color-ink-primary` measures 1.00:1 on this surface —
+   * identical luminance, blank, not merely low-contrast. Anything drawn here
+   * that reaches for the app's ink tiers disappears, and does so in the one
+   * state (a dark column under a light app) nobody screenshots.
    *
    * NO HORIZONTAL PADDING ON THE COLUMN. The rows run full-bleed so their active
    * edge sits on the rail's own margin (see `RailRow`); everything that is not a
@@ -96,31 +106,13 @@ export function Sidebar({ collapsed, onToggle, onNavigate, brand, sections, foot
       data-testid="side-rail"
       data-collapsed={isCollapsed ? "1" : "0"}
       className={cn(
-        "sticky top-0 flex h-screen shrink-0 flex-col gap-12 overflow-y-auto scrollbar-none border-r border-line-subtle bg-surface-sunken pt-12 pb-13",
+        "sticky top-0 flex h-screen shrink-0 flex-col gap-12 overflow-y-auto scrollbar-none border-r border-rail-line bg-rail-surface pt-12 pb-13",
         isCollapsed ? "w-39" : "w-108",
       )}
     >
       <div className="flex items-center justify-between gap-2 px-12">
         {isCollapsed ? null : brand}
-        {/*
-          THE FOLD, AND IT RECEDES. The mockup has no such control — it draws one
-          state — but the fold is a product feature (`sidebar.spec`: Review opens
-          collapsed, `[` toggles it, the choice persists server-side), so it
-          stays and instead stops looking like one of the doors. It was a
-          bordered box, which in a rail whose marks are now borderless was the
-          only chrome-drawn rectangle on the column and read as the most
-          important thing on it.
-        */}
-        <button
-          type="button"
-          data-testid="rail-toggle"
-          aria-pressed={isCollapsed}
-          aria-label={isCollapsed ? "Expand the navigator" : "Fold the navigator"}
-          onClick={onToggle}
-          className="shrink-0 rounded-3 px-2 py-1 font-mono text-sm text-ink-muted hover:bg-surface-panel hover:text-ink-secondary"
-        >
-          {isCollapsed ? "]" : "["}
-        </button>
+        <RailFold collapsed={isCollapsed} onToggle={onToggle} />
       </div>
 
       {sections.map((section) => (
@@ -142,7 +134,7 @@ export function Sidebar({ collapsed, onToggle, onNavigate, brand, sections, foot
       ))}
 
       {foot === undefined ? null : (
-        <div className="mt-auto border-t border-line-subtle px-12 pt-4">{foot}</div>
+        <div className="mt-auto border-t border-rail-line px-12 pt-4">{foot}</div>
       )}
     </aside>
   );

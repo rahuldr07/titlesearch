@@ -67,7 +67,15 @@ export function SidebarDoor({
             // and the mark is the whole row, so it steps up a size rather than
             // sitting small in the middle of 78px.
             collapsed ? "w-12 text-2xl" : "w-7 text-sm",
-            active ? "text-action" : "text-ink-muted",
+            /*
+             * TWO GROUNDS, TWO TOKENS. An ACTIVE mark stands on the marked row's
+             * band, which is paper, so it takes the wax unchanged (7.66:1). A
+             * RESTING mark stands on the dark column, where `--color-ink-muted`
+             * measures 1.7:1 — so it takes the rail's own muted tier instead.
+             * The mark is the whole row when collapsed; a mark that vanishes
+             * takes the door with it.
+             */
+            active ? "text-action" : "text-rail-ink-muted",
           )}
         >
           {icon}
