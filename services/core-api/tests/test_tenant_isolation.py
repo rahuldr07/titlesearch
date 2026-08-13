@@ -1,0 +1,1548 @@
+"""🔴 THE ISOLATION PROOF. Nine assertions, all of them as `titlepipe_app`.
+
+NINE AND NOT SEVEN SINCE 2026-08-06, and the two that were added are both
+reproductions of the same mistake rather than new ground:
+
+* **`test_1a`.** Assertion 1 was named for the GUC surviving the pool checkout
+  and could not observe it — its second session goes through
+  `tenant_session(None)`, whose listener writes the deny sentinel before the
+  read. `test_1a` reads the residual off a RAW `engine.connect()`, the one
+  checkout the listener never touches, and assertion 1 keeps the property it
+  really holds under a name that says so;
+* **`test_2b`.** `audit_log`'s only verb for `titlepipe_app` is `INSERT`, and it
+  was asserted in the REFUSAL direction only — so nothing required the table to
+  be writable at all.
+
+Both are the shape recorded two sections down: A DENIAL CANNOT TELL "the rule
+works" FROM "nothing works". It is the third and fourth time this file has had
+to add a positive control for that reason.
+
+The database is an EPHEMERAL CONTAINER — see `conftest.py`'s database seam. The
+module-scoped `migrated_database` fixture applies both revisions and puts the
+database back exactly as it found it. **Nothing here is skipped.** If Docker or
+`psql` is unavailable these tests FAIL, because "we did not check isolation
+today" and "isolation holds" must never render the same way in a test report.
+
+## Why every connection below is `titlepipe_app`, and why that is the whole file
+
+**A superuser bypasses row-level security unconditionally. `FORCE` does not stop
+one** — it removes the OWNER's exemption, which is a different exemption.
+MEASURED 2026-08-06 on this repository, by running this file's own assertions
+against `migrated_database` (the superuser DSN) instead of `app_dsn`: a
+correctly forced, correctly policied `orders` returned **every tenant's rows**
+to a session established as one tenant. An isolation test on the admin DSN
+passes while proving nothing at all.
+
+`isolation_dsn` below is the one place the role is named, so that the injection
+which proves the above is a one-line change and can be re-run at will. RE-MEASURED
+2026-08-06 with `test_1a` and `test_2b` in place, `isolation_dsn` respelled to
+take `migrated_database`, this file alone: **`9 failed`** — every assertion,
+including both new ones. That was checked rather than assumed for the reason the
+first run of this injection gave: it found that only SIX of seven failed, and
+assertion 4 had to grow a filtering check before it joined them. `test_1a` needed
+the same treatment and got it — a residual of `''` is just as true of a
+superuser connection, so it also asserts the raw checkout reads no rows.
+
+## The positive control, and why the denials are worthless without it
+
+Assertions 1, 3 and 5 all read `0 rows`. Every one of them is satisfied by a
+database that denies everything to everybody — a revoked grant, a policy with no
+`USING` clause anyone can satisfy, a table that is simply empty. Three of those
+are outages and one is the behaviour under test, and no denial can tell them
+apart.
+
+`test_1b_the_positive_control_...` is what distinguishes them: in **every one of
+the seven tables**, tenant B with its own tenant established must see exactly the
+one row committed for it and not zero, and tenant A must see every row committed
+for it and none of B's.
+
+🔴 AND THE WRITE SIDE NEEDED THE SAME THING, ON ONE TABLE, AND DID NOT HAVE IT
+   UNTIL 2026-08-06. `titlepipe_app` holds exactly one verb on `audit_log`:
+`INSERT`. Assertion 2 asserts it only in the refusal direction (A writing B's id
+is refused `42501`), and assertion 2's UPDATE arms `continue` past this table
+because the ACL refuses before the policy is reached. So no assertion anywhere in
+this file required `audit_log` to accept a write at all.
+
+MEASURED 2026-08-06, `0002::_isolate` given one extra statement and `_release` the
+matching `DROP POLICY` — a deny-all INSERT that leaves every read untouched:
+
+    CREATE POLICY tenant_deny_all_insert ON audit_log
+      AS RESTRICTIVE FOR INSERT WITH CHECK (false)
+
+**`1 failed, 198 passed`**, and the one failure is `test_2b`. Every other
+assertion in this file and in `test_forced_rls_and_grants.py` stayed green
+against an `audit_log` no tenant can write a single row into — the append-only
+table, which is the one whose contents are the record of what happened. RESTRICTIVE
+is what makes it invisible to the catalog: `_permissive_policies` there filters to
+PERMISSIVE policies and its own docstring says a RESTRICTIVE extra "is caught by
+the positive control in `tests/test_tenant_isolation.py` rather than here" — which
+was true of the read side and, until `test_2b`, false of the write side.
+
+(The blunter spelling — an explicit `WITH CHECK (false)` on `tenant_isolation`
+itself — is NOT the measurement to quote, and running it says why: `2 failed`,
+because `test_forced_rls_and_grants.py::test_every_tenant_table_is_forced_
+isolated_and_reachable_by_the_app` asserts `pg_policy.polwithcheck IS NULL` and
+catches the shape change. It is the RESTRICTIVE form that ships green.)
+
+MEASURED 2026-08-06 by deleting the `event.listen(..., "after_begin", ...)` line
+from `src/titlepipe_core/db/session.py` and changing nothing else — every session
+then runs at the deny sentinel. 🔴 THIS RUN PREDATES `test_1a` AND `test_2b` AND
+HAS NOT BEEN REPEATED WITH THEM: it is a record of the SEVEN-assertion file, and
+the two new assertions are absent from both lists below rather than green in
+them.
+
+    green: 2 (still 42501), 3 (0 rows), 5 (0 rows), 6 (still refused)
+    red:   1b, 4, and 1
+
+**Every denial assertion stayed green.** All four of them, including 2 and 6,
+which refuse for a reason that has nothing to do with the tenant and so refuse
+just as happily when the tenant is gone. Assertion 2 is the sharpest of these: it
+went green with the identical SQLSTATE *and the identical message*, because "A
+inserting B's row" and "nobody inserting anybody's row" are the same refusal to
+the server.
+
+Assertion 1 went red, and the honest reason is that it is not purely a denial:
+its first step is A COMMITTING A ROW, which the policy refuses outright with no
+tenant established. Its denial half — the second session reading nothing — would
+have been greener than ever. That leaves 1b and 4 as the only two assertions that
+fail *because they are positive*, and 1b is the one whose whole purpose is to be
+positive.
+
+## What the seed is, and what the asymmetry buys
+
+`isolation_seed` (in `conftest.py`) commits rows for both tenants in **every
+tenant-keyed table and in the registry** — two for A and exactly one for B in
+each of the six, one each in `tenants`, whose primary key IS a tenant id — as the
+superuser, before any app-role connection in this module opens. One row each
+would make "exactly 1" true of both tenants, so a control that read `1` would be
+equally satisfied by a session that had leaked into the other tenant's row.
+Two-and-one makes B's count a statement about B.
+
+## 🔴 THE PROOF USED TO COVER ONE TABLE, AND THE WHOLE SUITE PASSED WITHOUT THE
+   OTHER SIX
+
+Assertions 1b, 2, 4 and 5 all read or wrote `orders` and nothing else, and
+assertions 3 and 5 read the other tables — when they read them at all — only in
+the DENY state, where "this policy denies everyone" and "this policy leaks to
+everyone" are the same zero. MEASURED 2026-08-06, `0002::_isolate` patched so
+that `orders` keeps its real predicate and the other six plus `tenants` get
+
+    USING (nullif(current_setting('app.current_tenant', true), '') IS NOT NULL)
+
+— which hands every established tenant every other tenant's rows: **`192
+passed`**. A database leaking six of seven tables, reported as a green suite.
+
+Two changes close it and both are needed. `isolation_seed` now writes A and B
+rows into all seven tables, and assertion 1b is a LOOP over the derived set
+rather than a statement about `orders`; assertion 2 is the same loop on the write
+side. The catalog half of the same hole — an assertion that read the predicate's
+substring rather than its structure — is fixed in
+`tests/test_forced_rls_and_grants.py`.
+
+## Provenance of the nine
+
+Assertions 1, 1b, 2, 3 and 6 were executed against this contract on 2026-08-05
+and their expected results were recorded there. **4 and 5 were predictions**,
+and this file is the first place they have been run. Both were confirmed; what
+4 actually measured about `after_begin` and SAVEPOINTs is written out in its own
+docstring, because the prediction was right for a reason the contract did not
+state.
+
+**1a and 2b are in no contract.** They are 2026-08-06 review findings against
+this file, and each one carries the mutation that fails it: `_SET_CONFIG_IS_LOCAL
+= False` for 1a, the RESTRICTIVE deny-all INSERT above for 2b. Both mutations were
+run, both were reverted byte-identically, and both are quoted where the assertion
+that catches them is defined rather than only here.
+
+## `begin_nested()` is banned in `src/` and used deliberately here
+
+`scripts/check_backend_rules.py` scans `src/` only. Assertion 4 is exactly why
+the exemption exists: the SAVEPOINT trap cannot be proved without a SAVEPOINT.
+"""
+
+from __future__ import annotations
+
+from collections.abc import Iterable, Mapping
+from typing import NamedTuple
+from uuid import UUID
+
+import pytest
+from sqlalchemy import Select, func, select, text
+from sqlalchemy.exc import DBAPIError
+from sqlalchemy.ext.asyncio import AsyncEngine
+
+from titlepipe_core.db import make_engine, make_sessionmaker, tenant_session
+from titlepipe_core.db.models import Order
+from titlepipe_domain import TenantId
+
+# `insufficient_privilege`. PostgreSQL answers with this code for BOTH "your
+# INSERT violates a row-level security policy" and "you may not do that at all",
+# which is why assertion 2 asserts the message alongside the code — a typo'd
+# column, a NOT NULL violation and an RLS refusal all raise, and only the
+# SQLSTATE plus the message says which one happened.
+INSUFFICIENT_PRIVILEGE_SQLSTATE = "42501"
+
+# The fragment PostgreSQL puts in the message when the refusal is the POLICY's
+# and not the ACL's. MEASURED 2026-08-06 against postgres:18.4, `titlepipe_app`
+# established as tenant A inserting a row carrying tenant B's id:
+#
+#     new row violates row-level security policy for table "orders"
+RLS_REFUSAL_FRAGMENT = "row-level security policy"
+
+# MEASURED 2026-08-06 against postgres:18.4, `titlepipe_app` (no membership in
+# `titlepipe_owner`) issuing `SET ROLE titlepipe_owner`:
+#
+#     sqlstate 42501: permission denied to set role "titlepipe_owner"
+#
+# The SQLSTATE is asserted and the message is asserted as a SECONDARY check,
+# with the substring kept to the part that is not a role name. The message text
+# is English and locale-dependent through `lc_messages` — a server started with
+# a different one answers the same 42501 with different words — so a test that
+# asserted only the sentence would be a test of the container's locale.
+SET_ROLE_REFUSAL_FRAGMENT = "permission denied to set role"
+
+# 🔴 WRITTEN OUT, NOT DERIVED, AND IT SITS BESIDE A DERIVATION ON PURPOSE. The
+# loops below iterate over the tables `isolation_seed` derived from the catalog;
+# these two literals are what says the derivation found the right ones.
+#
+# The pattern and the reason are `test_forced_rls_and_grants.py`'s, which learned
+# both from Task 2:
+#
+#   * THE FLOOR catches a derivation that stopped working. Every assertion in the
+#     positive control and in assertion 2 is a `for`, and a `for` over nothing
+#     passes — so a short set reports success for the tables it never visited;
+#   * THE EXACT SET catches SEVEN WRONG TABLES. A cardinality of seven is
+#     satisfied by seven decoys as readily as by the seven that exist, which is
+#     precisely the shape that defeated Task 2's role floor.
+#
+# `tenants` is in the set. It is not a tenant table — it is the registry, keyed on
+# `id` — but it is one of the seven `0002` writes a policy on, and leaving it out
+# of the proof is how it came to be read only in the deny state.
+EXPECTED_ISOLATION_TABLES = frozenset(
+    {"tenants", "orders", "packages", "pages", "fields", "field_readings", "audit_log"}
+)
+MINIMUM_ISOLATION_TABLES = 7
+
+
+@pytest.fixture
+def isolation_dsn(app_dsn: str) -> str:
+    """🔴 THE ONE PLACE THE ROLE IS NAMED. `titlepipe_app`, never the superuser.
+
+    Every test in this file takes this rather than `app_dsn` directly, and the
+    indirection exists for one reason: the injection that proves this file is
+    worth running has to swap the role, and it has to be re-runnable by whoever
+    reads it. Respell the parameter as `migrated_database` — which yields the
+    superuser DSN — and every one of the seven fails. MEASURED 2026-08-06.
+
+    THAT NUMBER WAS SIX THE FIRST TIME IT WAS RUN, and the missing one is the
+    reason this injection is worth having rather than a formality: assertion 4
+    passed as the superuser, because it was checking the savepoint and the GUC
+    string without ever checking that the connection was FILTERED. It now asserts
+    the other tenant's row absent, and fails with the rest.
+
+    A superuser bypasses RLS unconditionally, so a file that quietly fell back to
+    the admin DSN would report seven passes about a database it was never
+    filtered by.
+    """
+    return app_dsn
+
+
+Seed = Mapping[str, Mapping[UUID, tuple[UUID, ...]]]
+
+
+def _seeded_ids(seed: Seed, table: str, tenant: UUID) -> set[UUID]:
+    """The ids the seed committed for `tenant` in `table`, as a set.
+
+    A SET rather than a list, because nothing here promises an ordering: the
+    assertions are about WHICH rows are visible, and a `SELECT` with no
+    `ORDER BY` is entitled to answer in any order it likes.
+    """
+    return set(seed[table][tenant])
+
+
+def _every_seeded_id(seed: Seed, table: str) -> set[UUID]:
+    """Every id the seed committed in `table`, for either tenant."""
+    return {row for ids in seed[table].values() for row in ids}
+
+
+# DELETED 2026-08-06: `_visible_order_ids(engine, tenant)`. It had ZERO call
+# sites repository-wide — every reader in this file goes through
+# `_visible_ids_per_table`, which is the derived-set version of the same
+# question, or reads `select(Order.id)` inline where the point is the session
+# rather than the table. A helper nothing calls is a helper nothing keeps honest:
+# it was the one place in this file that still hardcoded `orders`, which is
+# precisely the shape the module docstring records as having made the whole proof
+# a proof about one table.
+
+
+async def _visible_ids_per_table(
+    engine: AsyncEngine, tenant: TenantId | None, tables: Iterable[str]
+) -> dict[str, set[UUID]]:
+    """table -> every `id` a session established as `tenant` can see in it.
+
+    ONE SESSION FOR ALL SEVEN READS, which is the state the application is
+    actually in: a request establishes its tenant once and then touches whatever
+    tables it needs. Seven sessions would additionally be seven `after_begin`
+    firings, and a listener that worked on the first checkout and not the rest
+    would be invisible to it.
+
+    RAW SQL RATHER THAN THE MAPPED CLASSES, because the table set is DERIVED. A
+    loop over `Order`, `Package`, `Page`, … is a hardcoded list wearing an ORM
+    costume: it would pass unchanged on the day a migration adds an eighth tenant
+    table and forgets to isolate it, which is the failure the derivation exists to
+    catch.
+
+    S608 is suppressed for the reason `conftest.py::_seed_isolation_rows` records
+    at its own three: a table name cannot be a bind parameter in any dialect, and
+    every name here comes from `isolation_seed`'s derivation, which reads
+    `pg_class` on this suite's own container and refuses anything that is not a
+    plain lower-case identifier.
+    """
+    sessionmaker = make_sessionmaker(engine)
+    async with tenant_session(sessionmaker, tenant) as session:
+        return {
+            table: {
+                row[0]
+                for row in (
+                    await session.execute(text(f"SELECT id FROM {table}"))  # noqa: S608
+                ).all()
+            }
+            for table in sorted(tables)
+        }
+
+
+# What `_cross_tenant_insert_refusals` records for a table that took the row. It
+# is a message rather than an exception because "which table accepted it" is the
+# whole content of that failure, and a `pytest.raises` that does not fire reports
+# `DID NOT RAISE DBAPIError` and names nothing.
+ACCEPTED = "the INSERT was accepted rather than refused"
+
+
+async def _cross_tenant_insert_refusals(
+    dsn: str, key_columns: Mapping[str, str], writer: TenantId, other: UUID
+) -> dict[str, tuple[str | None, str]]:
+    """table -> (SQLSTATE, message) for `writer` inserting a row keyed to `other`.
+
+    One session per table, each established as `writer`, each rolled back. The
+    rollback matters twice: a refused INSERT leaves the transaction aborted so
+    `tenant_session`'s own commit on exit would be a second and less legible
+    failure, and an ACCEPTED one must not be allowed to commit — a leaked row
+    would then be visible to every assertion that runs after this test.
+
+    `sqlstate` is narrowed with `isinstance` rather than compared straight out of
+    `getattr`: comparing `Any` to a string passes for a `None` as readily as for a
+    code.
+
+    S608 is suppressed for the reason recorded at `_visible_ids_per_table`.
+    """
+    outcomes: dict[str, tuple[str | None, str]] = {}
+    engine = make_engine(dsn)
+    try:
+        sessionmaker = make_sessionmaker(engine)
+        for table, key_column in sorted(key_columns.items()):
+            insert = f"INSERT INTO {table} ({key_column}) VALUES (:other)"  # noqa: S608
+            async with tenant_session(sessionmaker, writer) as session:
+                try:
+                    await session.execute(text(insert), {"other": other})
+                except DBAPIError as error:
+                    sqlstate = getattr(error.orig, "sqlstate", None)
+                    outcomes[table] = (
+                        sqlstate if isinstance(sqlstate, str) else None,
+                        str(error),
+                    )
+                else:
+                    outcomes[table] = (None, ACCEPTED)
+                await session.rollback()
+    finally:
+        await engine.dispose()
+    return outcomes
+
+
+# 🔴 THE ONE TABLE THE UPDATE ARM CANNOT REACH, AND IT IS A RULING RATHER THAN A
+# GAP. `0002` grants `titlepipe_app` SELECT and INSERT on `audit_log` and no
+# UPDATE, deliberately — `tests/test_forced_rls_and_grants.py::test_audit_log_is
+# _granted_insert_but_never_update` holds that from the ACL side. The privilege
+# check runs BEFORE row-level security, so both arms below come back as the ACL's
+# refusal rather than the policy's. MEASURED 2026-08-06 against postgres:18.4,
+# `titlepipe_app` established as tenant A:
+#
+#     UPDATE audit_log SET tenant_id = '1111…';   -- A's own id
+#     -> 42501 permission denied for table audit_log
+#     UPDATE audit_log SET tenant_id = '2222…';   -- B's id
+#     -> 42501 permission denied for table audit_log
+#
+# So it is asserted as that refusal rather than skipped. The name is a literal
+# beside `EXPECTED_ISOLATION_TABLES` for the same reason that set is: the loop
+# derives its tables from the catalog, and this is what says which of them the
+# derivation is expected to behave differently for.
+#
+# 🔴 THAT `continue` IS ALSO WHY THIS TABLE NEEDED `test_2b`. Both UPDATE arms
+# skip it and the INSERT loop only ever requires a REFUSAL of it, so between them
+# they left `titlepipe_app`'s single verb on this table — `INSERT` — asserted in
+# the deny direction and in no other. A policy that refused every INSERT made all
+# of those assertions MORE true. `test_2b` is the positive control that closes it;
+# the module docstring carries the mutation and the `1 failed, 198 passed`.
+APPEND_ONLY_TABLE = "audit_log"
+
+# The fragment PostgreSQL puts in the message when the refusal is the ACL's
+# rather than the policy's. MEASURED 2026-08-06, as above. It is asserted
+# alongside the SQLSTATE because `42501` is the code for both, and a policy
+# refusal reported as an ACL refusal (or the reverse) is a test that has stopped
+# describing what it names.
+ACL_REFUSAL_FRAGMENT = "permission denied for table"
+
+# What `_unqualified_update_outcomes` records in the message slot when the
+# statement was NOT refused. The arm that expects a refusal reports this string
+# instead of `DID NOT RAISE`, which names no table.
+NOT_REFUSED = "the UPDATE was accepted rather than refused"
+
+
+class UpdateReach(NamedTuple):
+    """What one `UPDATE <table> SET <key> = <tenant>` did, with NO `WHERE` clause.
+
+    🔴 NO `WHERE`, AND THAT IS THE ENTIRE DESIGN OF THIS HELPER RATHER THAN A
+       SIMPLIFICATION. MEASURED 2026-08-06 against postgres:18.4 as
+       `titlepipe_app` established as tenant A, on `orders`, with the wide-open
+       `FOR UPDATE USING (true) WITH CHECK (true)` policy injected alongside a
+       correct `tenant_isolation`:
+
+           UPDATE orders SET tenant_id = <A> WHERE id = <B's row>  ->  0
+           UPDATE orders SET tenant_id = <A>                       ->  3
+
+       and, with no injection, `0` and `2`. A `WHERE` reads a column, and
+       PostgreSQL applies the SELECT policy to any UPDATE that reads — so the
+       qualified form answers **0 even when the UPDATE policy is wide open** and
+       proves nothing about it: that is the SELECT policy talking. Only the
+       unqualified form reads nothing and goes straight through the UPDATE
+       policy.
+
+    `before` and `after` are `SELECT count(*)` on the same table in the same
+    session, either side of the statement. `after` is the leak in its most
+    legible form: re-tenanting somebody else's row to yourself makes it VISIBLE,
+    so a session that could see two rows before and three after has taken one.
+
+    `touched` is `rowcount`, and `None` means the statement raised — in which
+    case `sqlstate` and `message` carry the refusal and `after` is `None`,
+    because the transaction is aborted and cannot be read.
+    """
+
+    before: int
+    touched: int | None
+    after: int | None
+    sqlstate: str | None
+    message: str
+
+
+async def _unqualified_update_outcomes(
+    dsn: str, key_columns: Mapping[str, str], writer: TenantId, target: UUID
+) -> dict[str, UpdateReach]:
+    """table -> `UpdateReach` for `writer` running `UPDATE … SET <key> = target`.
+
+    One session per table, each established as `writer`, each ROLLED BACK. The
+    rollback is not tidiness: an accepted cross-tenant UPDATE that committed
+    would re-tenant a seeded row and every assertion in this file after it would
+    be reading a different database.
+
+    `target` is the parameter that makes this two arms rather than one. Called
+    with the WRITER's own id it asks how far an unqualified UPDATE reaches;
+    called with the OTHER tenant's id it asks whether the row can be re-tenanted,
+    which is the `WITH CHECK` side.
+
+    `sqlstate` is narrowed with `isinstance` rather than compared straight out of
+    `getattr`, for the reason `_cross_tenant_insert_refusals` records: comparing
+    `Any` to a string passes for a `None` as readily as for a code.
+
+    🔴 THE UPDATE GOES THROUGH `await session.connection()` AND THE READS GO
+       THROUGH THE SESSION, AND THE SPLIT IS FORCED BY THE TYPE CHECKER RATHER
+       THAN CHOSEN. `AsyncSession.execute` is annotated `-> Result[Any]`, which
+       publishes no `rowcount` — MEASURED 2026-08-06 against pyright 1.1.411:
+       `Cannot access attribute "rowcount" for class "Result[Any]"` plus
+       `reportUnknownMemberType`. `AsyncConnection.execute` is annotated
+       `-> CursorResult[Any]`, where `rowcount` is an ordinary `int`. The
+       alternative was a `# pyright: ignore`, which this repository treats as a
+       suppression to justify rather than a fix.
+
+       It is the SAME transaction either way: `session.connection()` hands back
+       the connection the session's transaction is already running on — the count
+       above has begun it, so `after_begin` has fired and the tenant is
+       established — and `session.rollback()` below still discards it.
+
+    S608 is suppressed for the reason recorded at `_visible_ids_per_table`.
+    """
+    outcomes: dict[str, UpdateReach] = {}
+    engine = make_engine(dsn)
+    try:
+        sessionmaker = make_sessionmaker(engine)
+        for table, key_column in sorted(key_columns.items()):
+            count = f"SELECT count(*) FROM {table}"  # noqa: S608
+            update = f"UPDATE {table} SET {key_column} = :target"  # noqa: S608
+            async with tenant_session(sessionmaker, writer) as session:
+                before = int((await session.execute(text(count))).scalar_one())
+                connection = await session.connection()
+                try:
+                    result = await connection.execute(text(update), {"target": target})
+                except DBAPIError as error:
+                    sqlstate = getattr(error.orig, "sqlstate", None)
+                    outcomes[table] = UpdateReach(
+                        before,
+                        None,
+                        None,
+                        sqlstate if isinstance(sqlstate, str) else None,
+                        str(error),
+                    )
+                else:
+                    after = int((await session.execute(text(count))).scalar_one())
+                    outcomes[table] = UpdateReach(before, result.rowcount, after, None, NOT_REFUSED)
+                await session.rollback()
+    finally:
+        await engine.dispose()
+    return outcomes
+
+
+def _read_the_guc(tenant_guc: str) -> Select[tuple[str | None]]:
+    """`SELECT current_setting(<guc>, true)`, built once so it reads the same twice.
+
+    `true` is `missing_ok`: it answers NULL for a setting never assigned in this
+    session rather than raising `unrecognized configuration parameter`. That NULL
+    is one of the two absences the seam keeps apart from the other, which is why
+    every caller asserts on the VALUE rather than on it being falsy.
+
+    The GUC's name arrives as the `tenant_guc` fixture rather than as a literal.
+    `conftest.py` owns it, `0002`'s policies read it and `make_engine` pins it;
+    a fourth spelling of the same string in this file is a fourth place for it to
+    drift.
+    """
+    return select(func.current_setting(tenant_guc, True))
+
+
+@pytest.mark.asyncio
+async def test_1_a_second_scoped_session_on_the_reused_connection_sees_nothing(
+    isolation_dsn: str,
+    isolation_seed: Seed,
+    isolation_tenant_a: UUID,
+    tenant_guc: str,
+) -> None:
+    """🔴 ASSERTION 1. A writes and commits; the next SCOPED session on THE SAME
+    CONNECTION establishes no tenant and must see nothing.
+
+    ---------------------------------------------------------------------------
+    🔴 THIS WAS CALLED `test_1_the_tenant_does_not_survive_the_pool_checkout_into
+       _the_next_session` AND IT COULD NOT OBSERVE THAT. THE RENAME IS THE FIX,
+       AND `test_1a` BELOW IS WHERE THE CLAIM WENT.
+    ---------------------------------------------------------------------------
+    The residual the old name promised to inspect is scrubbed one statement
+    before anything reads it: the second session goes through
+    `tenant_session(None)`, whose `after_begin` listener writes the deny sentinel
+    onto the connection as its first act. So a tenant that HAD survived the
+    checkout would be overwritten by the listener and this test would still see
+    an empty result.
+
+    MEASURED 2026-08-06, `_SET_CONFIG_IS_LOCAL` flipped to `False` in
+    `src/titlepipe_core/db/session.py` — which makes the tenant session-scoped
+    and so persist on the pooled connection past COMMIT, the exact leak the old
+    name described. Whole suite, on this file as it stood with seven assertions:
+
+        1 failed, 196 passed
+        FAILED tests/test_tenant_session.py::test_the_tenant_does_not_survive_
+               the_commit_onto_the_pooled_connection
+
+    All seven isolation assertions stayed GREEN, this one among them. The leak
+    was caught, by a test in another file, and the assertion that named it was
+    vacuous. `test_1a` reads the residual off a RAW `engine.connect()` — the one
+    path the listener never touches — and goes red under that mutation.
+
+    What is left here is a different property and is worth keeping: a session
+    that establishes NO TENANT, on a connection the previous tenant committed
+    on, reads nothing. That is the ORM-side half, and it fails for reasons
+    `test_1a` cannot — a `tenant_guc_value(None)` that stopped encoding to the
+    sentinel, say — so neither subsumes the other.
+
+    `pool_size=1, max_overflow=0` IS THE TEST. `pool_size=1` alone leaves the
+    default `max_overflow=10`, so the pool may answer the second checkout with a
+    brand-new connection that was never poisoned, and the assertion passes for
+    the wrong reason. Task 5 exposed `max_overflow` on `make_engine` precisely so
+    that this task could pin it, and Task 5's own test of the parameter is a
+    signature check rather than a behavioural one. This is where the ceiling
+    earns its keep.
+
+    `pg_backend_pid()` IS ASSERTED EQUAL rather than assumed. Without it the
+    "same connection" in this test's name is a claim about SQLAlchemy's pooling
+    that nothing checks, and a pool that handed back a different backend would
+    make the denial below a statement about a fresh connection — which assertion
+    5 already covers.
+
+    A's WRITE is what makes this different from the seed alone: the row is
+    committed by the tenant whose GUC could leak, on the connection that could
+    leak it, one transaction before the read.
+
+    🔴 THAT WRITE IS ALSO WHY THIS TEST IS NOT A PURE DENIAL, AND THE DISTINCTION
+       IS WORTH THE LINE. MEASURED 2026-08-06 under the listener injection: this
+       test went red, but at the INSERT — `new row violates row-level security
+       policy` — and never reached the read. Its denial half would have been
+       greener than ever, since a session that establishes nothing sees nothing
+       whether or not the tenant survived the checkout. So the red here is not
+       evidence that the denial works; only assertion 1b's green-to-red is.
+    """
+    engine = make_engine(isolation_dsn, pool_size=1, max_overflow=0)
+    tenant_a = TenantId(isolation_tenant_a)
+    try:
+        sessionmaker = make_sessionmaker(engine)
+
+        async with tenant_session(sessionmaker, tenant_a) as session:
+            session.add(Order(tenant_id=isolation_tenant_a))
+            await session.flush()
+            wrote_on = (await session.execute(select(func.pg_backend_pid()))).scalar_one()
+            established = (await session.execute(_read_the_guc(tenant_guc))).scalar_one()
+
+        async with tenant_session(sessionmaker, None) as session:
+            read_on = (await session.execute(select(func.pg_backend_pid()))).scalar_one()
+            visible = set((await session.scalars(select(Order.id))).all())
+    finally:
+        await engine.dispose()
+
+    assert established == str(isolation_tenant_a), (
+        f"the writing session ran under {established!r} rather than "
+        f"{str(isolation_tenant_a)!r}, so nothing was established for the next "
+        f"checkout to inherit and this test proves nothing"
+    )
+    assert read_on == wrote_on, (
+        f"the pool handed back backend {read_on} where the write used {wrote_on}, "
+        f"so this says nothing about connection reuse. pool_size=1 with "
+        f"max_overflow=0 is the only spelling of `the same connection, twice`."
+    )
+    assert visible == set(), (
+        f"a session that established NO tenant, on the connection tenant "
+        f"{isolation_tenant_a} had just committed on, read {sorted(visible)}. The "
+        f"tenant survived the checkout AND the listener failed to overwrite it — "
+        f"`test_1a` is the assertion that sees the first of those on its own."
+    )
+
+
+@pytest.mark.asyncio
+async def test_1a_the_committed_tenant_leaves_the_deny_sentinel_on_the_pooled_connection(
+    isolation_dsn: str,
+    isolation_seed: Seed,
+    isolation_tenant_a: UUID,
+    tenant_deny_sentinel: str,
+    tenant_guc: str,
+) -> None:
+    """🔴 ASSERTION 1a. THE RESIDUAL ITSELF, READ WHERE THE LISTENER CANNOT REACH IT.
+
+    Assertion 1 above is named for a second scoped session and is exactly that.
+    THIS is the GUC surviving the pool checkout: tenant A establishes itself,
+    COMMITS, and the value left behind on the pooled connection must be the deny
+    sentinel rather than A.
+
+    A RAW `engine.connect()` IS THE WHOLE POINT AND IT IS THE ONLY PLACE THE
+    QUESTION CAN BE ASKED. `after_begin` is a `SessionEvents` hook — absent from
+    `ConnectionEvents` and `PoolEvents` alike, which assertion 5 records the
+    measurement for — so a Core connection is the one checkout that does not
+    have the sentinel written onto it before it can look. Every ORM path scrubs
+    the evidence on the way in.
+
+    MEASURED 2026-08-06, `_SET_CONFIG_IS_LOCAL` flipped to `False` in
+    `src/titlepipe_core/db/session.py`, which is the one-line spelling of "the
+    tenant is session-scoped rather than transaction-scoped" and therefore of
+    the leak this test names. On the file as it stood WITHOUT this assertion,
+    the whole suite answered `1 failed, 196 passed` and the single failure was
+    in `tests/test_tenant_session.py` — all seven isolation assertions green
+    against a database that leaks the tenant onto every pooled connection. This
+    assertion is what takes the count in THIS file off zero; the run under the
+    same mutation with it in place is recorded in the module docstring.
+
+    `pool_size=1, max_overflow=0`, for assertion 1's reason: `pool_size=1` alone
+    leaves the default `max_overflow=10`, so the pool may answer the second
+    checkout with a brand-new connection that was never poisoned and the read
+    below would be a reading of a fresh backend. `pg_backend_pid()` IS ASSERTED
+    EQUAL rather than assumed, because "the same connection" is a claim about
+    SQLAlchemy's pooling and nothing else here checks it.
+
+    NO ROW IS WRITTEN, DELIBERATELY, AND THE OMISSION IS THE POINT OF THE TEST
+    RATHER THAN A SHORTCUT. `set_config(…, is_local => true)` reverts at COMMIT;
+    `is_local => false` is transactional too and PERSISTS at COMMIT. So what
+    determines the residual is that the transaction committed, not what it did —
+    and a read-only transaction that commits is the cheapest statement of that.
+    Assertion 1 commits a row on the same connection for its own reasons, and a
+    second committing writer here would only add an `orders` row every other
+    assertion in the file would have to tolerate.
+
+    THE RAW CONNECTION IS ALSO ASSERTED BLIND, and that is not assertion 5 in
+    another spelling. Assertion 5 opens a FRESH engine and asks about the door;
+    this one asks about a connection a tenant has already used and given back.
+    It is also what makes this assertion fail under the superuser injection
+    recorded at `isolation_dsn` — a `residual == ''` is just as true of a
+    connection that bypasses row-level security entirely, and a GUC string on
+    its own says nothing about filtering.
+    """
+    engine = make_engine(isolation_dsn, pool_size=1, max_overflow=0)
+    read = _read_the_guc(tenant_guc)
+    try:
+        sessionmaker = make_sessionmaker(engine)
+
+        async with tenant_session(sessionmaker, TenantId(isolation_tenant_a)) as session:
+            established = (await session.execute(read)).scalar_one()
+            established_on = (await session.execute(select(func.pg_backend_pid()))).scalar_one()
+
+        async with engine.connect() as connection:
+            residual = (await connection.execute(read)).scalar_one()
+            residual_on = (await connection.execute(select(func.pg_backend_pid()))).scalar_one()
+            leaked = set((await connection.scalars(select(Order.id))).all())
+    finally:
+        await engine.dispose()
+
+    committed = _every_seeded_id(isolation_seed, "orders")
+
+    assert established == str(isolation_tenant_a), (
+        f"the session ran under {established!r} rather than "
+        f"{str(isolation_tenant_a)!r}, so it established nothing for the commit "
+        f"to leave behind and the residual below is not a statement about a leak"
+    )
+    assert residual_on == established_on, (
+        f"the pool handed back backend {residual_on} where the session used "
+        f"{established_on}, so the residual below belongs to some other "
+        f"connection. pool_size=1 with max_overflow=0 is the only spelling of "
+        f"`the same connection, twice`."
+    )
+    assert residual == tenant_deny_sentinel, (
+        f"tenant {isolation_tenant_a} committed and left {residual!r} on the "
+        f"pooled connection. The next checkout begins already holding that "
+        f"tenant — every Core path (Alembic, a queue worker, a pool health "
+        f"check) reads through it, and every ORM path would have overwritten it "
+        f"before any assertion in this file could see it."
+    )
+    assert leaked == set(), (
+        f"a raw checkout of the connection tenant {isolation_tenant_a} had just "
+        f"committed on read {sorted(leaked)} of the {len(committed)} committed "
+        f"orders. The GUC above can read as the sentinel while the connection is "
+        f"not filtered at all — that is exactly what the superuser injection at "
+        f"`isolation_dsn` produces."
+    )
+
+
+@pytest.mark.asyncio
+async def test_1b_the_positive_control_each_tenant_sees_its_own_rows_in_every_table(
+    isolation_dsn: str,
+    isolation_seed: Seed,
+    isolation_tenant_b: UUID,
+    isolation_tenant_a: UUID,
+) -> None:
+    """🔴 ASSERTION 1b — THE POSITIVE CONTROL. NOT OPTIONAL, AND NOT ABOUT `orders`.
+
+    Assertions 1, 3 and 5 are each satisfied by a database that denies everything
+    to everyone. Without this, the file cannot tell "isolated" from "broken", and
+    the broken case is an outage that reports as a green suite.
+
+    MEASURED 2026-08-06: with the `after_begin` listener deleted from
+    `src/titlepipe_core/db/session.py`, assertions 2, 3, 5 and 6 — every denial
+    in the file — all stayed GREEN. Assertion 2 went green with the same SQLSTATE
+    AND the same message, because a session with no tenant is refused the same
+    INSERT for a different reason. Only 1b and 4 fail on the grounds that they are
+    positive, and 1 fails on the write it makes rather than on the denial it
+    checks. That is not an argument for the control in the abstract; it is the
+    actual result on this tree — on the SEVEN-assertion tree. That run has not
+    been repeated since `test_1a` and `test_2b` were added, so "every denial in
+    the file" above is a statement about the seven it was run against and not
+    about the nine that are here now.
+
+    ---------------------------------------------------------------------------
+    🔴 IT WAS A CONTROL FOR `orders` AND FOR `orders` ONLY, AND THAT IS WHY IT IS
+       NOW A LOOP OVER THE DERIVED SET.
+    ---------------------------------------------------------------------------
+    A positive control on one table says nothing about the other six. MEASURED
+    2026-08-06, `0002::_isolate` patched so `orders` keeps its real predicate and
+    the other six plus `tenants` get
+    `USING (nullif(current_setting(…), '') IS NOT NULL)` — every established
+    tenant seeing every other tenant's rows in six of seven tables: **`192
+    passed`**. This loop is what takes that down.
+
+    THE TABLE SET IS DERIVED, NOT LISTED. `isolation_seed` asks the catalog which
+    tables exist and which column each is keyed on, so a migration that adds an
+    eighth tenant table and forgets to isolate it is caught rather than
+    forgotten. The floor and the exact-set check above the loop are what say the
+    derivation itself still works — see `EXPECTED_ISOLATION_TABLES`.
+
+    THE TWO TENANTS ARE ASSERTED DIFFERENTLY, AND THE ASYMMETRY IS AN ORDERING
+    PROPERTY RATHER THAN A PREFERENCE:
+
+    * **B is exact.** Nothing in this file commits a row for B — assertion 2 tries
+      and is refused — so `visible == seeded` holds under every ordering, and it
+      is the strongest statement available: not a count, which the wrong row
+      satisfies as readily as the right one, but the id set itself;
+    * **A is a floor plus disjointness.** Assertion 1 COMMITS an `orders` row for
+      A on purpose, and `isolation_seed` is module-scoped, so how many rows A owns
+      by the time this runs depends on whether assertion 1 has run yet. `after ==
+      seeded` for A would be a test of collection order. The floor (every seeded
+      row visible) plus `B's rows ∩ visible == ∅` holds under every ordering and
+      still fails the moment the policy stops filtering — which is exactly what
+      the mutation above produces.
+
+    `len(seeded_b) == 1` is asserted per table because `exactly 1, not 0` is the
+    contract the seed's two-and-one asymmetry exists to make meaningful.
+    """
+    tenant_a = TenantId(isolation_tenant_a)
+    tenant_b = TenantId(isolation_tenant_b)
+
+    engine = make_engine(isolation_dsn)
+    try:
+        seen_by_a = await _visible_ids_per_table(engine, tenant_a, isolation_seed)
+        seen_by_b = await _visible_ids_per_table(engine, tenant_b, isolation_seed)
+    finally:
+        await engine.dispose()
+
+    # THE FLOOR FIRST. Everything below is a `for` loop, and a `for` over nothing
+    # passes. The exact set does not subsume it — see EXPECTED_ISOLATION_TABLES.
+    assert len(isolation_seed) >= MINIMUM_ISOLATION_TABLES, (
+        f"the seed covered {len(isolation_seed)} tables, fewer than the "
+        f"{MINIMUM_ISOLATION_TABLES} this schema has: {sorted(isolation_seed)}. "
+        f"The control below is a loop, so it reports success for every table it "
+        f"never visited."
+    )
+    assert set(isolation_seed) == set(EXPECTED_ISOLATION_TABLES), (
+        f"the seeded tables are {sorted(isolation_seed)}, not "
+        f"{sorted(EXPECTED_ISOLATION_TABLES)}. A count of "
+        f"{MINIMUM_ISOLATION_TABLES} is satisfied by seven decoys just as readily."
+    )
+
+    for table in sorted(isolation_seed):
+        seeded_a = _seeded_ids(isolation_seed, table, isolation_tenant_a)
+        seeded_b = _seeded_ids(isolation_seed, table, isolation_tenant_b)
+        visible_a = seen_by_a[table]
+        visible_b = seen_by_b[table]
+
+        assert len(seeded_b) == 1, (
+            f"the seed gave tenant B {len(seeded_b)} rows in {table}, not the one "
+            f"this control is written around: {sorted(seeded_b)}"
+        )
+
+        assert visible_b != set(), (
+            f"tenant {isolation_tenant_b} established its own tenant and saw "
+            f"NOTHING in {table} while {sorted(seeded_b)} was committed for it. "
+            f"Every `0 rows` assertion in this file is now satisfied by a database "
+            f"that denies everybody, and none of them can tell you that."
+        )
+        assert visible_b == seeded_b, (
+            f"tenant {isolation_tenant_b} saw {sorted(visible_b)} in {table}, not "
+            f"{sorted(seeded_b)}. Tenant A's rows there are {sorted(seeded_a)}."
+        )
+
+        assert seeded_a <= visible_a, (
+            f"tenant {isolation_tenant_a} saw {sorted(visible_a)} in {table}, which "
+            f"is missing {sorted(seeded_a - visible_a)} of the rows committed for "
+            f"it. This is a floor rather than an equality because assertion 1 "
+            f"commits an extra row for A; falling below it means the session is "
+            f"scoped to the wrong tenant or to none."
+        )
+        assert visible_a & seeded_b == set(), (
+            f"tenant {isolation_tenant_a} saw {sorted(visible_a & seeded_b)} in "
+            f"{table}, which belongs to tenant {isolation_tenant_b}. This "
+            f"connection is not filtered on {table} — a predicate that ignores the "
+            f"key column and only asks whether SOME tenant is established passes "
+            f"every other assertion in this file."
+        )
+
+
+@pytest.mark.asyncio
+async def test_2_a_write_carrying_another_tenants_id_is_refused_with_42501(
+    isolation_dsn: str,
+    isolation_seed: Seed,
+    isolation_key_columns: Mapping[str, str],
+    isolation_tenant_a: UUID,
+    isolation_tenant_b: UUID,
+) -> None:
+    """🔴 ASSERTION 2 — THE WRITE SIDE. Reading is not the only way out of a tenant.
+
+    A session established as A inserts a row whose `tenant_id` is B's. Nothing in
+    the ORM stops it, nothing in the schema stops it — `tenant_id` is an ordinary
+    `uuid NOT NULL` column and B is a real tenant — and if the policy did not
+    stop it, one tenant could write rows into another's account at will and never
+    see them again.
+
+    `0002` writes no `WITH CHECK`, so PostgreSQL reuses the `USING` expression for
+    it. That reuse is what this test pins: a policy given an explicit
+    `WITH CHECK (true)` would satisfy every READ assertion in this file and let
+    this INSERT straight through.
+
+    THE ASSERTION IS ON THE SQLSTATE, NOT ON "IT RAISED". A typo'd column name
+    (`42703`), a NOT NULL violation (`23502`) and a missing grant all raise
+    `DBAPIError` here, and a test that only required an exception would go green
+    on any of them while the policy was gone. `42501` is matched specifically.
+
+    THE MESSAGE IS ASSERTED TOO, and that is not belt-and-braces: `42501` is
+    ALSO what "you have no INSERT privilege on this table" returns, which is what
+    a botched `0002` grant would produce — the same code for a refusal that has
+    nothing to do with tenancy.
+
+    THE `flush()` IS LOAD-BEARING AND IT IS THE ONLY STATEMENT INSIDE
+    `pytest.raises`. `session.add` queues, so without an explicit flush the
+    INSERT would reach the server at `tenant_session`'s own commit as the block
+    exits — raising from a line this test does not name, and out of a `finally`.
+    Narrowing the block to the one statement is also what `PT012` asks for, and
+    the rule is right here for the reason it usually is: with the whole
+    `async with` inside, an exception from `make_sessionmaker` or from the
+    listener would have satisfied `pytest.raises` just as well as the policy did.
+
+    The explicit `rollback()` clears the aborted transaction so that the block's
+    own commit on exit is a clean no-op rather than a second, less legible
+    failure.
+
+    ---------------------------------------------------------------------------
+    🔴 THE SECOND HALF: THE SAME QUESTION ON ALL SEVEN TABLES, AND IT IS THE SAME
+       HOLE THE POSITIVE CONTROL HAD.
+    ---------------------------------------------------------------------------
+    The ORM half above writes to `orders` and to nothing else, so an explicit
+    `WITH CHECK (true)` on the other six — or the tenant-blind predicate measured
+    in this module's docstring, which PostgreSQL reuses as the `WITH CHECK` — let
+    every cross-tenant INSERT through and this test stayed green. The loop is the
+    same derived set the positive control walks, on the write side.
+
+    THE KEY COLUMN COMES FROM THE DERIVATION, not from a branch on the table
+    name: `tenants` is keyed on `id` and the other six on `tenant_id`, and
+    `isolation_key_columns` is where that split is worked out once.
+
+    B'S OWN ID IS USED ON THE REGISTRY TOO, AND IT COULD HAVE COME BACK AS A
+    DUPLICATE-KEY ERROR INSTEAD. `tenants` has `PRIMARY KEY (id)` and the seed
+    has already committed B's row, so the INSERT collides on the key as well as
+    on the policy — and `models.py::_TenantRow` records the measurement that
+    unique enforcement can be reached before a policy's `WITH CHECK`. MEASURED
+    2026-08-06 against postgres:18.4, `titlepipe_app` established as A:
+
+        INSERT INTO tenants (id) VALUES ('2222…');   -- B, already committed
+        -> 42501 new row violates row-level security policy for table "tenants"
+
+        INSERT INTO tenants (id) VALUES (<an id nobody holds>);
+        -> 42501 new row violates row-level security policy for table "tenants"
+
+    Both are the policy, so no special case is needed and none is written. The
+    measurement is recorded because the alternative answer (`23505`) would have
+    been a refusal for the wrong reason wearing the right outcome.
+
+    A TRY/EXCEPT RATHER THAN `pytest.raises` IN THE LOOP, deliberately: a
+    `pytest.raises` that does not fire reports `DID NOT RAISE DBAPIError` and
+    names no table, and "which table let the write through" is the entire content
+    of this failure. The outcome is recorded per table and asserted after, so a
+    table that accepted the row is reported as such alongside every table that
+    refused it.
+
+    ---------------------------------------------------------------------------
+    🔴 THE THIRD HALF: `UPDATE`. UNTIL 2026-08-06 NO TEST IN THIS REPOSITORY EVER
+       ISSUED ONE AS `titlepipe_app`.
+    ---------------------------------------------------------------------------
+    Every `UPDATE` in the suite ran as the container superuser (which bypasses
+    RLS unconditionally) or as `titlepipe_migration` with `SET ROLE
+    titlepipe_owner` (which is `test_forced_rls_and_grants.py`'s data-migration
+    test). The verb that `0002` grants and that
+    `test_forced_rls_and_grants.py` now asserts in the ACL was never once
+    EXECUTED by the role it is granted to.
+
+    MEASURED 2026-08-06, `0002::_isolate` given one extra line and `_release` the
+    matching `DROP POLICY`:
+
+        CREATE POLICY tenant_maintenance ON <table> FOR UPDATE
+          USING (true) WITH CHECK (true)
+
+    **`195 passed`.** Permissive policies OR together, so `tenant_isolation`
+    stayed perfect and irrelevant. Re-measured with this arm in place, the first
+    table the loop reaches reports it exactly:
+
+        UpdateReach(before=2, touched=3, after=3) on field_readings
+
+    — A could see 2 rows, its unqualified UPDATE touched 3, and it could then see
+    3. It re-tenanted B's row to itself and read it. `orders` behaves identically
+    (`0` / `3` in the `WHERE` comparison at `UpdateReach`).
+
+    THE TWO ARMS, AND WHY NEITHER IS SPELLED "0 ROWS":
+
+    * **the reach arm** sets the key to A's OWN id. An unqualified UPDATE by A
+      legitimately touches A's own rows, so the number is not zero and cannot be
+      written as a literal either — assertion 1 commits an extra `orders` row for
+      A and `isolation_seed` is module-scoped, so how many A owns depends on
+      collection order. What holds under every ordering is that it touches
+      EXACTLY WHAT IT CAN SEE, and that the count it can see is UNCHANGED
+      afterwards. Under the mutation both fail, by exactly one row per table —
+      B's;
+    * **the re-tenanting arm** sets the key to B's id and must be refused
+      `42501`. That is the `WITH CHECK` side, which `0002` gets by writing no
+      `WITH CHECK` at all and letting PostgreSQL reuse `USING`.
+
+    `WHERE` IS ABSENT FROM BOTH AND THAT IS LOAD-BEARING — see `UpdateReach` for
+    the measurement. A qualified UPDATE reads a column, so the SELECT policy
+    answers it and it reports 0 rows even against a wide-open UPDATE policy.
+
+    `audit_log` is the one table both arms come back differently on, and it is a
+    Task 4 ruling rather than a hole — see `APPEND_ONLY_TABLE`.
+    """
+    engine = make_engine(isolation_dsn)
+    try:
+        sessionmaker = make_sessionmaker(engine)
+        async with tenant_session(sessionmaker, TenantId(isolation_tenant_a)) as session:
+            session.add(Order(tenant_id=isolation_tenant_b))
+            with pytest.raises(DBAPIError) as raised:
+                await session.flush()
+            await session.rollback()
+    finally:
+        await engine.dispose()
+
+    sqlstate = getattr(raised.value.orig, "sqlstate", None)
+    assert sqlstate == INSUFFICIENT_PRIVILEGE_SQLSTATE, (
+        f"tenant {isolation_tenant_a} inserting a row owned by "
+        f"{isolation_tenant_b} raised {sqlstate!r}, not "
+        f"{INSUFFICIENT_PRIVILEGE_SQLSTATE!r}. A refusal for the wrong reason is "
+        f"not this policy working: {raised.value}"
+    )
+    assert RLS_REFUSAL_FRAGMENT in str(raised.value), (
+        f"42501 came back for some reason other than the policy — a missing "
+        f"INSERT grant returns the identical code: {raised.value}"
+    )
+
+    refusals = await _cross_tenant_insert_refusals(
+        isolation_dsn, isolation_key_columns, TenantId(isolation_tenant_a), isolation_tenant_b
+    )
+
+    assert set(refusals) == set(EXPECTED_ISOLATION_TABLES), (
+        f"the write side was attempted on {sorted(refusals)}, not on "
+        f"{sorted(EXPECTED_ISOLATION_TABLES)}. Every assertion below is a loop "
+        f"over this set."
+    )
+    assert len(refusals) >= MINIMUM_ISOLATION_TABLES, (
+        f"only {len(refusals)} tables were written to: {sorted(refusals)}"
+    )
+
+    for table, (code, message) in sorted(refusals.items()):
+        assert code == INSUFFICIENT_PRIVILEGE_SQLSTATE, (
+            f"tenant {isolation_tenant_a} wrote a row keyed to "
+            f"{isolation_tenant_b} into {table} and got {code!r} rather than "
+            f"{INSUFFICIENT_PRIVILEGE_SQLSTATE!r}. A code of None means the write "
+            f"was ACCEPTED — one tenant writing rows into another's account at "
+            f"will and never seeing them again: {message}"
+        )
+        assert RLS_REFUSAL_FRAGMENT in message, (
+            f"{table} answered 42501 for some reason other than the policy — a "
+            f"missing INSERT grant returns the identical code: {message}"
+        )
+
+    reach = await _unqualified_update_outcomes(
+        isolation_dsn, isolation_key_columns, TenantId(isolation_tenant_a), isolation_tenant_a
+    )
+    retenanted = await _unqualified_update_outcomes(
+        isolation_dsn, isolation_key_columns, TenantId(isolation_tenant_a), isolation_tenant_b
+    )
+
+    assert set(reach) == set(EXPECTED_ISOLATION_TABLES), (
+        f"the UPDATE side was attempted on {sorted(reach)}, not on "
+        f"{sorted(EXPECTED_ISOLATION_TABLES)}. Both loops below are over this set."
+    )
+    assert set(retenanted) == set(reach), (
+        f"the two UPDATE arms covered different tables: {sorted(reach)} and {sorted(retenanted)}"
+    )
+
+    for table, outcome in sorted(reach.items()):
+        if table == APPEND_ONLY_TABLE:
+            assert outcome.sqlstate == INSUFFICIENT_PRIVILEGE_SQLSTATE, (
+                f"{table} is granted no UPDATE, so an UPDATE by "
+                f"{isolation_tenant_a} must be refused by the ACL before the "
+                f"policy is reached. It answered {outcome.sqlstate!r} and touched "
+                f"{outcome.touched} rows: {outcome.message}"
+            )
+            assert ACL_REFUSAL_FRAGMENT in outcome.message, (
+                f"{table} answered 42501 for some reason other than the missing "
+                f"grant — the policy returns the identical code: {outcome.message}"
+            )
+            continue
+
+        assert outcome.touched is not None, (
+            f"{isolation_tenant_a} could not UPDATE its own rows in {table} at "
+            f"all: {outcome.sqlstate!r} {outcome.message}. 0002 grants that role "
+            f"UPDATE on this table, so this is a broken grant rather than "
+            f"isolation working."
+        )
+        assert outcome.before >= 1, (
+            f"{isolation_tenant_a} saw no rows in {table} before the UPDATE, so a "
+            f"statement that touched none of them says nothing"
+        )
+        assert outcome.touched == outcome.before, (
+            f"an unqualified UPDATE by {isolation_tenant_a} touched "
+            f"{outcome.touched} rows in {table} while that session could see "
+            f"{outcome.before}. It reached rows belonging to somebody else: an "
+            f"UPDATE with no WHERE reads nothing, so it is answered by the UPDATE "
+            f"policy alone, and a second PERMISSIVE policy ORs its way past a "
+            f"perfectly correct tenant_isolation."
+        )
+        assert outcome.after == outcome.before, (
+            f"after that UPDATE, {isolation_tenant_a} could see {outcome.after} "
+            f"rows in {table} where it saw {outcome.before} before. It re-tenanted "
+            f"another tenant's row to itself and can now read it."
+        )
+
+    for table, outcome in sorted(retenanted.items()):
+        expected = ACL_REFUSAL_FRAGMENT if table == APPEND_ONLY_TABLE else RLS_REFUSAL_FRAGMENT
+        assert outcome.sqlstate == INSUFFICIENT_PRIVILEGE_SQLSTATE, (
+            f"{isolation_tenant_a} re-tenanted its own rows in {table} to "
+            f"{isolation_tenant_b} and got {outcome.sqlstate!r} rather than "
+            f"{INSUFFICIENT_PRIVILEGE_SQLSTATE!r}. A code of None means the write "
+            f"was ACCEPTED — one tenant handing its rows to another and losing "
+            f"sight of them: {outcome.message}"
+        )
+        assert expected in outcome.message, (
+            f"{table} answered 42501 for some reason other than {expected!r}: {outcome.message}"
+        )
+
+
+@pytest.mark.asyncio
+async def test_2b_the_positive_write_control_audit_log_takes_a_row_keyed_to_the_writer(
+    isolation_dsn: str,
+    isolation_seed: Seed,
+    isolation_key_columns: Mapping[str, str],
+    isolation_tenant_a: UUID,
+    isolation_tenant_b: UUID,
+) -> None:
+    """🔴 ASSERTION 2b — THE POSITIVE CONTROL ON THE WRITE SIDE, AND IT EXISTS FOR
+    ONE TABLE BECAUSE ONE TABLE IS ALL IT WAS MISSING FOR.
+
+    `audit_log` holds exactly one verb for `titlepipe_app`: `INSERT`. `0002`
+    grants `SELECT, INSERT` and deliberately no `UPDATE` — see
+    `APPEND_ONLY_TABLE` — and `0001` puts an append-only trigger under that.
+
+    Until this assertion existed, that verb was asserted in the REFUSAL
+    DIRECTION ONLY. Assertion 2's insert loop requires A writing B's id to be
+    refused, and its UPDATE arms `continue` past this table because the ACL
+    refuses before the policy is reached. So nothing in the file ever required
+    the table to be WRITABLE, and a policy that refused every INSERT on it would
+    make each of those refusals MORE true rather than less.
+
+    MEASURED 2026-08-06 against `0002` with `audit_log`'s policy given an
+    explicit `WITH CHECK (false)` — a deny-all INSERT that leaves every read
+    untouched — the result is recorded in the module docstring. The refusal
+    assertions cannot tell "the policy refuses A's write of B's row" from "the
+    policy refuses everybody's write of anything", exactly as
+    `test_1b_the_positive_control_…` records for the read side.
+
+    THE SAME SHAPE AS THAT CONTROL, ONE TABLE WIDE: the row is committed for A,
+    visible to A, and NOT visible to B — and B still sees exactly the row the
+    seed committed for it. `accepted is not None` alone would be satisfied by a
+    write that landed in nobody's tenant; the two read-backs are what say it
+    landed in A's.
+
+    THE KEY COLUMN COMES FROM THE DERIVATION rather than from a `tenant_id`
+    literal, for assertion 2's reason: `isolation_key_columns` is where the
+    registry-versus-tenant split is worked out once.
+
+    A TRY/EXCEPT RATHER THAN LETTING THE `DBAPIError` ESCAPE. An exception out of
+    the `async with` reports as an error rather than as a failed assertion and
+    arrives from inside `tenant_session`, where the block's own commit is also in
+    flight; catching it puts the SQLSTATE and the message into the assertion that
+    names what they mean.
+
+    🔴 THE ROW IS COMMITTED AND CANNOT BE REMOVED, WHICH IS A PROPERTY OF THE
+       SCHEMA. `0001`'s `audit_log_append_only` trigger refuses `DELETE` from
+       every role including the container superuser — see
+       `conftest.py::ISOLATION_UNCLEARABLE_TABLE`. It is safe anyway, and under
+       every collection order: `migrated_database` is MODULE-scoped so the table
+       is created fresh for this file, the seed's read-back runs at fixture setup
+       before any test, and every later assertion about A on this table is a
+       FLOOR (`seeded_a <= visible_a`) rather than an equality. B's is the
+       equality, and nothing here writes a row B can see.
+    """
+    assert APPEND_ONLY_TABLE in isolation_key_columns, (
+        f"{APPEND_ONLY_TABLE} is not among the derived tables "
+        f"{sorted(isolation_key_columns)}, so this control would be a statement "
+        f"about a table the seed never found"
+    )
+    key_column = isolation_key_columns[APPEND_ONLY_TABLE]
+
+    # S608 is suppressed for the reason recorded at `_visible_ids_per_table`: a
+    # table name cannot be a bind parameter, and both names here come from
+    # `isolation_seed`'s catalog derivation. The VALUE is bound.
+    insert = f"INSERT INTO {APPEND_ONLY_TABLE} ({key_column}) VALUES (:tenant) RETURNING id"  # noqa: S608
+
+    accepted: UUID | None = None
+    refusal = ""
+    engine = make_engine(isolation_dsn)
+    try:
+        sessionmaker = make_sessionmaker(engine)
+        async with tenant_session(sessionmaker, TenantId(isolation_tenant_a)) as session:
+            try:
+                returned = (
+                    await session.execute(text(insert), {"tenant": isolation_tenant_a})
+                ).scalar_one()
+            except DBAPIError as error:
+                # Narrowed with `isinstance` rather than formatted straight out
+                # of `getattr`, for `_cross_tenant_insert_refusals`' reason.
+                raw = getattr(error.orig, "sqlstate", None)
+                refusal = f"{raw if isinstance(raw, str) else None!r}: {error}"
+                await session.rollback()
+            else:
+                accepted = UUID(str(returned))
+
+        seen_by_a = await _visible_ids_per_table(
+            engine, TenantId(isolation_tenant_a), [APPEND_ONLY_TABLE]
+        )
+        seen_by_b = await _visible_ids_per_table(
+            engine, TenantId(isolation_tenant_b), [APPEND_ONLY_TABLE]
+        )
+    finally:
+        await engine.dispose()
+
+    seeded_a = _seeded_ids(isolation_seed, APPEND_ONLY_TABLE, isolation_tenant_a)
+    seeded_b = _seeded_ids(isolation_seed, APPEND_ONLY_TABLE, isolation_tenant_b)
+    visible_a = seen_by_a[APPEND_ONLY_TABLE]
+    visible_b = seen_by_b[APPEND_ONLY_TABLE]
+
+    assert accepted is not None, (
+        f"tenant {isolation_tenant_a} could not insert a row keyed to ITSELF "
+        f"into {APPEND_ONLY_TABLE} — {refusal}. INSERT is the only verb "
+        f"`titlepipe_app` holds on this table, so this is the whole of its write "
+        f"path refusing. Every refusal assertion in this file stays green while "
+        f"it does: `A may not write B's row` is more true, not less, when nobody "
+        f"may write anything."
+    )
+    assert accepted in visible_a, (
+        f"tenant {isolation_tenant_a} committed {accepted} into "
+        f"{APPEND_ONLY_TABLE} and a later session established as the same tenant "
+        f"saw {sorted(visible_a)}. The write was accepted and landed outside the "
+        f"writer's own tenant, which is a row nobody will ever read back."
+    )
+    assert seeded_a <= visible_a, (
+        f"tenant {isolation_tenant_a} saw {sorted(visible_a)} in "
+        f"{APPEND_ONLY_TABLE}, which is missing {sorted(seeded_a - visible_a)} of "
+        f"the rows the seed committed for it"
+    )
+    assert accepted not in visible_b, (
+        f"tenant {isolation_tenant_b} can see {accepted}, which tenant "
+        f"{isolation_tenant_a} wrote into {APPEND_ONLY_TABLE}. The audit trail is "
+        f"the one table where a cross-tenant read is also a disclosure of what "
+        f"the other tenant DID."
+    )
+    assert visible_b == seeded_b, (
+        f"tenant {isolation_tenant_b} saw {sorted(visible_b)} in "
+        f"{APPEND_ONLY_TABLE}, not the {sorted(seeded_b)} committed for it. "
+        f"Tenant A's rows there are {sorted(seeded_a | {accepted})}."
+    )
+
+
+@pytest.mark.asyncio
+async def test_3_a_session_with_no_tenant_reads_zero_rows_rather_than_raising(
+    isolation_dsn: str,
+    isolation_seed: Seed,
+    tenant_deny_sentinel: str,
+    tenant_guc: str,
+) -> None:
+    """🔴 ASSERTION 3 — THE `nullif` GUARD. A denial, not a 500.
+
+    Every connection this application opens starts with `app.current_tenant` set
+    to the EMPTY STRING, because `make_engine` pins `-c app.current_tenant=` at
+    connect time. That is an ASSIGNED empty string, not an unset GUC, and
+    `''::uuid` raises `invalid input syntax for type uuid: ""`. So without the
+    `nullif` in every `0002` policy, the ordinary unestablished session — a
+    health check, a request that failed authentication, the first statement on a
+    freshly pooled connection — returns a 500 rather than an empty result.
+
+    BOTH HALVES ARE ASSERTED AND NEITHER IMPLIES THE OTHER: that the GUC really
+    is at the deny sentinel (otherwise this describes some other state), and that
+    the read came back empty WITHOUT raising. `pytest.raises` is deliberately
+    absent — the point is that nothing is raised, and the way to assert that is to
+    let an exception fail the test.
+
+    The seed is requested for the reason it always is: zero rows out of an empty
+    table is not a denial.
+    """
+    engine = make_engine(isolation_dsn)
+    try:
+        sessionmaker = make_sessionmaker(engine)
+        async with tenant_session(sessionmaker, None) as session:
+            established = (await session.execute(_read_the_guc(tenant_guc))).scalar_one()
+            visible = set((await session.scalars(select(Order.id))).all())
+            registry = (await session.execute(text("SELECT count(*) FROM tenants"))).scalar_one()
+    finally:
+        await engine.dispose()
+
+    committed = _every_seeded_id(isolation_seed, "orders")
+
+    assert established == tenant_deny_sentinel, (
+        f"this session carries {established!r} rather than the deny sentinel, so "
+        f"it is not the state the nullif guards. Anything but NULL or the empty "
+        f"string reaches ::uuid and aborts the statement."
+    )
+    assert visible == set(), (
+        f"a session with no tenant established read {sorted(visible)} of the "
+        f"{len(committed)} committed orders"
+    )
+    assert registry == 0, (
+        f"a session with no tenant established counted {registry} rows in the "
+        f"tenants registry, whose policy keys on `id` rather than on `tenant_id` "
+        f"and is the one policy the six others do not cover"
+    )
+
+
+@pytest.mark.asyncio
+async def test_4_a_savepoint_rolled_back_leaves_the_tenant_established(
+    isolation_dsn: str,
+    isolation_seed: Seed,
+    isolation_tenant_a: UUID,
+    tenant_guc: str,
+) -> None:
+    """🔴 ASSERTION 4 — THE SAVEPOINT TRAP. First executed here; it was a prediction.
+
+    `ROLLBACK TO SAVEPOINT` unwinds GUC assignments made after the savepoint
+    opened. THAT IS NOT WHY `scripts/check_backend_rules.py` BANS `begin_nested(`
+    in `src/`, and this docstring used to say it was — the reason is stated
+    there, once, under rule 2 and measured: a savepoint around a write RLS
+    refused does not leak, it ERASES, committing the rest of the batch while the
+    cross-tenant row silently disappears. `session.py` cites the same reason
+    rather than restating it. This test is the exemption that rule's subject
+    exists for: `tests/` is not scanned, and the unwinding cannot be demonstrated
+    without a SAVEPOINT.
+
+    WHAT WAS MEASURED HERE, 2026-08-06, AND WHY THE PREDICTION HELD FOR A REASON
+    THE CONTRACT DID NOT STATE. The tenant survives the rollback because
+    `tenant_session` sets it from `after_begin` on the OUTER transaction — so the
+    value the rollback restores is the value the savepoint opened with, which is
+    the tenant.
+
+    🔴 THIS SAID "one statement before any savepoint exists", AND THAT HALF IS
+       FALSE. `after_begin` FIRES FOR THE NESTED TRANSACTION TOO, so
+       `_apply_tenant` runs a second time INSIDE the savepoint. RE-MEASURED
+       2026-08-06 against SQLAlchemy 2.0.51 — one handler, `SELECT`,
+       `begin_nested()`, `SELECT`, recording `transaction.nested` on each firing:
+
+           transaction.nested, in firing order   ->   [False, True]
+
+       The listener is therefore not absent from the nested block; it is
+       IDEMPOTENT there, writing the same tenant it wrote outside. That is the
+       whole of why the rollback is harmless, and it is a coupling rather than a
+       fact. `scripts/check_backend_rules.py` rule 2 records the same measurement
+       from the other side, as the reason the `begin_nested(` ban is cheap
+       insurance on an assumption its main argument depends on.
+
+    The designs that would fail were measured in the same run, and both are one
+    edit to `_apply_tenant` away:
+
+        writes a DIFFERENT value when `transaction.nested`:
+          before 'AAAA' -> inside '9999' -> after ROLLBACK TO 'AAAA'
+          (the rollback restores the tenant; every statement INSIDE the savepoint
+           ran as somebody else, and the outer read afterwards looks fine)
+        fires ONLY when `transaction.nested`:
+          before ''     -> inside 'AAAA' -> after ROLLBACK TO ''
+          (the tenant exists only inside the savepoint and unwinds to deny —
+           this is the "listener that only fired for nested transactions" the
+           earlier version of this docstring named, and it is confirmed)
+
+    This test pins the good case; the ban in `check_backend_rules.py` is what
+    keeps `src/` from reaching either bad one.
+
+    THE SAVEPOINT HAS TO ROLL SOMETHING BACK OR THIS TEST IS A NO-OP. An
+    `INSERT` inside the nested block is asserted VISIBLE before the rollback and
+    ABSENT after it. Without that, a `begin_nested()` that silently did nothing —
+    or a rollback that never reached the server — would leave every other
+    assertion here true and the savepoint entirely imaginary.
+
+    The re-select after the rollback is on the SAME transaction, which is the
+    only place the question means anything: the outer block's own commit is still
+    ahead, and a reading taken after it would be a reading of the deny sentinel
+    however well the savepoint behaved.
+
+    🔴 THE ROLLBACK IS COMPARED AGAINST `before`, NOT AGAINST THE SEED, AND THAT
+       IS AN ORDERING PROPERTY RATHER THAN A PREFERENCE. It was written as
+       `after == seeded` first and FAILED — measured 2026-08-06, one extra id in
+       the left set. Assertion 1 COMMITS a row for tenant A, on purpose, and
+       `isolation_seed` is module-scoped, so how many rows A owns by the time
+       this test runs depends on whether assertion 1 has run yet. A test whose
+       truth depends on collection order is not a test of the savepoint.
+
+       The seed is used as a FLOOR instead — every row committed for A must be
+       visible — which holds under every ordering and still fails if the session
+       is scoped to the wrong tenant or to none.
+
+    🔴 B'S ROW IS ASSERTED ABSENT ON BOTH SIDES OF THE ROLLBACK, AND THAT
+       ASSERTION WAS ADDED BECAUSE THE SUPERUSER INJECTION CAUGHT ITS ABSENCE.
+       MEASURED 2026-08-06: with `isolation_dsn` pointed at the superuser, six of
+       the seven assertions failed and THIS ONE PASSED — a floor plus
+       `after == before` plus a GUC string is all true of a connection that
+       bypasses row-level security entirely and can see all three orders. The
+       test was describing the savepoint without describing the scoping.
+
+       `after == before` is still the savepoint property; `B ∩ visible == ∅` is
+       what makes "still A's rows" mean A's and not everyone's. With it, the
+       injection takes this test down with the other six.
+    """
+    engine = make_engine(isolation_dsn)
+    seeded = _seeded_ids(isolation_seed, "orders", isolation_tenant_a)
+    not_mine = _every_seeded_id(isolation_seed, "orders") - seeded
+    try:
+        sessionmaker = make_sessionmaker(engine)
+        async with tenant_session(sessionmaker, TenantId(isolation_tenant_a)) as session:
+            before = set((await session.scalars(select(Order.id))).all())
+
+            savepoint = await session.begin_nested()
+            session.add(Order(tenant_id=isolation_tenant_a))
+            await session.flush()
+            inside = set((await session.scalars(select(Order.id))).all())
+            await savepoint.rollback()
+
+            after = set((await session.scalars(select(Order.id))).all())
+            established = (await session.execute(_read_the_guc(tenant_guc))).scalar_one()
+    finally:
+        await engine.dispose()
+
+    assert seeded <= before, (
+        f"the session saw {sorted(before)} before the savepoint, which does not "
+        f"include every row committed for tenant {isolation_tenant_a} "
+        f"({sorted(seeded)}). Nothing below is then a statement about that tenant."
+    )
+    assert not_mine & before == set(), (
+        f"before the savepoint, a session established as {isolation_tenant_a} "
+        f"already saw {sorted(not_mine & before)}, which belongs to the other "
+        f"tenant. This connection is not filtered, so nothing after the rollback "
+        f"can say it still is."
+    )
+    assert inside - before != set(), (
+        "the row written inside the savepoint was never visible, so the savepoint "
+        "rolled nothing back and this test is a no-op"
+    )
+    assert established == str(isolation_tenant_a), (
+        f"after ROLLBACK TO SAVEPOINT the session carries {established!r} rather "
+        f"than {str(isolation_tenant_a)!r}. Every statement after this point in "
+        f"the same transaction runs under the wrong tenant, or under none."
+    )
+    assert after == before, (
+        f"after the rollback the session sees {sorted(after)}, not the "
+        f"{sorted(before)} it saw before it. The savepoint took the tenant with "
+        f"it — or did not roll its own INSERT back."
+    )
+    assert not_mine & after == set(), (
+        f"after ROLLBACK TO SAVEPOINT the session sees {sorted(not_mine & after)}, "
+        f"which belongs to the other tenant. The GUC string above can be right "
+        f"while the connection is not filtered at all — that is exactly what the "
+        f"superuser injection produces."
+    )
+
+
+@pytest.mark.asyncio
+async def test_5_a_raw_core_connection_establishes_no_tenant_and_sees_nothing(
+    isolation_dsn: str,
+    isolation_seed: Seed,
+    tenant_deny_sentinel: str,
+    tenant_guc: str,
+) -> None:
+    """🔴 ASSERTION 5 — `after_begin` IS ORM-ONLY. First executed here; it was a prediction.
+
+    `after_begin` is a `SessionEvents` hook. It is absent from `ConnectionEvents`
+    and from `PoolEvents` alike — `ConnectionEvents.begin` exists, which is the
+    trap, because a reader who finds it can conclude they are covered at Core
+    level and not be. So `engine.connect()`, Alembic, and any future queue worker
+    that reaches for a Core connection get NO tenant applied.
+
+    They are not thereby UNSCOPED, and that is the property this pins: they are
+    DENIED, because `make_engine` pins every connection at the deny sentinel the
+    moment libpq opens it. A path that skips the ORM sees nothing rather than
+    seeing everything, which is the direction to fail in.
+
+    This is not assertion 3 in another spelling. Assertion 3 goes through
+    `tenant_session` with `tenant=None`, where the listener runs and deliberately
+    establishes nothing; here the listener never runs at all. The two failures are
+    different — a broken sentinel breaks this one, a broken `tenant_guc_value`
+    breaks that one — and either alone would leave the other's door open.
+
+    A FRESH ENGINE, not the one a session has used. The residual left on a
+    REUSED connection after a commit is Task 5's test and is a different
+    question; this one is about the door itself.
+    """
+    engine = make_engine(isolation_dsn)
+    try:
+        async with engine.connect() as connection:
+            established = (await connection.execute(_read_the_guc(tenant_guc))).scalar_one()
+            visible = set((await connection.scalars(select(Order.id))).all())
+    finally:
+        await engine.dispose()
+
+    committed = _every_seeded_id(isolation_seed, "orders")
+
+    assert established == tenant_deny_sentinel, (
+        f"a raw Core connection carries {established!r} rather than the deny "
+        f"sentinel. make_engine's connect_args pin is what puts it there, and "
+        f"without it this connection is one PGOPTIONS away from being a tenant."
+    )
+    assert visible == set(), (
+        f"a raw engine.connect() with no tenant established read {sorted(visible)} "
+        f"of the {len(committed)} committed orders. `after_begin` never fired on "
+        f"this connection, so nothing scoped it — the only thing between it and "
+        f"every tenant's data is the deny sentinel."
+    )
+
+
+@pytest.mark.asyncio
+async def test_6_the_app_role_cannot_become_the_owner(
+    roles_applied: str, isolation_dsn: str, owner_role: str
+) -> None:
+    """🔴 ASSERTION 6 — Task 2's OWNERSHIP RULE, from the side that would break it.
+
+    Every table is owned by `titlepipe_owner`, and `FORCE ROW LEVEL SECURITY` is
+    what stops that role reading every tenant's rows. `titlepipe_app` becoming
+    the owner would not defeat `FORCE` — but it WOULD hand the application role
+    `ALTER TABLE`, and `ALTER TABLE orders NO FORCE ROW LEVEL SECURITY` is one
+    statement. So the six assertions above rest on this one: they describe a
+    configuration the connection under test must not be able to change.
+
+    `roles.sql` makes this hold by granting the owner membership to
+    `titlepipe_migration` ALONE, and even that with `INHERIT FALSE, SET TRUE`.
+    `titlepipe_app` has no membership at all, which is why the refusal is
+    unconditional rather than a question of inheritance.
+
+    THE SQLSTATE IS ASSERTED FIRST AND THE MESSAGE SECOND, deliberately in that
+    order. The contract names the message `permission denied to set role`, and
+    that string is English — PostgreSQL translates its errors and `lc_messages`
+    selects the language, so a server started under a different locale answers
+    the identical `42501` in different words and a message-only assertion would
+    be testing the container's configuration. MEASURED 2026-08-06 on this
+    container (`lc_messages` inherited from the image's default): sqlstate
+    `42501`, message `permission denied to set role "titlepipe_owner"`. Both are
+    checked because the code alone is also what a missing grant returns, and the
+    message is the only thing that says the refusal was about the ROLE.
+
+    A raw `engine.connect()` rather than a session: `SET ROLE` is not something
+    the ORM has an opinion about, and this is a question about the connection's
+    identity rather than about a tenant.
+
+    ---------------------------------------------------------------------------
+    🔴 `roles_applied` IS REQUESTED AND THE VALUE IS NEVER READ. THIS IS THE ONE
+       TEST IN THE FILE THAT NEEDS NO ROWS, AND THAT MADE IT THE ONE TEST THAT
+       COULD NOT RUN ALONE.
+    ---------------------------------------------------------------------------
+    Every other assertion here takes `isolation_seed`, which pulls
+    `migrated_database` -> `roles_applied` and so applies `roles.sql` on the way
+    past. This one asks only about a role membership, so it took `isolation_dsn`
+    and nothing else — and `app_dsn` depends on `admin_dsn`, NOT on
+    `roles_applied`. MEASURED 2026-08-06, this node run on its own:
+
+        psycopg.OperationalError: connection failed: … FATAL:  password
+        authentication failed for user "titlepipe_app"
+
+    Which reads like a broken password and is actually a role that does not
+    exist yet: PostgreSQL answers identically for an absent role and a wrong
+    one, deliberately, so the error cannot tell you which. It passed in every
+    whole-file and whole-suite run because some earlier test had already built
+    the fixture — a latent green of exactly the shape `roles_applied`'s own
+    docstring is a record of, and it was caught by running each database test
+    individually rather than by any ordering of the files.
+    """
+    engine = make_engine(isolation_dsn)
+    try:
+        async with engine.connect() as connection:
+            with pytest.raises(DBAPIError) as raised:
+                # S608 does not apply and neither does a bind parameter: a role
+                # name cannot be one in any dialect. `owner_role` is the constant
+                # `titlepipe_owner` from `conftest.py` and reaches this from
+                # nowhere else.
+                await connection.execute(text(f"SET ROLE {owner_role}"))
+            await connection.rollback()
+    finally:
+        await engine.dispose()
+
+    sqlstate = getattr(raised.value.orig, "sqlstate", None)
+    assert sqlstate == INSUFFICIENT_PRIVILEGE_SQLSTATE, (
+        f"SET ROLE {owner_role} raised {sqlstate!r}, not "
+        f"{INSUFFICIENT_PRIVILEGE_SQLSTATE!r}: {raised.value}"
+    )
+    assert SET_ROLE_REFUSAL_FRAGMENT in str(raised.value), (
+        f"42501 came back for some reason other than the role membership — a "
+        f"missing table grant returns the identical code: {raised.value}"
+    )

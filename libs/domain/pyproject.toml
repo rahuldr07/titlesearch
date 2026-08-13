@@ -1,0 +1,38 @@
+[project]
+name = "titlepipe-domain"
+version = "0.1.0"
+description = "Framework-free domain primitives shared by every TitlePipe deployable."
+requires-python = ">=3.13,<3.14"
+dependencies = []
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "ruff==0.15.*",
+    "pyright==1.1.*",
+    "pytest==9.1.*",
+    "pytest-cov==7.*",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/titlepipe_domain"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --strict-markers --strict-config"
+
+[tool.pyright]
+include = ["src", "tests"]
+typeCheckingMode = "strict"
+pythonVersion = "3.13"
+reportMissingTypeStubs = false
+
+# This package must never grow a framework dependency. It is imported by the Core
+# API, the Blind API and both workers; anything added here is added to all four.
+# Forbidden imports are enforced by tests/test_import_boundary.py here and by
+# each service's own boundary test (e.g. services/blind-svc/tests/
+# test_blind_boundary.py). This comment named a tests/test_boundaries.py that
+# has never existed in this tree.

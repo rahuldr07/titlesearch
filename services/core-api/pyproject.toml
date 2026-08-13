@@ -1,0 +1,103 @@
+[project]
+name = "titlepipe-core-api"
+version = "0.1.0"
+description = "TitlePipe Core API — synchronous HTTP orchestration, contracts, auth, RBAC, RLS."
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "titlepipe-domain",
+    "fastapi==0.139.*",
+    "uvicorn[standard]==0.51.*",
+    "pydantic==2.13.*",
+    "pydantic-settings==2.14.*",
+    "structlog>=26.1,<27",
+    # The upper cap is hygiene, not a beta guard. MEASURED 2026-08-05:
+    #   uv pip compile <<< 'sqlalchemy>=2.0.51'                    -> 2.0.51
+    #   uv pip compile --prerelease=allow <<< 'sqlalchemy>=2.0.51' -> 2.1.0b3
+    # `2.1.0b3` is on PyPI and does sort newer than every 2.0 release, but uv —
+    # like pip — never selects a pre-release while a stable satisfies the range,
+    # so a bare `>=2.0.51` would NOT pull a beta. An earlier comment here said
+    # it would; that was wrong. What `<2.1` actually buys is exclusion of 2.1.0
+    # STABLE, an unreviewed major-minor that would otherwise arrive on its
+    # release day through a plain `uv lock`.
+    #
+    # `[asyncio]` IS NOT DECORATION, AND IT IS NOT SATISFIED BY THE PLATFORM
+    # MARKER. `titlepipe_core.db` uses `create_async_engine`, `AsyncEngine`,
+    # `AsyncSession` and `async_sessionmaker`, all of which import greenlet at
+    # first use. SQLAlchemy declares greenlet twice, and the unconditional
+    # declaration is architecture-gated. MEASURED 2026-08-06,
+    # `importlib.metadata.requires("sqlalchemy")` against the installed 2.0.51:
+    #
+    #     greenlet>=1; platform_machine == "aarch64" or (platform_machine ==
+    #     "ppc64le" or (platform_machine == "x86_64" or (platform_machine ==
+    #     "amd64" or (platform_machine == "AMD64" or (platform_machine ==
+    #     "win32" or platform_machine == "WIN32")))))
+    #     greenlet>=1; extra == "asyncio"
+    #
+    # `arm64` — what Apple Silicon macOS reports for `platform_machine` — is not
+    # in that list. Nothing is broken on this box or on any x86_64/aarch64
+    # runner (greenlet 3.5.4 is installed either way), so this is a declaration
+    # fix rather than a repair: without the extra, a macOS/arm64 developer gets
+    # an ImportError at the first async engine call, from a dependency nobody
+    # declared. The extra adds the same `greenlet>=1` with no marker at all.
+    "sqlalchemy[asyncio]>=2.0.51,<2.1",
+    # `[binary]` ships the libpq wheel, which is also what makes testcontainers
+    # able to connect at all — its own `[postgres]` extra installs no driver.
+    # `[pool]` is the connection pool the engine will want from Task 4 on.
+    "psycopg[binary,pool]>=3.3.4,<3.4",
+    "alembic>=1.18.5,<1.19",
+]
+
+# WorkOS, PgQueuer, boto3, HTTPX and the telemetry exporters still land at the
+# gate that first needs them, so an unused dependency never reaches a
+# production image. The database three above are that gate's arrivals.
+
+[dependency-groups]
+dev = [
+    "ruff==0.15.*",
+    "pyright==1.1.*",
+    "pytest==9.1.*",
+    "pytest-asyncio==1.4.*",
+    "pytest-cov==7.*",
+    "httpx2>=2,<3",               # Starlette 1.1 TestClient targets httpx2; plain httpx is deprecated there
+    # The `[postgres]` extra is EMPTY — it declares no driver. The connection
+    # works because `psycopg[binary]` is a runtime dependency above, not
+    # because of anything this extra installs.
+    "testcontainers[postgres]>=4.15.0,<5.0",
+    "titlepipe-test-support",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/titlepipe_core"]
+
+[tool.uv.sources]
+titlepipe-domain = { path = "../../libs/domain", editable = true }
+titlepipe-test-support = { path = "../../libs/test-support", editable = true }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --strict-markers --strict-config"
+asyncio_mode = "strict"
+
+[tool.pyright]
+# `migrations` is in here because it was NOT, and three real type errors lived
+# there undetected — two false return annotations (`Column` is invariant, so
+# `Column[UUID]` is not a `Column[object]`) and one `Column[Unknown]`. They were
+# written to a checker that was never pointed at them. A migration is executable
+# Python that creates every table this system has; there is no version of
+# "checked" that excludes it.
+include = ["src", "tests", "migrations"]
+typeCheckingMode = "strict"
+pythonVersion = "3.13"
+reportMissingTypeStubs = false
+
+# Strict everywhere. The one relaxation is scoped to tests and to a single
+# rule: pytest fixtures and route handlers registered by decorator are never
+# referenced by name, which pyright correctly reports and which is the
+# framework's intended idiom. No type-safety rule is relaxed anywhere.
+[[tool.pyright.executionEnvironments]]
+root = "tests"
+reportUnusedFunction = false
