@@ -21,17 +21,21 @@ import { cva } from "class-variance-authority";
  * edge at severity weight is banner vocabulary, and a navigator row is not an
  * alarm.
  *
- * THE FILL IS A BAND OF PAPER, since 2026-08-13 and the dark rail. It was
- * `rail-wash`, the mockup's `linear-gradient(90deg, accent 8%, transparent 70%)`
- * — correct on the warm-paper column it was drawn for, and invisible on the dark
- * one, where 8% of any hue falls below the just-noticeable step and left the
- * accent bar carrying the signal by itself. On a dark rail the scarce material
- * is PAPER, so the marked row spends it: `--color-rail-active-surface`, flat.
+ * THE FILL IS A LIFT OF THE COLUMN, since the dark rail. It was `rail-wash`,
+ * the mockup's `linear-gradient(90deg, accent 8%, transparent 70%)` — correct on
+ * the warm-paper column it was drawn for, and invisible on the dark one, where
+ * 8% of any hue falls below the just-noticeable step.
  *
- * That is not a return to `bg-action-surface`, the mistake before the wash. A
+ * It was then briefly a band of PAPER, which read beautifully and gave the light
+ * theme two grounds: a dark column and a white row. Every filled thing the rail
+ * draws — badges, stage discs, the spine — then had to work on both, and none
+ * did. `--color-rail-active-surface` is now a step of the column instead, which
+ * is what mocha always did and why mocha never had those defects.
+ *
+ * It is not a return to `bg-action-surface`, the mistake before the wash: a
  * full-strength CHIP tint made the loudest object on screen the thing pointing
- * at the work rather than the work; the band is the rail's own paper token, and
- * it reads as "this row is a sheet" rather than "this row is an alarm".
+ * at the work rather than the work. The lift is 1.26:1 and the accent bar is
+ * still what the eye lands on.
  *
  * EVERY COLOUR HERE IS A `rail-*` TOKEN, and that is load-bearing rather than
  * tidy. The rail is one of two surfaces with its own ink vocabulary (the other
@@ -64,14 +68,12 @@ export const railRowClasses = cva(
       },
       active: {
         /*
-         * THE BAR AND THE MARK STAY `action`, NOT `rail-accent`. Both stand on
-         * the marked row's BAND, which is paper, not on the rail — so the wax
-         * reads at 7.66:1 there exactly as it does anywhere else on a panel, and
-         * lightening it would be correcting for a ground it never touches.
-         * `rail-accent` is the wax as seen against the dark column, and the only
-         * things standing there are the wordmark's halves.
+         * THE BAR IS `rail-accent`, and it used to be `action`. That was correct
+         * only while the band was paper: with the band now a lift of the column
+         * (`tokens.css`, "the marked row is a lift of the column"), `--color-action`
+         * would sit at 2.06:1 on it. One ground, one accent.
          */
-        true: "border-l-action bg-rail-active-surface font-semibold text-rail-ink-active",
+        true: "border-l-rail-accent bg-rail-active-surface font-semibold text-rail-ink-active",
         false:
           "border-l-transparent font-medium text-rail-ink-secondary hover:bg-rail-row-hover hover:text-rail-ink",
       },

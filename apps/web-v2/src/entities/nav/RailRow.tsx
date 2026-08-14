@@ -102,7 +102,7 @@ export function RailRow({
         aria-disabled="true"
         title={title ?? `${label} — opens once an order is in view`}
         // The rail's muted tier, not the app's: this row stands on the dark
-        // column, where `--color-ink-muted` measures 1.7:1. An unreachable stage
+        // column, where `--color-ink-muted` measures 2.64:1. An unreachable stage
         // is meant to read as PRESENT BUT NOT YET YOURS — the numbering is
         // structural and has to stay countable — not as a gap in the list.
         className={cn(rowClass, "text-rail-ink-muted")}

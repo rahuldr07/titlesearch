@@ -201,34 +201,71 @@
    * not decoration and they are not re-derivable by eye on a dark ground.
    */
   --color-rail-surface: #1c1a32;
-  --color-rail-ink: #f4f2f8; /* 15.21:1 — hover, and the wordmark's upright half */
-  --color-rail-ink-secondary: #b6b3c6; /* 8.25:1 — the resting row label */
-  --color-rail-ink-muted: #9a97ad; /* 5.96:1 — group headers, resting marks, the fold */
+  --color-rail-ink: #f4f2f8; /* 15.21 col / 12.11 band — hover, the wordmark's upright half */
+  --color-rail-ink-secondary: #b6b3c6; /* 8.25 / 6.57 — the resting row label */
+  --color-rail-ink-muted: #9a97ad; /* 5.96 / 4.74 — group headers, resting marks, the fold */
   /*
    * THE ACCENT, LIGHTENED TO SURVIVE THE COLUMN. Same sealing-wax hue, raised
    * until it clears AA on the rail (6.30:1 where --color-action manages 2.06).
    * It is a SEPARATE NAME, not a redefinition of --color-action, because the
    * accent still has to mean one thing app-wide: this is the wax AS SEEN AGAINST
-   * THE DARK COLUMN, and the only things standing there are the wordmark's two
-   * halves. The marked row's bar and pictograph keep --color-action — they sit
-   * on that row's band, which is paper, and the wax reads on paper already.
+   * THE DARK COLUMN. It draws the marked row's bar, the marked row's pictograph,
+   * the wordmark's two halves, and the FOCUS RING (see `rail.css`) — everything
+   * that means "here" on this column.
    */
   --color-rail-accent: #d98a72;
   /*
-   * THE MARKED ROW IS A SOLID BAND OF PAPER, and that is the change the dark
-   * column forces. It was `rail-wash`, the mockup's 8%-accent gradient dying to
-   * nothing at 70% — a device that only works on paper. At 8% on #1c1a32 the
-   * wash was below the just-noticeable step: the accent bar at the margin was
-   * carrying the whole "you are here" signal alone. Paper is what the rail has
-   * least of, so paper is what reads loudest on it.
+   * THE MARKED ROW IS A LIFT OF THE COLUMN, NOT A SHEET OF PAPER.
+   *
+   * It was #faf7ef, the app's panel white, on the reasoning that paper is the
+   * scarcest material on a dark rail and therefore the loudest. That was true
+   * and it was still wrong, because it gave the light theme TWO GROUNDS: a dark
+   * column and a paper band. Every filled descendant then had to read on both,
+   * and no single value does — `RailBadge`'s halt pill measured 1.24:1 on the
+   * column, `StageDot`'s resting disc 13.18:1 (a bright paper disc on a dark
+   * rail), and the lifecycle spine INVERTED, with the not-yet-walked segment
+   * eleven times louder than the walked one. Four separate defects, one cause.
+   *
+   * Mocha never had them, because mocha's band was always a step of its column.
+   * The light theme now does the same thing, so the rail has ONE ground in both
+   * themes and one vocabulary that works on it. The lift is deliberately small
+   * (1.26:1) — the 3px accent bar at the margin is what says "here", which is
+   * what this rail's own design has claimed from the start, and a bigger lift
+   * buys loudness by spending the contrast every mark on the row needs.
    *
    * The row stays FULL-BLEED — a floating rounded pill would need a horizontal
    * inset, and the column's 12px of headroom over the 204px measured floor (see
-   * `Sidebar.tsx`) is not big enough to spend on one. The 3px accent bar at the
-   * margin survives unchanged and is still what the eye lands on.
+   * `Sidebar.tsx`) is not big enough to spend on one.
    */
-  --color-rail-active-surface: #faf7ef; /* = --color-surface-panel, 15.78:1 on the rail */
-  --color-rail-ink-active: #221c13; /* 15.77:1 on the band above */
+  --color-rail-active-surface: #2e2b4a; /* 1.26:1 lift over the column */
+  --color-rail-ink-active: #f4f2f8; /* 12.11:1 on the band — same value as
+                                       --color-rail-ink now that both grounds are
+                                       dark; kept as its own name so the marked
+                                       row can diverge without touching hover. */
+  /*
+   * THE MARKS THE FLOW RAIL DRAWS — `StageDot`'s discs and `StageLink`'s spine.
+   * Both stood on app tokens and both broke on the dark column: --color-state-settled
+   * measured 2.99:1 (the DONE step, the one the design most wants read as
+   * "behind you") while --color-line-strong measured 11.10:1, so the spine ran
+   * backwards. These two restore the order the flow rail's docblocks specify —
+   * settled reads louder than track on the column, 5.78 against 4.95.
+   *
+   * Gated at 3:1 on BOTH grounds: discs and 1px spines are marks, not glyphs.
+   */
+  --color-rail-settled: #6fa377; /* 5.78 col / 4.60 band — done disc, walked spine */
+  --color-rail-track: #8b87ac; /* 4.95 / 3.95 — the spine ahead of you, resting disc edge */
+  /*
+   * The halt BADGE's fill, and it is a different value from the halt DOT above
+   * because it is a different kind of object. The dot is a 4px disc gated at the
+   * 3:1 non-text bar; the badge carries a numeral, so its fill has to hold dark
+   * text at AA. #bd6450 does not (4.10:1) — this does, at 5.29:1, while still
+   * clearing 3:1 as a shape on both grounds.
+   *
+   * SOLID, where attend is an outline. `RailBadge`'s own docblock is the reason:
+   * fill-vs-outline survives greyscale where two hues do not, and "six open" and
+   * "three unresolved" are not the same news.
+   */
+  --color-rail-halt-surface: #cd7a66;
   /*
    * Hover, and the foot rule. Alpha over the rail rather than two more opaque
    * hexes: both must sit on whatever --color-rail-surface becomes, and neither
@@ -248,12 +285,20 @@
    * never built.
    *
    * Gated at 3:1, the NON-TEXT threshold — these are 4px discs, not glyphs.
-   * They are not required to separate from each other in greyscale (1.42:1):
-   * red PULSES and amber is still, which is this rail's documented distinction
-   * and the one that survives both colour blindness and a greyscale print.
+   *
+   * ⚠ THEY SEPARATE FROM EACH OTHER AT ONLY 1.42:1, and the motion that was
+   * supposed to carry that distinction IS NOT ALWAYS THERE. `red pulses, amber
+   * is still` is the rail's documented split, but this file ships a global
+   * `prefers-reduced-motion` block that kills every animation — so a user with
+   * reduced motion AND a red-green deficiency gets two 4px discs separated by
+   * colour alone. The `aria-label` covers assistive tech, not sighted users.
+   * The honest position: this is a KNOWN GAP, not a solved problem, and closing
+   * it needs a second non-motion channel (a ring, or a different shape) rather
+   * than another pair of hexes. Recorded here so the next person does not read
+   * the motion sentence and conclude it is handled.
    */
-  --color-rail-attention-halt: #bd6450; /* 4.10:1 on the column */
-  --color-rail-attention-attend: #c28f22; /* 5.83:1 */
+  --color-rail-attention-halt: #bd6450; /* 4.10 col / 3.27 band */
+  --color-rail-attention-attend: #c28f22; /* 5.83 / 4.64 */
 
   /* ── state: settled — confirmed, delivered, gate passed ───────────────── */
   --color-state-settled: #45714b;
@@ -892,6 +937,15 @@
      Named anyway so `RailDot` reads ONE token per state in both themes. */
   --color-rail-attention-halt: #f38ba8; /* = --color-state-halt */
   --color-rail-attention-attend: #fab387; /* = --color-state-attend */
+  /* The flow rail's marks. Green needs no lifting here; the TRACK does — mocha's
+     --color-line-strong measures 2.63:1 on this column, under the non-text bar,
+     so the un-walked spine was the segment that vanished in this theme (the
+     mirror of the light theme's defect, where the walked one did). */
+  --color-rail-settled: #a6e3a1; /* = --color-state-settled, 11.81 col / 7.36 band */
+  --color-rail-track: #8d92ab; /* 5.71 / 3.56 — overlay1, lifted */
+  /* Mocha's halt pastel already carries dark numerals at 7.58:1, so the badge
+     fill and the dot are one value here where the light theme needs two. */
+  --color-rail-halt-surface: #f38ba8; /* = --color-rail-attention-halt */
 
   /* ── state: settled — confirmed, delivered, gate passed ───────────────── */
   --color-state-settled: #a6e3a1; /* green */

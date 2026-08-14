@@ -55,7 +55,7 @@ export function RailSection({
          * dark column is a className, never a downgrade to a `<div>`.
          *
          * `text-rail-ink-muted` OVERRIDES the variant's own `text-ink-muted`,
-         * which measures 1.7:1 here. It lands last in `cn(eyebrow(…), className)`
+         * which measures 2.64:1 here. It lands last in `cn(eyebrow(…), className)`
          * and tailwind-merge resolves two text-colours last-wins while leaving
          * the size and tracking intact — the mechanism `Eyebrow`'s own header
          * documents, used for exactly what it is documented for.

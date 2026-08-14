@@ -41,7 +41,7 @@ export function RailFold({ collapsed, onToggle }: RailFoldProps) {
       aria-pressed={collapsed}
       aria-label={collapsed ? "Expand the navigator" : "Fold the navigator"}
       onClick={onToggle}
-      // Rail tokens, not app ink: `--color-ink-muted` measures 1.70:1 on this
+      // Rail tokens, not app ink: `--color-ink-muted` measures 2.64:1 on this
       // column. See `tokens.css`, "the navigator's own ink family".
       className="shrink-0 rounded-3 p-1 text-rail-ink-muted hover:bg-rail-row-hover hover:text-rail-ink"
     >

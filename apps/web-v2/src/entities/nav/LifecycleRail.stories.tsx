@@ -53,7 +53,7 @@ export const OnCompleteness: Story = {
     // The segment BELOW the done stage is green…
     const behindDone = await canvas.findByTestId("rail-link-/processing");
     expect(behindDone).toHaveAttribute("data-done", "1");
-    expect(behindDone.firstElementChild).toHaveClass("bg-state-settled");
+    expect(behindDone.firstElementChild).toHaveClass("bg-rail-settled");
 
     // …and the one after the not-done stage is NOT, even though the active row
     // sits below it. Colouring from "where you are standing" is the defect:
@@ -63,7 +63,7 @@ export const OnCompleteness: Story = {
     for (const to of ["/completeness", "/orders/ord_demo_1/review", "/delivered"]) {
       const link = await canvas.findByTestId(`rail-link-${to}`);
       expect(link, to).toHaveAttribute("data-done", "0");
-      expect(link.firstElementChild, to).toHaveClass("bg-line-strong");
+      expect(link.firstElementChild, to).toHaveClass("bg-rail-track");
     }
 
     // The first row owns no segment — there is nothing behind Questions to
@@ -74,13 +74,18 @@ export const OnCompleteness: Story = {
     // Tones ride WITH the badge; the pill never reads its own number.
     const gaps = await canvas.findByTestId("rail-badge-/completeness");
     expect(gaps).toHaveTextContent("3");
-    // `bg-state-halt`, not `-surface`, since the 2026-08-01 reskin: the mockup
-    // draws the two rail badges as a FILLED pill and an outlined one, because at
-    // 17px two tints are one shape. The assertion still pins what it always
-    // pinned — that the halt badge wears the halt family and not attend's.
-    expect(gaps).toHaveClass("bg-state-halt");
+    // FILLED, where attend is an OUTLINE — the mockup draws the two rail badges
+    // that way because at 17px two tints are one shape. The assertion still pins
+    // what it always pinned: the halt badge wears the halt family and not
+    // attend's, and the two are told apart by fill-vs-outline rather than hue.
+    // The token names moved to the rail's own family when the column went dark
+    // (`bg-state-halt` measured 1.24:1 there); the rule is unchanged.
+    expect(gaps).toHaveClass("bg-rail-halt-surface");
     const needYou = await canvas.findByTestId("rail-badge-/orders/ord_demo_1/review");
-    expect(needYou).toHaveClass("bg-state-attend-surface");
+    expect(needYou).toHaveClass("border-rail-attention-attend");
+    expect(needYou, "attend is an outline, never a fill").not.toHaveClass(
+      "bg-rail-halt-surface",
+    );
   },
 };
 

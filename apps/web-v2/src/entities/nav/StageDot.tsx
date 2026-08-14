@@ -66,11 +66,23 @@ export function StageDot({ n, done, active }: StageDotProps) {
          * Found by looking at a 4x screenshot. Every test passed.
          */
         "relative z-(--z-raised) flex size-10 shrink-0 items-center justify-center rounded-pill border font-mono text-xs",
+        /*
+         * THE RAIL'S FAMILY, and the hierarchy had inverted without it. On the
+         * dark column the app tokens measured: done 2.99:1 (nearly gone),
+         * resting 13.18:1 and active 16.60:1 — two bright paper discs shouting
+         * over the green tick that is the whole point of the flow rail. The
+         * docblock above still describes the intent; these values restore it.
+         *
+         * ACTIVE IS RINGED, NOT WHITE. On paper the current disc was the
+         * lightest thing in the column so the ticks behind it stayed countable;
+         * on a dark ground "lightest" is the loudest thing on screen, so the
+         * accent ring carries "you are here" and the fill stays the band.
+         */
         active
-          ? "border-(length:--stroke-emphasis) border-ink-primary bg-surface-raised text-ink-primary shadow-stage-current"
+          ? "border-(length:--stroke-emphasis) border-rail-accent bg-rail-active-surface text-rail-ink shadow-stage-current"
           : done
-            ? "border-state-settled bg-state-settled text-ink-on-action"
-            : "border-line-dashed bg-surface-sunken text-ink-muted",
+            ? "border-rail-settled bg-rail-settled text-rail-surface"
+            : "border-rail-track bg-rail-surface text-rail-ink-muted",
       )}
     >
       {done ? "✓" : n}

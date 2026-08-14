@@ -3,6 +3,7 @@ import { expect, within } from "storybook/test";
 import { Sidebar, type SidebarSection } from "./Sidebar";
 import type { SidebarDoorItem } from "./Sidebar";
 import { doorGlyph, doorTitle, doorsFor, type Door } from "./doors";
+import { Wordmark } from "../../shared/ui/Wordmark";
 
 const meta = {
   title: "Nav/Sidebar",
@@ -13,7 +14,19 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const brand = <span>TITLEPIPE</span>;
+/*
+ * THE REAL MARK, INVERTED, because the placeholder was invisible. `<span>` alone
+ * inherits `--color-ink-primary` from `html`, which on `bg-rail-surface`
+ * measures 1.00:1 — identical luminance. This story draws the whole column, so
+ * it was a screenshot of a rail with a hole where the wordmark goes.
+ *
+ * ⚠ AXE DOES NOT CATCH THIS ONE. Measured in this harness: it flags 1.01:1 and
+ * 2.22:1, and PASSES at exactly 1.00:1, where equal luminance is treated as
+ * deliberately hidden text. So the rail's headline failure mode — not faint,
+ * gone — is precisely the case the Storybook a11y gate is blind to, and the
+ * token assertions in `contrast.test.ts` are what actually cover it.
+ */
+const brand = <Wordmark size="rail" inverted />;
 
 /**
  * Fixture stages exercise all three THIS ORDER states at once: Upload is a
