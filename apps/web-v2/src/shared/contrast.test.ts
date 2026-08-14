@@ -372,3 +372,183 @@ describe("ink-on-action clears AA on every filled control", () => {
     }
   }
 });
+
+/**
+ * THE NAVIGATOR IS THE SECOND SURFACE WITH ITS OWN INK VOCABULARY, and it is
+ * gated here for the same reason the document pane is: the rail went dark on
+ * 2026-08-13, and a dark column under a light app is exactly the configuration
+ * nobody screenshots. Every failure it hides is total rather than marginal.
+ *
+ * The numbers that made this a gate rather than a note, measured on
+ * `--color-rail-surface` in the light theme. RE-MEASURED 2026-08-14 — the muted
+ * figure below was first written as 1.70:1, wrong, and repeated into four
+ * component files as the justification for the change. The conclusion held; the
+ * arithmetic did not, in a block whose whole claim is that it was measured.
+ *   --color-ink-primary    1.00:1   identical luminance — the wordmark was blank
+ *   --color-ink-secondary  2.22:1   the tier the resting row label used to read
+ *   --color-ink-muted      2.64:1   every group header and every resting mark
+ *   --color-action         2.06:1   the seal, `Pipe`, and the FOCUS RING
+ *   --color-state-halt     1.24:1   the attention dot and the halt badge's fill
+ *   --color-state-settled  2.99:1   the done stage disc and the walked spine
+ *
+ * A first pass drew the group headers at #79768f (3.86:1) and the marked row as
+ * a literal `bg-white`/`text-slate-900` pair — under AA, and frozen against
+ * `[data-theme="mocha"]`. A second gave the light theme TWO grounds, a dark
+ * column and a paper band, and four filled descendants broke on one or the
+ * other. Both are what these tests exist to refuse, which is why every ink is
+ * now asserted against BOTH grounds rather than against whichever one suited it.
+ */
+describe("the navigator has its own ink vocabulary", () => {
+  /**
+   * THE RAIL HAS TWO GROUNDS AND EVERY MARK MUST SURVIVE BOTH: the column, and
+   * the marked row's band, which is a lift of the column rather than a separate
+   * material. Asserting against only one is how the earlier passes shipped —
+   * the paper band flattered whatever stood on it and the column did not, so a
+   * per-ground list simply encoded which defect had not been noticed yet.
+   *
+   * TEXT, at AA.
+   */
+  const RAIL_TEXT = [
+    "color-rail-ink",
+    "color-rail-ink-active",
+    "color-rail-ink-secondary",
+    "color-rail-ink-muted",
+    "color-rail-accent",
+  ] as const;
+
+  /**
+   * MARKS, at the 3:1 non-text bar — dots, discs, spines, the focus ring. Every
+   * one of these is a thing no text-contrast tool will ever look at: axe
+   * measures text, so a filled `<span>` or a 1px rule is invisible to the
+   * Storybook a11y run that covers the rest of this rail.
+   */
+  const RAIL_MARKS = [
+    "color-rail-attention-halt",
+    "color-rail-attention-attend",
+    "color-rail-halt-surface",
+    "color-rail-settled",
+    "color-rail-track",
+  ] as const;
+
+  const GROUNDS = ["color-rail-surface", "color-rail-active-surface"] as const;
+
+  for (const theme of THEMES) {
+    for (const ground of GROUNDS) {
+      for (const ink of RAIL_TEXT) {
+        test(`${ink} clears AA on ${ground} — ${theme}`, () => {
+          const r = ratio(token(ink, theme), token(ground, theme));
+          expect(r, `${r.toFixed(2)}:1`).toBeGreaterThanOrEqual(AA_NORMAL);
+        });
+      }
+
+      for (const mark of RAIL_MARKS) {
+        test(`${mark} is visible on ${ground} — ${theme}`, () => {
+          const r = ratio(token(mark, theme), token(ground, theme));
+          expect(
+            r,
+            `${r.toFixed(2)}:1 — a rail mark below the 3:1 non-text bar`,
+          ).toBeGreaterThanOrEqual(3);
+        });
+      }
+    }
+
+    /*
+     * THE FILLED BADGE CARRIES A NUMERAL, so its fill is gated at AA against
+     * the ink on it and not merely at the 3:1 it clears as a shape. This is why
+     * `--color-rail-halt-surface` is a different value from the halt DOT in the
+     * light theme: the dot's colour holds text at only 4.10:1.
+     */
+    test(`the halt badge's numerals clear AA on its fill — ${theme}`, () => {
+      const r = ratio(
+        token("color-rail-surface", theme),
+        token("color-rail-halt-surface", theme),
+      );
+      expect(r, `${r.toFixed(2)}:1`).toBeGreaterThanOrEqual(AA_NORMAL);
+    });
+
+    /*
+     * THE FLOW RAIL'S ORDER, which no contrast bar expresses. A walked segment
+     * means "behind you" and must read LOUDER than the track ahead of it. Both
+     * cleared 3:1 individually while running backwards: the app tokens put the
+     * un-walked spine at 11.10:1 against the walked one at 2.99:1.
+     */
+    test(`the walked spine reads louder than the track ahead — ${theme}`, () => {
+      const column = token("color-rail-surface", theme);
+      const walked = ratio(token("color-rail-settled", theme), column);
+      const ahead = ratio(token("color-rail-track", theme), column);
+      expect(
+        walked,
+        `walked ${walked.toFixed(2)}:1 vs ahead ${ahead.toFixed(2)}:1 — the spine runs backwards`,
+      ).toBeGreaterThan(ahead);
+    });
+
+    /*
+     * The band has to be perceptible as a band, which no ink ratio proves. The
+     * bar is 1.2:1 in BOTH themes and deliberately low: the lift is a whisper
+     * and the accent bar at the margin is what says "here". An earlier version
+     * of this test set the light bar at 3 and the mocha bar at 1.4 against an
+     * observed 1.60 — a floor beneath the value it measured, which could not
+     * fail, dressed as a theme-specific allowance. One bar, both themes.
+     */
+    test(`the marked row separates from the column — ${theme}`, () => {
+      const r = ratio(
+        token("color-rail-active-surface", theme),
+        token("color-rail-surface", theme),
+      );
+      expect(r, `${r.toFixed(2)}:1`).toBeGreaterThanOrEqual(1.2);
+    });
+  }
+
+  /*
+   * THE FOCUS RING IS A MARK ON THE COLUMN, and it is asserted here because it
+   * is drawn in CSS rather than by any component: `index.css` rings the app with
+   * `--color-action` and `rail.css` overrides that to `--color-rail-accent`
+   * inside the rail. Without the override the ring measures 2.06:1 in the light
+   * theme — no visible focus indicator on any door, stage or the fold button.
+   * `--color-action` is asserted as NOT sufficient so the override cannot be
+   * deleted as redundant.
+   */
+  for (const theme of THEMES) {
+    test(`the rail's focus ring is visible on the column — ${theme}`, () => {
+      const r = ratio(
+        token("color-rail-accent", theme),
+        token("color-rail-surface", theme),
+      );
+      expect(r, `${r.toFixed(2)}:1`).toBeGreaterThanOrEqual(3);
+    });
+  }
+
+  test("light: --color-action alone is NOT a usable focus ring on the rail", () => {
+    const r = ratio(
+      token("color-action", "light"),
+      token("color-rail-surface", "light"),
+    );
+    expect(
+      r,
+      `${r.toFixed(2)}:1 — the app-wide ring needs the rail override`,
+    ).toBeLessThan(3);
+  });
+
+  /*
+   * THE APP'S INK TIERS ARE NOT AVAILABLE HERE. Same shape as the document
+   * pane's restriction, and same purpose: state the constraint as a test so
+   * that reaching for `text-ink-primary` on the rail fails a build instead of
+   * shipping a blank column. Light theme only — in Mocha the app inks are light
+   * colours and clear the dark column by construction, so asserting it there
+   * would encode a false claim (the pane's block above makes the identical
+   * distinction, for the identical reason).
+   */
+  for (const ink of [
+    "color-ink-primary",
+    "color-ink-secondary",
+    "color-ink-muted",
+  ] as const) {
+    test(`light: ${ink} is NOT usable on the rail`, () => {
+      const r = ratio(token(ink, "light"), token("color-rail-surface", "light"));
+      expect(
+        r,
+        `${r.toFixed(2)}:1 — app ink must not be reached for on the rail`,
+      ).toBeLessThan(AA_NORMAL);
+    });
+  }
+});

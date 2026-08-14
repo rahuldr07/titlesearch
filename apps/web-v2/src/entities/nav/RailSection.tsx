@@ -48,7 +48,19 @@ export function RailSection({
       className={cn("flex flex-col gap-1", foot === true && "mt-auto")}
     >
       {collapsed ? null : (
-        <Eyebrow as="h2" variant="group" className="px-12 pb-3.5">
+        /*
+         * STILL AN `h2`. The header is how a screen-reader user moves between
+         * WORK / THIS ORDER / ADMIN / REFERENCE without walking eleven rows, and
+         * the tracked caps are its appearance, not its job. Retoning it for the
+         * dark column is a className, never a downgrade to a `<div>`.
+         *
+         * `text-rail-ink-muted` OVERRIDES the variant's own `text-ink-muted`,
+         * which measures 2.64:1 here. It lands last in `cn(eyebrow(…), className)`
+         * and tailwind-merge resolves two text-colours last-wins while leaving
+         * the size and tracking intact — the mechanism `Eyebrow`'s own header
+         * documents, used for exactly what it is documented for.
+         */
+        <Eyebrow as="h2" variant="group" className="px-12 pb-3.5 text-rail-ink-muted">
           {label}
           {note === undefined ? null : (
             <>

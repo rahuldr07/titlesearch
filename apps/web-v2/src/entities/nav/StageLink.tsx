@@ -56,8 +56,18 @@ export function StageLink({ to, collapsed, filled }: StageLinkProps) {
         data-done={filled ? "1" : "0"}
         className="flex w-10 justify-center"
       >
+        {/*
+          THE SPINE RAN BACKWARDS ON THE DARK COLUMN, in both themes and in
+          opposite directions. Light: `bg-state-settled` (the walked segment,
+          "behind you") measured 2.99:1 and vanished while `bg-line-strong` (the
+          segment AHEAD) measured 11.10:1 and became the brightest line in the
+          navigator. Mocha inverted the other way — the un-walked track fell to
+          2.63:1, under the non-text bar. The rail's own pair restores the order
+          this component exists to draw: walked reads louder than un-walked,
+          5.78 against 4.95 on the column.
+        */}
         <span
-          className={cn("h-full w-px", filled ? "bg-state-settled" : "bg-line-strong")}
+          className={cn("h-full w-px", filled ? "bg-rail-settled" : "bg-rail-track")}
         />
       </span>
     </div>

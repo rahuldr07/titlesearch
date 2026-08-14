@@ -19,7 +19,13 @@ import { Wordmark } from "../../shared/ui/Wordmark";
 export function SidebarBrand() {
   return (
     <Link to="/" className="min-w-0 no-underline">
-      <Wordmark size="rail" />
+      {/*
+        `inverted` BECAUSE OF THE GROUND, not the theme. This is the one place
+        the mark stands on the dark rail; sign-in draws the same object on a
+        light card and passes nothing. Without it the default tokens apply and
+        the mark measures 1.00:1 on `--color-rail-surface` — not faint, gone.
+      */}
+      <Wordmark size="rail" inverted />
     </Link>
   );
 }

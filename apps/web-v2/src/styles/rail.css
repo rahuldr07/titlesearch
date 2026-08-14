@@ -4,30 +4,16 @@
  * Split out of `utilities.css` on 2026-08-08 when the scrollbar utility took
  * that file over the 150-line gate — the same split, for the same reason, that
  * created `utilities.css` out of `index.css` on 2026-08-01. The seam is the
- * component: both blocks here paint the rail and nothing else, and a change to
- * either starts from the rail's mockup, not from the utility grab-bag.
- */
-
-/*
- * THE NAVIGATOR'S ACTIVE ROW. A wash that fades out, not a filled band.
+ * component: this block paints the rail and nothing else, and a change to it
+ * starts from the rail's mockup, not from the utility grab-bag.
  *
- * A `bg-*` utility can only paint a flat colour, and the mockup's marked row is
- * a 90deg gradient dying to nothing at 70% — which is what lets the accent bar
- * at the left margin stay the thing that says "here" while the tint merely
- * agrees with it. Painted flat (`bg-action-surface`, which is what this
- * replaces) the row became a solid pink slab running the full 264px, louder
- * than any content on the screen it was pointing into.
- *
- * The stop is a PERCENTAGE, so it holds at both rail widths without a second
- * value; the colour is a token, so it follows the theme.
+ * `rail-wash` LIVED HERE UNTIL 2026-08-13 — a 90deg gradient of 8% accent dying
+ * to nothing at 70%, which drew the marked row on warm paper. The rail is a dark
+ * column now and 8% of anything on it is below the just-noticeable step, so the
+ * marked row is a flat band of `--color-rail-active-surface` that a plain `bg-*`
+ * utility can paint. The gradient went with the paper it was designed for; the
+ * reasoning is preserved on the token, where the replacement is declared.
  */
-@utility rail-wash {
-  background-image: linear-gradient(
-    90deg,
-    var(--color-rail-active-wash),
-    transparent 70%
-  );
-}
 
 /*
  * A SCROLLER WITH NO SCROLLBAR CHROME. The navigator only.
@@ -45,4 +31,33 @@
   &::-webkit-scrollbar {
     display: none;
   }
+}
+
+/*
+ * THE FOCUS RING, RE-COLOURED FOR THE COLUMN — and this is a keyboard-access
+ * defect, not a polish item.
+ *
+ * `index.css` rings every focusable element in the app with `--color-action`
+ * and a 2px offset. That offset puts the ring OUTSIDE the row's border box,
+ * i.e. on the rail's own ground, where the wax measures 2.06:1 — under the 3:1
+ * non-text bar, and DOWN from about 4.0:1 on the warm-paper rail this replaced.
+ * So turning the column dark quietly removed the focus indicator from all nine
+ * doors, the six stage links and the fold button, in the default theme, for the
+ * users who depend on it most. Mocha was unaffected (8.64:1), which is exactly
+ * how it would have survived a dark-theme screenshot review.
+ *
+ * Scoped to the rail by attribute rather than fixed globally: the app-wide ring
+ * is correct everywhere else, and the rule that the ring is the ACCENT is kept
+ * — this is the same rule reading the same meaning off the rail's own accent.
+ *
+ * ⚠ THE DESCENDANT SELECTOR IS DELIBERATE AND `:where()` IS NOT USABLE HERE.
+ * This file is `@import`ed by `index.css` at its top, and the global
+ * `:focus-visible` rule sits BELOW those imports — so at equal specificity the
+ * global wins on source order. Written first as `:where([data-testid=…])`, this
+ * override computed to (0,1,0), tied, and lost: the ring stayed #8a3222 and the
+ * fix silently did nothing. Verified in the browser rather than by reading,
+ * which is the only way that class of miss ever shows up.
+ */
+[data-testid="side-rail"] :focus-visible {
+  outline-color: var(--color-rail-accent);
 }

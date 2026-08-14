@@ -21,11 +21,28 @@ import { cva } from "class-variance-authority";
  * edge at severity weight is banner vocabulary, and a navigator row is not an
  * alarm.
  *
- * THE FILL IS A WASH THAT DIES, not a band (`rail-wash`, the mockup's
- * `linear-gradient(90deg, accent 8%, transparent 70%)`). It replaces
- * `bg-action-surface` — the full-strength CHIP tint, which painted the marked
- * row as a solid slab the width of the rail and made the loudest object on
- * screen the thing pointing at the work rather than the work.
+ * THE FILL IS A LIFT OF THE COLUMN, since the dark rail. It was `rail-wash`,
+ * the mockup's `linear-gradient(90deg, accent 8%, transparent 70%)` — correct on
+ * the warm-paper column it was drawn for, and invisible on the dark one, where
+ * 8% of any hue falls below the just-noticeable step.
+ *
+ * It was then briefly a band of PAPER, which read beautifully and gave the light
+ * theme two grounds: a dark column and a white row. Every filled thing the rail
+ * draws — badges, stage discs, the spine — then had to work on both, and none
+ * did. `--color-rail-active-surface` is now a step of the column instead, which
+ * is what mocha always did and why mocha never had those defects.
+ *
+ * It is not a return to `bg-action-surface`, the mistake before the wash: a
+ * full-strength CHIP tint made the loudest object on screen the thing pointing
+ * at the work rather than the work. The lift is 1.26:1 and the accent bar is
+ * still what the eye lands on.
+ *
+ * EVERY COLOUR HERE IS A `rail-*` TOKEN, and that is load-bearing rather than
+ * tidy. The rail is one of two surfaces with its own ink vocabulary (the other
+ * is the document pane): on `--color-rail-surface`, `--color-ink-primary`
+ * measures 1.00:1. A row that reached for the app's ink tiers — or for a literal
+ * `bg-white`/`text-slate-900` — would be blank in one theme and frozen against
+ * the other, since `[data-theme="mocha"]` redefines the whole family.
  *
  * MEASUREMENTS ARE THE MOCKUP'S: `py-3 pr-12 pl-10.5` is its `6px 24px 6px
  * 21px`, and 21 + the 3px border is the 24px inset the rest of the rail uses.
@@ -50,8 +67,15 @@ export const railRowClasses = cva(
         false: "py-3 pr-12 pl-10.5",
       },
       active: {
-        true: "rail-wash border-l-action font-semibold text-ink-primary",
-        false: "border-l-transparent font-medium text-ink-secondary",
+        /*
+         * THE BAR IS `rail-accent`, and it used to be `action`. That was correct
+         * only while the band was paper: with the band now a lift of the column
+         * (`tokens.css`, "the marked row is a lift of the column"), `--color-action`
+         * would sit at 2.06:1 on it. One ground, one accent.
+         */
+        true: "border-l-rail-accent bg-rail-active-surface font-semibold text-rail-ink-active",
+        false:
+          "border-l-transparent font-medium text-rail-ink-secondary hover:bg-rail-row-hover hover:text-rail-ink",
       },
     },
     defaultVariants: { collapsed: false, active: false },

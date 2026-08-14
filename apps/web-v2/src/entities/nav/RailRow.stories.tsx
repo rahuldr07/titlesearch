@@ -3,9 +3,25 @@ import { expect, fn, userEvent, within } from "storybook/test";
 import { RailRow } from "./RailRow";
 import { RailBadge } from "./RailBadge";
 
+/**
+ * THE ROW IS DRAWN ON THE RAIL'S GROUND, never on the app's. A rail row carries
+ * the navigator's own ink family (`tokens.css`), which is built for a dark
+ * column: on the default story background `--color-rail-ink-secondary` measures
+ * 1.49:1 and axe fails the story — correctly, because that pairing is not a
+ * configuration this component has. `Sidebar` paints the surface for the real
+ * thing; in isolation the story has to supply it or it is testing a row that
+ * does not exist.
+ */
 const meta = {
   title: "Nav/RailRow",
   component: RailRow,
+  decorators: [
+    (Story) => (
+      <div className="bg-rail-surface p-6">
+        <Story />
+      </div>
+    ),
+  ],
 } satisfies Meta<typeof RailRow>;
 
 export default meta;
