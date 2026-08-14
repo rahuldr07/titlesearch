@@ -180,18 +180,80 @@
   --color-key-chip-on-action: rgb(255 255 255 / 0.1);
 
   /*
-   * THE RAIL'S ACTIVE WASH — the navigator's marked row, and deliberately NOT
-   * --color-action-surface. The mockup washes the active row with the accent at
-   * 8% and fades it to nothing by 70% of the row's width; the tint token is the
-   * full-strength chip fill, and using it painted a solid pink band across the
-   * rail that read louder than the screen it was pointing at. The row's claim is
-   * "you are here", which is the quietest thing the accent ever says.
+   * ══ THE NAVIGATOR'S OWN INK FAMILY ═════════════════════════════════════════
    *
-   * An rgba token rather than a utility-side colour function because §6 bans
-   * every CSS colour function inside apps/web-v2/src — including color-mix — so
-   * the alpha has to be resolved here, where the palette lives.
+   * THE RAIL IS DARK IN BOTH THEMES, 2026-08-13. It was warm paper one tone off
+   * the sheet (--color-surface-sunken); the approved navigator draws it as a
+   * dark column so the chrome reads as furniture and the paper is spent on the
+   * work. That inverts every ink that stands ON it, which is why the rail gets
+   * NAMES OF ITS OWN rather than reaching for the app's ink tiers: on
+   * --color-rail-surface, --color-ink-primary measures 1.00:1 — the same
+   * luminance, invisible, not merely low — and --color-action measures 2.06:1.
+   * A component that reaches into the app palette while standing on this column
+   * is not slightly off, it is blank.
+   *
+   * This is the SECOND surface in the system with its own vocabulary; the first
+   * is --color-surface-document, and the argument is identical. Both are gated
+   * in contrast.test.ts against this surface rather than against the app's.
+   *
+   * Ratios below are measured against --color-rail-surface and asserted in
+   * `contrast.test.ts` ("the navigator has its own ink vocabulary") — they are
+   * not decoration and they are not re-derivable by eye on a dark ground.
    */
-  --color-rail-active-wash: rgb(138 50 34 / 0.08);
+  --color-rail-surface: #1c1a32;
+  --color-rail-ink: #f4f2f8; /* 15.21:1 — hover, and the wordmark's upright half */
+  --color-rail-ink-secondary: #b6b3c6; /* 8.25:1 — the resting row label */
+  --color-rail-ink-muted: #9a97ad; /* 5.96:1 — group headers, resting marks, the fold */
+  /*
+   * THE ACCENT, LIGHTENED TO SURVIVE THE COLUMN. Same sealing-wax hue, raised
+   * until it clears AA on the rail (6.30:1 where --color-action manages 2.06).
+   * It is a SEPARATE NAME, not a redefinition of --color-action, because the
+   * accent still has to mean one thing app-wide: this is the wax AS SEEN AGAINST
+   * THE DARK COLUMN, and the only things standing there are the wordmark's two
+   * halves. The marked row's bar and pictograph keep --color-action — they sit
+   * on that row's band, which is paper, and the wax reads on paper already.
+   */
+  --color-rail-accent: #d98a72;
+  /*
+   * THE MARKED ROW IS A SOLID BAND OF PAPER, and that is the change the dark
+   * column forces. It was `rail-wash`, the mockup's 8%-accent gradient dying to
+   * nothing at 70% — a device that only works on paper. At 8% on #1c1a32 the
+   * wash was below the just-noticeable step: the accent bar at the margin was
+   * carrying the whole "you are here" signal alone. Paper is what the rail has
+   * least of, so paper is what reads loudest on it.
+   *
+   * The row stays FULL-BLEED — a floating rounded pill would need a horizontal
+   * inset, and the column's 12px of headroom over the 204px measured floor (see
+   * `Sidebar.tsx`) is not big enough to spend on one. The 3px accent bar at the
+   * margin survives unchanged and is still what the eye lands on.
+   */
+  --color-rail-active-surface: #faf7ef; /* = --color-surface-panel, 15.78:1 on the rail */
+  --color-rail-ink-active: #221c13; /* 15.77:1 on the band above */
+  /*
+   * Hover, and the foot rule. Alpha over the rail rather than two more opaque
+   * hexes: both must sit on whatever --color-rail-surface becomes, and neither
+   * is text, so neither is AA-gated. Resolved HERE because §6 bans every CSS
+   * colour function inside apps/web-v2/src — including color-mix.
+   */
+  --color-rail-row-hover: rgb(244 242 248 / 0.07);
+  --color-rail-line: rgb(244 242 248 / 0.1);
+  /*
+   * THE ATTENTION DOTS, and they are the reason this family is not just about
+   * text. `RailDot` drew --color-state-halt straight, which is oxblood #4a231b
+   * and measures 1.24:1 on this column — the rail's MOST URGENT mark, invisible,
+   * in the light theme only. It survived review because `useAttention` returns
+   * only "attend" or null today, so nothing on screen or in a test ever drew it;
+   * `sidebar.spec` nonetheless specifies the red dot, and the type permits it.
+   * A signal that vanishes the day it is first needed is worse than one that was
+   * never built.
+   *
+   * Gated at 3:1, the NON-TEXT threshold — these are 4px discs, not glyphs.
+   * They are not required to separate from each other in greyscale (1.42:1):
+   * red PULSES and amber is still, which is this rail's documented distinction
+   * and the one that survives both colour blindness and a greyscale print.
+   */
+  --color-rail-attention-halt: #bd6450; /* 4.10:1 on the column */
+  --color-rail-attention-attend: #c28f22; /* 5.83:1 */
 
   /* ── state: settled — confirmed, delivered, gate passed ───────────────── */
   --color-state-settled: #45714b;
@@ -800,10 +862,36 @@
   --color-ink-on-action: #11111b; /* crust */
   --color-key-chip-on-action: rgb(17 17 27 / 0.18); /* mirrors the ink-on-action flip */
 
-  /* The rail's active wash — the accent (mauve) at the same weight the light
-     theme spends, raised two points because a pastel at 8% on a dark ground
-     lands under the just-noticeable step that 8% of wax clears on paper. */
-  --color-rail-active-wash: rgb(203 166 247 / 0.1);
+  /*
+   * ── the navigator's own ink family ──────────────────────────────────────
+   *
+   * The rail is dark in BOTH themes now, so mocha is the easy half: the column
+   * simply steps DOWN to mantle where the light theme steps all the way over
+   * from paper. Every name in the @theme block appears here, and the ratios are
+   * asserted against --color-rail-surface in contrast.test.ts exactly the same
+   * way — one gate, two themes, no theme-specific exemption.
+   *
+   * The marked row inverts with the theme rather than staying pale: on a dark
+   * app a sheet of white in the rail is the brightest object on screen, which is
+   * the failure `rail-wash` was replaced to avoid, arriving from the other side.
+   * surface-raised is the same "one step above the panel" the light band takes.
+   */
+  --color-rail-surface: #181825; /* mantle */
+  --color-rail-ink: #cdd6f4; /* text — 12.14:1 */
+  --color-rail-ink-secondary: #bac2de; /* subtext1 — 9.91:1 */
+  --color-rail-ink-muted: #a6adc8; /* subtext0 — 7.89:1 */
+  /* Mauve needs no lightening — the pastel accent already clears the column at
+     8.64:1, where the light theme's wax had to be raised to reach 6.30. */
+  --color-rail-accent: #cba6f7; /* = --color-action */
+  --color-rail-active-surface: #3a3b4f; /* = --color-surface-raised, 1.60:1 on the rail */
+  --color-rail-ink-active: #cdd6f4; /* 7.57:1 on the band above */
+  --color-rail-row-hover: rgb(205 214 244 / 0.07);
+  --color-rail-line: rgb(205 214 244 / 0.1);
+  /* The state colours unchanged: Mocha's are pastels, so both already clear the
+     dark column (7.58:1 and 9.92:1) where the light theme's oxblood could not.
+     Named anyway so `RailDot` reads ONE token per state in both themes. */
+  --color-rail-attention-halt: #f38ba8; /* = --color-state-halt */
+  --color-rail-attention-attend: #fab387; /* = --color-state-attend */
 
   /* ── state: settled — confirmed, delivered, gate passed ───────────────── */
   --color-state-settled: #a6e3a1; /* green */

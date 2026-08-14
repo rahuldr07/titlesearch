@@ -29,8 +29,22 @@ import { cn } from "./classNames";
  * Putting the anchor inside would have given the sign-in screen a second control
  * on a page whose entire argument is that it has exactly one.
  */
-const seal = cva("shrink-0 rounded-pill border border-action", {
+/**
+ * INVERTED IS A WHOLE-MARK AXIS, not a text colour, and the seal is why. The
+ * mark is three wax-or-ink objects — the ring, the dot, the italic half — and
+ * the rail is dark: on `--color-rail-surface`, `--color-ink-primary` measures
+ * 1.00:1 and `--color-action` measures 2.06:1. Flipping only the upright word
+ * (the obvious half) leaves `Pipe`, the ring and the dot dark-on-dark, so the
+ * mark reads as the single word "Title" beside a smudge. Every variant below
+ * therefore carries the axis, and `--color-rail-accent` is the wax re-measured
+ * against that column rather than a second brand colour.
+ */
+const seal = cva("shrink-0 rounded-pill border", {
   variants: {
+    inverted: {
+      true: "border-rail-accent",
+      false: "border-action",
+    },
     size: {
       /* 16px outer, 1px ring, 2px gap → a 10px dot. The mockup's 9px, rounded
          onto the 2px grid so the whole mark stays on it. */
@@ -46,23 +60,51 @@ const seal = cva("shrink-0 rounded-pill border border-action", {
       hero: "size-14 p-2.5",
     },
   },
+  defaultVariants: { inverted: false },
 });
 
-const word = cva("font-display font-strong text-ink-primary opsz-40", {
+/** The seal's inner disc — wax on paper, the lightened wax on the dark rail. */
+const dot = cva("block size-full rounded-pill", {
   variants: {
+    inverted: { true: "bg-rail-accent", false: "bg-action" },
+  },
+  defaultVariants: { inverted: false },
+});
+
+const word = cva("font-display font-strong opsz-40", {
+  variants: {
+    inverted: {
+      true: "text-rail-ink",
+      false: "text-ink-primary",
+    },
     size: {
       rail: "text-3xl leading-flat",
       hero: "text-5xl leading-flat",
     },
   },
+  defaultVariants: { inverted: false },
+});
+
+/** The italic half — the other wax object, and the one easiest to forget. */
+const half = cva("font-book", {
+  variants: {
+    inverted: { true: "text-rail-accent", false: "text-action" },
+  },
+  defaultVariants: { inverted: false },
 });
 
 export interface WordmarkProps {
   size: "rail" | "hero";
+  /**
+   * Draw for a DARK ground — the navigator. Not a theme flag: both themes draw
+   * a dark rail and a light sign-in card, so this follows the SURFACE the mark
+   * is standing on, which only the caller knows.
+   */
+  inverted?: boolean;
   className?: string;
 }
 
-export function Wordmark({ size, className }: WordmarkProps) {
+export function Wordmark({ size, inverted, className }: WordmarkProps) {
   return (
     /*
      * BASELINE, not centre. The seal is a small round object beside a large
@@ -73,8 +115,8 @@ export function Wordmark({ size, className }: WordmarkProps) {
      * hatch and the difference is invisible at both sizes.
      */
     <span className={cn("inline-flex items-baseline gap-5", className)}>
-      <span aria-hidden className={cn(seal({ size }))}>
-        <span className="block size-full rounded-pill bg-action" />
+      <span aria-hidden className={cn(seal({ size, inverted }))}>
+        <span className={cn(dot({ inverted }))} />
       </span>
       {/*
         ONE TEXT NODE, so a screen reader says "TitlePipe" and not "Title, Pipe".
@@ -82,8 +124,8 @@ export function Wordmark({ size, className }: WordmarkProps) {
         reason: `<i>` inside the word keeps it one accessible name, where two
         adjacent spans are announced as two words by some readers.
       */}
-      <span className={cn(word({ size }))}>
-        Title<i className="font-book text-action">Pipe</i>
+      <span className={cn(word({ size, inverted }))}>
+        Title<i className={cn(half({ inverted }))}>Pipe</i>
       </span>
     </span>
   );

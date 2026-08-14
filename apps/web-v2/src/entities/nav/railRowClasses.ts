@@ -21,11 +21,24 @@ import { cva } from "class-variance-authority";
  * edge at severity weight is banner vocabulary, and a navigator row is not an
  * alarm.
  *
- * THE FILL IS A WASH THAT DIES, not a band (`rail-wash`, the mockup's
- * `linear-gradient(90deg, accent 8%, transparent 70%)`). It replaces
- * `bg-action-surface` — the full-strength CHIP tint, which painted the marked
- * row as a solid slab the width of the rail and made the loudest object on
- * screen the thing pointing at the work rather than the work.
+ * THE FILL IS A BAND OF PAPER, since 2026-08-13 and the dark rail. It was
+ * `rail-wash`, the mockup's `linear-gradient(90deg, accent 8%, transparent 70%)`
+ * — correct on the warm-paper column it was drawn for, and invisible on the dark
+ * one, where 8% of any hue falls below the just-noticeable step and left the
+ * accent bar carrying the signal by itself. On a dark rail the scarce material
+ * is PAPER, so the marked row spends it: `--color-rail-active-surface`, flat.
+ *
+ * That is not a return to `bg-action-surface`, the mistake before the wash. A
+ * full-strength CHIP tint made the loudest object on screen the thing pointing
+ * at the work rather than the work; the band is the rail's own paper token, and
+ * it reads as "this row is a sheet" rather than "this row is an alarm".
+ *
+ * EVERY COLOUR HERE IS A `rail-*` TOKEN, and that is load-bearing rather than
+ * tidy. The rail is one of two surfaces with its own ink vocabulary (the other
+ * is the document pane): on `--color-rail-surface`, `--color-ink-primary`
+ * measures 1.00:1. A row that reached for the app's ink tiers — or for a literal
+ * `bg-white`/`text-slate-900` — would be blank in one theme and frozen against
+ * the other, since `[data-theme="mocha"]` redefines the whole family.
  *
  * MEASUREMENTS ARE THE MOCKUP'S: `py-3 pr-12 pl-10.5` is its `6px 24px 6px
  * 21px`, and 21 + the 3px border is the 24px inset the rest of the rail uses.
@@ -50,8 +63,17 @@ export const railRowClasses = cva(
         false: "py-3 pr-12 pl-10.5",
       },
       active: {
-        true: "rail-wash border-l-action font-semibold text-ink-primary",
-        false: "border-l-transparent font-medium text-ink-secondary",
+        /*
+         * THE BAR AND THE MARK STAY `action`, NOT `rail-accent`. Both stand on
+         * the marked row's BAND, which is paper, not on the rail — so the wax
+         * reads at 7.66:1 there exactly as it does anywhere else on a panel, and
+         * lightening it would be correcting for a ground it never touches.
+         * `rail-accent` is the wax as seen against the dark column, and the only
+         * things standing there are the wordmark's halves.
+         */
+        true: "border-l-action bg-rail-active-surface font-semibold text-rail-ink-active",
+        false:
+          "border-l-transparent font-medium text-rail-ink-secondary hover:bg-rail-row-hover hover:text-rail-ink",
       },
     },
     defaultVariants: { collapsed: false, active: false },
