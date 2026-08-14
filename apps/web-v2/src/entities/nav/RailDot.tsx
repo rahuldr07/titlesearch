@@ -36,7 +36,13 @@ export function RailDot({ to, label, attention, collapsed }: RailDotProps) {
       className={cn(
         "size-2 shrink-0 rounded-pill",
         collapsed ? "absolute top-2 right-2" : "ml-auto",
-        attention === "halt" ? "animate-tp-pulse bg-state-halt" : "bg-state-attend",
+        // THE RAIL'S OWN STATE COLOURS, not the app's. `bg-state-halt` is
+        // oxblood and measures 1.24:1 on the dark column — the loudest mark in
+        // the navigator, invisible, and only in the light theme. Gated at the
+        // 3:1 non-text threshold in `contrast.test.ts`.
+        attention === "halt"
+          ? "animate-tp-pulse bg-rail-attention-halt"
+          : "bg-rail-attention-attend",
       )}
     />
   );

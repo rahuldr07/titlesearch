@@ -423,6 +423,27 @@ describe("the navigator has its own ink vocabulary", () => {
     }
 
     /*
+     * THE ATTENTION DOTS ARE MARKS, NOT TEXT, so 3:1 is the bar rather than
+     * 4.5. They get their own assertion because they are the one thing on this
+     * column that no other test would have reached: `useAttention` returns only
+     * "attend" or null today, so the halt dot renders in no screen and no
+     * story, and axe measures text contrast rather than a filled `<span>`.
+     * `--color-state-halt` drawn straight measures 1.24:1 here.
+     */
+    for (const dot of [
+      "color-rail-attention-halt",
+      "color-rail-attention-attend",
+    ] as const) {
+      test(`${dot} is visible on the rail — ${theme}`, () => {
+        const r = ratio(token(dot, theme), token("color-rail-surface", theme));
+        expect(
+          r,
+          `${r.toFixed(2)}:1 — an attention mark below the 3:1 non-text bar`,
+        ).toBeGreaterThanOrEqual(3);
+      });
+    }
+
+    /*
      * The band has to be VISIBLE as a band, which no ink ratio proves. 3:1 is
      * the non-text threshold, and the light theme clears it by a mile (a sheet
      * of paper on a dark column); Mocha cannot — a dark panel on a dark column

@@ -237,6 +237,23 @@
    */
   --color-rail-row-hover: rgb(244 242 248 / 0.07);
   --color-rail-line: rgb(244 242 248 / 0.1);
+  /*
+   * THE ATTENTION DOTS, and they are the reason this family is not just about
+   * text. `RailDot` drew --color-state-halt straight, which is oxblood #4a231b
+   * and measures 1.24:1 on this column — the rail's MOST URGENT mark, invisible,
+   * in the light theme only. It survived review because `useAttention` returns
+   * only "attend" or null today, so nothing on screen or in a test ever drew it;
+   * `sidebar.spec` nonetheless specifies the red dot, and the type permits it.
+   * A signal that vanishes the day it is first needed is worse than one that was
+   * never built.
+   *
+   * Gated at 3:1, the NON-TEXT threshold — these are 4px discs, not glyphs.
+   * They are not required to separate from each other in greyscale (1.42:1):
+   * red PULSES and amber is still, which is this rail's documented distinction
+   * and the one that survives both colour blindness and a greyscale print.
+   */
+  --color-rail-attention-halt: #bd6450; /* 4.10:1 on the column */
+  --color-rail-attention-attend: #c28f22; /* 5.83:1 */
 
   /* ── state: settled — confirmed, delivered, gate passed ───────────────── */
   --color-state-settled: #45714b;
@@ -870,6 +887,11 @@
   --color-rail-ink-active: #cdd6f4; /* 7.57:1 on the band above */
   --color-rail-row-hover: rgb(205 214 244 / 0.07);
   --color-rail-line: rgb(205 214 244 / 0.1);
+  /* The state colours unchanged: Mocha's are pastels, so both already clear the
+     dark column (7.58:1 and 9.92:1) where the light theme's oxblood could not.
+     Named anyway so `RailDot` reads ONE token per state in both themes. */
+  --color-rail-attention-halt: #f38ba8; /* = --color-state-halt */
+  --color-rail-attention-attend: #fab387; /* = --color-state-attend */
 
   /* ── state: settled — confirmed, delivered, gate passed ───────────────── */
   --color-state-settled: #a6e3a1; /* green */
