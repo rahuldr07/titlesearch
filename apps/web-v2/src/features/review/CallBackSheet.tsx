@@ -1,5 +1,10 @@
 import type { Field } from "@titlepipe/contract";
-import { SECTION_HEADING, sectionAnchor, sectionsOf } from "./reportSections";
+import {
+  SECTION_HEADING,
+  sectionAnchor,
+  sectionPageOf,
+  sectionsOf,
+} from "./reportSections";
 import { SheetRow } from "./SheetRow";
 import { Card, CardHeader } from "../../shared/ui/Card";
 import { Eyebrow } from "../../shared/ui/Eyebrow";
@@ -27,7 +32,9 @@ import { Eyebrow } from "../../shared/ui/Eyebrow";
  *
  * EACH SECTION IS THE ANCHOR THE RAIL POINTS AT (`sectionAnchor`), and the
  * grouping is `sectionsOf` — the same function the rail walks, so a link and
- * the section it names can never drift into two different splits.
+ * the section it names can never drift into two different splits. The page ref
+ * on the band head is `sectionPageOf`, the same call the rail makes, so the
+ * page a reviewer read on the rail is the page they land beside.
  *
  * IT IS READ-ONLY. Decisions happen in the dock, on one field, with a reason.
  * An editable draft is a bulk-edit surface wearing a document's clothes.
@@ -49,25 +56,33 @@ export function CallBackSheet({
         the page it was read from.
       </p>
 
-      {sectionsOf(fields).map(([section, rows]) => (
-        <Card key={section} id={sectionAnchor(section)} className="scroll-mt-16">
-          <CardHeader filled>
-            <Eyebrow variant="section">
-              {SECTION_HEADING[section] ?? section.replaceAll("_", " ")}
-            </Eyebrow>
-          </CardHeader>
-          <div>
-            {rows.map((field) => (
-              <SheetRow
-                key={field.id}
-                field={field}
-                selected={field.path === selectedPath}
-                onSelect={() => onSelect(field.path)}
-              />
-            ))}
-          </div>
-        </Card>
-      ))}
+      {sectionsOf(fields).map(([section, rows]) => {
+        const page = sectionPageOf(rows);
+        return (
+          <Card key={section} id={sectionAnchor(section)} className="scroll-mt-16">
+            <CardHeader filled>
+              <div className="flex items-baseline gap-4">
+                <Eyebrow variant="section">
+                  {SECTION_HEADING[section] ?? section.replaceAll("_", " ")}
+                </Eyebrow>
+                {page === null ? null : (
+                  <span className="font-mono text-tiny text-ink-muted">p{page}</span>
+                )}
+              </div>
+            </CardHeader>
+            <div>
+              {rows.map((field) => (
+                <SheetRow
+                  key={field.id}
+                  field={field}
+                  selected={field.path === selectedPath}
+                  onSelect={() => onSelect(field.path)}
+                />
+              ))}
+            </div>
+          </Card>
+        );
+      })}
     </section>
   );
 }

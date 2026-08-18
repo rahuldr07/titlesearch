@@ -47,6 +47,21 @@ import { cn } from "../../shared/ui/classNames";
  * export — the active row is filled and that is the only row treatment. A hover
  * state would make every row the pointer crosses look momentarily selected, on
  * a screen where "which field am I deciding" is the whole question.
+ *
+ * THE LABEL COLUMN IS A FIXED MEASURE, NOT A FRACTION. It was `w-1/3` — a third
+ * of whatever the pane happened to be — so the values started at one x on a
+ * wide window and another on a narrow one, and nothing held them in a column at
+ * all once the pane could be resized. `w-72` (144px) wraps the longest label
+ * this vocabulary produces (`JGMT 1 — PLAINTIFF ATTORNEY`) to two lines and
+ * starts every value at the same x, which is what makes the draft read as the
+ * tabular document it is going to be printed as.
+ *
+ * THE MARK IS ITS OWN COLUMN, not a third item trailing the value. Inside the
+ * value's wrap it landed at a different x on every row, so the one glance that
+ * answers "what is still settled in this section" had to read each row's full
+ * value first. It is a SIBLING of the value column now, and the value column's
+ * `flex-1` is what pushes it to the row's right edge. Same `row-mark`, same
+ * testid; only where it lands changed.
  */
 export function SheetRow({
   field,
@@ -66,11 +81,11 @@ export function SheetRow({
       data-testid={`row-${field.path}`}
       onClick={onSelect}
       className={cn(
-        "flex gap-7 border-t border-line-subtle px-8 py-5 first:border-t-0",
+        "flex gap-6 border-t border-line-subtle px-7 py-4 first:border-t-0",
         selected && "bg-action-surface",
       )}
     >
-      <div className="flex w-1/3 shrink-0 flex-col items-start gap-3 pt-1">
+      <div className="flex w-72 shrink-0 flex-col items-start gap-2 pt-1">
         <button
           type="button"
           data-testid={`sheet-${field.path}`}
@@ -105,15 +120,16 @@ export function SheetRow({
           <span className="font-mono text-base text-ink-secondary">Not Available</span>
         ) : null}
         <FieldValue field={field} />
-        {mark === null ? null : (
-          <span
-            data-testid="row-mark"
-            className="text-xs font-semibold text-state-settled-ink"
-          >
-            {mark}
-          </span>
-        )}
       </div>
+
+      {mark === null ? null : (
+        <span
+          data-testid="row-mark"
+          className="shrink-0 pt-1 text-xs font-semibold text-state-settled-ink"
+        >
+          {mark}
+        </span>
+      )}
     </div>
   );
 }

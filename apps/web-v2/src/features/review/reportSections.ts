@@ -120,3 +120,27 @@ export function needsYouCountOf(fields: readonly Field[]): number {
 export function sectionAnchor(section: string): string {
   return `section-${section}`;
 }
+
+/**
+ * THE PAGE THIS SECTION WAS READ FROM — the first cited page among its fields,
+ * or `null` when not one of them carries a cite yet.
+ *
+ * READ STRAIGHT OFF `source_page`. It is never inferred from a section's
+ * position in the package or from the order of the payload: the number a
+ * reviewer needs is the one printed on the physical page, because that is what
+ * they will turn to and what they will quote to the county.
+ *
+ * `null` IS NOT PAGE ONE. A section whose fields are all `pending` has nothing
+ * to cite, and drawing `pg 1` there would invent a citation — which is the
+ * exact artefact principle 6 exists to prevent, made worse by being plausible.
+ * Both callers render nothing at all on `null` rather than a placeholder.
+ *
+ * FIRST, NOT LOWEST. A section's fields arrive in the order the server assembled
+ * them, and the first one that cites anything is the page the section OPENS on.
+ * `Math.min` would answer a different question — "the earliest page this section
+ * touches" — which is not what "jump to Judgments" means when a judgment's
+ * decree is recorded twenty pages before its satisfaction.
+ */
+export function sectionPageOf(fields: readonly Field[]): number | null {
+  return fields.find((f) => f.source_page !== null)?.source_page ?? null;
+}
