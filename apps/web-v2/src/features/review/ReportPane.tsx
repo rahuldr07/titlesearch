@@ -89,7 +89,7 @@ export function ReportPane({
         <OrderRail orderId={orderId} />
       </div>
 
-      <SectionRail fields={fields} />
+      <SectionRail fields={fields} selectedPath={selectedPath} />
     </div>
   );
 }

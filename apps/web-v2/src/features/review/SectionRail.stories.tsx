@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, within } from "storybook/test";
 import { demoFields } from "@titlepipe/mocks";
 import { SectionRail } from "./SectionRail";
 
@@ -28,7 +28,7 @@ type Story = StoryObj<typeof meta>;
  * copy; they were pinning a paraphrase.
  */
 export const AllSections: Story = {
-  args: { fields: demoFields },
+  args: { fields: demoFields, selectedPath: "owner.names" },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     // By testid, not by name: `Vesting` is now a PREFIX of `Vesting Deed`, and
@@ -42,37 +42,54 @@ export const AllSections: Story = {
 };
 
 /**
- * Clicking a section jumps the report — a real `<a href="#section-x">`, so a
- * BROWSER'S own fragment navigation lands the reviewer on it and leaves
- * `location.hash` a bookmarkable pointer into the draft sheet. That real
- * navigation is exercised end-to-end in `review.spec.ts` (Playwright); a
- * headless component-test session running an actual top-level navigation
- * mid-`play()` closes its own control connection, so the click here is
- * captured before the browser acts on it and only the REACT side — the
- * `aria-current` the rail sets, the same announced-not-just-coloured
- * convention `FieldRow` uses for its own selected row — is asserted.
+ * Each section is a real `<a href="#section-x">`, so a BROWSER'S own fragment
+ * navigation lands the reviewer on it and leaves `location.hash` a bookmarkable
+ * pointer into the draft sheet. That real navigation is exercised end-to-end in
+ * `review.spec.ts` (Playwright); a headless component-test session running an
+ * actual top-level navigation mid-`play()` closes its own control connection,
+ * so only the href is asserted here.
+ *
+ * `aria-current` MARKS THE SECTION HOLDING THE SELECTED FIELD, not the last one
+ * clicked. This story used to click Judgments and assert the rail lit it up —
+ * an assertion the rail could satisfy while pointing somewhere the reviewer had
+ * long since left, because `j`/`k`, a `?field=` deep link and a click in the
+ * sheet all move selection without touching the rail. Selection is URL-owned;
+ * the rail reads it. Same announced-not-just-coloured convention `FieldRow`
+ * uses for its own selected row.
  */
 export const JumpsToSection: Story = {
-  args: { fields: demoFields },
+  args: { fields: demoFields, selectedPath: "judgments.1.case_no" },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const link = canvas.getByRole("link", { name: /Judgments & Liens/ });
     await expect(link).toHaveAttribute("href", "#section-judgments");
-    await expect(link).not.toHaveAttribute("aria-current");
-    link.addEventListener("click", (e) => e.preventDefault(), { once: true });
-    await userEvent.click(link);
     await expect(link).toHaveAttribute("aria-current", "true");
+    // The section the reviewer is NOT in stays unmarked — the rail points at
+    // one place because the reviewer is in one place.
+    await expect(canvas.getByTestId("section-link-owner")).not.toHaveAttribute(
+      "aria-current",
+    );
   },
 };
 
-/** A section with nothing open shows no badge — the rail is not a second tally. */
+/**
+ * A section with nothing open shows no badge — the rail is not a second tally.
+ *
+ * ASSERTED ON A BARE NUMERAL, NOT ON "ANY DIGIT". The old assertion read
+ * `queryByText(/[0-9]/)` — which passed only for as long as the row carried
+ * nothing else numeric, and would now match the section's own page ref `p12`.
+ * A count and a citation are different facts; a test that cannot tell them
+ * apart would go green on a rail that had dropped the cite and kept a wrong
+ * badge. The badge is the only element here whose whole text IS a number.
+ */
 export const NoOpenFieldsShowsNoBadge: Story = {
   args: {
     fields: demoFields.filter((f) => f.path.startsWith("legal.")),
+    selectedPath: "legal.lot",
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const legal = canvas.getByRole("link", { name: /Legal Description/ });
-    await expect(within(legal).queryByText(/[0-9]/)).not.toBeInTheDocument();
+    await expect(within(legal).queryByText(/^\d+$/)).not.toBeInTheDocument();
   },
 };
