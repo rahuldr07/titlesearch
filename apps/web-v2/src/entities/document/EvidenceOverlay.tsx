@@ -46,15 +46,35 @@ const boxGeometry = (box: EvidenceBox): CSSProperties => ({
  *
  * Rendering nothing when there are no boxes is the contract, not an edge case:
  * an engine that declared no coordinates must get a snippet, never a box.
+ *
+ * `anchorId` IS THE CALLER'S, AND ONLY THE FIRST BOX TAKES IT. Something on the
+ * screen may want to point AT this mark — the draft's tie line does — and it
+ * needs a stable element to find. A DOM id must be unique in the document, so
+ * this component may not mint one for itself: the gallery renders four overlays
+ * on one page and the stories render more, and every one of them would claim
+ * the same id. The one surface that has exactly one overlay passes an id in;
+ * everybody else passes nothing and gets no id at all.
+ *
+ * FIRST BOX, because a citation spanning three wrapped lines is ONE citation
+ * and a pointer has one end. The first is the one the reader's eye reaches
+ * first, top to bottom.
  */
-export function EvidenceOverlay({ boxes }: { boxes: readonly EvidenceBox[] }) {
+export function EvidenceOverlay({
+  boxes,
+  anchorId,
+}: {
+  boxes: readonly EvidenceBox[];
+  /** Stable id for the first box, so another surface can point at it. */
+  anchorId?: string | undefined;
+}) {
   if (boxes.length === 0) return null;
 
   return (
     <div aria-hidden className="pointer-events-none absolute inset-0">
-      {boxes.map((box) => (
+      {boxes.map((box, index) => (
         <span
           key={`${box.x}:${box.y}:${box.width}:${box.height}`}
+          id={index === 0 ? anchorId : undefined}
           className="absolute bg-surface-evidence border border-border-evidence rounded-1"
           style={boxGeometry(box)} // rules-allow: server-computed per-box geometry
         />

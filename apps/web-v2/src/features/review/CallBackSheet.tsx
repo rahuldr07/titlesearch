@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { Field } from "@titlepipe/contract";
 import {
   SECTION_HEADING,
@@ -36,17 +37,44 @@ import { Eyebrow } from "../../shared/ui/Eyebrow";
  * on the band head is `sectionPageOf`, the same call the rail makes, so the
  * page a reviewer read on the rail is the page they land beside.
  *
- * IT IS READ-ONLY. Decisions happen in the dock, on one field, with a reason.
+ * THE DECISION OPENS IN THE ROW IT BELONGS TO (`renderDecision`).
+ *
+ * The card used to sit in a separate docked block above this sheet, so a
+ * reviewer read a question in one band and the value it was about in another,
+ * with the answered rows of the queue in between — and the sheet below printed
+ * every one of those values a second time. Opening the card UNDER ITS OWN ROW
+ * puts the question, the draft line it will change, and its section's other
+ * lines in one column, which is the arrangement that lets somebody notice that
+ * a lender name they are about to confirm disagrees with the mortgage two rows
+ * down.
+ *
+ * IT IS A SLOT, NOT FOURTEEN PROPS. The decision card needs every write handler
+ * on the screen; threading those through this component and `SheetRow` would
+ * make two presentational files carry the whole mutation surface as
+ * pass-through parameters, and every future handler would touch three files.
+ * The caller renders the card and hands it over; this component decides only
+ * WHERE it goes. `undefined` renders the sheet read-only, which is what the
+ * delivered-order and story surfaces want.
+ *
+ * THE SHEET IS STILL READ-ONLY IN ITSELF. Nothing here edits a value: the only
+ * interactive things are row selection and whatever the caller puts in the
+ * slot, which is one field's decision card with its reasons and its refusals.
  * An editable draft is a bulk-edit surface wearing a document's clothes.
  */
 export function CallBackSheet({
   fields,
   selectedPath,
   onSelect,
+  renderDecision,
 }: {
   fields: readonly Field[];
   selectedPath: string;
   onSelect: (path: string) => void;
+  /**
+   * The open decision, drawn beneath the row it decides. Omitted on read-only
+   * surfaces — the draft is a document there, not a workstation.
+   */
+  renderDecision?: ((field: Field) => ReactNode) | undefined;
 }) {
   return (
     <section data-testid="call-back-sheet" className="flex flex-col gap-5">
@@ -71,14 +99,30 @@ export function CallBackSheet({
               </div>
             </CardHeader>
             <div>
-              {rows.map((field) => (
-                <SheetRow
-                  key={field.id}
-                  field={field}
-                  selected={field.path === selectedPath}
-                  onSelect={() => onSelect(field.path)}
-                />
-              ))}
+              {rows.map((field) => {
+                const isSelected = field.path === selectedPath;
+                return (
+                  <div key={field.id}>
+                    <SheetRow
+                      field={field}
+                      selected={isSelected}
+                      onSelect={() => onSelect(field.path)}
+                    />
+                    {isSelected && renderDecision !== undefined ? (
+                      /* The card belongs to the row above it, so it sits inside
+                         the row's own fill rather than floating on the card's
+                         ground — the two read as one open line, not as a panel
+                         that happens to be adjacent. */
+                      <div
+                        data-testid="open-decision"
+                        className="border-t border-line-subtle bg-action-surface px-7 pb-7 pt-2"
+                      >
+                        {renderDecision(field)}
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })}
             </div>
           </Card>
         );

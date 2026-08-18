@@ -20,9 +20,12 @@ import { cn } from "../../shared/ui/classNames";
 export function PageFacsimile({
   page,
   boxes,
+  anchorId,
 }: {
   page: SourcePage;
   boxes: readonly EvidenceBox[] | null;
+  /** Handed to the overlay so the draft's tie line can find the mark. */
+  anchorId?: string | undefined;
 }) {
   if (!page.read_in_full) {
     return (
@@ -120,7 +123,7 @@ export function PageFacsimile({
           >
             {page.lines.join("\n")}
           </pre>
-          <EvidenceOverlay boxes={boxes ?? []} />
+          <EvidenceOverlay boxes={boxes ?? []} anchorId={anchorId} />
         </div>
       </div>
     </figure>

@@ -4,8 +4,11 @@ import type { Field } from "@titlepipe/contract";
 import { orderFieldsQuery, orderSignoffQuery } from "./queries";
 import { readingsOf } from "../../entities/field/fieldLabel";
 import { ReviewStandin } from "./ReviewStandin";
-import { DocumentPane } from "./DocumentPane";
+import { DocumentPane, EVIDENCE_ANCHOR_ID } from "./DocumentPane";
+import { EvidenceTieLine } from "./EvidenceTieLine";
 import { FieldsPane } from "./FieldsPane";
+import { ReviewToolbar } from "./ReviewToolbar";
+import { SHEET_ANCHOR_ID } from "./SheetRow";
 import { useReviewBindings } from "./useReviewBindings";
 import { useReviewEditor } from "./useReviewEditor";
 import { useReviewSelection } from "./useReviewSelection";
@@ -13,34 +16,35 @@ import { useReviewWrites } from "./useReviewWrites";
 import { Screen } from "../../shared/ui/Screen";
 
 /**
- * The review workstation — TWO PANES, edge to edge, in one frame that does not
- * scroll (export `:664-1082`).
+ * The review workstation — a thin toolbar over TWO PANES, edge to edge, in one
+ * frame that does not scroll.
  *
- * LEFT `1 1 52%` is the document: pinned header, one scroller, coverage docked
- * at the foot. RIGHT `1 1 48%` is the fields column: what was ordered, the one
- * decision you are on, the finalize gate, then the draft report beside its
- * section rail. The rail is INSIDE the right pane — a third top-level column
- * starved both halves and pushed the sheet's values out of their rows.
+ * THE DRAFT LEADS. `1 1 62%` left is the fields column — the queue's meter, then
+ * the document being assembled, the open decision drawn under the row it
+ * decides. `1 1 38%` right is the viewer: page nav, facsimile, then the
+ * instruments and the coverage spine docked at its foot.
  *
- * THERE IS NO SCREEN HEADER. It used to carry a `Review` title, a second
- * answered-of-needed count and a third "remaining" one, directly under an order
- * strip that already names the order and its four counts. The export draws none
- * of it: the left pane says DOCUMENT and the right pane opens on ORDERED, and
- * the counts belong to the queue that owns them. `{n} remaining` moved onto the
- * decision dock with the two numbers it is arithmetic on.
+ * This INVERTS the export (`:664-1082`), which leads with the document at 52%,
+ * and the reskin is right about why: the reviewer's object is the DELIVERABLE
+ * and the scan is what they consult about it. Reading order is the thing being
+ * decided, then the evidence for it. Stated as a deviation; what has to hold
+ * either way is the viewer staying wide enough to read a county deed
+ * (`DocumentPane`'s 38% floor).
  *
- * J AND K WALK ONLY SERVER-QUEUED FIELDS (`review.spec` #9). The queue is the
- * server's judgment about what needs a person; walking past it by keyboard is
- * how re-deciding settled fields becomes a habit.
+ * THERE IS STILL NO SCREEN HEADER, and the toolbar is not one — it carries no
+ * order identity and no counts, because `OrderStrip` above every order screen
+ * already carries the ref, the four counts including NEED YOU, and the stamp.
+ * `{n} remaining` stays on the decision meter with the numbers it is arithmetic
+ * on.
  *
- * SELECTION IS URL-OWNED, so `?field=` is a first-class deep link and a
- * complaint or an escalation can point at the exact field in context.
+ * J AND K WALK ONLY SERVER-QUEUED FIELDS (`review.spec` #9) — walking past the
+ * server's judgment by keyboard is how re-deciding settled fields becomes a
+ * habit. SELECTION IS URL-OWNED, so `?field=` is a first-class deep link.
  *
  * EVERY WRITE GOES THROUGH `useReviewWrites`, which owns the five mutations,
  * derives ONE server note from whichever was submitted last and refuses a
- * duplicate submit. This screen used to wire each mutation by hand and four of
- * the five carried `{ onSuccess: advance }` and nothing else — every refusal
- * they were given was dropped on the floor.
+ * duplicate submit. This screen used to wire each by hand with
+ * `{ onSuccess: advance }` and nothing else — every refusal was dropped.
  */
 export function ReviewScreen() {
   const { orderId } = useParams({ from: "/orders/$orderId/review" });
@@ -95,39 +99,48 @@ export function ReviewScreen() {
 
   return (
     <Screen placement="bleed">
-      <div className="flex h-full min-h-0">
-        <DocumentPane
-          orderId={orderId}
-          field={selected}
-          pinned={pinned?.reading ?? null}
-        />
+      <div className="flex h-full min-h-0 flex-col">
+        <ReviewToolbar orderId={orderId} onRaiseQuery={() => setMode("escalate")} />
 
-        <FieldsPane
-          orderId={orderId}
-          fields={fields}
-          signoff={signoff.data}
-          selected={selected}
-          pinned={pinned}
-          mode={mode}
-          seed={editorSeed}
-          writePending={writes.pending}
-          serverNote={writes.serverNote}
-          blankNote={blankNote}
-          onPin={setPinned}
-          onAdopt={adopt}
-          onConfirm={submitConfirm}
-          onCorrect={openCorrect}
-          onMode={setMode}
-          onCorrectSubmit={(value, reason) =>
-            writes.correct(selected.id, value, reason, advance)
-          }
-          onEscalateSubmit={(question) =>
-            writes.escalate(selected.id, question, advance)
-          }
-          onExcludeSubmit={(reason) => writes.exclude(selected.id, reason, advance)}
-          onPassSubmit={(reason) => writes.pass(reason, () => setMode("idle"))}
-          onSelect={reselect}
-        />
+        <div className="flex min-h-0 flex-1">
+          <FieldsPane
+            orderId={orderId}
+            fields={fields}
+            signoff={signoff.data}
+            selected={selected}
+            pinned={pinned}
+            mode={mode}
+            seed={editorSeed}
+            writePending={writes.pending}
+            serverNote={writes.serverNote}
+            blankNote={blankNote}
+            onPin={setPinned}
+            onAdopt={adopt}
+            onConfirm={submitConfirm}
+            onCorrect={openCorrect}
+            onMode={setMode}
+            onCorrectSubmit={(value, reason) =>
+              writes.correct(selected.id, value, reason, advance)
+            }
+            onEscalateSubmit={(question) =>
+              writes.escalate(selected.id, question, advance)
+            }
+            onExcludeSubmit={(reason) => writes.exclude(selected.id, reason, advance)}
+            onPassSubmit={(reason) => writes.pass(reason, () => setMode("idle"))}
+            onSelect={reselect}
+          />
+
+          <DocumentPane
+            orderId={orderId}
+            field={selected}
+            fields={fields}
+            pinned={pinned?.reading ?? null}
+          />
+        </div>
+
+        {/* Drawn last, over both panes, so neither needs to know it exists.
+            Nothing is drawn when the field cites no coordinates. */}
+        <EvidenceTieLine fromId={SHEET_ANCHOR_ID} toId={EVIDENCE_ANCHOR_ID} />
       </div>
     </Screen>
   );
