@@ -11,12 +11,36 @@ import type { Field, FieldReading, NaReason } from "@titlepipe/contract";
  */
 const SECTION_ABBR: Record<string, string> = { mortgages: "MTG", judgments: "JGMT" };
 
+const EXACT_LABELS: Record<string, string> = {
+  "deed.instrument_number": "Instrument #",
+  "deed.deed_type": "Deed type",
+  "deed.grantor": "Grantor",
+  "deed.grantee": "Grantee",
+  "deed.recorded": "Recorded",
+  "deed.book_page": "Book / Page",
+  "mortgages.1.min": "MIN",
+  "mortgages.1.lender": "Lender",
+  "mortgages.1.amount": "Amount",
+  "mortgages.1.recorded": "Recorded",
+  "assignment.1.recorded": "Recorded",
+  "assignment.1.assignor": "Assignor",
+  "assignment.1.assignee": "Assignee",
+  "judgments.1.amount": "Amount",
+  "judgments.1.filed": "Filed",
+  "assessment.city_tax": "City tax",
+  "assessment.county_tax_2025": "County tax 2025",
+};
+
 export function fieldLabel(path: string): string {
+  if (EXACT_LABELS[path]) return EXACT_LABELS[path];
+
   const parts = path.split(".");
-  const leaf = (parts[parts.length - 1] ?? path).replaceAll("_", " ").toUpperCase();
+  let leaf = (parts[parts.length - 1] ?? path).replaceAll("_", " ");
+  leaf = leaf.charAt(0).toUpperCase() + leaf.slice(1); // Capitalize first letter
+  
   const head = parts[0] ?? path;
   const index = parts.length === 3 ? parts[1] : undefined;
-  const section = SECTION_ABBR[head] ?? head.toUpperCase();
+  const section = SECTION_ABBR[head] ?? head.charAt(0).toUpperCase() + head.slice(1);
   return index === undefined ? `${section} ${leaf}` : `${section} ${index} — ${leaf}`;
 }
 

@@ -49,11 +49,12 @@ const OPEN_STATES = new Set<Field["state"]>(["needs_review", "escalated"]);
 export const SECTION_HEADING: Record<string, string> = {
   search: "Search Information",
   owner: "Vesting",
-  deed: "Vesting Deed",
-  mortgages: "Open Mortgages / Deeds of Trust",
+  deed: "CURRENT VESTING DEED",
+  mortgages: "SECURITY INSTRUMENTS",
+  assignment: "ASSIGNMENT",
   legal: "Legal Description",
-  judgments: "Judgments & Liens",
-  assessment: "Taxes & Assessments",
+  judgments: "JUDGMENTS",
+  assessment: "TAXES",
   notes: "Requirements / Notes",
 };
 
@@ -79,6 +80,7 @@ const SECTION_ORDER: readonly string[] = [
   "owner",
   "deed",
   "mortgages",
+  "assignment",
   "legal",
   "judgments",
   "assessment",

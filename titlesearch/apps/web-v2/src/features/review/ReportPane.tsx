@@ -43,6 +43,8 @@ export function ReportPane({
   signoff,
   selectedPath,
   onSelect,
+  onConfirm,
+  onMode,
 }: {
   orderId: string;
   fields: readonly Field[];
@@ -50,42 +52,12 @@ export function ReportPane({
   signoff: OrderSignoffResponse | undefined;
   selectedPath: string;
   onSelect: (path: string) => void;
+  onConfirm?: () => void;
+  onMode?: (m: string) => void;
 }) {
   return (
-    <div className="flex min-h-0 flex-1">
-      <div className="flex min-w-0 flex-1 flex-col gap-6 overflow-y-auto px-9 pb-20 pt-8">
-        <NoDisclosureCards lines={signoff?.lines ?? []} />
-        <CallBackSheet fields={fields} selectedPath={selectedPath} onSelect={onSelect} />
-        {/*
-          THE SIGNATURE A REVIEWER IS WORKING AGAINST, read where they work.
-
-          This is the placement the design asks for and the placement this pane's
-          own header note already identified — "where the export puts the
-          read-only sign-off block". It closes the last open item from the
-          2026-08-01 handoff: `entities/signoff/*` was reachable only as a
-          story, because the one screen that rendered it (`/questions`) is where
-          a sign-off is ANSWERED and therefore correctly serves an UNSIGNED
-          order, so the read-only branch could never fire there.
-
-          IT IS THE RECORD, NOT A CONTROL. `SignoffReadonly` renders no
-          interactive element at all — there is no amendment endpoint, and an
-          append-only signature is not edited in place. A reviewer reads a
-          claim somebody else made and, if it is wrong, escalates the FIELD it
-          affects; they do not reach back and change another person's answer.
-
-          ONLY WHEN SIGNED. An unsigned sign-off belongs to the abstractor who
-          has not finished it, and drawing their blank lines here would put an
-          unfinished intake form under a reviewer's draft report, inviting them
-          to read absence as an answer. `undefined` — still loading — draws
-          nothing for the same reason: silence is not a signature.
-        */}
-        {signoff !== undefined && signoff.signed_by !== null ? (
-          <SignoffReadonly signoff={signoff} />
-        ) : null}
-        <OrderRail orderId={orderId} />
-      </div>
-
-      <SectionRail fields={fields} />
+    <div className="flex flex-col gap-[20px] pb-20 pt-5 bg-[#F7F7F5]">
+      <CallBackSheet fields={fields} selectedPath={selectedPath} onSelect={onSelect} />
     </div>
   );
 }

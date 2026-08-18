@@ -25,7 +25,7 @@ function coordsFor(field: Field, pinned: FieldReading | null): unknown {
  * gate permits `%` where it bans `px`.
  */
 const PANE =
-  "flex min-h-0 min-w-0 shrink grow basis-[52%] flex-col border-r border-line-strong bg-surface-document";
+  "flex min-h-0 min-w-0 shrink grow basis-[26%] flex-col border-l border-[#DDDDD8] bg-[#F7F7F5]";
 
 /** Zoom scales the page, never the chrome around it. */
 function zoomClass(zoom: number): string {
@@ -36,39 +36,18 @@ function zoomClass(zoom: number): string {
   return "scale-100";
 }
 
-/**
- * THE LEFT PANE — a pinned header, one scroller, and the coverage spine DOCKED
- * at the foot (export `:675-830`).
- *
- * THE SPINE MAY NOT SCROLL AWAY FROM THE PAGES IT DESCRIBES. It sits outside
- * the scroller, on the pane's own footer row, because it answers "where am I in
- * the package" — a question you ask WHILE looking at a page, not one you scroll
- * to the bottom of a column to find. Docking it also makes its cells navigable:
- * the page the facsimile shows is this component's state, so a cell can finally
- * move it, and the export draws those cells as real buttons.
- *
- * THE GREY IS THE BACKDROP, NOT THE PAPER. `surface-document` is what a page
- * SITS ON; `surface-panel` is the sheet. Getting the two the wrong way round
- * renders a scan as a data slab, which is the one reading the facsimile exists
- * to prevent.
- *
- * THE `PAGES READ IN FULL` CHIP STRIP IS GONE (HANDOFF-UI §11). The coverage
- * spine replaced it and the screen kept both, so one pane carried two page maps
- * with different denominators — 6-of-64 beside 64-of-64 — and neither said
- * which was the package.
- *
- * THE PAGE FOLLOWS THE FIELD. Selecting a field moves the viewer to the page it
- * cites, because a reviewer navigating there themselves is the step that gets
- * skipped when the queue is long, and skipping it is how a value gets confirmed
- * without anybody reading the document it came from.
- */
+
+import { SectionRail } from "./SectionRail";
+
 export function DocumentPane({
   orderId,
   field,
+  fields,
   pinned,
 }: {
   orderId: string;
   field: Field;
+  fields: readonly Field[];
   pinned: FieldReading | null;
 }) {
   const { data } = useQuery(pagesQuery(orderId));
@@ -99,7 +78,7 @@ export function DocumentPane({
 
   return (
     <section aria-label="Document" className={PANE}>
-      <div className="flex-none bg-surface-panel">
+      <div className="flex-none bg-[#F7F7F5]">
         <PageNav
           page={page.n}
           totalPages={total}
@@ -109,10 +88,8 @@ export function DocumentPane({
         />
       </div>
 
-      {/* `items-start` — a page taller than the frame must start at its top
-          edge, not be centred with its head cropped off. */}
       <div className="flex min-h-0 flex-1 items-start justify-center overflow-auto p-12">
-        <div className={cn("origin-top", zoomClass(zoom))}>
+        <div className={cn("origin-top shadow-lg", zoomClass(zoom))}>
           <PageFacsimile
             page={page}
             boxes={toEvidenceBoxes(coordsFor(field, pinned), { width: 1, height: 1 })}
@@ -120,7 +97,9 @@ export function DocumentPane({
         </div>
       </div>
 
-      <OrderCoverageSpine orderId={orderId} currentPage={page.n} onSelect={setOverride} />
+      <div className="flex-none bg-[#F7F7F5] pt-4 pb-8 px-12 border-t border-[#DDDDD8]">
+        <SectionRail fields={fields} selectedPath={field.path} />
+      </div>
     </section>
   );
 }

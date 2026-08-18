@@ -101,49 +101,19 @@ export function FieldsPane({
   return (
     <section
       aria-label="Fields"
-      className="flex min-h-0 min-w-0 shrink grow basis-[48%] flex-col bg-surface-app"
+      className="flex min-h-0 min-w-0 shrink grow basis-[74%] flex-col bg-[#F7F7F5]"
     >
-      <OrderedRow orderId={orderId} />
-
-      <div
-        data-testid="decision-dock"
-        className="flex min-h-0 flex-none flex-col border-b border-line-strong bg-surface-panel"
-      >
-        <DecisionDock fields={fields} selectedPath={selected.path} />
-        <div className="max-h-190 min-h-0 overflow-y-auto px-9 pb-6">
-          <DecisionColumn
-            field={selected}
-            pinned={pinned}
-            mode={mode}
-            seed={seed}
-            machineValue={selected.value ?? ""}
-            writePending={writePending}
-            serverNote={serverNote}
-            blankNote={blankNote}
-            onPin={onPin}
-            onAdopt={onAdopt}
-            onConfirm={onConfirm}
-            onCorrect={onCorrect}
-            onMode={onMode}
-            onCorrectSubmit={onCorrectSubmit}
-            onEscalateSubmit={onEscalateSubmit}
-            onExcludeSubmit={onExcludeSubmit}
-            onPassSubmit={onPassSubmit}
-          />
-        </div>
-
-        <QueueRest fields={fields} selectedPath={selected.path} onSelect={onSelect} />
+      <div className="flex-1 overflow-y-auto px-[18px]">
+        <ReportPane
+          orderId={orderId}
+          fields={fields}
+          signoff={signoff}
+          selectedPath={selected.path}
+          onSelect={onSelect}
+          onConfirm={onConfirm}
+          onMode={onMode}
+        />
       </div>
-
-      <FinalizeBar fields={fields} signoffLines={signoff?.lines ?? []} />
-
-      <ReportPane
-        orderId={orderId}
-        fields={fields}
-        signoff={signoff}
-        selectedPath={selected.path}
-        onSelect={onSelect}
-      />
     </section>
   );
 }

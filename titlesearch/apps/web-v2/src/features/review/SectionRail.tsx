@@ -38,44 +38,58 @@ import { cn } from "../../shared/ui/classNames";
  * first-class, bookmarkable pointer into the report, same as `?field=` is for
  * the decision queue.
  */
-export function SectionRail({ fields }: { fields: readonly Field[] }) {
-  const [active, setActive] = useState<string | null>(null);
+const MOCKUP_LABELS: Record<string, string> = {
+  deed: "Vesting deed",
+  mortgages: "Security instr.",
+  assignment: "Assignment",
+  judgments: "Judgment",
+  assessment: "Tax receipt",
+};
+
+export function SectionRail({ fields, selectedPath }: { fields: readonly Field[], selectedPath: string }) {
   const sections = sectionsOf(fields);
+  
+  // Find which section contains the currently selected field
+  const activeSection = sections.find(([_, rows]) => 
+    rows.some(f => f.path === selectedPath)
+  )?.[0];
 
   return (
     <nav
-      aria-label="Report sections"
+      aria-label="Instruments"
       data-testid="section-rail"
-      className="flex w-76 flex-none flex-col gap-1 overflow-y-auto border-l border-line-strong bg-surface-panel px-4 py-7"
+      className="flex w-full flex-none flex-col py-2"
     >
-      <Eyebrow variant="caption" className="px-4 pb-3">
-        Jump to section
+      <Eyebrow variant="caption" className="px-4 pb-2 mb-1 tracking-widest text-[#A09D96]">
+        INSTRUMENTS
       </Eyebrow>
 
       {sections.map(([section, rows]) => {
-        const need = needsYouCountOf(rows);
+        const isActive = activeSection === section;
+        const shortLabel = MOCKUP_LABELS[section] ?? SECTION_HEADING[section] ?? section.replaceAll("_", " ");
+        
         return (
           <a
             key={section}
             href={`#${sectionAnchor(section)}`}
             data-testid={`section-link-${section}`}
-            aria-current={active === section ? "true" : undefined}
-            onClick={() => setActive(section)}
+            aria-current={isActive ? "true" : undefined}
             className={cn(
-              "flex items-center gap-3 rounded-6 px-4 py-3 text-xs leading-body",
-              active === section
-                ? "bg-action-surface font-semibold text-action-ink"
-                : "text-ink-secondary",
+              "flex items-center gap-3 px-3 py-1.5 text-[13px] rounded-md cursor-pointer mb-0.5",
+              isActive
+                ? "bg-[#EBE5D9] text-ink-primary font-medium"
+                : "text-ink-primary hover:bg-black/5",
             )}
           >
-            <span className="min-w-0 flex-1">
-              {SECTION_HEADING[section] ?? section.replaceAll("_", " ")}
+            <span className={cn("text-[9px] w-2", isActive ? "text-ink-primary" : "text-ink-muted")}>
+              {isActive ? "▾" : "▸"}
             </span>
-            {need > 0 ? (
-              <Chip tone="attend" shape="pill" size="micro" bordered>
-                {need}
-              </Chip>
-            ) : null}
+            <span className="min-w-0 flex-1">
+              {shortLabel}
+            </span>
+            <span className="text-xs text-ink-muted">
+              pg {rows[0]?.source_page ?? 1}
+            </span>
           </a>
         );
       })}

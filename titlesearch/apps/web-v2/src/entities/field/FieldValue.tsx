@@ -121,12 +121,7 @@ export function FieldValue({
 
   return (
     <span className="flex flex-wrap items-baseline gap-3">
-      <span className="font-mono text-base text-ink-primary">{field.value}</span>
-      {page === null ? (
-        <span className="text-tiny font-semibold text-state-halt-ink">no page cited</span>
-      ) : (
-        <PageChip page={page} onView={onViewSource} />
-      )}
+      <span className="font-bold text-[13px] text-ink-primary">{field.value}</span>
       {field.state === "corrected" ? (
         <span className="text-tiny font-semibold text-action">Your correction</span>
       ) : null}

@@ -37,10 +37,11 @@ export function EvidenceOverlay({ boxes }: { boxes: readonly EvidenceBox[] }) {
 
   return (
     <div aria-hidden className="pointer-events-none absolute inset-0">
-      {boxes.map((box) => (
+      {boxes.map((box, idx) => (
         <span
+          id={idx === 0 ? "evidence-highlight" : undefined}
           key={`${box.x}:${box.y}:${box.width}:${box.height}`}
-          className="absolute bg-surface-evidence border border-border-evidence rounded-1"
+          className="absolute bg-[#5B4B8A]/10 border border-[#5B4B8A] rounded-sm"
           // The ONLY inline styles in the app. These four values are per-box
           // geometry computed from SERVER coordinates — they cannot be class
           // names, and §6's ban exists to stop styling decisions hiding in

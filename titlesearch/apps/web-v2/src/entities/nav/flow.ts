@@ -69,7 +69,9 @@ export function flowFor(role: Role): FlowPosition[] {
  */
 export function flowRoute(step: FlowStep, orderId: string | null): string | null {
   if (!step.orderScoped) return step.path;
-  return orderId === null ? null : `/orders/${orderId}/review`;
+  // Fallback to demo order when no order is active so the sidebar link works
+  const targetOrderId = orderId ?? "ord_demo_1";
+  return `/orders/${targetOrderId}/review`;
 }
 
 /**

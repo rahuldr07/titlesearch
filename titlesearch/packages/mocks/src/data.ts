@@ -55,7 +55,7 @@ import type {
  * on the row while the pages still say CLAYTON CO. GA would be the same
  * contradiction this table exists to end.
  */
-export const PACKAGE_PAGES = 64;
+export const PACKAGE_PAGES = 83;
 /**
  * Pages the classifier carried forward out of `PACKAGE_PAGES`. Quoted, never
  * restated as a numeral. Not derivable from `demoPages` below — that fixture
@@ -1206,7 +1206,7 @@ export const demoPages: Record<string, { total: number; pages: { n: number; read
   [liveOrder.id]: {
     total: liveOrder.pages ?? PACKAGE_PAGES,
     pages: [
-      { n: 6, read_in_full: true, degraded: false, kind: "WARRANTY DEED", lines: [
+      { n: 4, read_in_full: true, degraded: false, kind: "WARRANTY DEED", lines: [
         "OFFICIAL RECORDS · CLAYTON CO. GA",
         "INSTR # 2019-0044821    BK 10944 PG 213",
         "RECORDED 04/11/2019 10:22",
@@ -1230,7 +1230,7 @@ export const demoPages: Record<string, { total: number; pages: { n: number; read
         "bounds description of record; no plat of survey is of record",
         "for this subdivision.",
       ] },
-      { n: 12, read_in_full: true, degraded: false, kind: "SECURITY DEED", lines: [
+      { n: 9, read_in_full: true, degraded: false, kind: "SECURITY DEED", lines: [
         "OFFICIAL RECORDS · CLAYTON CO. GA",
         "INSTR # 2019-0044822    BK 10944 PG 218",
         "",
@@ -1238,18 +1238,18 @@ export const demoPages: Record<string, { total: number; pages: { n: number; read
         "MARLOWE D. QUENBY AND TESSA R. QUENBY, and the Grantee,",
         "SOUTHSTONE MORTGAGE LLC, its successors and assigns.",
       ] },
-      { n: 14, read_in_full: true, degraded: true, kind: "SECURITY DEED (cont.)", lines: [
+      { n: 10, read_in_full: true, degraded: true, kind: "SECURITY DEED (cont.)", lines: [
         "Borrower owes Lender the principal sum of",
         "One Hundred Sixty-Six Thousand Ninety-Seven and 00/100 Dollars",
         "($1ß6,097.00)",
         "[ fax artefact over the numerals — the words line above is legible ]",
         "This debt is evidenced by Borrower's note dated the same date.",
       ] },
-      { n: 18, read_in_full: false, degraded: false, kind: "PLAT REFERENCE — COVER SHEET", lines: [
-        "Cover sheet for the plat referenced in Exhibit A. The classifier",
+      { n: 17, read_in_full: true, degraded: false, kind: "ASSIGNMENT", lines: [
+        "Cover sheet for the assignment. The classifier",
         "found nothing here the report needs, so no reader read it in full.",
       ] },
-      { n: 22, read_in_full: true, degraded: false, kind: "CLAYTON COUNTY TAX COMMISSIONER", lines: [
+      { n: 31, read_in_full: true, degraded: false, kind: "CLAYTON COUNTY TAX COMMISSIONER", lines: [
         "PARCEL ........... 13-0044-0018",
         "OWNER ............ QUENBY MARLOWE D",
         "SITUS ............ 4152 CREEKSTONE DR",
@@ -1258,7 +1258,7 @@ export const demoPages: Record<string, { total: number; pages: { n: number; read
         "BUILDING VALUE ... 158,400",
         "2025 STATUS ...... (not printed on this card)",
       ] },
-      { n: 30, read_in_full: true, degraded: true, kind: "FIFA SEARCH — SUPERIOR COURT", lines: [
+      { n: 24, read_in_full: true, degraded: true, kind: "FIFA SEARCH — SUPERIOR COURT", lines: [
         "IN THE SUPERIOR COURT OF CLAYTON COUNTY",
         "STATE OF GEORGIA · CIVIL DIVISION",
         "",
