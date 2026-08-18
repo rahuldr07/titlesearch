@@ -35,6 +35,23 @@ export interface ScreenProps {
  * The scroller is `PaneBody`'s, not a second one. A screen that grew its own
  * `overflow-y-auto` beside the pane's would produce two nested scrollbars, and
  * the outer one would be the page — the exact failure this replaces.
+ *
+ * `bleed` IS BOUNDED BY THE FRAME; EVERY OTHER PLACEMENT GROWS INTO IT. The two
+ * wrappers were `min-h-full` and `flex-1` for all three placements, which is
+ * right for a screen that scrolls — content taller than the frame extends the
+ * column and `PaneBody` scrolls it. `bleed` is the opposite contract: it sets
+ * `overflow-hidden` and asks its children to own their own scrolling, and under
+ * `min-h-full` a percentage height resolves against an `auto` parent and yields
+ * `auto`, so the children sized to their CONTENT and everything past the
+ * viewport was silently CLIPPED — not scrolled to, not reachable at all.
+ *
+ * FAILURE PREVENTED, measured: on a 1600x1000 window the review screen's two
+ * panes computed 3919px tall inside a 1000px frame, so the coverage spine
+ * docked at the document's foot — the surface that answers "which pages did
+ * anybody read" — had never once been visible. Nothing caught it because
+ * `toBeVisible()` is satisfied by a clipped element and no assertion measured
+ * the frame. `h-full` + `min-h-0` gives the flex children a definite height to
+ * divide, which is what a docked footer needs to be docked to.
  */
 export function Screen({ measure, pad, placement, children, className }: ScreenProps) {
   const bleed = placement === "bleed";
@@ -42,7 +59,8 @@ export function Screen({ measure, pad, placement, children, className }: ScreenP
     <PaneBody className={screenScroller({ placement })}>
       <div
         className={cn(
-          "flex min-h-full min-w-0 flex-col",
+          "flex min-w-0 flex-col",
+          bleed ? "h-full min-h-0" : "min-h-full",
           screenScroller({ pad: bleed ? undefined : (pad ?? "28x32") }),
           placement === "centre" && "m-auto",
         )}
@@ -50,6 +68,7 @@ export function Screen({ measure, pad, placement, children, className }: ScreenP
         <div
           className={cn(
             "flex min-w-0 flex-1 flex-col",
+            bleed && "min-h-0",
             screenClasses({ measure, placement }),
             className,
           )}

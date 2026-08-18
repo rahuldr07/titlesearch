@@ -1,16 +1,21 @@
+import type { ReactNode } from "react";
 import type { Field, OrderSignoffResponse } from "@titlepipe/contract";
 import { CallBackSheet } from "./CallBackSheet";
 import { NoDisclosureCards } from "./NoDisclosureCards";
 import { OrderRail } from "./OrderRail";
 import { SignoffReadonly } from "../../entities/signoff/SignoffReadonly";
-import { SectionRail } from "./SectionRail";
 
 /**
- * THE BOTTOM HALF OF THE FIELDS PANE — one scroller beside the section rail
- * (export `:918-1080`). `flex:1;min-width:0;overflow-y:auto` on the reading
- * column, `flex:0 0 152px` on the rail: the two are siblings INSIDE the right
- * pane, not a third top-level column, and the rail is only useful beside the
- * document it points into.
+ * THE DRAFT COLUMN — one scroller, and the whole of the fields pane below its
+ * meter (export `:918-1080`).
+ *
+ * THE SECTION RAIL LEFT THIS PANE. It was `flex:0 0 152px` beside this
+ * scroller, which was right while the document held the left half of the frame.
+ * The draft is the primary column now and the viewer sits beside it, so a rail
+ * here would run down the MIDDLE of the screen, between the document it indexes
+ * and the sheet it links into. It is docked under the document instead, above
+ * the coverage spine, where its page refs answer the same question the spine
+ * does. Stated as a deviation from the export, not passed off as a match.
  *
  * THE ORDER IS THE ORDER A REVIEWER WOULD WANT TO MEET IT IN. The gaps they
  * inherited (`NoDisclosureCards` — a NO at intake is not a fact about the
@@ -43,6 +48,7 @@ export function ReportPane({
   signoff,
   selectedPath,
   onSelect,
+  renderDecision,
 }: {
   orderId: string;
   fields: readonly Field[];
@@ -50,15 +56,21 @@ export function ReportPane({
   signoff: OrderSignoffResponse | undefined;
   selectedPath: string;
   onSelect: (path: string) => void;
+  /** The open decision, drawn under its own row in the draft. */
+  renderDecision?: ((field: Field) => ReactNode) | undefined;
 }) {
   return (
     <div className="flex min-h-0 flex-1">
-      <div className="flex min-w-0 flex-1 flex-col gap-6 overflow-y-auto px-9 pb-20 pt-8">
+      <div
+        data-testid="draft-scroller"
+        className="flex min-w-0 flex-1 flex-col gap-6 overflow-y-auto px-9 pb-20 pt-8"
+      >
         <NoDisclosureCards lines={signoff?.lines ?? []} />
         <CallBackSheet
           fields={fields}
           selectedPath={selectedPath}
           onSelect={onSelect}
+          renderDecision={renderDecision}
         />
         {/*
           THE SIGNATURE A REVIEWER IS WORKING AGAINST, read where they work.
@@ -88,8 +100,6 @@ export function ReportPane({
         ) : null}
         <OrderRail orderId={orderId} />
       </div>
-
-      <SectionRail fields={fields} selectedPath={selectedPath} />
     </div>
   );
 }

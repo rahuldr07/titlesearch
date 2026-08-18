@@ -51,6 +51,11 @@ export const SECTION_HEADING: Record<string, string> = {
   owner: "Vesting",
   deed: "Vesting Deed",
   mortgages: "Open Mortgages / Deeds of Trust",
+  /* CONTRACT GAP: nothing on the wire produces this section yet, so it renders
+     only once the server sends `assignment.*`. Unlike the seven around it this
+     wording is NOT verbatim from the delivered document (which this repo does
+     not hold) — confirm the client's own before an order ships with it. */
+  assignment: "Assignments",
   legal: "Legal Description",
   judgments: "Judgments & Liens",
   assessment: "Taxes & Assessments",
@@ -79,6 +84,7 @@ const SECTION_ORDER: readonly string[] = [
   "owner",
   "deed",
   "mortgages",
+  "assignment",
   "legal",
   "judgments",
   "assessment",
@@ -125,21 +131,17 @@ export function sectionAnchor(section: string): string {
  * THE PAGE THIS SECTION WAS READ FROM — the first cited page among its fields,
  * or `null` when not one of them carries a cite yet.
  *
- * READ STRAIGHT OFF `source_page`. It is never inferred from a section's
- * position in the package or from the order of the payload: the number a
- * reviewer needs is the one printed on the physical page, because that is what
- * they will turn to and what they will quote to the county.
+ * READ STRAIGHT OFF `source_page`, never inferred from position in the package:
+ * the number a reviewer needs is the one printed on the page they will turn to.
  *
- * `null` IS NOT PAGE ONE. A section whose fields are all `pending` has nothing
- * to cite, and drawing `pg 1` there would invent a citation — which is the
- * exact artefact principle 6 exists to prevent, made worse by being plausible.
- * Both callers render nothing at all on `null` rather than a placeholder.
+ * `null` IS NOT PAGE ONE. A section of all-`pending` fields has nothing to
+ * cite, and `p1` there would invent a citation — principle 6's exact artefact,
+ * made worse by being plausible. Both callers render nothing on `null`.
  *
- * FIRST, NOT LOWEST. A section's fields arrive in the order the server assembled
- * them, and the first one that cites anything is the page the section OPENS on.
- * `Math.min` would answer a different question — "the earliest page this section
- * touches" — which is not what "jump to Judgments" means when a judgment's
- * decree is recorded twenty pages before its satisfaction.
+ * FIRST, NOT LOWEST — the first field that cites anything is the page the
+ * section OPENS on. `Math.min` answers "the earliest page this section touches",
+ * which is not what "jump to Judgments" means when a decree is recorded twenty
+ * pages before its satisfaction.
  */
 export function sectionPageOf(fields: readonly Field[]): number | null {
   return fields.find((f) => f.source_page !== null)?.source_page ?? null;
