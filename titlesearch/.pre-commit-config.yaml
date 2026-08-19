@@ -1,0 +1,79 @@
+# Pre-commit hooks for the Python backend.
+#
+#   uvx pre-commit install
+#   uvx pre-commit run --all-files
+#
+# These mirror what CI enforces, so a failure is found in a second rather than
+# in a five-minute pipeline. CI remains the authority — a hook can be skipped.
+#
+# Two scoping decisions, both forced by problems found in review when the
+# documented command was actually run from a clean checkout:
+#
+# 1. `check-json` is scoped away from the TypeScript configs. `tsconfig.json`
+#    and friends are JSONC — comments and trailing commas are valid there and
+#    a strict JSON parser rejects them. The hook is kept for real JSON.
+#
+# 2. There is no `mixed-line-ending` hook. `.gitattributes` sets `* text=auto`,
+#    which stores LF in the repository and checks out native line endings — so
+#    on Windows the working tree legitimately holds CRLF. A hook forcing LF in
+#    the working tree fights that by design and tried to rewrite 78 files.
+#    Git already guarantees the only thing that matters, which is what is
+#    stored.
+#
+# 3. Unified-diff context lines are byte-sensitive evidence. The Gate 0 closure
+#    patch is excluded from whitespace rewriting and is instead proved by an
+#    actual `git apply --check` plus the fresh 177-test reproduction.
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: '(\.lock$|^scripts/gate0/gate0-closure\.patch$)'
+      - id: end-of-file-fixer
+        exclude: '\.lock$'
+      - id: check-yaml
+      - id: check-toml
+      - id: check-json
+        # JSONC: comments and trailing commas are valid in these.
+        exclude: '(^|/)(tsconfig[^/]*\.json|jsconfig\.json|\.vscode/.*\.json)$'
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: detect-private-key
+      # A county package, seed database or client document must never be
+      # committed. The 644 MB incident (docs/CONTEXT.md §19) is what this is
+      # for; check_no_client_data.py below is the typed version of the same rule.
+      - id: check-added-large-files
+        args: [--maxkb=512]
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.0
+    hooks:
+      - id: ruff-check
+        args: [--fix]
+      - id: ruff-format
+
+  - repo: local
+    hooks:
+      # Locks are verified per project. A drifted lock means the image and the
+      # manifest disagree, which `uv sync --frozen` would catch later and more
+      # expensively.
+      - id: uv-lock-check
+        name: uv lock is current (all projects)
+        entry: python scripts/check_locks.py
+        language: system
+        pass_filenames: false
+        files: '^(services|libs)/.*/(pyproject\.toml|uv\.lock)$'
+
+      - id: no-client-data
+        name: no county packages, seed databases or client documents
+        entry: python scripts/check_no_client_data.py
+        language: system
+
+      # The guard is a security control, so it has tests and they run here.
+      - id: guard-tests
+        name: client-data guard tests
+        entry: uv run --quiet --with pytest python -m pytest -q scripts/tests
+        language: system
+        pass_filenames: false
+        files: '^scripts/'

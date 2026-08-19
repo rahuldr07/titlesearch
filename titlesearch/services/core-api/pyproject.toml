@@ -1,0 +1,58 @@
+[project]
+name = "titlepipe-core-api"
+version = "0.1.0"
+description = "TitlePipe Core API — synchronous HTTP orchestration, contracts, auth, RBAC, RLS."
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "titlepipe-domain",
+    "fastapi==0.139.*",
+    "uvicorn[standard]==0.51.*",
+    "pydantic==2.13.*",
+    "pydantic-settings==2.14.*",
+    "structlog>=26.1,<27",
+]
+
+# Gate 1 is the foundation only. SQLAlchemy, psycopg, Alembic, WorkOS, PgQueuer,
+# boto3, HTTPX and the telemetry exporters land at the gate that first needs
+# them, so an unused dependency never reaches a production image.
+
+[dependency-groups]
+dev = [
+    "ruff==0.15.*",
+    "pyright==1.1.*",
+    "pytest==9.1.*",
+    "pytest-asyncio==1.4.*",
+    "pytest-cov==7.*",
+    "httpx2>=2,<3",               # Starlette 1.1 TestClient targets httpx2; plain httpx is deprecated there
+    "titlepipe-test-support",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/titlepipe_core"]
+
+[tool.uv.sources]
+titlepipe-domain = { path = "../../libs/domain", editable = true }
+titlepipe-test-support = { path = "../../libs/test-support", editable = true }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --strict-markers --strict-config"
+asyncio_mode = "strict"
+
+[tool.pyright]
+include = ["src", "tests"]
+typeCheckingMode = "strict"
+pythonVersion = "3.13"
+reportMissingTypeStubs = false
+
+# Strict everywhere. The one relaxation is scoped to tests and to a single
+# rule: pytest fixtures and route handlers registered by decorator are never
+# referenced by name, which pyright correctly reports and which is the
+# framework's intended idiom. No type-safety rule is relaxed anywhere.
+[[tool.pyright.executionEnvironments]]
+root = "tests"
+reportUnusedFunction = false
