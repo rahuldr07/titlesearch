@@ -49,7 +49,8 @@ pnpm --filter web-v2 check:rules
 pnpm typecheck                  # all TS projects
 ```
 
-Backend (from each `services/*` or `libs/*` directory):
+Backend checks (from each `services/*` or `libs/*` directory). The Python suite
+starts its own testcontainer, so these need a Docker daemon and nothing else:
 
 ```bash
 uv sync --frozen --all-groups
@@ -57,6 +58,20 @@ uv run ruff check . && uv run ruff format --check .
 uv run pyright
 uv run pytest
 ```
+
+Backend *running*, with a real database — full runbook in
+[`docs/backend/RUNNING-LOCALLY.md`](docs/backend/RUNNING-LOCALLY.md):
+
+```bash
+scripts/dev-db.sh                   # postgres + the five roles + schema + rulebook
+eval "$(scripts/dev-db.sh env)"     # exports the three variables
+cd services/core-api && uv run uvicorn titlepipe_core.app:create_app \
+  --factory --host 127.0.0.1 --port 8000 --reload
+```
+
+Then `curl -sS http://127.0.0.1:8000/ready` and check the body carries
+`"database_answers":true` — a 200 alone is not enough, because an unset DSN
+also answers 200, carrying no database check at all.
 
 Repo-wide hygiene (run with the project interpreter — the codebase is
 Python ≥3.13):

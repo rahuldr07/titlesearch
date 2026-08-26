@@ -1,0 +1,118 @@
+# The local development database, and deliberately nothing else.
+#
+#   docker compose -f infra/compose/compose.db.yaml up -d
+#   docker compose -f infra/compose/compose.db.yaml down      # keeps the data
+#   docker compose -f infra/compose/compose.db.yaml down -v   # discards it
+#
+# Normally you do not run these by hand — `scripts/dev-db.sh` starts this file,
+# waits for the health check, and then applies the roles, the schema and the
+# rulebook in the one order that works. See docs/backend/RUNNING-LOCALLY.md.
+#
+# WHY THIS IS A SECOND FILE AND NOT A SERVICE IN `compose.yaml`.
+#
+# `compose.yaml` is the Gate 1 file: it BUILDS the four service images and runs
+# them as containers. It says in its own header that it carries no PostgreSQL,
+# because standing one up then "would invite a service to connect to it before
+# any of that exists" — before the roles, the forced RLS policies and the
+# tenant-context lifecycle. Two of those three have since landed
+# (`migrations/sql/roles.sql`, `migrations/versions/0002_forced_rls_and_grants.py`),
+# so the objection no longer covers a database as such. It still covers WIRING
+# ONE TO THOSE CONTAINERS, which is a gate's worth of work — a DSN per service,
+# `depends_on: service_healthy`, and the tenant-context lifecycle that is not
+# written yet — and none of it is what a developer running the app locally needs.
+#
+# What that developer needs is a Postgres on loopback that the HOST-run
+# `uv run uvicorn`, `alembic upgrade head` and `node e2e-live/seedRulebook.mjs`
+# can all reach. That is exactly what `.github/workflows/migration-harness.yml`
+# stands up as a service container, and this file is the local equivalent of it.
+# Keeping it separate means `docker compose -f compose.yaml down` cannot take
+# your database with it, and starting the database builds no images.
+#
+# A DISTINCT PROJECT NAME, for that same reason. Compose scopes containers,
+# networks and volumes by project; `titlepipe-db` and `titlepipe` have separate
+# lifecycles and neither `down` reaches the other's.
+name: titlepipe-db
+
+services:
+  postgres:
+    # PINNED, and pinned to the SAME TAG as two things that already exist:
+    # `.github/workflows/migration-harness.yml`'s service container and
+    # `services/core-api/tests/conftest.py`'s testcontainer. A local database on
+    # a different major would let a developer prove something about a server
+    # neither CI nor the unit suite runs.
+    image: postgres:18.4
+    environment:
+      # The superuser, used exactly once — by the roles step, which is the only
+      # thing in a fresh cluster that can create the other five roles and grant
+      # on `public`. Nothing else ever connects as it, and no service is ever
+      # configured with it.
+      POSTGRES_PASSWORD: postgres
+      # `.env.example` documents the migration DSN as `…@localhost:5432/titlepipe`,
+      # so that is the database this creates. CI uses the default `postgres`
+      # database instead; both are just a DSN and nothing reads the name.
+      POSTGRES_DB: titlepipe
+    ports:
+      # 🔴 PUBLISHED ON 55432, NOT 5432, AND BOUND TO LOOPBACK.
+      #
+      # Two separate decisions in one line.
+      #
+      # THE PORT. 5432 was the first choice and it failed on the first machine it
+      # was run on: `failed to bind host port 127.0.0.1:5432/tcp: address already
+      # in use`, because a native `postgresql-18` cluster was already listening
+      # there (`pg_lsclusters` -> `18 main 5432 online`). A developer box with a
+      # system Postgres on it is the ordinary case, not the exotic one, so the
+      # default that collides is the wrong default. Nothing reads the number —
+      # every consumer takes a whole DSN, and `scripts/dev-db.sh` prints them —
+      # so the cost of moving is zero and the benefit is that a teammate's first
+      # run works. It also removes the worse failure, which is not a bind error
+      # but a SILENT one: a DSN pointed at 5432 on a machine that has both
+      # reaches whichever server got there first, and a schema applied to the
+      # wrong cluster looks exactly like success.
+      #
+      # Override with TITLEPIPE_DEV_DB_PORT, which `scripts/dev-db.sh` reads and
+      # this file's default follows.
+      #
+      # THE HOST IP. `55432:5432` — the short form — binds 0.0.0.0 and publishes
+      # on every interface the machine has, which on a laptop is the coffee-shop
+      # wifi, fronting a Postgres whose superuser password is the word `postgres`
+      # and is checked into this file. The explicit `127.0.0.1` is what keeps it
+      # reachable only from this machine.
+      - "127.0.0.1:${TITLEPIPE_DEV_DB_PORT:-55432}:5432"
+    volumes:
+      # 🔴 `/var/lib/postgresql`, NOT `/var/lib/postgresql/data`. THE 18 IMAGE
+      # CHANGED THIS AND THE OLD PATH DOES NOT DEGRADE — IT REFUSES TO START.
+      #
+      # MEASURED here on the first run, with the mount at the `/data` path every
+      # postgres image before 18 used:
+      #
+      #   Error: in 18+, these Docker images are configured to store database
+      #          data in a format which is compatible with "pg_ctlcluster"
+      #          (specifically, using major-version-specific directory names).
+      #          ...
+      #          Counter to that, there appears to be PostgreSQL data in:
+      #            /var/lib/postgresql/data (unused mount/volume)
+      #
+      # and the container went `unhealthy` rather than dying, so the symptom is a
+      # health check that never passes rather than an error anyone reads. 18+
+      # wants ONE mount at the parent and puts the cluster in a
+      # major-version-specific subdirectory beneath it (`18/docker/`), which is
+      # what makes `pg_upgrade --link` possible without crossing a mount
+      # boundary. See docker-library/postgres#1259.
+      #
+      # A NAMED VOLUME, so `down` is not destructive and a rebuilt schema is a
+      # deliberate `down -v` (or `scripts/dev-db.sh reset`). A bind mount into
+      # the working tree would be the other option and is refused: this
+      # repository's standing rule is that database files never land inside it.
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      # Without this every consumer races initdb, and the failure surfaces as a
+      # connection refusal that reads like a configuration error. `-d titlepipe`
+      # rather than a bare `pg_isready`, because the server accepts connections
+      # slightly before `POSTGRES_DB` exists.
+      test: ["CMD-SHELL", "pg_isready -U postgres -d titlepipe"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  pgdata:

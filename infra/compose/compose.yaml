@@ -4,9 +4,25 @@
 #   docker compose -f infra/compose/compose.yaml up -d core-api blind-api
 #   docker compose -f infra/compose/compose.yaml run --rm extraction-worker check
 #
-# No PostgreSQL here. The database arrives at Gate 2 together with the roles,
-# the forced RLS policies and the tenant-context lifecycle; standing one up now
-# would invite a service to connect to it before any of that exists.
+# No PostgreSQL here, and that is still true — but the reason has narrowed, so
+# read the current one rather than the original.
+#
+# This used to say the database "arrives at Gate 2 together with the roles, the
+# forced RLS policies and the tenant-context lifecycle; standing one up now
+# would invite a service to connect to it before any of that exists." Two of
+# those three have since landed — `migrations/sql/roles.sql` and
+# `migrations/versions/0002_forced_rls_and_grants.py` — so the objection no
+# longer covers a database as such. What it still covers is wiring one to THESE
+# containers: a DSN per service, `depends_on: service_healthy`, and the
+# tenant-context lifecycle, which is not written yet.
+#
+# The local development database therefore lives in its own file,
+# `compose.db.yaml`, with its own compose project name so neither `down` reaches
+# the other's containers or volumes. It serves the HOST-run loop — `uv run
+# uvicorn`, `alembic upgrade head`, the rulebook seed — which is what a developer
+# actually needs and what `.github/workflows/migration-harness.yml` stands up in
+# CI. Start it with `scripts/dev-db.sh`; the runbook is
+# `docs/backend/RUNNING-LOCALLY.md`.
 #
 # No Gotenberg here either. It arrives at Gate 8, pinned by digest and on an
 # internal-only network.
