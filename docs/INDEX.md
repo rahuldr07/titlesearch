@@ -112,4 +112,4 @@ RECORD. The pre-rebuild design zip and three UI crops, each admitted by hash.
 | `apps/web-v2/BRIEF-DELTAS.md` | AUTHORITATIVE | Living ledger: where BRIEF's premises differ from the repo (D-1…D-10) |
 | `apps/web-v2/e2e/invariants/README.md` | AUTHORITATIVE | The harvested-invariant contract: 111 skipped specs, what a green run means |
 | `infra/observability/README.md` | AUTHORITATIVE | Telemetry redaction contract, written before any collector exists |
-| `design-export/README.md` | AUTHORITATIVE | What the extracted design package is and what was dropped |
+| ~~`design-export/README.md`~~ | DELETED 2026-08-26 | The extracted design package. Superseded — the rebuild re-decides the visual language rather than implementing that export. Recorded as `apps/web-v2/BRIEF-DELTAS.md` D-11; reachable at `a516d30` |

@@ -33,7 +33,7 @@ authoritative vs. historical record vs. superseded.
 | `scripts/` | Repo-wide gates: client-data guard, backend structural rules, lock and dependency audits. |
 | `infra/` | Compose, containers, observability contract. |
 | `docs/` | All documentation — see `docs/INDEX.md`. |
-| `design-export/` | The 2026-07-28 design package as extracted text (historical reference; the approved visual target is `docs/frontend/directions/hybrid.html`). |
+| `contract-fixtures/` | The wire fixture core-api's Pydantic models and `packages/contract`'s Zod schemas are both answerable to. Belongs to neither tree, which is why it sits at the root. |
 
 ## Commands
 

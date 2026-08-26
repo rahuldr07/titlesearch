@@ -184,3 +184,31 @@ counterpart (14).
 All ten have harvested e2e coverage. **All 113 of those specs are `test.skip`.** Until Phase 5
 un-skips them, §9 is enforced by review and by nothing else, and the frontend CI job says so
 in its own output rather than letting a green tick imply otherwise.
+
+## D-11 — `design-export/` no longer exists
+
+**BRIEF §2 claims:** _"`design-export/` contains a Claude Design package."_ **§3 rule 2**
+forbids copying out of it, and **§13** repeats "Do not copy from `design-export/`".
+
+**Measured 2026-08-26.** The directory is deleted. The visual design it carried has been
+superseded: the rebuild re-decides the visual language from scratch rather than
+implementing that export faithfully, so the artefact BRIEF §2 points at is gone and the
+instruction to implement it is void.
+
+**Consequences.**
+
+1. **§3 rule 2 and §13's "do not copy from `design-export/`" are now vacuous** — there is
+   nothing left to copy. The rule's intent, unchanged since D-1, still binds against
+   whatever the new design produces: read it, understand the visual result, close it,
+   write the component yourself.
+2. **D-1 and D-2 are now history rather than instruction.** D-1's measurement of the
+   package's contents and D-2's transcription of its `:root` token block describe a file
+   that is no longer in the tree. Both are left exactly as written — this file is a
+   measurement log and its earlier measurements were correct when taken.
+3. **`packages/ui-tokens` outlives its source.** Its 135 values were derived from that
+   `:root` block, so they now encode a superseded design. The package is kept; the values
+   are replaced in a later task.
+4. **The export is not lost**, and reversing this decision does not require re-exporting
+   it: `design-export/` and its full history remain reachable at `a516d30`, the last
+   commit before this one's branch.
+
