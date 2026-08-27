@@ -38,9 +38,19 @@ export function ServedOrder(props: { readonly order: Order }) {
   return (
     <div className="flex flex-col gap-8 px-12 py-10">
       <div className="flex items-baseline gap-8">
-        {/* Rule 3: an order ref is data, so it is mono. `spotlight` is the
-            28px accent draw the design gives the subject of a screen. */}
-        <OrderRef orderRef={order.external_ref} emphasis="spotlight" />
+        {/*
+         * Rule 3: an order ref is data, so it is mono. `spotlight` is the 28px
+         * accent draw the design gives the subject of a screen.
+         *
+         * `order-ref` is the testid `queue.spec` #1 counts, and counting it is
+         * the assertion: `toHaveCount(1)` IS "no list". The id lives on this
+         * wrapper rather than inside `OrderRef` because that component is drawn
+         * many times per screen elsewhere in the product, and a testid that
+         * appears N times cannot express "exactly one".
+         */}
+        <span data-testid="order-ref">
+          <OrderRef orderRef={order.external_ref} emphasis="spotlight" />
+        </span>
         <span className="text-body font-semibold leading-close text-ink-primary">
           {order.jurisdiction}
         </span>

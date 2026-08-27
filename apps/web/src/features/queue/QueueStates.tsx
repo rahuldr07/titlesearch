@@ -81,3 +81,39 @@ export function QueueEmpty() {
     </Card>
   );
 }
+
+/**
+ * WHAT JUST LEFT, AND WHY IT IS ON THE SCREEN RATHER THAN ONLY IN A TOAST.
+ *
+ * A pass swaps one order for another in the same card, and those two orders
+ * look alike: same layout, same fields, a different ref. Without a line naming
+ * what was passed, the only evidence anything happened is that a number
+ * changed — and a reviewer who was reading rather than watching has no way to
+ * tell a successful pass from a screen that never moved.
+ *
+ * A toast fires too (`usePassOrder`), because that is the notification. This is
+ * the RECORD, and it persists until the next act.
+ *
+ * It names the order and NOT the reason. The reason went to the server and
+ * belongs to the next person who opens the order; echoing it back here would
+ * make it look like something this browser kept.
+ *
+ * There is deliberately no count. `endpoints.ts:206-210`: pass counts and the
+ * 4th-pass auto-escalation "never come back to the client", and a per-person
+ * tally is banned by §4.5 regardless.
+ */
+export function PassedNote(props: { readonly orderRef: string }) {
+  return (
+    <p
+      data-testid="passed-note"
+      role="status"
+      className="text-meta leading-close text-ink-secondary"
+    >
+      Recorded — you passed{" "}
+      <span className="font-mono tabular-nums text-ink-primary">
+        {props.orderRef}
+      </span>
+      . The server chose what is below.
+    </p>
+  );
+}

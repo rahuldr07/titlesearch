@@ -5,15 +5,14 @@ import type { Order } from "@titlepipe/contract";
 import { get } from "../../shared/api";
 import { queueNext } from "../../shared/queries";
 import { useChords } from "../../shared/chords";
-import { Button, Card, Kbd } from "../../components/ui";
-import { ServedOrder } from "./ServedOrder";
-import { PassReason } from "./PassReason";
+import { ServedOrderCard } from "./ServedOrderCard";
 import { usePassOrder } from "./usePassOrder";
 import {
   QueueAsking,
   QueueEmpty,
   QueueFailed,
   QueueHeader,
+  PassedNote,
 } from "./QueueStates";
 
 /**
@@ -23,26 +22,14 @@ import {
  *
  * The design draws "All Orders" here: a searchable, filterable, paginated table
  * with Ref / Address / Client / Stage / ASSIGNED / DUE columns, an SLA chip and
- * a per-row `Open →`. Every one of those affordances is refused, and the
- * refusal is not a preference:
+ * a per-row `Open →`. Every one of those is refused —
+ * `app/chrome/builtScreens.ts` carries the citations at the point the door is
+ * registered, and `docs/frontend/design-2026-08/CONFLICT-all-orders.md` is the
+ * report `INVARIANTS:26-27` requires. Unresolved, awaiting an owner ruling.
  *
- *   - `INVARIANTS:82-83` — the queue is a SINGLE SERVER-CHOSEN NEXT ORDER, no
- *     list, no browsing, no cherry-picking.
- *   - `INVARIANTS:84-85` — no pace indicators, no timers, and no time
- *     ESTIMATES; an estimate is a pace indicator. That deletes Due and the SLA
- *     chip outright.
- *   - `endpoints.ts:69` — "there is no browse/pick endpoint", and `:77-82`
- *     records that `/api/queue/bands` carries "no claim token, no assignment
- *     field, no ordering the caller can influence" precisely so that no
- *     cherry-picking holds BY CONSTRUCTION rather than by this screen's
- *     restraint.
- *
- * `INVARIANTS:26-27` says what to do about that: a rule a design cannot satisfy
- * is a CONFLICT IN THE DESIGN, stop and report, do not weaken the rule. It is
- * reported in `docs/frontend/design-2026-08/CONFLICT-all-orders.md` and awaits
- * an owner ruling. What is built here is the queue THE CONTRACT SUPPORTS,
- * wearing the design's visual language: one card, the accent spent once, the
- * design's type and spacing.
+ * What is built here is the queue THE CONTRACT SUPPORTS, wearing the design's
+ * visual language: one card, the accent spent once, the design's type and
+ * spacing.
  *
  * ══ THE KEYS ARE PANE-LOCAL ════════════════════════════════════════════════
  *
@@ -59,6 +46,15 @@ import {
 export function QueueScreen() {
   const navigate = useNavigate();
   const [passing, setPassing] = useState(false);
+  /**
+   * The ref of the order this reviewer last passed, for the on-screen record.
+   * Held here rather than read back from the server because the server does not
+   * return it — `PassOrderResponse` is `{ ok: true }` and nothing else
+   * (`endpoints.ts:212-216`), deliberately. This is not server STATE being
+   * mirrored; it is a note about what this person just did, which is the one
+   * kind of thing the client legitimately knows.
+   */
+  const [passedRef, setPassedRef] = useState<string | null>(null);
 
   const served = useQuery({
     queryKey: queueNext.key,
@@ -117,31 +113,25 @@ export function QueueScreen() {
 
       {served.isSuccess && order === null && <QueueEmpty />}
 
+      {passedRef !== null && <PassedNote orderRef={passedRef} />}
+
       {order !== null && (
-        <Card padding="none">
-          <ServedOrder order={order} />
-          <div className="flex flex-col gap-6 border-t border-line-subtle px-12 py-10">
-            {passing ? (
-              <PassReason
-                pending={pass.isPending}
-                onSubmit={(reason) =>
-                  pass.mutate(reason, { onSuccess: () => setPassing(false) })
-                }
-                onCancel={() => setPassing(false)}
-              />
-            ) : (
-              <div className="flex items-center gap-6">
-                {/* Rule 1: the accent is spent ONCE, here. */}
-                <Button variant="primary" onPress={startReview}>
-                  Start review <Kbd muted>Enter</Kbd>
-                </Button>
-                <Button variant="ghost" onPress={() => setPassing(true)}>
-                  Pass <Kbd muted>P</Kbd>
-                </Button>
-              </div>
-            )}
-          </div>
-        </Card>
+        <ServedOrderCard
+          order={order}
+          passing={passing}
+          passPending={pass.isPending}
+          onStartReview={startReview}
+          onOpenPass={() => setPassing(true)}
+          onCancelPass={() => setPassing(false)}
+          onSubmitPass={(reason) =>
+            pass.mutate(reason, {
+              onSuccess: () => {
+                setPassedRef(order.external_ref);
+                setPassing(false);
+              },
+            })
+          }
+        />
       )}
     </div>
   );

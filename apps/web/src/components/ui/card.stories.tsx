@@ -137,3 +137,41 @@ export const NestedCardsThrow: Story = {
     expect(canvasElement.textContent).toContain("Nested cards are forbidden");
   },
 };
+
+/**
+ * THE CASE THAT USED TO PASS, and the reason the guard now uses two contexts.
+ *
+ * `InnerPanel` once cleared a single boolean, so a card inside a PANEL inside a
+ * card rendered two 14px surfaces one within the other — measured, confirmed,
+ * REVIEW-03 B4. That is the arrangement that actually happens (a card, a
+ * section in it, a card in that section); direct card-in-card is the one nobody
+ * writes by accident. RECIPES §Card forbids nesting full stop, not "unless
+ * separated by a panel".
+ */
+export const NestedThroughAPanelThrows: Story = {
+  args: { children: "" },
+  render: () => (
+    <RenderBoundary>
+      <Card>
+        <InnerPanel>
+          <Card>Illegal, one level down</Card>
+        </InnerPanel>
+      </Card>
+    </RenderBoundary>
+  ),
+  play: ({ canvasElement }) => {
+    expect(canvasElement.textContent).toContain("Nested cards are forbidden");
+  },
+};
+
+/** Panels nest by their own rule; only cards are barred. */
+export const PanelInsidePanelIsLegal: Story = {
+  args: { children: "" },
+  render: () => (
+    <Card padding="roomy">
+      <InnerPanel>
+        <InnerPanel>Legal: card &gt; panel &gt; panel</InnerPanel>
+      </InnerPanel>
+    </Card>
+  ),
+};

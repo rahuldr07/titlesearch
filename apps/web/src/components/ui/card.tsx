@@ -20,10 +20,21 @@ import { cx } from "./cx";
  * choosing it. A context flag makes the violation a runtime throw the first
  * time a story renders it, which is the earliest a nesting mistake can possibly
  * be caught (it is invisible to tsc: `<Card>` deep inside a subtree is still
- * `<Card>`). `InnerPanel` clears the flag going down, so the legal shape —
- * card > inner panel > inner panel — keeps working, and only card > card fails.
+ * `<Card>`). TWO CONTEXTS, NOT ONE BOOLEAN, and the difference is the whole guard.
+ *
+ * `InnerPanel` used to clear a single flag going down. That made
+ * `Card > InnerPanel > Card` legal — two 14px surfaces, one inside the other,
+ * measured and confirmed rendering. So the guard caught the arrangement nobody
+ * writes by accident and missed the one that actually happens: a card, a
+ * section inside it, and a card in that section.
+ *
+ * `InsideCard` is now NEVER cleared: once you are within a card you are within
+ * it at every depth. `InsidePanel` is separate and is what `InnerPanel` sets,
+ * so the legal shape — card > panel > panel — still works, because panels
+ * nest by their own rule rather than by pretending the card is gone.
  */
 const InsideCard = createContext(false);
+const InsidePanel = createContext(false);
 
 const surface = cva("", {
   variants: {
@@ -127,13 +138,13 @@ export function CardBody({ children, className }: SlotProps) {
  */
 export function InnerPanel({ tone, edge, padding, className, children }: CardProps) {
   return (
-    <InsideCard value={false}>
+    <InsidePanel value={true}>
       <div
         data-slot="inner-panel"
         className={cx("rounded-md", surface({ tone, edge: edge ?? "hairline", padding }), className)}
       >
         {children}
       </div>
-    </InsideCard>
+    </InsidePanel>
   );
 }
