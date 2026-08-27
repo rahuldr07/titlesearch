@@ -11,7 +11,6 @@ import {
 } from "react-aria-components";
 
 import { cx } from "./cx";
-import { BlockedHint } from "./blockedHint";
 import { chordWidget } from "./overlaySurface";
 import { disabledAttributes, type Disablement } from "./disabled";
 
@@ -75,6 +74,27 @@ export function TabList({ label, ...props }: TabListShellProps) {
   );
 }
 
+/*
+ * ══ WHY THE `title` CARRIER IS `data-*`-ONLY ON A COLLECTION ITEM ═══════════
+ *
+ * `blockedHint.tsx` wraps a control in a `display:contents` span to carry the
+ * `title` react-aria's `filterDOMProps` strips from composites. That is right
+ * for a Checkbox, a Switch and a Select — and WRONG for a Tab or an Option,
+ * and the story proved it: wrapping a `<Tab>` made react-aria's
+ * CollectionBuilder stop seeing it, and the second stage DISAPPEARED FROM THE
+ * STRIP entirely. Rule 12 says a blocked stage renders disabled with the rule,
+ * NEVER HIDDEN — so the fix for the hover half of rule 9 was deleting the
+ * other half of rule 12. That is not a trade worth making.
+ *
+ * A collection builder reads its direct element children as data before any of
+ * them render, so any wrapper at all — even one with no box — is a node it
+ * cannot look through.
+ *
+ * So a collection item carries `data-disabled-reason` and, where the design
+ * gives it one, an inline note. `disabled.ts` already says a tooltip alone
+ * fails WCAG 2.2 on touch and is "the third carrier and never the only one";
+ * here it is simply absent, and the two that matter are not.
+ */
 export type TabProps = Omit<
   TabPrimitiveProps,
   "isDisabled" | "className" | "children"
@@ -83,26 +103,21 @@ export type TabProps = Omit<
 
 export function Tab({ disabledBecause, children, ...props }: TabProps) {
   return (
-    /* `BlockedHint` carries the `title` react-aria's `filterDOMProps` drops
-       from a composite — see `blockedHint.tsx`. Rule 9 needs all three
-       carriers, and a tooltip alone fails WCAG 2.2 on touch anyway. */
-    <BlockedHint reason={disabledBecause}>
-      <TabPrimitive
-        {...props}
-        {...disabledAttributes(disabledBecause)}
-        data-slot="tabs-trigger"
-        className={cx(
-          "tp-state tp-press tp-target tp-ring flex cursor-pointer items-center gap-4 border-b-2 px-4 pb-5",
-          "border-transparent font-sans text-meta leading-close font-medium text-ink-secondary",
-          "hover:not-data-disabled:text-ink-primary",
-          // The stroke, not a fill. Rule 1.
-          "data-selected:border-action data-selected:font-semibold data-selected:text-ink-primary",
-          "data-disabled:cursor-not-allowed data-disabled:text-ink-disabled",
-        )}
-      >
-        {children}
-      </TabPrimitive>
-    </BlockedHint>
+    <TabPrimitive
+      {...props}
+      {...disabledAttributes(disabledBecause)}
+      data-slot="tabs-trigger"
+      className={cx(
+        "tp-state tp-press tp-target tp-ring flex cursor-pointer items-center gap-4 border-b-2 px-4 pb-5",
+        "border-transparent font-sans text-meta leading-close font-medium text-ink-secondary",
+        "hover:not-data-disabled:text-ink-primary",
+        // The stroke, not a fill. Rule 1.
+        "data-selected:border-action data-selected:font-semibold data-selected:text-ink-primary",
+        "data-disabled:cursor-not-allowed data-disabled:text-ink-disabled",
+      )}
+    >
+      {children}
+    </TabPrimitive>
   );
 }
 

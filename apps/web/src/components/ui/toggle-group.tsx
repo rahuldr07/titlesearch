@@ -8,7 +8,6 @@ import {
 
 import { cx } from "./cx";
 import { disabledAttributes, type Disablement } from "./disabled";
-import { BlockedHint } from "./blockedHint";
 import { chordWidget } from "./overlaySurface";
 import { toggleClass } from "./toggle";
 
@@ -78,18 +77,16 @@ export function ToggleGroupItem({
   ...props
 }: ToggleGroupItemProps) {
   return (
-    /* `BlockedHint` carries the `title` react-aria's `filterDOMProps` drops —
-       see `toggle.tsx` and `blockedHint.tsx`. */
-    <BlockedHint reason={disabledBecause}>
-      <ToggleButton
-        {...props}
-        {...disabledAttributes(disabledBecause)}
-        data-slot="toggle-group-item"
-        /* `rounded-sm` = 6 = the track's 10 minus the 4px of padding. Rule 5. */
-        className={cx(toggleClass, "rounded-sm")}
-      >
-        {children}
-      </ToggleButton>
-    </BlockedHint>
+    /* NO `BlockedHint`: `ToggleButtonGroup` builds a collection, and a wrapper
+       around an item makes the builder stop seeing it — see `tabs.tsx`. */
+    <ToggleButton
+      {...props}
+      {...disabledAttributes(disabledBecause)}
+      data-slot="toggle-group-item"
+      /* `rounded-sm` = 6 = the track's 10 minus the 4px of padding. Rule 5. */
+      className={cx(toggleClass, "rounded-sm")}
+    >
+      {children}
+    </ToggleButton>
   );
 }

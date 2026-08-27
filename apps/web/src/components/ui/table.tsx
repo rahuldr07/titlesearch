@@ -70,7 +70,20 @@ export function Table<TRow>({ label, rows, columns, rowKey, empty }: TableProps<
   return (
     <div
       ref={scrollRef}
+      /*
+       * WCAG 2.1.1 via axe's `scrollable-region-focusable`, and the story
+       * caught it: a scrollable region with no focusable content is a region a
+       * keyboard reader cannot scroll at all. Virtualization is exactly what
+       * creates the case — the rows carry `tabIndex={-1}` (programmatically
+       * focusable, not tab-reachable, because tabbing through 5,000 rows is
+       * not navigation), so the container itself has to take the tab stop and
+       * answer to the arrow keys.
+       */
+      tabIndex={0}
       data-slot="table-container"
+      /* The ring comes from `styles.css`'s `[tabindex]:focus-visible` rule, not
+         from `tp-ring` — that utility keys off react-aria's `data-focus-visible`,
+         which a plain div never receives. */
       className="tp-z-raised relative h-full overflow-auto"
     >
       <div

@@ -75,12 +75,18 @@ export const StageBlocked: Story = {
     ),
   },
   play: async () => {
-    const blocked = document.querySelector("[data-disabled-reason]");
-    expect(blocked?.getAttribute("data-disabled-reason")).toBe(
-      "Blocked: assembly has an OPEN judgment.",
-    );
+    const reason = "Blocked: assembly has an OPEN judgment.";
+    /*
+     * BOTH tabs must still be in the strip. This is the assertion that caught
+     * a real defect: wrapping the Tab in `BlockedHint` to carry `title` made
+     * react-aria's CollectionBuilder stop seeing it, and the blocked stage
+     * VANISHED — rule 12 broken in the act of satisfying rule 9. See tabs.tsx.
+     */
+    expect(document.querySelectorAll("[data-slot='tabs-trigger']")).toHaveLength(2);
+    const tab = document.querySelector("[data-slot='tabs-trigger'][data-disabled-reason]");
+    expect(tab?.getAttribute("data-disabled-reason")).toBe(reason);
     // Rule 12 again: blocked, not hidden.
-    expect(blocked?.textContent).toContain("Release");
+    expect(tab?.textContent).toContain("Release");
   },
 };
 

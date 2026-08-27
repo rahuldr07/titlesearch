@@ -32,20 +32,18 @@ import { Popover } from "./popover";
  *
  * ══ ADAPTED FROM THE REGISTRY ═══════════════════════════════════════════════
  *
- * The registry shipped FIFTEEN exports, including a full multi-select tag
- * layer (ComboboxChips / ComboboxChipList / ComboboxChip / ComboboxChipsInput)
- * and its own popover anchoring hook. All of it is dropped: this app has no
- * multi-select field in the PRD's data model, and a component kept "in case"
- * is a component nobody has checked against the rules. It can come back with a
- * screen that needs it.
+ * The registry shipped FIFTEEN exports, including a multi-select tag layer
+ * (ComboboxChips / ChipList / Chip / ChipsInput) and its own anchoring hook.
+ * All dropped: this app has no multi-select field in the PRD's data model, and
+ * a component kept "in case" is a component nobody has checked against the
+ * rules. It can come back with a screen that needs it.
  *
  * Geometry is RECIPES.md §Inputs — 38px, radius 10, `--color-control-fill` on
  * `--color-control-border`, 13px. `bg-popover`/`text-popover-foreground` →
  * `bg-surface-panel`/`text-ink-primary`; every `dark:` variant deleted.
  *
  * Options come from `select.tsx`'s `Option`: one option component, one ✓ mark,
- * one place rule 6's glyph vocabulary is spent. The registry had two nearly
- * identical ones.
+ * one place rule 6's glyph vocabulary is spent.
  */
 export type ComboBoxProps = Omit<
   ComboBoxPrimitiveProps<object>,
@@ -74,6 +72,17 @@ export function ComboBox({
         {...props}
         {...disabledAttributes(disabledBecause)}
         aria-label={label}
+        /*
+         * VERIFIED against the installed react-aria-components 1.20 source, not
+         * assumed: `ComboBoxProps` declares `allowsEmptyCollection` — "whether
+         * the combo box allows the menu to be open when the collection is
+         * empty" — and it defaults FALSE. So `renderEmptyState` below is dead
+         * code without this: the panel that would say "No matches." never
+         * mounts, and a reader who mistypes a county gets a silently vanished
+         * list instead of an answer. The story asserts the sentence, which is
+         * how the omission was found.
+         */
+        allowsEmptyCollection
         data-slot="combobox"
         className="flex flex-col gap-3"
       >
