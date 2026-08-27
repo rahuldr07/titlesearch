@@ -8,7 +8,10 @@
  */
 @import "tailwindcss";
 @import "@titlepipe/ui-tokens/tokens.css";
+
 @import "./components/ui/ui.css";
+/* The domain layer's own utilities: the NA hatch and the paper register (rule 8). */
+@import "./entities/entities.css";
 
 /*
  * A REVIEW TOOL IS NOT A DOCUMENT. Design README §App shell: "Min app width
@@ -70,4 +73,28 @@ body {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/*
+ * THE SIGN-IN GLOW. Design §Screens 1: "dark canvas, radial accent glow."
+ *
+ * A gradient, and rule 7 says "no gradients" — so this is a deliberate,
+ * single exception rather than an oversight. Rule 7 governs the INTERFACE:
+ * flat brand mark, no icon soup, surfaces that do not shade. The sign-in
+ * canvas is not interface; it is the one screen with no data on it, and the
+ * design specifies the glow explicitly and by value. It exists exactly once,
+ * as a named utility, so a second one cannot be written without touching this
+ * file.
+ *
+ * Built from tokens with no colour function: `--color-rail-accent` and
+ * `transparent`. The alpha the design draws (.14) is carried by `opacity` on
+ * the element rather than by an rgba(), which keeps the value a token.
+ */
+@utility bg-radial-accent-glow {
+  background-image: radial-gradient(
+    80% 60% at 50% 0%,
+    var(--color-rail-accent),
+    transparent 70%
+  );
+  opacity: 0.14;
 }
