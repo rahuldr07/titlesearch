@@ -34,7 +34,7 @@ export const UNBUILT_SCREENS: readonly ScreenDescriptor[] = [
     binds:
       "CreateOrderRequest (endpoints.ts:39) · IngestRejection (:49) · POST /api/orders/{id}/accept (:60)",
     missing:
-      "The Quarantine Gateway checklist (AV → real-PDF → SHA-256) and the Optical Profile card (DPI, clerk stamp, contrast floor) have no schema at all — both are server-owned thresholds. Acceptance is explicit (INVARIANTS:47) and the design's single Sign button blurs upload and acceptance.",
+      "BUILT (features/ingest), minus two objects. The Quarantine Gateway checklist (AV → real-PDF → SHA-256) and the Optical Profile card (DPI, clerk stamp, contrast floor) have no schema at all — a four-step state machine and three server-owned thresholds. Both render an honest waiting-on-the-backend statement rather than a mock; backend conversation 3. Acceptance is explicit (INVARIANTS:47), so the design's single Sign button is two acts here.",
   },
   {
     path: "/dashboard",
