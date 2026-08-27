@@ -205,13 +205,21 @@ export default defineConfig(({ mode }) => {
          * checks the SHELL for a static import rather than checking that a
          * separate chunk appeared.
          */
-        input:
+        /*
+         * Typed as `Record<string, string>` rather than left to inference.
+         * The ternary's two branches have DIFFERENT key sets, so inference
+         * produced `{ workbench?: undefined } | { workbench: string }`, which
+         * is not assignable to Rollup's `Record<string, string>` — `tsc -b`
+         * failed on this file and therefore on every `pnpm build`. The
+         * annotation states the shape both branches actually satisfy.
+         */
+        input: ((): Record<string, string> =>
           mode === "production"
             ? { app: fileURLToPath(new URL("./index.html", import.meta.url)) }
             : {
                 app: fileURLToPath(new URL("./index.html", import.meta.url)),
                 workbench: fileURLToPath(new URL("./workbench.html", import.meta.url)),
-              },
+              })(),
         output: {
           /*
            * The PDF engine is 4.5 MB of WebAssembly plus its JS. It is pinned

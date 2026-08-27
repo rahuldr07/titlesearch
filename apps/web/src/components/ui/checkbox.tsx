@@ -41,15 +41,23 @@ function Checkbox({ className, children, disabledBecause, ...props }: CheckboxPr
         data-slot="checkbox"
         {...props}
         {...disabledAttributes(disabledBecause)}
+        /*
+         * THE LABEL IS A ROW; THE BOX IS THE FIRST CELL.
+         *
+         * react-aria renders `Checkbox` as a `<label>` wrapping both the
+         * control and its text, so box styling put here lands on the whole
+         * row. It did: `size-8` clamped the label to 16px wide and `font-mono
+         * text-label` set the LABEL TEXT in 11px mono, which rule 3 reserves
+         * for data. The words wrapped one letter per line inside the square.
+         *
+         * So the label owns layout and typography; `checkboxBox` below owns the
+         * drawn square. `group/checkbox` stays here because the box reads the
+         * label's state through it.
+         */
         className={cx(
-          "tp-state tp-press tp-ring group/checkbox relative flex size-8 shrink-0 cursor-pointer",
-          "items-center justify-center rounded-xs border border-control-border bg-control-fill",
-          "after:absolute after:-inset-x-3 after:-inset-y-2",
-          "font-mono text-label leading-flat",
-          "hover:not-data-disabled:border-ink-faint",
-          "data-selected:border-action data-selected:bg-action data-selected:text-ink-on-action",
-          "data-indeterminate:border-action data-indeterminate:bg-action data-indeterminate:text-ink-on-action",
-          "data-disabled:cursor-not-allowed data-disabled:border-line-strong data-disabled:bg-surface-sunken data-disabled:text-ink-disabled",
+          "tp-ring group/checkbox flex w-fit cursor-pointer items-center gap-4",
+          "font-sans text-meta leading-close text-ink-primary",
+          "data-disabled:cursor-not-allowed data-disabled:text-ink-disabled",
           className,
         )}
       >
@@ -58,7 +66,18 @@ function Checkbox({ className, children, disabledBecause, ...props }: CheckboxPr
             <span
               data-slot="checkbox-indicator"
               aria-hidden
-              className="grid place-content-center"
+              className={cx(
+                "tp-state tp-press relative grid size-8 shrink-0 place-content-center",
+                "rounded-xs border border-control-border bg-control-fill",
+                // WCAG 2.2 §2.5.8: the square is 16px, the hit area is not.
+                "after:absolute after:-inset-x-3 after:-inset-y-2",
+                // The mark, not the label. Rule 7's glyph vocabulary.
+                "font-mono text-label leading-flat",
+                "group-hover/checkbox:group-not-data-disabled/checkbox:border-ink-faint",
+                "group-data-selected/checkbox:border-action group-data-selected/checkbox:bg-action group-data-selected/checkbox:text-ink-on-action",
+                "group-data-indeterminate/checkbox:border-action group-data-indeterminate/checkbox:bg-action group-data-indeterminate/checkbox:text-ink-on-action",
+                "group-data-disabled/checkbox:border-line-strong group-data-disabled/checkbox:bg-surface-sunken group-data-disabled/checkbox:text-ink-disabled",
+              )}
             >
               {isIndeterminate ? "•" : isSelected ? "✓" : ""}
             </span>
