@@ -1,5 +1,5 @@
 /**
- * THE PROVENANCE ENVELOPE, AS A TYPE.
+ * THE PROVENANCE ENVELOPE, AS A TYPE — AND WHAT THAT DOES NOT BUY.
  *
  * Hard rule (AGENTS.md): "Never emit a value you can't cite. Provenance on
  * everything (principle 6 — caught 6 times in prototyping)."
@@ -10,10 +10,38 @@
  * value with null `source_*` is "the exact failure shape the architecture
  * exists to catch".
  *
- * So the envelope stops being a convention and becomes a type. A component
- * cannot render a value without also holding its citation, because there is no
- * way to construct the argument. The failure moves from a reviewer's attention
- * to `tsc`.
+ * WHAT THIS FILE ACTUALLY ENFORCES, AND WHAT IT DOES NOT. Read this before
+ * relying on it; the previous version of this paragraph claimed a compiler
+ * guarantee that REVIEW-01 (B1) proved false in three ways, all of which
+ * compiled clean:
+ *
+ *   1. `field.value` printed directly from the contract type, bypassing
+ *      `readCited` entirely.
+ *   2. `v.cited.value` destructured out, yielding a bare `string` with no
+ *      residual obligation.
+ *   3. a ternary laundering it into a plain `string`.
+ *
+ * `tsc` cannot close any of the three. `Cited<T>` is a structural record with
+ * a public `value`, and TypeScript has no way to make reading a member an
+ * error. Branding was evaluated and REJECTED: `string & { readonly __cited:
+ * unique symbol }` is a SUBTYPE of `string`, so `const s: string = c.value`
+ * still compiles — it closes construction, which was never the hole, and
+ * costs a cast at every site that builds one. It makes the file worse for no
+ * coverage. (Proof: `src/__probe/brand.tsx` in the B1 working notes.)
+ *
+ * So the honest statement is this. `readCited` + `FieldValue` are the shape a
+ * component SHOULD print from, and it is a LINT rule, not the type system,
+ * that stops the bypass:
+ *
+ *   - `eslint.config.js` `no-restricted-syntax` bans `field.value` member
+ *     access outside this file.
+ *   - `scripts/check-rules.mjs` (`raw-field-value`) carries the half ESLint
+ *     cannot: any file importing `Field` from `@titlepipe/contract`, other
+ *     than this one, may not touch `.value` at all.
+ *
+ * Both are grep-and-AST rules with the usual limits of such rules. They catch
+ * the spelling a tired developer reaches for. They are not an adversary
+ * model. The failure moves from a reviewer's attention to CI — not to `tsc`.
  *
  * WHAT THIS FILE IS NOT. It does not re-derive, re-validate, or second-guess
  * the server. `readCited` reads what the server sent and classifies it; it
@@ -36,6 +64,12 @@ export type Citation = {
  *
  * `Cited<T>` is deliberately not `{ value: T; citation?: Citation }` — an
  * optional citation is a citation you can forget.
+ *
+ * Note the limit, stated because the header above used to hide it: a REQUIRED
+ * citation you can destructure away is also a citation you can forget, one
+ * keystroke later. This shape makes the citation impossible to OMIT at
+ * construction. It does not make it impossible to DROP at use. The lint rules
+ * named above are what cover the second.
  */
 export type Cited<T> = {
   readonly value: T;

@@ -178,7 +178,44 @@ export default tseslint.config(
           ],
         },
       ],
+
+      /*
+       * §Provenance (AGENTS.md: "Never emit a value you can't cite").
+       *
+       * REVIEW-01 B1: `Cited<T>` does NOT make a missing citation a compile
+       * error, and the header of `shared/provenance.ts` now says so. This rule
+       * is the half of the enforcement that actually exists. It bans reading
+       * `.value` off anything named for a contract `Field`, which is the
+       * bypass that compiled clean: `<span>{field.value}</span>`, printed
+       * without ever going through `readCited`.
+       *
+       * SYNTACTIC, not type-aware — this project does not run typed linting,
+       * and turning it on to catch one member access is not a trade worth
+       * making. So the rule keys off the NAME, which is the spelling every
+       * site in the tree uses and the one a developer reaches for. A `Field`
+       * bound to some other identifier walks past; `check-rules.mjs`
+       * (`raw-field-value`) carries that case by keying off the IMPORT
+       * instead. Neither is an adversary model. Both catch the accident.
+       *
+       * `shared/provenance.ts` is exempted below — it is the one file whose
+       * job is to read `field.value`.
+       */
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector:
+            "MemberExpression[computed=false][property.name='value'][object.name=/^(field|f)$/]",
+          message:
+            "Never emit a value you can't cite (AGENTS.md). Go through `readCited(field)` in shared/provenance.ts and render the FieldValue union — printing `field.value` drops the citation. See REVIEW-01 B1.",
+        },
+      ],
     },
+  },
+  {
+    /* The one file allowed to read a contract Field's `.value`: it is what
+       `readCited` exists to do. */
+    files: ["src/shared/provenance.ts"],
+    rules: { "no-restricted-syntax": "off" },
   },
   {
     // Storybook CSF mandates a default export for the meta object.

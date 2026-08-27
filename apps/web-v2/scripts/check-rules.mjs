@@ -35,6 +35,20 @@ const EXTRA_ROOTS = [join(ROOT, ".storybook")];
 /** The single audited date utility — the one place date handling may live. */
 const DATE_UTILITY = join("src", "shared", "date.ts");
 
+/**
+ * The single file allowed to read a contract `Field`'s `.value` — that is what
+ * `readCited` exists to do. Everything else goes through the `FieldValue`
+ * union it returns.
+ */
+const PROVENANCE_MODULE = join("src", "shared", "provenance.ts");
+
+/** A file that pulls `Field` out of the frozen contract. */
+const IMPORTS_FIELD =
+  /import\s+(?:type\s+)?\{[^}]*\bField\b[^}]*\}\s+from\s+["']@titlepipe\/contract["']/;
+
+/** `.value` read as a member, computed or not. `x["value"]` included. */
+const FIELD_VALUE_ACCESS = /\.\s*value\b|\[\s*["']value["']\s*\]/;
+
 const LINE_LIMIT = 150;
 /** A 2-line 1,900-character file passed the line count. Bytes catch that. */
 const CHAR_LIMIT = 8000;
@@ -140,6 +154,42 @@ for (const file of files) {
   const rel = relative(ROOT, file);
   const text = readFileSync(file, "utf8");
   const lines = text.split("\n");
+
+  /*
+   * PROVENANCE (AGENTS.md: "Never emit a value you can't cite").
+   *
+   * REVIEW-01 B1 proved that `Cited<T>` does not make this a compile error:
+   * `<span>{field.value}</span>` typechecks clean, bypassing `readCited`
+   * entirely, and that is the exact rule "caught 6 times in prototyping".
+   *
+   * ESLint's `no-restricted-syntax` companion to this keys off the NAME
+   * (`field.value`), which misses a Field bound to another identifier. This
+   * rule carries the other half: it keys off the IMPORT. If a file pulls
+   * `Field` out of the frozen contract, it is in the business of handling
+   * server field records, and it may not touch `.value` at all — it goes
+   * through `readCited`. Coarse on purpose. The two rules overlap
+   * deliberately, because the review's finding was that a single opt-in
+   * mechanism is the mechanism that failed six times.
+   *
+   * Stories are NOT exempt: a story that prints `field.value` is the template
+   * the next screen is copied from.
+   */
+  if (rel !== PROVENANCE_MODULE && IMPORTS_FIELD.test(text)) {
+    lines.forEach((raw, i) => {
+      const t = raw.trim();
+      if (t.startsWith("//") || t.startsWith("*") || t.startsWith("/*")) return;
+      if (raw.includes("rules-allow:")) return;
+      // A property being WRITTEN in an object literal (`value: "X"`) is a
+      // fixture constructing a Field, not a render reading one.
+      if (!FIELD_VALUE_ACCESS.test(raw)) return;
+      add(
+        file,
+        i + 1,
+        "raw-field-value",
+        "this file imports `Field` from the contract and reads `.value` — go through `readCited` (shared/provenance.ts) and render the FieldValue union. Never emit a value you can't cite (AGENTS.md; REVIEW-01 B1)",
+      );
+    });
+  }
 
   if (BANNED_NAMES.test(basename(file)) || /[\\/]utils?[\\/]index\.tsx?$/i.test(rel)) {
     add(
