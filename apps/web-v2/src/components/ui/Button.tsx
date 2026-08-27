@@ -78,7 +78,7 @@ const button = cva(
 
 export type ButtonProps = Omit<AriaButtonProps, "isDisabled" | "className"> &
   Disablement &
-  VariantProps<typeof button> & { readonly className?: string };
+  VariantProps<typeof button> & { readonly className?: string | undefined };
 
 /**
  * `isDisabled` is Omit-ed, so the only way to disable a button in this app is
