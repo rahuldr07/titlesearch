@@ -44,7 +44,7 @@ playwright-report/
 # loose dev screenshots at the repo root (apps/ and docs/ assets are unaffected).
 # Deliberate design/QA captures belong in docs/archive/, not the working root.
 /*.png
-# side-by-side output from apps/web-v2/compare.mjs
+# side-by-side output from apps/web/compare.mjs
 /shots/
 
 # pdfjs worker copied from node_modules into public/ by scripts/copy-pdf-worker.mjs

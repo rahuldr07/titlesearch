@@ -22,20 +22,27 @@
 import { StrictMode, useState } from "react";
 import { createRoot } from "react-dom/client";
 
-import { Button } from "../components/ui";
-import { Input } from "../components/ui";
-import { TextArea } from "../components/ui";
-import { Select } from "../components/ui";
-import { ComboBox } from "../components/ui";
-import { Option } from "../components/ui";
-import { Checkbox, CheckboxGroup } from "../components/ui";
-import { Radio, RadioGroup } from "../components/ui";
-import { Switch } from "../components/ui";
-import { Kbd } from "../components/ui";
-import { Tabs, TabList, Tab, TabPanel } from "../components/ui";
-import { SegmentedControl, Segment } from "../components/ui";
+import {
+  Button,
+  Checkbox,
+  CheckboxGroup,
+  Kbd,
+  RadioGroup,
+  RadioGroupItem,
+  Segment,
+  SegmentedControl,
+  Switch,
+  Tab,
+  TabList,
+  TabPanel,
+  Tabs,
+  Toggle,
+  ToggleGroup,
+  ToggleGroupItem,
+} from "../components/ui";
 
 import { Row } from "./Row";
+import { FormsHalf } from "./FormsHalf";
 import { SecondHalf } from "./SecondHalf";
 import { DomainHalf } from "./DomainHalf";
 import "../styles.css";
@@ -43,8 +50,8 @@ import "../styles.css";
 function Workbench() {
   const [checked, setChecked] = useState(true);
   const [on, setOn] = useState(true);
-  const [seg, setSeg] = useState("all");
   const [radio, setRadio] = useState("b");
+  const [pinned, setPinned] = useState(false);
 
   return (
     <div className="h-full overflow-auto bg-surface-app">
@@ -61,66 +68,49 @@ function Workbench() {
         <Row title="Button" note="one accent on the page — the rest are graphite">
           <Button variant="primary">Confirm</Button>
           <Button variant="secondary">Edit</Button>
-          <Button variant="quiet">Dismiss</Button>
-          <Button variant="danger">Halt</Button>
+          <Button variant="ghost">Dismiss</Button>
+          <Button variant="halt">Halt</Button>
           <Button variant="secondary" size="sm">Small</Button>
           <Button variant="secondary" size="lg">Large</Button>
+          <Button variant="secondary" icon aria-label="Next field">→</Button>
           <Button variant="secondary" disabledBecause="Blocked: T1 second read not countersigned.">
             Blocked
           </Button>
         </Row>
 
-        <Row title="Text entry" note="type here, then press a chord key — it must stay text">
-          <div className="w-140"><Input label="Order reference" placeholder="TP-0000-0000" /></div>
-          <div className="w-140"><Input label="Data value" data defaultValue="BK 4412 PG 88" /></div>
-          <div className="w-140"><Input label="Refused" errorMessage="The server refused this value." /></div>
-          <div className="w-160"><TextArea label="Reason" placeholder="Why this correction?" /></div>
-        </Row>
-
-        <Row title="Choice" note="open one and type — its typeahead must own the keys">
-          <div className="w-120">
-            <Select label="Absence" defaultSelectedKey="b">
-              <Option id="a">Not used in this jurisdiction</Option>
-              <Option id="b">Searched — nothing of record</Option>
-              <Option id="c">Instrument is silent on it</Option>
-              <Option id="d">On the page — could not be read</Option>
-            </Select>
-          </div>
-          <div className="w-120">
-            <ComboBox label="County">
-              <Option id="a">Fulton</Option>
-              <Option id="b">Shelby</Option>
-              <Option id="c">San Diego</Option>
-            </ComboBox>
-          </div>
-        </Row>
-
-        <Row title="Toggles">
-          <CheckboxGroup label="Layers" defaultValue={["a"]}>
+        <Row title="Toggles" note="a group is ONE answer — one accessible name, not four boxes">
+          <CheckboxGroup aria-label="Layers" defaultValue={["a"]}>
             <Checkbox value="a">Quarantine passed</Checkbox>
             <Checkbox value="b">Optical profile read</Checkbox>
           </CheckboxGroup>
           <Checkbox isSelected={checked} onChange={setChecked}>Standalone</Checkbox>
-          <RadioGroup label="Seat" value={radio} onChange={setRadio}>
-            <Radio value="a">Seat A</Radio>
-            <Radio value="b">Seat B</Radio>
+          <RadioGroup aria-label="Seat" value={radio} onChange={setRadio}>
+            <RadioGroupItem value="a">Seat A</RadioGroupItem>
+            <RadioGroupItem value="b">Seat B</RadioGroupItem>
           </RadioGroup>
           <Switch isSelected={on} onChange={setOn}>Follow evidence</Switch>
           <Switch disabledBecause="Blocked: no package loaded.">Blocked switch</Switch>
+          <Toggle isSelected={pinned} onChange={setPinned}>Pin panel</Toggle>
         </Row>
 
-        <Row title="Navigation">
-          <SegmentedControl label="Filter" selectedKeys={[seg]} onSelectionChange={(k) => setSeg([...k][0] as string)}>
+        <Row title="Navigation" note="arrow keys belong to the widget, not to the chord layer">
+          <SegmentedControl label="Filter" defaultSelectedKeys={["all"]}>
             <Segment id="all">All</Segment>
             <Segment id="open">Open</Segment>
             <Segment id="settled">Settled</Segment>
           </SegmentedControl>
+          <ToggleGroup label="Density" defaultSelectedKeys={["compact"]}>
+            <ToggleGroupItem id="compact">Compact</ToggleGroupItem>
+            <ToggleGroupItem id="roomy">Roomy</ToggleGroupItem>
+          </ToggleGroup>
           <div className="w-210">
             <Tabs defaultSelectedKey="one">
               <TabList label="Stages">
                 <Tab id="one">Intake</Tab>
                 <Tab id="two">Extraction</Tab>
-                <Tab id="three">Review</Tab>
+                <Tab id="three" disabledBecause="Blocked: extraction has not finished.">
+                  Review
+                </Tab>
               </TabList>
               <TabPanel id="one"><p className="text-meta text-ink-secondary">Panel one.</p></TabPanel>
               <TabPanel id="two"><p className="text-meta text-ink-secondary">Panel two.</p></TabPanel>
@@ -129,6 +119,7 @@ function Workbench() {
           </div>
         </Row>
 
+        <FormsHalf />
         <SecondHalf />
         <DomainHalf />
       </div>

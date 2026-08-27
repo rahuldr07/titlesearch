@@ -114,7 +114,7 @@ jobs:
       # `uvx pre-commit run --all-files` at the end already runs all of these,
       # so the duplication is deliberate and the reason is that a single step
       # reports a single result. Measured on this tree: pre-commit is red for
-      # trailing whitespace in `apps/web-v2` and `design-export`, two Ruff
+      # trailing whitespace in `apps/web` and `design-export`, two Ruff
       # findings in `scripts/tests`, and 81 tracked files the client-data guard
       # refuses (77 `.png`, one `.zip`, three `.docx`) — none of it backend
       # structure, and all of it predating this job. A steps list that stops at

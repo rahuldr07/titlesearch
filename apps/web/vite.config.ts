@@ -194,6 +194,24 @@ export default defineConfig(({ mode }) => {
     ],
     build: {
       rollupOptions: {
+        /*
+         * ONE `build` KEY, AND THAT IS THE POINT. This file briefly carried
+         * two: an `output.manualChunks` block here and an `input` block below
+         * it for the workbench entry. In an object literal the second key wins
+         * outright, so `manualChunks` never ran -- no `pdf-*.js` chunk was ever
+         * emitted, and `size-limit`'s exclusion of it had been guarding a file
+         * that did not exist. Silent, and invisible to every gate: the build
+         * passed, the budget passed, the assertion below passed because it
+         * checks the SHELL for a static import rather than checking that a
+         * separate chunk appeared.
+         */
+        input:
+          mode === "production"
+            ? { app: fileURLToPath(new URL("./index.html", import.meta.url)) }
+            : {
+                app: fileURLToPath(new URL("./index.html", import.meta.url)),
+                workbench: fileURLToPath(new URL("./workbench.html", import.meta.url)),
+              },
         output: {
           /*
            * The PDF engine is 4.5 MB of WebAssembly plus its JS. It is pinned
@@ -257,17 +275,6 @@ export default defineConfig(({ mode }) => {
      * It is listed under `build` so `vite dev` serves it, and excluded from a
      * production build below.
      */
-    build: {
-      rollupOptions: {
-        input:
-          mode === "production"
-            ? { app: fileURLToPath(new URL("./index.html", import.meta.url)) }
-            : {
-                app: fileURLToPath(new URL("./index.html", import.meta.url)),
-                workbench: fileURLToPath(new URL("./workbench.html", import.meta.url)),
-              },
-      },
-    },
     server: { port: 5174, proxy: apiProxy },
     preview: { port: 4274, proxy: apiProxy },
   };

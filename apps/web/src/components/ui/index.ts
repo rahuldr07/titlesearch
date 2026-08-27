@@ -29,6 +29,8 @@ export { Input } from "./input";
 export { Textarea } from "./textarea";
 export { Label } from "./label";
 export { Checkbox } from "./checkbox";
+/* The registry has no group; `field-set.tsx` styles one. See checkbox-group.tsx. */
+export { CheckboxGroup, type CheckboxGroupProps } from "./checkbox-group";
 export { RadioGroup, RadioGroupItem } from "./radio-group";
 export { Switch } from "./switch";
 export { Toggle, type ToggleProps } from "./toggle";

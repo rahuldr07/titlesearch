@@ -98,9 +98,9 @@
   },
   "size-limit": [
     {
-      "name": "shell (js) — the entry chunk, not every chunk in the directory",
+      "name": "shell (js) \u2014 the entry chunk only; lazy pdf and mock chunks are excluded",
       "path": [
-        "dist/assets/index-*.js",
+        "dist/assets/app-*.js",
         "!dist/assets/pdf-*.js"
       ],
       "limit": "320 kB"
