@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Form } from "react-aria-components";
-import { Input } from "../../components/ui/Input";
-import { Button } from "../../components/ui/Button";
+import { Input } from "../../components/ui";
+import { Button } from "../../components/ui";
 
 /**
  * EMAIL + PASSWORD, DRAWN AS THE DESIGN DRAWS IT, AND HONEST ABOUT ITSELF.

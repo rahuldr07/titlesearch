@@ -1,4 +1,4 @@
-import { cx } from "../../components/ui/cx";
+import { cx } from "../../components/ui";
 
 /**
  * THE QUESTION, AND THE REFUSAL TO INVENT ONE.

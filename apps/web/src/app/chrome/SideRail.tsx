@@ -3,7 +3,7 @@ import type { GrantedPermissionSchema } from "@titlepipe/contract";
 import { DOORS, SECTION_ORDER, SECTION_RUBRIC, type RailSection } from "./doors";
 import { hasDoor } from "../session/permissions";
 import { ProfileBlock } from "./ProfileBlock";
-import { cx } from "../../components/ui/cx";
+import { cx } from "../../components/ui";
 
 /**
  * THE LEFT RAIL — 240px, on `--color-rail-surface`, full height.

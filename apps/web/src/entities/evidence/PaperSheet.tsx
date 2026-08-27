@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { cx } from "../../components/ui/cx";
+import { cx } from "../../components/ui";
 
 /**
  * RULE 8, AS A COMPONENT.

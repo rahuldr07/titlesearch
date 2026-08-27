@@ -1,91 +1,119 @@
-import * as React from "react"
-import { cva, type VariantProps } from "class-variance-authority"
+import type { ReactNode } from "react";
 import {
+  Tab as TabPrimitive,
   TabList as TabListPrimitive,
   TabPanel as TabPanelPrimitive,
-  Tab as TabPrimitive,
   Tabs as TabsPrimitive,
-} from "react-aria-components"
+  type TabListProps,
+  type TabPanelProps as TabPanelPrimitiveProps,
+  type TabProps as TabPrimitiveProps,
+  type TabsProps as TabsPrimitiveProps,
+} from "react-aria-components";
 
-import { cn } from "@/lib/utils"
+import { cx } from "./cx";
+import { BlockedHint } from "./blockedHint";
+import { chordWidget } from "./overlaySurface";
+import { disabledAttributes, type Disablement } from "./disabled";
 
-function Tabs({
-  className,
-  ...props
-}: React.ComponentProps<typeof TabsPrimitive>) {
+/**
+ * TABS SWITCH A VIEW OF THE SAME THING. The five stage tabs on the order bar
+ * are the case this is built for.
+ *
+ * ══ THE SELECTED TAB IS AN UNDERLINE, NOT A FILLED CAPSULE ══════════════════
+ *
+ * The registry drew `data-selected:bg-background` inside a `bg-muted` track —
+ * a filled pill. Rule 1 forbids it: the accent is the only colour in this
+ * palette drawn as a solid fill, it is spent ONCE per screen, and a tab strip
+ * would spend it on navigation rather than on the open decision. So selection
+ * is an accent UNDERLINE (a stroke) plus weight. The registry's whole `variant`
+ * axis (`default` = filled track, `line` = underline) collapses to the one
+ * that is legal.
+ *
+ * ══ THE CHORD MARK IS `widget`, NOT `own` ═══════════════════════════════════
+ *
+ * `focusRoles.ts` records this as the mistake that was nearly made: a Tabs
+ * strip is mounted at ALL TIMES, and `own` is read document-wide by
+ * `overlayIsUp()`, so marking it `own` would make every chord in the app
+ * permanently dead. `widget` is read only against the active element's
+ * ancestors. `focusOwnsKeys` also matches `role="tab"` and the `[role='tablist']`
+ * ancestor; this is the defence in depth behind both, and it is what catches a
+ * tab strip whose focus has landed somewhere react-aria did not put a role.
+ *
+ * Rule 12 lands here too, which is why `Tab` takes `disabledBecause`: a stage
+ * the reader may not open yet renders DISABLED WITH THE RULE, never hidden.
+ * Hiding it would also silently renumber the stages.
+ */
+export type TabsProps = Omit<TabsPrimitiveProps, "className" | "children"> & {
+  readonly children: ReactNode;
+};
+
+export function Tabs({ children, ...props }: TabsProps) {
   return (
-    <TabsPrimitive
-      data-slot="tabs"
-      className={cn(
-        "group/tabs flex gap-2 data-horizontal:flex-col",
-        className
-      )}
-      {...props}
-    />
-  )
+    <TabsPrimitive {...props} data-slot="tabs" className="flex flex-col gap-8">
+      {children}
+    </TabsPrimitive>
+  );
 }
 
-const tabsListVariants = cva(
-  "group/tabs-list inline-flex w-fit items-center justify-center rounded-lg p-[3px] text-muted-foreground group-data-horizontal/tabs:h-8 group-data-vertical/tabs:h-fit group-data-vertical/tabs:flex-col data-[variant=line]:rounded-none",
-  {
-    variants: {
-      variant: {
-        default: "bg-muted",
-        line: "gap-1 bg-transparent",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-    },
-  }
-)
+export type TabListShellProps = Omit<
+  TabListProps<object>,
+  "className" | "aria-label"
+> & {
+  /** The strip's accessible name, e.g. "Order stages". */
+  readonly label: string;
+};
 
-function TabsList({
-  className,
-  variant = "default",
-  ...props
-}: React.ComponentProps<typeof TabListPrimitive> &
-  VariantProps<typeof tabsListVariants>) {
+export function TabList({ label, ...props }: TabListShellProps) {
   return (
     <TabListPrimitive
+      {...props}
+      {...chordWidget}
+      aria-label={label}
       data-slot="tabs-list"
-      data-variant={variant}
-      className={cn(tabsListVariants({ variant }), className)}
-      {...props}
+      className="flex items-end gap-8 border-b border-line-strong"
     />
-  )
+  );
 }
 
-function TabsTrigger({
-  className,
-  ...props
-}: React.ComponentProps<typeof TabPrimitive>) {
+export type TabProps = Omit<
+  TabPrimitiveProps,
+  "isDisabled" | "className" | "children"
+> &
+  Disablement & { readonly children: ReactNode };
+
+export function Tab({ disabledBecause, children, ...props }: TabProps) {
   return (
-    <TabPrimitive
-      data-slot="tabs-trigger"
-      className={cn(
-        "relative inline-flex h-[calc(100%-1px)] flex-1 cursor-default items-center justify-center gap-1.5 rounded-md border border-transparent px-1.5 py-0.5 text-sm font-medium whitespace-nowrap text-foreground/60 transition-all group-data-vertical/tabs:w-full group-data-vertical/tabs:justify-start hover:text-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-1 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-50 has-data-[icon=inline-end]:pr-1 has-data-[icon=inline-start]:pl-1 data-[disabled]:pointer-events-none data-[disabled]:opacity-50 dark:text-muted-foreground dark:hover:text-foreground group-data-[variant=default]/tabs-list:data-selected:shadow-sm group-data-[variant=line]/tabs-list:data-selected:shadow-none group-data-[variant=default]/tabs-list:data-active:shadow-sm group-data-[variant=line]/tabs-list:data-active:shadow-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-        "group-data-[variant=line]/tabs-list:bg-transparent group-data-[variant=line]/tabs-list:data-selected:bg-transparent dark:group-data-[variant=line]/tabs-list:data-selected:border-transparent dark:group-data-[variant=line]/tabs-list:data-selected:bg-transparent",
-        "data-selected:bg-background data-selected:text-foreground dark:data-selected:border-input dark:data-selected:bg-input/30 dark:data-selected:text-foreground",
-        "after:absolute after:bg-foreground after:opacity-0 after:transition-opacity group-data-horizontal/tabs:after:inset-x-0 group-data-horizontal/tabs:after:bottom-[-5px] group-data-horizontal/tabs:after:h-0.5 group-data-vertical/tabs:after:inset-y-0 group-data-vertical/tabs:after:-right-1 group-data-vertical/tabs:after:w-0.5 group-data-[variant=line]/tabs-list:data-selected:after:opacity-100",
-        className
-      )}
-      {...props}
-    />
-  )
+    /* `BlockedHint` carries the `title` react-aria's `filterDOMProps` drops
+       from a composite — see `blockedHint.tsx`. Rule 9 needs all three
+       carriers, and a tooltip alone fails WCAG 2.2 on touch anyway. */
+    <BlockedHint reason={disabledBecause}>
+      <TabPrimitive
+        {...props}
+        {...disabledAttributes(disabledBecause)}
+        data-slot="tabs-trigger"
+        className={cx(
+          "tp-state tp-press tp-target tp-ring flex cursor-pointer items-center gap-4 border-b-2 px-4 pb-5",
+          "border-transparent font-sans text-meta leading-close font-medium text-ink-secondary",
+          "hover:not-data-disabled:text-ink-primary",
+          // The stroke, not a fill. Rule 1.
+          "data-selected:border-action data-selected:font-semibold data-selected:text-ink-primary",
+          "data-disabled:cursor-not-allowed data-disabled:text-ink-disabled",
+        )}
+      >
+        {children}
+      </TabPrimitive>
+    </BlockedHint>
+  );
 }
 
-function TabsContent({
-  className,
-  ...props
-}: React.ComponentProps<typeof TabPanelPrimitive>) {
+export type TabPanelProps = Omit<TabPanelPrimitiveProps, "className" | "children"> & {
+  readonly children: ReactNode;
+};
+
+export function TabPanel({ children, ...props }: TabPanelProps) {
   return (
-    <TabPanelPrimitive
-      data-slot="tabs-content"
-      className={cn("flex-1 text-sm outline-none", className)}
-      {...props}
-    />
-  )
+    <TabPanelPrimitive {...props} data-slot="tabs-content" className="outline-none">
+      {children}
+    </TabPanelPrimitive>
+  );
 }
-
-export { Tabs, TabsList, TabsTrigger, TabsContent, tabsListVariants }

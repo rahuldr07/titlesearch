@@ -1,5 +1,5 @@
 import { useSignedIn } from "../session/signedIn";
-import { Button } from "../../components/ui/Button";
+import { Button } from "../../components/ui";
 
 /**
  * THE PROFILE BLOCK — the design's "deep well" at the foot of the rail

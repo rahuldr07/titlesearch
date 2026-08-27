@@ -22,18 +22,18 @@
 import { StrictMode, useState } from "react";
 import { createRoot } from "react-dom/client";
 
-import { Button } from "../components/ui/Button";
-import { Input } from "../components/ui/Input";
-import { TextArea } from "../components/ui/TextArea";
-import { Select } from "../components/ui/Select";
-import { ComboBox } from "../components/ui/ComboBox";
-import { Option } from "../components/ui/Option";
-import { Checkbox, CheckboxGroup } from "../components/ui/Checkbox";
-import { Radio, RadioGroup } from "../components/ui/RadioGroup";
-import { Switch } from "../components/ui/Switch";
-import { Kbd } from "../components/ui/Kbd";
-import { Tabs, TabList, Tab, TabPanel } from "../components/ui/Tabs";
-import { SegmentedControl, Segment } from "../components/ui/SegmentedControl";
+import { Button } from "../components/ui";
+import { Input } from "../components/ui";
+import { TextArea } from "../components/ui";
+import { Select } from "../components/ui";
+import { ComboBox } from "../components/ui";
+import { Option } from "../components/ui";
+import { Checkbox, CheckboxGroup } from "../components/ui";
+import { Radio, RadioGroup } from "../components/ui";
+import { Switch } from "../components/ui";
+import { Kbd } from "../components/ui";
+import { Tabs, TabList, Tab, TabPanel } from "../components/ui";
+import { SegmentedControl, Segment } from "../components/ui";
 
 import { Row } from "./Row";
 import { SecondHalf } from "./SecondHalf";

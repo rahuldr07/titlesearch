@@ -1,5 +1,5 @@
 import type { FieldState } from "@titlepipe/contract";
-import { cx } from "../../components/ui/cx";
+import { cx } from "../../components/ui";
 
 /**
  * `Field.state`, RENDERED VERBATIM.

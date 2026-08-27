@@ -1,96 +1,95 @@
-"use client"
-
-import * as React from "react"
-import { type VariantProps } from "class-variance-authority"
+import type { ReactNode } from "react";
 import {
-  ToggleButtonGroup as ToggleGroupPrimitive,
-  ToggleButton as TogglePrimitive,
+  ToggleButton,
+  ToggleButtonGroup,
   type ToggleButtonGroupProps,
   type ToggleButtonProps,
-} from "react-aria-components"
+} from "react-aria-components";
 
-import { cn } from "@/lib/utils"
-import { toggleVariants } from "@/components/ui/toggle"
+import { cx } from "./cx";
+import { disabledAttributes, type Disablement } from "./disabled";
+import { BlockedHint } from "./blockedHint";
+import { chordWidget } from "./overlaySurface";
+import { toggleClass } from "./toggle";
 
-const ToggleGroupContext = React.createContext<
-  VariantProps<typeof toggleVariants> & {
-    spacing?: number
-    orientation?: "horizontal" | "vertical"
-  }
->({
-  size: "default",
-  variant: "default",
-  spacing: 2,
-  orientation: "horizontal",
-})
+/**
+ * A SEGMENTED CONTROL: A FILTER, NOT NAVIGATION — and that is the whole
+ * distinction from Tabs. These cells do not own panels; they filter a table
+ * that is already on screen, and announcing them as tabs would promise a reader
+ * a panel switch that never happens.
+ *
+ * ══ RULE 5'S ARITHMETIC, WHICH IS THE GEOMETRY OF THIS COMPONENT ════════════
+ *
+ * The design note reads "a 10px/4px/6px segmented control": a track with a 10px
+ * radius holding cells with a 6px one. That is `inner = outer − gap` exactly,
+ * with the 4px of padding BEING the gap — three numbers that are one number and
+ * two subtractions. Written as `rounded-md` / `p-2` / `rounded-sm` so the
+ * relationship survives a redesign of any one of them.
+ *
+ * The registry did the opposite: a `spacing` prop, an inline `--gap` custom
+ * property, and eleven `group-data-[spacing=0]` classes reconstructing joined
+ * corners. All of it is gone — the inline style is banned by check-rules.mjs,
+ * and a caller-tunable gap is a caller-tunable radius once rule 5's arithmetic
+ * is real.
+ *
+ * ══ THE CHORD MARK IS `widget` ══════════════════════════════════════════════
+ *
+ * A single ToggleButton needs no mark (it is a real `<button>`; see
+ * `toggle.tsx`), but a GROUP has roving arrow-key focus, which makes the arrows
+ * and Home/End the group's. `focusRoles.ts` is explicit that `own` would be
+ * wrong here for the same reason as Tabs: a filter strip is mounted at all
+ * times, and `own` is read document-wide, so it would kill every chord in the
+ * app permanently. `widget` is scoped to the active element's ancestors.
+ */
+export type ToggleGroupProps = Omit<
+  ToggleButtonGroupProps,
+  "className" | "children" | "selectionMode"
+> & {
+  /** The group's accessible name, e.g. "Order filter". */
+  readonly label: string;
+  readonly children: ReactNode;
+};
 
-function ToggleGroup({
-  className,
-  variant,
-  size,
-  spacing = 2,
-  orientation = "horizontal",
-  children,
-  ...props
-}: Omit<ToggleButtonGroupProps, "children"> &
-  VariantProps<typeof toggleVariants> & {
-    spacing?: number
-    orientation?: "horizontal" | "vertical"
-    children?: React.ReactNode
-  }) {
+export function ToggleGroup({ label, children, ...props }: ToggleGroupProps) {
   return (
-    <ToggleGroupPrimitive
+    <ToggleButtonGroup
+      {...props}
+      {...chordWidget}
+      selectionMode="single"
+      disallowEmptySelection
+      aria-label={label}
       data-slot="toggle-group"
-      data-variant={variant}
-      data-size={size}
-      data-spacing={spacing}
-      orientation={orientation}
-      style={
-        { "--gap": `calc(var(--spacing) * ${spacing})` } as React.CSSProperties
-      }
-      className={cn(
-        "group/toggle-group flex w-fit flex-row items-center gap-(--gap) rounded-lg data-[size=sm]:rounded-[min(var(--radius-md),10px)] data-vertical:flex-col data-vertical:items-stretch",
-        className
-      )}
-      {...props}
-    >
-      <ToggleGroupContext.Provider
-        value={{ variant, size, spacing, orientation }}
-      >
-        {children}
-      </ToggleGroupContext.Provider>
-    </ToggleGroupPrimitive>
-  )
-}
-
-function ToggleGroupItem({
-  className,
-  children,
-  variant = "default",
-  size = "default",
-  ...props
-}: ToggleButtonProps & VariantProps<typeof toggleVariants>) {
-  const context = React.useContext(ToggleGroupContext)
-
-  return (
-    <TogglePrimitive
-      data-slot="toggle-group-item"
-      data-variant={context.variant || variant}
-      data-size={context.size || size}
-      data-spacing={context.spacing}
-      className={cn(
-        "shrink-0 group-data-[spacing=0]/toggle-group:rounded-none group-data-[spacing=0]/toggle-group:px-2 focus:z-10 focus-visible:z-10 group-data-[spacing=0]/toggle-group:has-data-[icon=inline-end]:pr-1.5 group-data-[spacing=0]/toggle-group:has-data-[icon=inline-start]:pl-1.5 group-data-horizontal/toggle-group:data-[spacing=0]:first:rounded-l-lg group-data-vertical/toggle-group:data-[spacing=0]:first:rounded-t-lg group-data-horizontal/toggle-group:data-[spacing=0]:last:rounded-r-lg group-data-vertical/toggle-group:data-[spacing=0]:last:rounded-b-lg group-data-horizontal/toggle-group:data-[spacing=0]:data-[variant=outline]:border-l-0 group-data-vertical/toggle-group:data-[spacing=0]:data-[variant=outline]:border-t-0 group-data-horizontal/toggle-group:data-[spacing=0]:data-[variant=outline]:first:border-l group-data-vertical/toggle-group:data-[spacing=0]:data-[variant=outline]:first:border-t",
-        toggleVariants({
-          variant: context.variant || variant,
-          size: context.size || size,
-        }),
-        className
-      )}
-      {...props}
+      className="inline-flex gap-1 rounded-md border border-line-strong bg-surface-sunken p-2"
     >
       {children}
-    </TogglePrimitive>
-  )
+    </ToggleButtonGroup>
+  );
 }
 
-export { ToggleGroup, ToggleGroupItem }
+export type ToggleGroupItemProps = Omit<
+  ToggleButtonProps,
+  "isDisabled" | "className" | "children"
+> &
+  Disablement & { readonly children: ReactNode };
+
+export function ToggleGroupItem({
+  disabledBecause,
+  children,
+  ...props
+}: ToggleGroupItemProps) {
+  return (
+    /* `BlockedHint` carries the `title` react-aria's `filterDOMProps` drops —
+       see `toggle.tsx` and `blockedHint.tsx`. */
+    <BlockedHint reason={disabledBecause}>
+      <ToggleButton
+        {...props}
+        {...disabledAttributes(disabledBecause)}
+        data-slot="toggle-group-item"
+        /* `rounded-sm` = 6 = the track's 10 minus the 4px of padding. Rule 5. */
+        className={cx(toggleClass, "rounded-sm")}
+      >
+        {children}
+      </ToggleButton>
+    </BlockedHint>
+  );
+}

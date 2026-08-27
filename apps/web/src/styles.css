@@ -21,6 +21,7 @@
 @import "tailwindcss";
 @import "@titlepipe/ui-tokens/tokens.css";
 @import "./components/ui/ui.css";
+@import "./components/ui/overlays.css";
 
 /*
  * A REVIEW TOOL IS NOT A DOCUMENT. Design README §App shell: min width 1360px,

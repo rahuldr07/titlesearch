@@ -110,3 +110,10 @@
     transform: translateY(0) scale(1);
   }
 }
+
+/*
+ * The overlay/layering utilities live in `overlays.css`, imported by
+ * `styles.css` beside this file. Split because they are the scrim, the two
+ * z-levels and the fade — one subject, and this file was over the 150-line
+ * limit with them in it.
+ */

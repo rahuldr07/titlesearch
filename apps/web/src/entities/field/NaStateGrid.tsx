@@ -1,6 +1,6 @@
 import type { NaReason } from "@titlepipe/contract";
 import { NaReason as NaReasonEnum } from "@titlepipe/contract";
-import { RadioGroup, Radio } from "../../components/ui/RadioGroup";
+import { RadioGroup, Radio } from "../../components/ui";
 import { NO_VALUE } from "./noValueStates";
 
 /**

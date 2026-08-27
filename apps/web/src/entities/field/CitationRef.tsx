@@ -1,5 +1,5 @@
 import type { Citation } from "../../shared/provenance";
-import { cx } from "../../components/ui/cx";
+import { cx } from "../../components/ui";
 
 /**
  * A CITATION, AND IT IS ALWAYS MONO.

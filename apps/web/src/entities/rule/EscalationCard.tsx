@@ -1,6 +1,6 @@
 import type { Escalation } from "@titlepipe/contract";
 import type { ReactNode } from "react";
-import { cx } from "../../components/ui/cx";
+import { cx } from "../../components/ui";
 import { OrderRef } from "../order/OrderRef";
 
 /**

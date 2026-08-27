@@ -1,4 +1,4 @@
-import { cx } from "../../components/ui/cx";
+import { cx } from "../../components/ui";
 
 /**
  * A CLERK'S STAMP, DRAWN IN CSS.

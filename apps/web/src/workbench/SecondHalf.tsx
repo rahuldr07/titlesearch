@@ -2,16 +2,16 @@ import { useState } from "react";
 import { TooltipTrigger } from "react-aria-components";
 
 import { Row } from "./Row";
-import { Button } from "../components/ui/Button";
-import { Badge, StatusMark } from "../components/ui/Badge";
-import { Kbd } from "../components/ui/Kbd";
-import { Tooltip } from "../components/ui/Tooltip";
-import { Dialog } from "../components/ui/Dialog";
-import { ProgressMeter } from "../components/ui/ProgressMeter";
-import { Skeleton } from "../components/ui/Skeleton";
-import { EmptyState } from "../components/ui/EmptyState";
-import { Divider } from "../components/ui/Divider";
-import { Card, InnerPanel } from "../components/ui/Surface";
+import { Button } from "../components/ui";
+import { Badge, StatusMark } from "../components/ui";
+import { Kbd } from "../components/ui";
+import { Tooltip } from "../components/ui";
+import { Dialog } from "../components/ui";
+import { ProgressMeter } from "../components/ui";
+import { Skeleton } from "../components/ui";
+import { EmptyState } from "../components/ui";
+import { Divider } from "../components/ui";
+import { Card, InnerPanel } from "../components/ui";
 
 /**
  * The second half of the workbench: marks, progress, surfaces and the overlay.

@@ -1,6 +1,6 @@
 import type { Field, FieldReading } from "@titlepipe/contract";
 import { readCited } from "../../shared/provenance";
-import { cx } from "../../components/ui/cx";
+import { cx } from "../../components/ui";
 import { FieldValueView } from "../field/FieldValueView";
 import { ReadingPair } from "../field/ReadingPair";
 import { StatePill } from "../field/StatePill";

@@ -1,181 +1,128 @@
-import * as React from "react"
+import type { ReactNode } from "react";
 import {
   Dialog as DialogPrimitive,
-  DialogTrigger as DialogTriggerPrimitive,
+  DialogTrigger,
   Heading,
-  ModalOverlay as ModalOverlayPrimitive,
-  Modal as ModalPrimitive,
-  type DialogProps as DialogPrimitiveProps,
-  type DialogTriggerProps as DialogTriggerPrimitiveProps,
-  type ModalOverlayProps as ModalOverlayPrimitiveProps,
-} from "react-aria-components"
+  Modal,
+  ModalOverlay,
+  type ModalOverlayProps,
+} from "react-aria-components";
 
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { XIcon } from "lucide-react"
+import { cx } from "./cx";
+import { chordOverlay } from "./overlaySurface";
 
-function DialogTrigger({ ...props }: DialogTriggerPrimitiveProps) {
-  return <DialogTriggerPrimitive data-slot="dialog-trigger" {...props} />
-}
+/**
+ * THE MODAL, AND THE TWO THINGS IT OWES THE CHORD LAYER.
+ *
+ * First: `role="dialog"`, which react-aria's Dialog supplies, is the FIRST
+ * clause of `overlayIsUp()` in `shared/chords.ts`. Second: the explicit
+ * `data-chord-scope="own"` is the SECOND clause, and it is on the OVERLAY
+ * rather than on the dialog so it exists from the moment the scrim mounts —
+ * before focus moves inside.
+ *
+ * That second one is not belt-and-braces. `chords.ts` pins the prototype bug
+ * where "? then c CONFIRMS A RULING from inside the cheat sheet — on a field
+ * carrying T1 exposure". A help overlay is a dialog; a dialog stands the
+ * vocabulary down; the ruling cannot fire.
+ *
+ * ══ ADAPTED FROM THE REGISTRY ═══════════════════════════════════════════════
+ *
+ * The registry drew `bg-black/10` with `backdrop-blur-xs` and a `ring-1
+ * ring-foreground/10` card at `rounded-xl`. RECIPES.md §Elevation asks for a
+ * `rgba(20,18,30,.45)` BLURRED scrim and `--shadow-modal`, so: `tp-scrim`
+ * (ui.css — the 3px blur is not on Tailwind's scale and check-rules bans the
+ * arbitrary value), `shadow-modal`, `rounded-lg` (14, rule 5's surface rung),
+ * and the ring is dropped — a shadow that heavy needs no hairline as well.
+ *
+ * MOTION: the scrim FADES (`tp-fade`) and the card RISES (`tp-enter`). The
+ * design note's "220ms pop" is spent as the entry token, 260ms
+ * cubic-bezier(.32,.72,0,1): rule 10 ships three timings and 220 is not one of
+ * them, and that curve decelerates to rest rather than overshooting. Nothing
+ * bounces. React Aria holds the unmount until the exit animation ends.
+ *
+ * `isDismissable` defaults TRUE, and Esc therefore closes. `chords.ts` calls
+ * resumption-without-a-click a test: nothing was unbound while this was open,
+ * so the very next keystroke after close is live again.
+ */
+export type DialogProps = Omit<ModalOverlayProps, "className" | "children"> & {
+  /** The dialog's accessible name. Required: an unnamed dialog is unnavigable. */
+  readonly title: string;
+  readonly children: ReactNode;
+};
 
-function DialogClose({
-  className,
-  variant = "outline",
-  size = "default",
-  ...props
-}: React.ComponentProps<typeof Button>) {
+export function Dialog({ title, children, isDismissable = true, ...props }: DialogProps) {
   return (
-    <Button
-      slot="close"
-      data-slot="dialog-close"
-      variant={variant}
-      size={size}
-      className={cn(className)}
+    <ModalOverlay
       {...props}
-    />
-  )
-}
-
-function DialogOverlay({
-  className,
-  children,
-  ...props
-}: Omit<ModalOverlayPrimitiveProps, "className" | "children"> & {
-  className?: string
-  children: React.ReactNode
-}) {
-  return (
-    <ModalOverlayPrimitive
+      {...chordOverlay}
+      isDismissable={isDismissable}
       data-slot="dialog-overlay"
-      className={cn(
-        "fixed inset-0 isolate z-50 bg-black/10 duration-100 data-entering:animate-in data-entering:fade-in-0 data-exiting:animate-out data-exiting:fade-out-0 supports-backdrop-filter:backdrop-blur-xs",
-        className
-      )}
-      {...props}
+      className="tp-fade tp-scrim tp-z-overlay fixed inset-0 flex items-center justify-center p-12"
     >
-      {children}
-    </ModalOverlayPrimitive>
-  )
-}
-
-function Dialog({
-  className,
-  children,
-  showCloseButton = true,
-  isDismissable = true,
-  ...props
-}: Omit<ModalOverlayPrimitiveProps, "className" | "children"> &
-  Pick<React.ComponentProps<typeof ModalPrimitive>, "isDismissable"> & {
-    className?: string
-    children: React.ReactNode
-    showCloseButton?: boolean
-  }) {
-  return (
-    <DialogOverlay isDismissable={isDismissable} {...props}>
-      <ModalPrimitive
-        data-slot="dialog-content"
-        className={cn(
-          "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none data-entering:animate-in data-entering:fade-in-0 data-entering:zoom-in-95 data-exiting:animate-out data-exiting:fade-out-0 data-exiting:zoom-out-95 sm:max-w-sm",
-          className
-        )}
-      >
+      <Modal className="tp-enter w-full max-w-280 outline-none">
         <DialogPrimitive
           data-slot="dialog"
-          className="[display:inherit] [gap:inherit] outline-none"
-        >
-          {children}
-          {showCloseButton && (
-            <DialogClose
-              variant="ghost"
-              className="absolute top-2 right-2"
-              size="icon-sm"
-            >
-              <XIcon
-              />
-              <span className="sr-only">Close</span>
-            </DialogClose>
+          className={cx(
+            "flex flex-col overflow-hidden rounded-lg bg-surface-panel shadow-modal outline-none",
           )}
+        >
+          <DialogHeaderBand title={title} />
+          {children}
         </DialogPrimitive>
-      </ModalPrimitive>
-    </DialogOverlay>
-  )
+      </Modal>
+    </ModalOverlay>
+  );
 }
 
-function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
+/**
+ * The header BAND, not a header card. RECIPES.md §Card: "11px w700 #8A8E98
+ * sentence case on #FBFBFD with a #EDEFF3 rule" — and nested cards are
+ * forbidden, so this has no border box, no radius and no shadow of its own.
+ *
+ * `slot="title"` is what gives the dialog its accessible name; react-aria
+ * wires `aria-labelledby` from it, which is why the title is not merely a
+ * styled span.
+ */
+function DialogHeaderBand({ title }: { readonly title: string }) {
+  return (
+    <div className="border-b border-line-subtle bg-control-fill px-12 py-6">
+      <Heading
+        slot="title"
+        data-slot="dialog-title"
+        className="font-sans text-label leading-flat font-bold text-ink-muted"
+      >
+        {title}
+      </Heading>
+    </div>
+  );
+}
+
+/** The dialog's body. One padding rung, so no screen invents a second. */
+export function DialogBody({ children }: { readonly children: ReactNode }) {
   return (
     <div
-      data-slot="dialog-header"
-      className={cn("flex flex-col gap-2", className)}
-      {...props}
-    />
-  )
+      data-slot="dialog-body"
+      className="flex flex-col gap-8 p-12 font-sans text-body leading-body text-ink-primary"
+    >
+      {children}
+    </div>
+  );
 }
 
-function DialogFooter({
-  className,
-  showCloseButton = false,
-  children,
-  ...props
-}: React.ComponentProps<"div"> & {
-  showCloseButton?: boolean
-}) {
+/**
+ * The action row. Sunken, hairline above, actions right — and rule 1 binds
+ * here harder than anywhere: AT MOST ONE primary button in this row, because a
+ * modal is usually the screen's decision and the accent is spent once.
+ */
+export function DialogFooter({ children }: { readonly children: ReactNode }) {
   return (
     <div
       data-slot="dialog-footer"
-      className={cn(
-        "-mx-4 -mb-4 flex flex-col-reverse gap-2 rounded-b-xl border-t bg-muted/50 p-4 sm:flex-row sm:justify-end",
-        className
-      )}
-      {...props}
+      className="flex justify-end gap-6 border-t border-line-subtle bg-control-fill px-12 py-8"
     >
       {children}
-      {showCloseButton && <DialogClose variant="outline">Close</DialogClose>}
     </div>
-  )
+  );
 }
 
-function DialogTitle({
-  className,
-  ...props
-}: Omit<React.ComponentProps<typeof Heading>, "slot">) {
-  return (
-    <Heading
-      slot="title"
-      data-slot="dialog-title"
-      className={cn(
-        "font-heading text-base leading-none font-medium",
-        className
-      )}
-      {...props}
-    />
-  )
-}
-
-function DialogDescription({
-  className,
-  ...props
-}: Omit<React.ComponentProps<"div">, "slot">) {
-  return (
-    <div
-      data-slot="dialog-description"
-      className={cn(
-        "text-sm text-muted-foreground *:[a]:underline *:[a]:underline-offset-3 *:[a]:hover:text-foreground",
-        className
-      )}
-      {...props}
-    />
-  )
-}
-
-export {
-  type DialogPrimitiveProps,
-  type DialogTriggerPrimitiveProps,
-  Dialog,
-  DialogClose,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogOverlay,
-  DialogTitle,
-  DialogTrigger,
-}
+export { DialogTrigger };

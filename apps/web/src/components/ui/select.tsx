@@ -1,277 +1,109 @@
-import * as React from "react"
+import type { ReactNode } from "react";
 import {
   Button as ButtonPrimitive,
-  composeRenderProps,
-  Header as HeaderPrimitive,
-  ListBoxItem as ListBoxItemPrimitive,
-  ListBox as ListBoxPrimitive,
-  ListBoxSection as ListBoxSectionPrimitive,
-  Popover as PopoverPrimitive,
-  SearchField,
+  ListBox,
   Select as SelectPrimitive,
-  SelectValue as SelectValuePrimitive,
-  Separator as SeparatorPrimitive,
-  type ListBoxProps,
-  type SearchFieldProps,
-  type ListBoxSectionProps as SelectGroupProps,
-  type SelectProps,
-  type SelectValueProps,
-} from "react-aria-components"
-
-import { cn } from "@/lib/utils"
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupInput,
-} from "@/components/ui/input-group"
-import { ChevronDownIcon, SearchIcon, CheckIcon } from "lucide-react"
-
-function Select<T extends object, M extends "single" | "multiple" = "single">({
-  className,
-  ...props
-}: SelectProps<T, M>) {
-  return (
-    <SelectPrimitive
-      data-slot="select"
-      className={cn("w-fit", className)}
-      {...props}
-    />
-  )
-}
-
-function SelectGroup<T extends object>({
-  className,
-  ...props
-}: SelectGroupProps<T>) {
-  return (
-    <ListBoxSectionPrimitive
-      data-slot="select-group"
-      className={cn("scroll-my-1 p-1", className)}
-      {...props}
-    />
-  )
-}
-
-function SelectValue<T extends object>({
-  className,
-  children,
-  ...props
-}: SelectValueProps<T>) {
-  return (
-    <SelectValuePrimitive
-      data-slot="select-value"
-      className={cn(
-        "flex flex-1 text-left data-placeholder:text-muted-foreground",
-        className
-      )}
-      {...props}
-    >
-      {typeof children === "function"
-        ? children
-        : ({ selectedItems, selectedText, defaultChildren }) =>
-            selectedItems.length > 1 ? selectedText : defaultChildren}
-    </SelectValuePrimitive>
-  )
-}
-
-function SelectTrigger({
-  className,
-  size = "default",
-  children,
-  ...props
-}: Omit<React.ComponentProps<typeof ButtonPrimitive>, "children"> & {
-  children?: React.ReactNode
-  size?: "sm" | "default"
-}) {
-  return (
-    <ButtonPrimitive
-      data-slot="select-trigger"
-      data-size={size}
-      className={cn(
-        "flex w-full items-center justify-between gap-1.5 rounded-lg border border-input bg-transparent py-2 pr-2 pl-2.5 text-sm whitespace-nowrap transition-colors outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 data-placeholder:text-muted-foreground data-[size=default]:h-8 data-[size=sm]:h-7 data-[size=sm]:rounded-[min(var(--radius-md),10px)] *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 dark:bg-input/30 dark:hover:bg-input/50 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-        className
-      )}
-      {...props}
-    >
-      {children}
-      <ChevronDownIcon className="pointer-events-none size-4 text-muted-foreground" />
-    </ButtonPrimitive>
-  )
-}
-
-function SelectContent({
-  className,
-  children,
-  placement = "bottom",
-  offset = 4,
-  crossOffset = 0,
-  ...props
-}: Omit<
-  React.ComponentProps<typeof PopoverPrimitive>,
-  "className" | "children"
-> & {
-  className?: string
-  children?: React.ReactNode
-}) {
-  return (
-    <SelectPopover
-      className={className}
-      placement={placement}
-      offset={offset}
-      crossOffset={crossOffset}
-      {...props}
-    >
-      <SelectList>{children}</SelectList>
-    </SelectPopover>
-  )
-}
-
-function SelectPopover({
-  className,
-  children,
-  placement = "bottom start",
-  offset = 4,
-  crossOffset = 0,
-  ...props
-}: Omit<
-  React.ComponentProps<typeof PopoverPrimitive>,
-  "className" | "children"
-> & {
-  className?: string
-  children?: React.ReactNode
-}) {
-  return (
-    <PopoverPrimitive
-      data-slot="select-content"
-      placement={placement}
-      offset={offset}
-      crossOffset={crossOffset}
-      className={cn("relative isolate z-50 w-(--trigger-width) min-w-36 origin-(--trigger-anchor-point) overflow-hidden rounded-lg bg-popover text-popover-foreground shadow-md ring-1 ring-foreground/10 duration-100 data-entering:animate-in data-entering:fade-in-0 data-entering:zoom-in-95 data-exiting:animate-out data-exiting:fade-out-0 data-exiting:zoom-out-95 data-[placement=bottom]:slide-in-from-top-2 data-[placement=left]:slide-in-from-right-2 data-[placement=right]:slide-in-from-left-2 data-[placement=top]:slide-in-from-bottom-2 **:data-[slot$=-item]:data-focused:bg-foreground/10", className )}
-      {...props}
-    >
-      {children}
-    </PopoverPrimitive>
-  )
-}
-
-function SelectList<T extends object>({
-  className,
-  ...props
-}: ListBoxProps<T>) {
-  return (
-    <ListBoxPrimitive
-      data-slot="select-list"
-      className={cn(
-        "group/select-list max-h-[inherit] overflow-x-hidden overflow-y-auto p-0 outline-hidden",
-        className
-      )}
-      {...props}
-    />
-  )
-}
-
-function SelectInput({ className, ...props }: SearchFieldProps) {
-  return (
-    <SearchField
-      {...props}
-      autoFocus
-      data-slot="select-input-wrapper"
-      className={cn("p-1 pb-0", className)}
-    >
-      <InputGroup>
-        <InputGroupInput
-          data-slot="select-input"
-          className="[&::-webkit-search-cancel-button]:hidden"
-        />
-        <InputGroupAddon>
-          <SearchIcon className="size-4 shrink-0 opacity-50" />
-        </InputGroupAddon>
-      </InputGroup>
-    </SearchField>
-  )
-}
-
-function SelectLabel({
-  className,
-  ...props
-}: React.ComponentProps<typeof HeaderPrimitive>) {
-  return (
-    <HeaderPrimitive
-      data-slot="select-label"
-      className={cn("px-1.5 py-1 text-xs text-muted-foreground", className)}
-      {...props}
-    />
-  )
-}
-
-function SelectItem({
-  className,
-  children,
-  ...props
-}: React.ComponentProps<typeof ListBoxItemPrimitive>) {
-  return (
-    <ListBoxItemPrimitive
-      data-slot="select-item"
-      textValue={typeof children === "string" ? children : undefined}
-      className={cn(
-        "relative flex w-full cursor-default items-center gap-1.5 rounded-md py-1 pr-8 pl-1.5 text-sm outline-hidden select-none focus:bg-accent focus:text-accent-foreground not-data-[variant=destructive]:focus:**:text-accent-foreground data-focused:bg-accent data-focused:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
-        className
-      )}
-      {...props}
-    >
-      {composeRenderProps(children, (children, { isSelected }) => (
-        <>
-          <span className="flex flex-1 shrink-0 gap-2 whitespace-nowrap">
-            {children}
-          </span>
-          <span className="pointer-events-none absolute right-2 flex size-4 items-center justify-center">
-            {isSelected ? (
-              <CheckIcon className="pointer-events-none" />
-            ) : null}
-          </span>
-        </>
-      ))}
-    </ListBoxItemPrimitive>
-  )
-}
-
-function SelectSeparator({
-  className,
-  ...props
-}: React.ComponentProps<typeof SeparatorPrimitive>) {
-  return (
-    <SeparatorPrimitive
-      data-slot="select-separator"
-      className={cn("pointer-events-none -mx-1 my-1 h-px bg-border", className)}
-      {...props}
-    />
-  )
-}
-
-function SelectEmpty({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="select-empty"
-      className={cn(
-        "hidden w-full justify-center py-2 text-center text-sm text-muted-foreground group-data-empty/select-list:flex",
-        className
-      )}
-      {...props}
-    />
-  )
-}
-
-export {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectInput,
-  SelectItem,
-  SelectLabel,
-  SelectList,
-  SelectPopover,
-  SelectSeparator,
-  SelectTrigger,
   SelectValue,
-  SelectEmpty,
+  type SelectProps as SelectPrimitiveProps,
+} from "react-aria-components";
+import { ChevronDownIcon } from "lucide-react";
+
+import { cx } from "./cx";
+import { disabledAttributes, type Disablement } from "./disabled";
+import { BlockedHint } from "./blockedHint";
+import { Popover } from "./popover";
+
+/**
+ * A SELECT IS A COMPOSITE, WHICH MEANS IT OWNS ITS KEYS WHILE OPEN.
+ *
+ * The scope mark is NOT set in this file. It rides on `Popover`, which every
+ * anchored overlay in the kit portals through, and `overlaySurface.ts` explains
+ * why the mark belongs on the panel rather than on the listbox: `overlayIsUp()`
+ * must see it from the moment the panel mounts, one frame before focus reaches
+ * the first option, and `chords.ts` records that one frame is enough for a held
+ * key to repeat. Without it, `q` inside an open Select would both typeahead to
+ * "Quarantine" and fire the global escalate chord on the field behind it.
+ *
+ * ══ ADAPTED FROM THE REGISTRY ═══════════════════════════════════════════════
+ *
+ * The registry shipped eleven exports — SelectContent, SelectPopover,
+ * SelectList, SelectInput (a whole SearchField inside the menu), SelectGroup,
+ * SelectLabel, SelectSeparator, SelectEmpty. That is a ComboBox wearing a
+ * Select's name, and `combobox.tsx` is where a searchable list lives. This is
+ * a trigger, a panel and options: three exports, and a caller who needs search
+ * reaches for the component that is named after it.
+ *
+ * Trigger geometry is RECIPES.md §Inputs: 38px, radius 10, `--color-control-fill`,
+ * `--color-control-border`, 13px. `rounded-lg`(8) → `rounded-md`(10 here);
+ * `border-input` → `border-control-border`; `text-muted-foreground` →
+ * `text-ink-muted`; every `dark:` variant deleted.
+ *
+ * `isDisabled` is not in the public props. Rule 9 says every disabled control
+ * states its reason, so `disabledBecause` is the only way to turn one off —
+ * see `disabled.ts`.
+ */
+export type SelectProps = Omit<
+  SelectPrimitiveProps<object>,
+  "isDisabled" | "className" | "children"
+> &
+  Disablement & {
+    /** The control's accessible name. An unnamed select is unusable. */
+    readonly label: string;
+    /** `Option` elements, or a Collection render over them. */
+    readonly children: ReactNode;
+    readonly placeholder?: string | undefined;
+  };
+
+export function Select({
+  label,
+  disabledBecause,
+  placeholder = "Select…",
+  children,
+  ...props
+}: SelectProps) {
+  return (
+    /* `BlockedHint` carries the `title` react-aria's `filterDOMProps` drops
+       from a composite — see `blockedHint.tsx`. */
+    <BlockedHint reason={disabledBecause}>
+      <SelectPrimitive
+        {...props}
+        {...disabledAttributes(disabledBecause)}
+        aria-label={label}
+        data-slot="select"
+        className="flex flex-col gap-3"
+      >
+        <ButtonPrimitive
+          data-slot="select-trigger"
+          className={cx(
+            "tp-state tp-press tp-ring flex h-19 w-full cursor-pointer items-center justify-between",
+            "gap-4 rounded-md border border-control-border bg-control-fill px-5 text-left",
+            "font-sans text-meta leading-close text-ink-primary outline-none",
+            "data-disabled:cursor-not-allowed data-disabled:text-ink-disabled",
+          )}
+        >
+          {/*
+           * The placeholder is SelectValue's CHILD, not a prop on the trigger:
+           * react-aria renders children only while nothing is selected. Passing
+           * it anywhere else makes it a dead prop.
+           */}
+          <SelectValue className="truncate">
+            {({ isPlaceholder, selectedText }) =>
+              isPlaceholder ? placeholder : selectedText
+            }
+          </SelectValue>
+          {/*
+           * The ONE icon here, and rule 7 ("no icon soup") is why it is allowed:
+           * a disclosure arrow is structural affordance — it says the control
+           * opens — rather than decoration.
+           */}
+          <ChevronDownIcon aria-hidden size={16} className="shrink-0 text-ink-muted" />
+        </ButtonPrimitive>
+        <Popover>
+          <ListBox className="flex flex-col gap-1 p-2 outline-none">{children}</ListBox>
+        </Popover>
+      </SelectPrimitive>
+    </BlockedHint>
+  );
 }
+
+export { Option, type OptionProps } from "./option";

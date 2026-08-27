@@ -1,7 +1,7 @@
 import type { ComponentProps } from "react";
 import type { FieldValue } from "../../shared/provenance";
 import { assertNever } from "../../shared/provenance";
-import { cx } from "../../components/ui/cx";
+import { cx } from "../../components/ui";
 import { CitationRef } from "./CitationRef";
 import { NoValueChip } from "./NoValueChip";
 

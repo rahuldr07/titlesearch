@@ -2,7 +2,7 @@ import { onPanel } from "../panelGround";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect } from "storybook/test";
 import type { Field, FieldReading } from "@titlepipe/contract";
-import { Button } from "../../components/ui/Button";
+import { Button } from "../../components/ui";
 import { DecisionCard } from "./DecisionCard";
 
 /**

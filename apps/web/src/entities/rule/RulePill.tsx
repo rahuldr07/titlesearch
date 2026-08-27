@@ -1,5 +1,5 @@
 import type { Rule } from "@titlepipe/contract";
-import { cx } from "../../components/ui/cx";
+import { cx } from "../../components/ui";
 
 /**
  * A RULE, AND WHETHER IT CAN AFFECT ANYTHING.

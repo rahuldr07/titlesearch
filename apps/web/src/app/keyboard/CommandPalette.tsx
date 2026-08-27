@@ -3,7 +3,7 @@ import { Dialog, Modal, ModalOverlay } from "react-aria-components";
 import type { GrantedPermissionSchema } from "@titlepipe/contract";
 import { useCommands } from "./commands";
 import { useOverlayOpen, useOverlays } from "./overlays";
-import { cx } from "../../components/ui/cx";
+import { cx } from "../../components/ui";
 
 /**
  * THE COMMAND PALETTE — arrow/enter navigation over the commands in

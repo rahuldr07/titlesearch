@@ -1,239 +1,138 @@
-import * as React from "react"
+import type { ReactNode } from "react";
 import {
   Autocomplete,
-  Collection,
-  composeRenderProps,
-  Header,
-  Input,
+  Input as InputPrimitive,
   Menu,
   MenuItem,
-  MenuSection,
   SearchField,
-  Separator,
   useFilter,
-  type AutocompleteProps,
-  type InputProps,
   type MenuItemProps,
   type MenuProps,
-  type MenuSectionProps,
-  type SeparatorProps,
-} from "react-aria-components"
+} from "react-aria-components";
+import { SearchIcon } from "lucide-react";
 
-import { cn } from "@/lib/utils"
-import {
-  Dialog,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
-import {
-  InputGroup,
-  InputGroupAddon,
-} from "@/components/ui/input-group"
-import { SearchIcon, CheckIcon } from "lucide-react"
+import { cx } from "./cx";
+import { collectionItem, markGutter } from "./overlaySurface";
 
-function Command({
-  className,
-  dir,
-  style,
-  ...props
-}: Omit<AutocompleteProps, "className" | "style"> & {
-  className?: string
-  dir?: React.HTMLAttributes<HTMLDivElement>["dir"]
-  style?: React.CSSProperties
-}) {
-  const { contains } = useFilter({ sensitivity: "base" })
+/**
+ * THE COMMAND MENU — THE ONE OVERLAY THE CHORD LAYER WAS WRITTEN FOR.
+ *
+ * `CommandPalette`, the dialog-wrapped form, lives in `commandPalette.tsx`;
+ * this file is the filtering shell and its three parts, which are also usable
+ * inline inside a panel.
+ *
+ * `chords.ts` pins the prototype bug in this component's exact shape: "? then c
+ * CONFIRMS A RULING from inside the cheat sheet — on a field carrying T1
+ * exposure". A palette is opened BY a chord, is full of single letters, and
+ * sits over a screen whose fields the same letters act on. If any overlay in
+ * this kit gets the mark wrong, this is the one that costs a ruling.
+ *
+ * It is covered THREE ways and none is redundant:
+ *
+ *   1. `Dialog` renders `role="dialog"` — `overlayIsUp()`'s first clause.
+ *   2. `Dialog`'s overlay carries `data-chord-scope="own"` — the second clause,
+ *      live from the moment the scrim mounts, before focus moves inside.
+ *   3. The search input is a real `<input>`, which `focusOwnsKeys` catches on
+ *      tagName, and the list is `role="menu"` with `role="menuitem"` children —
+ *      both in the role tables. So even a palette rendered inline, outside a
+ *      dialog, still owns its keys.
+ *
+ * ══ ADAPTED FROM THE REGISTRY ═══════════════════════════════════════════════
+ *
+ * `rounded-xl!` → `rounded-lg` (14) and the `!` is gone — check-rules.mjs bans
+ * Tailwind's important modifier, and it was there to beat the Dialog's own
+ * radius, which now matches. `bg-popover`/`text-popover-foreground` →
+ * `bg-surface-panel`/`text-ink-primary`. `text-sm`/`text-xs` → the 16px body
+ * and 13px meta rungs. The registry's `CommandShortcut` — a right-aligned
+ * `text-muted-foreground` span — becomes `CommandKeys`, drawn in MONO, because
+ * rule 3 names kbd as data.
+ */
+/**
+ * The filtering shell, usable inline as well as in the dialog.
+ *
+ * `useFilter({ sensitivity: "base" })` is the Intl-backed comparison
+ * react-aria ships: it matches "Reçu" from "recu", which a `toLowerCase()`
+ * `includes` does not. County names and grantor strings are exactly the data
+ * where that is not academic.
+ */
+export function Command({ children }: { readonly children: ReactNode }) {
+  const { contains } = useFilter({ sensitivity: "base" });
   return (
-    <div
-      data-slot="command"
-      dir={dir}
-      className={cn(
-        "flex size-full flex-col overflow-hidden rounded-xl! bg-popover p-1 text-popover-foreground",
-        className
-      )}
-      style={style}
-    >
-      <Autocomplete {...props} filter={props.filter || contains}>
-        {props.children}
-      </Autocomplete>
+    <div data-slot="command" className="flex flex-col">
+      <Autocomplete filter={contains}>{children}</Autocomplete>
     </div>
-  )
+  );
 }
 
-function CommandDialog({
-  title = "Command Palette",
-  description = "Search for a command to run...",
-  children,
-  open,
-  onOpenChange,
-  className,
-  showCloseButton = false,
-  ...props
-}: Omit<
-  React.ComponentProps<typeof Dialog>,
-  "children" | "className" | "isOpen" | "onOpenChange"
-> & {
-  title?: string
-  description?: string
-  open?: boolean
-  onOpenChange?: (isOpen: boolean) => void
-  className?: string
-  showCloseButton?: boolean
-  children: React.ReactNode
-}) {
-  return (
-    <Dialog
-      isOpen={open}
-      onOpenChange={onOpenChange}
-      className={cn(
-        "top-1/3 translate-y-0 overflow-hidden rounded-xl! p-0",
-        className
-      )}
-      showCloseButton={showCloseButton}
-      isDismissable
-      {...props}
-    >
-      <DialogHeader className="sr-only">
-        <DialogTitle>{title}</DialogTitle>
-        <DialogDescription>{description}</DialogDescription>
-      </DialogHeader>
-      {children}
-    </Dialog>
-  )
-}
-
-function CommandInput({ className, ...props }: InputProps) {
+/**
+ * The search row. A BAND inside the dialog's surface, not a card and not an
+ * input box: nested cards are forbidden (RECIPES.md §Card), and an input
+ * chrome box drawn inside a panel that is already a box is the same defect one
+ * rung down. So it is a hairline-ruled row on `--color-control-fill` with no
+ * border and no radius of its own.
+ */
+export function CommandInput({ placeholder = "Search commands…" }: { readonly placeholder?: string }) {
   return (
     <SearchField
       autoFocus
-      aria-label={props.placeholder || "Search"}
-      data-slot="command-input-wrapper"
-      className="p-1 pb-0"
+      aria-label={placeholder}
+      data-slot="command-input"
+      className="flex items-center gap-5 border-b border-line-subtle bg-control-fill px-8 py-6"
     >
-      <InputGroup className="h-8! rounded-lg! border-input/30 bg-input/30 shadow-none! *:data-[slot=input-group-addon]:pl-2!">
-        <Input
-          {...props}
-          data-slot="command-input"
-          className={cn(
-            "w-full text-sm outline-hidden disabled:cursor-not-allowed disabled:opacity-50 [&::-webkit-search-cancel-button]:hidden",
-            className
-          )}
-        />
-        <InputGroupAddon>
-          <SearchIcon className="size-4 shrink-0 opacity-50" />
-        </InputGroupAddon>
-      </InputGroup>
+      <SearchIcon aria-hidden size={16} className="shrink-0 text-ink-muted" />
+      <InputPrimitive
+        placeholder={placeholder}
+        className={cx(
+          "min-w-0 flex-1 bg-transparent font-sans text-body leading-close",
+          "text-ink-primary outline-none placeholder:text-ink-muted",
+        )}
+      />
     </SearchField>
-  )
+  );
 }
 
-function CommandList<T extends object>({ className, ...props }: MenuProps<T>) {
+/** The results list. `role="menu"`, and its items are `role="menuitem"`. */
+export function CommandList<T extends object>(props: MenuProps<T>) {
   return (
     <Menu
       {...props}
       data-slot="command-list"
-      className={cn(
-        "no-scrollbar max-h-72 scroll-py-1 overflow-x-hidden overflow-y-auto outline-none",
-        className
+      className="flex max-h-160 flex-col gap-1 overflow-auto p-2 outline-none"
+      renderEmptyState={() => (
+        <div className="px-6 py-8 text-center font-sans text-meta leading-close text-ink-muted">
+          No commands match.
+        </div>
       )}
     />
-  )
+  );
 }
 
-function CommandEmpty({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="command-empty"
-      className={cn("py-6 text-center text-sm", className)}
-      {...props}
-    />
-  )
-}
+export type CommandItemProps = Omit<MenuItemProps, "className" | "children" | "textValue"> & {
+  /** Plain text. Doubles as the filter and typeahead string. */
+  readonly children: string;
+  /** The chord that runs this command, e.g. "c". Rendered in mono — rule 3. */
+  readonly keys?: string | undefined;
+};
 
-function CommandGroup<T extends object>({
-  className,
-  children,
-  items,
-  heading,
-  ...props
-}: MenuSectionProps<T> & { heading?: string }) {
-  return (
-    <MenuSection
-      data-slot="command-group"
-      className={cn(
-        "overflow-hidden p-1 text-foreground **:[[cmdk-group-heading]]:px-2 **:[[cmdk-group-heading]]:py-1.5 **:[[cmdk-group-heading]]:text-xs **:[[cmdk-group-heading]]:font-medium **:[[cmdk-group-heading]]:text-muted-foreground",
-        className
-      )}
-      {...props}
-    >
-      {heading && <Header cmdk-group-heading="">{heading}</Header>}
-      <Collection items={items}>{children}</Collection>
-    </MenuSection>
-  )
-}
-
-function CommandSeparator({ className, ...props }: SeparatorProps) {
-  return (
-    <Separator
-      data-slot="command-separator"
-      className={cn("-mx-1 h-px bg-border", className)}
-      {...props}
-    />
-  )
-}
-
-function CommandItem<T extends object>({
-  className,
-  children,
-  textValue,
-  ...props
-}: MenuItemProps<T>) {
+export function CommandItem({ children, keys, ...props }: CommandItemProps) {
   return (
     <MenuItem
       {...props}
+      textValue={children}
       data-slot="command-item"
-      className={cn(
-        "group/command-item relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none in-data-[slot=dialog-content]:rounded-lg! data-focused:bg-muted data-focused:text-foreground data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50 data-selected:bg-muted data-selected:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 data-focused:*:[svg]:text-foreground data-selected:*:[svg]:text-foreground",
-        className
-      )}
-      textValue={
-        textValue || (typeof children === "string" ? children : undefined)
-      }
+      className={cx(collectionItem, "justify-between")}
     >
-      {composeRenderProps(children, (children) => (
-        <>
-          {children}
-          <CheckIcon className="ml-auto opacity-0 group-has-data-[slot=command-shortcut]/command-item:hidden group-data-[checked=true]/command-item:opacity-100" />
-        </>
-      ))}
-    </MenuItem>
-  )
-}
-
-function CommandShortcut({
-  className,
-  ...props
-}: React.ComponentProps<"span">) {
-  return (
-    <span
-      data-slot="command-shortcut"
-      className={cn(
-        "ml-auto text-xs tracking-widest text-muted-foreground group-data-focused/command-item:text-foreground group-data-selected/command-item:text-foreground",
-        className
+      <span className="flex min-w-0 items-center gap-4">
+        {/* The ✓ gutter keeps every label on one left edge whether or not a
+            row is selected. Rule 6's mark, not a lucide CheckIcon. */}
+        <span aria-hidden className={markGutter} />
+        <span className="truncate">{children}</span>
+      </span>
+      {keys !== undefined && (
+        <kbd className="shrink-0 rounded-xs border border-line-strong bg-surface-sunken px-3 py-1 font-mono text-label leading-flat text-ink-muted">
+          {keys}
+        </kbd>
       )}
-      {...props}
-    />
-  )
-}
-
-export {
-  Command,
-  CommandDialog,
-  CommandInput,
-  CommandList,
-  CommandEmpty,
-  CommandGroup,
-  CommandItem,
-  CommandShortcut,
-  CommandSeparator,
+    </MenuItem>
+  );
 }

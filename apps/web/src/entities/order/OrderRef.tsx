@@ -1,4 +1,4 @@
-import { cx } from "../../components/ui/cx";
+import { cx } from "../../components/ui";
 
 /**
  * AN ORDER REFERENCE. Rule 3's first named example: "Mono (--font-data) is for

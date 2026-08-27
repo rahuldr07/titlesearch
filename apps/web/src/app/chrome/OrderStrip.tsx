@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useRouterState } from "@tanstack/react-router";
 import { OrderContextResponse } from "@titlepipe/contract";
 import { get } from "../../shared/api";
-import { cx } from "../../components/ui/cx";
+import { cx } from "../../components/ui";
 
 /**
  * THE ORDER BAR — white, hairline bottom, above `main` and inside the content

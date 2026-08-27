@@ -1,5 +1,5 @@
 import { diffChars } from "diff";
-import { cx } from "../../components/ui/cx";
+import { cx } from "../../components/ui";
 
 /**
  * THE DIFFERING CHARACTERS, AND ONLY THOSE.

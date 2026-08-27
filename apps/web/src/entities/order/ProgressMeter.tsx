@@ -1,4 +1,4 @@
-import { cx } from "../../components/ui/cx";
+import { cx } from "../../components/ui";
 
 /**
  * THE 18-DOT PROGRESS METER (design §Screens 4 and 7).

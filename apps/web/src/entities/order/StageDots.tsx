@@ -1,4 +1,4 @@
-import { cx } from "../../components/ui/cx";
+import { cx } from "../../components/ui";
 
 /**
  * THE SEQUENTIAL STAGE TIMELINE (design §Screens 6, "Sequential stages
