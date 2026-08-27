@@ -66,6 +66,7 @@ same commit.
 | `plans/backend/03-identity.md` | AUTHORITATIVE | Plan 03 DRAFT — four human gates open; not executable until ruled |
 | `plans/2026-07-28-titlepipe-revised-design.md` + six `2026-07-30-design-fidelity-*` + `2026-07-30-consistency-audit.md` | RECORD | The design-fidelity wave plans, as executed |
 | `specs/2026-07-30-design-fidelity-design.md` | RECORD | The wave spec |
+| `specs/2026-08-27-frontend-dependency-set-design.md` | AUTHORITATIVE | The rebuild's dependency set — kit, observability, manifest, execution steps (owner-approved 2026-08-27) |
 
 ## docs/frontend/
 
