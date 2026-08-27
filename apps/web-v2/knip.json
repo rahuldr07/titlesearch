@@ -3,6 +3,7 @@
   "entry": [
     ".storybook/{main,preview}.ts",
     "e2e/**/*.spec.ts",
+    "e2e/helpers/*.ts",
     "e2e-live/**/*.spec.ts",
     "*.test.ts"
   ],
@@ -14,15 +15,10 @@
     "@tanstack/react-virtual",
     "react-hook-form",
     "@hookform/resolvers",
-    "valibot",
-    "cmdk",
     "lucide-react",
     "sonner",
-    "react-pdf",
-    "pdfjs-dist",
     "msw",
-    "@testing-library/react",
-    "@axe-core/playwright"
+    "@testing-library/react"
   ],
   "ignoreBinaries": ["psql"],
   "rules": {
