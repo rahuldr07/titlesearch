@@ -1,0 +1,68 @@
+/*
+ * THE HATCH, AND WHY IT IS CSS RATHER THAN A CLASS LIST.
+ *
+ * `tokens.css` §"the four no-value states": each NA member carries a border
+ * STYLE and a FILL as well as an ink, "and that is what survives greyscale and
+ * a red-green deficiency both." Three of the four express their fill with a
+ * Tailwind utility. NOT_STATED's is a hatch stripe, which no utility spells, and
+ * `check-rules.mjs` bans the arbitrary value that would spell it inline.
+ *
+ * Also the paper register (rule 8): grain and tilt are CSS art — the design
+ * README is explicit that there are "no binary assets" and "all paper/scan
+ * artwork is CSS".
+ */
+
+/* NOT_STATED. The document is silent: a struck-through stock, not an empty one. */
+@utility tp-na-hatch {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    transparent 0 3px,
+    var(--color-na-silent-hatch) 3px 4px
+  );
+}
+
+/*
+ * PAPER GRAIN. Rule 8: evidence renders as paper — warm stock, never a grey
+ * placeholder bar. Two crossed hairline gradients read as laid stock at 100%
+ * and disappear into texture below it, which is what a scan does.
+ */
+@utility tp-paper-grain {
+  background-image:
+    repeating-linear-gradient(0deg, transparent 0 3px, var(--color-scan-line-soft) 3px 4px),
+    repeating-linear-gradient(90deg, transparent 0 5px, var(--color-scan-line-soft) 5px 6px);
+  background-blend-mode: multiply;
+}
+
+/*
+ * The sheet's own tilt (−.35°) and the clerk stamp's (−3.5°), per design
+ * §Screens 7. Ten times the sheet's angle, because a stamp is applied by a hand
+ * and a page is only ever laid down slightly crooked.
+ */
+@utility tp-paper-tilt {
+  transform: rotate(-0.35deg);
+}
+
+@utility tp-clerk-stamp {
+  transform: rotate(-3.5deg);
+}
+
+/*
+ * THE DEGRADED-SCAN FILTER. `--filter-*` is NOT a Tailwind v4 theme namespace
+ * (tokens.css §layering says so of --space-*, --z-* and --filter-* alike), so
+ * `filter-scan` generates no utility and would have rendered nothing while the
+ * build stayed green — the exact silent failure the token file warns about.
+ */
+@utility tp-scan-filter {
+  filter: var(--filter-scan);
+}
+
+/*
+ * THE CITATION BOX: "1.5px accent + 13% fill" (design §Screens 7). Neither is
+ * expressible as a utility — there is no 1.5px border width in Tailwind's scale
+ * and check-rules.mjs bans the arbitrary value that would spell one. The fill
+ * is the evidence mark's own token (16%, the register's value) with the accent
+ * rule drawn at the design's weight.
+ */
+@utility tp-citation-box {
+  border: 1.5px solid var(--color-border-evidence);
+}
