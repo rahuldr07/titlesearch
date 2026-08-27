@@ -77,9 +77,17 @@ export function RadioGroup({ label, disabledBecause, children, ...props }: Radio
     <AriaRadioGroup
       {...props}
       {...disabledAttributes(disabledBecause)}
+      aria-label={label}
       className="flex flex-col gap-4"
     >
-      <span className="font-sans text-meta leading-close font-medium text-ink-secondary">
+      {/*
+       * The visible text and `aria-label` carry the same string. React Aria
+       * warned that the group had no accessible name: a bare <span> beside a
+       * group is not wired to it, and RAC's <Label> is only picked up inside
+       * the components that declare a label slot. Duplicating deliberately,
+       * because a group whose name exists only visually is unnavigable.
+       */}
+      <span aria-hidden className="font-sans text-meta leading-close font-medium text-ink-secondary">
         {label}
       </span>
       {children}

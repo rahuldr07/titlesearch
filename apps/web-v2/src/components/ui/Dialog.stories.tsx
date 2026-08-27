@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, userEvent, within } from "storybook/test";
 import { Dialog, DialogTrigger } from "./Dialog";
 import { Button } from "./Button";
 
@@ -45,6 +46,29 @@ export const WithActions: Story = {
       </Dialog>
     </DialogTrigger>
   ),
+};
+
+/**
+ * `? then c CONFIRMS A RULING from inside the cheat sheet` — the prototype bug
+ * `shared/chords.ts` pins. An overlay that is up stands the vocabulary down,
+ * and the mark sits on the ModalOverlay so it exists from the moment the scrim
+ * mounts rather than from when focus lands inside.
+ */
+export const OpenMarksItsChordScope: Story = {
+  args: { title: "Keyboard shortcuts", children: null },
+  render: (args) => (
+    <DialogTrigger>
+      <Button>Show shortcuts</Button>
+      <Dialog {...args}>
+        <p className="font-sans text-body leading-body text-ink-secondary">C confirms.</p>
+      </Dialog>
+    </DialogTrigger>
+  ),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(await within(canvasElement).findByRole("button"));
+    await expect(document.querySelector("[role='dialog']")).not.toBe(null);
+    await expect(document.querySelector("[data-chord-scope='own']")).not.toBe(null);
+  },
 };
 
 /** Not dismissable: the reader must answer rather than press Esc past it. */

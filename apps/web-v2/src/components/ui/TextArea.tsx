@@ -4,7 +4,8 @@ import {
   type TextFieldProps,
 } from "react-aria-components";
 import { cx } from "./cx";
-import { FieldShell, controlClass, type FieldShellProps } from "./Input";
+import { FieldShell, type FieldShellProps } from "./Input";
+import { controlClass } from "./fieldChrome";
 import { disabledAttributes } from "./disabled";
 
 /**

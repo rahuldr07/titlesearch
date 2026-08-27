@@ -7,9 +7,11 @@ import {
 } from "react-aria-components";
 import { ChevronDown } from "lucide-react";
 import { cx } from "./cx";
-import { FieldShell, controlClass, type FieldShellProps } from "./Input";
+import { FieldShell, type FieldShellProps } from "./Input";
+import { controlClass } from "./fieldChrome";
 import { Popover } from "./Popover";
-import { ListBox, listBoxClass } from "./Option";
+import { ListBox } from "./Option";
+import { listBoxClass } from "./fieldChrome";
 import { disabledAttributes } from "./disabled";
 
 /**
@@ -62,7 +64,14 @@ export function Select({
             "tp-ring flex cursor-pointer items-center justify-between gap-4 text-left",
           )}
         >
-          <SelectValue className="truncate data-placeholder:text-ink-muted" />
+          {/*
+           * The placeholder is SelectValue's child, not a prop on the trigger:
+           * react-aria renders children only while nothing is selected. Passing
+           * it anywhere else made it a dead prop, which is what lint caught.
+           */}
+          <SelectValue className="truncate data-placeholder:text-ink-muted">
+            {({ isPlaceholder, selectedText }) => (isPlaceholder ? placeholder : selectedText)}
+          </SelectValue>
           <ChevronDown aria-hidden size={16} className="shrink-0 text-ink-muted" />
         </AriaButton>
       </FieldShell>

@@ -8,9 +8,11 @@ import {
 } from "react-aria-components";
 import { ChevronDown } from "lucide-react";
 import { cx } from "./cx";
-import { FieldShell, controlClass, type FieldShellProps } from "./Input";
+import { FieldShell, type FieldShellProps } from "./Input";
+import { controlClass } from "./fieldChrome";
 import { Popover } from "./Popover";
-import { ListBox, listBoxClass } from "./Option";
+import { ListBox } from "./Option";
+import { listBoxClass } from "./fieldChrome";
 import { disabledAttributes } from "./disabled";
 
 /**

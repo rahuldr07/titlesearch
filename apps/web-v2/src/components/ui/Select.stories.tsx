@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, userEvent, within } from "storybook/test";
 import { Select } from "./Select";
 import { Option } from "./Option";
 
@@ -27,6 +28,28 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
+
+/**
+ * THE CHORD CONTRACT, ASSERTED IN A REAL BROWSER.
+ *
+ * Not a visual story. `shared/chords.ts` stands the global single-key
+ * vocabulary down inside `[data-chord-scope='own']`, and this checks that the
+ * attribute is actually in the document once the listbox is up — the other half
+ * of a handshake whose handler side is tested by
+ * `e2e/invariants/chord-suppression.spec.ts`.
+ *
+ * Without it, `q` inside an open Select both typeaheads to "Quarantine" AND
+ * fires the global escalate chord on the field behind it.
+ */
+export const OpenMarksItsChordScope: Story = {
+  play: async ({ canvasElement }) => {
+    await userEvent.click(await within(canvasElement).findByRole("button"));
+    await expect(document.querySelector("[data-chord-scope='own']")).not.toBe(null);
+    // The listbox is a <div role="listbox">, which the prototype's tagName
+    // guard is structurally incapable of seeing. This is why the mark exists.
+    await expect(document.querySelector("[role='listbox']")).not.toBe(null);
+  },
+};
 
 export const Selected: Story = { args: { defaultSelectedKey: "full" } };
 

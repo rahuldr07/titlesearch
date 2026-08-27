@@ -9,6 +9,7 @@ import {
 } from "react-aria-components";
 import { cx } from "./cx";
 import { disabledAttributes, type Disablement } from "./disabled";
+import { controlClass, labelClass } from "./fieldChrome";
 
 /**
  * A LABELLED TEXT FIELD, AND THE LABEL IS NOT OPTIONAL.
@@ -33,21 +34,6 @@ export type FieldShellProps = Disablement & {
    */
   readonly errorMessage?: string | undefined;
 };
-
-/** 11px tracked-free sentence-case label. Rule 3: sans, never mono. */
-export const labelClass = "font-sans text-meta leading-close font-medium text-ink-secondary";
-
-/**
- * The input box itself, shared by Input, Select's button, ComboBox and
- * TextArea so all four sit on one geometry. Rule 5: 10px, the control radius.
- */
-export const controlClass = [
-  "tp-state tp-target w-full rounded-md border border-control-border bg-control-fill",
-  "px-8 py-6 font-sans text-body leading-close text-ink-primary",
-  "placeholder:text-ink-muted",
-  "focus:border-action focus:outline-2 focus:outline-offset-0 focus:outline-action",
-  "disabled:bg-surface-sunken disabled:text-ink-disabled disabled:cursor-not-allowed",
-];
 
 /** Label + control + description/error, in the order a screen reader wants. */
 export function FieldShell({
