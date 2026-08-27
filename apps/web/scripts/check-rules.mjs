@@ -71,6 +71,31 @@ const BANNED = [
     why: "spacing/radii/size must come from tokens, not arbitrary values (§6)",
   },
   {
+    /*
+     * RULE 2, THE OTHER FOUR DOORS. Six type sizes only — 11/13/16/20/28/40.
+     *
+     * `tokens.css`'s `--text-*: initial` reset genuinely works: built against
+     * real Tailwind 4.3.3, `text-sm` and `text-2xl` emit NOTHING. But a
+     * namespace reset only removes NAMED scale members. It cannot touch
+     * arbitrary-value syntax, and the rule above cannot either — it requires
+     * the bracket to open on a digit.
+     *
+     * REVIEW-02 built all six evasions and ran them through the compiler. Two
+     * were caught. These four were not, and each emits a seventh font-size:
+     *
+     *     text-[length:13px]     → font-size: 13px
+     *     [font-size:13px]       → font-size: 13px
+     *     text-[calc(13px)]      → font-size: calc(13px)
+     *     text-(length:--x)      → font-size: var(--x)
+     *
+     * Matched here by SHAPE rather than by unit, because `calc()` and a custom
+     * property have no unit to match on.
+     */
+    name: "seventh-type-size",
+    re: /\btext-\[(length:|calc\()|\[font-size:|\btext-\(length:/i,
+    why: "rule 2 allows six type sizes — use --text-label/meta/body/subject/title/verdict",
+  },
+  {
     name: "inline-style",
     re: /\bstyle=\{|\bstyle="|\bstyle:\s*\{/,
     why: "no inline styles (§6)",
