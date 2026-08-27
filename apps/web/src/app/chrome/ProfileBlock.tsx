@@ -83,10 +83,10 @@ export function ProfileBlock() {
         {account.role}
       </span>
       <div className="flex items-center gap-2">
-        <Button variant="quiet" size="sm" onPress={signOut}>
+        <Button variant="ghost" size="sm" onPress={signOut}>
           Switch user
         </Button>
-        <Button variant="quiet" size="sm" onPress={signOut} data-testid="sign-out">
+        <Button variant="ghost" size="sm" onPress={signOut} data-testid="sign-out">
           Sign out
         </Button>
       </div>

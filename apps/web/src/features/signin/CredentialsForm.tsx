@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Form } from "react-aria-components";
-import { Input } from "../../components/ui";
+import { Form, TextField } from "react-aria-components";
+import { Field, Label, Input } from "../../components/ui";
 import { Button } from "../../components/ui";
 
 /**
@@ -47,13 +47,18 @@ export function CredentialsForm() {
     >
       {/* Rule 3: an email address is an identifier, so mono is legal here —
           and the design's own field is mono. */}
-      <Input label="Work email" type="email" name="email" data autoComplete="username" />
-      <Input
-        label="Password"
-        type="password"
-        name="password"
-        autoComplete="current-password"
-      />
+      <Field>
+        <TextField name="email" type="email" className="flex flex-col gap-3">
+          <Label>Work email</Label>
+          <Input data autoComplete="username" />
+        </TextField>
+      </Field>
+      <Field>
+        <TextField name="password" type="password" className="flex flex-col gap-3">
+          <Label>Password</Label>
+          <Input autoComplete="current-password" />
+        </TextField>
+      </Field>
       <Button type="submit" variant="primary" size="lg" className="mt-4 w-full">
         Sign in
       </Button>

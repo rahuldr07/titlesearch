@@ -1,6 +1,12 @@
 import type { NaReason } from "@titlepipe/contract";
 import { NaReason as NaReasonEnum } from "@titlepipe/contract";
-import { RadioGroup, Radio } from "../../components/ui";
+import {
+  RadioGroup,
+  RadioGroupItem,
+  FieldSet,
+  FieldLegend,
+  FieldDescription,
+} from "../../components/ui";
 import { NO_VALUE } from "./noValueStates";
 
 /**
@@ -37,20 +43,28 @@ export type NaStateGridProps = {
 
 export function NaStateGrid({ value, onChange, disabledBecause }: NaStateGridProps) {
   return (
-    <div data-na-grid className="flex flex-col gap-4">
+    <FieldSet data-na-grid>
+      <FieldLegend variant="label">Record this field as absent</FieldLegend>
       <RadioGroup
-        label="Record this field as absent"
+        aria-label="Record this field as absent"
         value={value ?? ""}
         onChange={(next) => onChange(NaReasonEnum.parse(next))}
         disabledBecause={disabledBecause}
       >
         {NaReasonEnum.options.map((reason) => (
-          <Radio key={reason} value={reason} description={describe(reason)}>
-            {NO_VALUE[reason].mark} {NO_VALUE[reason].sentence}
-          </Radio>
+          <RadioGroupItem key={reason} value={reason} className="items-start">
+            <span className="flex flex-col gap-1">
+              <span>
+                {NO_VALUE[reason].mark} {NO_VALUE[reason].sentence}
+              </span>
+              {/* The distinction, stated on the option rather than in a tooltip:
+                  this is the one place four look-alike answers are told apart. */}
+              <FieldDescription>{describe(reason)}</FieldDescription>
+            </span>
+          </RadioGroupItem>
         ))}
       </RadioGroup>
-    </div>
+    </FieldSet>
   );
 }
 
