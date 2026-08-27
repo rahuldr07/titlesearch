@@ -99,20 +99,33 @@ describe("the two scope values are NOT interchangeable", () => {
    *
    * So: the always-present composites must use `widget`, and only the four
    * overlays may use `own`.
+   *
+   * ══ THE KIT NOW SPELLS BOTH THROUGH `overlaySurface.ts` ══════════════════
+   *
+   * The registry adaptation renamed these files to lowercase and replaced the
+   * literal attribute with the `chordWidget` / `chordOverlay` constants, so the
+   * old assertion — grep the literal in `Tabs.tsx` — was reading files that no
+   * longer exist and PASSING VACUOUSLY on nothing. The invariant is unchanged;
+   * only the spelling it is checked through moved. Matching either form keeps
+   * the test honest whichever way a future component writes it, and the
+   * `toBeGreaterThan(0)` below is what stops "no marks at all" counting as a
+   * pass a second time.
    */
   const ALWAYS_PRESENT = [
-    "src/components/ui/Tabs.tsx",
-    "src/components/ui/DataTable.tsx",
-    "src/components/ui/SegmentedControl.tsx",
-    "src/components/ui/RadioGroup.tsx",
-    "src/components/ui/Checkbox.tsx",
-    "src/components/ui/Switch.tsx",
+    "src/components/ui/tabs.tsx",
+    "src/components/ui/table.tsx",
+    "src/components/ui/segmented-control.tsx",
+    "src/components/ui/toggle-group.tsx",
   ];
 
   test.each(ALWAYS_PRESENT)("%s marks itself widget, never own", async (file) => {
     const { readFileSync } = await import("node:fs");
     const source = readFileSync(file, "utf8");
-    const attributes = [...source.matchAll(/data-chord-scope="([a-z]+)"/g)].map((m) => m[1]);
+    const literals = [...source.matchAll(/data-chord-scope="([a-z]+)"/g)].map((m) => m[1]);
+    const viaConstant = [...source.matchAll(/\{\.\.\.(chordWidget|chordOverlay)\}/g)].map((m) =>
+      m[1] === "chordWidget" ? "widget" : "own",
+    );
+    const attributes = [...literals, ...viaConstant];
     expect(attributes.length).toBeGreaterThan(0);
     for (const value of attributes) {
       expect(value).toBe("widget");
@@ -122,14 +135,16 @@ describe("the two scope values are NOT interchangeable", () => {
   test("only the overlays use own", async () => {
     const { readFileSync } = await import("node:fs");
     const OVERLAYS = [
-      "src/components/ui/Dialog.tsx",
-      "src/components/ui/Popover.tsx",
+      "src/components/ui/dialog.tsx",
+      "src/components/ui/popover.tsx",
       "src/app/keyboard/CommandPalette.tsx",
       "src/app/keyboard/KeyMap.tsx",
     ];
     for (const file of OVERLAYS) {
       const source = readFileSync(file, "utf8");
-      expect(source).toContain('data-chord-scope="own"');
+      const owns =
+        source.includes('data-chord-scope="own"') || source.includes("{...chordOverlay}");
+      expect(owns).toBe(true);
     }
   });
 });
