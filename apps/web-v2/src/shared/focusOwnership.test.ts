@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { FOCUSED_ITEM_ROLES, focusOwnsKeys } from "./focusOwnership";
+import { FOCUSED_ITEM_ROLES, focusOwnsKeys, type FocusTarget } from "./focusOwnership";
 
 /**
  * [INVARIANT 49/50/51] — rule: a focused control owns the keystroke, and a
@@ -17,13 +17,15 @@ import { FOCUSED_ITEM_ROLES, focusOwnsKeys } from "./focusOwnership";
  */
 
 /** A focusable element, without a DOM. `closest` answers for ancestors. */
-function focused(role: string | null, ancestorSelectorsMatched: string[] = []): Element {
+function focused(role: string | null, ancestorSelectorsMatched: string[] = []): FocusTarget {
   return {
     tagName: "DIV",
     getAttribute: (name: string) => (name === "role" ? role : null),
-    closest: (selector: string) =>
-      ancestorSelectorsMatched.some((s) => selector.includes(s)) ? ({} as Element) : null,
-  } as unknown as Element;
+    closest: ((selector: string) =>
+      ancestorSelectorsMatched.some((s) => selector.includes(s))
+        ? ({ tagName: "DIV" } as Element)
+        : null) as Element["closest"],
+  };
 }
 
 /** The nine REVIEW-01 proved missing, with the source that emits each. */
@@ -66,7 +68,12 @@ describe("container roles are matched as ANCESTORS, never by equality", () => {
 
 describe("the tagName half of the prototype's test is kept", () => {
   test.each(["INPUT", "TEXTAREA", "SELECT"])("<%s> owns its keys", (tagName) => {
-    expect(focusOwnsKeys({ tagName, getAttribute: () => null, closest: () => null } as unknown as Element)).toBe(true);
+    const target: FocusTarget = {
+      tagName,
+      getAttribute: () => null,
+      closest: (() => null) as Element["closest"],
+    };
+    expect(focusOwnsKeys(target)).toBe(true);
   });
 });
 

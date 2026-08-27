@@ -86,6 +86,21 @@ const BANNED = [
     // read as a class name. A rule with false positives gets switched off.
     inStrings: /(?:^|\s)(?:![a-z][a-z0-9-]*|[a-z][a-z0-9-]*!)(?=\s|$)/,
     why: "no !important, including Tailwind's `!` modifier (§6)",
+    /*
+     * THE ONE PLACE `!important` IS CORRECT, and it is narrow on purpose.
+     *
+     * `@media (prefers-reduced-motion: reduce)` has to beat every animation
+     * any component can declare, INCLUDING ones written after it. Specificity
+     * cannot express "beat everything", so `!important` is the only mechanism
+     * CSS offers, and WCAG §2.3.3 plus design rule 10 ("nothing bounces")
+     * make it a requirement rather than a shortcut.
+     *
+     * The exemption is keyed to being INSIDE that at-rule, not to the file, so
+     * it cannot spread: an `!important` anywhere else in styles.css is still
+     * an error. `rules-allow:` was the alternative and is worse here — it
+     * would need four markers on four lines that are one rule.
+     */
+    exemptInAtRule: /@media\s*\(\s*prefers-reduced-motion\s*:\s*reduce\s*\)/,
   },
   {
     name: "browser-storage",
@@ -242,9 +257,27 @@ for (const file of files) {
   const isPresentational =
     rel.startsWith(join("src", "shared")) || rel.startsWith(join("src", "entities"));
 
+  /** The at-rule enclosing the current line, and its brace depth. Per file. */
+  let openAtRule = null;
+  let atRuleDepth = 0;
+
   lines.forEach((raw, i) => {
     const n = i + 1;
     const t = raw.trim();
+
+    /*
+     * Which at-rule, if any, encloses this line. Brace-counted rather than
+     * parsed: this is a line scanner, and an at-rule block is the one CSS
+     * structure a banned-pattern exemption needs to be scoped to.
+     */
+    if (openAtRule === null && t.startsWith("@") && raw.includes("{")) {
+      openAtRule = t;
+      atRuleDepth = 1;
+    } else if (openAtRule !== null) {
+      atRuleDepth += (raw.match(/\{/g) ?? []).length;
+      atRuleDepth -= (raw.match(/\}/g) ?? []).length;
+      if (atRuleDepth <= 0) openAtRule = null;
+    }
 
     // A line inside a block comment is prose, never code — including prose that
     // explains the escape hatch itself.
@@ -266,6 +299,10 @@ for (const file of files) {
     if (t.startsWith("//") || inBlockComment) return;
 
     for (const b of BANNED) {
+      // Scoped exemption: correct INSIDE one at-rule, an error everywhere else.
+      if (b.exemptInAtRule && openAtRule !== null && b.exemptInAtRule.test(openAtRule)) {
+        continue;
+      }
       if (b.re.test(raw)) {
         add(file, n, b.name, b.why);
       } else if (b.inStrings && stringLiterals(raw).some((s) => b.inStrings.test(s))) {

@@ -4,10 +4,9 @@
  * Split out of `chords.ts` because it is the part with a table in it, and the
  * table is the part that was wrong.
  *
- * WHAT REVIEW-01 (B3) FOUND. The previous list checked the roles of
- * CONTAINERS — listbox, menu, grid, tree. React Aria puts DOM focus on the
- * ITEMS. Measured against the installed react-aria, nine of nine roles it
- * actually focuses walked straight past:
+ * WHAT REVIEW-01 (B3) FOUND. The previous list checked CONTAINER roles —
+ * listbox, menu, grid, tree. React Aria puts DOM focus on the ITEMS, so nine
+ * of nine roles it actually focuses walked straight past:
  *
  *   option            useOption.mjs:44          ListBox / Select / ComboBox items
  *   row               useGridListItem.mjs:274   GridList / Table rows
@@ -20,11 +19,8 @@
  *   slider            Slider
  *
  * `gridcell` was on the list and `row` was not, while `useGridListItem`
- * defaults to `focusMode: 'row'`. `menuitem` was on it; its two role variants
- * were not. This is INVARIANT 51's ORPHAN rule O15 — "a chord's second key must
- * never ALSO fire a screen action. This is what stops a stray keystroke
- * destroying an in-progress correction" — and it is the rule with no other
- * record in the repo, so nothing else would have caught it.
+ * defaults to `focusMode: 'row'`. This is INVARIANT 51's ORPHAN rule O15 — the
+ * rule with no other record in the repo, so nothing else would have caught it.
  *
  * THE TWO HALVES OF THE FIX, and they are different mechanisms:
  *
@@ -35,78 +31,30 @@
  *      `option` is INSIDE a `listbox`, so asking "is the active element a
  *      listbox" answers no every time. Asking "is it inside one" answers yes.
  *
- * Belt and braces on purpose. Either half alone would cover most of the cases;
- * the review's finding was that one mechanism, opted into, is the mechanism
- * that fails.
- *
- * `src/shared/focusOwnership.test.ts` pins every role in both tables and runs
- * DOM-free in the `gates` Vitest project. It is the executable check the chord
- * header used to claim and not have.
+ * Belt and braces on purpose. `focusOwnership.test.ts` pins every role in both
+ * tables, DOM-free, in the `gates` Vitest project — the executable check the
+ * chord header used to claim and not have.
  */
 
-/**
- * Roles that RECEIVE focus and own every printable key while they have it.
- *
- * Typeahead is the reason for the collection items — a `<div role="option">`
- * consumes `q` as a search character, and the global layer must not also read
- * it as "quarantine". The single controls (radio/checkbox/switch/slider) are
- * here for a different reason: Space, Enter and the arrows are theirs, and a
- * chord layer that acts on them fights the control.
- */
-export const FOCUSED_ITEM_ROLES: ReadonlySet<string> = new Set([
-  // Text surfaces that are not <input>. react-aria renders these as divs.
-  "textbox",
-  "searchbox",
-  "spinbutton",
-  "combobox",
-  // Collection items — the nine the review proved missing, plus the ones the
-  // old list happened to have right.
-  "option",
-  "row",
-  "gridcell",
-  "columnheader",
-  "rowheader",
-  "tab",
-  "treeitem",
-  "menuitem",
-  "menuitemradio",
-  "menuitemcheckbox",
-  // Single controls whose keys are their own.
-  "radio",
-  "checkbox",
-  "switch",
-  "slider",
-]);
+import {
+  FOCUSED_ITEM_ROLES,
+  FOCUS_CONTAINER_SELECTOR,
+  SCOPE_SELECTOR,
+} from "./focusRoles";
+
+export { FOCUSED_ITEM_ROLES };
 
 /**
- * Roles that CONTAIN a focused item. Matched with `closest()`.
+ * The three members this function reads, and the whole of its input contract.
  *
- * Never by equality: focus is on the item, so the container is an ancestor of
- * the active element, never the active element. `listbox` and `menu` were on
- * the old list and could not fire for exactly this reason.
+ * Declared structurally rather than as `Element` because that is what is
+ * true: nothing here needs a real DOM node, and saying so lets
+ * `focusOwnership.test.ts` pin every role without a browser and without an
+ * `as unknown as` cast to smuggle a fake past the compiler. A real `Element`
+ * satisfies it, so every call site is unchanged.
  */
-const FOCUS_CONTAINER_SELECTOR =
-  "[role='listbox'],[role='menu'],[role='menubar'],[role='grid'],[role='treegrid'],[role='tree'],[role='radiogroup'],[role='tablist']";
+export type FocusTarget = Pick<Element, "tagName" | "getAttribute" | "closest">;
 
-/**
- * THE TWO SCOPE MARKERS, AND WHY THEY ARE NOT ONE.
- *
- * `data-chord-scope="own"` means AN OVERLAY IS UP. `chords.ts:overlayIsUp`
- * reads it document-wide, so it suspends every chord everywhere while any
- * element carrying it exists. That is right for a dialog, a popover, the
- * command palette and the key map. Those are the only four that set it.
- *
- * `data-chord-scope="widget"` means THIS SUBTREE OWNS ITS KEYS WHILE FOCUSED.
- * It is read only here, only against the active element's ancestors, and it
- * never suspends anything globally.
- *
- * The distinction is load-bearing and was nearly a bug while fixing B3: a Tabs
- * strip or a Checkbox marked `own` is present in the document at all times, so
- * `overlayIsUp()` would answer true forever and EVERY chord in the app would
- * be permanently dead. S6 asks for these composites to be scope-marked; they
- * are, with the value that means what is intended.
- */
-const SCOPE_SELECTOR = "[data-chord-scope='own'],[data-chord-scope='widget']";
 
 /**
  * Is a text surface or composite widget holding focus?
@@ -120,7 +68,7 @@ const SCOPE_SELECTOR = "[data-chord-scope='own'],[data-chord-scope='widget']";
  *   4. `closest()` over container roles and `data-chord-scope="own"` — the
  *      extension point, for composites this function cannot know about.
  */
-export function focusOwnsKeys(active: Element | null): boolean {
+export function focusOwnsKeys(active: FocusTarget | null): boolean {
   if (active === null) return false;
 
   const tag = active.tagName;
@@ -144,7 +92,7 @@ export function focusOwnsKeys(active: Element | null): boolean {
  * browser — which is how `focusOwnership.test.ts` found it, since that test is
  * deliberately DOM-free so the rule can be checked without a browser at all.
  */
-function isContentEditable(active: Element): boolean {
+function isContentEditable(active: FocusTarget): boolean {
   const editable: unknown = (active as { isContentEditable?: unknown }).isContentEditable;
   return editable === true;
 }
