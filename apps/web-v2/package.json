@@ -56,8 +56,10 @@
   "devDependencies": {
     "@axe-core/playwright": "^4.12.1",
     "@axe-core/react": "^4.13.0",
+    "@babel/core": "^8.0.1",
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.61.1",
+    "@rolldown/plugin-babel": "^0.2.3",
     "@size-limit/preset-app": "^13.0.1",
     "@storybook/addon-a11y": "^10.5.4",
     "@storybook/addon-vitest": "^10.5.4",

@@ -12,7 +12,7 @@ Read before writing code, in this order:
 - **Never emit a value you can't cite.** Provenance on everything (principle 6 — caught 6 times in prototyping).
 - **Two NA states** — `NOT_PRESENT` vs `PRESENT_UNREADABLE` — never collapse; never derive `needs_review` from `value === null`.
 - **Server owns all state machines and thresholds.** UI never computes `state` from confidence, never re-derives counts, chain termination, or release resolution.
-- **Anti-patterns stay out:** no throughput counters anywhere, no probe visibility, no aggregate accuracy headline, no auto-tuning, no approve-all, no queue cherry-picking. Refusals are product requirements → Playwright tests.
+- **Anti-patterns stay out:** no throughput counters anywhere, no probe visibility, no aggregate accuracy headline, no auto-tuning, no approve-all. Refusals are product requirements → Playwright tests. **Amended 2026-08-27 (owner ruling, `docs/frontend/decisions.md` D4):** “no queue cherry-picking” is **withdrawn** — the 2026-08 design’s browsable, searchable, paginated All Orders table ships as drawn, with the SLA chip and `Due` column. A role-locked action renders **disabled with its reason** rather than absent. Everything else on this line still binds. See `docs/INVARIANTS.md` rules 22, 23, 26, 42, 43.
 - **Escalation resolution is refused without a rule.** PENDING rules cannot affect the pipeline until engineer-confirmed.
 - **Judgments never auto-confirm in v1.** Engine self-confidence never gates auto-confirm.
 - **Engines never see each other's output.** Adapters ≤300 lines; cost + latency recorded per call; capabilities declared, not faked.

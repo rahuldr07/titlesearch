@@ -181,3 +181,69 @@ These remain owner calls and are **not** blocking Pass 1:
 Deletion scope, per `replatform-mapping.md` §5: only what the new design actually replaces — Queue, Review, Ingest→Upload, the account/rulebook surfaces, shared chrome, and the old theme. The 12 measurement screens are deleted in Pass 3, one at a time, as each replacement lands.
 
 Completion bar: **132** un-skipped and green (126 harvested + 6 keyboard specs promoted to INVARIANT by Q3).
+
+---
+
+## D4 — REVERSED by the owner, 2026-08-27. The 2026-08 design ships as drawn.
+
+**Ruled 2026-08-27.** Resolves the `CONFLICT` escalated in
+`design-2026-08/ANALYSIS-screens.md` §6, and the smaller rule collision beside it.
+
+### Decision
+
+**Whatever is in the 2026-08 design is final.** Where design and invariants disagreed, the
+design wins:
+
+| | Ships as drawn |
+|---|---|
+| Screen 3 "All Orders" | Browsable, searchable, filterable, paginated, `Assigned` column, per-row `Open →`. A reviewer may take a specific order. |
+| Order bar + table | SLA chip and `Due` column. |
+| Role-locked actions | **Disabled with the reason**, not absent (design rule 12). |
+| NA taxonomy | 4-state grid as drawn. |
+
+`docs/INVARIANTS.md` rules **22, 23, 42, 43** struck through and marked SUPERSEDED; rule
+**26** narrowed. `AGENTS.md` / `CLAUDE.md` anti-pattern line amended — *"no queue
+cherry-picking"* withdrawn.
+
+The amendment was applied **narrowly**: only what the design actually draws. Approve-all
+and throughput counters remain banned, because the design contains neither. If the ruling
+was meant more broadly, widen it here rather than in the rulebook.
+
+### What was overridden, stated plainly
+
+The queue's refusal to be browsed was built in by construction, not by restraint.
+`endpoints.ts:69` records `/api/queue/next` as the only hand-over;
+`endpoints.ts:77-82` records that `/api/queue/bands` is deliberately **not** a browse
+endpoint — no claim token, no assignment field, no caller-influenced ordering — so that
+"no cherry-picking" held *by construction rather than by the screen's restraint*. That
+property is now gone by decision.
+
+Rules 42-43 are likewise overridden: a disabled door advertises a world its viewer cannot
+enter, which is precisely why the rule read ABSENT rather than dimmed.
+
+### What this ruling does NOT settle
+
+Not design questions, so untouched by it:
+
+1. **The browse endpoint does not exist.** Screen 3 cannot be completed until one is built
+   in `services/core-api`. The ruling settles *what* to build, not whether the wire serves it.
+2. **T1 second read and countersign have no contract surface at all.** Design screens 7, 8
+   and 9 depend on it. Still `OPEN`.
+3. **Release compile / gate / reissue and the quarantine gateway** likewise have no
+   endpoints. Screens 5, 8, 9 wait on them.
+
+### Consequence for the test suite
+
+Several harvested invariant specs assert browsing and cherry-picking are impossible. Those
+assertions are now **wrong, not weakened** — the rule behind them was withdrawn by the
+owner. They are to be **rewritten to the new behaviour, not deleted**, so each screen keeps
+coverage. Any spec removed rather than rewritten must be recorded here with a reason, so a
+later reader does not find a missing test and assume it was dropped to make a build green.
+
+### Cost if wrong
+
+Reviewers can choose their work. The rule existed to stop cherry-picking — easy orders
+taken first, hard ones aging — and to keep pace pressure off a judgment task where haste is
+the failure mode. If that shows up in production the remedy is a product change plus a
+server-side ordering constraint, not a UI tweak: the browse endpoint will exist by then, and
+removing it is a breaking change.
