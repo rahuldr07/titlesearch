@@ -1,0 +1,41 @@
+:root {
+  /* ink */
+  --ink-900:#14161C; --ink-700:#454A55; --ink-500:#6E7480;
+  --ink-400:#8A8E98; --ink-300:#B9BEC9;
+  /* accent — spend once per screen */
+  --accent:#5B4B8A; --accent-hover:#4C3E75;
+  --accent-border:#C6BAE4; --accent-tint:#F1EEF9;
+  --accent-tint-border:#E4DDF4; --accent-on-dark:#B7A6EE;
+  /* surfaces */
+  --canvas:#ECEEF3; --surface:#FFFFFF; --well:#FBFBFD;
+  --border:#E4E7ED; --hairline:#EDEFF3; --hairline-soft:#F3F4F7;
+  --control-border:#D6D9E1; --control-fill:#FBFBFD;
+  /* status */
+  --ok:#2E6B4F; --ok-bg:#EAF2ED; --ok-border:#C2DEC9; --ok-muted:#9DC0AC;
+  --warn:#8A5B12; --warn-bg:#FBF3E4; --warn-border:#F3E7D3;
+  --bad:#A4291F; --bad-muted:#E4B0AA; --bad-bg:#FDF3F2; --bad-border:#F2A8A2;
+  /* dark chrome (sidebar, auth, code panels) */
+  --dark:#1E1B2E; --dark-deep:#171424;
+  --dark-text:#C9C5D8; --dark-muted:#8881A2;
+  --dark-hairline:rgba(255,255,255,.07);
+  /* paper (evidence scans + certificates) */
+  --paper-scan:#F7F5EF; --paper-doc:#FDFCFA; --paper-border:#DDD9D0;
+  --paper-ink:#2C281F; --paper-meta:#5C5647; --paper-stamp:#7C6A55;
+  /* radii — rule: inner = outer − gap */
+  --r-kbd:4px; --r-inner:6px; --r-input:10px;
+  --r-surface:14px; --r-pill:999px; --r-paper:2px;
+  /* type */
+  --font-ui:'Plus Jakarta Sans',system-ui,sans-serif;
+  --font-data:'JetBrains Mono',monospace;
+  --font-paper:'Source Serif 4',Georgia,serif;
+  --fs-label:11px; --fs-meta:13px; --fs-body:16px;
+  --fs-subject:20px; --fs-title:28px; --fs-verdict:40px;
+  /* elevation */
+  --shadow-card:0 1px 2px rgba(20,22,28,.04),0 10px 28px rgba(20,22,28,.06);
+  --shadow-modal:0 24px 60px rgba(0,0,0,.3);
+  --shadow-paper:0 1px 2px rgba(0,0,0,.18),0 10px 26px rgba(0,0,0,.13);
+  /* motion */
+  --ease-state:140ms ease;
+  --ease-enter:260ms cubic-bezier(.32,.72,0,1);
+  --ease-move:300ms cubic-bezier(.32,.72,0,1);
+}
