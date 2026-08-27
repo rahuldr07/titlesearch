@@ -45,9 +45,9 @@ export function FormsHalf() {
           </TextField>
         </Field>
         <Field className="w-140">
-          <TextField className="flex flex-col gap-3" isInvalid>
+          <TextField defaultValue="BK 0000 PG 00" className="flex flex-col gap-3" isInvalid>
             <Label>Refused</Label>
-            <Input data defaultValue="BK 0000 PG 00" />
+            <Input data />
             {/* The SERVER's wording. The client never authors a refusal. */}
             <FieldError>The server refused this value.</FieldError>
           </TextField>
@@ -59,9 +59,9 @@ export function FormsHalf() {
           </TextField>
         </Field>
         <Field className="w-140">
-          <TextField isDisabled className="flex flex-col gap-3">
+          <TextField defaultValue="0000-0000000" isDisabled className="flex flex-col gap-3">
             <Label>Read from the stamp</Label>
-            <Input data defaultValue="0000-0000000" disabledBecause="Blocked: read from the clerk stamp." />
+            <Input data disabledBecause="Blocked: read from the clerk stamp." />
             <FieldDescription>Blocked: read from the clerk stamp.</FieldDescription>
           </TextField>
         </Field>
@@ -74,8 +74,8 @@ export function FormsHalf() {
           </InputGroupAddon>
           <InputGroupInput aria-label="Search orders" placeholder="Search orders" />
         </InputGroup>
-        <InputGroup className="w-140">
-          <InputGroupInput aria-label="Consideration" data defaultValue="000,000.00" />
+        <InputGroup defaultValue="000,000.00" className="w-140">
+          <InputGroupInput aria-label="Consideration" data />
           <InputGroupAddon align="inline-end">
             <InputGroupButton>Clear</InputGroupButton>
           </InputGroupAddon>

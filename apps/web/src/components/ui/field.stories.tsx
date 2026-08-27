@@ -58,7 +58,7 @@ export const Horizontal: Story = {
         <FieldTitle id="vesting-deed">Vesting deed</FieldTitle>
         <FieldDescription>Read from the chain, not entered.</FieldDescription>
       </FieldContent>
-      <Input data defaultValue="2016-0881204" className="w-70" aria-labelledby="vesting-deed" />
+      <Input data className="w-70" aria-labelledby="vesting-deed" />
     </Field>
   ),
 };
@@ -67,11 +67,10 @@ export const Horizontal: Story = {
 export const BlockedWithReason: Story = {
   render: () => (
     <Field className="w-90">
-      <TextField isDisabled className="flex flex-col gap-3">
+      <TextField defaultValue="2019-0043117" isDisabled className="flex flex-col gap-3">
         <Label>Instrument number</Label>
         <Input
           data
-          defaultValue="2019-0043117"
           disabledBecause="Read from the clerk stamp."
         />
         <FieldDescription>Read from the clerk stamp — not editable.</FieldDescription>
@@ -84,9 +83,9 @@ export const BlockedWithReason: Story = {
 export const Invalid: Story = {
   render: () => (
     <Field data-invalid="true" className="w-90">
-      <TextField isInvalid className="flex flex-col gap-3">
+      <TextField defaultValue="2019-43117" isInvalid className="flex flex-col gap-3">
         <Label>Instrument number</Label>
-        <Input data defaultValue="2019-43117" aria-invalid />
+        <Input data aria-invalid />
         <FieldError>Not found in the county package for Maricopa.</FieldError>
       </TextField>
     </Field>

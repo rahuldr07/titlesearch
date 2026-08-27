@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { TextField } from "react-aria-components";
 import { Button, Input, Kbd } from "../../components/ui";
 
 /**
@@ -29,6 +30,14 @@ import { Button, Input, Kbd } from "../../components/ui";
  * this field has focus it owns every key (`focusOwnership.ts`), which is the
  * same rule that stops `p` re-triggering the pass while somebody is typing the
  * word "pass" into the reason.
+ *
+ * ══ THE VALUE IS ON `TextField`, NOT ON `Input` ════════════════════════════
+ *
+ * `components/ui/input.tsx` omits `value` and `defaultValue` from `InputProps`
+ * on purpose: `TextField` injects a controlled value through `InputContext`, a
+ * caller's own value collides with it, and React drops one — the measured
+ * result being a box that renders BLANK while every story still passes. So the
+ * state lives on the field and `Input` is the box it draws.
  */
 export function PassReason(props: {
   readonly onSubmit: (reason: string) => void;
@@ -58,28 +67,31 @@ export function PassReason(props: {
   return (
     <div data-testid="pass-reason" className="flex flex-col gap-5">
       <div className="flex items-center gap-5">
-        <Input
-          ref={input}
+        <TextField
           aria-label="Why are you passing this order?"
-          placeholder="Why are you passing this order?"
           value={reason}
-          onChange={(event) => {
-            setReason(event.target.value);
+          onChange={(next) => {
+            setReason(next);
             if (nudge) setNudge(false);
           }}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              event.preventDefault();
-              attempt();
-              return;
-            }
-            if (event.key === "Escape") {
-              event.preventDefault();
-              props.onCancel();
-            }
-          }}
           className="flex-1"
-        />
+        >
+          <Input
+            ref={input}
+            placeholder="Why are you passing this order?"
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                attempt();
+                return;
+              }
+              if (event.key === "Escape") {
+                event.preventDefault();
+                props.onCancel();
+              }
+            }}
+          />
+        </TextField>
         <Button
           variant="secondary"
           onPress={attempt}

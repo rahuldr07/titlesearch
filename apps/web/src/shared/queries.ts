@@ -1,5 +1,7 @@
 import {
+  EscalationsResponse,
   LifecycleResponse,
+  OrderPagesResponse,
   OrderCompletenessResponse,
   OrderContextResponse,
   OrderFieldsResponse,
@@ -123,3 +125,24 @@ export function orderTimeline(id: string): ReadDescriptor<OrderTimelineResponse>
     schema: OrderTimelineResponse,
   };
 }
+
+/** Pages as TEXT (endpoints.ts:654). `degraded` is the server's finding, never
+ * inferred client-side (:648); `pages` is a SAMPLE, so its length is not a count. */
+export function orderPages(id: string): ReadDescriptor<OrderPagesResponse> {
+  return {
+    path: `/api/orders/${id}/pages`,
+    key: ["orders", id, "pages"],
+    schema: OrderPagesResponse,
+  };
+}
+
+/** The escalation list, SHOP-WIDE — no per-order endpoint exists; an order view
+ * filters on `Escalation.order_ids` (entities.ts:169), the server's own join.
+ * Type INFERRED: `endpoints.ts:650` ships no companion `type` to import. */
+type EscalationsShape = ReturnType<typeof EscalationsResponse.parse>;
+
+export const escalations: ReadDescriptor<EscalationsShape> = {
+  path: "/api/escalations",
+  key: ["escalations"],
+  schema: EscalationsResponse,
+};

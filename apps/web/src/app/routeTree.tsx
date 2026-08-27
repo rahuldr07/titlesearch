@@ -2,10 +2,9 @@ import { createRoute } from "@tanstack/react-router";
 import { rootRoute } from "./rootRoute";
 import { Unbuilt } from "./chrome/Unbuilt";
 import { UNBUILT_SCREENS, type ScreenDescriptor } from "./chrome/unbuiltScreens";
-import { BLIND_SEAT_SCREEN, REVIEW_SCREEN } from "./chrome/orderScreens";
-import { IngestScreen } from "../features/ingest/IngestScreen";
-import { EscalationsScreen } from "../features/escalations/EscalationsScreen";
-import { DeliveryScreen } from "../features/delivery/DeliveryScreen";
+import { BLIND_SEAT_SCREEN } from "./chrome/orderScreens";
+import { BUILT_SCREENS } from "./chrome/builtScreens";
+import { OrderRoute } from "./chrome/OrderRoute";
 
 /**
  * THE ROUTES, AND EVERY PATH IS COPIED FROM `authz.ts:62-81`.
@@ -48,22 +47,8 @@ import { DeliveryScreen } from "../features/delivery/DeliveryScreen";
  */
 const parent = () => rootRoute;
 
-/**
- * A DOOR THAT IS BUILT REPLACES ITS PLACEHOLDER BY PATH.
- *
- * `UNBUILT_SCREENS` stays the complete door list — it is what the rail and the
- * command palette read, and removing an entry as each screen lands would make
- * the list mean "unbuilt" in one file and "all doors" in another. So the table
- * keeps every path and this map names the ones that now have a screen. A path
- * here that is not in the table renders nowhere, which is the failure mode we
- * want: the frozen table (authz.ts:62-81) stays the only source of doors.
- */
-const BUILT: Readonly<Record<string, () => React.JSX.Element>> = {
-  "/ingest": IngestScreen,
-};
-
 const staticRoutes = UNBUILT_SCREENS.map((descriptor) => {
-  const Built = BUILT[descriptor.path];
+  const Built = BUILT_SCREENS[descriptor.path];
   return createRoute({
     getParentRoute: parent,
     path: descriptor.path,
@@ -91,18 +76,65 @@ function Placeholder(props: { readonly descriptor: ScreenDescriptor }) {
  * rather than a query string somebody remembers to read: navigating here with
  * a misspelled search key does not compile.
  *
- * The shape is deliberately narrow. `field` is a field id and nothing else: no
- * filter, no sort, no page. Those would be the browse affordance arriving
- * through the search string after having been refused at the endpoint
- * (endpoints.ts:69, INVARIANTS:82-83).
+ * The shape is deliberately narrow. `field` is a field id and `page` is a page
+ * number, and nothing else: no filter, no sort, no page SIZE. Those would be
+ * the browse affordance arriving through the search string after having been
+ * refused at the endpoint (endpoints.ts:69, INVARIANTS:82-83).
+ *
+ * `page` is here because the extraction matrix (design §Screens 6) opens the
+ * workstation AT a page, and selection that lives in component state is
+ * selection nobody can link to or reload into. It is validated as a finite
+ * number rather than trusted: a `page=NaN` pasted into the bar must not reach a
+ * component as a number.
  */
 const reviewRoute = createRoute({
   getParentRoute: parent,
   path: "/orders/$orderId",
-  validateSearch: (search: Record<string, unknown>): { field?: string } =>
-    typeof search["field"] === "string" ? { field: search["field"] } : {},
-  component: () => <Placeholder descriptor={REVIEW_SCREEN} />,
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { field?: string; page?: number } => {
+    const parsed: { field?: string; page?: number } = {};
+    if (typeof search["field"] === "string") parsed.field = search["field"];
+    const page = Number(search["page"]);
+    if (Number.isInteger(page) && page > 0) parsed.page = page;
+    return parsed;
+  },
+  component: ReviewRoute,
 });
+
+/** The order id comes off the route, not off a prop nobody could type-check. */
+function ReviewRoute() {
+  const { orderId } = reviewRoute.useParams();
+  return <OrderRoute orderId={orderId} />;
+}
+
+/**
+ * `/orders/{id}/review` — THE WORKSTATION, one level below the hub, and still
+ * beneath the SAME frozen door (`authz.ts:66` grants `/orders` as a route
+ * PREFIX, so this invents no path).
+ *
+ * It is declared HERE rather than left to 404 because it is the address the
+ * product already uses: the harvested specs address it in nine places
+ * (`chord-suppression`, `errors`, `server-owns-state`, `shell-frame`,
+ * `responsive-frame`, the smoke list) and `queue.spec` #5 pins it as where
+ * Enter on the served order lands. A door the whole test suite names and the
+ * router does not know is a not-found card standing where a screen is expected.
+ *
+ * It renders the same composition as the hub route for now. The Examination
+ * Workstation itself is NOT built and cannot be: the design's T1 second read
+ * and countersign have no contract surface at all, and AGENTS.md forbids
+ * building past OPEN. `OrderRoute` says so on screen rather than by omission.
+ */
+const reviewWorkstationRoute = createRoute({
+  getParentRoute: parent,
+  path: "/orders/$orderId/review",
+  component: ReviewWorkstationRoute,
+});
+
+function ReviewWorkstationRoute() {
+  const { orderId } = reviewWorkstationRoute.useParams();
+  return <OrderRoute orderId={orderId} />;
+}
 
 const blindSeatRoute = createRoute({
   getParentRoute: parent,
@@ -110,32 +142,9 @@ const blindSeatRoute = createRoute({
   component: () => <Placeholder descriptor={BLIND_SEAT_SCREEN} />,
 });
 
-/**
- * THE BUILT SCREENS, AT THE SAME FROZEN PATHS.
- *
- * Both paths are copied from `authz.ts:68` and `authz.ts:70`; nothing here is
- * invented. They are declared beside the placeholder loop rather than inside
- * it because a built screen is no longer described by `UNBUILT_SCREENS` — its
- * entry is REMOVED from that table when the screen lands, since a door cannot
- * simultaneously be built and describe itself as missing. The table shrinking
- * is how the remaining work stays legible.
- */
-const escalationsRoute = createRoute({
-  getParentRoute: parent,
-  path: "/escalations",
-  component: EscalationsScreen,
-});
-
-const deliveryRoute = createRoute({
-  getParentRoute: parent,
-  path: "/delivery",
-  component: DeliveryScreen,
-});
-
 export const routeTree = rootRoute.addChildren([
   ...staticRoutes,
-  escalationsRoute,
-  deliveryRoute,
   reviewRoute,
+  reviewWorkstationRoute,
   blindSeatRoute,
 ]);

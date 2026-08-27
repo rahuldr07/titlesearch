@@ -85,32 +85,37 @@ test("no priority, category, or assignee affordances exist", async ({ page }) =>
  *
  * Design §Screens 10 wants determination buttons "disabled + 'belongs to QC'"
  * for roles that lack them. `INVARIANTS:42-43` says a role-locked affordance is
- * ABSENT, not disabled, and the contract's own permission projection makes it
- * so: a role without `escalation.resolve` never receives the grant.
+ * ABSENT, not disabled, and the contract's permission projection makes it so:
+ * a role without the grant never receives it, so there is nothing to dim.
+ *
+ * WHAT THIS TEST ASSERTS, AND WHY IT IS THE DOOR RATHER THAN THE BUTTON.
+ * `screen.escalations.enter` (authz.ts:68) and `escalation.resolve`
+ * (authz.ts:104) hold the SAME role set — `senior`/`admin`. So no role exists
+ * that can stand on this screen and not hold the determination, and a test
+ * driving one would be testing a state the permission table cannot produce.
+ * The absence therefore asserts at the outer boundary, which is where the
+ * contract actually puts it. The screen's inner guard stays regardless: the two
+ * grants are separate rows and may diverge, and a screen that relied on them
+ * coinciding would ship the design's dimmed button the day they did.
  *
  * NEW, not harvested — the collision is new, so nothing pre-rebuild covers it.
  */
-test("the determination is ABSENT for a role that does not hold it", async ({ page }) => {
+test("the escalations door is ABSENT for a role that does not hold it", async ({ page }) => {
   await page.goto("/escalations");
   await expect(page.getByTestId("resolve-card")).toBeVisible();
 
   /*
-   * Continue as the reviewer, who holds no `escalation.resolve` (authz.ts:104).
-   *
-   * NO `page.goto` AFTER THE SWITCH, and the reason is worth recording: the
-   * demo session is a zustand store that §9.11 forbids persisting, so a full
-   * page load re-boots it to the dev-default ADMIN (`signedIn.ts`). The first
-   * write of this test did reload and asserted against an admin while believing
-   * it had a reviewer. Navigation stays in-app.
+   * NO `page.goto` AFTER THE SWITCH. The demo session is a zustand store that
+   * §9.11 forbids persisting, so a full page load re-boots it to the
+   * dev-default ADMIN (`signedIn.ts`). The first write of this test reloaded
+   * and asserted against an admin while believing it had a reviewer.
    */
   await page.getByTestId("sign-out").click();
   await page.getByTestId("continue-as-reviewer").click();
-  await page.getByRole("link", { name: "Escalations" }).click();
 
-  // absent, not disabled: there is no held button to find either
-  await expect(page.getByTestId("escalations-screen")).toBeVisible();
-  await expect(page.getByTestId("resolve-card")).toHaveCount(0);
-  await expect(page.getByTestId("resolve-btn")).toHaveCount(0);
+  // absent, not dimmed — the rail carries no escalations door at all
+  await expect(page.getByTestId("side-rail")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Escalations" })).toHaveCount(0);
 });
 
 /** Choose a rule from the rulebook ComboBox by its code. */

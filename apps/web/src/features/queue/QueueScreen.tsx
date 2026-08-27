@@ -1,14 +1,20 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useCallback, useMemo, useState } from "react";
-import { PassOrderResponse, type Order } from "@titlepipe/contract";
-import { get, post } from "../../shared/api";
+import type { Order } from "@titlepipe/contract";
+import { get } from "../../shared/api";
 import { queueNext } from "../../shared/queries";
-import { notify } from "../../shared/notify";
 import { useChords } from "../../shared/chords";
-import { Button, Card, Empty, Kbd } from "../../components/ui";
+import { Button, Card, Kbd } from "../../components/ui";
 import { ServedOrder } from "./ServedOrder";
 import { PassReason } from "./PassReason";
+import { usePassOrder } from "./usePassOrder";
+import {
+  QueueAsking,
+  QueueEmpty,
+  QueueFailed,
+  QueueHeader,
+} from "./QueueStates";
 
 /**
  * SCREEN — THE QUEUE, AT `/queue` (`authz.ts:63`, reviewer + admin).
@@ -52,7 +58,6 @@ import { PassReason } from "./PassReason";
  */
 export function QueueScreen() {
   const navigate = useNavigate();
-  const client = useQueryClient();
   const [passing, setPassing] = useState(false);
 
   const served = useQuery({
@@ -62,38 +67,30 @@ export function QueueScreen() {
 
   const order: Order | null = served.data?.order ?? null;
 
-  /**
-   * A REASONED PASS RECORDS, AND THE SERVER SERVES THE NEXT ORDER
-   * (`INVARIANTS:87`). The response is a bare `{ ok: true }` — pass counts and
-   * the 4th-pass auto-escalation stay server-side (`endpoints.ts:206-210`) —
-   * so there is nothing to read out of it. Advancing is a REFETCH of
-   * `/api/queue/next`, not a local step through a list: this screen does not
-   * hold a list to step through, and the server may well serve something other
-   * than "the next row".
-   */
-  const pass = useMutation({
-    mutationFn: (reason: string) =>
-      post(`/api/orders/${order?.id ?? ""}/pass`, PassOrderResponse, { reason }),
-    onSuccess: async () => {
-      const passed = order?.external_ref ?? "";
-      setPassing(false);
-      await client.invalidateQueries({ queryKey: queueNext.key });
-      // The record of the act, in the reviewer's own frame: which order left.
-      notify.success(`Recorded — passed ${passed}`);
-    },
-    // The server's message, VERBATIM (`INVARIANTS:58-59`). A 403 from the role
-    // gate and a 422 from the schema both arrive here and both keep the order.
-    onError: (error: Error) => notify.error(error.message),
-  });
+  const pass = usePassOrder(
+    order === null ? null : { id: order.id, ref: order.external_ref },
+  );
 
   const startReview = useCallback(() => {
     if (order === null) return;
-    void navigate({ to: "/orders/$orderId", params: { orderId: order.id } });
+    /*
+     * `INVARIANTS:88` — Enter STARTS REVIEW on the served order, and review is
+     * `/orders/{id}/review`, not the hub. Taking an order means going to work
+     * on it; landing on a summary would be Enter opening a description of the
+     * thing it said it was starting.
+     *
+     * Typed navigation, so a misspelled path or param is a COMPILE error
+     * rather than a runtime not-found — which is the whole reason the
+     * order-scoped routes are declared by hand in `app/routeTree.tsx`.
+     */
+    void navigate({
+      to: "/orders/$orderId/review",
+      params: { orderId: order.id },
+    });
   }, [navigate, order]);
 
   const bindings = useMemo(
     () => ({
-      /** `INVARIANTS:88` — Enter starts review on the SERVED order. */
       Enter: (event: KeyboardEvent) => {
         if (order === null || passing) return;
         event.preventDefault();
@@ -112,56 +109,13 @@ export function QueueScreen() {
 
   return (
     <div className="tp-screen-enter flex h-full min-h-0 flex-col gap-10 overflow-y-auto p-14">
-      <header className="flex flex-col gap-2">
-        <span className="text-label font-semibold uppercase leading-flat tracking-caps text-ink-faint">
-          Queue
-        </span>
-        <h1 className="text-title font-bold leading-tight text-ink-primary">
-          Next for you
-        </h1>
-        {/*
-         * THE SCREEN SAYS WHAT IT IS. Not decoration: a reviewer who expects a
-         * list and is handed one order should be told that is the design,
-         * rather than left assuming the list failed to load.
-         */}
-        <p className="max-w-240 text-meta leading-body text-ink-secondary">
-          The server chooses. There is one order at a time and no way to pick a
-          different one — pass with a reason and the next is served.
-        </p>
-      </header>
+      <QueueHeader />
 
-      {served.isPending && (
-        <Card>
-          <p className="text-meta leading-body text-ink-muted">Asking the queue…</p>
-        </Card>
-      )}
+      {served.isPending && <QueueAsking />}
 
-      {served.isError && (
-        <Card>
-          <p
-            data-testid="queue-error"
-            role="alert"
-            className="text-meta leading-body text-state-halt"
-          >
-            {served.error.message}
-          </p>
-        </Card>
-      )}
+      {served.isError && <QueueFailed message={served.error.message} />}
 
-      {served.isSuccess && order === null && (
-        <Card padding="none">
-          {/*
-           * NULL IS AN ANSWER, NOT AN EMPTY LIST. `QueueNextResponse.order` is
-           * nullable and the server saying "nothing" is a statement about the
-           * queue, not a filter that matched nothing — so there is no Clear
-           * search here, because there was never a search.
-           */}
-          <Empty
-            title="Nothing queued for you"
-            reason="The server has no next order for this seat. There is no list to look through — when work is ready it is served here."
-          />
-        </Card>
-      )}
+      {served.isSuccess && order === null && <QueueEmpty />}
 
       {order !== null && (
         <Card padding="none">
@@ -170,7 +124,9 @@ export function QueueScreen() {
             {passing ? (
               <PassReason
                 pending={pass.isPending}
-                onSubmit={(reason) => pass.mutate(reason)}
+                onSubmit={(reason) =>
+                  pass.mutate(reason, { onSuccess: () => setPassing(false) })
+                }
                 onCancel={() => setPassing(false)}
               />
             ) : (

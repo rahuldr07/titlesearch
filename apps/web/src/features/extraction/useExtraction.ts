@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { OrderPagesResponse, OrderPipelineResponse } from "@titlepipe/contract";
 import { get } from "../../shared/api";
+import { orderPages, orderPipeline } from "../../shared/queries";
 
 /**
  * THE TWO READS EXTRACTION IS MADE OF, AND THERE IS NO THIRD.
@@ -29,16 +29,25 @@ import { get } from "../../shared/api";
  * question from `total_pages` and printing it would put two numbers on one
  * screen that disagree by design.
  */
+/**
+ * BOTH READS GO THROUGH `shared/queries.ts`, which is the one place each path
+ * and each cache key is spelled. The hub draws the same pipeline response, and
+ * a second spelling of that key would be two caches of one pipeline — rule 11's
+ * "one variable, never two literals" failing silently as a stale stage list
+ * rather than loudly as a wrong number.
+ */
 export function usePipeline(orderId: string) {
+  const read = orderPipeline(orderId);
   return useQuery({
-    queryKey: ["orders", orderId, "pipeline"],
-    queryFn: () => get(`/api/orders/${orderId}/pipeline`, OrderPipelineResponse),
+    queryKey: read.key,
+    queryFn: () => get(read.path, read.schema),
   });
 }
 
 export function useOrderPages(orderId: string) {
+  const read = orderPages(orderId);
   return useQuery({
-    queryKey: ["orders", orderId, "pages"],
-    queryFn: () => get(`/api/orders/${orderId}/pages`, OrderPagesResponse),
+    queryKey: read.key,
+    queryFn: () => get(read.path, read.schema),
   });
 }

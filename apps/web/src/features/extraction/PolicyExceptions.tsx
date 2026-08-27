@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { EscalationsResponse } from "@titlepipe/contract";
 import { get } from "../../shared/api";
+import { escalations as escalationsRead } from "../../shared/queries";
 
 /**
  * POLICY EXCEPTIONS (design §Screens 6's last card).
@@ -40,8 +40,8 @@ import { get } from "../../shared/api";
  */
 export function PolicyExceptions(props: { readonly orderId: string }) {
   const escalations = useQuery({
-    queryKey: ["escalations"],
-    queryFn: () => get("/api/escalations", EscalationsResponse),
+    queryKey: escalationsRead.key,
+    queryFn: () => get(escalationsRead.path, escalationsRead.schema),
   });
 
   if (escalations.data === undefined) {

@@ -46,8 +46,8 @@ export const WithPrefix: Story = {
 /** A suffix unit. Mono, because a unit sits against a data value (rule 3). */
 export const WithSuffix: Story = {
   render: () => (
-    <InputGroup className="w-90">
-      <InputGroupInput aria-label="Consideration" data defaultValue="184,500.00" />
+    <InputGroup defaultValue="184,500.00" className="w-90">
+      <InputGroupInput aria-label="Consideration" data />
       <InputGroupAddon align="inline-end">
         <InputGroupText className="font-mono">USD</InputGroupText>
       </InputGroupAddon>
@@ -86,13 +86,12 @@ export const BlockedWithReason: Story = {
   render: () => (
     <TextField isDisabled className="flex w-140 flex-col gap-3">
       <Label>Instrument number</Label>
-      <InputGroup>
+      <InputGroup defaultValue="2019-0043117">
         <InputGroupAddon>
           <InputGroupText>•</InputGroupText>
         </InputGroupAddon>
         <InputGroupInput
           data
-          defaultValue="2019-0043117"
           disabledBecause="Read from the clerk stamp — not editable."
         />
       </InputGroup>
@@ -103,11 +102,10 @@ export const BlockedWithReason: Story = {
 /** Invalid is drawn on the wrapper, so the border does not double up. */
 export const Invalid: Story = {
   render: () => (
-    <InputGroup className="w-140">
+    <InputGroup defaultValue="2019-43117" className="w-140">
       <InputGroupInput
         aria-label="Instrument number"
         data
-        defaultValue="2019-43117"
         aria-invalid
       />
       <InputGroupAddon align="inline-end">

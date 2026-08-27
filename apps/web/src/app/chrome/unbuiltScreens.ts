@@ -44,6 +44,22 @@ export const UNBUILT_SCREENS: readonly ScreenDescriptor[] = [
       "Nothing structural. Stage counts are server-authored and printed verbatim — endpoints.ts:152-156 records that a total which shrank with your permissions reads as work vanishing.",
   },
   {
+    path: "/delivery",
+    screen: "Delivery",
+    binds:
+      "DeliveriesResponse (endpoints.ts:625) · DeliveryWithReport (:617) · Report (entities.ts:216)",
+    missing:
+      "Backend conversation 2. No compile endpoint, no gate-evaluation shape, no sign-and-execute endpoint and no release.execute action; no manifest model; no reissue endpoint and no Report.reason or Report.supersedes to carry the v2 reason. DeliveryStatus is still z.string() (enums.ts:118), so the four receipt steps cannot be named.",
+  },
+  {
+    path: "/escalations",
+    screen: "Escalations",
+    binds:
+      "Escalation (entities.ts:166) · ResolveEscalationRequest (endpoints.ts:238) · Rule (entities.ts:153)",
+    missing:
+      "Nothing structural, but the design omits the binding requirement: resolution is REFUSED without a rule (endpoints.ts:233-236, INVARIANTS:109-110), and a drafted rule lands PENDING and renders visibly inert. The design's 'determination buttons' mention neither.",
+  },
+  {
     path: "/complaints",
     screen: "Complaints",
     binds:

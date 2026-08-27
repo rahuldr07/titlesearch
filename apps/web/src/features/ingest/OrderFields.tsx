@@ -1,4 +1,5 @@
 import type { CreateOrderRequest } from "@titlepipe/contract";
+import { TextField } from "react-aria-components";
 import { Input } from "../../components/ui";
 import { ClientPicker } from "./ClientPicker";
 import { MANIFEST } from "./manifest";
@@ -59,14 +60,20 @@ export function OrderFields(props: {
                 onChange={(id) => props.onChange("client_id", id)}
               />
             ) : (
-              <Input
-                id={`order-${entry.key}`}
-                data
-                data-testid={`order-${entry.key}`}
+              /*
+               * The composite owns the value, not the box. `TextField` injects
+               * a controlled `value` through `InputContext`, so an `Input`
+               * carrying its own collides with it and React drops one --
+               * REVIEW-03 B2, which rendered ten fields blank. `InputProps`
+               * now Omit-s both, so this is the only shape that compiles.
+               */
+              <TextField
                 aria-label={entry.label}
                 value={props.values[entry.key]}
-                onChange={(event) => props.onChange(entry.key, event.target.value)}
-              />
+                onChange={(next) => props.onChange(entry.key, next)}
+              >
+                <Input id={`order-${entry.key}`} data data-testid={`order-${entry.key}`} />
+              </TextField>
             )}
             <span className="font-sans text-label leading-body text-ink-muted">
               {entry.why}

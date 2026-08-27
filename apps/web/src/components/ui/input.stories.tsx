@@ -32,25 +32,38 @@ type Story = StoryObj<typeof meta>;
 /** 36px, radius 10, control fill on control border, 13px (RECIPES §Inputs). */
 export const Rest: Story = {};
 
-export const WithValue: Story = { args: { defaultValue: "Warranty deed, book 4412" } };
+export const WithValue: Story = {
+  render: () => (
+    <TextField defaultValue="Warranty deed, book 4412">
+      <Input />
+    </TextField>
+  ),
+};
 
 /** Rule 3: mono is for DATA — refs, money, citations, hashes, timestamps. */
-export const DataValue: Story = { args: { data: true, defaultValue: "2019-0043117" } };
+export const DataValue: Story = {
+  render: () => (
+    <TextField defaultValue="2019-0043117">
+      <Input data />
+    </TextField>
+  ),
+};
 
 /** Rule 9: there is no way to disable this without saying why. */
 export const BlockedWithReason: Story = {
-  args: {
-    defaultValue: "2019-0043117",
-    disabledBecause: "Read from the clerk stamp — not editable.",
-  },
+  render: () => (
+    <TextField defaultValue="2019-0043117">
+      <Input disabledBecause="Read from the clerk stamp — not editable." />
+    </TextField>
+  ),
 };
 
 /** Halt border, halt message. The label stays grey; the screen is not broken. */
 export const Invalid: Story = {
   render: () => (
-    <TextField isInvalid className="flex w-90 flex-col gap-3">
+    <TextField defaultValue="2019-43117" isInvalid className="flex w-90 flex-col gap-3">
       <Label>Instrument number</Label>
-      <Input defaultValue="2019-43117" data aria-invalid />
+      <Input data aria-invalid />
       <FieldError>Not found in the county package for Maricopa.</FieldError>
     </TextField>
   ),

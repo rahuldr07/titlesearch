@@ -33,9 +33,9 @@ export const SentenceCase: Story = { args: { children: "Recorded date and time" 
 /** The assembly it is for: 11px grey above, 13px ink below. */
 export const AboveItsControl: Story = {
   render: () => (
-    <TextField className="flex w-90 flex-col gap-3">
+    <TextField defaultValue="2019-0043117" className="flex w-90 flex-col gap-3">
       <Label>Instrument number</Label>
-      <Input data defaultValue="2019-0043117" />
+      <Input data />
     </TextField>
   ),
 };
@@ -46,11 +46,10 @@ export const AboveItsControl: Story = {
  */
 export const AlongsideBlockedControl: Story = {
   render: () => (
-    <TextField isDisabled className="flex w-90 flex-col gap-3">
+    <TextField defaultValue="2019-0043117" isDisabled className="flex w-90 flex-col gap-3">
       <Label>Instrument number</Label>
       <Input
         data
-        defaultValue="2019-0043117"
         disabledBecause="Read from the clerk stamp."
       />
     </TextField>
@@ -64,9 +63,9 @@ export const AlongsideBlockedControl: Story = {
  */
 export const AlongsideInvalidControl: Story = {
   render: () => (
-    <TextField isInvalid className="flex w-90 flex-col gap-3">
+    <TextField defaultValue="2019-43117" isInvalid className="flex w-90 flex-col gap-3">
       <Label>Instrument number</Label>
-      <Input data defaultValue="2019-43117" aria-invalid />
+      <Input data aria-invalid />
     </TextField>
   ),
 };
@@ -80,7 +79,7 @@ export const ExplicitHtmlFor: Story = {
   render: () => (
     <div className="flex w-90 flex-col gap-3">
       <Label htmlFor="parcel">Parcel identifier</Label>
-      <Input id="parcel" data defaultValue="301-44-118A" />
+      <Input id="parcel" data />
     </div>
   ),
 };
