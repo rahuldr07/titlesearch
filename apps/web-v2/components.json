@@ -5,7 +5,7 @@
   "tsx": true,
   "tailwind": {
     "config": "",
-    "css": "src/styles/index.css",
+    "css": "src/styles.css",
     "baseColor": "neutral",
     "cssVariables": true,
     "prefix": ""
@@ -13,7 +13,7 @@
   "aliases": {
     "components": "@/components",
     "ui": "@/components/ui",
-    "utils": "@/shared/ui/classNames",
+    "utils": "@/components/ui/cx",
     "hooks": "@/hooks"
   },
   "iconLibrary": "lucide"

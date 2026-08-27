@@ -121,29 +121,31 @@ const DATE_RE =
 
 const BANNED_NAMES = /^(utils?|helpers?|common|misc|shared|stuff)\.(ts|tsx)$/i;
 
-/**
- * VENDORED SOURCE IS NOT OUR SOURCE. `src/components/ui/` holds shadcn registry
- * files, added by `pnpm dlx shadcn@latest add` and re-added on upgrade. They
- * are third-party code that happens to live in the tree so it can be read and
- * patched — the same status as `node_modules`, with better ergonomics.
+/*
+ * THERE IS NO VENDORED DIRECTORY, AND THE EXEMPTION THAT CLAIMED OTHERWISE IS
+ * GONE.
  *
- * They cannot satisfy these rules and should not be edited to: the registry's
- * own idiom is arbitrary values (`w-[var(--radix-select-trigger-width)]`,
- * `[&_svg]:shrink-0`), its files run past 150 lines (`select.tsx` is ~185), and
- * it ships `dark:` variants this app does not use. Hand-editing them to pass
- * would be reverted by the next `add`, and the diff that upgrade produces is
- * the only review that matters for vendored code.
+ * This file used to skip `src/components/ui/` entirely, on the grounds that it
+ * held shadcn registry output — third-party code with "the same status as
+ * node_modules". That premise was false. `shadcn init --base aria` was never
+ * run (`components.json` has no `base` key, and points `tailwind.css` and the
+ * `utils` alias at two paths that do not exist), and every file in that
+ * directory is hand-written against `react-aria-components`, this repo's own
+ * `cva`/`cx`/`disabled.ts`, and the fourteen design rules.
  *
- * The boundary is the point: everything OUTSIDE this directory is ours and is
- * held to every rule. `src/components/ui/` is separate from `src/shared/ui/`
- * for a second reason too — the registry writes `button.tsx` where the kit has
- * `Button.tsx`, and on a case-insensitive filesystem that is one file.
+ * So the exemption was excusing 49 files and ~2,965 lines of THE MOST REUSED
+ * CODE IN THE APP from the raw-hex, arbitrary-value and file-length gates,
+ * while reporting green. A gate that skips the kit is a gate that checks the
+ * screens for a discipline the kit is free to break.
+ *
+ * If a registry `add` ever does land here, re-add an exemption THEN, scoped to
+ * the files it actually wrote, and say so in the commit. Do not restore this
+ * one on the strength of a `components.json` that describes a setup nobody
+ * performed.
  */
-const VENDORED = join(ROOT, "src", "components", "ui");
 
 function walk(dir) {
   if (!existsSync(dir)) return [];
-  if (resolve(dir) === VENDORED) return [];
   const out = [];
   for (const name of readdirSync(dir)) {
     const p = join(dir, name);
