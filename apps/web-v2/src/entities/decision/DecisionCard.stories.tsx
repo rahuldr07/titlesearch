@@ -109,8 +109,11 @@ export const QuestionNotAuthored: Story = {
  */
 export const NeverRouted: Story = {
   args: {
-    field: (() => {
-      const { asking: _a, why: _w, ...rest } = FIELD;
+    /* Deleted, not destructured-around: no unused bindings for §6 to reject. */
+    field: ((): typeof FIELD => {
+      const rest = { ...FIELD };
+      delete rest.asking;
+      delete rest.why;
       return rest;
     })(),
   },
