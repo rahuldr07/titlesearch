@@ -8,10 +8,16 @@ import { NoValueChip } from "./NoValueChip";
 /**
  * THE SIX RENDERS OF A FIELD VALUE, AND THE `never` GUARD THAT KEEPS THEM SIX.
  *
- * `provenance.ts:45-62` is the specification. Four NA reasons, plus a fifth
+ * `provenance.ts` is the specification. Four NA reasons, plus a fifth
  * "not yet extracted" render that is a statement about the PIPELINE, plus
  * `uncited` — a value the server sent with no source, which `entities.ts:85-89`
  * calls "the exact failure shape the architecture exists to catch".
+ *
+ * The switch below has SEVEN cases because the union is flat: each NA reason
+ * is its own `kind`. That is the B2 fix. Under the old shape a single
+ * `case "na": return <span>—</span>` collapsed all four into one grey dash and
+ * satisfied the `never` guard while doing it. It cannot now — dropping any one
+ * of the four fails to compile here.
  *
  * Every render differs in TEXT, in MARK and in `data-field-render`. The last is
  * what a test and a Playwright assertion read: "they must never collapse into
@@ -72,14 +78,28 @@ export function FieldValueView({ value, onOpenCitation, className }: FieldValueV
       return <NoValueChip render="not-extracted" className={className} />;
 
     /**
+     * The three NA reasons that carry no page reference. Written out one by
+     * one rather than folded together: folding them is the collapse, and the
+     * whole point of the flat union is that the compiler counts them.
+     */
+    case "na-not-present":
+      return <NoValueChip render="NOT_PRESENT" className={className} />;
+
+    case "na-not-found":
+      return <NoValueChip render="NOT_FOUND" className={className} />;
+
+    case "na-not-stated":
+      return <NoValueChip render="NOT_STATED" className={className} />;
+
+    /**
      * PRESENT_UNREADABLE is the only member carrying a page reference
      * (`enums.ts:41-43`) — and the citation is rendered when the server sent
      * one rather than when the reason says it may. The type permits a citation
-     * on the NA branch; the server decides whether there is one.
+     * on THIS branch only; the server decides whether there is one.
      */
-    case "na":
+    case "na-present-unreadable":
       return (
-        <NoValueChip render={value.reason} className={className}>
+        <NoValueChip render="PRESENT_UNREADABLE" className={className}>
           {value.citation !== null && (
             <CitationRef citation={value.citation} onOpen={onOpenCitation} />
           )}

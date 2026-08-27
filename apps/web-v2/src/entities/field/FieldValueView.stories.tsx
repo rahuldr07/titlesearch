@@ -4,6 +4,7 @@ import { expect } from "storybook/test";
 import { NaReason } from "@titlepipe/contract";
 import { FieldValueView } from "./FieldValueView";
 import type { Citation } from "../../shared/provenance";
+import { naFieldValue } from "../../shared/provenance";
 
 /**
  * THE STATES GALLERY, AND THE ASSERTION UNDER IT.
@@ -53,20 +54,20 @@ export const Uncited: Story = {
 };
 
 export const NotPresent: Story = {
-  args: { value: { kind: "na", reason: "NOT_PRESENT", citation: null } },
+  args: { value: { kind: "na-not-present" } },
 };
 
 export const NotFound: Story = {
-  args: { value: { kind: "na", reason: "NOT_FOUND", citation: null } },
+  args: { value: { kind: "na-not-found" } },
 };
 
 export const NotStated: Story = {
-  args: { value: { kind: "na", reason: "NOT_STATED", citation: null } },
+  args: { value: { kind: "na-not-stated" } },
 };
 
 /** The only member carrying a page reference (`enums.ts:41-43`). */
 export const PresentUnreadable: Story = {
-  args: { value: { kind: "na", reason: "PRESENT_UNREADABLE", citation: CITATION } },
+  args: { value: { kind: "na-present-unreadable", citation: CITATION } },
 };
 
 /** A statement about the PIPELINE, not the document. */
@@ -84,7 +85,7 @@ export const AllFiveRenders: Story = {
   render: () => (
     <div className="flex flex-col gap-8">
       {NaReason.options.map((reason) => (
-        <FieldValueView key={reason} value={{ kind: "na", reason, citation: null }} />
+        <FieldValueView key={reason} value={naFieldValue(reason, null)} />
       ))}
       <FieldValueView value={{ kind: "not-extracted" }} />
     </div>
@@ -116,7 +117,7 @@ export const AbsencesAndTheDefect: Story = {
       <FieldValueView value={{ kind: "cited", cited: { value: "MARIA L. ESTRADA", citation: CITATION } }} />
       <FieldValueView value={{ kind: "uncited", value: "MARIA L. ESTRADA" }} />
       {NaReason.options.map((reason) => (
-        <FieldValueView key={reason} value={{ kind: "na", reason, citation: null }} />
+        <FieldValueView key={reason} value={naFieldValue(reason, null)} />
       ))}
       <FieldValueView value={{ kind: "not-extracted" }} />
     </div>
