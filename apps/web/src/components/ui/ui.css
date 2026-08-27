@@ -99,8 +99,33 @@
  * 16px checkbox gets a 24px hit box rather than a smaller one plus an apology.
  */
 @utility tp-target {
-  min-block-size: var(--size-control-md);
-  min-inline-size: var(--size-control-md);
+  /*
+   * NOT SET WHEN THE COMPONENT ASKED FOR ITS OWN FLOOR.
+   *
+   * `@utility` output is emitted AFTER the numeric utilities, so at equal
+   * specificity this used to win every race against a `min-h-*` on the same
+   * element. Proven by byte offset in the production CSS:
+   *
+   *     .min-h-36{   at 11440
+   *     .tp-target{  at 28660      ← later, same specificity, wins
+   *
+   * `Textarea` set `min-h-36` and documented it as "72px, three lines of
+   * 13px". Measured: 24px. The floor did not exist, and was masked only by
+   * `field-sizing-content` growing the box to one line, so it looked plausible
+   * and was wrong. Every future `min-h-*` alongside this utility would have
+   * been swallowed the same silent way.
+   *
+   * The guard is deliberately narrow: WCAG 2.2 §2.5.8 wants 24px MINIMUM, and
+   * a component asking for MORE already satisfies it. A component asking for
+   * less is the case worth catching, and `textarea.test.ts` catches it by
+   * measuring rather than by reading the class.
+   */
+  &:not([class*="min-h-"]) {
+    min-block-size: var(--size-control-md);
+  }
+  &:not([class*="min-w-"]) {
+    min-inline-size: var(--size-control-md);
+  }
 }
 
 /*

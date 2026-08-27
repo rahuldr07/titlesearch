@@ -3,6 +3,7 @@ import { readCited } from "../../shared/provenance";
 import { cx } from "../../components/ui";
 import { FieldValueView } from "../../entities/field/FieldValueView";
 import { fieldLabel } from "./fieldNaming";
+import { readingsDisagree } from "./readings";
 import { RowMark } from "./RowMark";
 import { T1Pill } from "./T1Pill";
 
@@ -36,15 +37,13 @@ export type FieldRowProps = {
 
 export function FieldRow({ field, selected, onSelect, ruinous }: FieldRowProps) {
   const value = readCited(field);
-  const readings = field.readings ?? [];
   /*
-   * A≠B: the two readings the server sent carry different values. A fact about
-   * the payload, not a ruling — INVARIANT 28 requires the disagreement to be
-   * surfaced ON THE ROW, and this is that surface.
+   * A≠B: the readings the server sent carry different values. A fact about the
+   * payload, not a ruling — INVARIANT 28 requires the disagreement to be
+   * surfaced ON THE ROW, and this is that surface. Decided in `readings.ts`,
+   * which is where touching a reading's `.value` belongs.
    */
-  const disagree =
-    readings.length >= 2 &&
-    new Set(readings.map((r) => r.value)).size > 1;
+  const disagree = readingsDisagree(field.readings ?? []);
 
   return (
     <button

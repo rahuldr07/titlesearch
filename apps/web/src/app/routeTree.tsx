@@ -4,6 +4,7 @@ import { Unbuilt } from "./chrome/Unbuilt";
 import { UNBUILT_SCREENS, type ScreenDescriptor } from "./chrome/unbuiltScreens";
 import { BLIND_SEAT_SCREEN } from "./chrome/orderScreens";
 import { BUILT_SCREENS } from "./chrome/builtScreens";
+import { orderSearch } from "./orderSearch";
 import { OrderRoute } from "./chrome/OrderRoute";
 
 /**
@@ -76,29 +77,13 @@ function Placeholder(props: { readonly descriptor: ScreenDescriptor }) {
  * rather than a query string somebody remembers to read: navigating here with
  * a misspelled search key does not compile.
  *
- * The shape is deliberately narrow. `field` is a field id and `page` is a page
- * number, and nothing else: no filter, no sort, no page SIZE. Those would be
- * the browse affordance arriving through the search string after having been
- * refused at the endpoint (endpoints.ts:69, INVARIANTS:82-83).
- *
- * `page` is here because the extraction matrix (design §Screens 6) opens the
- * workstation AT a page, and selection that lives in component state is
- * selection nobody can link to or reload into. It is validated as a finite
- * number rather than trusted: a `page=NaN` pasted into the bar must not reach a
- * component as a number.
+ * The shape is deliberately narrow and lives in `orderSearch.ts`, which
+ * carries the argument for each of its two keys and for everything absent.
  */
 const reviewRoute = createRoute({
   getParentRoute: parent,
   path: "/orders/$orderId",
-  validateSearch: (
-    search: Record<string, unknown>,
-  ): { field?: string; page?: number } => {
-    const parsed: { field?: string; page?: number } = {};
-    if (typeof search["field"] === "string") parsed.field = search["field"];
-    const page = Number(search["page"]);
-    if (Number.isInteger(page) && page > 0) parsed.page = page;
-    return parsed;
-  },
+  validateSearch: orderSearch,
   component: ReviewRoute,
 });
 
