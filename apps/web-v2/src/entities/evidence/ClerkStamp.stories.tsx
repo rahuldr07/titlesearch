@@ -1,3 +1,4 @@
+import { onPaper } from "../panelGround";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { ClerkStamp } from "./ClerkStamp";
 
@@ -9,7 +10,8 @@ import { ClerkStamp } from "./ClerkStamp";
 const meta = {
   title: "entities/ClerkStamp",
   component: ClerkStamp,
-  parameters: { backgrounds: { value: "paper" } },
+  /* Rule 8's own surface, not the app canvas — see `panelGround.tsx`. */
+  decorators: [onPaper],
 } satisfies Meta<typeof ClerkStamp>;
 
 export default meta;

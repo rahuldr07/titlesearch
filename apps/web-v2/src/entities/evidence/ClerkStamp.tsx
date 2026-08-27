@@ -29,7 +29,14 @@ export function ClerkStamp({ caption, detail, className }: ClerkStampProps) {
       className={cx(
         "tp-clerk-stamp inline-flex flex-col items-center gap-1",
         "rounded-paper border-2 border-double px-6 py-3",
-        "border-paper-stamp text-paper-stamp opacity-80",
+        /*
+         * NO OPACITY. A stamp fading into the stock is the obvious way to draw
+         * one, and it is how this failed: `--color-paper-stamp` clears 4.76:1
+         * on paper, and `opacity-80` composited it down to 3.13:1 — a real AA
+         * failure that no token audit would ever find, because the token is
+         * fine. The aged look comes from the double rule and the rotation.
+         */
+        "border-paper-stamp text-paper-stamp",
         className,
       )}
     >

@@ -25,3 +25,18 @@ export const onPanel: Decorator = (Story) => (
     <Story />
   </div>
 );
+
+/**
+ * THE PAPER GROUND. Rule 8's surface, and the one `entities/` component family
+ * that must NOT stand on a panel: a scanned sheet on a white card has had the
+ * thing it is saying ("this is evidence") erased by its background.
+ *
+ * Same argument as `onPanel`, opposite surface. The a11y gate then grades the
+ * stamp brown against the warm stock it is actually pressed onto rather than
+ * against the app canvas, where it measures 3.13:1 and correctly fails.
+ */
+export const onPaper: Decorator = (Story) => (
+  <div className="bg-surface-paper p-12">
+    <Story />
+  </div>
+);

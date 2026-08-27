@@ -1,3 +1,4 @@
+import { onPaper } from "../panelGround";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect } from "storybook/test";
 import { PaperSheet, CitationBox } from "./PaperSheet";
@@ -17,7 +18,8 @@ const BODY =
 const meta = {
   title: "entities/PaperSheet",
   component: PaperSheet,
-  parameters: { backgrounds: { value: "paper" } },
+  /* Rule 8's own surface, not the app canvas — see `panelGround.tsx`. */
+  decorators: [onPaper],
 } satisfies Meta<typeof PaperSheet>;
 
 export default meta;
