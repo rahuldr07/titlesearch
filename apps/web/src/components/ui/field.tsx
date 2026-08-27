@@ -1,69 +1,40 @@
 import { useMemo } from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 
-import { cn } from "@/lib/utils"
-import { Label } from "@/components/ui/label"
-import { Separator } from "@/components/ui/separator"
+import { cx } from "@/components/ui/cx"
+import { descriptionClass, errorClass } from "@/components/ui/field-chrome"
 
-function FieldSet({ className, ...props }: React.ComponentProps<"fieldset">) {
-  return (
-    <fieldset
-      data-slot="field-set"
-      className={cn(
-        "flex flex-col gap-4 has-[>[data-slot=checkbox-group]]:gap-3 has-[>[data-slot=radio-group]]:gap-3",
-        className
-      )}
-      {...props}
-    />
-  )
-}
-
-function FieldLegend({
-  className,
-  variant = "legend",
-  ...props
-}: React.ComponentProps<"legend"> & { variant?: "legend" | "label" }) {
-  return (
-    <legend
-      data-slot="field-legend"
-      data-variant={variant}
-      className={cn(
-        "mb-1.5 font-medium data-[variant=label]:text-sm data-[variant=legend]:text-base",
-        className
-      )}
-      {...props}
-    />
-  )
-}
-
-function FieldGroup({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="field-group"
-      className={cn(
-        "group/field-group @container/field-group flex w-full flex-col gap-5 data-[slot=checkbox-group]:gap-3 *:data-[slot=field-group]:gap-4",
-        className
-      )}
-      {...props}
-    />
-  )
-}
-
+/**
+ * A SINGLE FIELD AND ITS PARTS. The containers (set, legend, group, separator,
+ * wrapping label) live in `field-set.tsx`; both are re-exported from here so a
+ * screen still imports one module.
+ *
+ * `data-[invalid=true]:text-destructive` became `text-state-halt`, and it is
+ * the ONLY thing the invalid state colours at this level: the registry tinted
+ * the whole field red, which turns a wrong postcode into a screen that looks
+ * broken. The control gets a halt border, the message gets halt ink, and the
+ * label stays grey.
+ */
 const fieldVariants = cva(
-  "group/field flex w-full gap-2 data-[invalid=true]:text-destructive",
+  "group/field flex w-full gap-4 data-[invalid=true]:text-state-halt",
   {
     variants: {
       orientation: {
         vertical: "flex-col *:w-full [&>.sr-only]:w-auto",
-        horizontal:
-          "flex-row items-center has-[>[data-slot=field-content]]:items-start *:data-[slot=field-label]:flex-auto has-[>[data-slot=field-content]]:[&>[role=checkbox],[role=radio]]:mt-px",
-        responsive:
-          "flex-col *:w-full @md/field-group:flex-row @md/field-group:items-center @md/field-group:*:w-auto @md/field-group:has-[>[data-slot=field-content]]:items-start @md/field-group:*:data-[slot=field-label]:flex-auto [&>.sr-only]:w-auto @md/field-group:has-[>[data-slot=field-content]]:[&>[role=checkbox],[role=radio]]:mt-px",
+        horizontal: [
+          "flex-row items-center",
+          "has-[>[data-slot=field-content]]:items-start",
+          "*:data-[slot=field-label]:flex-auto",
+        ],
+        responsive: [
+          "flex-col *:w-full [&>.sr-only]:w-auto",
+          "@md/field-group:flex-row @md/field-group:items-center @md/field-group:*:w-auto",
+          "@md/field-group:has-[>[data-slot=field-content]]:items-start",
+          "@md/field-group:*:data-[slot=field-label]:flex-auto",
+        ],
       },
     },
-    defaultVariants: {
-      orientation: "vertical",
-    },
+    defaultVariants: { orientation: "vertical" },
   }
 )
 
@@ -77,7 +48,7 @@ function Field({
       role="group"
       data-slot="field"
       data-orientation={orientation}
-      className={cn(fieldVariants({ orientation }), className)}
+      className={cx(fieldVariants({ orientation }), className)}
       {...props}
     />
   )
@@ -87,38 +58,24 @@ function FieldContent({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="field-content"
-      className={cn(
-        "group/field-content flex flex-1 flex-col gap-0.5 leading-snug",
-        className
-      )}
+      className={cx("group/field-content flex flex-1 flex-col gap-1 leading-close", className)}
       {...props}
     />
   )
 }
 
-function FieldLabel({
-  className,
-  ...props
-}: React.ComponentProps<typeof Label>) {
-  return (
-    <Label
-      data-slot="field-label"
-      className={cn(
-        "group/field-label peer/field-label flex w-fit gap-2 leading-snug group-data-[disabled=true]/field:opacity-50 has-data-checked:border-primary/30 has-data-checked:bg-primary/5 has-data-selected:border-primary/30 has-data-selected:bg-primary/5 has-[>[data-slot=field]]:rounded-lg has-[>[data-slot=field]]:border has-[>[data-slot=field]]:not-has-[:disabled,[data-disabled]]:hover:bg-muted/50 has-[>[data-slot=field]]:has-[:focus-visible]:border-ring has-[>[data-slot=field]]:has-[:focus-visible]:ring-3 has-[>[data-slot=field]]:has-[:focus-visible]:ring-ring/50 *:data-[slot=field]:p-2.5 dark:has-data-checked:border-primary/20 dark:has-data-checked:bg-primary/10 dark:has-data-selected:border-primary/20 dark:has-data-selected:bg-primary/10",
-        "has-[>[data-slot=field]]:w-full has-[>[data-slot=field]]:flex-col",
-        className
-      )}
-      {...props}
-    />
-  )
-}
-
+/**
+ * The name of a field drawn as TEXT rather than as a `<label>` — a read-only
+ * row, or a row whose control labels itself. 13px, one tier above the 11px
+ * form label, because this one sits BESIDE its value rather than above it.
+ */
 function FieldTitle({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
-      data-slot="field-label"
-      className={cn(
-        "flex w-fit items-center gap-2 text-sm font-medium group-data-[disabled=true]/field:opacity-50",
+      data-slot="field-title"
+      className={cx(
+        "flex w-fit items-center gap-4 font-sans text-meta leading-close font-semibold",
+        "text-ink-primary group-data-[disabled=true]/field:text-ink-disabled",
         className
       )}
       {...props}
@@ -126,14 +83,21 @@ function FieldTitle({ className, ...props }: React.ComponentProps<"div">) {
   )
 }
 
+/**
+ * Standing help, and rule 9's inline home: a disabled control states its reason
+ * HERE as well as in `title`, because a tooltip is unreachable on touch and by
+ * most screen readers (disabled.ts). `hover:text-primary` on a link became the
+ * action colour, which is the only place a link may spend it.
+ */
 function FieldDescription({ className, ...props }: React.ComponentProps<"p">) {
   return (
     <p
       data-slot="field-description"
-      className={cn(
-        "text-left text-sm leading-normal font-normal text-muted-foreground group-has-data-horizontal/field:text-balance [[data-variant=legend]+&]:-mt-1.5",
-        "last:mt-0 nth-last-2:-mt-1",
-        "[&>a]:underline [&>a]:underline-offset-4 [&>a:hover]:text-primary",
+      className={cx(
+        descriptionClass,
+        "text-left group-has-data-horizontal/field:text-balance",
+        "[[data-variant=legend]+&]:-mt-3 last:mt-0 nth-last-2:-mt-2",
+        "[&>a]:underline [&>a]:underline-offset-4 [&>a:hover]:text-action",
         className
       )}
       {...props}
@@ -141,36 +105,12 @@ function FieldDescription({ className, ...props }: React.ComponentProps<"p">) {
   )
 }
 
-function FieldSeparator({
-  children,
-  className,
-  ...props
-}: React.ComponentProps<"div"> & {
-  children?: React.ReactNode
-}) {
-  return (
-    <div
-      data-slot="field-separator"
-      data-content={!!children}
-      className={cn(
-        "relative -my-2 h-5 text-sm group-data-[variant=outline]/field-group:-mb-2",
-        className
-      )}
-      {...props}
-    >
-      <Separator className="absolute inset-0 top-1/2" />
-      {children && (
-        <span
-          className="relative mx-auto block w-fit bg-background px-2 text-muted-foreground"
-          data-slot="field-separator-content"
-        >
-          {children}
-        </span>
-      )}
-    </div>
-  )
-}
-
+/**
+ * The SERVER's message. `shared/notify.ts`: the client never authors refusal
+ * wording, and a field-level refusal is refusal wording. `role="alert"` is kept
+ * from the registry — a message that appears after submit and is never
+ * announced is a message a screen-reader user does not receive.
+ */
 function FieldError({
   className,
   children,
@@ -180,57 +120,27 @@ function FieldError({
   errors?: Array<{ message?: string } | undefined>
 }) {
   const content = useMemo(() => {
-    if (children) {
-      return children
-    }
+    if (children) return children
+    if (!errors?.length) return null
 
-    if (!errors?.length) {
-      return null
-    }
-
-    const uniqueErrors = [
-      ...new Map(errors.map((error) => [error?.message, error])).values(),
-    ]
-
-    if (uniqueErrors?.length == 1) {
-      return uniqueErrors[0]?.message
-    }
+    const uniqueErrors = [...new Map(errors.map((e) => [e?.message, e])).values()]
+    if (uniqueErrors.length === 1) return uniqueErrors[0]?.message
 
     return (
-      <ul className="ml-4 flex list-disc flex-col gap-1">
-        {uniqueErrors.map(
-          (error, index) =>
-            error?.message && <li key={index}>{error.message}</li>
-        )}
+      <ul className="ml-8 flex list-disc flex-col gap-2">
+        {uniqueErrors.map((error, index) => error?.message && <li key={index}>{error.message}</li>)}
       </ul>
     )
   }, [children, errors])
 
-  if (!content) {
-    return null
-  }
+  if (!content) return null
 
   return (
-    <div
-      role="alert"
-      data-slot="field-error"
-      className={cn("text-sm font-normal text-destructive", className)}
-      {...props}
-    >
+    <div role="alert" data-slot="field-error" className={cx(errorClass, className)} {...props}>
       {content}
     </div>
   )
 }
 
-export {
-  Field,
-  FieldLabel,
-  FieldDescription,
-  FieldError,
-  FieldGroup,
-  FieldLegend,
-  FieldSeparator,
-  FieldSet,
-  FieldContent,
-  FieldTitle,
-}
+export { Field, FieldContent, FieldTitle, FieldDescription, FieldError }
+export { FieldSet, FieldLegend, FieldGroup, FieldSeparator, FieldLabel } from "./field-set"

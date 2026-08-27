@@ -1,25 +1,49 @@
 import * as React from "react"
-import {
-  composeRenderProps,
-  TextArea as TextareaPrimitive,
-} from "react-aria-components"
+import { composeRenderProps, TextArea as TextareaPrimitive } from "react-aria-components"
 
-import { cn } from "@/lib/utils"
+import { cx } from "@/components/ui/cx"
+import { disabledAttributes, type Disablement } from "@/components/ui/disabled"
+import { controlClass } from "@/components/ui/field-chrome"
 
-function Textarea({
-  className,
-  ...props
-}: React.ComponentProps<typeof TextareaPrimitive>) {
+/**
+ * THE MULTI-LINE CONTROL, on the same box as `Input` (field-chrome.ts).
+ *
+ * `min-h-16` in the registry meant 64px at Tailwind's stock 4px base; at this
+ * app's 2px base (ui.css) the same token is 32px, which is under one line. So
+ * the floor is restated as `min-h-36` — 72px, three lines of 13px at
+ * leading-close plus padding — rather than left to a token whose meaning
+ * changed underneath it. That silent halving is exactly the failure the token
+ * file warns about for line-height.
+ *
+ * `field-sizing-content` is KEPT: an examiner's note grows with the note, and
+ * a fixed box that scrolls internally hides the end of a sentence someone is
+ * about to sign.
+ *
+ * Both `dark:` pairs deleted; `disabled` is a reason, not a boolean.
+ */
+export type TextareaProps = Omit<
+  React.ComponentProps<typeof TextareaPrimitive>,
+  "isDisabled" | "disabled"
+> &
+  Disablement & {
+    /** Rule 3: mono is for data only. Opt in; nothing infers it. */
+    readonly data?: boolean | undefined
+  }
+
+function Textarea({ className, data, disabledBecause, ...props }: TextareaProps) {
   return (
     <TextareaPrimitive
       data-slot="textarea"
-      className={composeRenderProps(className, (className) =>
-        cn(
-          "flex field-sizing-content min-h-16 w-full rounded-lg border border-input bg-transparent px-2.5 py-2 text-base transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 md:text-sm dark:bg-input/30 dark:disabled:bg-input/80 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40",
-          className
+      {...props}
+      {...disabledAttributes(disabledBecause)}
+      className={composeRenderProps(className, (resolved) =>
+        cx(
+          controlClass,
+          "flex field-sizing-content min-h-36 py-5",
+          data === true && "font-mono",
+          resolved
         )
       )}
-      {...props}
     />
   )
 }
