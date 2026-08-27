@@ -76,6 +76,7 @@ they served. Recoverable from git history; see `docs/frontend/CARRY-FORWARD.md`.
 |---|---|---|
 | `design-2026-08/` | AUTHORITATIVE | **The current design.** `reference-app.html` is the behavioural source of truth; `tokens.css` / `tokens.json` copy verbatim; `claude-design-rules.md` is the 14 agent rules; three `ANALYSIS-*.md` map it against the contract |
 | `CARRY-FORWARD.md` | AUTHORITATIVE | Facts rescued from the 2026-08-27 cleanup — constraints, traps, and why they still bind |
+| `REVIEW.md` | AUTHORITATIVE | Standing review procedure + the open findings ledger. Read before reviewing; update in the same session |
 | `decisions.md` | AUTHORITATIVE | Living ledger: delegated decisions incl. owner rulings |
 | `open-rulings.md` | AUTHORITATIVE | Living ledger: RULE elements awaiting an owner/backend ruling. **Q11 is live** |
 | `test-harvest.md` | RECORD | Pass 0: all 138 pre-rebuild tests classified |
