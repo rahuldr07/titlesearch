@@ -1,4 +1,3 @@
-import { onPanel } from "../panelGround";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect } from "storybook/test";
 import { FieldState } from "@titlepipe/contract";
@@ -25,7 +24,7 @@ type Story = StoryObj<typeof meta>;
 
 export const Pending: Story = { args: { state: "pending" } };
 
-/** No human saw this. The lighter ✓ — a mark on a row you are not asked to act on. */
+/** No human saw this. The muted ✓ — a mark on a row you are not asked to act on. */
 export const AutoConfirmed: Story = { args: { state: "auto_confirmed" } };
 
 export const NeedsReview: Story = { args: { state: "needs_review" } };

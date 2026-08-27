@@ -1,4 +1,3 @@
-import { onPanel } from "../panelGround";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect } from "storybook/test";
 import { NaReason } from "@titlepipe/contract";
@@ -46,8 +45,7 @@ export const CitedClickable: Story = {
 
 /**
  * THE DEFECT. A value with no source — `entities.ts:85-89`, "the exact failure
- * shape the architecture exists to catch". Drawn as the defect it is, never
- * silently as a slightly quieter cited value.
+ * shape the architecture exists to catch". Drawn as the defect it is.
  */
 export const Uncited: Story = {
   args: { value: { kind: "uncited", value: "MARIA L. ESTRADA" } },
@@ -114,9 +112,7 @@ export const AbsencesAndTheDefect: Story = {
   args: { value: { kind: "uncited", value: "MARIA L. ESTRADA" } },
   render: () => (
     <div className="flex flex-col gap-8">
-      <FieldValueView
-        value={{ kind: "cited", cited: { value: "MARIA L. ESTRADA", citation: CITATION } }}
-      />
+      <FieldValueView value={{ kind: "cited", cited: { value: "MARIA L. ESTRADA", citation: CITATION } }} />
       <FieldValueView value={{ kind: "uncited", value: "MARIA L. ESTRADA" }} />
       {NaReason.options.map((reason) => (
         <FieldValueView key={reason} value={{ kind: "na", reason, citation: null }} />

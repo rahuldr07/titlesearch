@@ -16,6 +16,9 @@ import type { Decorator } from "@storybook/react-vite";
  * will actually ship on. This is not silencing axe; it is giving axe the right
  * question. A component that needs the canvas gets `--color-surface-app` and
  * has to earn its contrast there.
+ *
+ * `evidence/` deliberately does NOT use this. Paper is its own surface family
+ * (rule 8) and a sheet on a white panel has had its point erased.
  */
 export const onPanel: Decorator = (Story) => (
   <div className="bg-surface-panel p-12">
