@@ -27,7 +27,23 @@ export default tseslint.config(
       "react-refresh": reactRefresh,
     },
     rules: {
-      ...reactHooks.configs.recommended.rules,
+      /*
+       * `recommended-latest` rather than `recommended`, because the React
+       * Compiler is now enabled in vite.config.ts and this is where its lint
+       * rules live. eslint-plugin-react-hooks 7.x ships them in-plugin —
+       * `purity`, `immutability`, `set-state-in-effect`,
+       * `preserve-manual-memoization`, `refs`, `static-components`,
+       * `error-boundaries` and ten more.
+       *
+       * DO NOT install `eslint-plugin-react-compiler`. It is stuck at
+       * 19.1.0-rc.2 and superseded by exactly these rules.
+       *
+       * This matters more than a normal lint upgrade: a compiler-broken
+       * component does not fail loudly, it memoizes something it should not
+       * and produces a stale render. These rules are the only place that gets
+       * caught before it ships.
+       */
+      ...reactHooks.configs["recommended-latest"].rules,
       "react-refresh/only-export-components": "warn",
 
       /* §6 — no `any`, no non-null assertion, no ts-ignore. */
@@ -67,14 +83,54 @@ export default tseslint.config(
               message: "§8 — dates are opaque strings; see src/shared/date.ts",
             },
             { name: "lodash", message: "§4 forbidden" },
-            { name: "framer-motion", message: "§4 forbidden" },
+
+            /* MOTION — the §4 `framer-motion` ban is REVERSED by owner ruling
+               2026-08-27 (dependency spec, Deviations §4). `motion` is Framer
+               Motion's current package name and it is installed.
+
+               What replaces the ban is narrower and load-bearing. MEASURED in
+               the spec: `LazyMotion` + `domAnimation` + `m` is 25.8 kB for the
+               same API that the top-level `motion` component costs 42.5 kB —
+               a 40% saving that is invisible unless you already know to look
+               for it. An agent writing `<motion.div>` gets a working animation
+               and silently doubles the motion bundle; nothing fails.
+
+               So the cheap path is made the only reachable one:
+                 - `motion/react` is PERMITTED — that is where LazyMotion,
+                   domAnimation and `m` come from.
+                 - the `motion` NAMESPACE export of it is banned by name, which
+                   is what `motion.div` is reached through.
+                 - the bare `motion` package specifier is banned, since it
+                   re-exports the eager surface.
+               `framer-motion` stays listed: it is the dead name, is not
+               installed, and an agent recalling it should be told where to go
+               rather than getting a module-not-found. */
+            {
+              name: "motion",
+              message:
+                "Import from `motion/react`, and only LazyMotion + domAnimation + m. The bare package re-exports the eager surface (42.5 kB vs 25.8 kB).",
+            },
+            {
+              name: "motion/react",
+              importNames: ["motion"],
+              message:
+                "`motion.div` pulls the eager surface (42.5 kB vs 25.8 kB). Use LazyMotion + domAnimation + `m` instead.",
+            },
+            {
+              name: "framer-motion",
+              message:
+                "Dead package name — the current one is `motion`. Import `motion/react` and use LazyMotion + m.",
+            },
             { name: "next", message: "§4 forbidden — no SSR" },
             { name: "styled-components", message: "§4 forbidden — Tailwind + cva" },
-            {
-              name: "zod",
-              message:
-                "§4 — Valibot in the browser; @titlepipe/contract owns wire shapes",
-            },
+            /* The `zod` and `zod/*` entries that used to sit here enforced
+               BRIEF §4's "Valibot NOT zod" mandate. That mandate is SUPERSEDED
+               by owner ruling 2026-08-27 (dependency spec, Decisions taken §1
+               — D-6 closed): Zod ships in the browser deliberately, `valibot`
+               is removed, and ADR-0001 stands unamended with Zod as the
+               browser's runtime boundary parser. The rule would now fail
+               `@titlepipe/contract`'s own imports, so it is deleted rather
+               than suppressed per-file. */
           ],
           // `paths` matches the exact module name only, so `lodash/merge` and
           // `date-fns/format` both walked past it. The config previously
@@ -105,11 +161,19 @@ export default tseslint.config(
                 "styled-components/*",
                 "next",
                 "next/*",
-                "zod",
-                "zod/*",
               ],
               message:
                 "§4 forbidden dependency (subpath imports included). Dates: src/shared/date.ts. Wire shapes: @titlepipe/contract.",
+            },
+            /* `paths` above names `motion` and `motion/react` exactly, which
+               leaves every OTHER subpath — `motion/react-client`,
+               `motion/mini`, `motion/dom` — walking straight past, and the
+               first of those re-exports the eager namespace. Negation keeps
+               the one permitted entry point reachable. */
+            {
+              group: ["motion/*", "!motion/react"],
+              message:
+                "`motion/react` is the only permitted entry point, and only LazyMotion + domAnimation + m from it.",
             },
           ],
         },
