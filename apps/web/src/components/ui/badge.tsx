@@ -1,58 +1,121 @@
-import { cva, type VariantProps } from "class-variance-authority"
+import type { ReactNode } from "react";
+import { cva, type VariantProps } from "class-variance-authority";
+import { cx } from "./cx";
 
-import { cn } from "@/lib/utils"
-
-const badgeVariants = cva(
-  "group/badge inline-flex h-5 w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-4xl border border-transparent px-2 py-0.5 text-xs font-medium whitespace-nowrap transition-all focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&>svg]:pointer-events-none [&>svg]:size-3!",
+/**
+ * ADAPTED FROM THE REGISTRY `badge`, AND SPLIT IN TWO.
+ *
+ * The registry ships one `Badge` with six variants (default/secondary/
+ * destructive/outline/ghost/link), `dark:` rings, and `text-xs`. Rule 6 says a
+ * row carries ONE status signal — a mark (✓ ◆ •) plus weight — and colored
+ * capsules appear only at moments of record: released, quarantine clear, T1.
+ * A single component with a `variant` prop cannot express that budget, because
+ * a variant is a thing a developer flips without deciding.
+ *
+ *   <StatusMark>  a glyph plus weight. Free. Use in every row.
+ *   <Badge>       a tinted capsule. Expensive. A moment of record only.
+ *
+ * A reviewer seeing `<Badge>` inside a table row can call it a rule 6 violation
+ * from the element name alone. `link` and `ghost` are dropped: a badge that is
+ * a link is a link, and a badge with no fill is a StatusMark.
+ *
+ * Tones are the THREE state families the token file ships plus `accent`. No
+ * `info`, no `success` — those would be a fourth and fifth hue on a screen that
+ * spends colour deliberately.
+ */
+const capsule = cva(
+  [
+    // Rule 7: pills are 999px and this is one of the four legal pill uses.
+    "inline-flex w-fit shrink-0 items-center gap-3 rounded-pill border px-5 py-1",
+    // Rule 4: sentence case. NOT uppercase — ALL-CAPS is legal only in sidebar
+    // rubrics and serif certificate headings, and a status capsule is neither.
+    // Rule 2: `text-label` (11px), one of the six. The registry's `text-xs`
+    // does not exist as a utility in this app.
+    "font-sans text-label leading-flat font-semibold whitespace-nowrap",
+  ],
   {
     variants: {
-      variant: {
-        default: "bg-primary text-primary-foreground [a]:hover:bg-primary/80",
-        secondary:
-          "bg-secondary text-secondary-foreground [a]:hover:bg-secondary/80",
-        destructive:
-          "bg-destructive/10 text-destructive focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:focus-visible:ring-destructive/40 [a]:hover:bg-destructive/20",
-        outline:
-          "border-border text-foreground [a]:hover:bg-muted [a]:hover:text-muted-foreground",
-        ghost:
-          "hover:bg-muted hover:text-muted-foreground dark:hover:bg-muted/50",
-        link: "text-primary underline-offset-4 hover:underline",
+      tone: {
+        settled: "border-state-settled-border bg-state-settled-surface text-state-settled",
+        attend: "border-state-attend-border bg-state-attend-surface text-state-attend",
+        halt: "border-state-halt-border bg-state-halt-surface text-state-halt",
+        /* Rule 1: a spend of the accent. Once per screen, WITH the primary
+           action rather than in addition to it. */
+        accent: "border-action-border bg-action-surface text-action",
       },
     },
-    defaultVariants: {
-      variant: "default",
-    },
-  }
-)
+    defaultVariants: { tone: "settled" },
+  },
+);
 
-function Badge({
-  className,
-  variant = "default",
-  render,
-  ...props
-}: React.ComponentProps<"span"> &
-  VariantProps<typeof badgeVariants> & {
-    render?: (props: React.HTMLAttributes<HTMLElement>) => React.ReactNode
-  }) {
-  if (render) {
-    const renderProps = {
-      "data-slot": "badge",
-      "data-variant": variant,
-      className: cn(badgeVariants({ variant }), className),
-      ...props,
-    }
+export type BadgeProps = VariantProps<typeof capsule> & {
+  readonly children: ReactNode;
+  readonly className?: string | undefined;
+};
 
-    return render(renderProps)
-  }
-
+/** A moment of record: released, quarantine clear, T1. Never an ordinary row. */
+export function Badge({ tone, className, children }: BadgeProps) {
   return (
-    <span
-      data-slot="badge"
-      data-variant={variant}
-      className={cn(badgeVariants({ variant }), className)}
-      {...props}
-    />
-  )
+    <span data-slot="badge" data-tone={tone ?? "settled"} className={cx(capsule({ tone }), className)}>
+      {children}
+    </span>
+  );
 }
 
-export { Badge, badgeVariants }
+/**
+ * The glyph vocabulary, and it is closed: ✓ ◆ • T1 (rule 7). A union rather
+ * than a string, so a fifth mark is a compile error rather than design drift.
+ */
+export type Mark = "settled" | "attend" | "halt" | "tier1";
+
+const GLYPH: Record<Mark, string> = {
+  settled: "✓",
+  attend: "◆",
+  halt: "•",
+  tier1: "T1",
+};
+
+const MARK_INK: Record<Mark, string> = {
+  settled: "text-state-settled",
+  attend: "text-state-attend",
+  halt: "text-state-halt",
+  tier1: "text-state-halt",
+};
+
+/**
+ * ONE status signal for a row: mark plus weight, no capsule and no fill.
+ *
+ * `label` is required and is what a screen reader gets; the glyph is
+ * `aria-hidden`. Colour is never the only carrier — glyph, weight and words all
+ * differ — so this survives greyscale and a red-green deficiency, which is what
+ * CONTEXT §11 asks of the NA states and is no less true here.
+ */
+export function StatusMark({
+  mark,
+  label,
+  resting,
+  className,
+}: {
+  readonly mark: Mark;
+  readonly label: string;
+  /** A ✓ on a row you are not being asked to act on. Desaturated, not hidden. */
+  readonly resting?: boolean | undefined;
+  readonly className?: string | undefined;
+}) {
+  return (
+    <span
+      data-slot="status-mark"
+      data-mark={mark}
+      className={cx(
+        "inline-flex items-center gap-4 font-sans text-meta leading-close font-semibold",
+        resting === true ? "text-ink-secondary" : MARK_INK[mark],
+        className,
+      )}
+    >
+      <span aria-hidden className="font-mono">
+        {GLYPH[mark]}
+      </span>
+      {label}
+    </span>
+  );
+}

@@ -31,8 +31,13 @@ export { Label } from "./label";
 export { Checkbox } from "./checkbox";
 export { RadioGroup, RadioGroupItem } from "./radio-group";
 export { Switch } from "./switch";
-export { Toggle, toggleVariants } from "./toggle";
-export { ToggleGroup, ToggleGroupItem } from "./toggle-group";
+export { Toggle, type ToggleProps } from "./toggle";
+export {
+  ToggleGroup,
+  ToggleGroupItem,
+  type ToggleGroupProps,
+  type ToggleGroupItemProps,
+} from "./toggle-group";
 
 /* ── fields: label + control + description + error, as one unit ───────────── */
 export {
@@ -57,91 +62,64 @@ export {
 } from "./input-group";
 
 /* ── collections ──────────────────────────────────────────────────────────── */
-export {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectInput,
-  SelectItem,
-  SelectLabel,
-  SelectList,
-  SelectPopover,
-  SelectSeparator,
-  SelectTrigger,
-  SelectValue,
-  SelectEmpty,
-} from "./select";
-export {
-  Combobox,
-  ComboboxInput,
-  ComboboxContent,
-  ComboboxList,
-  ComboboxItem,
-  ComboboxGroup,
-  ComboboxLabel,
-  ComboboxCollection,
-  ComboboxEmpty,
-  ComboboxSeparator,
-  ComboboxTrigger,
-  ComboboxValue,
-} from "./combobox";
+/*
+ * `Option` is exported ONCE, from `select.tsx`, and `combobox.tsx` re-exports
+ * it. The registry shipped two near-identical option components; rule 6's ✓
+ * mark is spent in one place or it drifts.
+ */
+export { Select, Option, type SelectProps, type OptionProps } from "./select";
+export { ComboBox, type ComboBoxProps } from "./combobox";
+export { CommandPalette, type CommandPaletteProps } from "./commandPalette";
 export {
   Command,
-  CommandDialog,
   CommandInput,
   CommandList,
-  CommandEmpty,
-  CommandGroup,
   CommandItem,
-  CommandShortcut,
-  CommandSeparator,
+  type CommandItemProps,
 } from "./command";
-export {
-  Table,
-  TableHeader,
-  TableBody,
-  TableFooter,
-  TableHead,
-  TableRow,
-  TableCell,
-  TableCaption,
-} from "./table";
+/*
+ * The table's public surface is THREE names, not eight. There is no
+ * `TableHeader`/`TableRow`/`TableCell` for a screen to compose, because a
+ * virtualized grid owns its own row rendering — a caller-supplied `<tr>` is
+ * exactly what stops it virtualizing. A screen supplies COLUMNS.
+ */
+export { Table, type TableProps } from "./table";
+export { DataCell, statusColumn, type RowStatus, type TableColumn } from "./tableColumns";
 
 /* ── overlays ─────────────────────────────────────────────────────────────── */
-export {
-  Dialog,
-  DialogClose,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogOverlay,
-  DialogTitle,
-  DialogTrigger,
-  type DialogPrimitiveProps,
-  type DialogTriggerPrimitiveProps,
-} from "./dialog";
+export { Dialog, DialogBody, DialogFooter, DialogTrigger, type DialogProps } from "./dialog";
 export {
   Popover,
   PopoverDescription,
   PopoverHeader,
   PopoverTitle,
   PopoverTrigger,
+  type SurfacePopoverProps,
 } from "./popover";
-export { Tooltip, TooltipTrigger } from "./tooltip";
+export { Tooltip, TooltipTrigger, type ChipTooltipProps } from "./tooltip";
 
 /* ── navigation ───────────────────────────────────────────────────────────── */
-export { Tabs, TabsList, TabsTrigger, TabsContent, tabsListVariants } from "./tabs";
+export {
+  Tabs,
+  TabList,
+  Tab,
+  TabPanel,
+  type TabsProps,
+  type TabProps,
+  type TabPanelProps,
+} from "./tabs";
 
 /* ── display ──────────────────────────────────────────────────────────────── */
-export { Badge, badgeVariants } from "./badge";
+/* `badgeVariants` is NOT exported: rule 6 makes the capsule a decision, and a
+   loose class-string factory is how a decision becomes a copy-paste. The
+   `Empty*` slot family is gone with it — `Empty` takes a required `reason`. */
+export { Badge, StatusMark, type Mark, type BadgeProps } from "./badge";
 export { Separator } from "./separator";
 export { Skeleton } from "./skeleton";
-export {
-  Empty,
-  EmptyHeader,
-  EmptyTitle,
-  EmptyDescription,
-  EmptyContent,
-  EmptyMedia,
-} from "./empty";
+export { Empty } from "./empty";
 export { Progress, ProgressTrack, ProgressIndicator, ProgressLabel, ProgressValue } from "./progress";
+/* The one the screens use. `progress` above is the bar, for continuous work. */
+export { ProgressMeter, type ProgressMeterProps } from "./progress-meter";
+export { Kbd } from "./kbd";
+export { Card, CardHeader, CardBody, InnerPanel, type CardProps } from "./card";
+export { SegmentedControl, Segment, type SegmentedControlProps, type SegmentProps } from "./segmented-control";

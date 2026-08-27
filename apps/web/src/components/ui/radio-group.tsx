@@ -2,47 +2,93 @@ import {
   composeRenderProps,
   RadioGroup as RadioGroupPrimitive,
   Radio as RadioPrimitive,
-  type RadioGroupProps,
-  type RadioProps,
-} from "react-aria-components"
+  type RadioGroupProps as RadioGroupPrimitiveProps,
+  type RadioProps as RadioPrimitiveProps,
+} from "react-aria-components";
 
-import { cn } from "@/lib/utils"
+import { cx } from "./cx";
+import { disabledAttributes, type Disablement } from "./disabled";
+import { BlockedHint } from "./blockedHint";
 
-function RadioGroup({ className, ...props }: RadioGroupProps) {
+/**
+ * ADAPTED FROM THE REGISTRY `radio-group`. Same treatment as `checkbox`: the
+ * `dark:` register, `border-input`, `ring-ring/50` and the boolean disabled all
+ * go, and `disabledBecause` replaces `isDisabled` on both the group and the
+ * item (a group-level block — "this order is released, the disposition is
+ * fixed" — carries a different sentence from an item-level one, so both slots
+ * exist and neither is derived from the other).
+ *
+ * `rounded-full` → `rounded-pill`. Same 999px, but `rounded-full` is a STATIC
+ * Tailwind utility that survives the token file's `--radius-*: initial` reset
+ * and is banned for exactly that reason: it is the one radius that could be
+ * written without consulting the scale.
+ *
+ * The dot is `bg-ink-on-action` on an accent fill, matching the checkbox, so a
+ * selected radio and a checked box read as the same act. Rule 1 is not violated
+ * by this: a form's selected control is the same single accent spend as the
+ * primary action it sits above, and a screen showing both an accent radio and
+ * an accent Confirm has one spend too many — which is a screen-level review
+ * question, not something a primitive can enforce.
+ */
+export type RadioGroupProps = Omit<RadioGroupPrimitiveProps, "isDisabled"> &
+  Disablement;
+
+function RadioGroup({ className, disabledBecause, ...props }: RadioGroupProps) {
   return (
-    <RadioGroupPrimitive
-      data-slot="radio-group"
-      className={cn("grid w-full gap-2", className)}
-      {...props}
-    />
-  )
+    <BlockedHint reason={disabledBecause}>
+      <RadioGroupPrimitive
+        data-slot="radio-group"
+        {...props}
+        {...disabledAttributes(disabledBecause)}
+        className={cx("grid w-full gap-4", className)}
+      />
+    </BlockedHint>
+  );
 }
 
-function RadioGroupItem({ className, children, ...props }: RadioProps) {
+export type RadioGroupItemProps = Omit<RadioPrimitiveProps, "isDisabled"> & Disablement;
+
+function RadioGroupItem({
+  className,
+  children,
+  disabledBecause,
+  ...props
+}: RadioGroupItemProps) {
   return (
-    <RadioPrimitive
-      data-slot="radio-group-item"
-      className={cn(
-        "group/radio-group-item peer relative flex aspect-square size-4 shrink-0 rounded-full border border-input outline-none group-has-[:focus-visible]/field-label:ring-0 group-has-[:focus-visible]/field-label:not-data-checked:border-input after:absolute after:-inset-x-3 after:-inset-y-2 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 aria-invalid:aria-checked:border-primary data-focus-visible:border-ring data-focus-visible:ring-3 data-focus-visible:ring-ring/50 data-invalid:border-destructive data-invalid:ring-3 data-invalid:ring-destructive/20 data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50 dark:bg-input/30 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 dark:data-invalid:border-destructive/50 dark:data-invalid:ring-destructive/40 data-checked:border-primary data-checked:bg-primary data-checked:text-primary-foreground group-has-[:focus-visible]/field-label:data-checked:border-primary dark:data-checked:bg-primary data-selected:border-primary data-selected:bg-primary data-selected:text-primary-foreground data-invalid:data-selected:border-primary dark:data-selected:bg-primary",
-        className
-      )}
-      {...props}
-    >
-      {composeRenderProps(children, (children, { isSelected }) => (
-        <>
-          <span
-            data-slot="radio-group-indicator"
-            className="flex size-4 items-center justify-center"
-          >
-            {isSelected && (
-              <span className="absolute top-1/2 left-1/2 size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary-foreground" />
-            )}
-          </span>
-          {children}
-        </>
-      ))}
-    </RadioPrimitive>
-  )
+    <BlockedHint reason={disabledBecause}>
+      <RadioPrimitive
+        data-slot="radio-group-item"
+        {...props}
+        {...disabledAttributes(disabledBecause)}
+        className={cx(
+          "tp-state tp-press tp-ring group/radio-group-item relative flex cursor-pointer",
+          "items-center gap-4 font-sans text-meta leading-close text-ink-primary",
+          "data-disabled:cursor-not-allowed data-disabled:text-ink-disabled",
+          className,
+        )}
+      >
+        {composeRenderProps(children, (children, { isSelected }) => (
+          <>
+            <span
+              data-slot="radio-group-indicator"
+              aria-hidden
+              className={cx(
+                "tp-state flex size-8 shrink-0 items-center justify-center rounded-pill border",
+                "after:absolute after:-inset-x-3 after:-inset-y-2",
+                isSelected
+                  ? "border-action bg-action"
+                  : "border-control-border bg-control-fill group-hover/radio-group-item:not-group-data-disabled/radio-group-item:border-ink-faint",
+                "group-data-disabled/radio-group-item:border-line-strong group-data-disabled/radio-group-item:bg-surface-sunken",
+              )}
+            >
+              {isSelected && <span className="size-3 rounded-pill bg-ink-on-action" />}
+            </span>
+            {children}
+          </>
+        ))}
+      </RadioPrimitive>
+    </BlockedHint>
+  );
 }
 
-export { RadioGroup, RadioGroupItem }
+export { RadioGroup, RadioGroupItem };

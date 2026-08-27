@@ -1,0 +1,139 @@
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect } from "storybook/test";
+import { Card, CardBody, CardHeader, InnerPanel } from "./card";
+import { onCanvas } from "./kitGround";
+import { RenderBoundary } from "./renderBoundary";
+
+/**
+ * A card lives on the CANVAS, not on a panel — so these stories use `onCanvas`,
+ * which is the surface that makes its shadow and its border mean anything.
+ *
+ * The last story is the important one: nested cards throw, and the throw is
+ * caught and displayed rather than crashing the frame.
+ */
+const meta = {
+  title: "ui/Card",
+  decorators: [onCanvas],
+  component: Card,
+  args: { children: "Content" },
+} satisfies Meta<typeof Card>;
+
+export default meta;
+type Story = StoryObj<typeof meta>;
+
+/** The default: white, raised, 24px padding. */
+export const Raised: Story = {
+  args: {
+    children: (
+      <p className="font-sans text-meta leading-body text-ink-primary">
+        Harris County, warranty deed, recorded 12 March 2024.
+      </p>
+    ),
+  },
+};
+
+/** A hairline edge instead of depth. Never both. */
+export const Hairline: Story = {
+  args: {
+    edge: "hairline",
+    children: (
+      <p className="font-sans text-meta leading-body text-ink-primary">
+        A quieter card.
+      </p>
+    ),
+  },
+};
+
+/** Sunken: a well, a table cap, an inset track. */
+export const Sunken: Story = {
+  args: {
+    tone: "sunken",
+    edge: "hairline",
+    children: (
+      <p className="font-sans text-meta leading-body text-ink-secondary">
+        An inset well.
+      </p>
+    ),
+  },
+};
+
+/** Rule 8: evidence and deliverables are paper, not a UI surface. */
+export const Paper: Story = {
+  args: {
+    tone: "paper",
+    edge: "none",
+    children: (
+      <p className="leading-document">
+        Know all men by these presents, that the undersigned, for good and valuable
+        consideration, does hereby grant and convey.
+      </p>
+    ),
+  },
+};
+
+/** Tight padding — 16px, the low end of the recipe's 16–24. */
+export const TightPadding: Story = {
+  args: {
+    padding: "tight",
+    children: (
+      <p className="font-sans text-meta leading-body text-ink-primary">Denser.</p>
+    ),
+  },
+};
+
+/** The header-plus-rows shape, verbatim from RECIPES §Card. */
+export const WithHeader: Story = {
+  args: {
+    padding: "none",
+    children: (
+      <>
+        <CardHeader>
+          <span>Chain of title</span>
+          <span className="font-mono">6 instruments</span>
+        </CardHeader>
+        <CardBody>
+          <p className="font-sans text-meta leading-body text-ink-primary">
+            Delgado to Delgado Family Trust, 12 March 2024.
+          </p>
+        </CardBody>
+      </>
+    ),
+  },
+};
+
+/** The legal nesting: a card holding 10px inner panels. */
+export const WithInnerPanels: Story = {
+  args: {
+    children: (
+      <div className="flex flex-col gap-8">
+        <InnerPanel tone="sunken" padding="tight">
+          <p className="font-sans text-meta leading-body text-ink-primary">Reading A</p>
+        </InnerPanel>
+        <InnerPanel tone="sunken" padding="tight">
+          <p className="font-sans text-meta leading-body text-ink-primary">Reading B</p>
+        </InnerPanel>
+      </div>
+    ),
+  },
+};
+
+/**
+ * NESTED CARDS THROW. The registry lets cards nest freely; RECIPES forbids it,
+ * and this is the enforcement rather than a comment asking nicely.
+ *
+ * `RenderBoundary` and not try/catch — see that file for why the obvious
+ * version silently fails.
+ */
+export const NestedCardsThrow: Story = {
+  args: { children: "" },
+  render: () => (
+    <RenderBoundary>
+      <Card>
+        <Card>Illegal</Card>
+      </Card>
+    </RenderBoundary>
+  ),
+  play: ({ canvasElement }) => {
+    expect(canvasElement.textContent).toContain("Nested cards are forbidden");
+  },
+};
