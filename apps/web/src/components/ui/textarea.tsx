@@ -2,7 +2,7 @@ import * as React from "react"
 import { composeRenderProps, TextArea as TextareaPrimitive } from "react-aria-components"
 
 import { cx } from "@/components/ui/cx"
-import { disabledAttributes, type Disablement } from "@/components/ui/disabled"
+import { disabledNativeAttributes, type Disablement } from "@/components/ui/disabled"
 import { controlClass } from "@/components/ui/field-chrome"
 
 /**
@@ -35,7 +35,7 @@ function Textarea({ className, data, disabledBecause, ...props }: TextareaProps)
     <TextareaPrimitive
       data-slot="textarea"
       {...props}
-      {...disabledAttributes(disabledBecause)}
+      {...disabledNativeAttributes(disabledBecause)}
       className={composeRenderProps(className, (resolved) =>
         cx(
           controlClass,

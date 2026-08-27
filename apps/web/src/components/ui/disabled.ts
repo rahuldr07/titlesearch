@@ -59,3 +59,46 @@ export function disabledAttributes(reason: string | null | undefined): DisabledA
     "data-disabled-reason": blocked ? reason : undefined,
   };
 }
+
+/**
+ * The NATIVE half of the same idea, and the reason it exists is a bug that
+ * shipped past four green gates.
+ *
+ * `react-aria-components`' `Input` and `TextArea` are NOT composites. They are
+ * thin wrappers over `<input>` / `<textarea>`, and their props interface is
+ * `Omit<InputHTMLAttributes<HTMLInputElement>, …>` — there is no `isDisabled`
+ * prop at all. Verified in the installed source:
+ *
+ *     dist/private/Input.mjs:33   isDisabled: props.disabled
+ *     dist/private/Input.mjs:56   "data-disabled": props.disabled || undefined
+ *
+ * So `{...disabledAttributes(reason)}` on an `Input` passed an unknown key
+ * straight through to the DOM. React warned; nothing else did. Measured: the
+ * control stayed LIVE and accepted typing, while still rendering the `title`
+ * and the `data-disabled-reason` attribute the invariant specs assert against.
+ * A gate green on a refusal that refused nothing.
+ *
+ * It also never received `data-disabled`, so every `data-disabled:` class in
+ * `field-chrome.ts` was dead and a blocked field did not even LOOK blocked.
+ *
+ * The two functions are deliberately separate rather than one that guesses.
+ * A component author knows whether they are wrapping a composite or an
+ * element; a helper inspecting its own arguments does not, and would fail the
+ * same way silently the first time react-aria changed a primitive.
+ */
+export type DisabledNativeAttributes = {
+  readonly disabled: boolean;
+  readonly title: string | undefined;
+  readonly "data-disabled-reason": string | undefined;
+};
+
+export function disabledNativeAttributes(
+  reason: string | null | undefined,
+): DisabledNativeAttributes {
+  const blocked = typeof reason === "string" && reason.length > 0;
+  return {
+    disabled: blocked,
+    title: blocked ? reason : undefined,
+    "data-disabled-reason": blocked ? reason : undefined,
+  };
+}

@@ -78,6 +78,22 @@
 }
 
 /*
+ * SCREEN ENTRY. Design README §App shell: "Screen-enter animation 260ms
+ * cubic-bezier(.32,.72,0,1)" — the same curve and duration `--ease-enter`
+ * already carries, which is why this reuses the token rather than restating
+ * the numbers.
+ *
+ * Separate from `tp-enter` because that one keys off react-aria's
+ * `data-entering`/`data-exiting`, which a screen root does not have: a route
+ * component MOUNTS, it does not transition, so the animation runs
+ * unconditionally on mount and there is nothing to exit. The global
+ * prefers-reduced-motion rule at the foot of `styles.css` kills it.
+ */
+@utility tp-screen-enter {
+  animation: tp-rise var(--ease-enter) both;
+}
+
+/*
  * WCAG 2.2 §2.5.8 Target Size (Minimum): 24x24 CSS px. Applied to every
  * interactive primitive in the kit, including the visually small ones — a
  * 16px checkbox gets a 24px hit box rather than a smaller one plus an apology.

@@ -552,6 +552,27 @@ export const handlers = [
   http.get("/api/orders/:id/fields", ({ params }) => {
     const id = String(params["id"]);
     const fields = id === FIELDS_ORDER_ID ? fieldStore : [];
+    /*
+     * THE DECISION FIGURES, DECIDED HERE.
+     *
+     * `decisions` is every field this order ever put in front of a person —
+     * the ones a reviewer settled plus the ones still queued. It is NOT
+     * `fields.length`: the 2 auto-confirmed nobody saw and the 1 pending
+     * nothing has read yet were never anybody's decision, and counting them
+     * would silently inflate the denominator the dock prints.
+     *
+     * `queue_rest` is everything this order still holds BEHIND the open
+     * decision — the whole of what the reviewer has left to walk, not just the
+     * unsettled part of it, because a reviewer moving back through a settled
+     * ruling is still walking this order's queue. Written as its own figure
+     * rather than left to the client as `decisions - 1`, because that
+     * subtraction is precisely the `answered = base + a` arithmetic the
+     * contract comment above this endpoint exists to forbid.
+     */
+    const queued = fields.filter((f) => f.state === "needs_review");
+    const settled = fields.filter(
+      (f) => f.state === "confirmed" || f.state === "corrected" || f.state === "escalated",
+    );
     const body: OrderFieldsResponse = {
       order_id: id,
       fields,
@@ -571,6 +592,9 @@ export const handlers = [
             f.source_page === null &&
             (f.readings ?? []).length === 0,
         ).length,
+        decisions: settled.length + queued.length,
+        settled: settled.length,
+        queue_rest: Math.max(settled.length + queued.length - 1, 0),
       },
     };
     return HttpResponse.json(body);

@@ -163,6 +163,36 @@ export const OrderCensus = z.object({
   needs_review: z.number().int(),
   /** Values the pipeline produced with no document, page or reading behind them. */
   no_source: z.number().int(),
+  /**
+   * ⚠ UI-DRIVEN REQUEST — AWAITING RATIFICATION (2026-08-27, review workstation).
+   * READ FIELDS ONLY, and they exist because the alternative was arithmetic.
+   *
+   * The review dock prints "12 of 18 answered · rest of the queue 17". Every
+   * one of those three numbers was being computed in the browser — `settled`
+   * as a filter over `fields[].state`, `decisions` as `settled + queued`, and
+   * `queue_rest` as `decisions - 1` for the open one. That is the browser
+   * deciding what counts as a decision, which is the same class of judgement
+   * `no_source` above was moved off the client for, and it is the exact shape
+   * of the `answered = base + a` bug the reference prototype shipped
+   * (`derived()` in ANALYSIS-behavior §5, which AGENTS.md forbids surviving
+   * into this build as authority).
+   *
+   * `decisions` is how many fields this order ever put in front of a person —
+   * NOT `fields`, which includes the auto-confirmed nobody saw and the pending
+   * nothing has read yet. `settled` is how many of those carry a ruling.
+   * `queue_rest` is what remains behind the open one, and it is the server's
+   * because only the server knows what else it would hand over.
+   *
+   * OPTIONAL for the same reason `census` itself is: absent is not zero, it is
+   * "the server did not say", and the dock prints that silence rather than
+   * filling it in.
+   *
+   * A CENSUS, NEVER A RATE (§4.5). Nothing here is per-hour or per-person, and
+   * §4.5 means nothing here ever may be.
+   */
+  decisions: z.number().int().optional(),
+  settled: z.number().int().optional(),
+  queue_rest: z.number().int().optional(),
 });
 export type OrderCensus = z.infer<typeof OrderCensus>;
 

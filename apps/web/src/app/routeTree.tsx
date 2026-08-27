@@ -3,6 +3,9 @@ import { rootRoute } from "./rootRoute";
 import { Unbuilt } from "./chrome/Unbuilt";
 import { UNBUILT_SCREENS, type ScreenDescriptor } from "./chrome/unbuiltScreens";
 import { BLIND_SEAT_SCREEN, REVIEW_SCREEN } from "./chrome/orderScreens";
+import { IngestScreen } from "../features/ingest/IngestScreen";
+import { EscalationsScreen } from "../features/escalations/EscalationsScreen";
+import { DeliveryScreen } from "../features/delivery/DeliveryScreen";
 
 /**
  * THE ROUTES, AND EVERY PATH IS COPIED FROM `authz.ts:62-81`.
@@ -45,13 +48,29 @@ import { BLIND_SEAT_SCREEN, REVIEW_SCREEN } from "./chrome/orderScreens";
  */
 const parent = () => rootRoute;
 
-const staticRoutes = UNBUILT_SCREENS.map((descriptor) =>
-  createRoute({
+/**
+ * A DOOR THAT IS BUILT REPLACES ITS PLACEHOLDER BY PATH.
+ *
+ * `UNBUILT_SCREENS` stays the complete door list — it is what the rail and the
+ * command palette read, and removing an entry as each screen lands would make
+ * the list mean "unbuilt" in one file and "all doors" in another. So the table
+ * keeps every path and this map names the ones that now have a screen. A path
+ * here that is not in the table renders nowhere, which is the failure mode we
+ * want: the frozen table (authz.ts:62-81) stays the only source of doors.
+ */
+const BUILT: Readonly<Record<string, () => React.JSX.Element>> = {
+  "/ingest": IngestScreen,
+};
+
+const staticRoutes = UNBUILT_SCREENS.map((descriptor) => {
+  const Built = BUILT[descriptor.path];
+  return createRoute({
     getParentRoute: parent,
     path: descriptor.path,
-    component: () => <Placeholder descriptor={descriptor} />,
-  }),
-);
+    component:
+      Built === undefined ? () => <Placeholder descriptor={descriptor} /> : Built,
+  });
+});
 
 function Placeholder(props: { readonly descriptor: ScreenDescriptor }) {
   return (
@@ -91,8 +110,32 @@ const blindSeatRoute = createRoute({
   component: () => <Placeholder descriptor={BLIND_SEAT_SCREEN} />,
 });
 
+/**
+ * THE BUILT SCREENS, AT THE SAME FROZEN PATHS.
+ *
+ * Both paths are copied from `authz.ts:68` and `authz.ts:70`; nothing here is
+ * invented. They are declared beside the placeholder loop rather than inside
+ * it because a built screen is no longer described by `UNBUILT_SCREENS` — its
+ * entry is REMOVED from that table when the screen lands, since a door cannot
+ * simultaneously be built and describe itself as missing. The table shrinking
+ * is how the remaining work stays legible.
+ */
+const escalationsRoute = createRoute({
+  getParentRoute: parent,
+  path: "/escalations",
+  component: EscalationsScreen,
+});
+
+const deliveryRoute = createRoute({
+  getParentRoute: parent,
+  path: "/delivery",
+  component: DeliveryScreen,
+});
+
 export const routeTree = rootRoute.addChildren([
   ...staticRoutes,
+  escalationsRoute,
+  deliveryRoute,
   reviewRoute,
   blindSeatRoute,
 ]);

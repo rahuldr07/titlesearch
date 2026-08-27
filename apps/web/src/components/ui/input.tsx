@@ -4,7 +4,7 @@ import * as React from "react"
 import { composeRenderProps, Input as InputPrimitive } from "react-aria-components"
 
 import { cx } from "@/components/ui/cx"
-import { disabledAttributes, type Disablement } from "@/components/ui/disabled"
+import { disabledNativeAttributes, type Disablement } from "@/components/ui/disabled"
 import { controlClass, controlHeight } from "@/components/ui/field-chrome"
 
 /**
@@ -38,7 +38,7 @@ function Input({ className, type, data, disabledBecause, ...props }: InputProps)
       type={type}
       data-slot="input"
       {...props}
-      {...disabledAttributes(disabledBecause)}
+      {...disabledNativeAttributes(disabledBecause)}
       className={composeRenderProps(className, (resolved) =>
         cx(controlClass, controlHeight, data === true && "font-mono", resolved)
       )}
