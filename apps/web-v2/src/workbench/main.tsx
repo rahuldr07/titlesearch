@@ -37,6 +37,7 @@ import { SegmentedControl, Segment } from "../components/ui/SegmentedControl";
 
 import { Row } from "./Row";
 import { SecondHalf } from "./SecondHalf";
+import { DomainHalf } from "./DomainHalf";
 import "../styles.css";
 
 function Workbench() {
@@ -129,6 +130,7 @@ function Workbench() {
         </Row>
 
         <SecondHalf />
+        <DomainHalf />
       </div>
     </div>
   );
