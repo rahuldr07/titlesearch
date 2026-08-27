@@ -1,10 +1,83 @@
 import { fileURLToPath, URL } from "node:url";
-import { defineConfig, loadEnv } from "vite";
-import react from "@vitejs/plugin-react";
+import { defineConfig, loadEnv, type PluginOption, type Rollup } from "vite";
+import react, { reactCompilerPreset } from "@vitejs/plugin-react";
+import babel from "@rolldown/plugin-babel";
 import tailwindcss from "@tailwindcss/vite";
+import { visualizer } from "rollup-plugin-visualizer";
 
 /** This package's own directory, and the ONE place env files are read from. */
 const APP_DIR = fileURLToPath(new URL(".", import.meta.url));
+
+/**
+ * THE PDF ENGINE MAY NOT REACH THE SHELL, and this refuses the build if it does.
+ *
+ * EmbedPDF is 16.7 kB of JS in front of a 4.5 MB `pdfium.wasm`. Both are a
+ * first-load cost that must be paid on the review screen and nowhere else. The
+ * thing that keeps them out of the shell is a single dynamic `import()` at the
+ * PDF module's boundary — one refactor to a static import and 4.5 MB moves onto
+ * the critical path of the queue screen. Nothing about that is visible in a
+ * diff, and the size gate cannot see it either: `size-limit` measures files,
+ * and the wasm is an asset, not JS.
+ *
+ * So the reachability is asserted on the real emitted graph. Walk `imports`
+ * (STATIC imports only — `dynamicImports` is the separate field, and being on
+ * it is the desired state) transitively from every entry chunk. If a chunk
+ * carrying `@embedpdf` / pdfium is in that closure, the build fails with the
+ * path that pulled it in.
+ *
+ * It reports nothing when no PDF module exists yet, which is today. That is the
+ * point of landing it now rather than after the first regression.
+ */
+function pdfMustStayLazy(): PluginOption {
+  const isPdfModule = (id: string) =>
+    id.includes("@embedpdf/") || id.includes("pdfium");
+
+  return {
+    name: "titlepipe:pdf-must-stay-lazy",
+    apply: "build",
+    generateBundle(_options, bundle) {
+      const chunks = new Map<string, Rollup.OutputChunk>();
+      for (const [file, out] of Object.entries(bundle)) {
+        if (out.type === "chunk") chunks.set(file, out);
+      }
+
+      // Breadth-first over static edges, remembering how we arrived so the
+      // failure names the import path rather than just the verdict.
+      const arrivedVia = new Map<string, string[]>();
+      const queue: string[] = [];
+      for (const [file, chunk] of chunks) {
+        if (chunk.isEntry) {
+          arrivedVia.set(file, [file]);
+          queue.push(file);
+        }
+      }
+
+      while (queue.length > 0) {
+        const file = queue.shift();
+        if (file === undefined) continue;
+        const chunk = chunks.get(file);
+        if (!chunk) continue;
+        const path = arrivedVia.get(file) ?? [file];
+
+        const pdfModule = Object.keys(chunk.modules).find(isPdfModule);
+        if (pdfModule !== undefined) {
+          this.error(
+            `PDF engine is STATICALLY reachable from the shell.\n` +
+              `  chunk path: ${path.join(" -> ")}\n` +
+              `  module:     ${pdfModule}\n` +
+              `The PDF module and pdfium.wasm must sit behind a dynamic import().`,
+          );
+        }
+
+        for (const next of chunk.imports) {
+          if (arrivedVia.has(next)) continue;
+          arrivedVia.set(next, [...path, next]);
+          queue.push(next);
+        }
+      }
+    },
+  };
+}
 
 /**
  * THE FUNCTION FORM EXISTS FOR ONE REASON: `loadEnv`.
@@ -77,7 +150,71 @@ export default defineConfig(({ mode }) => {
       : undefined;
 
   return {
-    plugins: [react(), tailwindcss()],
+    plugins: [
+      react(),
+      /*
+       * REACT COMPILER, and the wiring is not what the dependency spec wrote.
+       * The spec said `react({ babel: { plugins: [...] } })` or a
+       * `reactCompiler` option. VERIFIED against the INSTALLED 6.0.3:
+       * `Options` in node_modules/@vitejs/plugin-react/dist/index.d.ts declares
+       * only include/exclude/jsxImportSource/jsxRuntime/reactRefreshHost —
+       * there is no `babel` key and no `reactCompiler` key. v6 moved to
+       * rolldown/oxc, so Babel is no longer in the plugin at all; what it
+       * exports instead is `reactCompilerPreset`, fed to
+       * `@rolldown/plugin-babel`. Passing the option the spec describes would
+       * be silently ignored: an object literal excess-property error at type
+       * level, and NOTHING compiled at runtime.
+       *
+       * `@rolldown/plugin-babel` and `@babel/core` are peer dependencies of
+       * that path and were not in the manifest; both are now devDependencies.
+       *
+       * The preset carries its own `rolldown.filter` so only files that look
+       * like components or hooks reach Babel, and it is client-only via
+       * `applyToEnvironmentHook`. Defaults kept: compilationMode is
+       * infer (not `annotation`), and no `target`, because React is 19.
+       */
+      babel({ presets: [reactCompilerPreset()] }),
+      tailwindcss(),
+      /*
+       * Bundle composition, written to disk on every build rather than behind
+       * a flag. The acceptance criteria require the PDF module and
+       * `pdfium.wasm` to be CONFIRMED in a lazy chunk "in the
+       * rollup-plugin-visualizer output, not assumed" — a report nobody
+       * generates cannot confirm anything. `emitFile` puts it inside `dist/`
+       * as `stats.html`; it is not `dist/assets/*`, so it cannot enter the
+       * size-limit glob.
+       */
+      visualizer({
+        emitFile: true,
+        filename: "stats.html",
+        brotliSize: true,
+        gzipSize: true,
+      }),
+      pdfMustStayLazy(),
+    ],
+    build: {
+      rollupOptions: {
+        output: {
+          /*
+           * The PDF engine is 4.5 MB of WebAssembly plus its JS. It is pinned
+           * into its own chunk so that (a) it is one identifiable thing in the
+           * visualizer output, and (b) `pdfMustStayLazy` below has something
+           * unambiguous to assert against.
+           *
+           * A manual chunk does NOT by itself make anything lazy — laziness
+           * comes from the import being dynamic at the only place the app
+           * names it. That is exactly why the assertion exists rather than a
+           * comment claiming it.
+           */
+          manualChunks(id) {
+            if (id.includes("@embedpdf/") || id.includes("/pdfium")) {
+              return "pdf";
+            }
+            return undefined;
+          },
+        },
+      },
+    },
     /*
      * Pinned so `import.meta.env` and the `loadEnv` above cannot read different
      * directories. It defaults to `root`, which is derived from the working
