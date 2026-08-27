@@ -94,8 +94,11 @@
   },
   "size-limit": [
     {
-      "name": "app bundle (js)",
-      "path": "dist/assets/*.js",
+      "name": "shell (js) — the entry chunk, not every chunk in the directory",
+      "path": [
+        "dist/assets/index-*.js",
+        "!dist/assets/pdf-*.js"
+      ],
       "limit": "320 kB"
     },
     {
