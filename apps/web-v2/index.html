@@ -5,31 +5,33 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>TitlePipe</title>
     <!--
-      FOUR FACES, TWO HOSTS. Switzer is not on Google Fonts — it ships from
-      Fontshare — so this page carries a second preconnect pair. Dropping it
-      costs a full DNS+TLS round trip before any body text can paint.
+      THREE FACES, ONE HOST. The 2026-08 design's §Assets is explicit: "Fonts
+      via Google Fonts: Plus Jakarta Sans (400–800), JetBrains Mono (400–700),
+      Source Serif 4 (400/600)." No binary assets; the brand mark is typed "TF"
+      in a flat square and all paper/scan artwork is CSS.
 
-      Fraunces is requested VARIABLE on all three axes (ital, opsz, wght).
-      The `opsz` range is not decoration: this design sets optical size per
-      role (144 on the 38px h1, 90 on the 26px italic question), and a static
-      cut would collapse those into one drawing. `wght` is a range because the
-      display weights are fractional — 420 / 430 / 480 / 520.
+      Each face is SEMANTIC in this design, which is why there are three and
+      not one:
+        - Plus Jakarta Sans is the interface.
+        - JetBrains Mono is DATA ONLY (design rule 3) — order refs, money,
+          citations, hashes, timestamps, kbd. Never labels, buttons or prose.
+        - Source Serif 4 is PAPER — evidence scans and certificates render as
+          stock, never as grey placeholder bars (rule 8).
 
-      Serif is semantic in this design: it renders human testimony (rulings,
-      reasons, citations) and never machine output. Fraunces carries it now.
-      Courier Prime is the SCANNED PAGE ONLY — a typewriter face for a
-      photographed county record, never for UI. See tokens.md.
+      `display=swap` so text paints in a fallback rather than waiting. This is
+      an authenticated internal tool that reviewers keep open all day: the
+      faces are cached after the first load, and a blocked first paint costs
+      more than one frame of fallback.
+
+      TODO (before airgap/offline deployment): self-host these. A county office
+      with no outbound internet gets no fonts at all from a CDN, and the mono
+      face carries citations — the one place a fallback's differing metrics
+      would misalign a bounding box against the evidence pane.
     -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="preconnect" href="https://api.fontshare.com" />
-    <link rel="preconnect" href="https://cdn.fontshare.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&family=Geist+Mono:wght@400;500;600&family=Courier+Prime:wght@400;700&display=swap"
-      rel="stylesheet"
-    />
-    <link
-      href="https://api.fontshare.com/v2/css?f[]=switzer@400,500,600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap"
       rel="stylesheet"
     />
   </head>

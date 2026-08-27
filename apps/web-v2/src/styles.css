@@ -1,0 +1,72 @@
+/**
+ * The stylesheet root. Tailwind v4, then the token layer, then the handful of
+ * base rules that are genuinely global.
+ *
+ * The token file is a package (`@titlepipe/ui-tokens`) rather than a local
+ * file so `packages/mocks`, Storybook and the app cannot drift onto different
+ * palettes.
+ */
+@import "tailwindcss";
+@import "@titlepipe/ui-tokens/tokens.css";
+
+/*
+ * A REVIEW TOOL IS NOT A DOCUMENT. Design README §App shell: "Min app width
+ * 1360px", the sidebar is a full-height column and the frame is one viewport
+ * tall — `INVARIANTS` pins both ("the page never scrolls — the frame is one
+ * viewport tall", "the rail is a full-height column, not a page-sticky
+ * element"). Scrolling happens INSIDE panes, never on the page.
+ */
+html,
+body,
+#root {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  margin: 0;
+  min-width: 1360px;
+  background: var(--color-surface-app);
+  color: var(--color-ink-primary);
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/*
+ * WCAG 2.2 §2.4.7 Focus Visible, and §2.4.11 Focus Not Obscured.
+ *
+ * Tailwind's preflight resets outlines, so a visible ring has to be put back
+ * deliberately. `:focus-visible` rather than `:focus` keeps it off mouse
+ * clicks while guaranteeing it on keyboard traversal — and this app is
+ * keyboard-first, so the ring is load-bearing rather than decorative.
+ *
+ * `scroll-margin` is the §2.4.11 half: it keeps a focused row from landing
+ * underneath the sticky order bar when the browser scrolls it into view.
+ */
+:where(a, button, input, textarea, select, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-action);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
+}
+
+:where(a, button, input, textarea, select, [tabindex], [role="row"], [role="option"]) {
+  scroll-margin-block: 5rem;
+}
+
+/*
+ * Design rule 10: "Nothing bounces." And nothing moves at all for a reader who
+ * asked it not to — WCAG §2.3.3.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
