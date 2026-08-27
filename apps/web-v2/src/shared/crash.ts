@@ -105,19 +105,16 @@ function send(event: CrashEvent): void {
  * Report a React-surfaced error. Wired to `createRoot`'s three handlers in
  * `main.tsx`.
  *
- * `info.componentStack` is ACCEPTED AND DISCARDED. The old header called it
- * "React's own, and it names component types, not user data" — true of the
- * component names, not of the whole string, which in React 19 dev builds
- * carries source file paths and can carry `key` values from keyed lists. Rows
- * keyed by a natural key would leak one. The parameter stays so the call sites
- * in `main.tsx` need not change the day there is a receiver that can take it.
+ * THE `info` PARAMETER IS GONE, not ignored. React passes an object carrying
+ * `componentStack`, and the old header called it "React's own, and it names
+ * component types, not user data" — true of the component names, not of the
+ * whole string, which in React 19 dev builds carries source file paths and can
+ * carry `key` values from keyed lists. Rows keyed by a natural key would leak
+ * one. An unused parameter is an invitation to start using it, so the
+ * signature does not accept what it must not send. `main.tsx` still passes it;
+ * JavaScript discards extra arguments, and the types below say two.
  */
-export function reportCrash(
-  kind: CrashKind,
-  error: unknown,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- accepted and DISCARDED on purpose; see above
-  info?: { componentStack?: string | undefined },
-): void {
+export function reportCrash(kind: CrashKind, error: unknown): void {
   send({
     event: "client_crash",
     error_code: kind,

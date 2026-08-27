@@ -57,9 +57,16 @@ async function start(): Promise<void> {
    * structlog redaction exists to remove (party names, field values, reasons).
    */
   createRoot(root, {
-    onUncaughtError: (error, info) => reportCrash("uncaught", error, info),
-    onCaughtError: (error, info) => reportCrash("caught", error, info),
-    onRecoverableError: (error, info) => reportCrash("recoverable", error, info),
+    /*
+     * The `info` React offers each of these is DROPPED HERE, deliberately.
+     * It carries `componentStack`, which in React 19 dev builds includes
+     * source file paths and can include `key` values from keyed lists — a row
+     * keyed by a party name would leak one. REVIEW-01 B4; `crash.ts` does not
+     * accept it, so this is a discard the compiler agrees with.
+     */
+    onUncaughtError: (error) => reportCrash("uncaught", error),
+    onCaughtError: (error) => reportCrash("caught", error),
+    onRecoverableError: (error) => reportCrash("recoverable", error),
   }).render(
     <StrictMode>
       <QueryClientProvider client={queryClient}>

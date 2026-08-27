@@ -37,22 +37,14 @@ export function ScreenBoundary(props: {
     <ErrorBoundary
       FallbackComponent={ScreenFailed}
       resetKeys={[props.resetKey]}
-      onError={(error, info) =>
-        /*
-         * `react-error-boundary`'s `ErrorInfo.componentStack` is
-         * `string | null`; React's own `onCaughtError` passes
-         * `string | undefined`, which is what `reportCrash` takes. The two
-         * spell "absent" differently and the conversion is done HERE rather
-         * than by widening `reportCrash` — that function is shared with
-         * React's three root handlers and loosening its signature to
-         * accommodate one caller would let a null reach the crash payload,
-         * where `component_stack` is already explicitly nullable and would
-         * then have two spellings of nothing.
-         */
-        reportCrash("caught", error, {
-          componentStack: info.componentStack ?? undefined,
-        })
-      }
+      /*
+       * `info` is not forwarded. It carries `componentStack`, which React 19
+       * dev builds fill with source file paths and keyed-list `key` values —
+       * a row keyed by a party name would leak one. REVIEW-01 B4 took
+       * `component_stack` out of the crash payload entirely, so `reportCrash`
+       * no longer accepts it and this boundary has nothing to convert.
+       */
+      onError={(error) => reportCrash("caught", error)}
     >
       {props.children}
     </ErrorBoundary>
