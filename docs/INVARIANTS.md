@@ -79,29 +79,16 @@ an *observable behaviour*, which is the form a rebuild can actually be checked a
 
 ## 6. The queue refuses browsing
 
-> **AMENDED BY OWNER RULING, 2026-08-27** (`docs/frontend/decisions.md` D4). Rules 22 and
-> 23 are **superseded**: the 2026-08 design ships as drawn, and its screen 3 is a browsable,
-> searchable, paginated order table with an `Assigned` column and a per-row `Open →`; the
-> order bar carries an SLA chip and the table a `Due` column. Struck through, not deleted —
-> this file exists so a rule is never lost silently.
-
-22. ~~The queue is a **single server-chosen next order** — no list, no browsing, **no
-    cherry-picking**.~~ **SUPERSEDED.** Browsing and taking a specific order are permitted.
-    **The backend cannot serve this yet** — `endpoints.ts:69` records `/api/queue/next` as
-    the only hand-over, with no claim token, no assignment field and no caller-influenced
-    ordering. Screen 3 is blocked until a browse endpoint is designed and built.
-23. ~~**No pace indicators, no throughput language, no timers, and no time ESTIMATES** — an
-    estimate is a pace indicator.~~ **SUPERSEDED for the SLA chip and `Due` column only.**
-    Both ship as drawn. The prohibition still binds everywhere the design does not draw one:
-    no timers on the review workstation, no elapsed-time readouts, no throughput language.
+22. The queue is a **single server-chosen next order** — no list, no browsing, **no
+    cherry-picking**.
+23. **No pace indicators, no throughput language, no timers, and no time ESTIMATES** — an
+    estimate is a pace indicator.
 24. A reasoned pass records and **the server** serves the next order.
 25. Enter starts review on the **served** order.
 
 ## 7. Review workstation
 
-26. **No approve-all. No throughput.** Anywhere. ~~No timers.~~ — narrowed by the
-    2026-08-27 ruling to permit the SLA chip and `Due` column (rule 23). Approve-all and
-    throughput counters remain banned outright; the design contains neither.
+26. **No approve-all. No throughput. No timers.** Anywhere.
 27. Field navigation visits **ONLY server-queued fields** — a reviewer cannot walk into
     auto-confirmed fields. *(ORPHAN O20, promoted to INVARIANT by open-rulings Q3.)*
 28. Engine disagreement is surfaced **on the row**, and both readings shown **attributed** in
@@ -132,13 +119,8 @@ an *observable behaviour*, which is the form a rebuild can actually be checked a
 40. The **role gate runs BEFORE validation** — a role lacking the action gets 403 even with an
     invalid body.
 41. **One permission table** gates UI affordances and server mutations alike — they cannot drift.
-42. ~~A role-locked affordance is **ABSENT, not disabled.**~~ **SUPERSEDED, 2026-08-27.**
-    Design rule 12 ships: blocked actions render **disabled with the rule, not hidden**. The
-    gate stays server-side — disabling renders the server's answer, never a client-side
-    permission decision. Rule 41 is unchanged.
-43. ~~Doors outside the role's world are **ABSENT, not dimmed.**~~ **SUPERSEDED, 2026-08-27.**
-    Note the asymmetry accepted deliberately: a disabled door advertises a world its viewer
-    cannot enter, which is why this rule existed. Load-bearing across design screens 5, 7, 8, 10.
+42. A role-locked affordance is **ABSENT, not disabled.**
+43. Doors outside the role's world are **ABSENT, not dimmed.**
 44. A **forged or case-variant role is refused** — roles are exact, and garbage never yields
     the admin world.
 45. Nobody signed in is shown an ADMIN world; the session-ended screen is equally bare.
