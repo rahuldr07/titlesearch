@@ -26,6 +26,7 @@ export type SwitchProps = Omit<AriaSwitchProps, "isDisabled" | "className" | "ch
 export function Switch({ disabledBecause, children, ...props }: SwitchProps) {
   return (
     <AriaSwitch
+      data-chord-scope="widget"
       {...props}
       {...disabledAttributes(disabledBecause)}
       className={cx(

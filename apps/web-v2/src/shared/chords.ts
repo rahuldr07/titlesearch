@@ -18,6 +18,17 @@
  * carrying T1 exposure. `apps/web-v2/e2e/invariants/chord-suppression.spec.ts`
  * pins both.
  *
+ * WHAT PINS WHAT, stated because REVIEW-01 found this header citing a test as
+ * proof of a claim the code did not implement:
+ *   - `src/shared/focusOwnership.test.ts` — DOM-free, runs in the `gates`
+ *     Vitest project, pins every role in both tables including the nine the
+ *     review proved missing. This is the check that runs on every `pnpm test`.
+ *   - `e2e/invariants/chord-suppression.spec.ts` — the same rules against a
+ *     real screen. It is a Playwright spec and it needs the review screen,
+ *     which is still a Placeholder in `app/routeTree.tsx`, so it cannot pass
+ *     yet. It is not skipped and it is not deleted: it fails honestly until
+ *     the screen lands, which is what BRIEF §5 Phase 5 asks for.
+ *
  * THE CONTRACT THIS IMPLEMENTS, in one sentence: a global chord is SUSPENDED,
  * never cancelled, while a text surface or an overlay holds focus, and it
  * RESUMES on close without a click.
@@ -38,55 +49,15 @@
 
 import { useEffect } from "react";
 import { tinykeys } from "tinykeys";
+import { focusOwnsKeys } from "./focusOwnership";
+
+export { focusOwnsKeys };
 
 /**
  * Why a chord is standing down. Not a boolean, because the three reasons want
  * different handling and a boolean would let a caller conflate them.
  */
 export type SuspendReason = "text-entry" | "overlay" | "signed-out";
-
-/**
- * Is a text surface or composite widget holding focus?
- *
- * The tagName half is the prototype's test, kept because it is correct as far
- * as it goes. The rest is what it misses.
- *
- * `role` covers the react-aria composites that implement typeahead:
- * listbox / combobox / menu / grid / tree / textbox / searchbox / spinbutton.
- * A `<div role="listbox">` owns every printable key while it is open, so the
- * global layer must not also act on one.
- *
- * `closest("[data-chord-scope='own']")` is the escape hatch for anything this
- * function cannot know about: a component that owns its keys marks its subtree
- * and the global layer stands down inside it. That is the extension point,
- * rather than growing this list forever.
- */
-export function focusOwnsKeys(active: Element | null): boolean {
-  if (active === null) return false;
-
-  const tag = active.tagName;
-  if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
-  if (active instanceof HTMLElement && active.isContentEditable) return true;
-
-  const role = active.getAttribute("role");
-  if (
-    role === "listbox" ||
-    role === "combobox" ||
-    role === "menu" ||
-    role === "menuitem" ||
-    role === "grid" ||
-    role === "gridcell" ||
-    role === "tree" ||
-    role === "treeitem" ||
-    role === "textbox" ||
-    role === "searchbox" ||
-    role === "spinbutton"
-  ) {
-    return true;
-  }
-
-  return active.closest("[data-chord-scope='own']") !== null;
-}
 
 /**
  * Is a modal layer up?

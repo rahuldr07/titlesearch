@@ -40,6 +40,7 @@ export function SegmentedControl({ label, children, ...props }: SegmentedControl
   return (
     <ToggleButtonGroup
       {...props}
+      data-chord-scope="widget"
       selectionMode="single"
       disallowEmptySelection
       aria-label={label}

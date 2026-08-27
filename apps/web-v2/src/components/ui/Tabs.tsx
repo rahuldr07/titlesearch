@@ -39,7 +39,13 @@ export function Tabs({ children, ...props }: TabsProps) {
 
 export function TabList({ label, children }: { readonly label: string; readonly children: ReactNode }) {
   return (
-    <AriaTabList aria-label={label} className="flex items-end gap-8 border-b border-line-strong">
+    /* REVIEW-01 B3/S6: the five stage tabs on the order bar are exactly where
+       a reviewer's letter keys land, and this set no scope at all. `focusOwnsKeys`
+       now matches role="tab" directly; this is the defence in depth behind it. */
+    <AriaTabList
+      data-chord-scope="widget"
+      aria-label={label}
+      className="flex items-end gap-8 border-b border-line-strong">
       {children}
     </AriaTabList>
   );

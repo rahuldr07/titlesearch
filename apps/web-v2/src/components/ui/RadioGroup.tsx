@@ -75,6 +75,7 @@ export type RadioGroupProps = Omit<
 export function RadioGroup({ label, disabledBecause, children, ...props }: RadioGroupProps) {
   return (
     <AriaRadioGroup
+      data-chord-scope="widget"
       {...props}
       {...disabledAttributes(disabledBecause)}
       aria-label={label}

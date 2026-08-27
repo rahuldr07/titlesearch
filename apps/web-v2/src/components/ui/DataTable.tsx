@@ -47,7 +47,15 @@ export function DataTable<TData extends RowData>({
   if (rows.length === 0) return <>{empty}</>;
 
   return (
-    <table className="w-full border-collapse" aria-label={label}>
+    <table
+      /* REVIEW-01 B3/S6: a focused row in a long table must stand the global
+         chord layer down. `focusOwnsKeys` matches role="row" and the
+         [role='grid'] ancestor; this covers a plain <table> too, which has
+         neither. */
+      data-chord-scope="widget"
+      className="w-full border-collapse"
+      aria-label={label}
+    >
       <thead>
         {table.getHeaderGroups().map((group) => (
           <tr key={group.id} className="border-b border-line-strong bg-surface-sunken">

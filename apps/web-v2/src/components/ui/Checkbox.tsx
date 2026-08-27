@@ -31,6 +31,7 @@ export type CheckboxProps = Omit<AriaCheckboxProps, "isDisabled" | "className" |
 export function Checkbox({ disabledBecause, children, ...props }: CheckboxProps) {
   return (
     <AriaCheckbox
+      data-chord-scope="widget"
       {...props}
       {...disabledAttributes(disabledBecause)}
       className={cx(
