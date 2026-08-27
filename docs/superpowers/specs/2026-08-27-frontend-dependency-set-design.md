@@ -177,10 +177,10 @@ declares today. 55% of the 320 kB budget, leaving ~144 kB for application code.
 That figure includes `motion`, adopted by owner decision 2026-08-27 (see Deviations §4).
 Without it the stack measures 152.9 kB.
 
-### Remove (6)
+### Remove (8)
 
 `@base-ui/react` · `radix-ui` · `cmdk` · `valibot` · `react-zoom-pan-pinch` ·
-`react-hotkeys-hook`
+`react-hotkeys-hook` · `react-pdf` · `pdfjs-dist`
 
 `cmdk`'s last release is **1.1.1, 2025-03-14** — seventeen months — and it costs 15.3 kB.
 Both primitive kits go because only one is needed and neither is the chosen one.
@@ -197,7 +197,7 @@ Both primitive kits go because only one is needed and neither is the chosen one.
 | Forms | `react-hook-form` 7.86.0 · `@hookform/resolvers` 5.9.1 · `zod` 4.4.3 (via `@titlepipe/contract`) |
 | State | `zustand` 5.0.15 |
 | Keyboard | **`tinykeys` 4.0.0** |
-| PDF & pan | `react-pdf` 10.5.0 · `pdfjs-dist` (pinned) · **`@panzoom/panzoom` 4.6.2** |
+| PDF & pan | **`@embedpdf/core` + `plugin-{viewport,render,scroll,zoom}` 2.15.0** · **`@panzoom/panzoom` 4.6.2** |
 | a11y gap-fillers | **`@react-aria/interactions`** · **`@react-aria/live-announcer`** |
 | Resilience & perf | **`react-error-boundary` 6.1.3** · **`web-vitals` 6.2.1** |
 | Utility | **`diff` 9.0.0** |
@@ -226,6 +226,50 @@ Motion is not the default answer for enter/exit. `react-aria-components` emits
 `data-entering` / `data-exiting` attributes intended for CSS animation, and Tailwind v4
 covers fade/slide/scale at zero JS. `motion` is for what CSS cannot express: shared-element
 transitions between queue and review, drag gestures, and spring chains.
+
+### PDF: EmbedPDF, composed — not the all-in-one
+
+Ruled by the owner 2026-08-27, replacing `react-pdf` and the direct `pdfjs-dist` pin.
+EmbedPDF is PDFium compiled to WebAssembly — the engine Chrome itself renders PDFs with —
+rather than pdf.js. For a title product whose whole premise is that a rendered page must
+agree with what was extracted from it, engine fidelity on county-recorder scans is a
+product concern, not a preference.
+
+Measured, and the entry point matters more than the library:
+
+| | JS (brotli) | engine asset |
+|---|---|---|
+| `@embedpdf/core` + `plugin-{viewport,render,scroll,zoom}` | **16.7 kB** | 4.5 MB `pdfium.wasm` |
+| `react-pdf` | 102.4 kB | 1.3 MB `pdf.worker.min.mjs` |
+| `@embedpdf/react-pdf-viewer` (all-in-one) | 351.2 kB | same |
+
+**Import the composition, never `@embedpdf/react-pdf-viewer`.** The all-in-one is 21×
+the composed set and drags in selection, search, annotation and form machinery this app
+does not use. Composed, EmbedPDF is six times *smaller* than the `react-pdf` it replaces.
+
+The engine is a fetched, cached, asynchronous asset rather than bundle JS, so the 4.5 MB
+is a first-load cost on a tool reviewers keep open all day. It must be code-split; see
+latent defect 2, since the current `size-limit` glob would count it against the shell.
+
+**Two risks, both accepted with eyes open:**
+
+1. **A v3 rewrite is in flight.** `@embedpdf/react` and `@embedpdf/viewer` are at
+   `3.0.0-next.0` (2026-08-05), with native engine runtimes alongside. This spec adopts
+   the **2.15.0** stable line via `@embedpdf/core/react`. A migration is foreseeable;
+   confine EmbedPDF behind the same kind of boundary as the notification adapter so it is
+   one module's problem.
+2. **The licence is not as clean as npm implies.** The npm packages declare **MIT**; the
+   repository's `LICENSE` is **Apache-2.0** with an explicit carve-out stating that
+   `cloudpdf/server` is under the **Fair Core License (FCL-1.0-ALv2)** — source-available,
+   not open source. The client packages this spec consumes are the MIT-declared ones and
+   the server component is not used, but npm metadata is weaker evidence than a LICENSE
+   file. **Confirm before shipping commercially.** CloudPDF is an open-core business;
+   that is the model, not a defect.
+
+**BRIEF §4's "REPORT PREVIEW ONLY, never source pages" is preserved.** That rule exists
+for provenance — a cited page must be the raster the server produced and OCR'd, not a
+client re-render that may differ. Changing engines does not change that reasoning.
+Rendering source pages client-side is a separate product ruling and is **not** taken here.
 
 ### The notification boundary
 
@@ -311,13 +355,26 @@ factory, and no ranking addresses it.** The contract to write, once, and test: w
 overlay is open, global chords are suppressed; on close, they resume without requiring a
 click. `HANDOFF-UI.md:167` shows the previous build already hit the adjacent problem.
 
-## Open decisions
+## Decisions taken
 
-| | Decision | Cost of doing it now |
+All three were ruled by the owner on 2026-08-27. Nothing in this spec is left open.
+
+| | Ruling | Consequence |
 |---|---|---|
-| 1 | `zod` → `zod/mini` in `packages/contract` | Recovers ~45 kB brotli (contract measures 57.2 kB today, 18% of budget, for a surface using only `nullable` ×124, `int` ×50, `optional` ×36, `min` ×17, `partial`, `extend`, `default`). Mini requires wrapping, not chaining, so it is a codemod over ~230 call sites — not `sed`. Cheapest while `src/` is empty. Touches ADR-0001's territory. |
-| 2 | TypeScript 6 → 7 | 7.0.2 (the Go rewrite) is published. Recommendation: **stay on 6.** `typescript-eslint` 8.68 and the Storybook/Vitest chain are unlikely to be ready, and a compiler swap mid-rebuild is a bad trade. |
-| 3 | `pdfjs-dist` 5.4.296 → 6.2.108 | The exact pin is correct given CVE history, but a pin with no update signal rots. Adopt Dependabot/Renovate rather than bumping blind. |
+| 1 | **Stay on full `zod`.** No `zod/mini` port. | Forgoes ~45 kB brotli — the contract measures 57.2 kB, 18% of budget, for a surface using only `nullable` ×124, `int` ×50, `optional` ×36, `min` ×17, `partial`, `extend`, `default`. Bought with it: one authoring style across `packages/contract`, `packages/mocks` and forms; no codemod over ~230 call sites; `x.nullable()` stays readable where `z.nullable(x)` would not. **ADR-0001 stands unamended** — Zod remains the browser's runtime boundary parser. |
+| 2 | **Stay on TypeScript 6.** | 7.0.2 (the Go rewrite) is published and deliberately not adopted. `typescript-eslint` 8.68 and the Storybook/Vitest chain are unproven against it, and a compiler swap mid-rebuild trades a known toolchain for an unknown one. Revisit after the rebuild lands, not during. |
+| 3 | **EmbedPDF replaces `react-pdf` + `pdfjs-dist`.** | The `pdfjs-dist` pin question is now moot — the dependency is gone. See the PDF section for the composition rule, the two accepted risks, and the licence item that still needs confirming before commercial release. |
+
+**D-6 is now closed by ruling rather than by argument.** BRIEF §4's *"valibot NOT zod"*
+and *"Do not install … zod in the browser bundle"* are overridden: Zod ships in the
+browser, deliberately, and `valibot` is removed. The contradiction BRIEF-DELTAS D-6
+recorded — that reusing `packages/mocks` unforked meant shipping its Zod contract, while
+§4 forbade exactly that — is resolved in favour of reuse.
+
+**One item survives as a standing task rather than a decision:** dependency update
+signalling. `pdfjs-dist`'s exact pin was correct given its CVE history, and the same
+discipline now applies to `@embedpdf/pdfium`. Adopt Dependabot or Renovate so pins carry
+an update signal instead of rotting quietly.
 
 ## Deviations this requires
 
@@ -339,24 +396,30 @@ Three, to be recorded as BRIEF-DELTAS rather than applied silently:
    path, per the manifest note. This deviation is the reason the runtime total moved from
    152.9 kB to 175.6 kB, and the owner accepted that trade explicitly.
 
-D-6 (Zod in the browser vs BRIEF §4's Valibot mandate) is **not** resolved here.
-Open decision 1 sharpens it: the question is no longer zod-or-valibot but
-zod-or-zod/mini, and ADR-0001 already names Zod the browser's boundary parser.
+D-6 (Zod in the browser vs BRIEF §4's Valibot mandate) **is** resolved here, by owner
+ruling rather than by argument — see Decisions taken §1. Zod ships in the browser and
+`valibot` is removed.
 
 ## How this is applied
 
-Run from the repository root. The three open decisions above do **not** block any of
-this; the manifest stands whichever way they are ruled.
+Run from the repository root. Every decision above is ruled; nothing here is blocked.
 
 ```bash
 # 1. Remove what the rebuild does not use.
 pnpm --filter web-v2 remove \
-  @base-ui/react radix-ui cmdk valibot react-zoom-pan-pinch react-hotkeys-hook
+  @base-ui/react radix-ui cmdk valibot react-zoom-pan-pinch react-hotkeys-hook \
+  react-pdf pdfjs-dist
 
 # 2. Runtime additions.
 pnpm --filter web-v2 add \
   react-aria-components @react-aria/interactions @react-aria/live-announcer \
   motion tinykeys @panzoom/panzoom react-error-boundary web-vitals diff
+
+# 2b. PDF: the composition, NOT @embedpdf/react-pdf-viewer (21x larger).
+pnpm --filter web-v2 add \
+  @embedpdf/core @embedpdf/engines @embedpdf/pdfium \
+  @embedpdf/plugin-viewport @embedpdf/plugin-render \
+  @embedpdf/plugin-scroll @embedpdf/plugin-zoom
 
 # 3. The table major. Not a bump — a different API (see the Runtime notes).
 pnpm --filter web-v2 add @tanstack/react-table@9
@@ -382,8 +445,9 @@ Three configuration changes accompany the installs, and none is optional:
 2. **`eslint.config.js`** — replace the `framer-motion` entry rather than deleting it.
    Permit `motion/react`; ban the bare `motion` namespace import, so `LazyMotion` + `m`
    stays the only reachable path. Add `reactHooks.configs["recommended-latest"].rules` for
-   the compiler lint rules. Remove the `zod` ban only if open decision 1 rules for
-   `zod/mini`; it is unrelated to this manifest otherwise.
+   the compiler lint rules. **Delete the `zod` / `zod/*` entries** from both `paths` and
+   `patterns` — they enforce BRIEF §4's superseded Valibot mandate and would now fail the
+   contract's own imports (Decisions taken §1).
 3. **`package.json`** — fix the `size-limit` glob so lazy pdfjs chunks stop counting
    against the shell budget (latent defect 2).
 
@@ -397,6 +461,11 @@ The manifest is correctly applied when all of the following hold:
 - `grep -rn "framer-motion\|from \"motion\"" apps/web-v2/src` returns nothing: every motion
   import is `motion/react`.
 - `grep -rn "sonner" apps/web-v2/src` returns exactly one file — the notification adapter.
+- `grep -rn "@embedpdf" apps/web-v2/src` touches only the PDF module, and
+  `grep -rn "react-pdf-viewer" apps/web-v2/src` returns nothing — the all-in-one entry
+  point is never imported.
+- `pdfium.wasm` and the PDF module appear in a **lazy** chunk, not the shell — confirmed
+  in the `rollup-plugin-visualizer` output, not assumed.
 - `pnpm --filter web-v2 check:rules` passes, with `src/components/ui/` still quarantined.
 - The axe fixture runs against every route and fails the build on a violation — i.e.
   latent defect 1 is closed, not merely noted.
