@@ -28,3 +28,8 @@ playwright-report
 *.njsproj
 *.sln
 *.sw?
+
+# Reviewer scratch — probe files, throwaway builds. Agents write these to prove
+# a claim by executing it rather than asserting it; none of it is source.
+*probe*
+dist-probe/
