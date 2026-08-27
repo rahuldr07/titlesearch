@@ -22,6 +22,24 @@
 @import "@titlepipe/ui-tokens/tokens.css";
 @import "./components/ui/ui.css";
 @import "./components/ui/overlays.css";
+/*
+ * THE DOMAIN LAYER'S OWN CSS, and its absence was silent for a whole rebuild.
+ *
+ * REVIEW-03 B5: this line did not exist, so `tp-paper-grain`, `tp-paper-tilt`
+ * and `tp-na-hatch` were never emitted. Confirmed absent from a production
+ * build; `PaperSheet` rendered with the classes on the element and
+ * `backgroundImage: none, transform: none`.
+ *
+ * Three rules died with it. Rule 8 — evidence renders as paper, never a grey
+ * placeholder bar — became a flat beige rectangle. Rule 14 and INVARIANT 7 lost
+ * the hatch that is NOT_STATED's distinguishing channel, which is the one
+ * pattern separating it from NOT_FOUND at a glance.
+ *
+ * A missing @import is invisible to tsc, to eslint, to check-rules and to
+ * Storybook, because every one of those sees the class NAME and none of them
+ * sees whether a rule was emitted. `paper.test.ts` now reads the built CSS.
+ */
+@import "./entities/entities.css";
 
 /*
  * A REVIEW TOOL IS NOT A DOCUMENT. Design README §App shell: min width 1360px,

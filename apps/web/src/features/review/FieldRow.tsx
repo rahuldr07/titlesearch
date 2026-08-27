@@ -1,9 +1,9 @@
 import type { Field } from "@titlepipe/contract";
 import { readCited } from "../../shared/provenance";
 import { cx } from "../../components/ui";
-import { FieldValueView } from "../../entities/field/FieldValueView";
 import { fieldLabel } from "./fieldNaming";
 import { readingsDisagree } from "./readings";
+import { RowValue } from "./RowValue";
 import { RowMark } from "./RowMark";
 import { T1Pill } from "./T1Pill";
 
@@ -67,7 +67,7 @@ export function FieldRow({ field, selected, onSelect, ruinous }: FieldRowProps) 
 
       {/* 1fr — the value, with the reading signals under it. */}
       <span className="flex min-w-0 flex-col gap-2">
-        <FieldValueView value={value} />
+        <RowValue value={value} />
         <span className="flex flex-wrap items-center gap-3">
           {disagree && (
             <span
