@@ -64,29 +64,27 @@ same commit.
 | `plans/backend/02-first-vertical-slice.md` | RECORD | Plan 02 as issued (executed, merged via PR #7) |
 | `plans/backend/02-WHAT-HAPPENED.md` | RECORD | Plan 02 handover — §5 is the transferable part; read before Plan 03 work |
 | `plans/backend/03-identity.md` | AUTHORITATIVE | Plan 03 DRAFT — four human gates open; not executable until ruled |
-| `plans/2026-07-28-titlepipe-revised-design.md` + six `2026-07-30-design-fidelity-*` + `2026-07-30-consistency-audit.md` | RECORD | The design-fidelity wave plans, as executed |
-| `specs/2026-07-30-design-fidelity-design.md` | RECORD | The wave spec |
 | `specs/2026-08-27-frontend-dependency-set-design.md` | AUTHORITATIVE | The rebuild's dependency set — kit, observability, manifest, execution steps (owner-approved 2026-08-27) |
+
+*The 2026-07 design-fidelity wave plans (`plans/2026-07-28-*`, six `2026-07-30-design-fidelity-*`,
+`2026-07-30-consistency-audit.md`) and their spec were deleted 2026-08-27 with the design
+they served. Recoverable from git history; see `docs/frontend/CARRY-FORWARD.md`.*
 
 ## docs/frontend/
 
 | Document | Status | Purpose |
 |---|---|---|
-| `HANDOFF-2026-08-01.md` | AUTHORITATIVE | Current frontend state (reskin, rail rebuild, gate numbers) |
-| `HANDOFF-UI.md` | RECORD | Frontend state as of 2026-07-29, before the reskin |
-| `conflicts.md` | AUTHORITATIVE | Living ledger: design behaviors refused, deliberate departures |
-| `decisions.md` | AUTHORITATIVE | Living ledger: delegated decisions incl. owner rulings (D1–D3) |
-| `open-rulings.md` | AUTHORITATIVE | Living ledger: RULE elements awaiting an owner/backend ruling |
-| `directions/{a,b,c,hybrid}.html` | AUTHORITATIVE | The four direction mockups; **`hybrid.html` is the approved visual reference** |
+| `design-2026-08/` | AUTHORITATIVE | **The current design.** `reference-app.html` is the behavioural source of truth; `tokens.css` / `tokens.json` copy verbatim; `claude-design-rules.md` is the 14 agent rules; three `ANALYSIS-*.md` map it against the contract |
+| `CARRY-FORWARD.md` | AUTHORITATIVE | Facts rescued from the 2026-08-27 cleanup — constraints, traps, and why they still bind |
+| `decisions.md` | AUTHORITATIVE | Living ledger: delegated decisions incl. owner rulings |
+| `open-rulings.md` | AUTHORITATIVE | Living ledger: RULE elements awaiting an owner/backend ruling. **Q11 is live** |
 | `test-harvest.md` | RECORD | Pass 0: all 138 pre-rebuild tests classified |
-| `design-classification.md` | RECORD | Pass 2: every export element → RENDER/RULE/CONFLICT |
-| `component-inventory.md` | RECORD | Pass 2: pattern → component mapping |
-| `tokens.md` | RECORD | Phase 1 token audit against the export |
-| `state-coverage.md` | RECORD | States the design never drew, both directions |
-| `replatform-mapping.md` | RECORD | Owner decision: the 12 measurement screens re-platform |
-| `design-fidelity.md` | RECORD | 2026-07-28 fidelity audit |
-| `fidelity-audit-2026-07-30.md` | RECORD | 2026-07-30 audit: 221 divergences |
-| `phase2-audit.md` | RECORD | Audit of the Phase 2 deliverables |
+
+*Deleted 2026-08-27 with the design and build they described:* `HANDOFF-2026-08-01.md`,
+`HANDOFF-UI.md`, `conflicts.md`, `directions/`, `design-classification.md`,
+`component-inventory.md`, `tokens.md`, `state-coverage.md`, `replatform-mapping.md`,
+`design-fidelity.md`, `fidelity-audit-2026-07-30.md`, `phase2-audit.md`. All recoverable
+from git history. The facts that still bind were moved to `CARRY-FORWARD.md` first.
 
 ## docs/prompts/ — verbatim as issued
 
@@ -101,16 +99,11 @@ hash in `scripts/check_no_client_data.py`: `Implementation_Rulebook_v1.docx` (th
 typing rulebook — **not** TitlePipe's R1–R24) · `2_Golden_Rules.docx` ·
 `3_Typed_Report_Template.docx` · `abstractor-report-typing.skill`.
 
-## docs/archive/
-
-RECORD. The pre-rebuild design zip and three UI crops, each admitted by hash.
-
 ## Elsewhere in the tree
 
 | Document | Status | Purpose |
 |---|---|---|
-| `apps/web-v2/BRIEF.md` | RECORD | The rebuild master prompt, kept verbatim as issued |
-| `apps/web-v2/BRIEF-DELTAS.md` | AUTHORITATIVE | Living ledger: where BRIEF's premises differ from the repo (D-1…D-10) |
-| `apps/web-v2/e2e/invariants/README.md` | AUTHORITATIVE | The harvested-invariant contract: 111 skipped specs, what a green run means |
+| `apps/web-v2/e2e/invariants/README.md` | AUTHORITATIVE | The harvested-invariant contract: what a green run means. **The rules themselves now live in `docs/INVARIANTS.md`**, which survives a frontend rebuild |
 | `infra/observability/README.md` | AUTHORITATIVE | Telemetry redaction contract, written before any collector exists |
+| ~~`apps/web-v2/BRIEF.md`~~ + ~~`BRIEF-DELTAS.md`~~ | DELETED 2026-08-27 | The 2026-07 rebuild master prompt and its delta ledger. Deleted with the design they briefed; the 2026-08 design supersedes them. Recoverable from git history |
 | ~~`design-export/README.md`~~ | DELETED 2026-08-26 | The extracted design package. Superseded — the rebuild re-decides the visual language rather than implementing that export. Recorded as `apps/web-v2/BRIEF-DELTAS.md` D-11; reachable at `a516d30` |
