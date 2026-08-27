@@ -13,7 +13,7 @@ import { disabledAttributes, type Disablement } from "./disabled";
  * not.
  *
  * MOTION: the thumb travels on `tp-move` (300ms, the movement token), not on
- * `tp-state`. It is the only control in this kit whose geometry animates, and
+ * `tp-state tp-press`. It is the only control in this kit whose geometry animates, and
  * rule 10's third timing exists for exactly this. Nothing bounces — the curve
  * ends at rest.
  *

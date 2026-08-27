@@ -21,7 +21,7 @@ import { disabledAttributes, type Disablement } from "./disabled";
  */
 const button = cva(
   [
-    "tp-state tp-target tp-ring inline-flex items-center justify-center gap-4",
+    "tp-state tp-press tp-target tp-ring inline-flex items-center justify-center gap-4",
     // Rule 3: buttons are NEVER mono. Rule 4: sentence case, so no `uppercase`.
     "font-sans text-meta leading-flat font-semibold whitespace-nowrap",
     // Rule 5: 10px is the control radius, one step in from a 14px surface.

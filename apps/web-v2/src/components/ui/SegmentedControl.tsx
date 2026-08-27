@@ -60,7 +60,7 @@ export function Segment({ disabledBecause, children, ...props }: SegmentProps) {
       {...props}
       {...disabledAttributes(disabledBecause)}
       className={cx(
-        "tp-state tp-target tp-ring flex cursor-pointer items-center justify-center rounded-sm px-6",
+        "tp-state tp-press tp-target tp-ring flex cursor-pointer items-center justify-center rounded-sm px-6",
         "font-sans text-meta leading-close font-medium text-ink-secondary",
         "hover:not-data-disabled:text-ink-primary",
         "data-selected:bg-surface-panel data-selected:font-semibold data-selected:text-ink-primary data-selected:shadow-card",

@@ -38,6 +38,28 @@
   transition: var(--ease-state);
 }
 
+/*
+ * PRESS. The one state the kit was missing, and its absence was audible: a
+ * button that changes on hover and then does nothing on mousedown reads as
+ * broken for the ~120ms before the mutation answers.
+ *
+ * `data-pressed` is react-aria's own attribute, and it is why this is a
+ * utility rather than `:active`. React Aria presses fire on touch, pen, mouse,
+ * Space AND Enter, and it keeps the state while the pointer is held and
+ * dragged inside the target -- `:active` does none of that consistently.
+ *
+ * Design rule 10 governs the shape of it: 140ms on state, and NOTHING BOUNCES.
+ * So this is a settle, not a squash -- brightness and an inset shadow, and a
+ * 1px translate rather than a scale. A scale on a text button reflows the
+ * glyphs; a translate moves them as one.
+ */
+@utility tp-press {
+  &[data-pressed] {
+    transform: translateY(1px);
+    box-shadow: inset 0 1px 2px rgb(20 22 28 / 0.12);
+  }
+}
+
 /* Entry: 260ms cubic-bezier(.32,.72,0,1). Nothing bounces — the curve
    decelerates to rest and never overshoots 1. */
 @utility tp-enter {

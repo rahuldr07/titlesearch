@@ -46,7 +46,7 @@ export function Checkbox({ disabledBecause, children, ...props }: CheckboxProps)
             aria-hidden
             className={cx(
               // Rule 5: 6px inner radius, one step in from the 10px control.
-              "tp-state flex size-8 shrink-0 items-center justify-center rounded-sm border",
+              "tp-state tp-press flex size-8 shrink-0 items-center justify-center rounded-sm border",
               "text-label leading-flat",
               isSelected || isIndeterminate
                 ? "border-action bg-action text-ink-on-action"

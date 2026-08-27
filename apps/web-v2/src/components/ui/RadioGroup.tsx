@@ -38,7 +38,7 @@ export function Radio({ disabledBecause, description, children, ...props }: Radi
       <span
         aria-hidden
         className={cx(
-          "tp-state mt-1 flex size-8 shrink-0 items-center justify-center rounded-pill border",
+          "tp-state tp-press mt-1 flex size-8 shrink-0 items-center justify-center rounded-pill border",
           "border-control-border bg-control-fill",
           "group-data-selected:border-action",
           "group-data-disabled:border-ink-disabled group-data-disabled:bg-surface-sunken",

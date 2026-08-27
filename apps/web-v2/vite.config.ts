@@ -247,6 +247,27 @@ export default defineConfig(({ mode }) => {
      * assertion still passes while the positive control fails. That asymmetry is
      * the whole reason the positive control exists.
      */
+    /*
+     * TWO ENTRIES. `index.html` is the app; `workbench.html` is the dev-only
+     * component page (src/workbench/). It is a second Rollup input rather than
+     * a route because `app/routeTree.tsx` copies every path from the frozen
+     * door table in `authz.ts:62-81` and invents none — a `/workbench` route
+     * would be a door that table does not contain.
+     *
+     * It is listed under `build` so `vite dev` serves it, and excluded from a
+     * production build below.
+     */
+    build: {
+      rollupOptions: {
+        input:
+          mode === "production"
+            ? { app: fileURLToPath(new URL("./index.html", import.meta.url)) }
+            : {
+                app: fileURLToPath(new URL("./index.html", import.meta.url)),
+                workbench: fileURLToPath(new URL("./workbench.html", import.meta.url)),
+              },
+      },
+    },
     server: { port: 5174, proxy: apiProxy },
     preview: { port: 4274, proxy: apiProxy },
   };

@@ -60,7 +60,7 @@ export function Tab({ disabledBecause, children, ...props }: TabProps) {
       {...props}
       {...disabledAttributes(disabledBecause)}
       className={cx(
-        "tp-state tp-target tp-ring flex cursor-pointer items-center gap-4 border-b-2 px-4 pb-5",
+        "tp-state tp-press tp-target tp-ring flex cursor-pointer items-center gap-4 border-b-2 px-4 pb-5",
         "border-transparent font-sans text-meta leading-close font-medium text-ink-secondary",
         "hover:not-data-disabled:text-ink-primary",
         "data-selected:border-action data-selected:font-semibold data-selected:text-ink-primary",
