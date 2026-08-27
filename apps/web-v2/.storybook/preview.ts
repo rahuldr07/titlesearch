@@ -13,7 +13,13 @@ const preview: Preview = {
       options: {
         app: { name: "app", value: "var(--color-surface-app)" },
         panel: { name: "panel", value: "var(--color-surface-panel)" },
-        document: { name: "document pane", value: "var(--color-document-bg)" },
+        // Was --color-document-bg, deleted in the 2026-08-27 revaluation: the
+        // dark-document ink vocabulary is gone. The two grounds a primitive can
+        // now stand on besides the app chrome are PAPER (evidence, rule 8) and
+        // the DARK CHROME rail. Both are listed, because a token that only
+        // looks right on one of them is the defect this panel exists to catch.
+        paper: { name: "paper (evidence)", value: "var(--color-surface-paper)" },
+        rail: { name: "dark chrome (rail)", value: "var(--color-rail-surface)" },
       },
     },
     // §6 requires every interactive element to be keyboard reachable with a
