@@ -34,7 +34,7 @@ export const Rest: Story = {};
 
 export const WithValue: Story = {
   render: () => (
-    <TextField defaultValue="Warranty deed, book 4412">
+    <TextField aria-label="Instrument" defaultValue="Warranty deed, book 4412">
       <Input />
     </TextField>
   ),
@@ -43,7 +43,7 @@ export const WithValue: Story = {
 /** Rule 3: mono is for DATA — refs, money, citations, hashes, timestamps. */
 export const DataValue: Story = {
   render: () => (
-    <TextField defaultValue="2019-0043117">
+    <TextField aria-label="Instrument number" defaultValue="2019-0043117">
       <Input data />
     </TextField>
   ),
@@ -52,7 +52,7 @@ export const DataValue: Story = {
 /** Rule 9: there is no way to disable this without saying why. */
 export const BlockedWithReason: Story = {
   render: () => (
-    <TextField defaultValue="2019-0043117">
+    <TextField aria-label="Instrument number" defaultValue="2019-0043117">
       <Input disabledBecause="Read from the clerk stamp — not editable." />
     </TextField>
   ),

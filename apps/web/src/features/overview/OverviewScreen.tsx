@@ -3,8 +3,9 @@ import { Link } from "@tanstack/react-router";
 import { get } from "../../shared/api";
 import { lifecycle, queueNext } from "../../shared/queries";
 import { useSignedIn } from "../../app/session/signedIn";
-import { Card, CardBody, CardHeader } from "../../components/ui";
+import { Card } from "../../components/ui";
 import { StatCard } from "./StatCard";
+import { RecentOrdersRefusal } from "./RecentOrdersRefusal";
 import { Spotlight } from "./Spotlight";
 
 /**
@@ -108,37 +109,7 @@ export function OverviewScreen() {
 
       <Spotlight order={served.data?.order ?? null} pending={served.isPending} />
 
-      {/*
-       * WHERE THE DESIGN'S RECENT-ORDERS TABLE WOULD HAVE BEEN. Stated, not
-       * omitted: a blank region reads as a screen that failed to load, and
-       * AGENTS.md forbids emitting values that cannot be cited — a plausible
-       * ten-row table is exactly that.
-       */}
-      <Card padding="none">
-        <CardHeader>Recent orders</CardHeader>
-        <CardBody className="flex flex-col gap-5 py-10">
-          <p className="max-w-260 text-meta leading-body text-ink-secondary">
-            Not built, and not pending. The design draws the last ten orders
-            here linking to a browsable table; no endpoint lists orders and the
-            contract removed one by construction, so there is nothing to list
-            and nowhere to link. The way to an order is the queue serving you
-            one, or a deep link somebody sent you.
-          </p>
-          <p className="text-meta leading-body text-ink-secondary">
-            The collision and the options for resolving it are written up in{" "}
-            <span className="font-mono text-label text-ink-muted">
-              docs/frontend/design-2026-08/CONFLICT-all-orders.md
-            </span>
-            .
-          </p>
-          <Link
-            to="/queue"
-            className="tp-state w-fit text-meta font-semibold leading-close text-action underline-offset-4 hover:underline"
-          >
-            Go to the queue
-          </Link>
-        </CardBody>
-      </Card>
+      <RecentOrdersRefusal />
 
       {/* The board's own stage rows are the lifecycle screen's subject, not
           this one's — drawing them here would be two screens counting the same
