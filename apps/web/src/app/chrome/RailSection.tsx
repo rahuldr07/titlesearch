@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, useRouterState } from "@tanstack/react-router";
+import { ActiveOrderStages as OrderStages } from "./ActiveOrderStages";
 import { OrderContextResponse, type GrantedPermissionSchema } from "@titlepipe/contract";
 import { get } from "../../shared/api";
 import { DOORS, SECTION_RUBRIC, type RailSection } from "./doors";
@@ -70,6 +71,15 @@ export function Section(props: {
           </SidebarMenuLink>
         ))}
       </SidebarMenu>
+      {/*
+        * The design's numbered stages, BELOW the door.
+        *
+        * §App shell: "Active Order (numbered stages 1-5 with state dots)". A
+        * door and a stage are different objects — a door is somewhere you may
+        * go, a stage is where the work has got to — so the stages sit under
+        * the Review door rather than replacing it.
+        */}
+      {props.section === "order" && <ActiveOrderStages />}
     </SidebarGroup>
   );
 }
@@ -92,6 +102,15 @@ export function Section(props: {
  * It is only fetched on an order-scoped route, and only for the Active-Order
  * rubric — `enabled` is the guard, so the other two sections never ask.
  */
+/** The stages, gated on an order-scoped route exactly as the ref above is. */
+function ActiveOrderStages() {
+  const orderId = useRouterState({
+    select: (s) => /^\/orders\/([^/]+)/.exec(s.location.pathname)?.[1] ?? null,
+  });
+  if (orderId === null) return null;
+  return <OrderStages orderId={orderId} />;
+}
+
 function ActiveOrderRef(props: { readonly section: RailSection }) {
   const orderId = useRouterState({
     select: (s) => /^\/orders\/([^/]+)/.exec(s.location.pathname)?.[1] ?? null,

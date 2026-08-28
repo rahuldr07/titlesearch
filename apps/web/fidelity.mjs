@@ -77,7 +77,13 @@ async function compareRail(ours, theirs) {
         badges: (t.match(/^\s*(\d{1,3}|v\d+\.\d+|\d+ QC)\s*$/gm) ?? []).length,
         namesActiveOrder: /\d{7}-\d/.test(t),
         stageMarks: (t.match(/^[✓•]$|^[1-5]$/gm) ?? []).length,
-        hasProfileRole: /Admin|Reviewer|Engineer|Typist/.test(t),
+        /*
+         * Case-insensitive: the design writes "Admin" in a pill and this app
+         * writes the contract's own role name, which is lowercase (`admin` —
+         * authz.ts:31). The role is PRESENT in both; only its casing differs,
+         * and rule 4 (sentence case) is on our side of that.
+         */
+        hasProfileRole: /\b(admin|reviewer|senior|ops|engineer|typist)\b/i.test(t),
       };
     });
   return { ours: await read(ours), theirs: await read(theirs) };
@@ -88,7 +94,13 @@ const ours = await browser.newPage({ viewport: { width: 1440, height: 960 } });
 const theirs = await browser.newPage({ viewport: { width: 1440, height: 960 } });
 
 await openDesign(theirs);
-await ours.goto(APP + "/", { waitUntil: "networkidle" });
+/*
+ * AN ORDER-SCOPED ROUTE, not "/". The rail's Active Order section only draws
+ * stages when an order is in scope — correctly, since a stage is where THIS
+ * order's work has got to. Measuring the rail on "/" reported zero stage marks
+ * against the design's seven and made a working section look missing.
+ */
+await ours.goto(APP + "/orders/ord_demo_1", { waitUntil: "networkidle" });
 await ours.waitForTimeout(1200);
 
 const rail = await compareRail(ours, theirs);
