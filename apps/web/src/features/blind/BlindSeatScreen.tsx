@@ -81,7 +81,7 @@ function SheetBody(props: { readonly schedule: CaptureScheduleResponse }) {
       entries.push(toWire(draft, draft.confidence));
     }
     if (entries.length === 0) return;
-    capture.mutate({ entries });
+    capture.file({ entries });
   }
 
   return (
@@ -90,7 +90,10 @@ function SheetBody(props: { readonly schedule: CaptureScheduleResponse }) {
         schedule={props.schedule}
         sheet={sheet}
         onChange={(next: DraftEntry) => {
-          setSheet({ ...sheet, [next.path]: next });
+          // Updater form, not `{ ...sheet }`: two rows answered inside one tick
+          // would otherwise both spread the same stale sheet and the first
+          // answer would be silently dropped.
+          setSheet((prev) => ({ ...prev, [next.path]: next }));
         }}
         answered={answered}
         missingRequired={missingRequired}

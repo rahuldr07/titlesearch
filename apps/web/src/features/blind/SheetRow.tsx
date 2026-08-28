@@ -1,19 +1,12 @@
 import type { Key } from "react";
-import type { NaReason, SheetField } from "@titlepipe/contract";
+import type { SheetField } from "@titlepipe/contract";
 import { TextField } from "react-aria-components";
-import { cx, Input, Label, Option, Select } from "../../components/ui";
+import { Input, Label, Option, Select } from "../../components/ui";
+import { NoValueChip } from "../../entities/field/NoValueChip";
 import { ABSENCES, isAnswered, type DraftEntry } from "./draftEntry";
 import { RowProvenance } from "./RowProvenance";
 
 const KEYED = "KEYED";
-
-/** The four states never collapse into one grey dash — each keeps its own ink. */
-const ABSENCE_INK: Readonly<Record<NaReason, string>> = {
-  NOT_PRESENT: "text-na-not-present-ink",
-  NOT_FOUND: "text-na-not-found-ink",
-  NOT_STATED: "text-na-silent-ink",
-  PRESENT_UNREADABLE: "text-na-unreadable-ink",
-};
 
 /** The control the schedule asks for. `kind` drives the box, never a validator. */
 function Reading(props: {
@@ -91,9 +84,14 @@ export function SheetRow(props: {
               }}
             />
           ) : (
-            <p className={cx("font-sans text-meta leading-body", ABSENCE_INK[draft.absence])}>
-              {ABSENCES.find((a) => a.id === draft.absence)?.gloss ?? draft.absence}
-            </p>
+            /*
+             * The shared chip, not a coloured line of text. `noValueStates`
+             * carries the reason the four differ in EVERY channel at once —
+             * mark, ink, border style and fill — because colour alone does not
+             * survive greyscale or a red-green deficiency. The picker below
+             * keeps the typist's own phrasing; the echo speaks the taxonomy's.
+             */
+            <NoValueChip render={draft.absence} />
           )}
 
           <Select
