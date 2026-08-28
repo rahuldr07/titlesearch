@@ -34,8 +34,14 @@ import { useOrderPages, usePipeline } from "./useExtraction";
  *    heading carries its own weight.
  * 4. THE STAGE CARD'S CTA FOOTER — "N exceptions securely routed to human
  *    review" beside an "Enter Examination Workstation →" button. N is a count
- *    no response carries, and the workstation is `Unbuilt` (OrderRoute:25-28):
- *    a primary action into a placeholder is worse than no action.
+ *    NO RESPONSE CARRIES: `PipelineStage` (intake.ts:83) has no count member,
+ *    so the sentence could only be composed here. The BUTTON half is refused
+ *    for a different reason, and an earlier note here got it wrong: the
+ *    workstation IS built (`/orders/$orderId/review`, orderRoutes.tsx:63) and
+ *    `VerdictCard` (hub/VerdictCard.tsx:70) already carries the one accented
+ *    way in, from the hub rendered directly above this view on the same
+ *    scrolling route (OrderRoute:18-19). A second primary into the same door
+ *    is a duplicate, not a missing action.
  *
  * ══ THE DARK TERMINAL IS REFUSED, NOT DEFERRED ═════════════════════════════
  *

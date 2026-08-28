@@ -1,5 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
-import { get } from "../../shared/api";
+import { useRead } from "../../app/useRead";
 import { orderPages, orderPipeline } from "../../shared/queries";
 
 /**
@@ -30,24 +29,19 @@ import { orderPages, orderPipeline } from "../../shared/queries";
  * screen that disagree by design.
  */
 /**
- * BOTH READS GO THROUGH `shared/queries.ts`, which is the one place each path
- * and each cache key is spelled. The hub draws the same pipeline response, and
- * a second spelling of that key would be two caches of one pipeline — rule 11's
- * "one variable, never two literals" failing silently as a stale stage list
- * rather than loudly as a wrong number.
+ * BOTH READS GO THROUGH `shared/queries.ts` FOR THE DESCRIPTOR AND `app/useRead`
+ * FOR THE FETCH. `queries.ts` is the one place each path and each cache key is
+ * spelled; the hub draws the same pipeline response, and a second spelling of
+ * that key would be two caches of one pipeline — rule 11's "one variable, never
+ * two literals" failing silently as a stale stage list rather than loudly as a
+ * wrong number. The three lines that turn a descriptor into a query were
+ * written out here too, which is the third copy `useRead` was extracted to
+ * stop (`app/useRead.ts`).
  */
 export function usePipeline(orderId: string) {
-  const read = orderPipeline(orderId);
-  return useQuery({
-    queryKey: read.key,
-    queryFn: () => get(read.path, read.schema),
-  });
+  return useRead(orderPipeline(orderId));
 }
 
 export function useOrderPages(orderId: string) {
-  const read = orderPages(orderId);
-  return useQuery({
-    queryKey: read.key,
-    queryFn: () => get(read.path, read.schema),
-  });
+  return useRead(orderPages(orderId));
 }

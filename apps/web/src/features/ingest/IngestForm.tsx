@@ -87,6 +87,32 @@ export function IngestForm(props: {
             Order configuration
           </h2>
           <OrderFields values={props.values} onChange={props.onValue} />
+
+          {/*
+           * CONTRACT GAP: the design's PRODUCT select has no field to write to.
+           * `CreateOrderRequest` (endpoints.ts:39-45) has exactly five members —
+           * `client_id`, `external_ref`, `jurisdiction`, `state`, `county` — and
+           * no `product_id: string`. `Order.product` (entities.ts) is nullable
+           * and SERVER-RESOLVED, so a product chosen here would be sent nowhere
+           * and silently dropped.
+           *
+           * It is stated on screen rather than left as a hole because the gap
+           * has a visible consequence one line below: `EffectiveChecklist`
+           * (workspace.ts:118) is keyed on client AND product, so with no
+           * product to narrow by, the banner names EVERY product's checklist
+           * for the chosen client rather than the one this order will use.
+           */}
+          <BackendGap
+            object="Product — the second half of the checklist key"
+            conversation="CONTRACT GAP: CreateOrderRequest, endpoints.ts:39-45"
+          >
+            The design picks a product here and resolves one checklist from it.
+            There is no product field on the create request, so nothing carries
+            the choice to the server. Until there is, the banner below names
+            every checklist this client has rather than pretending to know
+            which one applies.
+          </BackendGap>
+
           <RulebookBanner clientId={props.values.client_id} />
         </div>
       </div>

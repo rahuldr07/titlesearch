@@ -81,12 +81,12 @@ export function IngestScreen() {
           <IngestForm
             values={values}
             file={file}
-            uploading={upload.isPending}
+            uploading={upload.pending}
             onValue={(key, value) =>
               setValues((previous) => ({ ...previous, [key]: value }))
             }
             onFile={setFile}
-            onSubmit={() => upload.mutate(packageForm(values, file))}
+            onSubmit={() => upload.send(packageForm(values, file))}
           />
         )}
 
@@ -102,8 +102,8 @@ export function IngestScreen() {
           <AcceptCard
             order={stage.order}
             fileName={stage.fileName}
-            pending={accept.isPending}
-            onAccept={() => accept.mutate(stage.order)}
+            pending={accept.pending}
+            onAccept={() => accept.send(stage.order)}
           />
         )}
 
