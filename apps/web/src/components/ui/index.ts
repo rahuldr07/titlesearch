@@ -125,3 +125,6 @@ export { ProgressMeter, type ProgressMeterProps } from "./progress-meter";
 export { Kbd } from "./kbd";
 export { Card, CardHeader, CardBody, InnerPanel, type CardProps } from "./card";
 export { SegmentedControl, Segment, type SegmentedControlProps, type SegmentProps } from "./segmented-control";
+
+/* THE RAIL COLUMN — `sidebar` adapted: no mobile, no cookie, no `dark:`. */
+export * from "./sidebar";
