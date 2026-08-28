@@ -3,6 +3,9 @@ import type { Field } from "@titlepipe/contract";
 import { Alert, Button, Card } from "../../components/ui";
 import { DecisionCard } from "../../entities/decision/DecisionCard";
 import { nominatedPair } from "./readings";
+import { fieldLabel } from "./fieldNaming";
+import { panelRubric } from "./panelRubric";
+import { readCited } from "../../shared/provenance";
 import { useReviewWrites } from "./useReviewWrites";
 import { DecisionEditor, type EditorMode } from "./DecisionEditor";
 
@@ -70,8 +73,15 @@ export function DecisionPanel(props: {
 
   return (
     <div className="flex shrink-0 flex-col gap-6 border-b border-line-strong bg-surface-app p-8">
+      {/* `label`/`rubric` are passed in: an entity may not import a feature,
+          and these are what the specs address the selection by (sel-label,
+          sel-state — eighty assertions). `panelRubric` was orphaned until now;
+          StatePill says "Needs review" where the rubric says "NEEDS REVIEW",
+          and the specs pin the second. See CONFLICT-caps-in-strings.md. */}
       <DecisionCard
         field={field}
+        label={fieldLabel(field.path)}
+        rubric={panelRubric(field, readCited(field)).text}
         readings={nominatedPair(field.readings ?? []) ?? undefined}
         onAdoptReading={(reading) => {
           // INVARIANT 31 — into the editor, never retyped.

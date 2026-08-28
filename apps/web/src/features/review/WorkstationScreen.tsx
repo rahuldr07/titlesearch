@@ -2,13 +2,13 @@ import { useRead } from "../../app/useRead";
 import { orderContext, orderFields } from "../../shared/queries";
 import { QueryState } from "../../entities/state/QueryState";
 import { WorkstationBar } from "./WorkstationBar";
-import { SectionRail } from "./SectionRail";
 import { FieldQueue } from "./FieldQueue";
 import { DecisionPanel } from "./DecisionPanel";
 import { CountersignGap } from "./CountersignGap";
+import { WorkstationFooter } from "./WorkstationFooter";
 import { ScanPane } from "./ScanPane";
 import { DecisionDock } from "./DecisionDock";
-import { sectionsOf, sectionOf, fieldLabel } from "./fieldNaming";
+import { sectionsOf, fieldLabel } from "./fieldNaming";
 import { isQueued, resolveSelection } from "./queue";
 
 /**
@@ -74,17 +74,12 @@ export function WorkstationScreen(props: {
                 openLabel={selected === null ? null : fieldLabel(selected.path)}
               />
               <div className="flex min-h-0 flex-1">
-                <SectionRail
-                  sections={sections}
-                  activeSection={selected === null ? null : sectionOf(selected.path)}
-                  onSelect={(id) => {
-                    const first = sections
-                      .find((s) => s.id === id)
-                      ?.fields.find(isQueued);
-                    if (first !== undefined) props.onSelectField(first.path);
-                  }}
-                />
-
+                {/*
+                 * TWO PANES, which is what `reference-app.html` draws. The
+                 * field list and the scan, and nothing between them — the 200px
+                 * section rail an earlier pass added here was read off a
+                 * `min-width:200px` that belongs to the top bar's meter.
+                 */}
                 <div className="flex min-h-0 min-w-0 flex-1 flex-col border-r border-line-strong bg-surface-panel">
                   <DecisionDock census={data.census} />
                   <div className="min-h-0 flex-1 overflow-y-auto">
@@ -93,21 +88,23 @@ export function WorkstationScreen(props: {
                       selectedId={selected?.id ?? null}
                       canSelect={isQueued}
                       onSelect={(field) => props.onSelectField(field.path)}
+                      renderOpen={() => (
+                        <DecisionPanel field={selected} orderId={props.orderId} />
+                      )}
                     />
-                    <div className="flex flex-col gap-8 p-8">
+                    <div className="p-8">
                       <CountersignGap />
                     </div>
                   </div>
                 </div>
 
-                <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-                  <DecisionPanel field={selected} orderId={props.orderId} />
+                <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-surface-app">
                   {/*
                    * INVARIANT 33: the citation renders as a pin on the source
                    * page. `source_line_coords` is `z.unknown()` until the
                    * LLMWhisperer adapter lands (entities.ts:29), so the pin
-                   * marks the PAGE and says that no line coordinate was
-                   * recorded, rather than guessing an index.
+                   * marks the PAGE and says no line coordinate was recorded
+                   * rather than guessing an index.
                    */}
                   <ScanPane
                     orderId={props.orderId}
@@ -116,6 +113,7 @@ export function WorkstationScreen(props: {
                   />
                 </div>
               </div>
+              <WorkstationFooter census={data.census} />
             </>
           );
         }}

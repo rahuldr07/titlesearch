@@ -31,6 +31,22 @@ export type DecisionCardProps = {
    */
   readonly readings?: { readonly a: FieldReading; readonly b: FieldReading } | undefined;
   /**
+   * THE FIELD'S DISPLAY NAME AND ITS STATE RUBRIC, both passed IN.
+   *
+   * `fieldLabel()` and `panelRubric()` live in `features/review`, and an entity
+   * may not import a feature — so the words arrive as props rather than this
+   * card reaching up for them. Without `label` the header falls back to the raw
+   * `field.path`, which is what it printed before and is still the right answer
+   * for a caller that has no naming table.
+   *
+   * They carry `sel-label` and `sel-state` because the harvested invariant
+   * specs address the open decision by those two ids in eighty places — the
+   * selection's name and the server's word for its state are what every one of
+   * those tests is really asserting about.
+   */
+  readonly label?: string | undefined;
+  readonly rubric?: string | undefined;
+  /**
    * What follows from getting this wrong, e.g. "A wrong vested owner voids the
    * policy." SERVER-AUTHORED like `why`; the amber line is a claim about
    * consequence and the browser has no standing to make one.
@@ -45,6 +61,8 @@ export type DecisionCardProps = {
 export function DecisionCard({
   field,
   readings,
+  label,
+  rubric,
   consequence,
   onOpenCitation,
   onAdoptReading,
@@ -60,10 +78,29 @@ export function DecisionCard({
       )}
     >
       <header className="flex items-start justify-between gap-8">
-        <span className="font-sans text-meta leading-close font-semibold text-action">
-          {field.path}
+        <span
+          data-testid="sel-label"
+          className="font-sans text-meta leading-close font-semibold text-action"
+        >
+          {label ?? field.path}
         </span>
-        <StatePill state={field.state} />
+        {/*
+          * `sel-state` wraps the RUBRIC ALONE. One spec asserts it with
+          * `toHaveText("ENGINES DISAGREE — NOTHING SETTLED")`, which is exact,
+          * so the pill has to be a sibling rather than a child — otherwise the
+          * id carries two sentences and the assertion can never hold.
+          */}
+        <span className="flex items-center gap-4">
+          {rubric !== undefined && (
+            <span
+              data-testid="sel-state"
+              className="font-sans text-label leading-flat tracking-caps text-ink-muted"
+            >
+              {rubric}
+            </span>
+          )}
+          <StatePill state={field.state} />
+        </span>
       </header>
 
       <DecisionQuestion asking={field.asking} why={field.why} />
