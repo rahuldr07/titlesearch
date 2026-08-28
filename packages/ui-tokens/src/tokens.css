@@ -106,6 +106,18 @@
   --color-ink-primary: #14161c;
   --color-ink-secondary: #454a55;
   --color-ink-muted: #6e7480;
+  /*
+   * ⚠ FAILS WCAG 2.2 AA FOR NORMAL TEXT ON EVERY SURFACE IN THIS PALETTE.
+   * Measured 2026-08-28: 3.28:1 on panel, 3.17:1 on sunken, 2.83:1 on the app
+   * canvas, 2.86:1 on action-surface, against a 4.5:1 floor. It is the ink on
+   * every 11px label, and 11px is normal text — WCAG's large-text exemption
+   * starts at 18.66px bold.
+   *
+   * The value is UNCHANGED because it is the design system's, and the fix is a
+   * token rather than a screen: there is no surface to move a label onto.
+   * `#686C76` is the same hue darkened enough to clear all four (worst 4.53).
+   * Ruling and options: docs/frontend/design-2026-08/CONFLICT-ink-faint-contrast.md
+   */
   --color-ink-faint: #8a8e98;
   --color-ink-disabled: #b9bec9;
 
@@ -193,7 +205,14 @@
   --color-rail-surface: #1e1b2e;
   --color-rail-deep: #171424;
   --color-rail-ink: #c9c5d8; /* 10.51:1 on rail */
-  --color-rail-ink-muted: #8881a2; /* 5.03:1 — rubrics, resting labels */
+  /*
+   * The 5.03:1 this used to claim is wrong twice over, measured 2026-08-28.
+   * On the bare rail (--color-rail-surface #1e1b2e) it is 4.56:1, not 5.03. And
+   * the app does not render it on the bare rail: the quick-jump button carries
+   * --color-rail-line over the surface, compositing to #2e2b3d, where it is
+   * 3.73:1 and fails. Same ruling as --color-ink-faint above.
+   */
+  --color-rail-ink-muted: #8881a2; /* 4.56:1 on rail-surface; 3.73:1 where it is used */
   --color-rail-line: rgb(255 255 255 / 0.07);
   --color-rail-accent: #b7a6ee; /* 8.16:1 — the accent AS SEEN ON THE COLUMN */
 
