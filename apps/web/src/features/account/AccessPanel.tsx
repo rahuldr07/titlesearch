@@ -53,7 +53,7 @@ export function AccessPanel() {
 
   return (
     <PanelFrame
-      title="Access (RBAC)"
+      title="Access control (RBAC)"
       note="What this seat may open and do, as the server projected it."
     >
       <QueryState query={permissions} of="the permission projection">

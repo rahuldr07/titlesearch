@@ -70,21 +70,20 @@ export function AccountScreen(props: { readonly tab: AccountTabId | undefined })
                 search={{ tab: tab.id }}
                 aria-current={tab.id === active ? "page" : undefined}
                 className={cx(
-                  "tp-state flex flex-col gap-1 rounded-lg px-6 py-5 text-meta leading-close",
+                  "tp-state flex rounded-lg px-6 py-5 text-meta leading-close",
                   tab.id === active
                     ? "bg-action-surface font-semibold text-ink-secondary"
                     : "font-medium text-ink-muted hover:bg-row-hover",
                 )}
               >
-                {tab.label}
                 {/*
-                 * The endpoint under the label, in mono because a path is an
-                 * identifier (rule 3). Two of the six have none, and saying so
-                 * here is why the gap is visible before the click.
+                 * PLAIN TEXT, as the design draws it. An earlier pass put the
+                 * backing endpoint under every label in mono — useful, and not
+                 * what `reference-app.html` has: its tabs are one 13px w500
+                 * line each. Which panes have no contract surface is said on
+                 * the pane itself, where the gap actually is.
                  */}
-                <span className="font-mono text-label leading-flat text-ink-muted">
-                  {tab.backing ?? "no contract surface"}
-                </span>
+                {tab.label}
               </Link>
             </li>
           ))}

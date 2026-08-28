@@ -50,40 +50,34 @@ export function PeoplePanel() {
 
   return (
     <PanelFrame
-      title="People"
+      title="People & roles"
       note="Who holds a seat, and which of them are privileged without a second factor."
     >
       <QueryState query={roster} of="the roster">
         {(data) => (
           <div className="flex flex-col gap-8">
             {/*
-             * The gate figure leads, because it is the only number on this pane
-             * and the reason a compliance reader opens it.
+             * ONE LINE, NOT A CARD. The design leads with the Team Directory
+             * and has no gate card at all; an earlier pass here put
+             * `privileged_without_mfa` in a card that took the first read off
+             * the roster. The figure stays — it is the server's, and it is why
+             * a compliance reader opens this pane — but it sits under the
+             * heading rather than above the thing it is about.
              */}
-            <Card padding="tight">
-              <div className="flex items-center justify-between gap-8">
-                <div className="flex flex-col gap-2">
-                  <span className="text-label font-semibold leading-flat text-ink-faint">
-                    Privileged without MFA
-                  </span>
-                  <span className="text-meta leading-close text-ink-secondary">
-                    The server&rsquo;s count across the whole shop, not a filter
-                    over the rows below — the roster is scoped to you and the
-                    gate is not.
-                  </span>
-                </div>
-                <span
-                  data-mfa-gap={data.privileged_without_mfa}
-                  className={
-                    data.privileged_without_mfa > 0
-                      ? "text-title font-bold leading-flat tabular-nums text-state-attend"
-                      : "text-title font-bold leading-flat tabular-nums text-state-settled"
-                  }
-                >
-                  {data.privileged_without_mfa}
-                </span>
-              </div>
-            </Card>
+            <p className="text-meta leading-body text-ink-secondary">
+              <span
+                data-mfa-gap={data.privileged_without_mfa}
+                className={
+                  data.privileged_without_mfa > 0
+                    ? "font-semibold text-state-attend"
+                    : "font-semibold text-state-settled"
+                }
+              >
+                {data.privileged_without_mfa} privileged without MFA
+              </span>{" "}
+              — the server&rsquo;s count across the whole shop, not a filter over
+              the rows below. The roster is scoped to you; the gate is not.
+            </p>
 
             <Card padding="none">
               <ul>
