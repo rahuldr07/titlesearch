@@ -117,9 +117,12 @@ export function OverviewScreen() {
           this one's — drawing them here would be two screens counting the same
           thing. The link is the join. */}
       {board.data !== undefined && board.data.stages.length > 0 && (
-        <p className="text-meta leading-close text-ink-faint">
+        <p className="text-meta leading-close text-ink-secondary">
           Seven stages hold these orders.{" "}
-          <Link to="/dashboard" className="tp-state text-action hover:underline">
+          <Link
+            to="/dashboard"
+            className="tp-state text-action underline underline-offset-4"
+          >
             The lifecycle board
           </Link>{" "}
           draws them.

@@ -78,7 +78,7 @@ export function AccountScreen(props: { readonly tab: AccountTabId | undefined })
                  * identifier (rule 3). Two of the six have none, and saying so
                  * here is why the gap is visible before the click.
                  */}
-                <span className="font-mono text-label leading-flat text-ink-faint">
+                <span className="font-mono text-label leading-flat text-ink-muted">
                   {tab.backing ?? "no contract surface"}
                 </span>
               </Link>
@@ -87,7 +87,18 @@ export function AccountScreen(props: { readonly tab: AccountTabId | undefined })
         </ul>
       </nav>
 
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto px-20 py-16">
+      {/*
+       * `tabIndex={0}`: a region that scrolls must be reachable by keyboard, or
+       * a reader who cannot use a pointer cannot reach the bottom of the pane
+       * (WCAG 2.1.1, and axe's `scrollable-region-focusable`). It takes an
+       * accessible name with it, because a bare tab stop announces nothing.
+       */}
+      <div
+        tabIndex={0}
+        role="region"
+        aria-label="Settings content"
+        className="tp-state flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto px-20 py-16"
+      >
         <div className="w-full max-w-500">
           <AccountPanel tab={active} />
         </div>

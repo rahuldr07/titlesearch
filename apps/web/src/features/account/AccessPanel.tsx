@@ -94,7 +94,7 @@ export function AccessPanel() {
                 }))}
               />
 
-              <p className="text-meta leading-body text-ink-muted">
+              <p className="text-meta leading-body text-ink-secondary">
                 One column, not four, and no cell cycles. The design draws every
                 role against every module with editable cells; this payload is
                 this role&rsquo;s world with the others unrepresented rather than

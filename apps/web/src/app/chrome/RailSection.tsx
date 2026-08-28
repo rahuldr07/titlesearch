@@ -126,7 +126,16 @@ function ActiveOrderRef(props: { readonly section: RailSection }) {
     <Link
       to="/orders"
       data-testid="rail-active-order"
-      className="tp-state min-w-0 truncate font-mono text-label font-bold leading-flat text-rail-accent"
+      /*
+       * WCAG 2.2 §2.5.8 wants a 24px target; this is 11px mono text and was
+       * 63x11. Padded rather than given the `after:-inset` pseudo-element the
+       * kit uses on checkbox and switch: that mechanism is right for a control
+       * whose DRAWN box must stay 16px, and it was tried here first — axe still
+       * failed it, because `target-size` measures the element's own rect and
+       * the pseudo-element is not in it. A rail row has no drawn box to protect,
+       * so the honest fix is for the link to actually be that tall.
+       */
+      className="tp-state flex min-h-12 min-w-0 items-center truncate font-mono text-label font-bold leading-flat text-rail-accent"
     >
       {context.data.order_ref}
     </Link>

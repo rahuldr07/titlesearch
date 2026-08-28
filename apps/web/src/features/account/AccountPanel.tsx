@@ -78,7 +78,7 @@ export function PanelFrame(props: {
         <h2 className="text-title font-semibold leading-tight text-ink-primary">
           {props.title}
         </h2>
-        <p className="text-meta leading-body text-ink-muted">{props.note}</p>
+        <p className="text-meta leading-body text-ink-secondary">{props.note}</p>
       </div>
       {props.children}
     </section>

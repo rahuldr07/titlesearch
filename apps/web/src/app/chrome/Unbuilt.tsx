@@ -24,9 +24,15 @@ export function Unbuilt(props: {
   readonly missing: ReactNode;
 }) {
   return (
+    // `tabIndex={0}`: a scrolling region must be keyboard-reachable, or a
+    // reader who cannot use a pointer cannot reach the bottom of it (WCAG
+    // 2.1.1). Named, because a bare tab stop announces nothing.
     <div
       data-testid="unbuilt"
-      className="flex h-full min-h-0 flex-col gap-6 overflow-y-auto p-14"
+      tabIndex={0}
+      role="region"
+      aria-label={`${props.screen} — not built`}
+      className="tp-state flex h-full min-h-0 flex-col gap-6 overflow-y-auto p-14"
     >
       <div className="flex flex-col gap-2">
         <span className="text-label font-semibold leading-flat text-ink-faint">

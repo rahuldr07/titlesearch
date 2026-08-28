@@ -117,7 +117,7 @@ export function PeoplePanel() {
               </ul>
             </Card>
 
-            <p className="text-meta leading-body text-ink-muted">
+            <p className="text-meta leading-body text-ink-secondary">
               Read-only. The design puts a role picker on every row; no endpoint
               accepts a role change, and{" "}
               <code className="font-mono text-label">PERMISSIONS</code> closes
