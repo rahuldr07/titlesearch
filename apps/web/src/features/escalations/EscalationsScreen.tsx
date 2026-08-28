@@ -78,7 +78,7 @@ export function EscalationsScreen() {
             replaced drew "Nothing escalated" over a failed read. */}
         <div className="min-h-0 flex-1 overflow-y-auto p-6">
           {queries ? (
-            <QueryState query={escalations} of="the escalation queue">
+            <QueryState query={escalations} of="the escalation queue" failedTitle="Inbox unavailable">
               {(data) => (
                 <EscalationQueue
                   escalations={data.escalations}

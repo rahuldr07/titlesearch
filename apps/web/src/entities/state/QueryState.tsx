@@ -21,6 +21,12 @@ export function QueryState<T>(props: {
   readonly query: ReadLike<T>;
   /** Names the thing in the sentence — "could not load the roster". */
   readonly of: string;
+  /**
+   * Overrides the failure headline where a screen's unavailable state has a
+   * name of its own. `errors.spec` pins those names: the rule is that a failed
+   * list renders a NAMED unavailable state, not a generic one.
+   */
+  readonly failedTitle?: string;
   readonly children: (data: T) => ReactNode;
 }) {
   if (props.query.isError) {
@@ -31,7 +37,7 @@ export function QueryState<T>(props: {
             role="alert"
             className="text-meta font-semibold leading-close text-state-halt"
           >
-            Could not load {props.of}.
+            {props.failedTitle ?? `Could not load ${props.of}.`}
           </p>
           {props.query.error !== null && (
             <p className="text-meta leading-body text-ink-secondary">
