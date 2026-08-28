@@ -28,7 +28,7 @@ export function SwitchExaminer() {
       data-testid="countersign-switch-user"
       onPress={() => {
         signIn(qc);
-        actAs(qc.role);
+        actAs({ role: qc.role, actor: qc.name });
       }}
     >
       Switch user: {qc.name} ({qc.seat})

@@ -25,19 +25,22 @@ interface SessionState {
    * the session"*. A correction to the golden set is the most consequential
    * write in the product — it changes what every future measurement is graded
    * against — so the one thing that must not be typeable is who did it.
-   * There is no setter. In production this arrives with the session; here it
-   * is fixed, and `x-mock-actor` carries it so the mock records the same name
-   * the screen displays rather than the screen inventing one after the fact.
+   * It has no setter of its own. In production it arrives with the session;
+   * here it travels WITH the role, because a seat is a person and a role
+   * together — `actAs` takes both, so switching to QC cannot leave the previous
+   * examiner's name on the next signature. `x-mock-actor` carries it so the
+   * mock records the name the screen displayed rather than inventing one after
+   * the fact.
    */
   actor: string;
-  actAs: (role: Role) => void;
+  actAs: (seat: { role: Role; actor: string }) => void;
 }
 
 export const useSession = create<SessionState>((set) => ({
   // The mock server treats a missing header as the dev-default admin session.
   role: "admin",
   actor: "L. Vance",
-  actAs: (role) => set({ role }),
+  actAs: ({ role, actor }) => set({ role, actor }),
 }));
 
 /**

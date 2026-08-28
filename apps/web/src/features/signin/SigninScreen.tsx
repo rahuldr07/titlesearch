@@ -49,7 +49,7 @@ export function SigninScreen() {
      * role's.
      */
     setAccount(account);
-    actAs(account.role);
+    actAs({ role: account.role, actor: account.name });
     void navigate({ to: "/" });
   }
 
