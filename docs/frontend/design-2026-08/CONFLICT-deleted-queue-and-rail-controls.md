@@ -109,9 +109,13 @@ is unbuilt for a different reason, and the comment should say so.
 control. Building one would be inventing an affordance, and `nav_collapsed` is
 still unratified, so the preference it would write is itself provisional.
 
-**Not done, pending the ruling:** the fold is not built; `NOT_WIRED`'s comment
-is left uncorrected here because a wrong comment is a smaller defect than a
-silent edit to the file this document is about. Fix it with the ruling.
+**Not done, pending the ruling:** the fold is not built.
+
+*Updated 2026-08-28:* `NOT_WIRED`'s comment **has now been corrected** — it no
+longer claims the endpoint is missing and instead states the two real reasons
+(no fold control in the reference app; `nav_collapsed` unratified) and points
+back at this section. The fold itself is still unbuilt and `sidebar.spec`'s four
+fold tests are still red.
 
 ---
 
@@ -198,3 +202,76 @@ The reference app draws no `g`-sequence affordance either. As with the profile
 popover, these specs describe the archived `.dc.html` design.
 
 **Not done, pending the ruling:** no sequences built, no assertions edited.
+
+---
+
+## 6. The order strip's account trigger — the fourth appearance of section 2
+
+Added 2026-08-28, closing the `entities/**` + `app/chrome/**` invariant sweep.
+
+`e2e/invariants/review.spec.ts`, *"the order strip shows the ref, the four
+counts, and the sign-off stamp"*, ends on a fifth assertion:
+
+```ts
+await expect(strip.getByTestId("account-menu")).toBeVisible();
+```
+
+Its comment says the strip carries *"ref, the four counts, a sign-off stamp, and
+the account trigger"*. The first four were built in this pass — `ORDER 4176034-1`
+with the design's own rubric, `order-counts` off the server's `OrderCensus`, and
+`order-stamp` now carrying `data-tone` so the served tone is readable rather than
+inferred. **The account trigger was not**, and this is section 2's popover
+appearing on a fourth surface rather than a new question:
+
+- The reference app's order strip (`reference-app.html`) draws a ref block,
+  meta facts and a stamp. **No account control of any kind sits in it.** Identity
+  lives once, in the rail footer — the flat `ProfileBlock`, section 2.
+- Building one would put a second identity affordance on the screen whose whole
+  subject is one order, and would be inventing a control the ruling source of
+  truth does not draw.
+
+So the test now fails on that one clause instead of on five. **Nothing was
+weakened and the assertion was not edited.**
+
+The same `account-menu` id also blocks, unchanged from section 2:
+`sidebar.spec` *"doors outside the role's world are ABSENT, not dimmed"* and
+`authz.spec`'s two role-switch tests, all of which reach the roles through it.
+**There is no role switch anywhere in this app today** — `grep -rn "role-reviewer"
+src/` is empty, and `features/review/SwitchExaminer.tsx` is a countersign
+affordance, not a session role switch. Those specs need a decision about the
+identity surface, not a testid.
+
+**If the ruling is "the trigger stays":** it is one element and the data is
+already there (`app/session/signedIn`), but it needs to be drawn somewhere the
+reference app sanctions, and the role list under it has no design at all.
+
+---
+
+## 7. Correction to section 4: 1280px is BELOW the floor too
+
+Section 4 recommended *"drop 1024 and 900 from that spec's width list and keep
+1440 and 1280, which sit above the floor"*. **1280 does not sit above the floor.**
+`apps/web/src/styles.css:60` and the reference app's own CSS both set
+`min-width: 1360px`, and `docs/frontend/design-2026-08/README.md:15` says so.
+
+Measured at HEAD, `e2e/invariants/responsive-frame.spec.ts` fails at **1280, 1024
+and 900** and passes only at 1440 — exactly what a 1360px floor predicts, and the
+same signature section 4 already identified (a constant `scrollWidth 1360` at
+every route rather than content-dependent overflow).
+
+Three more failures in that file are the same floor seen from a different angle,
+and none of them is a layout defect either — every one measures at 900px or 600px:
+
+| Test | Measures at | Why the floor decides it |
+|---|---|---|
+| `a screen's padding steps down below lg and is restored above it` | 900px | below the floor the body is 1360px wide regardless, so the `lg` breakpoint never fires |
+| `a measure shrinks into a narrow column instead of overflowing it` | 900px | the column is laid out against 1360px, so a 860px measure is affordable |
+| `the masthead steps down on a narrow window` | 600px | same — the `sm` step never fires inside a 1360px body |
+
+That is **six** of `responsive-frame`'s eight tests, all one decision. The seventh
+(`a centred card that outgrows the window keeps its padding and scrolls`) fails on
+a missing `signin-handoff` testid on `/signin` and is a separate, ordinary gap.
+
+**Still not applied, and still for section 4's reason:** narrowing a spec's width
+list is the edit the brief forbids doing unilaterally. The correction is recorded
+so the eventual ruling is made against the real number.

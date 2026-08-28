@@ -4,6 +4,8 @@ import { OrderContextResponse } from "@titlepipe/contract";
 import { get } from "../../shared/api";
 import { cx } from "../../components/ui";
 import { OrderStripStages } from "./OrderStripStages";
+import { OrderCounts } from "./OrderCounts";
+import { OrderStamp } from "./OrderStamp";
 
 /**
 
@@ -44,7 +46,10 @@ export function OrderStrip() {
       data-testid="order-strip"
       className="flex shrink-0 flex-col gap-5 border-b border-line-strong bg-surface-panel px-14 py-6"
     >
-      <div className="flex min-h-14 items-center gap-10">
+      {/* WRAPS, for the reason the stage row below wraps: the ref, three server
+          facts, four census figures and a stamp do not fit one 1360px line, and
+          the alternatives are all the browser shortening the server's words. */}
+      <div className="flex min-h-14 flex-wrap items-center gap-10">
         {context.data === undefined ? (
           /* INVARIANT 59 — a partial failure degrades this region only. The id
              from the URL is the one thing that is true without the server. */
@@ -53,11 +58,19 @@ export function OrderStrip() {
           </span>
         ) : (
           <>
-            <span
-              data-testid="order-ref"
-              className="font-mono text-subject font-bold leading-flat text-ink-secondary"
-            >
-              {context.data.order_ref}
+            {/* "ORDER 4176034-1" — the design's own spelling (intake.ts:289).
+                The rubric is a sibling so `order-ref` still carries the ref and
+                nothing else; the space between them is a real text node. */}
+            <span className="flex items-baseline gap-4">
+              <span className="text-label font-semibold leading-flat tracking-caps text-ink-muted">
+                ORDER
+              </span>{" "}
+              <span
+                data-testid="order-ref"
+                className="font-mono text-subject font-bold leading-flat text-ink-secondary"
+              >
+                {context.data.order_ref}
+              </span>
             </span>
             <Fact value={context.data.product} absent="No resolved product" pill />
             <Fact value={context.data.period_label} absent="No period on record" />
@@ -65,7 +78,8 @@ export function OrderStrip() {
               value={context.data.pages === null ? null : `${context.data.pages} pages`}
               absent="Page count unread"
             />
-            <Stamp stamp={context.data.stamp} />
+            <OrderCounts orderId={orderId} />
+            <OrderStamp stamp={context.data.stamp} />
           </>
         )}
       </div>
@@ -95,39 +109,6 @@ function Fact(props: {
       )}
     >
       {props.value}
-    </span>
-  );
-}
-
-/**
-
- * `tone` drives the paint and NOTHING ELSE (intake.ts:290-294). `label` is a free
-
- * string on purpose — an enum here would be an invitation to `switch` on a lifecycle
-
- * word, which is the client state machine moved one line down.
-
- */
-const TONE = {
-  neutral: "border-line-strong bg-surface-sunken text-ink-secondary",
-  action: "border-action-border bg-action-surface text-action",
-  settled: "border-state-settled-border bg-state-settled-surface text-state-settled",
-  attend: "border-state-attend-border bg-state-attend-surface text-state-attend",
-  halt: "border-state-halt-border bg-state-halt-surface text-state-halt",
-} as const;
-
-function Stamp(props: {
-  readonly stamp: { readonly label: string; readonly tone: keyof typeof TONE };
-}) {
-  return (
-    <span
-      data-testid="order-stamp"
-      className={cx(
-        "ml-auto rounded-pill border px-6 py-2 text-label font-semibold leading-flat",
-        TONE[props.stamp.tone],
-      )}
-    >
-      {props.stamp.label}
     </span>
   );
 }

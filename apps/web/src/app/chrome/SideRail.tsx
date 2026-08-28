@@ -85,12 +85,20 @@ export function SideRail(props: {
 }
 
 /**
-
- * The fold has no server to write to yet, and this is the honest spelling of that: a
-
- * named no-op the TODO above points at. A `useState` here would make the rail fold,
-
- * look finished, and silently forget on every navigation — a worse…
-
+ * THE FOLD IS UNBUILT, AND NOT FOR THE REASON THIS COMMENT USED TO GIVE.
+ *
+ * It said "the fold has no server to write to yet". That was false:
+ * `Preferences.nav_collapsed` (`intake.ts`) and `GET`/`PATCH
+ * /api/me/preferences` have both existed for some time, and `packages/mocks`
+ * serves them. The real reason is that the reference app's rail draws NO fold
+ * control, so building one would be inventing an affordance, and
+ * `nav_collapsed` is still marked awaiting ratification — the preference it
+ * would write is itself provisional.
+ *
+ * Recorded in `docs/frontend/design-2026-08/CONFLICT-deleted-queue-and-rail-controls.md`
+ * §3, which is where `sidebar.spec`'s four red fold tests are accounted for.
+ *
+ * A named no-op rather than a `useState`: state here would make the rail fold,
+ * look finished, and silently forget on every navigation.
  */
 const NOT_WIRED = () => {};

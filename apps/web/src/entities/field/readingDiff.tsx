@@ -50,6 +50,9 @@ export function ReadingText({
           // index IS the identity here, and the list is never reordered.
           key={i}
           data-differs={segment.differs}
+          // The handle a reviewer's eye has: only the marked run carries it, so
+          // "nothing is highlighted" and "everything is" are both a failure.
+          data-testid={segment.differs ? "diff-hl" : undefined}
           className={cx(
             segment.differs &&
               "rounded-xs bg-na-unreadable-surface px-1 font-bold text-na-unreadable-ink underline decoration-2",
