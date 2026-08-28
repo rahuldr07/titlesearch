@@ -41,7 +41,7 @@ export function WorkstationFooter(props: { readonly census: OrderCensus | undefi
        * The design's right half is a single disabled control. A full
        * `ContractGap` block here would dwarf the census beside it and turn a
        * footer into an essay — the gap is stated in one line, and the long form
-       * lives in `CountersignGap`, which blocks the same release.
+       * lives in `CountersignPanel`, which blocks the same release.
        */}
       <p className="max-w-260 text-meta leading-close text-state-attend">
         Advance to publication is not built and not disabled: there is no compile

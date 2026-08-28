@@ -4,7 +4,7 @@ import { QueryState } from "../../entities/state/QueryState";
 import { WorkstationBar } from "./WorkstationBar";
 import { FieldQueue } from "./FieldQueue";
 import { DecisionPanel } from "./DecisionPanel";
-import { CountersignGap } from "./CountersignGap";
+import { CountersignPanel } from "./CountersignPanel";
 import { WorkstationFooter } from "./WorkstationFooter";
 import { ScanPane } from "./ScanPane";
 import { DecisionDock } from "./DecisionDock";
@@ -62,7 +62,7 @@ export function WorkstationScreen(props: {
                       )}
                     />
                     <div className="p-8">
-                      <CountersignGap />
+                      <CountersignPanel orderId={props.orderId} />
                     </div>
                   </div>
                 </div>
