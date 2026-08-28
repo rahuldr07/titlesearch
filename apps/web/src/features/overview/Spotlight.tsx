@@ -4,22 +4,11 @@ import { Card } from "../../components/ui";
 import { SpotlightOrder } from "./SpotlightOrder";
 
 /**
- * THE ACTIVE SPOTLIGHT — the three answers the queue can give, and nothing
- * about how a served order is drawn. That is `SpotlightOrder`.
- *
- * ══ WHICH ORDER IS "ACTIVE", AND WHO DECIDES ═══════════════════════════════
- *
- * The prototype's spotlight draws `activeOrderRef`, a CLIENT-HELD pointer into
- * a browsable list — you clicked a row, so that row is now active. There is no
- * such list and no such pointer here (`INVARIANTS:82-83`), so the active order
- * is the one the SERVER is serving: `GET /api/queue/next`, the only hand-over
- * (`endpoints.ts:69`).
- *
- * That makes the spotlight and the queue name the same order by construction
- * rather than by agreement — the same query, the same cache key
- * (`shared/queries.ts`), rule 11's "one variable, never two literals" applied
- * across two screens. If they ever disagreed it would mean the server had
- * changed its mind between two reads, which is the truth and worth seeing.
+
+ * THE ACTIVE SPOTLIGHT — the three answers the queue can give, and nothing about how a
+
+ * served order is drawn. That is `SpotlightOrder`.
+
  */
 export function Spotlight(props: {
   readonly order: Order | null;
@@ -49,8 +38,8 @@ export function Spotlight(props: {
             Active spotlight
           </span>
           <p className="text-meta leading-body text-ink-secondary">
-            The queue has nothing for this seat right now. There is no list to
-            look through — work arrives by being served.
+            The queue has nothing for this seat right now. There is no list to look
+            through — work arrives by being served.
           </p>
           <Link
             to="/queue"

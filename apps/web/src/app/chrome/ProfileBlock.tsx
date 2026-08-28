@@ -3,58 +3,11 @@ import { useOverlays } from "../keyboard/overlays";
 import { Kbd } from "../../components/ui";
 
 /**
- * THE PROFILE BLOCK — the design's "deep well" at the foot of the rail.
- *
- * The WELL ITSELF is `SidebarFooter` (`--color-rail-deep`, top hairline); this
- * is its contents. The split is what keeps the rail's regions in one file and
- * the session's identity in another.
- *
- * ══ THE DESIGN ASKS FOR A SEVENTH TYPE SIZE, AND IT IS REFUSED ═════════════
- *
- * Design README §App shell, verbatim: "Bottom: signed-in profile (avatar
- * initials, name, email mono 10.5px, role pill)". The reference prototype uses
- * `font-size:10.5px` in five places (the divider caption and account role on
- * sign-in, this email, the role hint, the footer legal line).
- *
- * `claude-design-rules.md` rule 2, also verbatim: "Six type sizes only:
- * 11 / 13 / 16 / 20 / 28 / 40 px. NOTHING BETWEEN."
- *
- * 10.5 is between. The two documents in the same bundle contradict each other,
- * and rule 2 is the one that ships as enforcement: `tokens.css` deletes the
- * whole `--text-*` namespace so Tailwind emits no seventh utility, and
- * `shared/tokens.test.ts` pins the cardinality at six. Inventing
- * `--text-micro: 10.5px` would defeat all three in one line, and the half-pixel
- * lands differently per zoom level anyway.
- *
- * RESOLVED IN FAVOUR OF THE RULE: the email renders at `--text-label` (11px),
- * mono per rule 3 — an email address is an identifier, which is data.
- *
- * ══ WHAT IS HERE THAT WAS NOT, AND WHAT IS STILL NOT ═══════════════════════
- *
- *   - "SIGNED IN" rubric — 11px/.14em ALL-CAPS. Rule 4 permits capitals on a
- *     sidebar rubric, and this is one.
- *   - The HOTKEYS button — the design's `? Hotkeys` chip. It opens the same
- *     `key-map` overlay `?` does, which is what makes the chord discoverable to
- *     a reader who never presses unlabelled keys.
- *   - The ROLE HINT ("Full access · rules, templates, people, release") is NOT
- *     built. The design hard-codes one sentence per role in the browser, which
- *     is a client-side summary of the permission table — INVARIANT 41 says
- *     there is exactly one permission table and it is the server's. The payload
- *     carries `rules`, not prose, and authoring the prose here would let it
- *     drift from the grants it describes. The role pill states the role; the
- *     Account screen holds what it means.
- *   - The RESET control is NOT built. It resets the prototype's in-memory demo
- *     state, which this app does not have: every value on every screen comes
- *     from the server, so there is nothing local to restore.
- *
- * ══ SWITCH USER / SIGN OUT ═════════════════════════════════════════════════
- *
- * ONE control, as the design draws it ("Switch user / Sign out"), because both
- * did the same thing: drop the client-held demo session and return to sign-in.
- * Two buttons calling one handler is a menu that lies about having two choices.
- * There is no auth surface in the contract — no login, logout or session
- * endpoint (see `app/session/signedIn.ts`) — so this claims to have told a
- * server nothing.
+
+ * THE PROFILE BLOCK — the design's "deep well" at the foot of the rail. The WELL
+
+ * ITSELF is `SidebarFooter` (`--color-rail-deep`, top hairline); this is its contents.
+
  */
 export function ProfileBlock() {
   const account = useSignedIn((s) => s.account);

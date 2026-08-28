@@ -1,22 +1,6 @@
 import type { ReactNode } from "react";
 
-/**
- * A SCREEN THAT DOES NOT EXIST YET, SAYING SO.
- *
- * Not a mock. The design bundle ships a working prototype and it would be
- * cheap to transcribe its markup here with invented values — and that is the
- * one thing this must not do. Root AGENTS.md: "Never generate backend logic
- * from the UI/screens", and principle 6, "never emit a value you can't cite."
- * A placeholder full of plausible order refs and counts is a screen emitting
- * values it cannot cite, and it reads as finished to everybody who opens it.
- *
- * So each one names three things and nothing else: what the screen is, what
- * contract surface it will bind to, and what is missing. `needs` is
- * file:line into `packages/contract` wherever a surface exists, and the words
- * "no contract surface" wherever it does not — the analysis in
- * `docs/frontend/design-2026-08/ANALYSIS-screens.md` §1 is where those come
- * from.
- */
+/** A SCREEN THAT DOES NOT EXIST YET, SAYING SO. Not a mock. */
 export function Unbuilt(props: {
   readonly screen: string;
   readonly door: string;
@@ -65,9 +49,13 @@ function Row(props: { readonly term: string; readonly children: ReactNode }) {
 }
 
 /**
- * INVARIANT 57 — an unknown route renders a NAMED not-found state, never a
- * blank page. Named for the reader: it says which path failed, because "not
- * found" without the path is a screen refusing to tell you what it refused.
+
+ * INVARIANT 57 — an unknown route renders a NAMED not-found state, never a blank page.
+
+ * Named for the reader: it says which path failed, because "not found" without the
+
+ * path is a screen refusing to tell you what it refused.
+
  */
 export function NotFound() {
   return (

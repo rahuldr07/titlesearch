@@ -6,42 +6,13 @@ import { PanelFrame } from "./AccountPanel";
 import { QueryState } from "../../entities/state/QueryState";
 
 /**
- * RULES & ROUTING — the rulebook, filtered in the browser, and PENDING drawn as
- * inert.
- *
- * ══ WHY FILTERING IS LEGAL HERE AND NOT ON THE QUEUE ═══════════════════════
- *
- * This looks like the affordance `CONFLICT-all-orders.md` spends four pages
- * refusing, and it is not. INVARIANT 22 governs the QUEUE — "a single
- * server-chosen next order, no list, no browsing, no cherry-picking" — and what
- * it protects is WORK SELECTION: a reviewer must not be able to pick which
- * order they take. The rulebook is not work. It is the reference document every
- * ruling cites, `GET /api/rules` returns it whole because it is meant to be
- * read whole, and no row here carries a way to take anything.
- *
- * The test that separates the two: filtering this list changes what you can
- * READ; filtering the queue would change what you can DO. There is no claim
- * token, no assignment and no ordering the caller can influence on either — but
- * only one of them hands out work.
- *
- * The filter is component state rather than a URL key for the reason
- * `accountSearch.ts` gives: a bookmarkable rulebook filter is a second
- * rulebook.
- *
- * ══ PENDING RENDERS VISIBLY INERT ══════════════════════════════════════════
- *
- * INVARIANT 38: "A drafted rule lands PENDING and renders visibly inert — it
- * cannot affect the pipeline until an engineer confirms." AGENTS.md says the
- * same as a hard rule. So `status` is not a neutral chip: a PENDING rule is
- * marked as not in force, in the attend register, with the sentence saying so
- * rather than a colour a reader has to decode.
- *
- * The confirm action is NOT drawn. `POST /api/rules/{id}/confirm` exists and is
- * the engineer's, and `authz.ts` grants it by role — but this pane is reached
- * by EVERY role (`screen.account.enter`, EVERYONE), and putting a
- * pipeline-affecting mutation on the settings screen for whoever opens it is
- * how a confirmation gets made by somebody who was reading. It belongs on the
- * engineer's own door, next to the evidence for confirming.
+
+ * RULES & ROUTING — the rulebook, filtered in the browser, and PENDING drawn as inert.
+
+ * This looks like the affordance `CONFLICT-all-orders.md` spends four pages refusing,
+
+ * and it is not.
+
  */
 export function RulesPanel() {
   const book = useRead(rules);
@@ -98,9 +69,8 @@ export function RulesPanel() {
               {shown.length === 0 ? (
                 <Card>
                   <p className="text-meta leading-body text-ink-secondary">
-                    No rule matches that. This is a filter over the rulebook
-                    the server sent, not an empty rulebook — clear the box to
-                    see it again.
+                    No rule matches that. This is a filter over the rulebook the server
+                    sent, not an empty rulebook — clear the box to see it again.
                   </p>
                 </Card>
               ) : (

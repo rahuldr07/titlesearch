@@ -3,21 +3,17 @@ import { isRole, type Role } from "@titlepipe/contract";
 
 /**
  * The acting role, for the MOCK BACKEND ONLY.
- *
  * ⚠ DEV-ONLY, and this is conflict C12. In production, identity comes from the
  * session cookie and the server enforces authorization independently — the
  * client never asserts who it is. The design's own "Acting as" control says as
  * much: *"Preview control — not in production. The server enforces
  * authorization independently."*
- *
  * It exists here because `packages/mocks` reads `x-mock-role` to stand in for
  * the Clerk JWT claim, and the harvested authz specs switch roles to prove the
  * SERVER refuses — `authz.spec` #1 asserts a 403 arrives before validation
  * does. Removing this would remove the ability to test that at all.
- *
  * It must not survive cutover to the real API. `hard.spec` #2 already pins the
  * shape of the risk: a forged role must be refused, never honoured.
- *
  * Zustand, not a Query cache: this is ephemeral UI state (§7), and it never
  * persists — no `persist` middleware, nothing in browser storage (§9.11).
  */
@@ -29,7 +25,6 @@ interface SessionState {
    * the session"*. A correction to the golden set is the most consequential
    * write in the product — it changes what every future measurement is graded
    * against — so the one thing that must not be typeable is who did it.
-   *
    * There is no setter. In production this arrives with the session; here it
    * is fixed, and `x-mock-actor` carries it so the mock records the same name
    * the screen displays rather than the screen inventing one after the fact.

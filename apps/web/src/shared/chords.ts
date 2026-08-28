@@ -1,9 +1,7 @@
 /**
- * THE CHORD LAYER.
- *
+ * The chord layer.
  * Every global single-key shortcut in this app goes through here, and the
  * reason is a bug the reference prototype ships.
- *
  * WHAT THE PROTOTYPE DOES (design_handoff_titlepipe/reference-app.html): one
  * `window.addEventListener("keydown")`, guarded by a tagName test —
  * INPUT / TEXTAREA / SELECT / isContentEditable. That guard is structurally
@@ -12,12 +10,10 @@
  * they DO implement typeahead, and `c` `e` `q` `j` `k` `z` `/` are all
  * printable. So `q` would both escalate the open field AND jump a menu to
  * "Quarantine".
- *
  * Worse: the prototype never guards on its own help overlay. Press `?` then
  * `c` and you CONFIRM A RULING from inside the cheat sheet — on a field
  * carrying T1 exposure. `apps/web-v2/e2e/invariants/chord-suppression.spec.ts`
  * pins both.
- *
  * WHAT PINS WHAT, stated because REVIEW-01 found this header citing a test as
  * proof of a claim the code did not implement:
  *   - `src/shared/focusOwnership.test.ts` — DOM-free, runs in the `gates`
@@ -28,11 +24,9 @@
  *     which is still a Placeholder in `app/routeTree.tsx`, so it cannot pass
  *     yet. It is not skipped and it is not deleted: it fails honestly until
  *     the screen lands, which is what BRIEF §5 Phase 5 asks for.
- *
  * THE CONTRACT THIS IMPLEMENTS, in one sentence: a global chord is SUSPENDED,
  * never cancelled, while a text surface or an overlay holds focus, and it
  * RESUMES on close without a click.
- *
  * Three consequences worth stating, because each is a test:
  *   - Suspension is by SCOPE, not by tag. The innermost layer that can use a
  *     key wins. `activeElement` is asked what it is, not what element it is.
@@ -41,7 +35,6 @@
  *     installed and simply declined to act.
  *   - Chords are DEAD until signed in (design README §Interactions). Not
  *     merely inert: not installed.
- *
  * `tinykeys` rather than `react-hotkeys-hook`: HANDOFF-UI.md:167 records that
  * the latter "does not recognise `?` or `[` as hotkey names. Both were
  * registered and never fired."
@@ -61,14 +54,12 @@ export type SuspendReason = "text-entry" | "overlay" | "signed-out";
 
 /**
  * Is a modal layer up?
- *
  * Asked of the DOM rather than of a store, deliberately. React Aria portals
  * its overlays and marks the rest of the page `aria-hidden`; a store copy of
  * "is a dialog open" is a second source of truth that drifts from the first
  * exactly when it matters — during the transition. The DOM is the layer that
  * actually decides who receives the keystroke, so it is the layer that is
  * asked.
- *
  * `[data-chord-scope='own']` appears here as well as above so an overlay that
  * is up but has not yet moved focus still stands the global layer down. The
  * gap between "open" and "focused" is one frame, and one frame is enough for a
@@ -96,7 +87,6 @@ export type UseChordsOptions = {
 
 /**
  * Install global chords for the lifetime of the calling component.
- *
  * The suspension test runs INSIDE the handler, on every keystroke, rather than
  * by binding and unbinding as focus moves. That is the mechanism behind
  * "resumes without a click": there is nothing to re-bind, so there is no
@@ -128,7 +118,6 @@ export function useChords(bindings: ChordBindings, options: UseChordsOptions): v
 
 /**
  * Why this keystroke is standing down, or null if it is not.
- *
  * Returned rather than thrown away so a caller can log it. A chord that
  * silently does nothing is indistinguishable from a chord that is broken, and
  * this project has already shipped one of those.

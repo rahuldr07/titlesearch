@@ -8,29 +8,19 @@ import { RowMark } from "./RowMark";
 import { T1Pill } from "./T1Pill";
 
 /**
- * ONE FIELD ROW — the design's `140px / 1fr / 70px / 24px` grid (§Screens 7).
- *
- * Label 11px, value mono, cite mono grey, mark. Four tracks and no fifth,
- * because rule 6 allows ONE status signal per row and the mark is it: the
- * A≠B chip and the T1 pill both ride in the value track, under the value,
- * where they are describing the READING rather than competing with the row's
- * own state.
- *
- * ══ NOTHING ON THIS ROW IS DERIVED ═════════════════════════════════════════
- *
- * The value goes through `readCited` (the only supported way to print one —
- * `provenance.ts`, and `check-rules.mjs` enforces it), which classifies what
- * the SERVER sent into the six renders. The mark reads `state`. The A≠B chip
- * reads whether the server sent two readings that differ, which is a fact
- * about the payload rather than a judgement about the field.
+
+ * ONE FIELD ROW — the design's `140px / 1fr / 70px / 24px` grid (§Screens 7). Label
+
+ * 11px, value mono, cite mono grey, mark.
+
  */
 export type FieldRowProps = {
   readonly field: Field;
   readonly selected: boolean;
   readonly onSelect: () => void;
   /**
-   * Whether this field carries ruinous exposure. SERVER-SUPPLIED via
-   * `rule_refs` — see `T1Pill`, which refuses to decide it.
+   * Whether this field carries ruinous exposure. SERVER-SUPPLIED via `rule_refs` — see
+   * `T1Pill`, which refuses to decide it.
    */
   readonly ruinous: boolean;
 };

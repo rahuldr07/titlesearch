@@ -2,48 +2,7 @@ import type { LifecycleStage } from "@titlepipe/contract";
 import { Card, CardHeader, cx } from "../../components/ui";
 import { OrderCard } from "./OrderCard";
 
-/**
- * ONE OF THE SEVEN COLUMNS. Everything printed here is server-authored.
- *
- * ══ `count` IS THE CENSUS AND `orders` IS THE LIST, AND THEY DIFFER ════════
- *
- * `intake.ts:217-222` states the rule this column exists to obey: "`count` is
- * SERVER-SUPPLIED and is not `orders.length`. The order list is scoped to what
- * the caller may see; the census is not. A stage count that shrank with your
- * permissions would read as work disappearing rather than as work you cannot
- * look at." So the figure in the header is `stage.count` and there is no
- * `.length` on any rendered number on this screen.
- *
- * The two genuinely diverge — `packages/mocks/src/workspace.ts:392-404` seeds a
- * Gates order that is in the census and in nobody's list precisely so the case
- * has data — and when they do, the column SAYS SO instead of quietly showing
- * fewer cards than its own number. That sentence is not a count and does not
- * compute one: `count` is printed, the cards are rendered, and the fact that
- * the two disagree is stated in words. Subtracting them would be the browser
- * publishing a figure the server never sent.
- *
- * ══ `kind` MAY BE SWITCHED ON. `state_label` MAY NOT ══════════════════════
- *
- * `StageKind` (`intake.ts:185`) is a four-member `z.enum` — a declared,
- * machine-readable axis, and mapping it to ink is the same move `LifecycleStamp`
- * sanctions for its `tone`: "`tone` is the only machine-readable axis." The
- * free strings beside it are not. `label`, `sub`, `waiting_on` and every
- * `state_label` below are printed and never inspected, because a `switch` on a
- * lifecycle word is a state machine moved one line down (`intake.ts:264-272`),
- * and hard rule 3 puts state machines on the server.
- *
- * The tone is a property of the STAGE, not of how full it is. A column that
- * turned amber above some number of cards would be a threshold, and thresholds
- * are the server's (AGENTS.md).
- *
- * ══ `sub` AND `waiting_on` ARE WHY AN EMPTY COLUMN STILL SPEAKS ════════════
- *
- * `intake.ts:226-238` asked for both: "The board drew a column header with
- * neither, so an empty stage said nothing at all about itself — and an empty
- * column is exactly when a reader most needs to be told what would be sitting
- * there." They are authored per stage on the server rather than derived from
- * `kind`, so nothing here composes them.
- */
+/** ONE OF THE SEVEN COLUMNS. Everything printed here is server-authored. */
 const KIND_INK: Record<LifecycleStage["kind"], string> = {
   idle: "text-ink-muted",
   halt: "text-state-attend",
@@ -113,8 +72,8 @@ export function StageColumn(props: { readonly stage: LifecycleStage }) {
 
         {shown > 0 && shown !== stage.count && (
           <p className="font-sans text-label leading-body text-ink-muted">
-            The census counts more than this list shows. It is scoped to what you
-            may open; the count is not.
+            The census counts more than this list shows. It is scoped to what you may
+            open; the count is not.
           </p>
         )}
       </div>

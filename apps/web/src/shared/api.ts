@@ -2,7 +2,6 @@ import { currentActor, currentRole } from "./session";
 
 /**
  * A validator, described STRUCTURALLY rather than by importing Zod's types.
- *
  * Every schema in `@titlepipe/contract` satisfies this, so nothing changes at
  * runtime — but web-v2 never takes a direct dependency on zod, which keeps
  * §4's "no zod in the browser bundle" true of this package's own imports and
@@ -19,12 +18,10 @@ export interface Validator<T> {
  * before it reaches a component — BRIEF §7 makes the contract authoritative on
  * shapes, and a response that does not match it is a bug we want to see loudly
  * rather than a `undefined` three components deep.
- *
  * Zod lives here rather than Valibot on purpose, and the reasoning is recorded
  * in BRIEF-DELTAS.md D-6: `packages/contract` is the shared REST contract that
  * `packages/mocks` is built on, and §7/§13 both say reuse the mocks unforked.
  * Valibot's role (§9.14) is form feedback, which is a different job.
- *
  * NO RETRY ON MUTATIONS, and no optimistic anything. Constraint 10 and
  * `review-conflict.spec`: the server's returned state is the truth, and a 409
  * is an ANSWER that must render — so `ApiError` carries the server's message

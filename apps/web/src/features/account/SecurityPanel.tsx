@@ -6,35 +6,13 @@ import { PanelFrame } from "./AccountPanel";
 import { QueryState } from "../../entities/state/QueryState";
 
 /**
- * RETENTION & SECURITY — half of this pane is real and half of it does not
- * exist, and the split is worth naming rather than blending.
- *
- * SECURITY is `MeProfileResponse` (`intake.ts:359`): who you are, whether a
- * second factor is enrolled, and the sessions holding your account open. All
- * three are served and all three are read-only here by construction —
- * `intake.ts:363` on `mfa`: "Held by the identity provider; reported here,
- * never set here."
- *
- * RETENTION has no contract surface at all. No policy, no schedule, no period,
- * no purge — nothing in `packages/contract` names one. It is drawn as a gap
- * rather than a form, because a retention period is the single worst field in
- * this product to guess at: a form that looks saveable and is not would let
- * somebody believe they had set one.
- *
- * ══ IDENTITY IS NOT AUTHORISATION ══════════════════════════════════════════
- *
- * This pane reads `/api/me/profile` and the access pane reads
- * `/api/me/permissions`, and they are deliberately different endpoints.
- * `intake.ts:352-356`: "Identity and authorisation are different questions and
- * conflating them is how a screen ends up trusting a name it got from a
- * permissions payload."
- *
- * ══ THERE IS NO SIGN-OUT-THIS-SESSION BUTTON ═══════════════════════════════
- *
- * `SessionRecord` (`intake.ts:344`) is a read shape and no endpoint revokes
- * one. The row that says `current: true` is marked as this session so the list
- * is legible, and no row offers an action, because none exists to offer. A
- * revoke button that did nothing would be worse than the list alone.
+
+ * RETENTION & SECURITY — half of this pane is real and half of it does not exist, and
+
+ * the split is worth naming rather than blending. SECURITY is `MeProfileResponse`
+
+ * (`intake.ts:359`): who you are, whether a second factor is enrolled, and…
+
  */
 export function SecurityPanel() {
   const profile = useRead(meProfile);
@@ -74,8 +52,8 @@ export function SecurityPanel() {
                   Sessions
                 </span>
                 <span className="text-label leading-close text-ink-muted">
-                  Reported by the identity provider. No endpoint revokes one, so
-                  no row offers to.
+                  Reported by the identity provider. No endpoint revokes one, so no row
+                  offers to.
                 </span>
               </div>
               <ul>
@@ -112,19 +90,17 @@ export function SecurityPanel() {
               drawn="Retention policy — how long packages, extractions and delivered reports are kept, and the purge schedule (design §Settings, Retention & security pane)"
               has={
                 <>
-                  Nothing. No retention policy, schedule, period or purge shape
-                  exists in{" "}
-                  <code className="font-mono text-label">packages/contract</code>
-                  , and no endpoint names one. The security half of this pane
-                  above is real; the retention half has never been specified.
+                  Nothing. No retention policy, schedule, period or purge shape exists
+                  in <code className="font-mono text-label">packages/contract</code>,
+                  and no endpoint names one. The security half of this pane above is
+                  real; the retention half has never been specified.
                 </>
               }
               needs={
                 <>
-                  A retention shape and the door that may write it. It is the
-                  last field in this product anybody should be guessing at — a
-                  form that looked saveable and was not would let somebody
-                  believe a policy had been set.
+                  A retention shape and the door that may write it. It is the last field
+                  in this product anybody should be guessing at — a form that looked
+                  saveable and was not would let somebody believe a policy had been set.
                 </>
               }
             />

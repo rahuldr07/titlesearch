@@ -1,16 +1,13 @@
 import { Card } from "../../components/ui";
 
 /**
- * ONE BLOCK OF GRANTS. Both halves of `/api/me/permissions` render the same
- * way — a door is a grant that carries a `path` and an action is one that does
- * not, which is the only structural difference between them in the payload.
- *
- * Every string here is the server's, printed verbatim and in mono, because each
- * is an identifier the server gates on (rule 3). None is mapped to a friendlier
- * phrase: a lookup turning `screen.blind-status.enter` into "Capture status"
- * would be a second copy of the door table living in the browser, which is the
- * thing INVARIANT 41 exists to prevent, and it would drift the moment a
- * fourteenth door is added.
+
+ * One block of grants. Both halves of `/api/me/permissions` render the same way — a
+
+ * door is a grant that carries a `path` and an action is one that does not, which is
+
+ * the only structural difference between them in the payload.
+
  */
 export function GrantList(props: {
   readonly heading: string;
@@ -27,9 +24,7 @@ export function GrantList(props: {
         <span className="text-label font-semibold leading-flat text-ink-faint">
           {props.heading}
         </span>
-        <span className="text-label leading-close text-ink-muted">
-          {props.note}
-        </span>
+        <span className="text-label leading-close text-ink-muted">{props.note}</span>
       </div>
       <ul>
         {props.items.map((item) => (

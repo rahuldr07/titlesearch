@@ -117,10 +117,11 @@ export { SIDEBAR_KEY };
  * the design has it flush to the viewport edge with a hairline. `offcanvas`
  * slides it out entirely, which at 1360px minimum leaves a permanent gap.
  *
- * Also deleted: the `sidebar-gap` and `sidebar-container` divs. They exist to
- * fake a document flow around a `fixed` element. This is a flex child of the
- * frame and takes `h-full` — INVARIANT 63, a full-height COLUMN, not a
- * page-sticky element — so there is nothing to fake.
+ * Also deleted: the `sidebar-gap` and `sidebar-container` divs, which fake a
+ * document flow around a `fixed` element. This is a flex child of the frame at
+ * `h-full` — INVARIANT 63, a COLUMN, not page-sticky — nothing to fake. THE
+ * RIGHT-EDGE HAIRLINE (`border-right:1px solid #2C2742`, the 7% white the
+ * header and footer draw) was MISSING: the column butted the paper with no seam.
  */
 export function Sidebar(props: {
   readonly children: ReactNode;
@@ -137,7 +138,7 @@ export function Sidebar(props: {
       aria-label={props.label}
       className={cx(
         "tp-state flex h-full shrink-0 flex-col justify-between overflow-hidden",
-        "bg-rail-surface text-rail-ink",
+        "border-r border-rail-line bg-rail-surface text-rail-ink",
         collapsed ? "w-39" : "w-120",
         props.className,
       )}

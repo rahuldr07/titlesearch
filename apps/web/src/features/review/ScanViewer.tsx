@@ -6,33 +6,13 @@ import { PageSheet } from "./PageSheet";
 import { CoverageSpine } from "./CoverageSpine";
 
 /**
- * THE VIEWER'S STATE, AND THE THREE THINGS IT REFUSES TO COMPUTE.
- *
- * Which page is on screen is a VIEW position — it is not order state, it is
- * not derived from a threshold, and it is not written anywhere. Zoom is the
- * same. Both are local, per §"zoom is a local view control".
- *
- * What is NOT local: how many pages the package has (`total`), whether a page
- * was read in full, and whether a scan is degraded. All three are the server's
- * findings and are printed, never inferred (`endpoints.ts:678` — "never
- * inferred client-side").
- *
- * ══ THE PROP WINS WHEN IT CHANGES; THE READER WINS IN BETWEEN ══════════════
- *
- * A reviewer selecting a cited field must move this pane to the citation
- * (INVARIANT 33). A reviewer then paging away from it must not be yanked back
- * on the next render. That is React's "adjusting state when a prop changes"
- * pattern — compare the prop to the copy stored last render, during render,
- * with no effect and no second paint. An effect here would flash the old page.
- *
- * ══ WHERE IT OPENS ════════════════════════════════════════════════════════
- *
- * With no citation: the package's FIRST DESCRIBED page, not page 1. Page 1 of
- * a county package is a cover the classifier skipped — in the live fixture the
- * first described page is p6 — so opening on p1 would show a correct-but-blank
- * "nobody read this page" sheet every time the workstation loads, and a pane
- * that opens empty reads as broken rather than as honest. Prev still walks
- * down to p1, and the spine covers all 64, so nothing is hidden by this.
+
+ * The viewer's state, and the three things it refuses to compute. Which page is on
+
+ * screen is a VIEW position — it is not order state, it is not derived from a
+
+ * threshold, and it is not written anywhere.
+
  */
 export function ScanViewer(props: {
   readonly total: number;
@@ -59,9 +39,9 @@ export function ScanViewer(props: {
   if (props.total < 1) {
     return (
       <p className="p-12 text-meta leading-body text-ink-secondary">
-        The server reported no page count for this package. That is not a
-        package of zero pages — it is the absence of a count, and no source
-        page can be shown until one arrives.
+        The server reported no page count for this package. That is not a package of
+        zero pages — it is the absence of a count, and no source page can be shown until
+        one arrives.
       </p>
     );
   }

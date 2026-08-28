@@ -20,27 +20,11 @@ import {
 } from "../../components/ui";
 
 /**
- * THE LEFT RAIL — 240px, on `--color-rail-surface`, full height.
- *
- * INVARIANT 63: a full-height COLUMN, not a page-sticky element. It is a flex
- * child of the frame and takes `h-full`; nothing here is `sticky` or `fixed`,
- * because a sticky rail terminates over blank ground the moment the page is
- * taller than the viewport, and the page is never taller than the viewport
- * (INVARIANT 60).
- *
- * INVARIANTS 42/43 — a door outside the role's world is ABSENT, not dimmed.
- * That is why this takes `rules` and renders nothing for a path the payload
- * does not carry: there is no `disabled` branch below and nowhere to add one
- * without changing the shape of the loop. The payload is the server's
- * projection for THIS role, so a world the reader lacks never arrived.
- *
- * ⚠ TODO(nav-collapsed): the fold is pinned open. `SidebarProvider` takes the
- * state as a prop (see `sidebar.tsx` — no cookie, no `localStorage`), and the
- * value belongs to `GET/PATCH /api/me/preferences` (`Preferences.nav_collapsed`,
- * `intake.ts:375`, decision C16). That field is `boolean | null` and null means
- * "never chosen, the route default governs", so wiring it is a THREE-state
- * resolution against the route — not a `useState`, which is what would quietly
- * reintroduce the local persistence this component just had removed.
+
+ * THE LEFT RAIL — 240px, on `--color-rail-surface`, full height. INVARIANT 63: a
+
+ * full-height COLUMN, not a page-sticky element.
+
  */
 export function SideRail(props: {
   readonly rules: readonly GrantedPermissionSchema[] | undefined;
@@ -101,9 +85,12 @@ export function SideRail(props: {
 }
 
 /**
- * The fold has no server to write to yet, and this is the honest spelling of
- * that: a named no-op the TODO above points at. A `useState` here would make
- * the rail fold, look finished, and silently forget on every navigation — a
- * worse failure than a control that does not move.
+
+ * The fold has no server to write to yet, and this is the honest spelling of that: a
+
+ * named no-op the TODO above points at. A `useState` here would make the rail fold,
+
+ * look finished, and silently forget on every navigation — a worse…
+
  */
 const NOT_WIRED = () => {};

@@ -1,12 +1,13 @@
 import { Button, SegmentedControl, Segment } from "../../components/ui";
 
 /**
- * Local magnification. Three steps, exactly the reference's ("Fit", "150%",
- * "200%"), and the labels are the only numbers on this pane that are not the
- * server's — which is precisely why they are labelled as a VIEW control. A
- * percentage that came from the pipeline (coverage, confidence, agreement)
- * would be a measurement; this one is how big the paper is on your monitor,
- * and it changes nothing about the record.
+
+ * Local magnification. Three steps, exactly the reference's ("Fit", "150%", "200%"),
+
+ * and the labels are the only numbers on this pane that are not the server's — which
+
+ * is precisely why they are labelled as a VIEW control.
+
  */
 export type ZoomLevel = "fit" | "half" | "double";
 
@@ -21,13 +22,11 @@ function isZoom(key: unknown): key is ZoomLevel {
 }
 
 /**
- * PREV / PAGE / NEXT, and the magnifier.
- *
- * The label is `p6 / 64` — the position and `total_pages`, both printed. Mono,
- * because rule 3 reserves it for data and a page coordinate is the canonical
- * case. Rule 9 pays for the bounds: a Prev that cannot go anywhere says why,
- * rather than dimming and leaving the reader to guess whether the package ends
- * here or the control is broken.
+
+ * PREV / PAGE / NEXT, and the magnifier. The label is `p6 / 64` — the position and
+
+ * `total_pages`, both printed.
+
  */
 export function PageBar(props: {
   readonly shown: number;

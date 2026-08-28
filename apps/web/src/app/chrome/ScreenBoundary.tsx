@@ -3,31 +3,13 @@ import { ErrorBoundary, type FallbackProps } from "react-error-boundary";
 import { reportCrash } from "../../shared/crash";
 
 /**
- * INVARIANT 59 — A PARTIAL FAILURE DEGRADES THAT REGION ONLY.
- *
- * One boundary PER SCREEN, wrapped by the root route around `<Outlet/>`, so a
- * screen that throws takes the screen and not the chrome: the rail keeps its
- * doors and the order strip keeps its identity, which is the half of the
- * invariant a single app-level boundary cannot satisfy.
- *
- * `resetKeys` on the pathname is what makes it recoverable without a reload —
- * `react-error-boundary` resets when a key changes, so navigating away from a
- * broken screen and back gives you a fresh attempt. Without it the boundary
- * latches and every subsequent route renders this card.
- *
- * ══ WHAT IT SHOWS, AND WHAT IT REFUSES TO SHOW ═════════════════════════════
- *
- * The error's `message` and nothing else. No stack, no component tree, no
- * request body. `shared/crash.ts` records why in detail: the backend's
- * structlog redaction exists to keep party names, field values and reasons out
- * of logs, and a client that paints them onto the screen has re-collected
- * exactly what the redaction removes. An `ApiError` message is the SERVER's
- * own sentence and is safe by the same argument that makes it renderable
- * anywhere else.
- *
- * Reporting goes through `reportCrash("caught", …)`, the same sink React's own
- * `onCaughtError` uses in `main.tsx`, so a boundary-caught error and an
- * uncaught one land in one pipeline rather than two.
+
+ * Invariant 59 — a partial failure degrades that region only. One boundary PER SCREEN,
+
+ * wrapped by the root route around `<Outlet/>`, so a screen that throws takes the
+
+ * screen and not the chrome: the rail keeps its doors and the order strip…
+
  */
 export function ScreenBoundary(props: {
   readonly resetKey: string;

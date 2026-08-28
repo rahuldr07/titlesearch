@@ -4,36 +4,11 @@ import { assertNever } from "../../shared/provenance";
 import { readingsDisagree } from "./readings";
 
 /**
- * THE PANEL'S STATE LINE — WHAT THE SERVER SENT, SAID IN ONE RUBRIC.
- *
- * The row carries `RowMark` (rule 6: one signal, a mark). The open decision has
- * room for the full statement, and this is it: the 11px caps rubric above the
- * value, which is one of the two registers rule 4 permits ALL-CAPS in.
- *
- * ══ THIS COMPOSES A SENTENCE. IT DOES NOT DECIDE A STATE ═══════════════════
- *
- * Hard rule 3 and `enums.ts:3-8` forbid computing `state`. Nothing here does:
- * every branch below is a statement the SERVER already made, and the only
- * choice being made is WHICH of the server's statements leads.
- *
- *   1. An NA REASON leads. It is the server's positive statement about the
- *      document and it outranks everything: a field the server called
- *      PRESENT_UNREADABLE is that, whatever its lifecycle state, and
- *      `provenance.ts` orders its own classification the same way for the same
- *      reason.
- *   2. Then DISAGREEMENT, and this branch is INVARIANT 29 — the ORPHAN rule.
- *      "When both engines found a value and disagree, the UI must NEVER claim
- *      extraction returned nothing." A `needs_review` field with a null value
- *      and two conflicting readings is the fixture's core case
- *      (`mortgages.1.lender`), and rendering it as plain "NEEDS REVIEW" over a
- *      "not yet extracted" chip would say precisely the false thing the rule
- *      forbids: extraction ran, it produced two answers, and the disagreement
- *      is WHY this is a person's. So the rubric says so.
- *   3. Otherwise the state, verbatim.
- *
- * The words in branch 2 are not invented copy — they are the design's, drawn
- * on this exact card, and the rule they satisfy is written down in
- * `INVARIANTS:73-75`.
+
+ * The panel's state line — what the server sent, said in one rubric. The row carries
+
+ * `RowMark` (rule 6: one signal, a mark).
+
  */
 export type PanelRubric = {
   readonly text: string;
@@ -52,8 +27,11 @@ const STATE_RUBRIC: Readonly<Record<FieldState, PanelRubric>> = {
 };
 
 /**
- * The absence words. The taxonomy's own distinctions (`enums.ts:20-52`) in the
- * rubric register — four sentences that must never collapse, so four rubrics.
+
+ * The absence words. The taxonomy's own distinctions (`enums.ts:20-52`) in the rubric
+
+ * register — four sentences that must never collapse, so four rubrics.
+
  */
 const ABSENCE_RUBRIC: Readonly<
   Record<Extract<FieldValue["kind"], `na-${string}`>, PanelRubric>
@@ -73,10 +51,13 @@ export function panelRubric(field: Field, value: FieldValue): PanelRubric {
       return ABSENCE_RUBRIC[value.kind];
 
     /**
-     * A value the server sent with no source. `entities.ts:85-89` calls this
-     * "the exact failure shape the architecture exists to catch", so it leads
-     * over the lifecycle state — an auto-confirmed value nobody can cite is a
-     * defect first and a settled field second.
+
+     * A value the server sent with no source. `entities.ts:85-89` calls this "the exact
+
+     * failure shape the architecture exists to catch", so it leads over the lifecycle
+
+     * state — an auto-confirmed value nobody can cite is a defect first and a…
+
      */
     case "uncited":
       return { text: "NO PROVENANCE — CANNOT BE CITED", tone: "halt" };

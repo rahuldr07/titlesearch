@@ -5,41 +5,13 @@ import { get } from "../../shared/api";
 import { cx } from "../../components/ui";
 
 /**
- * THE ORDER BAR — white, hairline bottom, above `main` and inside the content
- * column, so it stays put while the screen scrolls under it (INVARIANT 62).
- *
- * Every value comes from `GET /api/orders/{id}/context`
- * (`intake.ts:301`), which exists precisely because an order-scoped screen has
- * the URL id and nothing else. Nothing on this bar is computed here.
- *
- * ══ WHAT THE DESIGN ASKED FOR THAT THE CONTRACT REFUSES ════════════════════
- *
- * Design README §App shell: the bar "shows ref (mono, 18px), address, product
- * pill, SLA CHIP, primary action button, and 5 STAGE TABS."
- *
- *   - THE SLA CHIP IS DELETED. `INVARIANTS:84-85`: "No pace indicators, no
- *     throughput language, no timers, and no time ESTIMATES — an estimate is a
- *     pace indicator." There is no SLA field anywhere in the contract to bind
- *     one to, which is the same refusal expressed as an absence.
- *   - THE 5 STAGE TABS ARE NOT BUILT. ANALYSIS-screens §3: the design collapses
- *     three different state machines (`FieldState` 6 members, `PipelineStage`/
- *     `StagePhase` 4, `StageKind` 4) into one 1-5 rail. Drawing them would mean
- *     the browser deciding which machine each tab belongs to. The server's own
- *     `LifecycleStamp` (intake.ts:296) is drawn instead — one word it already
- *     chose, plus the `tone` that is its only machine-readable axis.
- *   - ADDRESS IS ABSENT from `OrderContextResponse`. `period_label` is what the
- *     endpoint carries and it is a RENDERED LABEL, never a machine-readable
- *     span (entities.ts:53-56). The bar prints it and does not pretend it is an
- *     address.
- *   - 18px IS NOT A TYPE SIZE (rule 2: 11/13/16/20/28/40). The ref renders at
- *     `--text-subject` (20px), mono per rule 3. Flagged, not invented.
- *   - THE PRIMARY ACTION is not drawn here. Rule 1 spends the accent ONCE per
- *     screen, and the screen below owns its own decision; a permanent accent
- *     button in the chrome would spend it before every screen begins.
- *
- * `product` and `pages` are NULLABLE and null is a STATEMENT, not a dash:
- * entities.ts:50-53 — null means no resolved product, and a count asserts
- * somebody looked. The bar says so in words.
+
+ * THE ORDER BAR — white, hairline bottom, above `main` and inside the content column,
+
+ * so it stays put while the screen scrolls under it (INVARIANT 62). Every value comes
+
+ * from `GET /api/orders/{id}/context` (`intake.ts:301`), which exists…
+
  */
 const ORDER_PATH = /^\/orders\/([^/]+)/;
 
@@ -76,16 +48,10 @@ export function OrderStrip() {
           >
             {context.data.order_ref}
           </span>
-          <Fact
-            value={context.data.product}
-            absent="No resolved product"
-            pill
-          />
+          <Fact value={context.data.product} absent="No resolved product" pill />
           <Fact value={context.data.period_label} absent="No period on record" />
           <Fact
-            value={
-              context.data.pages === null ? null : `${context.data.pages} pages`
-            }
+            value={context.data.pages === null ? null : `${context.data.pages} pages`}
             absent="Page count unread"
           />
           <Stamp stamp={context.data.stamp} />
@@ -120,9 +86,13 @@ function Fact(props: {
 }
 
 /**
- * `tone` drives the paint and NOTHING ELSE (intake.ts:290-294). `label` is a
- * free string on purpose — an enum here would be an invitation to `switch` on
- * a lifecycle word, which is the client state machine moved one line down.
+
+ * `tone` drives the paint and NOTHING ELSE (intake.ts:290-294). `label` is a free
+
+ * string on purpose — an enum here would be an invitation to `switch` on a lifecycle
+
+ * word, which is the client state machine moved one line down.
+
  */
 const TONE = {
   neutral: "border-line-strong bg-surface-sunken text-ink-secondary",

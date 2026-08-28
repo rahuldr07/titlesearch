@@ -1,12 +1,13 @@
 import type { ScreenDescriptor } from "./unbuiltScreens";
 
 /**
- * THE TWO ORDER-SCOPED SCREENS. Separate from `unbuiltScreens.ts` because they
- * are wired by hand rather than looped: both take a path param, and it is the
- * hand-written `createRoute` that makes a misspelled param a compile error.
- *
- * They also carry the two largest blocking questions in the build, which is
- * reason enough for them not to be buried in the middle of a fifteen-row list.
+
+ * The two order-scoped screens. Separate from `unbuiltScreens.ts` because they are
+
+ * wired by hand rather than looped: both take a path param, and it is the hand-written
+
+ * `createRoute` that makes a misspelled param a compile error.
+
  */
 export const REVIEW_SCREEN: ScreenDescriptor = {
   path: "/orders/{id}",

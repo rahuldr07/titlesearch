@@ -1,10 +1,6 @@
 /**
- * WHAT EACH UNBUILT SCREEN IS, BINDS TO, AND LACKS. A table, split out of
- * `routeTree.tsx` because that file's job is wiring. Every `missing` string
- * comes from `ANALYSIS-screens.md` §1-§7, which walked all twelve design
- * screens against the frozen contract: where a surface exists it is cited
- * file:line, where one does not the entry says so. Prose, deliberately —
- * whoever opens an unbuilt door wants the blocking question, not a spinner.
+ * What each unbuilt screen is, binds to, and lacks. A table, split out of
+ * `routeTree.tsx` because that file's job is wiring.
  */
 export interface ScreenDescriptor {
   readonly path: string;

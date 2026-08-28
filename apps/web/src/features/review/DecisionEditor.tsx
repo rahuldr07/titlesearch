@@ -4,39 +4,13 @@ import { Button, InnerPanel, Label, Textarea } from "../../components/ui";
 export type EditorMode = "correct" | "escalate" | null;
 
 /**
- * THE CORRECTION AND ESCALATION EDITORS — two forms, one refusal shape.
- *
- * INVARIANT 9: "A correction is refused without its reason." INVARIANT 10: "An
- * escalation is refused without its question." Both are held HERE with the
- * reason visible (rule 9: every disabled control states why), and both are
- * refused again by the server, which is the enforcement that matters — this is
- * the courtesy that stops a reviewer typing into a submit that was never going
- * to land.
- *
- * INVARIANT 32: "A correction is inert until it differs from the machine read."
- * A corrected value identical to what the machine already has is not a
- * correction, it is a confirm, and the hold says so and points at the button
- * that does mean that.
- *
- * INVARIANT 12: "Every refusal speaks — a silent no-op is the defect." So the
- * hold sentence is rendered inline as well as carried on the control: a `title`
- * is unreachable by keyboard and on touch, and this is the screen the product
- * is for.
- *
- * ══ IT IS AN `InnerPanel`, NOT A `Card` ════════════════════════════════════
- *
- * RECIPES: nested cards are forbidden, and `DecisionPanel` is already inside
- * one surface. `InnerPanel` is the 10px rung the kit provides for exactly this,
- * and `card.tsx`'s two-context guard makes the illegal arrangement a runtime
- * throw rather than a review comment.
- *
- * ══ WHY THE VALUE IS A `Textarea` ══════════════════════════════════════════
- *
- * `Input` deliberately refuses `value`/`defaultValue` (REVIEW-03 B2 — the value
- * belongs to a `TextField` this kit does not export), and a corrected value has
- * to be seeded from an adopted reading without retyping (INVARIANT 31), which
- * needs a controlled component. `Textarea` accepts `value` and is the control
- * that can carry a seeded one.
+
+ * THE CORRECTION AND ESCALATION EDITORS — two forms, one refusal shape. INVARIANT 9:
+
+ * "A correction is refused without its reason." INVARIANT 10: "An escalation is
+
+ * refused without its question." Both are held HERE with the reason visible…
+
  */
 export function DecisionEditor(props: {
   readonly mode: Exclude<EditorMode, null>;

@@ -15,27 +15,18 @@ import { BlindSeatScreen } from "../../features/blind/BlindSeatScreen";
 import { BlindStatusScreen } from "../../features/blindStatus/BlindStatusScreen";
 
 /**
- * THE DOORS THAT NOW HAVE A SCREEN.
- *
- * `unbuiltScreens.ts` stays the COMPLETE door list — it is what the rail and
- * the command palette read, and deleting an entry as each screen lands would
- * make that table mean "unbuilt" in one file and "all doors" in another. So
- * the table keeps every path and this map names the ones that have arrived.
- *
- * A path here that is not in the table renders nowhere, and that is the right
- * failure: `packages/contract/src/authz.ts:62-81` is the frozen door list, and
- * a screen may only appear at a path that table already grants. This map can
- * replace a placeholder; it cannot open a door.
- *
- * The two order-scoped routes are NOT here. They take a path param and are
- * wired by hand in `routeTree.tsx`, which is what makes a misspelled param a
- * compile error.
+
+ * The doors that now have a screen. `unbuiltScreens.ts` stays the COMPLETE door list —
+
+ * it is what the rail and the command palette read, and deleting an entry as each
+
+ * screen lands would make that table mean "unbuilt" in one file and "all…
+
  */
 export const BUILT_SCREENS: Readonly<Record<string, () => JSX.Element>> = {
   "/": OverviewScreen,
   /*
    * THE QUEUE IS THE CONTRACT'S QUEUE, NOT THE DESIGN'S SCREEN 3.
-   *
    * The design draws "All Orders" at this door: a searchable, filterable,
    * paginated table with an Assigned column, a Due column, an SLA chip and a
    * per-row `Open →`. Every one of those is refused — `INVARIANTS:82-83` makes
@@ -43,7 +34,6 @@ export const BUILT_SCREENS: Readonly<Record<string, () => JSX.Element>> = {
    * cherry-picking, `INVARIANTS:84-85` bans the Due column and the SLA chip as
    * pace indicators, and `endpoints.ts:69`/`:77-82` records that the browse
    * endpoint was removed BY CONSTRUCTION.
-   *
    * `INVARIANTS:26-27`: a rule a design cannot satisfy is a CONFLICT IN THE
    * DESIGN — report it, do not weaken the rule. Reported in
    * `docs/frontend/design-2026-08/CONFLICT-all-orders.md`; unresolved, and
@@ -53,7 +43,6 @@ export const BUILT_SCREENS: Readonly<Record<string, () => JSX.Element>> = {
   "/ingest": IngestScreen,
   /*
    * SCREEN 10, AND THE RULE THE DESIGN OMITS.
-   *
    * Design §Screens 10 draws determination buttons and a settled banner and
    * never mentions that resolution is REFUSED WITHOUT A RULE
    * (endpoints.ts:233-236, `INVARIANTS:36-38`). A transcription of the drawing
