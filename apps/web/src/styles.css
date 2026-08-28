@@ -22,6 +22,7 @@
 @import "@titlepipe/ui-tokens/tokens.css";
 @import "./components/ui/ui.css";
 @import "./components/ui/a11y.css";
+@import "./components/ui/browser-surfaces.css";
 @import "./components/ui/overlays.css";
 /*
  * THE DOMAIN LAYER'S OWN CSS, and its absence was silent for a whole rebuild.
