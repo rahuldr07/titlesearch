@@ -3,6 +3,15 @@ import { Button, Empty, Table } from "../../components/ui";
 import { ORDER_COLUMNS } from "./orderColumns";
 import { OrdersPager } from "./OrdersPager";
 
+/** The grid's accessible name follows the filter — a reader paging the
+    delivered list should not hear it announced as "All orders". */
+const GRID_LABEL: Readonly<Record<OrderFilter, string>> = {
+  all: "All orders",
+  active: "Orders in pipeline",
+  waiting: "Orders with queries and gaps",
+  delivered: "Delivered orders",
+};
+
 const NOTHING_HERE: Readonly<Record<OrderFilter, string>> = {
   all: "No orders in this view",
   active: "Nothing is in the pipeline",
@@ -10,11 +19,8 @@ const NOTHING_HERE: Readonly<Record<OrderFilter, string>> = {
   delivered: "Nothing delivered yet",
 };
 
-/**
- * WHY THE EMPTY PANE READS THE SERVER'S ECHO. `query` and `filter` come back on
- * the response, so the sentence names the term the server actually matched on
- * rather than whatever is in the box a keystroke later.
- */
+/** `query` and `filter` are the server's echo, so the sentence names the term
+    it actually matched rather than what is in the box a keystroke later. */
 function emptyReason(data: OrdersPageResponse): string {
   if (data.query === "")
     return "New packages appear here the moment intake signs for them.";
@@ -35,7 +41,7 @@ export function OrdersTable({
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-line-strong bg-surface-panel shadow-card">
       <div className="min-h-0 flex-1">
         <Table
-          label="All orders"
+          label={GRID_LABEL[data.filter]}
           rows={data.orders}
           columns={ORDER_COLUMNS}
           rowKey={(row) => row.id}

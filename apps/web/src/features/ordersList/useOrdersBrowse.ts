@@ -2,18 +2,12 @@ import { useEffect, useState } from "react";
 import type { OrderFilter } from "@titlepipe/contract";
 
 export interface OrdersBrowseState {
-  /** What is in the box right now — drives the clear affordance. */
+  /** What is in the box now. `query` is what the server was asked to match. */
   readonly typed: string;
-  /** What the server has been asked to match. Trails `typed` by one debounce. */
   readonly query: string;
   readonly filter: OrderFilter;
   readonly page: number;
-  /**
-   * Bumped by `clear`. The search box is uncontrolled — `InputProps` omits both
-   * `value` and `defaultValue` — so emptying it means remounting it, and this
-   * is the `key` that does so. A ref would be the other way and the React
-   * compiler refuses one read across a component boundary.
-   */
+  /** `clear` bumps this; it is the search box's `key`. See below. */
   readonly resetKey: number;
   readonly type: (next: string) => void;
   readonly clear: () => void;
@@ -21,17 +15,17 @@ export interface OrdersBrowseState {
   readonly goToPage: (next: number) => void;
 }
 
-/** Long enough that a typed word is one request, short enough to feel live. */
 const SETTLE_MS = 200;
 
 /**
- * THE THREE BROWSE INPUTS, IN ONE PLACE. Every one of them resets the page,
- * because page 4 of a search that now matches two rows is not a page.
+ * The three browse inputs. Each of the two that change the result set resets the
+ * page, because page 4 of a search matching two rows is not a page.
  *
- * The debounce is here rather than in the read because `useRead` keys the cache
- * on the descriptor: a keystroke is a new key, a new key is a pending query, and
- * a pending query replaces the table. Settling the term first means one fetch
- * per word instead of one per letter.
+ * The term is debounced because `useRead` keys its cache on the descriptor: a
+ * keystroke is a new key, and a new key is a pending query that replaces the
+ * table. Clearing works by remounting the box under a new `key` — `InputProps`
+ * omits `value` and `defaultValue`, and the React compiler rejects reading a ref
+ * across a component boundary.
  */
 export function useOrdersBrowse(): OrdersBrowseState {
   const [typed, setTyped] = useState("");

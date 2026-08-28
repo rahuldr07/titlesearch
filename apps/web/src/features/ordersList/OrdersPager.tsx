@@ -2,10 +2,9 @@ import type { OrdersPageResponse } from "@titlepipe/contract";
 import { Button } from "../../components/ui";
 
 /**
- * THE SERVER'S ARITHMETIC, REPRINTED. `total` and `page_count` arrive on the
- * response and are rendered as they came; nothing here divides a list length by
- * a page size to reconstruct either. The window is the server's `page` and
- * `page_size` plus how many rows it actually sent.
+ * `total` and `page_count` arrive on the response and are printed as they came.
+ * The window is the server's `page` and `page_size` plus the rows it sent — no
+ * length is ever divided by a page size here.
  */
 export function OrdersPager({
   data,

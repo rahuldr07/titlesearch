@@ -8,17 +8,11 @@ import { OrdersTable } from "./OrdersTable";
 import { useOrdersBrowse } from "./useOrdersBrowse";
 
 /**
- * ALL ORDERS — every order in the pipeline and the delivered record.
+ * All orders. Searching, filtering and paging are three query parameters on
+ * `GET /api/orders`: this screen never filters, slices or counts an array.
  *
- * THE SERVER DOES THE WORK. Searching, filtering and paging are three query
- * parameters on `GET /api/orders`; this screen never filters an array, never
- * slices one, and never counts one. `total` and `page_count` are printed as
- * they arrived (`design.ts:50-56`), and `due` is the server's own label — no
- * countdown is derived from it, which INVARIANT 23 forbids outright.
- *
- * The header stays OUTSIDE `QueryState` on purpose: it holds an uncontrolled
- * search box, and a box that unmounts while its own request is in flight loses
- * both the caret and the text that started the request.
+ * The header sits outside `QueryState` because it holds an uncontrolled search
+ * box, and a box that unmounts mid-request loses the caret and the text.
  */
 export function OrdersListScreen() {
   const browse = useOrdersBrowse();

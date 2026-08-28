@@ -3,11 +3,7 @@ import { DataCell, type TableColumn } from "../../components/ui";
 import { RouteButton } from "../../app/chrome/RouteButton";
 import { Absent, Address } from "./orderCells";
 
-/**
- * The enum's own words, capitalised and nothing more. Recasing a server
- * identifier into prose is how the string a reader sees stops matching the
- * string they would search for — `stage:gate` still finds the "Gate" row.
- */
+/** The enum's own words, capitalised — so `stage:gate` still finds the "Gate" row. */
 const STAGE_LABEL: Readonly<Record<OrderRow["stage"], string>> = {
   unassigned: "Unassigned",
   intake: "Intake",
@@ -66,8 +62,7 @@ export const ORDER_COLUMNS: readonly TableColumn<OrderRow>[] = [
     id: "due",
     header: "Due",
     width: "130px",
-    /* The server's own label, printed verbatim. INVARIANT 23: no client-side
-       countdown is computed from it, and there is no timer on this screen. */
+    /* The server's label, verbatim. INVARIANT 23: no countdown is derived from it. */
     cell: (row) =>
       row.due === null ? (
         <Absent>No due date</Absent>

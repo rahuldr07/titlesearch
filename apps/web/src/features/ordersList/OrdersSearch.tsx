@@ -1,17 +1,10 @@
 import { Button, Input } from "../../components/ui";
 import type { OrdersBrowseState } from "./useOrdersBrowse";
 
-/** Exactly the scopes `GET /api/orders` matches on, in the order it reads them. */
+/** Exactly the scopes `GET /api/orders` matches on. */
 const SCOPES = "ref: address: client: stage: product: assigned:";
 
-/**
- * THE SEARCH BOX. Uncontrolled, because `InputProps` omits `value` and
- * `defaultValue` — so clearing it means remounting it under a new `key`, which
- * the browse state owns so the empty pane's way out clears the same box.
- *
- * The screen never filters anything itself: the term goes to the server and the
- * server answers with the page and the count.
- */
+/** Uncontrolled. The term goes to the server; nothing here filters a row. */
 export function OrdersSearch({ browse }: { readonly browse: OrdersBrowseState }) {
   const typing = browse.typed.length > 0;
 

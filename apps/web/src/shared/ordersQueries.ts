@@ -1,12 +1,6 @@
 import { OrdersPageResponse, type OrderFilter } from "@titlepipe/contract";
 import type { ReadDescriptor } from "./queries";
 
-/**
- * THE BROWSE READ. `queries.ts` records that there was no order-list endpoint;
- * `GET /api/orders` landed under the 2026-08-28 ruling and this is its one
- * spelling. It stays out of `queries.ts` so that file's account of the absence
- * reads as history rather than as a contradiction.
- */
 export interface OrdersBrowse {
   readonly query: string;
   readonly filter: OrderFilter;
@@ -15,9 +9,9 @@ export interface OrdersBrowse {
 }
 
 /**
- * The three browse inputs are part of the CACHE KEY, not just the URL: a
- * different page of a different filter is a different answer, and sharing one
- * key across them is the silent-stale defect `queries.ts` names.
+ * `GET /api/orders`. Kept out of `queries.ts`, whose header records that this
+ * endpoint did not exist; all three inputs are part of the cache key, because a
+ * different page of a different filter is a different answer.
  */
 export function ordersPage(browse: OrdersBrowse): ReadDescriptor<OrdersPageResponse> {
   const search = new URLSearchParams({
