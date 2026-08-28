@@ -49,15 +49,19 @@ export function AccountScreen(props: { readonly tab: AccountTabId | undefined })
 
   return (
     <div className="tp-screen-enter flex h-full min-h-0">
-      <nav
-        aria-label="Settings sections"
-        className="flex w-120 shrink-0 flex-col border-r border-line-subtle bg-surface-panel"
-      >
+      {/*
+       * The h1 sits OUTSIDE the nav landmark. The prototype draws the title in
+       * the sidebar column and so does this, but a page title inside <nav> is a
+       * page whose name a screen-reader user finds by browsing navigation. The
+       * column is the layout; the nav is only the list inside it.
+       */}
+      <div className="flex w-120 shrink-0 flex-col border-r border-line-subtle bg-surface-panel">
         <div className="px-12 pt-12 pb-8">
           <h1 className="text-title font-semibold leading-tight text-ink-primary">
             Settings
           </h1>
         </div>
+        <nav aria-label="Settings sections" className="min-h-0 flex-1">
         <ul className="flex flex-col gap-2 px-6 pb-10">
           {ACCOUNT_TABS.map((tab) => (
             <li key={tab.id}>
@@ -85,7 +89,8 @@ export function AccountScreen(props: { readonly tab: AccountTabId | undefined })
             </li>
           ))}
         </ul>
-      </nav>
+        </nav>
+      </div>
 
       {/*
        * `tabIndex={0}`: a region that scrolls must be reachable by keyboard, or

@@ -120,7 +120,7 @@ function ScreenHeading() {
   return (
     <header className="flex flex-col gap-2">
       <h1 className="font-sans text-title font-bold leading-tight text-ink-primary">
-        Package intake
+        Package intake &amp; registration
       </h1>
     </header>
   );
