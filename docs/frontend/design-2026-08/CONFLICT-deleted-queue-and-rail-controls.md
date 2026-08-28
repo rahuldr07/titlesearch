@@ -115,11 +115,86 @@ silent edit to the file this document is about. Fix it with the ruling.
 
 ---
 
-## What was repaired, and why it is not in this document
+## What was repaired, and what it measured
 
-Six spec files navigated to `/queue` only to *stand somewhere* while testing the
-rail, the frame, the overlays or the responsive layout — the queue was scenery,
-not subject. Those navigations were repointed to `/orders/ord_demo_1`, which
-renders both the rail and the order strip, and `rail-door-/queue` to
-`rail-door-/orders-list`. No assertion changed. Files: `sidebar`, `navigation`,
-`shell-frame`, `key-map-modal`, `ux`, `responsive-frame`.
+Eight spec files referenced `/queue`, `/completeness` or `/rulebook` only to
+*stand somewhere* while testing the rail, the frame, the overlays or the
+responsive layout — the route was scenery, not subject. `/completeness` and
+`/rulebook` have never had routes in this app at all.
+
+Repointed, with **no assertion changed**:
+
+| Was | Now | Why |
+|---|---|---|
+| `goto("/queue")` (six files) | `/orders/ord_demo_1` | renders both the rail and the order strip |
+| `rail-door-/queue` | `rail-door-/orders-list` | the door that replaced it |
+| `responsive-frame` `ROUTES` | `/`, review, `/escalations`, `/templates` | four routes that exist |
+| `shell-frame` `CROWDED` | `/orders-list`, `/escalations` | two genuinely crowded screens |
+| `shell-frame` `/rulebook` | `/templates` | any screen with a full-height rail |
+
+**Measured after, on `responsive-frame` + `shell-frame`: 9 pass, 10 fail.**
+The ten break down as:
+
+- **7** — the 1360px floor, section 4 above. Every below-floor assertion.
+- **2** — the profile popover, section 2 above.
+- **1** — `nothing collapses below its own content — the escalation cards`.
+  This one is a **real finding the repoint surfaced**, not a spec artefact:
+  `mode-cite` in `features/escalations/ResolveCard.tsx` renders 18px around
+  22px of content. It is a `RadioGroupItem` from the shared kit
+  (`components/ui/radio-group.tsx:64`), dating to 2026-08-27, so it affects
+  every radio in the app rather than that card. `overflow` is `visible` and
+  nothing is clipped, which is why no screenshot caught it. Left unfixed: a
+  4px line-box shortfall in a shared primitive is worth a deliberate change to
+  the kit, not a patch on the one screen a spec happened to point at.
+
+---
+
+## 4. `responsive-frame.spec` contradicts the design's stated minimum width
+
+Added 2026-08-28, after measuring.
+
+`e2e/invariants/responsive-frame.spec.ts` asserts *"the page never scrolls
+sideways"* at 1440, 1280, **1024 and 900px**. It cannot pass at the last two,
+and it should not:
+
+- `apps/web/src/styles.css:60` sets `body { min-width: 1360px }`, citing
+  *"Design README §App shell: min width 1360px"*.
+- `docs/frontend/design-2026-08/README.md:15` says it: *"Min app width 1360px."*
+- **The reference app's own CSS carries `min-width: 1360px`** — it is in the
+  export, not just the prose.
+
+So the ruling source of truth states a 1360px floor, and a spec asserts the app
+works 460px below it. Both landed 2026-08-27 in the same import; the
+contradiction predates this rebuild and neither side is today's work.
+
+Measured now, at HEAD: every screen reports `scrollWidth 1360` against the
+narrower viewport at 1024 and 900. That is the declared minimum doing exactly
+what it was written to do — not a layout defect, and not something the new
+recent-orders table or two-row order strip introduced (the figure is constant
+across all twelve screens, which is the signature of a floor rather than of
+content).
+
+**Recommendation, not applied:** drop 1024 and 900 from that spec's width list
+and keep 1440 and 1280, which sit above the floor and are genuine regression
+guards. Not done here, because narrowing a spec's range is exactly the kind of
+edit the brief forbids doing unilaterally — *"never weaken a test assertion."*
+
+The same file's `ROUTES` named `/completeness` and `/rulebook`, which have never
+had routes in this app, alongside `/queue`. Those three were scenery for a
+frame-level assertion, so they were repointed to `/`, `/escalations` and
+`/templates`. The width list was left alone.
+
+---
+
+## 5. Keyboard `g`-sequences are asserted and were never built
+
+`e2e/invariants/navigation.spec.ts` asserts `g d` → `/delivered` and `g q` →
+`/queue`. Neither destination exists (`/delivery` is ours; `/queue` is deleted),
+and `apps/web/src/app/keyboard/keymap.ts` — now the single registry, so this is
+readable rather than inferred — installs only `$mod+k`, `/`, `?` and `Escape`.
+There are no `g`-sequences in the app at all.
+
+The reference app draws no `g`-sequence affordance either. As with the profile
+popover, these specs describe the archived `.dc.html` design.
+
+**Not done, pending the ruling:** no sequences built, no assertions edited.

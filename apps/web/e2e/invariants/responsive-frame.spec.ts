@@ -25,7 +25,7 @@ const NARROW = { width: 900, height: 700 };
 /** Above `lg` (1024px), where every drawn value is supposed to be restored. */
 const WIDE = { width: 1440, height: 900 };
 
-const ROUTES = ["/queue", "/orders/ord_demo_1/review", "/completeness", "/rulebook"];
+const ROUTES = ["/", "/orders/ord_demo_1/review", "/escalations", "/templates"];
 
 /**
  * A screen is `PaneBody` — the scroller — then the padded wrapper, then the

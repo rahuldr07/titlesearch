@@ -67,7 +67,7 @@ test("the rail is a full-height column, not a page-sticky element", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1600, height: 1000 });
-  await page.goto("/rulebook");
+  await page.goto("/templates");
   const rail = await boxOf(page.getByTestId("side-rail"));
   expect(rail.y).toBe(0);
   expect(rail.height).toBe(1000);
@@ -127,8 +127,8 @@ test("the session-ended screen is equally bare", async ({ page }) => {
  */
 const CROWDED = [
   { url: "/orders/ord_demo_1/review", what: "the review report column" },
-  { url: "/queue", what: "the queue bands" },
-  { url: "/completeness", what: "the gap cards" },
+  { url: "/orders-list", what: "the orders table" },
+  { url: "/escalations", what: "the escalation cards" },
 ];
 
 for (const { url, what } of CROWDED) {
