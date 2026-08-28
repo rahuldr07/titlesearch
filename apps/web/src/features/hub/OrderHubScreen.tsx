@@ -1,5 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
-import { get } from "../../shared/api";
+import { useRead } from "../../app/useRead";
 import {
   orderCompleteness,
   orderContext,
@@ -7,7 +6,6 @@ import {
   orderPipeline,
   orderSignoff,
   orderTimeline,
-  type ReadDescriptor,
 } from "../../shared/queries";
 import { Card } from "../../components/ui";
 import { VerdictCard } from "./VerdictCard";
@@ -130,18 +128,4 @@ export function OrderHubScreen(props: { readonly orderId: string }) {
       )}
     </section>
   );
-}
-
-/**
- * One read, from its descriptor. The descriptor pairs the path, the cache key
- * and the contract schema in `shared/queries.ts` so no two screens can spell
- * one endpoint two ways (rule 11 for cache keys); this is the three lines that
- * actually fetch it, and they live in `features/` because `check-rules.mjs`
- * keeps Query out of `shared/` and `entities/`.
- */
-function useRead<T>(descriptor: ReadDescriptor<T>) {
-  return useQuery({
-    queryKey: descriptor.key,
-    queryFn: () => get(descriptor.path, descriptor.schema),
-  });
 }

@@ -128,6 +128,6 @@ export const UNBUILT_SCREENS: readonly ScreenDescriptor[] = [
     binds:
       "MeProfileResponse (intake.ts:359) · Preferences (:375) · PeopleResponse (:336) · AuditResponse (endpoints.ts:558)",
     missing:
-      "Refusals, not gaps. The design's RBAC matrix cells 'cycle — / VIEW / EDIT', which implies a write: authz.ts:118 closes PERMISSIONS with `as const satisfies` and it is compile-time frozen. Audit is read-only by construction. Neither the contract nor packages/mocks ships a GET /api/me/profile handler yet, so the identity block has nothing to read.",
+      "BUILT (features/account), and this entry is kept because the door's gaps are worth stating. Four of the design's six panes bind to a live endpoint; Organization has no contract surface at all, and Retention is the absent half of a pane whose security half is real. The rest are REFUSALS, not gaps: the RBAC matrix cells 'cycle — / VIEW / EDIT', which implies a write, and authz.ts:118 closes PERMISSIONS with `as const satisfies` — compile-time frozen; the payload is one role's projection, so there is no fourth column to draw either. The People pane's role picker is the same refusal. Audit is read-only by construction. NOTE: an earlier version of this entry said no GET /api/me/profile handler shipped. One does, at workspace.ts:926, along with /api/people and GET+PATCH /api/me/preferences.",
   },
 ];

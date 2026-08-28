@@ -1,11 +1,11 @@
 import { createRoute } from "@tanstack/react-router";
 import { rootRoute } from "./rootRoute";
-import { Unbuilt } from "./chrome/Unbuilt";
-import { UNBUILT_SCREENS, type ScreenDescriptor } from "./chrome/unbuiltScreens";
 import { BLIND_SEAT_SCREEN } from "./chrome/orderScreens";
-import { BUILT_SCREENS } from "./chrome/builtScreens";
 import { orderSearch } from "./orderSearch";
+import { accountSearch } from "./accountSearch";
+import { AccountScreen } from "../features/account/AccountScreen";
 import { OrderRoute } from "./chrome/OrderRoute";
+import { staticRoutes, ACCOUNT_PATH, Placeholder } from "./staticRoutes";
 
 /**
  * THE ROUTES, AND EVERY PATH IS COPIED FROM `authz.ts:62-81`.
@@ -47,27 +47,6 @@ import { OrderRoute } from "./chrome/OrderRoute";
  * types buy nothing, hand-write where they buy something.
  */
 const parent = () => rootRoute;
-
-const staticRoutes = UNBUILT_SCREENS.map((descriptor) => {
-  const Built = BUILT_SCREENS[descriptor.path];
-  return createRoute({
-    getParentRoute: parent,
-    path: descriptor.path,
-    component:
-      Built === undefined ? () => <Placeholder descriptor={descriptor} /> : Built,
-  });
-});
-
-function Placeholder(props: { readonly descriptor: ScreenDescriptor }) {
-  return (
-    <Unbuilt
-      screen={props.descriptor.screen}
-      door={props.descriptor.path}
-      binds={props.descriptor.binds}
-      missing={props.descriptor.missing}
-    />
-  );
-}
 
 /**
  * THE ORDER-SCOPED DOOR, and `?field=` is first-class on it.
@@ -121,6 +100,23 @@ function ReviewWorkstationRoute() {
   return <OrderRoute orderId={orderId} />;
 }
 
+/**
+ * SCREEN 12 — Settings & RBAC, the one FLAT door off the static loop, because
+ * it is the only one carrying a search key: `validateSearch` buys it the order
+ * routes' guarantee. See `accountSearch.ts`.
+ */
+const accountRoute = createRoute({
+  getParentRoute: parent,
+  path: ACCOUNT_PATH,
+  validateSearch: accountSearch,
+  component: AccountRoute,
+});
+
+function AccountRoute() {
+  const { tab } = accountRoute.useSearch();
+  return <AccountScreen tab={tab} />;
+}
+
 const blindSeatRoute = createRoute({
   getParentRoute: parent,
   path: "/blind/$orderId",
@@ -131,5 +127,6 @@ export const routeTree = rootRoute.addChildren([
   ...staticRoutes,
   reviewRoute,
   reviewWorkstationRoute,
+  accountRoute,
   blindSeatRoute,
 ]);
