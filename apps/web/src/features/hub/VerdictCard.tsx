@@ -54,7 +54,7 @@ export function VerdictCard(props: {
             data-testid="verdict-kicker"
             className={`w-fit rounded-pill border px-6 py-2 text-label font-semibold leading-flat ${PILL[props.stamp.tone]}`}
           >
-            Where this order stands
+            Order life-cycle hub
           </span>
           {/* 40px — `--text-verdict`, the sixth size, and the one place in the
               product it is spent. */}
