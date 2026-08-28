@@ -2,7 +2,7 @@ import { useRead } from "../../app/useRead";
 import { useSignedIn } from "../../app/session/signedIn";
 import { hasAction, usePermissions } from "../../app/session/permissions";
 import { engineRouting, engines } from "../../shared/engineQueries";
-import { EngineReadState } from "./EngineReadState";
+import { QueryState } from "../../entities/state/QueryState";
 import { SeatChange } from "./SeatChange";
 import { SeatTable } from "./SeatTable";
 
@@ -52,7 +52,7 @@ export function SeatPane() {
       >
         Current seats, and who approved each one with what evidence
       </h2>
-      <EngineReadState query={routing} of="the seat assignments">
+      <QueryState query={routing} of="the seat assignments">
         {(data) => (
           <div className="flex min-h-0 flex-1 flex-col gap-10">
             {mayFlip && roster.data !== undefined && (
@@ -61,7 +61,7 @@ export function SeatPane() {
             <SeatTable cells={data.cells} />
           </div>
         )}
-      </EngineReadState>
+      </QueryState>
     </section>
   );
 }

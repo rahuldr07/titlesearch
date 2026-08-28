@@ -1,7 +1,7 @@
 import { Empty } from "../../components/ui";
 import { useRead } from "../../app/useRead";
 import { lifecycle } from "../../shared/dashboardQueries";
-import { BoardState } from "./BoardState";
+import { QueryState } from "../../entities/state/QueryState";
 import { BoardCensus } from "./BoardCensus";
 import { FailedBanner } from "./FailedBanner";
 import { StageColumn } from "./StageColumn";
@@ -79,7 +79,7 @@ export function DashboardScreen() {
         )}
       </header>
 
-      <BoardState query={board} of="the lifecycle board">
+      <QueryState query={board} of="the lifecycle board">
         {(data) => (
           <div className="flex min-w-0 flex-col gap-12">
             <BoardCensus board={data} />
@@ -99,7 +99,7 @@ export function DashboardScreen() {
             )}
           </div>
         )}
-      </BoardState>
+      </QueryState>
     </div>
   );
 }

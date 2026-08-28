@@ -2,7 +2,7 @@ import type { Engine } from "@titlepipe/contract";
 import { useRead } from "../../app/useRead";
 import { engines } from "../../shared/engineQueries";
 import { Empty, Table, type TableColumn } from "../../components/ui";
-import { EngineReadState } from "./EngineReadState";
+import { QueryState } from "../../entities/state/QueryState";
 
 /**
  * THE ROSTER — WHAT EACH ENGINE DECLARES ABOUT ITSELF.
@@ -48,7 +48,7 @@ export function EngineRoster() {
       >
         Each engine, as its adapter declares itself
       </h2>
-      <EngineReadState query={roster} of="the engine roster">
+      <QueryState query={roster} of="the engine roster">
         {(data) => (
           <div className="min-h-0 flex-1 overflow-hidden rounded-lg border border-line-strong bg-surface-panel">
             <Table
@@ -65,7 +65,7 @@ export function EngineRoster() {
             />
           </div>
         )}
-      </EngineReadState>
+      </QueryState>
     </section>
   );
 }

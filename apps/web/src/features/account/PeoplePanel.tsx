@@ -2,7 +2,7 @@ import { useRead } from "../../app/useRead";
 import { people } from "../../shared/accountQueries";
 import { Badge, Card } from "../../components/ui";
 import { PanelFrame } from "./AccountPanel";
-import { PanelState } from "./PanelState";
+import { QueryState } from "../../entities/state/QueryState";
 
 /**
  * PEOPLE — the roster, read-only, and the role picker the prototype draws is
@@ -53,7 +53,7 @@ export function PeoplePanel() {
       title="People"
       note="Who holds a seat, and which of them are privileged without a second factor."
     >
-      <PanelState query={roster} of="the roster">
+      <QueryState query={roster} of="the roster">
         {(data) => (
           <div className="flex flex-col gap-8">
             {/*
@@ -127,7 +127,7 @@ export function PeoplePanel() {
             </p>
           </div>
         )}
-      </PanelState>
+      </QueryState>
     </PanelFrame>
   );
 }

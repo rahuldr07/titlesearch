@@ -3,7 +3,7 @@ import { meProfile } from "../../shared/accountQueries";
 import { Badge, Card } from "../../components/ui";
 import { ContractGap } from "../../entities/contract/ContractGap";
 import { PanelFrame } from "./AccountPanel";
-import { PanelState } from "./PanelState";
+import { QueryState } from "../../entities/state/QueryState";
 
 /**
  * RETENTION & SECURITY — half of this pane is real and half of it does not
@@ -44,7 +44,7 @@ export function SecurityPanel() {
       title="Retention & security"
       note="Your second factor and the sessions holding this account open."
     >
-      <PanelState query={profile} of="your profile">
+      <QueryState query={profile} of="your profile">
         {(data) => (
           <div className="flex flex-col gap-8">
             <Card padding="tight">
@@ -130,7 +130,7 @@ export function SecurityPanel() {
             />
           </div>
         )}
-      </PanelState>
+      </QueryState>
     </PanelFrame>
   );
 }

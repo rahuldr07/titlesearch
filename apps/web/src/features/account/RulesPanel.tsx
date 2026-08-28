@@ -3,7 +3,7 @@ import { useRead } from "../../app/useRead";
 import { rules } from "../../shared/accountQueries";
 import { Badge, Card, Input, Label } from "../../components/ui";
 import { PanelFrame } from "./AccountPanel";
-import { PanelState } from "./PanelState";
+import { QueryState } from "../../entities/state/QueryState";
 
 /**
  * RULES & ROUTING — the rulebook, filtered in the browser, and PENDING drawn as
@@ -52,7 +52,7 @@ export function RulesPanel() {
       title="Rules & routing"
       note="The rulebook every ruling cites. Read-only here; a rule is confirmed on the engineer's door, beside the evidence for it."
     >
-      <PanelState query={book} of="the rulebook">
+      <QueryState query={book} of="the rulebook">
         {(data) => {
           const needle = query.trim().toLowerCase();
           const shown =
@@ -142,7 +142,7 @@ export function RulesPanel() {
             </div>
           );
         }}
-      </PanelState>
+      </QueryState>
     </PanelFrame>
   );
 }

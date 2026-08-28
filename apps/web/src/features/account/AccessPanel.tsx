@@ -2,7 +2,7 @@ import { useSignedIn } from "../../app/session/signedIn";
 import { usePermissions } from "../../app/session/permissions";
 import { Card } from "../../components/ui";
 import { PanelFrame } from "./AccountPanel";
-import { PanelState } from "./PanelState";
+import { QueryState } from "../../entities/state/QueryState";
 import { GrantList } from "./GrantList";
 
 /**
@@ -56,7 +56,7 @@ export function AccessPanel() {
       title="Access (RBAC)"
       note="What this seat may open and do, as the server projected it."
     >
-      <PanelState query={permissions} of="the permission projection">
+      <QueryState query={permissions} of="the permission projection">
         {(data) => {
           const doors = data.rules.filter((rule) => rule.path !== undefined);
           const actions = data.rules.filter((rule) => rule.path === undefined);
@@ -106,7 +106,7 @@ export function AccessPanel() {
             </div>
           );
         }}
-      </PanelState>
+      </QueryState>
     </PanelFrame>
   );
 }

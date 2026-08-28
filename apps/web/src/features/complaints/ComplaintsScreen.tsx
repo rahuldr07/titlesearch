@@ -6,7 +6,7 @@ import { complaints } from "../../shared/complaintsQueries";
 import { rules as rulebook } from "../../shared/accountQueries";
 import { notify } from "../../shared/notify";
 import { Empty } from "../../components/ui";
-import { ReadState } from "./ReadState";
+import { QueryState } from "../../entities/state/QueryState";
 import { ComplaintList } from "./ComplaintList";
 import { ComplaintDetail } from "./ComplaintDetail";
 import { ReportComplaintCard } from "./ReportComplaintCard";
@@ -86,7 +86,7 @@ export function ComplaintsScreen() {
 
       <div className="grid grid-cols-[minmax(0,420px)_minmax(0,1fr)] gap-12">
         <div className="flex flex-col gap-10">
-          <ReadState query={list} of="the complaints">
+          <QueryState query={list} of="the complaints">
             {(data) => (
               <ComplaintList
                 complaints={data.complaints}
@@ -94,7 +94,7 @@ export function ComplaintsScreen() {
                 onSelect={setSelected}
               />
             )}
-          </ReadState>
+          </QueryState>
 
           {/* Rules 42/43: absent, not disabled. Without the grant there is no
               filing control at all — nothing to dim, nothing withheld. */}
@@ -115,7 +115,7 @@ export function ComplaintsScreen() {
           )}
         </div>
 
-        <ReadState query={rules} of="the rulebook">
+        <QueryState query={rules} of="the rulebook">
           {(book) =>
             current === null ? (
               <Empty
@@ -140,7 +140,7 @@ export function ComplaintsScreen() {
               />
             )
           }
-        </ReadState>
+        </QueryState>
       </div>
     </div>
   );

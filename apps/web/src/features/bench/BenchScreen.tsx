@@ -1,6 +1,6 @@
 import { useRead } from "../../app/useRead";
 import { benchResults } from "../../shared/benchQueries";
-import { BenchReadState } from "./BenchReadState";
+import { QueryState } from "../../entities/state/QueryState";
 import { BenchResults } from "./BenchResults";
 
 /**
@@ -64,9 +64,9 @@ export function BenchScreen() {
       </header>
 
       <div className="flex min-h-0 flex-1 flex-col px-16 pb-14">
-        <BenchReadState query={results} of="the bench run">
+        <QueryState query={results} of="the bench run">
           {(data) => <BenchResults results={data} />}
-        </BenchReadState>
+        </QueryState>
       </div>
     </div>
   );

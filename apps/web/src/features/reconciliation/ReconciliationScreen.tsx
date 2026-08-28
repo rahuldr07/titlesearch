@@ -7,7 +7,7 @@ import { rules as rulebook } from "../../shared/accountQueries";
 import { notify } from "../../shared/notify";
 import { Empty } from "../../components/ui";
 import { ContractGap } from "../../entities/contract/ContractGap";
-import { ReadState } from "./ReadState";
+import { QueryState } from "../../entities/state/QueryState";
 import { DivergenceList } from "./DivergenceList";
 import { DivergenceDetail } from "./DivergenceDetail";
 import { useRuleDivergence } from "./useReconciliation";
@@ -97,7 +97,7 @@ export function ReconciliationScreen() {
       />
 
       <div className="grid grid-cols-[minmax(0,420px)_minmax(0,1fr)] gap-12">
-        <ReadState query={divergences} of="the divergences">
+        <QueryState query={divergences} of="the divergences">
           {(data) => (
             <DivergenceList
               divergences={data.divergences}
@@ -105,9 +105,9 @@ export function ReconciliationScreen() {
               onSelect={setSelected}
             />
           )}
-        </ReadState>
+        </QueryState>
 
-        <ReadState query={rules} of="the rulebook">
+        <QueryState query={rules} of="the rulebook">
           {(book) =>
             current === null ? (
               <Empty
@@ -132,7 +132,7 @@ export function ReconciliationScreen() {
               />
             )
           }
-        </ReadState>
+        </QueryState>
       </div>
     </div>
   );

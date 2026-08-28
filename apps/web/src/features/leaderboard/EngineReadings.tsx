@@ -2,7 +2,7 @@ import type { LeaderboardCell } from "@titlepipe/contract";
 import { useRead } from "../../app/useRead";
 import { engineLeaderboard } from "../../shared/engineQueries";
 import { Empty, Table, type TableColumn } from "../../components/ui";
-import { EngineReadState } from "./EngineReadState";
+import { QueryState } from "../../entities/state/QueryState";
 import { StatedNumber, TagReading } from "./ReadingCells";
 
 /**
@@ -40,7 +40,7 @@ export function EngineReadings() {
       >
         Accuracy by golden tag, per engine, section and jurisdiction
       </h2>
-      <EngineReadState query={readings} of="the engine readings">
+      <QueryState query={readings} of="the engine readings">
         {(data) => (
           <div className="min-h-0 flex-1 overflow-hidden rounded-lg border border-line-strong bg-surface-panel">
             <Table
@@ -59,7 +59,7 @@ export function EngineReadings() {
             />
           </div>
         )}
-      </EngineReadState>
+      </QueryState>
     </section>
   );
 }

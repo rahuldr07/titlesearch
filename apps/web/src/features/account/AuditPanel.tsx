@@ -2,7 +2,7 @@ import { useRead } from "../../app/useRead";
 import { audit } from "../../shared/accountQueries";
 import { Card } from "../../components/ui";
 import { PanelFrame } from "./AccountPanel";
-import { PanelState } from "./PanelState";
+import { QueryState } from "../../entities/state/QueryState";
 
 /**
  * AUDIT LOG — append-only, and read-only BY CONSTRUCTION.
@@ -41,7 +41,7 @@ export function AuditPanel() {
       title="Audit log"
       note="The append-only record. There is no write endpoint in the contract, ever — and no filter, so a missing row means a missing event."
     >
-      <PanelState query={log} of="the audit log">
+      <QueryState query={log} of="the audit log">
         {(data) =>
           data.entries.length === 0 ? (
             <Card>
@@ -81,7 +81,7 @@ export function AuditPanel() {
             </Card>
           )
         }
-      </PanelState>
+      </QueryState>
     </PanelFrame>
   );
 }
