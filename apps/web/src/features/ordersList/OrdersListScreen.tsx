@@ -3,6 +3,7 @@ import { Segment, SegmentedControl } from "../../components/ui";
 import { QueryState } from "../../entities/state/QueryState";
 import { useRead } from "../../app/useRead";
 import { ordersPage } from "../../shared/ordersQueries";
+import { windowLabel } from "./ordersRange";
 import { OrdersSearch } from "./OrdersSearch";
 import { OrdersTable } from "./OrdersTable";
 import { useOrdersBrowse } from "./useOrdersBrowse";
@@ -19,6 +20,9 @@ export function OrdersListScreen() {
   const query = useRead(
     ordersPage({ query: browse.query, filter: browse.filter, page: browse.page }),
   );
+  /* The server's tally for the term it echoed back — absent while the read for
+     a newly settled term is in flight, never a row count. */
+  const matches = browse.query === "" ? undefined : query.data?.total;
 
   return (
     <div className="tp-screen-enter flex h-full min-h-0 flex-col overflow-hidden">
@@ -32,9 +36,9 @@ export function OrdersListScreen() {
               Every order in the pipeline and the delivered record — search, filter, page.
             </p>
           </div>
-          <OrdersSearch browse={browse} />
+          <OrdersSearch browse={browse} matches={matches} />
         </div>
-        <div>
+        <div className="flex flex-wrap items-center justify-between gap-6">
           <SegmentedControl
             label="Which orders to show"
             selectedKeys={new Set([browse.filter])}
@@ -49,6 +53,11 @@ export function OrdersListScreen() {
             <Segment id="waiting">Queries and gaps</Segment>
             <Segment id="delivered">Delivered history</Segment>
           </SegmentedControl>
+          {query.data !== undefined && (
+            <span className="font-mono text-meta leading-close text-ink-secondary">
+              {windowLabel(query.data)}
+            </span>
+          )}
         </div>
       </header>
 

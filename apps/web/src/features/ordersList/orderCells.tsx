@@ -9,7 +9,7 @@ import type { OrderRow } from "@titlepipe/contract";
 export function Address({ row }: { readonly row: OrderRow }) {
   const live = row.stage !== "delivered";
   return (
-    <span className="flex min-w-0 items-baseline gap-4">
+    <span className="flex min-w-0 flex-col justify-center">
       <span
         className={
           live
@@ -19,7 +19,9 @@ export function Address({ row }: { readonly row: OrderRow }) {
       >
         {row.addr}
       </span>
-      <span className="shrink-0 text-label leading-flat text-ink-faint">{row.place}</span>
+      {/* The county and state sit UNDER the address, as the design draws them:
+          beside it they read as one run of one sentence. */}
+      <span className="truncate text-label leading-flat text-ink-faint">{row.place}</span>
     </span>
   );
 }

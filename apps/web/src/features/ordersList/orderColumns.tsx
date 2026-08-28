@@ -17,7 +17,7 @@ const STAGE_LABEL: Readonly<Record<OrderRow["stage"], string>> = {
 export const ORDER_COLUMNS: readonly TableColumn<OrderRow>[] = [
   {
     id: "ref",
-    header: "Ref",
+    header: "Order ref",
     width: "130px",
     cell: (row) => <DataCell>{row.order_ref}</DataCell>,
   },

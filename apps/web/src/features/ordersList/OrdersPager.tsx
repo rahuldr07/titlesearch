@@ -1,5 +1,6 @@
 import type { OrdersPageResponse } from "@titlepipe/contract";
 import { Button } from "../../components/ui";
+import { windowLabel } from "./ordersRange";
 
 /**
  * `total` and `page_count` arrive on the response and are printed as they came.
@@ -13,14 +14,12 @@ export function OrdersPager({
   readonly data: OrdersPageResponse;
   readonly goToPage: (page: number) => void;
 }) {
-  const first = (data.page - 1) * data.page_size + 1;
-  const last = first + data.orders.length - 1;
   const pages = Array.from({ length: data.page_count }, (_, index) => index + 1);
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-6 border-t border-line-subtle bg-control-fill px-8 py-6">
       <span className="font-mono text-meta leading-close text-ink-secondary">
-        {data.total === 0 ? "0 orders" : `Showing ${first}–${last} of ${data.total}`}
+        {windowLabel(data)}
       </span>
       <nav aria-label="Order pages" className="flex items-center gap-3">
         <Button
