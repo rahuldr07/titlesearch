@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useRouterState } from "@tanstack/react-router";
 import type { GrantedPermissionSchema } from "@titlepipe/contract";
 import { DOORS } from "../chrome/doors";
 import { hasDoor } from "../session/permissions";
@@ -34,12 +34,17 @@ export interface Command {
   readonly run: () => void;
 }
 
+const ORDER_PATH = /^\/orders\/([^/]+)/;
+
 export function useCommands(
   rules: readonly GrantedPermissionSchema[] | undefined,
 ): readonly Command[] {
   const navigate = useNavigate();
   const close = useOverlays((s) => s.close);
+  const open = useOverlays((s) => s.open);
   const signOut = useSignedIn((s) => s.signOut);
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const hasOrder = ORDER_PATH.test(pathname);
 
   return useMemo(() => {
     const screens: Command[] = DOORS.filter((door) => hasDoor(rules, door.path)).map(
@@ -55,12 +60,53 @@ export function useCommands(
     );
 
     /*
-     * "Switch user" and "Sign out" are the same client-side act — there is no
-     * auth surface in the contract (see `app/session/signedIn.ts`) — so only
-     * one is offered here rather than two entries that do one thing. The rail's
-     * profile block draws both because the design draws both there.
+     * The three cross-cutting overlays are reachable from here and nowhere
+     * else in the keyboard layer, because only `?` has a key the design gives
+     * it. Inventing chords for the other two would put keys in the shortcut
+     * list that the design never asked for.
+     *
+     * "Order history" is offered ONLY when an order is in the URL. It is not
+     * disabled-but-visible: a command that cannot run is rule 9's boolean
+     * disabled wearing a palette row, and there is no order to name.
      */
     const actions: Command[] = [
+      {
+        id: "action:shortcuts",
+        label: "Keyboard shortcuts",
+        group: "Actions",
+        run: () => {
+          close("palette");
+          open("key-map");
+        },
+      },
+      {
+        id: "action:na-guide",
+        label: "No-value states",
+        group: "Actions",
+        run: () => {
+          close("palette");
+          open("na-guide");
+        },
+      },
+      ...(hasOrder
+        ? [
+            {
+              id: "action:order-history",
+              label: "Order history",
+              group: "Actions" as const,
+              run: () => {
+                close("palette");
+                open("order-history");
+              },
+            },
+          ]
+        : []),
+      /*
+       * "Switch user" and "Sign out" are the same client-side act — there is no
+       * auth surface in the contract (see `app/session/signedIn.ts`) — so only
+       * one is offered here rather than two entries that do one thing. The
+       * rail's profile block draws both because the design draws both there.
+       */
       {
         id: "action:sign-out",
         label: "Sign out",
@@ -73,5 +119,5 @@ export function useCommands(
     ];
 
     return [...screens, ...actions];
-  }, [rules, close, navigate, signOut]);
+  }, [rules, close, open, navigate, signOut, hasOrder]);
 }

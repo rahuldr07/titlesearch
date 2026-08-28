@@ -15,8 +15,12 @@ import { create } from "zustand";
  * that drifts from the first exactly when it matters — during the transition."
  * This store answers a different question: what should be RENDERED. The two
  * agree because the render is what puts `role="dialog"` in the DOM.
+ *
+ * `key-map` is the `?` shortcut list; `na-guide` and `order-history` are the
+ * two other cross-cutting overlays. All four are transient dialogs, so all four
+ * stand the chord layer down while they are up, and Escape pops exactly one.
  */
-export type Overlay = "palette" | "key-map";
+export type Overlay = "palette" | "key-map" | "na-guide" | "order-history";
 
 interface OverlayState {
   stack: readonly Overlay[];

@@ -138,12 +138,23 @@ describe("the two scope values are NOT interchangeable", () => {
       "src/components/ui/dialog.tsx",
       "src/components/ui/popover.tsx",
       "src/app/keyboard/CommandPalette.tsx",
-      "src/app/keyboard/KeyMap.tsx",
+      // The three cross-cutting overlays. `KeyMap.tsx` became
+      // `features/overlays/ShortcutsOverlay.tsx`; the other two are new, and
+      // each declares itself through the kit `Dialog`'s `chordOverlay`.
+      "src/features/overlays/ShortcutsOverlay.tsx",
+      "src/features/overlays/NaGuideOverlay.tsx",
+      "src/features/overlays/OrderHistoryOverlay.tsx",
     ];
     for (const file of OVERLAYS) {
       const source = readFileSync(file, "utf8");
       const owns =
-        source.includes('data-chord-scope="own"') || source.includes("{...chordOverlay}");
+        source.includes('data-chord-scope="own"') ||
+        source.includes("{...chordOverlay}") ||
+        // …or it COMPOSES the kit `Dialog`, which spreads `chordOverlay`
+        // itself and is the first entry in this list. The mark is then one
+        // file away, not absent — and a screen that hand-rolls a scrim instead
+        // still fails, which is the clause that matters.
+        (source.includes("<Dialog") && source.includes("components/ui"));
       expect(owns).toBe(true);
     }
   });

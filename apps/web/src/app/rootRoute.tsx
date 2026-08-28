@@ -7,8 +7,10 @@ import { OrderStrip } from "./chrome/OrderStrip";
 import { ScreenBoundary } from "./chrome/ScreenBoundary";
 import { NotFound } from "./chrome/Unbuilt";
 import { GlobalKeys } from "./keyboard/GlobalKeys";
-import { KeyMap } from "./keyboard/KeyMap";
 import { CommandPalette } from "./keyboard/CommandPalette";
+import { ShortcutsOverlay } from "../features/overlays/ShortcutsOverlay";
+import { NaGuideOverlay } from "../features/overlays/NaGuideOverlay";
+import { OrderHistoryOverlay } from "../features/overlays/OrderHistoryOverlay";
 import { isCaptureSeat } from "./chrome/captureSeat";
 import { SigninScreen } from "../features/signin/SigninScreen";
 
@@ -47,10 +49,15 @@ import { SigninScreen } from "../features/signin/SigninScreen";
  *
  * ══ THE OVERLAYS ARE MOUNTED HERE, ONCE ════════════════════════════════════
  *
- * `KeyMap` and `CommandPalette` are portalled by react-aria, so their position
- * in this tree governs their lifetime, not their placement. Mounted once at the
- * root: an overlay per screen would unmount mid-transition and lose focus
- * return, which `key-map-modal.spec` #4 pins.
+ * The palette and the three cross-cutting overlays — the shortcut list, the
+ * no-value guide and the order history — are portalled by react-aria, so their
+ * position in this tree governs their LIFETIME, not their placement. Mounted
+ * once at the root: an overlay per screen would unmount mid-transition and lose
+ * focus return, which `key-map-modal.spec` #4 pins.
+ *
+ * All four are dialogs, so all four stand the chord layer down while up
+ * (INVARIANT 46 territory) and Escape pops exactly one — the palette and an
+ * overlay never both own focus.
  */
 function RootFrame() {
   const signedIn = useSignedIn((s) => s.account !== null);
@@ -102,7 +109,9 @@ function RootFrame() {
           </main>
         </div>
       </div>
-      <KeyMap />
+      <ShortcutsOverlay />
+      <NaGuideOverlay />
+      <OrderHistoryOverlay />
       {/*
        * NOT MOUNTED AT THE SEAT. The palette is the other navigator, and it was
        * gated on role while the rail was gated on path — so Ctrl+K at the seat

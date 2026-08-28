@@ -47,10 +47,18 @@ import { chordOverlay } from "./overlaySurface";
 export type DialogProps = Omit<ModalOverlayProps, "className" | "children"> & {
   /** The dialog's accessible name. Required: an unnamed dialog is unnavigable. */
   readonly title: string;
+  /** Handle for the invariant specs, which assert on the dialog NODE. */
+  readonly testId?: string | undefined;
   readonly children: ReactNode;
 };
 
-export function Dialog({ title, children, isDismissable = true, ...props }: DialogProps) {
+export function Dialog({
+  title,
+  testId,
+  children,
+  isDismissable = true,
+  ...props
+}: DialogProps) {
   return (
     <ModalOverlay
       {...props}
@@ -62,6 +70,14 @@ export function Dialog({ title, children, isDismissable = true, ...props }: Dial
       <Modal className="tp-enter w-full max-w-280 outline-none">
         <DialogPrimitive
           data-slot="dialog"
+          data-testid={testId}
+          /*
+           * `aria-modal` is set on the NODE because React Aria drops it as a
+           * prop — it marks everything outside the overlay `inert` instead,
+           * which is stronger. `key-map-modal.spec` asserts the attribute, and
+           * an assertion is not weakened to match an implementation.
+           */
+          ref={(node) => node?.setAttribute("aria-modal", "true")}
           className={cx(
             "flex flex-col overflow-hidden rounded-lg bg-surface-panel shadow-modal outline-none",
           )}
