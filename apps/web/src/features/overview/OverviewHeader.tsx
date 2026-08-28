@@ -6,6 +6,11 @@ import { RouteButton } from "../../app/chrome/RouteButton";
  * The header band, drawn to the prototype's two-sided geometry. The kicker pill
  * ("TitleFlow Engine · Production Pipeline") is dropped: nothing in the contract
  * tells this screen which environment it is pointed at.
+ *
+ * The subhead is `LifecycleResponse.scope_note` — the server's sentence about
+ * what this caller can see. The prototype's fixed sentence ends in "SOC 2
+ * delivery certification", a certification claim no member of the contract
+ * backs, and a screen is not the place to assert one on the server's behalf.
  */
 export function OverviewHeader(props: {
   readonly scopeNote: string | undefined;
@@ -15,7 +20,7 @@ export function OverviewHeader(props: {
   return (
     <header className="flex flex-wrap items-start justify-between gap-8">
       <div className="flex min-w-0 flex-col gap-3">
-        <h1 className="text-title font-bold leading-tight text-ink-primary">
+        <h1 className="text-title font-bold leading-tight tracking-tight text-ink-primary">
           Orders overview
         </h1>
         {props.scopeNote !== undefined && (

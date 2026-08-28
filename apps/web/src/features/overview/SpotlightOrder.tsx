@@ -6,8 +6,13 @@ import { RouteButton } from "../../app/chrome/RouteButton";
 
 /**
  * The served order in the prototype's spotlight card: 4px accent rail, 24px
- * padding, solid accent pill, then ref · place, then the meta row. The
- * prototype's SLA chip and "Assigned:" line have no member on `Order`.
+ * padding, solid accent pill, then ref · place, then the meta row.
+ *
+ * Three of the prototype's values have no member on `Order` (`entities.ts:32`)
+ * and are not invented: the SLA chip, the "Assigned:" line, and the street
+ * address the prototype puts ahead of the county. `county` and `state` DO ride
+ * on the shape, so the place line is those two rather than the `jurisdiction`
+ * slug, which is a routing key and not a name a person reads.
  */
 export function SpotlightOrder(props: { readonly order: Order }) {
   const order = props.order;
@@ -23,7 +28,7 @@ export function SpotlightOrder(props: { readonly order: Order }) {
           <div className="flex flex-wrap items-baseline gap-7">
             <OrderRef orderRef={order.external_ref} emphasis="spotlight" />
             <span className="text-subject font-semibold leading-tight text-ink-primary">
-              {order.jurisdiction}
+              {order.county}, {order.state}
             </span>
           </div>
 

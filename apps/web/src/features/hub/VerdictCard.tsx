@@ -30,7 +30,7 @@ export function VerdictCard(props: {
         {/* 40px — the sixth type size, and the one place the product spends it. */}
         <p
           data-testid="verdict"
-          className={`text-verdict font-bold leading-tight ${INK[props.stamp.tone]}`}
+          className={`text-verdict font-bold leading-tight tracking-tight ${INK[props.stamp.tone]}`}
         >
           {props.stamp.label}
         </p>

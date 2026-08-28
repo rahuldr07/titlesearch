@@ -4,6 +4,10 @@ import { Card, cx } from "../../components/ui";
  * One census card, drawn to the prototype's geometry: 18px padding, 11px w600
  * label, 28px w700 figure. The prototype's third line — a note under the
  * figure — has no member on `LifecycleResponse` and is not invented here.
+ *
+ * That refusal, and the four labels this card carries instead of the
+ * prototype's, are ruled on in full by
+ * `docs/frontend/design-2026-08/CONFLICT-overview-stats.md` §5.
  */
 const FIGURE_TONE = {
   primary: "text-ink-primary",

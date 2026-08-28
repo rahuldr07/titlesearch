@@ -1,20 +1,37 @@
 import { Link } from "@tanstack/react-router";
 import type { OrderRow } from "@titlepipe/contract";
+import { RouteButton } from "../../app/chrome/RouteButton";
 
 /**
  * One browse row, drawn to the prototype's seven tracks (130 · 1fr · 170 · 110
- * · 120 · 130 · 120). The whole row is the link, so "Open" is decoration.
+ * · 120 · 130 · 120).
+ *
+ * The prototype's action cell holds TWO controls with two destinations — the
+ * order's history, and the workstation — so both are here. The first is an
+ * anchor laid over the row, which keeps the whole row clickable without nesting
+ * one interactive element inside another; the button follows it in the DOM and
+ * so takes its own clicks.
+ *
+ * The prototype also tints a delivered row's ink and fills the selected one.
+ * Not carried: the row already prints the server's stage word in its own
+ * column, and a second, colour-coded encoding of the same fact would be a
+ * client-side taxonomy over `OrderStage` — rule 7 keeps state colour closed.
  */
 export function RecentOrderRow(props: { readonly row: OrderRow }) {
   const row = props.row;
 
   return (
-    <Link
-      to="/orders/$orderId"
-      params={{ orderId: row.id }}
+    <div
       data-recent-order={row.id}
-      className="tp-state flex h-30 items-center border-b border-line-subtle last:border-b-0 hover:bg-surface-sunken"
+      className="relative flex h-30 items-center border-b border-line-subtle last:border-b-0 hover:bg-surface-sunken"
     >
+      <Link
+        to="/orders/$orderId"
+        params={{ orderId: row.id }}
+        aria-label={`Order ${row.order_ref} — ${row.addr}, ${row.place}`}
+        className="tp-state absolute inset-0"
+      />
+
       <span className="w-65 shrink-0 truncate px-6 font-mono text-meta leading-close tabular-nums text-ink-muted">
         {row.order_ref}
       </span>
@@ -44,14 +61,16 @@ export function RecentOrderRow(props: { readonly row: OrderRow }) {
         {row.due ?? "No due date"}
       </span>
 
-      <span className="flex w-60 shrink-0 justify-end px-6">
-        <span
-          aria-hidden
-          className="inline-flex h-14 items-center rounded-lg border border-action-border bg-action-surface px-6 text-label font-semibold leading-flat text-ink-secondary"
+      <span className="relative flex w-60 shrink-0 justify-end px-6">
+        <RouteButton
+          size="sm"
+          to="/orders/$orderId/review"
+          params={{ orderId: row.id }}
+          aria-label={`Open the review for order ${row.order_ref}`}
         >
           Open →
-        </span>
+        </RouteButton>
       </span>
-    </Link>
+    </div>
   );
 }
