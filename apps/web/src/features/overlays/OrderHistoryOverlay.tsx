@@ -1,7 +1,6 @@
 import type { OrderTimelineEvent } from "@titlepipe/contract";
 import { useRouterState } from "@tanstack/react-router";
 import { Button, Dialog, DialogBody, DialogFooter, Empty } from "../../components/ui";
-import { overlayCap } from "../../components/ui/overlaySurface";
 import { QueryState } from "../../entities/state/QueryState";
 import { useRead } from "../../app/useRead";
 import { orderContext, orderTimeline } from "../../shared/queries";
@@ -18,6 +17,13 @@ const ORDER_PATH = /^\/orders\/([^/]+)/;
  * attestable audit log. Naming it one would be this screen asserting a
  * certification on the server's behalf.
  *
+ * ══ IT TAKES ITS SUBJECT FROM THE STORE FIRST, THE ROUTE SECOND ════════════
+ *
+ * `openOrderHistory(id)` names the order; `/orders/:id` is the fallback for the
+ * order-scoped entry points that never named one. One surface, two ways of
+ * being told — see `app/keyboard/overlays.ts`, which argues why a second
+ * overlay for the All Orders table would have been two copies of this one.
+ *
  * `attend` is the one flag the server owns here, and it renders as a DOT.
  * INVARIANT 66: never a count — a badge reading "3" is a number this screen
  * would have derived from a list length, which is the whole class of defect the
@@ -26,10 +32,11 @@ const ORDER_PATH = /^\/orders\/([^/]+)/;
 export function OrderHistoryOverlay() {
   const open = useOverlayOpen("order-history");
   const close = useOverlays((s) => s.close);
+  const named = useOverlays((s) => s.historySubject);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const orderId = ORDER_PATH.exec(pathname)?.[1] ?? null;
+  const orderId = named ?? ORDER_PATH.exec(pathname)?.[1] ?? null;
 
-  // No order in the URL, no history. The overlay names the order it is about.
+  // Nobody named one and none in the URL: no history. It names its subject.
   // `isOpen` rather than an early return on `open`, so react-aria keeps the
   // exit animation — and `Body` (and its reads) mounts only while it is up.
   if (orderId === null) return null;
@@ -76,7 +83,8 @@ function Body({ orderId }: { readonly orderId: string }) {
               reason="The server holds no events for this order. Events are appended by the pipeline, never by this screen."
             />
           ) : (
-            <ol className={overlayCap}>
+            // 420px — the design's own scroll height for this trail.
+            <ol className="max-h-210 overflow-auto">
               {data.events.map((event, index) => (
                 <Row
                   // `at` + `kind` is not unique — an order can be delivered

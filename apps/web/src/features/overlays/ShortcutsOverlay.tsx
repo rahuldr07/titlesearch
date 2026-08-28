@@ -1,5 +1,4 @@
 import { Button, Dialog, DialogBody, DialogFooter, Kbd } from "../../components/ui";
-import { overlayCap } from "../../components/ui/overlaySurface";
 import { CHORD_SECTIONS, chordsIn, type ChordSection } from "../../app/keyboard/keymap";
 import { useOverlayOpen, useOverlays } from "../../app/keyboard/overlays";
 
@@ -14,9 +13,17 @@ import { useOverlayOpen, useOverlays } from "../../app/keyboard/overlays";
  * dropped: nothing in the contract backs a SOC 2 claim, and a compliance claim
  * printed under a keyboard list is one nobody can cite.
  *
- * What replaces it is the fact that IS true: every row here is a row
- * `GlobalKeys` installs. The previous version of this overlay listed seven
- * review keys (C/E/Q/J/K/Z and double-click) that no screen binds.
+ * What replaces it is the fact that IS true: every row here is a row some layer
+ * installs — `GlobalKeys` for the four global chords, the workstation's own
+ * panes for C/E/Q/J/K/Z (INVARIANT 50: keys are pane-local), and `keymap.test`
+ * fails if the second half ever stops being bound. The design's own list ends
+ * with "Double-Click"; nothing binds it, so it is not printed.
+ *
+ * THE DESIGN'S THIRD SECTION IS NOT KEYS. It lists the four NA states under
+ * "Law 3 & 4-State NA Taxonomy" with the state NAMES in the `kbd` slot — a
+ * taxonomy wearing a keyboard list's clothes. It lives in `NaGuideOverlay`
+ * instead, against the contract's states rather than the design's
+ * (`CONFLICT-na-taxonomy.md`), and this overlay points at it.
  *
  * `data-testid="key-map"` is kept — `key-map-modal.spec` owns that handle, and
  * renaming a test's grip on a component is not a rename, it is a deletion.
@@ -35,7 +42,11 @@ export function ShortcutsOverlay() {
       }}
     >
       <DialogBody>
-        <div className={overlayCap}>
+        {/* 480px, the design's own body height for this modal. NOT
+            `overlayCap` (320px): that constant is the ANCHORED popover's cap
+            and its header says so — a modal centred in the viewport has room
+            the trigger-anchored panel does not, and 320 cut this list mid-row. */}
+        <div className="max-h-240 overflow-auto">
           <div className="flex flex-col gap-10">
             {CHORD_SECTIONS.map((section) => (
               <Section key={section} title={section} />
@@ -44,7 +55,8 @@ export function ShortcutsOverlay() {
         </div>
         <p className="text-meta leading-body text-ink-muted">
           Every row is a key this app installs. A shortcut the screens do not
-          bind cannot be listed here.
+          bind cannot be listed here. The four no-value states are not keys —
+          they are in the no-value guide, which the command palette opens.
         </p>
       </DialogBody>
       <DialogFooter>

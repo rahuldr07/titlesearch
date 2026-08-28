@@ -1,5 +1,4 @@
 import { Button, Dialog, DialogBody, DialogFooter } from "../../components/ui";
-import { overlayCap } from "../../components/ui/overlaySurface";
 import { NoValueChip } from "../../entities/field/NoValueChip";
 import { NO_VALUE, type NoValueRender } from "../../entities/field/noValueStates";
 import { NA_GUIDE, NA_REASONS } from "./naGuideRows";
@@ -38,7 +37,10 @@ export function NaGuideOverlay() {
           Four states about the document, one about the pipeline. They never
           collapse into one dash, and nothing is derived from a null value.
         </p>
-        <div className={overlayCap}>
+        {/* The design caps this modal nowhere and lets the five cards run;
+            480px is the sibling shortcut modal's height and keeps it inside a
+            900px frame. `overlayCap`'s 320 is the anchored popover's number. */}
+        <div className="max-h-240 overflow-auto">
           <div className="flex flex-col gap-6">
             {NA_REASONS.map((render) => (
               <Row key={render} render={render} />

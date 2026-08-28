@@ -14,8 +14,9 @@ import { KEYMAP, type ChordAction } from "./keymap";
  *
  * C/E/Q/J/K/Z belong to the review screen and are installed by that screen, not
  * here — INVARIANT 50 makes keys pane-local, "the innermost layer that can use
- * a key wins." No screen installs them yet, which is why they are absent from
- * the registry rather than listed as bindings that do not fire.
+ * a key wins." They ARE in the registry, marked `install: "review"`, so the
+ * shortcut list can print them; `install()` below skips every row this file is
+ * not the installer of, so naming them here would take a deliberate edit.
  *
  * ══ DEAD UNTIL SIGNED IN, AND "DEAD" IS LITERAL ════════════════════════════
  *
@@ -73,6 +74,8 @@ function install(handlers: Record<ChordAction, (event: KeyboardEvent) => void>):
   const bindings: Record<string, (event: KeyboardEvent) => void> = {};
   const alwaysOn: Record<string, (event: KeyboardEvent) => void> = {};
   for (const spec of KEYMAP) {
+    // A `review` row is the workstation's; its `action` is null by definition.
+    if (spec.install !== "global" || spec.action === null) continue;
     const target = spec.alwaysOn ? alwaysOn : bindings;
     target[spec.chord] = handlers[spec.action];
   }

@@ -99,8 +99,26 @@ export function SigninScreen() {
           </ul>
         </div>
 
+        {/*
+          THE DESIGN'S FOOTER MAKES TWO CLAIMS AND NEITHER SURVIVED VERBATIM.
+          "Sessions are audited" is the one this screen is least entitled to:
+          there is no session surface in the contract at all — no login, no
+          session, no logout — so the sentence would have been a compliance
+          claim printed on the one screen with nothing behind it. Its second
+          line names a firm and a prototype version ("FirstKey Abstracting · v2
+          prototype"); both are fixture branding, and principle 6 refuses a
+          value nobody can cite.
+
+          What replaces them is what the contract actually says. `POST
+          /api/golden/corrections` (endpoints.ts:283-289): "the signer is
+          derived server-side from the authenticated session, never declared by
+          the client… the server stamps the actor". `GET /api/audit`
+          (endpoints.ts:574-577): "read-only by construction — there is no write
+          endpoint in this contract, ever."
+        */}
         <p className="mt-8 text-center font-mono text-label leading-airy text-rail-ink-muted">
-          Sessions are audited · actor identity stamps every ruling
+          The server stamps the actor on every ruling · the audit log is
+          append-only and has no write
         </p>
       </div>
     </div>
