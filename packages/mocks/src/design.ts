@@ -11,7 +11,7 @@ import type {
   ArtifactsResponse,
   CountersignsResponse,
 } from "@titlepipe/contract";
-import { demoOrders } from "./data.js";
+import { demoOrders, demoDeliveries } from "./data.js";
 import { guard } from "./guard.js";
 
 /** Handlers for the surface added under the 2026-08-28 ruling. */
@@ -110,6 +110,23 @@ const composition = (orderId: string): CompositionResponse => ({
   seal_sha256: null,
 });
 
+/**
+ * A stable 64-hex digest per fixture artifact. It is NOT a hash of any file —
+ * nothing here renders a PDF — but it has to differ per version, because two
+ * versions sharing a digest would say the reissue changed nothing.
+ */
+const fixtureDigest = (seed: string): string => {
+  let a = 0x811c9dc5;
+  let out = "";
+  for (let i = 0; out.length < 64; i += 1) {
+    for (const ch of `${seed}#${String(i)}`) {
+      a = Math.imul(a ^ ch.charCodeAt(0), 0x01000193) >>> 0;
+    }
+    out += a.toString(16).padStart(8, "0");
+  }
+  return out.slice(0, 64);
+};
+
 export const designHandlers = [
   http.get("/api/orders", ({ request }) => {
     const url = new URL(request.url);
@@ -148,19 +165,30 @@ export const designHandlers = [
     );
   }),
 
+  /*
+   * One artifact per report actually delivered for this order, so an order with
+   * a v1 and a v2 has two rows and each joins to its own report. Before this
+   * every order got a single `rep_1` row carrying one shared digest — a hash
+   * that hashed nothing and a join that landed on another order's report.
+   */
   http.get("/api/orders/:id/artifacts", ({ params }) => {
+    const orderId = String(params["id"]);
     const body: ArtifactsResponse = {
-      artifacts: [
-        {
-          id: "art_1",
-          report_id: "rep_1",
-          filename: `${String(params["id"])}-title-report-v1.pdf`,
-          media_type: "application/pdf",
-          bytes: 486_112,
-          sha256: "7f8a92b104d3c61e5a0c2f88b17d4e9a3c5b8e21f0d7a64c9b3e5f1082a4c9e6",
-          href: `/api/artifacts/art_1`,
-        },
-      ],
+      artifacts: demoDeliveries
+        .flatMap((delivery) => {
+          // A delivery whose report never rendered has no artifact to certify.
+          const report = delivery.report;
+          if (report === null || report.order_id !== orderId) return [];
+          return [{
+            id: `art_${delivery.report_id}`,
+            report_id: delivery.report_id,
+            filename: `${orderId}-title-report-v${String(report.version)}.pdf`,
+            media_type: "application/pdf",
+            bytes: 486_112 + report.version * 2_048,
+            sha256: fixtureDigest(`${delivery.report_id}:v${String(report.version)}`),
+            href: `/api/artifacts/art_${delivery.report_id}`,
+          }];
+        }),
     };
     return HttpResponse.json(body);
   }),
