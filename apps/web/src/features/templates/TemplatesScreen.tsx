@@ -2,6 +2,7 @@ import { useRead } from "../../app/useRead";
 import { templates } from "../../shared/templateQueries";
 import { QueryState } from "../../entities/state/QueryState";
 import { Empty } from "../../components/ui";
+import { ContractGap } from "../../entities/contract/ContractGap";
 import { TemplateBlocks } from "./TemplateBlocks";
 import { ComposerPreview } from "./ComposerPreview";
 import { ClientSamples } from "./ClientSamples";
@@ -52,6 +53,33 @@ export function TemplatesScreen() {
           design draws are absent rather than disabled.
         </p>
       </header>
+
+      {/* A READ that does not exist, which is a different absence from the
+          write refusal above and so is said separately. */}
+      <ContractGap
+        drawn="The template catalog — a searchable list of templates with client and product filters, each row carrying a name, client, product, status, mapped-field count and version; and the Split Diff view comparing a client's wording against the product baseline (design §Templates, left rail and centre segments)"
+        has={
+          <>
+            One shape. <code className="font-mono text-label">GET /api/templates</code>{" "}
+            returns a single <code className="font-mono text-label">TemplateResponse</code>{" "}
+            (design2.ts:64) — a version, a block list, client samples and the compiled
+            spec. There is no template id, no name, no client or product on it, no
+            status, and no collection endpoint to list or filter. There is no baseline
+            wording either, so a diff would have one side and would invent the other.
+          </>
+        }
+        needs={
+          <>
+            A template collection —{" "}
+            <code className="font-mono text-label">
+              GET /api/templates → {"{ templates: { id, name, client_id, product, status, version }[] }"}
+            </code>{" "}
+            — and, for the diff, the product baseline wording per block beside the
+            client&rsquo;s. `TemplateSample.client_id` (design2.ts:56) is the only
+            client key on the wire today and it scopes a sample, not a template.
+          </>
+        }
+      />
 
       <QueryState query={shape} of="the template shape">
         {(data) =>

@@ -1,5 +1,5 @@
 import type { Escalation } from "@titlepipe/contract";
-import { Empty, Skeleton, cx } from "../../components/ui";
+import { Empty, cx } from "../../components/ui";
 
 /**
  * THE INBOX, DRAWN AS THE PROTOTYPE DRAWS IT.
@@ -29,24 +29,13 @@ import { Empty, Skeleton, cx } from "../../components/ui";
  */
 export function EscalationQueue({
   escalations,
-  loading,
   selectedId,
   onSelect,
 }: {
   readonly escalations: readonly Escalation[];
-  readonly loading: boolean;
   readonly selectedId: string | null;
   readonly onSelect: (id: string) => void;
 }) {
-  if (loading) {
-    return (
-      <div className="flex flex-col gap-4 p-4">
-        <Skeleton className="h-24 w-full" />
-        <Skeleton className="h-24 w-full" />
-      </div>
-    );
-  }
-
   if (escalations.length === 0) {
     return (
       <Empty

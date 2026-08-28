@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useRead } from "../../app/useRead";
 import { rules } from "../../shared/accountQueries";
-import { Badge, Card, Input, Label } from "../../components/ui";
+import { Badge, Card, Input, Label, Segment, SegmentedControl } from "../../components/ui";
 import { PanelFrame } from "./AccountPanel";
 import { QueryState } from "../../entities/state/QueryState";
+import { RulesGaps } from "./RulesGaps";
 
 /**
 
@@ -17,6 +18,7 @@ import { QueryState } from "../../entities/state/QueryState";
 export function RulesPanel() {
   const book = useRead(rules);
   const [query, setQuery] = useState("");
+  const [status, setStatus] = useState<string>("all");
 
   return (
     <PanelFrame
@@ -26,16 +28,15 @@ export function RulesPanel() {
       <QueryState query={book} of="the rulebook">
         {(data) => {
           const needle = query.trim().toLowerCase();
-          const shown =
-            needle === ""
-              ? data.rules
-              : data.rules.filter(
-                  (rule) =>
-                    rule.code.toLowerCase().includes(needle) ||
-                    rule.text.toLowerCase().includes(needle) ||
-                    rule.origin.toLowerCase().includes(needle) ||
-                    (rule.jurisdiction_scope ?? "").toLowerCase().includes(needle),
-                );
+          const shown = data.rules.filter(
+            (rule) =>
+              (status === "all" || rule.status === status) &&
+              (needle === "" ||
+                rule.code.toLowerCase().includes(needle) ||
+                rule.text.toLowerCase().includes(needle) ||
+                rule.origin.toLowerCase().includes(needle) ||
+                (rule.jurisdiction_scope ?? "").toLowerCase().includes(needle)),
+          );
 
           return (
             <div className="flex flex-col gap-8">
@@ -66,11 +67,30 @@ export function RulesPanel() {
                 </span>
               </div>
 
+              {/* The design's STATUS chips, on the server's own `Rule.status`
+                  enum. Its SCOPE chips are not here: "Global / Product /
+                  Jurisdiction" needs a layer no rule carries, and the ask for
+                  one is stated below rather than approximated with the
+                  nullable `jurisdiction_scope`. */}
+              <SegmentedControl
+                label="Filter by status"
+                selectedKeys={new Set([status])}
+                onSelectionChange={(keys) => {
+                  setStatus(String([...keys][0] ?? "all"));
+                }}
+              >
+                <Segment id="all">All</Segment>
+                <Segment id="live">Live</Segment>
+                <Segment id="pending">Pending</Segment>
+                <Segment id="retired">Retired</Segment>
+              </SegmentedControl>
+
               {shown.length === 0 ? (
                 <Card>
                   <p className="text-meta leading-body text-ink-secondary">
                     No rule matches that. This is a filter over the rulebook the server
-                    sent, not an empty rulebook — clear the box to see it again.
+                    sent, not an empty rulebook — clear the box and the status filter to
+                    see it again.
                   </p>
                 </Card>
               ) : (
@@ -109,6 +129,8 @@ export function RulesPanel() {
                   </ul>
                 </Card>
               )}
+
+              <RulesGaps />
             </div>
           );
         }}

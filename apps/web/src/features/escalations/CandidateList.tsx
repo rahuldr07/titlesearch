@@ -1,5 +1,5 @@
 import type { Rule } from "@titlepipe/contract";
-import { Empty, Skeleton } from "../../components/ui";
+import { Empty } from "../../components/ui";
 import { RulePill } from "../../entities/rule/RulePill";
 
 /**
@@ -20,21 +20,7 @@ import { RulePill } from "../../entities/rule/RulePill";
  * selection in this screen's contract, and adding one would be a new
  * affordance rather than the drawing.
  */
-export function CandidateList({
-  candidates,
-  loading,
-}: {
-  readonly candidates: readonly Rule[];
-  readonly loading: boolean;
-}) {
-  if (loading) {
-    return (
-      <div className="flex flex-col gap-4 p-4">
-        <Skeleton className="h-24 w-full" />
-      </div>
-    );
-  }
-
+export function CandidateList({ candidates }: { readonly candidates: readonly Rule[] }) {
   if (candidates.length === 0) {
     return (
       <Empty
