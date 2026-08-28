@@ -62,7 +62,7 @@ test("a screen's padding steps down below lg and is restored above it", async ({
 }) => {
   const padAt = async (size: { width: number; height: number }) => {
     await page.setViewportSize(size);
-    await page.goto("/queue");
+    await page.goto("/orders/ord_demo_1");
     await expect(page.getByTestId("side-rail")).toBeVisible();
     return page.evaluate((sel) => {
       const el = document.querySelector(sel);
@@ -93,7 +93,7 @@ test("a measure shrinks into a narrow column instead of overflowing it", async (
   page,
 }) => {
   await page.setViewportSize(NARROW);
-  await page.goto("/queue");
+  await page.goto("/orders/ord_demo_1");
   await expect(page.getByTestId("side-rail")).toBeVisible();
   const { measured, column, docOverflowX } = await page.evaluate(
     ([paddedSel, measuredSel]) => {
@@ -207,7 +207,7 @@ test("a centred card that outgrows the window keeps its padding and scrolls", as
 test("the masthead steps down on a narrow window", async ({ page }) => {
   const sizeAt = async (width: number) => {
     await page.setViewportSize({ width, height: 800 });
-    await page.goto("/queue");
+    await page.goto("/orders/ord_demo_1");
     const h1 = page.getByRole("heading", { level: 1 }).first();
     await expect(h1).toBeVisible();
     return h1.evaluate((el) => parseFloat(getComputedStyle(el).fontSize));

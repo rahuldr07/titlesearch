@@ -21,7 +21,7 @@ import { expect, test } from "@playwright/test";
  */
 
 test("the ? map is a real dialog: named, and focus moves into it", async ({ page }) => {
-  await page.goto("/queue");
+  await page.goto("/orders/ord_demo_1");
   await expect(page.getByTestId("order-ref")).toBeVisible();
   await page.keyboard.press("?");
   const map = page.getByTestId("key-map");
@@ -38,7 +38,7 @@ test("the ? map is a real dialog: named, and focus moves into it", async ({ page
 });
 
 test("the ? map traps focus — Tab never lands behind the scrim", async ({ page }) => {
-  await page.goto("/queue");
+  await page.goto("/orders/ord_demo_1");
   await expect(page.getByTestId("order-ref")).toBeVisible();
   await page.keyboard.press("?");
   const map = page.getByTestId("key-map");
@@ -61,7 +61,7 @@ test("the ? map traps focus — Tab never lands behind the scrim", async ({ page
 });
 
 test("the queue's keys stand down while the ? map is open", async ({ page }) => {
-  await page.goto("/queue");
+  await page.goto("/orders/ord_demo_1");
   await expect(page.getByTestId("order-ref")).toBeVisible();
   await page.keyboard.press("?");
   await expect(page.getByTestId("key-map")).toBeVisible();
@@ -80,7 +80,7 @@ test("the queue's keys stand down while the ? map is open", async ({ page }) => 
 });
 
 test("closing the map returns focus where it came from", async ({ page }) => {
-  await page.goto("/queue");
+  await page.goto("/orders/ord_demo_1");
   await expect(page.getByTestId("order-ref")).toBeVisible();
   await page.getByTestId("rail-toggle").focus();
   await page.keyboard.press("?");

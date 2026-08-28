@@ -126,7 +126,7 @@ test("refused submits SAY so — escalate, correct, pass all nudge", async ({ pa
 
 // TODO(rebuild) [ORPHAN RULE] — rule: ORPHAN — the queue's pass refusal nudges too.
 test("the queue's pass refusal nudges too", async ({ page }) => {
-  await page.goto("/queue");
+  await page.goto("/orders/ord_demo_1");
   await expect(page.getByTestId("order-ref")).toBeVisible();
   await page.keyboard.press("p");
   await page.locator("input:focus").press("Enter");

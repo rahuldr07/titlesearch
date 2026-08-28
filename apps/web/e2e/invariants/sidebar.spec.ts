@@ -36,7 +36,7 @@ import { expect, test } from "@playwright/test";
 // clause is dropped, not weakened — the amber/gap clause survives on the live
 // `/escalations` door, and the "no counts" rule is asserted in full.
 test("attention rides the doors as dots, never counts", async ({ page }) => {
-  await page.goto("/queue");
+  await page.goto("/orders/ord_demo_1");
   const rail = page.getByTestId("side-rail");
   await expect(rail).toBeVisible();
   // an open escalation pulls an amber dot onto its door (the demo admin holds it)
@@ -54,12 +54,12 @@ test("attention rides the doors as dots, never counts", async ({ page }) => {
 // that still exist as routes: `/ingest` (ops+admin) and `/escalations`
 // (senior+admin). The rule and its assertions are untouched.
 test("doors outside the role's world are ABSENT, not dimmed", async ({ page }) => {
-  await page.goto("/queue");
+  await page.goto("/orders/ord_demo_1");
   await page.getByTestId("account-menu").click();
   await page.getByTestId("role-reviewer").click();
   await page.keyboard.press("Escape");
   // a door the reviewer holds is present…
-  await expect(page.getByTestId("rail-door-/queue")).toBeVisible();
+  await expect(page.getByTestId("rail-door-/orders-list")).toBeVisible();
   // …and doors the reviewer does not hold are ABSENT (count 0), never dimmed
   await expect(page.getByTestId("rail-door-/ingest")).toHaveCount(0);
   await expect(page.getByTestId("rail-door-/escalations")).toHaveCount(0);
@@ -80,7 +80,7 @@ test("the capture seat has no rail — structural blindness stays whole", async 
 // [INVARIANT] — rule: ORPHAN — the navigator folds from the keyboard.
 // (Promoted to INVARIANT by open-rulings Q3.)
 test("[ folds the rail from the keyboard", async ({ page }) => {
-  await page.goto("/queue");
+  await page.goto("/orders/ord_demo_1");
   const rail = page.getByTestId("side-rail");
   await expect(rail).toHaveAttribute("data-collapsed", "0");
   await page.keyboard.press("[");
@@ -117,13 +117,13 @@ test("[ inside a text field is text, not a fold", async ({ page }) => {
 // BRIEF §9.11 forbids localStorage, so it persists via the server preference
 // (GET/PATCH /api/me/preferences). Assertion untouched.
 test("collapse is a persisted UI preference", async ({ page }) => {
-  await page.goto("/queue");
+  await page.goto("/orders/ord_demo_1");
   const rail = page.getByTestId("side-rail");
   await expect(rail).toHaveAttribute("data-collapsed", "0");
   await page.getByTestId("rail-toggle").click();
   await expect(rail).toHaveAttribute("data-collapsed", "1");
   // labels collapse away; the chord key and dots remain
-  await expect(page.getByTestId("rail-door-/queue")).toBeVisible();
+  await expect(page.getByTestId("rail-door-/orders-list")).toBeVisible();
   // survives a reload — via the SERVER preference (GET/PATCH /api/me/preferences).
   // NOT localStorage: BRIEF §9.11 forbids it and check-rules rejects it.
   await page.reload();

@@ -12,7 +12,7 @@ import { expect, test } from "@playwright/test";
 
 // TODO(rebuild) [INVARIANT] — rule: ORPHAN — keyboard IS the navigation layer; ? renders the map. (Promoted to INVARIANT by open-rulings Q3.)
 test("g-sequences jump between screens; ? shows the map", async ({ page }) => {
-  await page.goto("/queue");
+  await page.goto("/orders/ord_demo_1");
   await expect(page.getByTestId("order-ref")).toBeVisible();
   await page.keyboard.press("g");
   await page.keyboard.press("d");

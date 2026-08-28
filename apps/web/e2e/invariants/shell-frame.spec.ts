@@ -40,7 +40,7 @@ test("the page never scrolls — the frame is one viewport tall", async ({ page 
 
 test("main fills the content column rather than shrink-wrapping", async ({ page }) => {
   await page.setViewportSize({ width: 1600, height: 1000 });
-  await page.goto("/queue");
+  await page.goto("/orders/ord_demo_1");
   const rail = await boxOf(page.getByTestId("side-rail"));
   const main = await boxOf(page.locator("main"));
   expect(main.width).toBeGreaterThanOrEqual(1600 - rail.width - 1);
@@ -180,7 +180,7 @@ for (const { url, what } of CROWDED) {
 test("navigating from the profile card closes it; toggling inside it does not", async ({
   page,
 }) => {
-  await page.goto("/queue");
+  await page.goto("/orders/ord_demo_1");
   await page.getByTestId("account-menu").click();
   await expect(page.getByTestId("profile-card")).toBeVisible();
 
@@ -209,7 +209,7 @@ test("navigating from the profile card closes it; toggling inside it does not", 
  * role switcher with no current role stated is a control with no origin.
  */
 test("the profile card names the person and their role", async ({ page }) => {
-  await page.goto("/queue");
+  await page.goto("/orders/ord_demo_1");
   await page.getByTestId("account-menu").click();
   const card = page.getByTestId("profile-card");
   await expect(card).toContainText("L. Vance");
