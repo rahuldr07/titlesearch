@@ -76,10 +76,8 @@ export function EscalationsScreen() {
               setView([...keys][0] === "candidates" ? "candidates" : "queries");
             }}
           >
-            <Segment id="queries">{`QC queries (${String(rows.length)})`}</Segment>
-            <Segment id="candidates">
-              {`Rule candidates (${String(candidates.length)})`}
-            </Segment>
+            <Segment id="queries">QC queries</Segment>
+            <Segment id="candidates">Rule candidates</Segment>
           </SegmentedControl>
 
           <div className="flex flex-col gap-2">
@@ -138,8 +136,9 @@ export function EscalationsScreen() {
             <RuleCandidates
               rules={book}
               canConfirm={mayConfirm}
-              confirming={confirm.isPending}
-              onConfirm={(ruleId) => confirm.mutate(ruleId)}
+              confirming={confirm.pending}
+              refusal={confirm.refusal}
+              onConfirm={confirm.confirm}
             />
           )}
         </div>

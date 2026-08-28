@@ -1,3 +1,4 @@
+import { useCallback, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   EscalationsResponse,
@@ -72,16 +73,42 @@ export function useResolveEscalation(escalationId: string | null) {
 
 /**
  * The engineer gate (handlers.ts:1410) — the ONLY thing that can make a
- * PENDING rule bind. Approving a candidate and drafting one are two different
+ * PENDING rule bind. Drafting a candidate and confirming one are two different
  * acts by two different roles, which is the whole point of `INVARIANTS:38`.
  */
 export function useConfirmRule() {
   const client = useQueryClient();
-  return useMutation({
+  const inFlight = useRef(false);
+  const mutation = useMutation({
     mutationFn: (ruleId: string) => post(`/api/rules/${ruleId}/confirm`, OkResponse),
     onSuccess: () => client.invalidateQueries({ queryKey: ["rules"] }),
-    onError: (error: Error) => notify.error(error.message),
+    onSettled: () => {
+      inFlight.current = false;
+    },
   });
+
+  const { mutate, reset } = mutation;
+  /*
+   * One act files one record. `isPending` is state read at render, so three
+   * clicks inside one frame all see `false` and all three post. The ref moves
+   * synchronously, so the second and third are dropped before they leave.
+   */
+  const confirm = useCallback(
+    (ruleId: string) => {
+      if (inFlight.current) return;
+      inFlight.current = true;
+      reset();
+      mutate(ruleId);
+    },
+    [mutate, reset],
+  );
+
+  return {
+    confirm,
+    pending: mutation.isPending,
+    // The server's sentence, verbatim (INVARIANTS:58-59). Never composed here.
+    refusal: mutation.error === null ? null : mutation.error.message,
+  };
 }
 
 /**
