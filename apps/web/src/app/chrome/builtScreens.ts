@@ -14,6 +14,7 @@ import { LeaderboardScreen } from "../../features/leaderboard/LeaderboardScreen"
 import { BlindSeatScreen } from "../../features/blind/BlindSeatScreen";
 import { BlindStatusScreen } from "../../features/blindStatus/BlindStatusScreen";
 import { TemplatesScreen } from "../../features/templates/TemplatesScreen";
+import { JurisdictionScreen } from "../../features/jurisdiction/JurisdictionScreen";
 
 /**
 
@@ -100,4 +101,5 @@ export const BUILT_SCREENS: Readonly<Record<string, () => JSX.Element>> = {
      keeps its rail. Most of it has no contract surface and says so. */
   "/blind-status": BlindStatusScreen,
   "/templates": TemplatesScreen,
+  "/jurisdiction": JurisdictionScreen,
 };

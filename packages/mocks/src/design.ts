@@ -276,15 +276,23 @@ export const designHandlers = [
   }),
 
   http.get("/api/jurisdictions/:code", ({ params }) => {
+    const code = String(params["code"]);
+    const state = code.slice(-2).toUpperCase();
+    const label =
+      state === "GA" ? "Georgia" : state === "NY" ? "New York" : state === "NC" ? "North Carolina" : state;
     const body: JurisdictionResponse = {
-      code: String(params["code"]),
-      label: "Georgia",
-      baseline_note: "Global baseline plus three Georgia overrides.",
+      code,
+      label,
+      baseline_note:
+        state === "GA"
+          ? "Global baseline plus three Georgia overrides."
+          : `Global baseline. No ${label} overrides are in force.`,
       rules: [
-        { id: "j1", code: "GA-01", text: "Security deeds convey title; report as vesting instruments.", applies: true, scope_note: "statewide" },
-        { id: "j2", code: "GA-02", text: "Plat references are reported from the plat book, not the deed.", applies: true, scope_note: "county of record only" },
+        { id: "j1", code: "GA-01", text: "Security deeds convey title; report as vesting instruments.", applies: state === "GA", scope_note: "Georgia only" },
+        { id: "j2", code: "GA-02", text: "Plat references are reported from the plat book, not the deed.", applies: state === "GA", scope_note: "county of record only" },
         { id: "j3", code: "R13", text: "HOA liens report regardless of age unless expressly released.", applies: true, scope_note: null },
-        { id: "j4", code: "NY-04", text: "Consolidated mortgages report as one instrument.", applies: false, scope_note: "New York only" },
+        { id: "j4", code: "NY-04", text: "Consolidated mortgages report as one instrument.", applies: state === "NY", scope_note: "New York only" },
+        { id: "j5", code: "NC-02", text: "Deeds of trust name a trustee; report the trustee with the beneficiary.", applies: state === "NC", scope_note: "North Carolina only" },
       ],
       null_states: [
         { path: "legal.plat_book_page", label: "Plat book & page", reason: "NOT_PRESENT", renders_as: "N/A — expected in this jurisdiction" },
