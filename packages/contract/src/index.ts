@@ -14,3 +14,5 @@ export * from "./endpoints.js";
 export * from "./authz.js";
 export * from "./workspace.js";
 export * from "./intake.js";
+export * from "./design.js";
+export * from "./design2.js";

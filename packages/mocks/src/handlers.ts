@@ -1,5 +1,6 @@
 import { http, HttpResponse } from "msw";
 import { workspaceHandlers } from "./workspace.js";
+import { designHandlers } from "./design.js";
 import {
   BlindEntriesRequest,
   ConfirmFieldRequest,
@@ -422,6 +423,7 @@ const REQUIRED_ORDER_FIELDS = [
 
 export const handlers = [
   ...workspaceHandlers,
+  ...designHandlers,
   timelineHandler,
   pagesHandler,
   /**

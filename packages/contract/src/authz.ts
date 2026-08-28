@@ -79,9 +79,18 @@ export const PERMISSIONS = [
   // every role keeps the account door in the mock-auth phase (role switch
   // must not lock you out); Clerk narrows this at P1
   { action: "screen.account.enter", path: "/account", roles: EVERYONE },
+  // added under the 2026-08-28 ruling
+  { action: "screen.orders-list.enter", path: "/orders-list", roles: ["ops", "senior", "admin"] },
+  { action: "screen.templates.enter", path: "/templates", roles: ["engineer", "admin"] },
+  { action: "screen.jurisdiction.enter", path: "/jurisdiction", roles: ["senior", "engineer", "admin"] },
 
   /* ── actions ─────────────────────────────────────────────────────────── */
   { action: "order.create", roles: ["ops", "admin"] },
+  { action: "release.compile", roles: ["ops", "admin"] },
+  { action: "release.execute", roles: ["ops", "admin"] },
+  { action: "delivery.reissue", roles: ["ops", "admin"] },
+  { action: "field.countersign", roles: ["senior", "admin"] },
+  { action: "template.edit", roles: ["engineer", "admin"] },
   { action: "order.accept", roles: ["ops", "admin"] },
   { action: "order.pass", roles: ["reviewer", "admin"] },
   {
