@@ -1,40 +1,16 @@
 import type { PipelineStage } from "@titlepipe/contract";
-import { Card, CardBody, CardHeader } from "../../components/ui";
+import { HubSectionLabel } from "./HubSectionLabel";
 
 /**
- * AUTOMATED-OPERATIONS ROWS — design §Screens 4, verbatim: "Automated-
- * operations rows (COUNT STRINGS DERIVE FROM ORDER DATASET)."
+ * The pipeline's own stages, drawn as the prototype's operation rows.
  *
- * ══ THE PARENTHESIS IS THE PART THAT IS REFUSED ════════════════════════════
- *
- * "Count strings derive from order dataset" makes the client the arithmetic
- * authority, and ANALYSIS-screens §5 item 3 names it as one of three explicit
- * statements doing so. `PipelineStage` (`intake.ts:83`) carries `detail`, a
- * SERVER-COMPOSED sentence with the count already in it — "Deskew, de-speckle,
- * OCR · 41 pages" — for the same reason `LifecycleStamp.label` is served: a
- * client-side template that interpolates a number into product copy is a second
- * copy of that copy, and it drifts silently from the first.
- *
- * So every row here prints two server strings and one server enum, and there is
- * no `${}` anywhere in the file. Nothing is counted, nothing is joined, nothing
- * is pluralised.
- *
- * ══ `owner` IS THE ROW'S SUBJECT, AND IT IS A THREE-MEMBER ENUM ════════════
- *
- * `StageOwner` (`intake.ts:80`) is `Automated` | `LLM agent` | `You` — the
- * shop's own division of labour. The design calls the whole block "automated
- * operations", which is true of most rows and false of the two the pipeline
- * stops on for a person. Printing the owner is what keeps a halted human stage
- * from reading as a machine that failed.
- *
- * ══ `phase` DRIVES THE MARK, AND NOTHING INFERS IT ═════════════════════════
- *
- * `StagePhase` is `done` | `running` | `halted` | `waiting`. This component
- * does NOT infer "the next one must be running because the last is done", and
- * does not infer done from a count reaching a total — a stage that processed
- * every page and then failed to write its output is complete by arithmetic and
- * failed in fact, and only the server knows which. Rule 6: one status signal
- * per row, a mark plus weight, no capsule.
+ * Two refusals. The design titles the block "Zero Manual Touch" — false of the
+ * two stages the pipeline stops on for a person, and `StageOwner` (`Automated` |
+ * `LLM agent` | `You`) is what keeps a halted human stage from reading as a
+ * machine that failed, so the owner holds the right-hand column. The design puts
+ * a COUNT there; `PipelineStage` has no count member, and the figure lives
+ * inside the server-composed `detail` sentence — parsing it out would be the
+ * browser re-deriving a number it cannot cite. CONTRACT GAP, not filled here.
  */
 export function AutomatedOperations(props: {
   readonly stages: readonly PipelineStage[] | undefined;
@@ -42,12 +18,11 @@ export function AutomatedOperations(props: {
   readonly gateHalted: boolean | undefined;
 }) {
   return (
-    <Card padding="none">
-      <CardHeader>
+    <section className="flex flex-col gap-6 border-b border-line-subtle p-12">
+      <HubSectionLabel>
         Automated operations
         {props.gateHalted === true && (
-          // SERVER STATE (`intake.ts:99`: "Server state. The screen never infers
-          // a halt from a stage list.").
+          // Server state (`intake.ts:99`) — never inferred from the stage list.
           <span
             data-testid="gate-halted"
             className="rounded-pill border border-state-halt-border bg-state-halt-surface px-5 py-1 text-label font-semibold leading-flat text-state-halt"
@@ -55,40 +30,34 @@ export function AutomatedOperations(props: {
             Gate halted
           </span>
         )}
-      </CardHeader>
+      </HubSectionLabel>
 
       {props.stages === undefined ? (
-        <CardBody>
-          <p className="text-meta leading-body text-ink-muted">
-            The server has not described this order's run.
-          </p>
-        </CardBody>
+        <p className="text-meta leading-body text-ink-muted">
+          The server has not described this order's run.
+        </p>
       ) : (
-        <ol>
+        <ol className="flex flex-col gap-2">
           {props.stages.map((stage) => (
             <li
               key={stage.id}
               data-stage={stage.id}
               data-phase={stage.phase}
-              className="flex items-baseline gap-6 border-b border-line-subtle px-12 py-7 last:border-b-0"
+              className="flex items-center gap-6 rounded-lg p-5 hover:bg-surface-sunken"
             >
               <span
                 aria-hidden
-                className={`w-6 shrink-0 font-mono text-body leading-flat ${MARK[stage.phase].ink}`}
+                className={`flex size-10 shrink-0 items-center justify-center rounded-pill font-mono text-label font-bold leading-flat ${MARK[stage.phase].skin}`}
               >
                 {MARK[stage.phase].glyph}
               </span>
               <span className="sr-only">{stage.phase}</span>
-              <div className="flex min-w-0 flex-1 flex-col gap-1">
-                <span className="text-meta font-semibold leading-close text-ink-primary">
-                  {stage.label}
-                </span>
+              <span className="min-w-0 flex-1 text-meta font-semibold leading-close text-ink-primary">
+                {stage.label}{" "}
                 {/* The server's sentence, with its own count already in it. */}
-                <span className="text-meta leading-body text-ink-secondary">
-                  {stage.detail}
-                </span>
-              </div>
-              <span className="shrink-0 text-label leading-flat text-ink-faint">
+                <span className="font-normal text-ink-faint">· {stage.detail}</span>
+              </span>
+              <span className="shrink-0 text-meta leading-close text-ink-secondary">
                 {stage.owner}
               </span>
             </li>
@@ -97,20 +66,16 @@ export function AutomatedOperations(props: {
       )}
 
       {props.classifierNote !== undefined && (
-        <CardBody className="border-t border-line-subtle py-8">
-          <p className="text-meta leading-body text-ink-secondary">
-            {props.classifierNote}
-          </p>
-        </CardBody>
+        <p className="text-meta leading-body text-ink-secondary">{props.classifierNote}</p>
       )}
-    </Card>
+    </section>
   );
 }
 
 /** Rule 7's closed glyph vocabulary — ✓ ◆ • and nothing else. No icons. */
 const MARK = {
-  done: { glyph: "✓", ink: "text-state-settled" },
-  running: { glyph: "•", ink: "text-action animate-tp-pulse" },
-  halted: { glyph: "◆", ink: "text-state-halt" },
-  waiting: { glyph: "•", ink: "text-ink-muted" },
+  done: { glyph: "✓", skin: "bg-state-settled-surface text-state-settled" },
+  running: { glyph: "•", skin: "bg-action-surface text-action animate-tp-pulse" },
+  halted: { glyph: "◆", skin: "bg-state-halt-surface text-state-halt" },
+  waiting: { glyph: "•", skin: "bg-surface-sunken text-ink-muted" },
 } as const;

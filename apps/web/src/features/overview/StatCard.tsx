@@ -1,25 +1,9 @@
 import { Card, cx } from "../../components/ui";
 
 /**
-
- * ONE STAT CARD, drawn to the prototype's geometry. Measured out of
-
- * `reference-app.html` (the `queueStats` block and the `<sc-for>` that renders it)
-
- * rather than paraphrased out of the README, which is how the previous version came to
-
- * say…
-
- */
-
-/**
-
- * The prototype colours the figure per card — graphite for the two neutral censuses,
-
- * `#8A5B12` for the one that wants attention, `#2E6B4F` for the one that is a moment
-
- * of record. `tone` is that channel, and it is a STATIC property of the…
-
+ * One census card, drawn to the prototype's geometry: 18px padding, 11px w600
+ * label, 28px w700 figure. The prototype's third line — a note under the
+ * figure — has no member on `LifecycleResponse` and is not invented here.
  */
 const FIGURE_TONE = {
   primary: "text-ink-primary",
@@ -37,9 +21,8 @@ export function StatCard(props: {
   readonly tone: StatTone;
 }) {
   return (
-    <Card padding="tight">
+    <Card padding="none" className="p-9">
       <div className="flex flex-col gap-3">
-        {/* Rule 4: sentence case. 11px w600 grey, as the prototype draws it. */}
         <span className="text-label font-semibold leading-flat text-ink-faint">
           {props.label}
         </span>
@@ -48,13 +31,8 @@ export function StatCard(props: {
             The server has not said.
           </span>
         ) : (
-          /*
-           * `tabular-nums` so four cards in a row line their figures up on one
-           * column. The unit noun is the prototype's ("6 orders", not "6") and
-           * is a fact about the figure rather than a claim about it — every one
-           * of these four counts orders. Pluralised, because the prototype
-           * prints "1 orders" and shipping its grammar bug is not fidelity.
-           */
+          /* The unit noun is the prototype's ("6 orders"), pluralised — every
+             one of these four counts orders. */
           <span
             data-stat-value={props.value}
             className={cx(

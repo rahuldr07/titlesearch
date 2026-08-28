@@ -7,18 +7,13 @@ import { usePermissions } from "../../app/session/permissions";
 import { Card } from "../../components/ui";
 import { OverviewHeader } from "./OverviewHeader";
 import { StatCard } from "./StatCard";
-import { RecentOrdersRefusal } from "./RecentOrdersRefusal";
+import { RecentOrders } from "./RecentOrders";
 import { Spotlight } from "./Spotlight";
 import { CENSUS_FIGURES } from "../../entities/lifecycle/census";
 
 /**
-
- * SCREEN 2 — OVERVIEW, at `/` (`authz.ts:62`, `screen.home.enter`, SIGHTED). Typists
-
- * never see it: they go straight to the capture seat (§0.7), which is why `SIGHTED`
-
- * excludes them and why this screen never has to remember to.
-
+ * SCREEN 2 — OVERVIEW, at `/` (`authz.ts:62`, `screen.home.enter`, SIGHTED).
+ * Typists never see it: they go straight to the capture seat (§0.7).
  */
 export function OverviewScreen() {
   const account = useSignedIn((s) => s.account);
@@ -50,12 +45,8 @@ export function OverviewScreen() {
         </Card>
       )}
 
-      {/*
-       * The four labels and tones come from `entities/lifecycle/census`, which
-       * the lifecycle board reads too. They were spelled out twice — rule 11's
-       * "one variable, never two literals" — and matched only because somebody
-       * matched them by hand.
-       */}
+      {/* The four labels and tones come from `entities/lifecycle/census`, which
+          the lifecycle board reads too — one variable, never two literals. */}
       <div className="grid grid-cols-4 gap-8">
         {CENSUS_FIGURES.map((figure) => (
           <StatCard
@@ -69,11 +60,10 @@ export function OverviewScreen() {
 
       <Spotlight order={served.data?.order ?? null} pending={served.isPending} />
 
-      <RecentOrdersRefusal />
+      <RecentOrders />
 
-      {/* The board's own stage rows are the lifecycle screen's subject, not
-          this one's — drawing them here would be two screens counting the same
-          thing. The link is the join. */}
+      {/* The board's own stage rows are the lifecycle screen's subject, not this
+          one's. The link is the join. */}
       {board.data !== undefined && board.data.stages.length > 0 && (
         <p className="text-meta leading-close text-ink-secondary">
           Seven stages hold these orders.{" "}

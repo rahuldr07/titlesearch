@@ -3,15 +3,9 @@ import type { GrantedPermissionSchema } from "@titlepipe/contract";
 import { RouteButton } from "../../app/chrome/RouteButton";
 
 /**
-
- * THE OVERVIEW'S HEADER BAND, drawn to the prototype's geometry.
-
- * `reference-app.html`'s `isQueue` block opens with a two-sided row that the previous
-
- * version of this screen did not have at all: left kicker pill · h1 28px w700 ·
-
- * subhead…
-
+ * The header band, drawn to the prototype's two-sided geometry. The kicker pill
+ * ("TitleFlow Engine · Production Pipeline") is dropped: nothing in the contract
+ * tells this screen which environment it is pointed at.
  */
 export function OverviewHeader(props: {
   readonly scopeNote: string | undefined;
@@ -38,7 +32,7 @@ export function OverviewHeader(props: {
           </RouteButton>
         )}
         {props.role !== undefined && (
-          <span className="flex items-center gap-4 rounded-lg border border-line-strong bg-surface-panel px-7 py-4 text-meta leading-flat text-ink-muted">
+          <span className="flex items-center gap-4 rounded-lg border border-line-strong bg-surface-panel px-7 py-4 text-meta leading-close text-ink-muted">
             <span className="size-4 rounded-pill bg-state-settled" />
             Examiner: {/* Rule 3: a role is an identifier the server gates on. */}
             <span className="font-mono font-semibold text-ink-primary">

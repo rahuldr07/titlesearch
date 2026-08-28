@@ -3,13 +3,7 @@ import type { Order } from "@titlepipe/contract";
 import { Card } from "../../components/ui";
 import { SpotlightOrder } from "./SpotlightOrder";
 
-/**
-
- * THE ACTIVE SPOTLIGHT — the three answers the queue can give, and nothing about how a
-
- * served order is drawn. That is `SpotlightOrder`.
-
- */
+/** The three answers the queue can give. `SpotlightOrder` draws the served one. */
 export function Spotlight(props: {
   readonly order: Order | null;
   readonly pending: boolean;
@@ -24,12 +18,7 @@ export function Spotlight(props: {
     );
   }
 
-  /*
-   * NULL IS THE SERVER'S ANSWER. `QueueNextResponse.order` is nullable, and
-   * nothing being served is a statement about the queue rather than a failure
-   * to load one. The card stays, so the reader can tell "nothing for you" from
-   * "this screen has no spotlight".
-   */
+  // Null is the server's answer, not a failed load, so the card stays.
   if (props.order === null) {
     return (
       <Card>
