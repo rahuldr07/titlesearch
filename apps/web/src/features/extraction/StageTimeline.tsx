@@ -2,72 +2,94 @@ import type { PipelineStage } from "@titlepipe/contract";
 import { cx } from "../../components/ui";
 
 /**
- * THE SEQUENTIAL STAGES TIMELINE (design §Screens 6).
+ * THE SEQUENTIAL STAGES TIMELINE — the design's rail (`/tmp/ref.html`
+ * §isProcessing): a 2px hairline running behind a column of 20px ringed dots,
+ * each row a 16px bold label over a 13px note, with a mono chip on the right.
  *
  * One row per `PipelineStage` (intake.ts:83) in the order the server sent
  * them. The screen does not sort, filter, renumber, or decide that a stage is
  * running because the one before it is done — `phase` arrives already decided
- * and `StagePhase` (intake.ts:77) has exactly four members. A stage that
- * processed every page and then failed to write its output is complete by
- * arithmetic and failed in fact, and only the server knows which.
+ * and `StagePhase` (intake.ts:77) has exactly four members.
  *
  * `label`, `detail` and `owner` are the server's words and are printed
  * verbatim. A client-side `Record<StageId, string>` would be a second copy of
- * product copy drifting silently from the first — the argument intake.ts:275
- * makes for `LifecycleStamp.label`, and the reason the design's own stage
- * captions are not hardcoded here.
+ * product copy drifting silently from the first.
  *
- * ══ THE DESIGN'S "LIVE COUNTS" AND "↺ REPLAY" ══════════════════════════════
+ * ══ WHAT SITS IN THE DESIGN'S RIGHT-HAND CHIP, AND WHAT DOES NOT ═══════════
  *
- * §Screens 6 asks for a live count per row and a Replay control. Neither is
- * built:
+ * The design puts a COUNT there ("38 of 64 pages", "6 engine passes"). There
+ * is no count field on `PipelineStage`: the counts the design draws live
+ * inside `detail`, already composed by the server, and that is where they are
+ * rendered. Splitting a numeral back out of that sentence to set it in mono
+ * would be the client re-authoring a server string.
  *
- *   - `PipelineStage` carries no count field. The counts the design draws live
- *     inside `detail`, already composed by the server, and that is where they
- *     are rendered. Splitting a numeral back out of that sentence to set it in
- *     mono would be the client re-authoring a server string.
- *   - REPLAY IS A MUTATION AND NO ENDPOINT EXISTS. There is no re-run action
- *     in `PERMISSIONS` (authz.ts:59-118) and no replay route in the contract. A
- *     button that re-ran extraction is a state transition the server owns.
+ * So the chip carries `owner` — the one short, fixed-vocabulary fact a stage
+ * row has (`StageOwner`, intake.ts:80). It is sans rather than mono because
+ * rule 3 reserves mono for data, and "LLM agent" is a word.
+ *
+ * REPLAY IS REFUSED. The design draws a "↺ Replay" control beside the header.
+ * It is a MUTATION and no endpoint exists — there is no re-run action in
+ * `PERMISSIONS` (authz.ts:59-118) and no replay route in the contract.
  *
  * Rule 7's glyph vocabulary carries the phase: ✓ done, • running/waiting,
  * ◆ halted. No icons, no fifth mark.
  */
-const PHASE: Readonly<Record<PipelineStage["phase"], { mark: string; ink: string }>> = {
-  done: { mark: "✓", ink: "text-state-settled" },
-  running: { mark: "•", ink: "text-action animate-tp-pulse" },
-  halted: { mark: "◆", ink: "text-state-halt" },
-  waiting: { mark: "•", ink: "text-ink-faint" },
+const PHASE: Readonly<
+  Record<PipelineStage["phase"], { mark: string; ink: string; ring: string }>
+> = {
+  done: { mark: "✓", ink: "text-state-settled", ring: "border-state-settled-muted" },
+  running: { mark: "•", ink: "text-action animate-tp-pulse", ring: "border-action-border" },
+  halted: { mark: "◆", ink: "text-state-halt", ring: "border-state-halt-border" },
+  waiting: { mark: "•", ink: "text-ink-faint", ring: "border-line-strong" },
 };
 
 export function StageTimeline(props: { readonly stages: readonly PipelineStage[] }) {
   return (
-    <ol data-testid="stage-timeline" className="flex flex-col">
+    <ol data-testid="stage-timeline" className="relative flex flex-col gap-10">
+      {/*
+       * The design's rail: 2px, behind the dots, stopping short of the first
+       * and last so it reads as a connector rather than a border. Every dot
+       * below is `relative`, so each paints over it.
+       */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute top-5 bottom-5 left-5 w-1 bg-line-subtle"
+      />
       {props.stages.map((stage) => (
         <li
           key={stage.id}
           data-testid={`stage-${stage.id}`}
           data-phase={stage.phase}
-          className="grid grid-cols-[20px_minmax(0,1fr)_110px] items-baseline gap-6 border-b border-line-subtle py-6 last:border-b-0"
+          className="flex items-start gap-8"
         >
           <span
             aria-hidden
-            className={cx("font-mono text-body leading-flat", PHASE[stage.phase].ink)}
+            className={cx(
+              "relative flex h-10 w-10 shrink-0 items-center justify-center",
+              "rounded-pill border-2 bg-surface-panel font-mono text-label leading-flat",
+              PHASE[stage.phase].ring,
+              PHASE[stage.phase].ink,
+            )}
           >
             {PHASE[stage.phase].mark}
           </span>
-          <span className="flex min-w-0 flex-col gap-2">
-            <span className="font-sans text-meta font-semibold leading-close text-ink-primary">
+          <span className="flex min-w-0 flex-1 flex-col gap-2">
+            <span className="font-sans text-body font-bold leading-close text-ink-primary">
               {stage.label}
             </span>
             {/* The server's sentence, counts and all. Never re-composed. */}
-            <span className="font-sans text-label leading-body text-ink-secondary">
+            <span className="font-sans text-meta leading-body text-ink-muted">
               {stage.detail}
             </span>
             {/* The phase word, for a reader who cannot see the mark. */}
             <span className="sr-only">{stage.phase}</span>
           </span>
-          <span className="font-sans text-label leading-flat text-ink-muted">
+          <span
+            className={cx(
+              "shrink-0 rounded-lg border border-line-strong bg-surface-sunken px-4 py-2",
+              "font-sans text-meta font-bold leading-flat text-ink-secondary",
+            )}
+          >
             {stage.owner}
           </span>
         </li>

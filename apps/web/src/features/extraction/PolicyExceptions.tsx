@@ -33,8 +33,9 @@ import { escalations as escalationsRead } from "../../shared/queries";
  *
  * ══ NO COUNT ══════════════════════════════════════════════════════════════
  *
- * The card prints rows, never "N exceptions". No endpoint serves an exception
- * census for an order, and `escalations.length` after a client-side filter is
+ * The design puts a "2 items" capsule on this card's header bar. It is not
+ * drawn. The card prints rows, never "N exceptions". No endpoint serves an
+ * exception census for an order, and `escalations.length` after a filter is
  * a number nobody could reconcile against the hub — rule 11 wants one
  * variable, and this would be the only literal.
  */
@@ -70,19 +71,25 @@ export function PolicyExceptions(props: { readonly orderId: string }) {
     );
   }
 
+  /*
+   * The design's item: a 13px bold title over an 11px body, items separated by
+   * a hairline and spaced 16px apart. The QUESTION is the title, because the
+   * question is what the exception is; the cluster path and the disposition are
+   * the body beneath it.
+   */
   return (
-    <ul data-testid="policy-exceptions" className="flex flex-col">
+    <ul data-testid="policy-exceptions" className="flex flex-col gap-8">
       {mine.map((exception) => (
         <li
           key={exception.id}
           data-testid={`policy-exception-${exception.id}`}
-          className="flex flex-col gap-3 border-b border-line-subtle py-6 last:border-b-0"
+          className="flex flex-col gap-3 border-b border-line-subtle pb-8 last:border-b-0 last:pb-0"
         >
-          <span className="font-mono text-label leading-flat text-ink-faint">
-            {exception.field_path_cluster}
-          </span>
-          <span className="font-sans text-meta leading-body text-ink-primary">
+          <span className="font-sans text-meta font-bold leading-close text-ink-primary">
             {exception.question}
+          </span>
+          <span className="font-mono text-label leading-flat text-ink-muted">
+            {exception.field_path_cluster}
           </span>
           {exception.resolution === null ? (
             <span className="font-sans text-label leading-body text-state-attend">
@@ -93,7 +100,7 @@ export function PolicyExceptions(props: { readonly orderId: string }) {
             <span className="font-sans text-label leading-body text-ink-secondary">
               {exception.resolution}
               {exception.rule_id !== null && (
-                <span className="ml-4 font-mono text-ink-faint">
+                <span className="ml-4 font-mono text-ink-muted">
                   {exception.rule_id}
                 </span>
               )}
