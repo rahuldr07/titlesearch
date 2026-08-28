@@ -85,8 +85,11 @@ export function RulesPanel() {
                     placeholder="Rule code, text, origin or scope"
                   />
                 </div>
-                {/* A count of what is shown, not a census — it is this list's
-                    own length and says so. */}
+                {/* Both numbers describe THIS LIST, not the shop.
+                    `RulesResponse` carries no server count, so any total here
+                    is the length of what arrived — legal for a list the caller
+                    filters itself, and not INVARIANT 5's census pattern,
+                    because "shown" scopes the claim to the rows on screen. */}
                 <span className="font-mono text-meta leading-close text-ink-muted">
                   {shown.length} of {data.rules.length} shown
                 </span>
@@ -95,9 +98,9 @@ export function RulesPanel() {
               {shown.length === 0 ? (
                 <Card>
                   <p className="text-meta leading-body text-ink-secondary">
-                    No rule matches that. The rulebook still holds{" "}
-                    {data.rules.length} — this is a filter, not an empty
-                    rulebook.
+                    No rule matches that. This is a filter over the rulebook
+                    the server sent, not an empty rulebook — clear the box to
+                    see it again.
                   </p>
                 </Card>
               ) : (

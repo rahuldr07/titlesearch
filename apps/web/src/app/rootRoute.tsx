@@ -9,6 +9,7 @@ import { NotFound } from "./chrome/Unbuilt";
 import { GlobalKeys } from "./keyboard/GlobalKeys";
 import { KeyMap } from "./keyboard/KeyMap";
 import { CommandPalette } from "./keyboard/CommandPalette";
+import { isCaptureSeat } from "./chrome/captureSeat";
 import { SigninScreen } from "../features/signin/SigninScreen";
 
 /**
@@ -58,6 +59,8 @@ function RootFrame() {
   // The permission payload gates every door. Not fetched at all while signed
   // out — asking "what may I do" with no session is a question with no subject.
   const permissions = usePermissions(signedIn);
+  /** INVARIANT 46, asked once — the rail and the palette must agree. */
+  const seat = isCaptureSeat(pathname);
 
   if (!signedIn) {
     return (
@@ -83,9 +86,7 @@ function RootFrame() {
          * draw the full rail for exactly the person most likely to be
          * demonstrating the protocol.
          */}
-        {!pathname.startsWith("/blind") && (
-          <SideRail rules={permissions.data?.rules} />
-        )}
+        {!seat && <SideRail rules={permissions.data?.rules} />}
         <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-surface-app">
           <OrderStrip />
           <main className="flex min-h-0 min-w-0 flex-1 flex-col">
@@ -102,7 +103,13 @@ function RootFrame() {
         </div>
       </div>
       <KeyMap />
-      <CommandPalette rules={permissions.data?.rules} />
+      {/*
+       * NOT MOUNTED AT THE SEAT. The palette is the other navigator, and it was
+       * gated on role while the rail was gated on path — so Ctrl+K at the seat
+       * listed every door including Review. See `chrome/captureSeat.ts`, which
+       * carries the measurement.
+       */}
+      {!seat && <CommandPalette rules={permissions.data?.rules} />}
       <Toaster hotkey={["altKey", "KeyY"]} />
     </>
   );
