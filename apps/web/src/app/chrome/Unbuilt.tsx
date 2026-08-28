@@ -29,7 +29,7 @@ export function Unbuilt(props: {
       className="flex h-full min-h-0 flex-col gap-6 overflow-y-auto p-14"
     >
       <div className="flex flex-col gap-2">
-        <span className="text-label font-semibold uppercase tracking-caps leading-flat text-ink-faint">
+        <span className="text-label font-semibold leading-flat text-ink-faint">
           Not built
         </span>
         <h1 className="text-title font-bold leading-tight text-ink-primary">
@@ -50,7 +50,7 @@ export function Unbuilt(props: {
 function Row(props: { readonly term: string; readonly children: ReactNode }) {
   return (
     <div className="grid grid-cols-[110px_minmax(0,1fr)] gap-8">
-      <dt className="text-label font-semibold uppercase tracking-caps leading-airy text-ink-faint">
+      <dt className="text-label font-semibold leading-airy text-ink-faint">
         {props.term}
       </dt>
       <dd className="text-meta leading-body text-ink-secondary">{props.children}</dd>
@@ -69,7 +69,7 @@ export function NotFound() {
       data-testid="not-found"
       className="flex h-full flex-col items-center justify-center gap-4 p-14"
     >
-      <span className="text-label font-semibold uppercase tracking-caps leading-flat text-ink-faint">
+      <span className="text-label font-semibold leading-flat text-ink-faint">
         No screen at this address
       </span>
       <p className="text-body leading-body text-ink-secondary">

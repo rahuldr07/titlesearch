@@ -54,7 +54,7 @@ function ReadingSide({
       className="flex flex-col gap-4 rounded-md border border-line-strong bg-surface-panel p-6"
     >
       {/* Rule 3: an engine id is data. Rule 4: the rubric is the only caps. */}
-      <span className="font-mono text-label leading-flat tracking-caps text-ink-muted uppercase">
+      <span className="font-mono text-label leading-flat text-ink-muted">
         {reading.engine_id}
       </span>
 

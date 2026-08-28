@@ -37,7 +37,7 @@ export function ContractGap(props: {
         "bg-state-attend-surface px-10 py-8",
       )}
     >
-      <span className="font-sans text-label leading-flat font-bold uppercase tracking-caps text-state-attend">
+      <span className="font-sans text-label leading-flat font-bold text-state-attend">
         Not built — no contract surface
       </span>
       <p className="font-sans text-meta leading-close font-semibold text-ink-primary">

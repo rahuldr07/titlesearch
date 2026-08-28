@@ -97,7 +97,7 @@ function Cell(props: {
 }) {
   return (
     <div className="flex flex-col gap-2">
-      <dt className="text-label font-bold uppercase leading-flat tracking-caps text-ink-faint">
+      <dt className="text-label font-bold leading-flat text-ink-faint">
         {props.term}
       </dt>
       {props.value === null ? (

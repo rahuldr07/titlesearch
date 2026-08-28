@@ -40,7 +40,7 @@ export function BackendGap(props: {
       className="flex flex-col gap-4 rounded-md border border-dashed border-line-strong bg-surface-sunken px-8 py-6"
     >
       <div className="flex flex-wrap items-baseline gap-4">
-        <span className="text-label font-semibold uppercase tracking-caps leading-flat text-ink-faint">
+        <span className="text-label font-semibold leading-flat text-ink-faint">
           Waiting on the backend
         </span>
         <span className="font-sans text-meta font-semibold leading-close text-ink-primary">

@@ -59,7 +59,7 @@ export function EscalationQueue({
                   selected && "bg-surface-sunken",
                 )}
               >
-                <span className="font-mono text-label leading-flat uppercase tracking-caps text-ink-muted">
+                <span className="font-mono text-label leading-flat text-ink-muted">
                   {escalation.field_path_cluster}
                 </span>
                 <span

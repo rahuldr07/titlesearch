@@ -59,7 +59,7 @@ function ScreenFailed({ error, resetErrorBoundary }: FallbackProps) {
       role="alert"
       className="flex h-full flex-col items-start justify-center gap-6 overflow-y-auto p-14"
     >
-      <span className="text-label font-semibold uppercase leading-flat tracking-caps text-state-halt">
+      <span className="text-label font-semibold leading-flat text-state-halt">
         This screen stopped
       </span>
       <p className="max-w-320 text-body leading-body text-ink-secondary">{message}</p>

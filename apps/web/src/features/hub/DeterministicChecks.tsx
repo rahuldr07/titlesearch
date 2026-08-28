@@ -108,7 +108,7 @@ export function DeterministicChecks(props: {
 
               {gap.closed_by === null ? (
                 <div className="flex flex-col gap-3">
-                  <span className="text-label font-bold uppercase leading-flat tracking-caps text-ink-faint">
+                  <span className="text-label font-bold leading-flat text-ink-faint">
                     What the server says could close it
                   </span>
                   {gap.close_options.map((option) => (
@@ -140,7 +140,7 @@ export function DeterministicChecks(props: {
 function Side(props: { readonly term: string; readonly body: string }) {
   return (
     <div className="flex flex-col gap-1">
-      <dt className="text-label font-bold uppercase leading-flat tracking-caps text-ink-faint">
+      <dt className="text-label font-bold leading-flat text-ink-faint">
         {props.term}
       </dt>
       <dd className="text-meta leading-body text-ink-primary">{props.body}</dd>

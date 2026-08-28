@@ -22,7 +22,7 @@ import { Card, Empty } from "../../components/ui";
 export function QueueHeader() {
   return (
     <header className="flex flex-col gap-2">
-      <span className="text-label font-semibold uppercase leading-flat tracking-caps text-ink-faint">
+      <span className="text-label font-semibold leading-flat text-ink-faint">
         Queue
       </span>
       <h1 className="text-title font-bold leading-tight text-ink-primary">

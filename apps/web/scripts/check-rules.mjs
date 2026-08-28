@@ -128,6 +128,41 @@ const BANNED = [
     exemptInAtRule: /@media\s*\(\s*prefers-reduced-motion\s*:\s*reduce\s*\)/,
   },
   {
+    /*
+     * RULE 4, AND THE COMMENT THAT CLAIMED THIS GATE ALREADY EXISTED.
+     *
+     * `sidebar-menu.tsx:54` read: "check-rules.mjs bans `uppercase` outside
+     * rail/sidebar/certificate, so this is the one place it is legal." It did
+     * not. There was no rule 4 check of any kind, and eighteen elements across
+     * nine screens were ALL-CAPS on the strength of a sentence asserting a
+     * mechanism that was never written — the same failure REVIEW-03 names as
+     * the theme of this kit, one layer down.
+     *
+     * Rule 4 has exactly two exceptions and both are identifiable from the
+     * class list itself, which is why this can be mechanical rather than a
+     * judgement call:
+     *
+     *   - sidebar rubrics            -> drawn in the rail register, `text-rail-*`
+     *   - serif certificate headings -> `font-serif`
+     *
+     * Anything else reaching for `uppercase` is either a label that should be
+     * sentence case, or — worse, and this is what the rule actually caught — a
+     * SERVER-SUPPLIED IDENTIFIER recased for decoration. Four components
+     * rendered `judgments.hit_identity` as `JUDGMENTS.HIT_IDENTITY`. That is
+     * not a style choice: the string a reviewer sees stops matching the string
+     * in the rulebook they would search for.
+     *
+     * KNOWN HOLE, stated rather than hidden: this is a line scanner, so a
+     * `className={cx(...)}` split across lines with `uppercase` on one and
+     * `font-serif` on another reads as a violation. Every legal use in the tree
+     * is on one line and should stay that way; if that stops being true, this
+     * needs the class list assembled, not a wider regex.
+     */
+    name: "caps-outside-rubric",
+    re: /^(?!.*(?:text-rail-|font-serif)).*\buppercase\b/,
+    why: "rule 4 is sentence case — ALL-CAPS only in rail rubrics and serif certificate headings",
+  },
+  {
     name: "browser-storage",
     re: /\b(localStorage|sessionStorage)\b|\[\s*["'](local|session)Storage["']\s*\]/,
     why: "nothing in localStorage or sessionStorage (§9.11) — preferences live on the server (§7)",

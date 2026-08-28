@@ -124,7 +124,7 @@ function Group(props: {
 }) {
   return (
     <section className="flex flex-col gap-4">
-      <h3 className="text-label font-bold uppercase leading-flat tracking-caps text-ink-faint">
+      <h3 className="text-label font-bold leading-flat text-ink-faint">
         {props.title}
       </h3>
       <dl className="flex flex-col gap-3">

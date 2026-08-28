@@ -61,7 +61,7 @@ export function FieldRow({ field, selected, onSelect, ruinous }: FieldRowProps) 
       )}
     >
       {/* 140px — the label. 11px, mono, the rubric register (fieldNaming.ts). */}
-      <span className="truncate font-mono text-label leading-flat tracking-caps text-ink-muted">
+      <span className="truncate font-mono text-label leading-flat text-ink-muted">
         {fieldLabel(field.path)}
       </span>
 

@@ -49,7 +49,7 @@ export function EscalationCard({ escalation, actions, className }: EscalationCar
         className,
       )}
     >
-      <span className="font-mono text-label leading-flat tracking-caps text-ink-muted uppercase">
+      <span className="font-mono text-label leading-flat text-ink-muted">
         {escalation.field_path_cluster}
       </span>
 

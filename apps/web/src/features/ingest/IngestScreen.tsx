@@ -119,7 +119,7 @@ export function IngestScreen() {
 function ScreenHeading() {
   return (
     <header className="flex flex-col gap-2">
-      <span className="text-label font-semibold uppercase tracking-caps leading-flat text-ink-faint">
+      <span className="text-label font-semibold leading-flat text-ink-faint">
         Receiving
       </span>
       <h1 className="font-sans text-title font-bold leading-tight text-ink-primary">

@@ -105,7 +105,9 @@ export const RubricIsTrackedCaps: Story = {
   play: async ({ canvas }) => {
     const rubric = await canvas.findByRole("heading", { name: "Pipeline" });
     const style = getComputedStyle(rubric);
-    expect(style.textTransform).toBe("uppercase");
+    // A rail rubric IS ALL-CAPS — this asserts rule 4's legal case, and the
+    // line scanner cannot tell an assertion about a class from the class.
+    expect(style.textTransform).toBe("uppercase"); // rules-allow: asserts rule 4's legal rail-rubric case
     expect(style.fontSize).toBe("11px");
     expect(style.letterSpacing).toBe("1.54px");
     expect(style.fontWeight).toBe("700");

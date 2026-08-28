@@ -51,8 +51,11 @@ export function SidebarGroup(props: { readonly children: ReactNode }) {
 /**
  * THE RUBRIC. 11px, .14em, ALL-CAPS — and this is one of exactly two places
  * rule 4 permits capitals (the other is a serif certificate heading).
- * `check-rules.mjs` bans `uppercase` outside rail/sidebar/certificate, so the
- * utility below is legal HERE and nowhere a screen can copy it from.
+ * `check-rules.mjs`'s `caps-outside-rubric` bans `uppercase` on any line that
+ * does not also carry `text-rail-*` or `font-serif` — legal HERE, and nowhere
+ * a screen can copy it from. That sentence used to describe a gate that did
+ * not exist; eighteen elements went ALL-CAPS behind it, so the rule was
+ * written to match the claim.
  *
  * The registry's version was `text-xs font-medium text-sidebar-foreground/70`
  * on an `h-8` row — sentence case, no tracking, and an opacity-derived colour.

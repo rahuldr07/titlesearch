@@ -54,7 +54,7 @@ export function MetaStrip(props: { readonly pipeline: OrderPipelineResponse }) {
 function Cell(props: { readonly label: string; readonly value: string }) {
   return (
     <div className="flex flex-col gap-1">
-      <dt className="text-label font-semibold uppercase tracking-caps leading-flat text-ink-faint">
+      <dt className="text-label font-semibold leading-flat text-ink-faint">
         {props.label}
       </dt>
       {/* Rule 3: mono for data. Rule 2: `text-subject` is one of the six. */}
