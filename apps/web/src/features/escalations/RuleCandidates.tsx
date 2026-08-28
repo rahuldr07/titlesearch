@@ -44,8 +44,26 @@ export function RuleCandidates({
 
   return (
     <div className="flex flex-col gap-12">
+      {/*
+       * The prototype's right pane opens on a kicker capsule, the pane's own
+       * heading, and one sentence saying what PENDING means. The sentence is
+       * rewritten to the contract's actor: the prototype says "verified by an
+       * Administrator", `authz.ts:105` says `engineer`/`admin`.
+       */}
+      <header className="flex flex-col items-start gap-4">
+        <span className="rounded-pill border border-state-attend-border bg-state-attend-surface px-5 py-2 font-sans text-label leading-flat font-semibold text-state-attend">
+          Continuous rule learning
+        </span>
+        <h1 className="font-sans text-title leading-tight font-bold text-ink-primary">
+          Rule candidate review
+        </h1>
+        <p className="font-sans text-meta leading-body font-medium text-ink-muted">
+          A candidate is non-blocking until an engineer confirms it.
+        </p>
+      </header>
+
       <Card padding="none">
-        <CardHeader>Rule candidates</CardHeader>
+        <CardHeader>Candidates awaiting the engineer gate</CardHeader>
         <CardBody className="flex flex-col gap-10">
           {candidates.length === 0 ? (
             <Empty
@@ -62,13 +80,6 @@ export function RuleCandidates({
                 <RulePill code={rule.code} status={rule.status} />
                 <p className="font-sans text-body leading-body text-ink-primary">
                   {rule.text}
-                </p>
-                {/* Server fields, printed. `jurisdiction_scope: null` is a
-                    STATEMENT — the rule is not scoped — so it is said, not
-                    left blank (rule 14's argument, applied to a scope). */}
-                <p className="font-sans text-meta leading-close text-ink-secondary">
-                  Origin: {rule.origin} · Scope:{" "}
-                  {rule.jurisdiction_scope ?? "every jurisdiction — unscoped"}
                 </p>
                 <RuleEffect code={rule.code} status={rule.status} />
                 {canConfirm && (
