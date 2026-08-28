@@ -97,3 +97,16 @@ function toCitation(field: Field): Citation | null {
     snippet: field.source_snippet,
   };
 }
+
+/**
+ * The value a confirm files. Confirm means "the machine read this correctly",
+ * so the act names the value it confirms; sending null made the server compare
+ * null against a real string and answer "already confirmed with a different
+ * value", which was false. Absent stays null — there is nothing to confirm.
+ */
+export function confirmValue(field: Field): string | null {
+  const value = readCited(field);
+  if (value.kind === "cited") return value.cited.value;
+  if (value.kind === "uncited") return value.value;
+  return null;
+}

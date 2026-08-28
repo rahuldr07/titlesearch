@@ -90,7 +90,8 @@ export function Table<TRow>({ label, rows, columns, rowKey, empty }: TableProps<
         {...chordWidget}
         role="grid"
         aria-label={label}
-        aria-rowcount={rows.length}
+        aria-colcount={columns.length}
+        aria-rowcount={rows.length + 1}
         data-slot="table"
         className="min-w-full"
       >

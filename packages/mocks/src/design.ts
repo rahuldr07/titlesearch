@@ -12,6 +12,7 @@ import type {
   CountersignsResponse,
 } from "@titlepipe/contract";
 import { demoOrders } from "./data.js";
+import { guard } from "./guard.js";
 
 /** Handlers for the surface added under the 2026-08-28 ruling. */
 
@@ -135,6 +136,8 @@ export const designHandlers = [
   ),
 
   http.post("/api/orders/:id/release", async ({ request }) => {
+    const denied = guard(request, "release.execute");
+    if (denied) return denied;
     const body = (await request.json()) as { signature?: string };
     if (!body?.signature) {
       return HttpResponse.json({ error: "a release is refused without its signature" }, { status: 422 });
@@ -163,6 +166,8 @@ export const designHandlers = [
   }),
 
   http.post("/api/deliveries/:id/reissue", async ({ request }) => {
+    const denied = guard(request, "delivery.reissue");
+    if (denied) return denied;
     const body = (await request.json()) as { reason?: string };
     if (!body?.reason) {
       return HttpResponse.json({ error: "a reissue is refused without its reason" }, { status: 422 });
@@ -183,6 +188,8 @@ export const designHandlers = [
   }),
 
   http.post("/api/fields/:id/countersign", async ({ request }) => {
+    const denied = guard(request, "field.countersign");
+    if (denied) return denied;
     const body = (await request.json()) as { signature?: string };
     if (!body?.signature) {
       return HttpResponse.json({ error: "a countersign is refused without a signature" }, { status: 422 });

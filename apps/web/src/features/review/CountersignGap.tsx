@@ -1,13 +1,10 @@
 import { ContractGap } from "../../entities/contract/ContractGap";
 
 /**
-
- * The t1 second read, which cannot be built. `reference-app.html`'s `isReview` draws a
-
- * whole block for it, and it is the most load-bearing thing on the prototype's version
-
- * of this screen: "Second read — T1 exposure · 3 rulings.
-
+ * The countersign shapes landed under the 2026-08-28 ruling — CountersignsResponse,
+ * POST /api/fields/{id}/countersign, and field.countersign in PERMISSIONS. What is
+ * still missing is the workstation UI for it, so this names that rather than
+ * claiming the surface does not exist.
  */
 export function CountersignGap() {
   return (

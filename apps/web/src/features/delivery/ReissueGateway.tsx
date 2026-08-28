@@ -40,23 +40,22 @@ export function ReissueGateway() {
           drawn="Reissue Gateway — radio-button reasons, one-way, closes after v2 (design §Screens 9)"
           has={
             <>
-              No reissue endpoint anywhere in `endpoints.ts`, and no
-              `release.execute`-style action in `PERMISSIONS` (authz.ts:59-118) —
-              `delivery.retry` (authz.ts:118) is the only delivery mutation in
-              the table, and a retry re-sends the same file rather than
-              rendering a new version. `Report` (entities.ts:216-222) is five
-              fields: `id`, `order_id`, `version`, `shape`, `rendered_at`. There
-              is no `reason` and no `supersedes`, so the reason the gate
-              requires has nowhere to live and the v1→v2 link is inferred from
-              version numbers rather than recorded.
+              The surface landed under the 2026-08-28 ruling:{" "}
+              <code className="font-mono text-label">ReissueRequest</code> carries
+              the reason, <code className="font-mono text-label">ReissueResponse</code>{" "}
+              carries <code className="font-mono text-label">supersedes</code>,{" "}
+              <code className="font-mono text-label">
+                POST /api/deliveries/{"{id}"}/reissue
+              </code>{" "}
+              exists, and{" "}
+              <code className="font-mono text-label">delivery.reissue</code> is in
+              PERMISSIONS. The server refuses without a reason.
             </>
           }
           needs={
             <>
-              A reissue endpoint, a permission row for who may execute one, and
-              a home for the reason — `Report.reason` + `Report.supersedes`, or a
-              separate reissue entity. Backend conversation 2
-              (ANALYSIS-screens.md §Conversation 2).
+              The gateway itself — the reason a reissue states, and the act that
+              files it. Not built here yet; the endpoint is ready for it.
             </>
           }
         />

@@ -94,6 +94,14 @@ export function VerdictCard(props: {
          * work.
          */}
         <RouteButton
+          variant="secondary"
+          to="/orders/$orderId/release"
+          params={{ orderId: props.orderId }}
+          data-testid="hub-release"
+        >
+          Release compiler
+        </RouteButton>
+        <RouteButton
           variant="primary"
           to="/orders/$orderId/review"
           params={{ orderId: props.orderId }}

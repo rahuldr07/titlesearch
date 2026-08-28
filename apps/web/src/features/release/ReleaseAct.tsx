@@ -83,7 +83,7 @@ export function ReleaseAct(props: { readonly composed: CompositionResponse }) {
             });
           }}
         >
-          {held === null ? "Sign and release" : "Held — a release needs its signature"}
+          {held === null ? "Sign and release" : held}
         </Button>
       </div>
 

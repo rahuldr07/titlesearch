@@ -5,7 +5,7 @@ import { DecisionCard } from "../../entities/decision/DecisionCard";
 import { nominatedPair } from "./readings";
 import { fieldLabel } from "./fieldNaming";
 import { panelRubric } from "./panelRubric";
-import { readCited } from "../../shared/provenance";
+import { confirmValue, readCited } from "../../shared/provenance";
 import { useReviewWrites } from "./useReviewWrites";
 import { DecisionEditor, type EditorMode } from "./DecisionEditor";
 
@@ -68,7 +68,7 @@ export function DecisionPanel(props: {
             <Button
               variant="primary"
               disabledBecause={writes.pending ? "Filing the last act…" : null}
-              onPress={() => writes.confirm(field.id, null)}
+              onPress={() => writes.confirm(field.id, confirmValue(field))}
             >
               Confirm
             </Button>
@@ -92,6 +92,7 @@ export function DecisionPanel(props: {
 
       {mode !== null && (
         <DecisionEditor
+          key={adopted ?? "blank"}
           mode={mode}
           seeded={adopted}
           pending={writes.pending}
