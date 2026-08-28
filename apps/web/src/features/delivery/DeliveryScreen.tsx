@@ -17,7 +17,7 @@ import { OrderPicker } from "./OrderPicker";
  *
  *     page padding 32px 32px 64px on the app canvas
  *     header: kicker pill, h1 28px w700, note 16px max-width 640px
- *             (SHA-256 chip on the right — refused, see CertifiedDeliverables)
+ *             (the SHA-256 chip is per artifact, see CertifiedDeliverables)
  *     grid minmax(0,1fr) / 340px, gap 24px, align-start
  *       left  column: Certified deliverables, Transmission receipt
  *       right column: Version ledger, Reissue gateway (refused)
@@ -37,12 +37,11 @@ import { OrderPicker } from "./OrderPicker";
  * anticipates it ("both v1 and v2 rows appear — the pair is the defect
  * record"), which is only readable AS a pair once the two are adjacent.
  *
- * ══ NO REISSUE, NO SHA, NO NAMED RECEIPT STEPS ═════════════════════════════
+ * ══ ONE REFUSAL LEFT ═══════════════════════════════════════════════════════
  *
- * Three refusals, each stated where the design put the thing. See
- * `ReissueGateway` (reissue), `CertifiedDeliverables` (SHA and View) and
- * `TransmissionReceipt` (the four steps, blocked on `DeliveryStatus` being
- * `z.string()` and explicitly OPEN).
+ * The reissue gateway and the deliverable digests are built — both have wire
+ * surface now. `TransmissionReceipt` still refuses the design's four named
+ * steps, blocked on `DeliveryStatus` being `z.string()` and explicitly OPEN.
  */
 export function DeliveryScreen() {
   const deliveries = useDeliveries();
@@ -101,7 +100,7 @@ export function DeliveryScreen() {
               </div>
               <div className="flex min-w-0 flex-col gap-12">
                 <VersionLedger versions={current[1]} />
-                <ReissueGateway />
+                <ReissueGateway deliveries={current[1]} />
               </div>
             </div>
           )}
