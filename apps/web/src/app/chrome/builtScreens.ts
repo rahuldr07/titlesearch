@@ -4,6 +4,15 @@ import { OverviewScreen } from "../../features/overview/OverviewScreen";
 import { QueueScreen } from "../../features/queue/QueueScreen";
 import { EscalationsScreen } from "../../features/escalations/EscalationsScreen";
 import { DeliveryScreen } from "../../features/delivery/DeliveryScreen";
+import { DashboardScreen } from "../../features/dashboard/DashboardScreen";
+import { ComplaintsScreen } from "../../features/complaints/ComplaintsScreen";
+import { ReconciliationScreen } from "../../features/reconciliation/ReconciliationScreen";
+import { GoldenScreen } from "../../features/golden/GoldenScreen";
+import { SeedCorrectionScreen } from "../../features/seedCorrection/SeedCorrectionScreen";
+import { BenchScreen } from "../../features/bench/BenchScreen";
+import { LeaderboardScreen } from "../../features/leaderboard/LeaderboardScreen";
+import { BlindSeatScreen } from "../../features/blind/BlindSeatScreen";
+import { BlindStatusScreen } from "../../features/blindStatus/BlindStatusScreen";
 
 /**
  * THE DOORS THAT NOW HAVE A SCREEN.
@@ -60,4 +69,44 @@ export const BUILT_SCREENS: Readonly<Record<string, () => JSX.Element>> = {
    * cannot be named either. Both refusals render as honest gaps in place.
    */
   "/delivery": DeliveryScreen,
+
+  /* The seven stages the server returns, drawn as a board. `LifecycleStage.count`
+     is the only rendered figure — `orders.length` reaches none of them. */
+  "/dashboard": DashboardScreen,
+
+  /* The post-delivery defect loop. A resolution is refused without the rule it
+     terminates in (endpoints.ts:548). */
+  "/complaints": ComplaintsScreen,
+
+  /* Blind-fifty divergences. A ruling with no source is an opinion
+     (endpoints.ts:345), so the citation is a requirement, not a field. */
+  "/reconciliation": ReconciliationScreen,
+
+  /* The measured ground truth. No aggregate accuracy headline anywhere on it —
+     AGENTS.md names one as an anti-pattern, not a missing feature. */
+  "/golden": GoldenScreen,
+
+  /* Correcting the ruler everything else is measured with: source + reason +
+     signature, or it is refused (endpoints.ts:285). */
+  "/seed-correction": SeedCorrectionScreen,
+
+  /* Section x tag against the golden set. Two integers per cell and no
+     division anywhere in the directory — a percentage would be the headline
+     the anti-pattern list forbids. */
+  "/bench": BenchScreen,
+
+  /* Engines: declared capabilities, per-call cost and latency, and a seat
+     change that is refused without its evidence. Never a ranking. */
+  "/leaderboard": LeaderboardScreen,
+
+  /*
+   * THE CAPTURE SEAT. `rootRoute` withholds BOTH navigators here — see
+   * `chrome/captureSeat.ts`. This entry only names the screen; the blindness
+   * is the shell's job and stays there.
+   */
+  "/blind": BlindSeatScreen,
+
+  /* The OPS read of capture, which is a different world from the seat and
+     keeps its rail. Most of it has no contract surface and says so. */
+  "/blind-status": BlindStatusScreen,
 };
