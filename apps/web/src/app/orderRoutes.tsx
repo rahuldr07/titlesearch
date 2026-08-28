@@ -3,6 +3,7 @@ import { rootRoute } from "./rootRoute";
 import { orderSearch } from "./orderSearch";
 import { OrderRoute } from "./chrome/OrderRoute";
 import { WorkstationScreen } from "../features/review/WorkstationScreen";
+import { ReleaseScreen } from "../features/release/ReleaseScreen";
 
 /**
  * THE TWO ORDER-SCOPED ROUTES, split out of `routeTree.tsx` on the 150-line
@@ -98,4 +99,16 @@ function ReviewWorkstationRoute() {
  * routes' guarantee. See `accountSearch.ts`.
  */
 
-export const orderRoutes = [reviewRoute, reviewWorkstationRoute];
+/** `/orders/{id}/release` — the compiler, beneath the same frozen `/orders` door. */
+const releaseRoute = createRoute({
+  getParentRoute: parent,
+  path: "/orders/$orderId/release",
+  component: ReleaseRoute,
+});
+
+function ReleaseRoute() {
+  const { orderId } = releaseRoute.useParams();
+  return <ReleaseScreen orderId={orderId} />;
+}
+
+export const orderRoutes = [reviewRoute, reviewWorkstationRoute, releaseRoute];
