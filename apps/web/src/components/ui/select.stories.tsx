@@ -108,4 +108,28 @@ export const OptionBlocked: Story = {
       </>
     ),
   },
+  /*
+   * THE COUNT IS THE ASSERTION, and its absence is why this shipped broken.
+   *
+   * This story had no `play` at all, so it proved only that the list renders —
+   * and the list DID render, with the blocked option silently dropped from the
+   * DOM by `ListBox`'s collection builder. One live option where there should
+   * be two, and a green story.
+   *
+   * Rule 12: a blocked action renders disabled WITH THE RULE, never hidden. A
+   * reviewer choosing an absence state has to be able to see that a state
+   * exists and is barred; an option that is simply gone is indistinguishable
+   * from one that was never offered.
+   */
+  play: async () => {
+    const options = document.querySelectorAll("[role='option']");
+    expect(options).toHaveLength(2);
+
+    const blocked = document.querySelector("[role='option'][data-disabled-reason]");
+    expect(blocked).not.toBeNull();
+    expect(blocked?.textContent).toContain("Countersign");
+    expect(blocked?.getAttribute("data-disabled-reason")).toBe(
+      "Blocked: a T1 countersign needs a second user.",
+    );
+  },
 };

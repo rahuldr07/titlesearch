@@ -6,6 +6,7 @@ import {
   type ToggleButtonProps,
 } from "react-aria-components";
 
+import { BlockedHint } from "./blockedHint";
 import { cx } from "./cx";
 import { disabledAttributes, type Disablement } from "./disabled";
 import { chordWidget } from "./overlaySurface";
@@ -77,16 +78,35 @@ export function ToggleGroupItem({
   ...props
 }: ToggleGroupItemProps) {
   return (
-    /* NO `BlockedHint`: `ToggleButtonGroup` builds a collection, and a wrapper
-       around an item makes the builder stop seeing it — see `tabs.tsx`. */
-    <ToggleButton
-      {...props}
-      {...disabledAttributes(disabledBecause)}
-      data-slot="toggle-group-item"
-      /* `rounded-sm` = 6 = the track's 10 minus the 4px of padding. Rule 5. */
-      className={cx(toggleClass, "rounded-sm")}
-    >
-      {children}
-    </ToggleButton>
+    /*
+     * `BlockedHint`, matching `segmented-control.tsx`, which wraps this same
+     * primitive.
+     *
+     * This comment previously said the opposite — that `ToggleButtonGroup`
+     * builds a collection and a wrapper makes the builder stop seeing the item.
+     * That is true of `ListBox` and `Tabs` and NOT of this. Probed with one
+     * live and one blocked item in each of the four group controls:
+     *
+     *     Segment (wrapped)             2 of 2 rendered
+     *     ToggleGroupItem (unwrapped)   2 of 2 rendered
+     *     RadioGroupItem (wrapped)      2 of 2 rendered
+     *     Option (wrapped)              1 of 2 rendered   ← the real case
+     *
+     * So this component gave up the hover half of rule 9 for a constraint that
+     * does not apply to it, while a component built on the identical primitive
+     * made the opposite choice. Harmless in the pixels; the danger was the
+     * comment, which reads like a finding and would have been copied.
+     */
+    <BlockedHint reason={disabledBecause}>
+      <ToggleButton
+        {...props}
+        {...disabledAttributes(disabledBecause)}
+        data-slot="toggle-group-item"
+        /* `rounded-sm` = 6 = the track's 10 minus the 4px of padding. Rule 5. */
+        className={cx(toggleClass, "rounded-sm")}
+      >
+        {children}
+      </ToggleButton>
+    </BlockedHint>
   );
 }
