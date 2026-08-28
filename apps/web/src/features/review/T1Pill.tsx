@@ -39,11 +39,11 @@ import type { Field } from "@titlepipe/contract";
  * would mean this file enumerating them — the list problem again, one level
  * down.
  *
- * ⚠ FIXTURE NOTE, STATED RATHER THAN PAPERED OVER: `packages/mocks` ships no
- * `T1-` rule ref on any field today, so no pill renders against the demo order.
- * That is the honest render of what the server currently says, and it is the
- * right failure — a pill drawn from a hardcoded path list would look finished
- * and be a fabrication. Reported as a fixture gap, not worked around.
+ * `packages/mocks` tags three fields (`T1_LENDER`, `T1_PRINCIPAL`,
+ * `T1_JUDGMENT_PARTY` in `data.ts`), which is the design's own count — "the
+ * three ruinous-exposure (T1) rulings". They were untagged until 2026-08-27
+ * and the fixture, not this file, is where they were added: a pill drawn from a
+ * path list in a component would look finished and be a fabrication.
  */
 const T1_PREFIX = "T1-";
 

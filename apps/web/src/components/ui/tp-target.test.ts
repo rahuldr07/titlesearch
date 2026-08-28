@@ -13,7 +13,9 @@ import { readFileSync } from "node:fs";
  * `minHeight: 72px`. This is the regression guard: if the guard clause is ever
  * removed, the silent clobber comes back for every future component.
  */
-const css = readFileSync(new URL("./ui.css", import.meta.url), "utf8");
+// `tp-target` and `tp-ring` moved to a11y.css when ui.css crossed the 150-line
+// gate — they are conformance utilities, not the design's motion language.
+const css = readFileSync(new URL("./a11y.css", import.meta.url), "utf8");
 const target = css.slice(css.indexOf("@utility tp-target"), css.indexOf("@utility tp-ring"));
 
 test("tp-target yields to a component that declared its own height floor", () => {

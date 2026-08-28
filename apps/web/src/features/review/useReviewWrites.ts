@@ -70,11 +70,6 @@ export function useReviewWrites(orderId: string) {
   }, [client, orderId]);
 
   /**
-   * Wrap a mutation so it obeys both rules without each call site remembering
-   * to. `run` is the request; `after` is what SUCCESS does — advancing
-   * selection, closing an editor — and it is never called on a refusal.
-   */
-  /**
    * Whether an act is in flight, FOR RENDERING ONLY. The duplicate guard is the
    * ref above and must stay the ref: this is state, it is read at render time,
    * and `review-refusals.spec` dispatches three clicks in one tick precisely to

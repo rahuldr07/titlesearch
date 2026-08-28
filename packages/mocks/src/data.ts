@@ -333,6 +333,30 @@ export const demoOrder2: Order = demoOrderEntity(rowOrThrow("ord_demo_2"));
 /** The live review order — the package `demoFields` and `demoPages` describe. */
 const oid = "ord_demo_1";
 
+/**
+ * THE THREE T1 RULE REFS — RUINOUS EXPOSURE, TAGGED BY THE RULEBOOK.
+ *
+ * The design's review screen draws "T1 pills on ruinous fields" and its own
+ * copy names the count: "the three ruinous-exposure (T1) rulings await a second
+ * examiner's countersign — no single-examiner release"
+ * (ANALYSIS-behavior §5, quoted from the reference prototype).
+ *
+ * WHICH fields carry the exposure is a RULEBOOK judgement, so it rides on
+ * `rule_refs` where every other rulebook judgement rides, and the review screen
+ * reads the tag rather than holding a path list (`features/review/T1Pill.tsx`
+ * argues that at length). Tagging them HERE is what makes the pill server-said
+ * rather than browser-decided.
+ *
+ * The three are the three the rulebook already has rules about, not a
+ * selection made to fill the design's number:
+ *   - the lender of record — a wrong lender is a wrong lien holder;
+ *   - the secured principal — S5 words-over-numerals exists for this field;
+ *   - the judgment party — R13's whole subject is whether a hit is OUR owner.
+ */
+const T1_LENDER = "T1-lien-holder-identity";
+const T1_PRINCIPAL = "T1-secured-principal";
+const T1_JUDGMENT_PARTY = "T1-judgment-party-identity";
+
 export const demoFields: Field[] = [
   // ---- OWNER ---------------------------------------------------------------
   {
@@ -522,7 +546,7 @@ export const demoFields: Field[] = [
     source_line_coords: null,
     engine_id: null,
     engine_confidence_raw: null,
-    rule_refs: [],
+    rule_refs: [T1_LENDER],
     approved_by: null,
     approved_at: null,
     asking: "Is the lender SOUTHSTONE MORTGAGE LLC?",
@@ -570,7 +594,7 @@ export const demoFields: Field[] = [
     source_line_coords: null,
     engine_id: null,
     engine_confidence_raw: null,
-    rule_refs: ["S5-words-over-numerals"],
+    rule_refs: [T1_PRINCIPAL, "S5-words-over-numerals"],
     approved_by: null,
     approved_at: null,
     asking: "Confirm the original principal amount of the security deed.",
@@ -722,7 +746,7 @@ export const demoFields: Field[] = [
     source_line_coords: null,
     engine_id: null,
     engine_confidence_raw: null,
-    rule_refs: [],
+    rule_refs: [T1_JUDGMENT_PARTY],
     approved_by: null,
     approved_at: null,
     asking: "Is Q. T. FENWICK & ASSOC., P.C. the plaintiff's attorney of record?",
