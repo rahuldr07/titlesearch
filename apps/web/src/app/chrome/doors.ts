@@ -13,38 +13,19 @@ export interface Door {
 }
 
 export const DOORS: readonly Door[] = [
-  // ── Pipeline ────────────────────────────────────────────────────────────
   { path: "/", label: "Overview", section: "pipeline" },
   { path: "/orders-list", label: "All orders", section: "pipeline" },
 
-  // ── Active order ────────────────────────────────────────────────────────
   { path: "/orders", label: "Overview hub", section: "order" },
+  { path: "/ingest", label: "Intake & upload", section: "order" },
+  { path: "/delivery", label: "Delivered", section: "order" },
 
-  // ── Platform tools ──────────────────────────────────────────────────────
   { path: "/escalations", label: "QC & escalations", section: "platform" },
   { path: "/templates", label: "Templates architect", section: "platform" },
   { path: "/account", label: "Settings & RBAC", section: "platform" },
 
-  /*
-   * OFF THE RAIL, STILL REACHABLE. The design draws eleven rail entries; these
-   * are doors `authz.ts` grants that it does not draw. `more` is absent from
-   * SECTION_ORDER, so the rail skips them while `keyboard/commands.ts` — which
-   * reads DOORS whole — still offers every one in the palette. Removing them
-   * from the table would make real screens unreachable; leaving them on the
-   * rail is the clutter the design does not have.
-   */
-  { path: "/queue", label: "Queue", section: "more" },
-  { path: "/ingest", label: "Intake", section: "more" },
-  { path: "/dashboard", label: "Lifecycle", section: "more" },
-  { path: "/delivery", label: "Delivery", section: "more" },
-  { path: "/complaints", label: "Complaints", section: "more" },
-  { path: "/reconciliation", label: "Reconciliation", section: "more" },
-  { path: "/golden", label: "Golden set", section: "more" },
-  { path: "/seed-correction", label: "Seed correction", section: "more" },
-  { path: "/bench", label: "Bench", section: "more" },
-  { path: "/leaderboard", label: "Engines", section: "more" },
+  /* Off the rail: the design reaches these by role switch, not by a door. */
   { path: "/blind", label: "Capture seat", section: "more" },
-  { path: "/blind-status", label: "Capture status", section: "more" },
   { path: "/jurisdiction", label: "Jurisdiction", section: "more" },
 ];
 
