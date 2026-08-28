@@ -7,8 +7,14 @@ import { Badge, Card, CardBody, CardHeader, cx } from "../../components/ui";
  * The prototype's card: header with "Law 9 · append-only" on the right, then
  * bordered rows at the 10px rung, each carrying the version numeral in mono, a
  * tinted status capsule, a mono meta line, and — where there is one — a reason
- * line beneath. That shape is kept; the row's "View →" is not, for the same
- * reason `CertifiedDeliverables` has no View: nothing routes to a report file.
+ * line beneath. That shape is kept.
+ *
+ * The row's "View →" is not repeated here, and the reason is placement rather
+ * than absence: `Artifact.href` (design.ts:121) is real and
+ * `CertifiedDeliverables` already draws a View on it, on a row that carries the
+ * same version numeral this one does. A second link to the same file, from a
+ * card whose subject is the ledger rather than the file, is one control with
+ * two homes.
  *
  * ══ SUPERSESSION IS READ OFF THE SERVER'S ROWS, NOT DECIDED HERE ═══════════
  *
@@ -87,10 +93,14 @@ export function VersionLedger({
                 </span>
               )}
               {superseded && (
-                /* The prototype's "Reason:" line. The reason a reissue was
-                   ordered has nowhere to live in the contract (see
-                   `ReissueGateway`), so what stands here is the only thing
-                   this row's position actually means. */
+                /* The prototype's "Reason:" line. CONTRACT GAP: the reason a
+                   reissue stated is accepted (`ReissueRequest.reason`,
+                   design.ts:136) and echoed once (`ReissueResponse.reason`,
+                   :141), but nothing persists it — `Report` (entities.ts:216)
+                   is five fields and carries no `reissue_reason` and no
+                   `supersedes`. `Report.supersedes: number | null` and
+                   `Report.reissue_reason: string | null` would close it. Until
+                   then the row states only what its position actually means. */
                 <span className="font-sans text-label leading-close text-ink-secondary">
                   A later version exists and this row is still in the record.
                 </span>

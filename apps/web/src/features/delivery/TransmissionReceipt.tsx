@@ -79,27 +79,36 @@ export function TransmissionReceipt({ delivery }: { readonly delivery: DeliveryW
             <ClerkStamp caption="Transmitted" detail={`${delivery.method} · ${delivery.delivered_at}`} />
           </div>
         )}
-
-        <ContractGap
-          drawn="Signed → hash → transmitted → acked, each timestamped (design §Screens 9)"
-          has={
-            <>
-              `DeliveryStatus` is `z.string()` (enums.ts:118) and enums.ts:112-115
-              marks it OPEN until the Flask models are ported, so the four steps
-              cannot be named. `Delivery` also carries two instants, not four:
-              `attempted_at` and `delivered_at` (entities.ts:231-232). The status
-              in the header is the server's own string, printed.
-            </>
-          }
-          needs={
-            <>
-              The real `DeliveryStatus` members, and — if the receipt is a
-              sequence rather than a state — a per-step record with its own
-              timestamp. Root AGENTS.md: do not build past `OPEN`.
-            </>
-          }
-        />
       </CardBody>
     </Card>
+  );
+}
+
+/**
+ * The gap belongs to the ENDPOINT, not to a row, so it is stated once per order
+ * rather than once per delivery. A reissued order draws two receipts, and the
+ * same paragraph printed twice under them reads as two separate findings.
+ */
+export function ReceiptGap() {
+  return (
+    <ContractGap
+      drawn="Signed → hash → transmitted → acked, each timestamped (design §Screens 9)"
+      has={
+        <>
+          `DeliveryStatus` is `z.string()` (enums.ts:118) and enums.ts:112-115
+          marks it OPEN until the Flask models are ported, so the four steps
+          cannot be named. `Delivery` also carries two instants, not four:
+          `attempted_at` and `delivered_at` (entities.ts:231-232). The status in
+          each header is the server's own string, printed.
+        </>
+      }
+      needs={
+        <>
+          The real `DeliveryStatus` members, and — if the receipt is a sequence
+          rather than a state — a per-step record with its own timestamp. Root
+          AGENTS.md: do not build past `OPEN`.
+        </>
+      }
+    />
   );
 }

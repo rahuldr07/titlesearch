@@ -3,7 +3,7 @@ import type { DeliveryWithReport } from "@titlepipe/contract";
 import { Empty, Skeleton } from "../../components/ui";
 import { useDeliveries } from "./useDeliveries";
 import { CertifiedDeliverables } from "./CertifiedDeliverables";
-import { TransmissionReceipt } from "./TransmissionReceipt";
+import { ReceiptGap, TransmissionReceipt } from "./TransmissionReceipt";
 import { VersionLedger } from "./VersionLedger";
 import { ReissueGateway } from "./ReissueGateway";
 import { OrderPicker } from "./OrderPicker";
@@ -97,6 +97,7 @@ export function DeliveryScreen() {
                 {current[1].map((delivery) => (
                   <TransmissionReceipt key={delivery.id} delivery={delivery} />
                 ))}
+                <ReceiptGap />
               </div>
               <div className="flex min-w-0 flex-col gap-12">
                 <VersionLedger versions={current[1]} />

@@ -2,7 +2,9 @@ import { useRef, useState } from "react";
 import { TextField } from "react-aria-components";
 import type { CompositionResponse } from "@titlepipe/contract";
 import { Alert, Button, Input, Label } from "../../components/ui";
+import { RouteButton } from "../../app/chrome/RouteButton";
 import { notify } from "../../shared/notify";
+import { CompositionJson } from "./CompositionJson";
 import { releaseHold, useRelease } from "./useRelease";
 
 /**
@@ -20,6 +22,21 @@ import { releaseHold, useRelease } from "./useRelease";
  * that sentence for ours before it was ever spoken. What IS held is what the
  * client can know about itself: an unsigned act, an act in flight, and a sheet
  * already sealed.
+ *
+ * ══ THE WAY OUT IS A DOOR, NOT A DIAGNOSIS ═════════════════════════════════
+ *
+ * The prototype makes its gate line a button to "the step that is blocking
+ * release", choosing the destination by counting open fields and unread
+ * countersigns. That choice is a re-derivation of release resolution and is not
+ * made here. What IS offered is the workstation itself — one fixed door to
+ * where every gate's work is done — so a reader told the gate is closed is not
+ * left on a screen with no exit. Which gate, and what it wants, is the server's
+ * sentence in the alert and the panel above it.
+ *
+ * The design's "Template Verified ✓" chip beside it is not drawn. It is a
+ * verification claim about the template, and `CompositionResponse` carries
+ * `template_version` — a name, not a verdict on it. The version is printed on
+ * the sheet's dateline, without the tick.
  */
 export function ReleaseAct(props: { readonly composed: CompositionResponse }) {
   const [signature, setSignature] = useState("");
@@ -36,6 +53,16 @@ export function ReleaseAct(props: { readonly composed: CompositionResponse }) {
           tone="halt"
           title="The release gate is closed"
           message={props.composed.blocked_reason}
+          action={
+            <RouteButton
+              size="sm"
+              to="/orders/$orderId/review"
+              params={{ orderId: props.composed.order_id }}
+              data-testid="release-open-workstation"
+            >
+              Open the review workstation →
+            </RouteButton>
+          }
         />
       )}
 
@@ -64,6 +91,8 @@ export function ReleaseAct(props: { readonly composed: CompositionResponse }) {
             />
           </TextField>
         </div>
+
+        <CompositionJson composed={props.composed} />
 
         <Button
           variant="primary"
