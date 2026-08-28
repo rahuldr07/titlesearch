@@ -44,12 +44,15 @@ export function ReleaseScreen(props: { readonly orderId: string }) {
               </div>
 
               <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-                {/* A scrolling pane must be keyboard-reachable and named. */}
+                {/* A scrolling pane must be keyboard-reachable and named.
+                    `items-start` because the default stretch pins the sheet to
+                    the viewport's height and the last blocks render off the
+                    paper — a deliverable that runs past its own page. */}
                 <div
                   tabIndex={0}
                   role="region"
                   aria-label="Composed report"
-                  className="tp-state flex min-h-0 flex-1 justify-center overflow-y-auto bg-surface-app p-16"
+                  className="tp-state flex min-h-0 flex-1 items-start justify-center overflow-y-auto bg-surface-app p-16"
                 >
                   <ManifestSheet composed={data} />
                 </div>

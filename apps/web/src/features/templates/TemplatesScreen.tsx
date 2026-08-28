@@ -11,11 +11,14 @@ import { ExportSpec } from "./ExportSpec";
  * TEMPLATES ARCHITECT — the report shape, the clients scoped to it, the compiled
  * spec and the running order the composer will emit.
  *
- * THE EDITOR THE DESIGN DRAWS IS NOT HERE. The prototype carries a wording
- * textarea, a token palette, null-state inputs, "+ new template", "+ add custom
- * section", a remove ✕ and a save button. `template.edit` is a real grant
- * (`authz.ts:93`) but no write endpoint exists, so every one of those is ABSENT
- * rather than disabled — INVARIANT 42/43. Said once, below, and nowhere else.
+ * THE EDITOR THE DESIGN DRAWS IS NOT HERE, AND NEITHER IS ITS "INITIALIZE
+ * TEMPLATE WORKSPACE" DIALOG. The prototype carries a wording textarea, a token
+ * palette, null-state inputs, "+ new template", "+ add custom section", a
+ * remove ✕, a save button, and a create form whose client list is four named
+ * companies the contract never mentions. `template.edit` is a real grant
+ * (`authz.ts:93`) but no write endpoint exists — nothing creates a template and
+ * nothing edits one — so every one of those is ABSENT rather than disabled,
+ * INVARIANT 42/43. Said once, below, and nowhere else.
  */
 export function TemplatesScreen() {
   const shape = useRead(templates);
@@ -44,8 +47,9 @@ export function TemplatesScreen() {
           copy.
         </p>
         <p className="max-w-320 font-sans text-meta leading-body text-ink-muted">
-          Read-only: editing a template has no endpoint, so the wording editor and the
-          block controls the design draws are absent rather than disabled.
+          Read-only: neither creating nor editing a template has an endpoint, so the
+          initialize-workspace dialog, the wording editor and the block controls the
+          design draws are absent rather than disabled.
         </p>
       </header>
 
@@ -64,7 +68,7 @@ export function TemplatesScreen() {
               </div>
               <div className="flex min-w-0 flex-col gap-8">
                 <ClientSamples samples={data.samples} />
-                <ExportSpec spec={data.export_spec} />
+                <ExportSpec spec={data.export_spec} version={data.version} />
               </div>
             </div>
           )

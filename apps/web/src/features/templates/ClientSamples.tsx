@@ -1,10 +1,12 @@
 import type { TemplateSample } from "@titlepipe/contract";
 import { Card, CardHeader, CardBody, Empty, InnerPanel } from "../../components/ui";
+import { SampleInspector } from "./SampleInspector";
 
 /**
  * SCOPED CLIENT SAMPLES — one sample per client, and scoped is the point: a
  * sample belongs to the client it was drawn for and is never shown as evidence
- * for another.
+ * for another. `Inspect` opens the sample inspector, which prints the four
+ * fields this record has and names the shapes the design's other panels want.
  */
 export function ClientSamples({ samples }: { readonly samples: readonly TemplateSample[] }) {
   return (
@@ -24,9 +26,12 @@ export function ClientSamples({ samples }: { readonly samples: readonly Template
               <li key={sample.client_id}>
                 <InnerPanel padding="tight">
                   <div className="flex flex-col gap-3">
-                    <span className="font-sans text-meta leading-close font-semibold text-ink-primary">
-                      {sample.client}
-                    </span>
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="font-sans text-meta leading-close font-semibold text-ink-primary">
+                        {sample.client}
+                      </span>
+                      <SampleInspector sample={sample} />
+                    </div>
                     <div className="flex flex-wrap items-baseline justify-between gap-4">
                       {/* Rule 3: the client key and the shape letter are identifiers. */}
                       <span className="font-mono text-label leading-flat text-ink-muted">
