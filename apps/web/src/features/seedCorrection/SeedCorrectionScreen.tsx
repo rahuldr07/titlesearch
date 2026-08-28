@@ -7,6 +7,7 @@ import { Alert, Card, ComboBox, Empty, Option } from "../../components/ui";
 import { CorrectionPreamble } from "./CorrectionPreamble";
 import { CurrentSeed } from "./CurrentSeed";
 import { CorrectionForm } from "./CorrectionForm";
+import { RelatedDoor } from "../../app/chrome/RelatedDoor";
 
 /**
  * SCREEN — SEED CORRECTION, at `/seed-correction` (`authz.ts`,
@@ -117,6 +118,7 @@ export function SeedCorrectionScreen() {
           )}
         </div>
       )}
+      <RelatedDoor to="/golden">The golden set these corrections are measured against →</RelatedDoor>
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { useSignedIn } from "../../app/session/signedIn";
 import { Alert, Card, Empty } from "../../components/ui";
 import { GoldenRow } from "./GoldenRow";
 import { GoldenPreamble } from "./GoldenPreamble";
+import { RelatedDoor } from "../../app/chrome/RelatedDoor";
 
 /**
  * SCREEN — THE GOLDEN SET, at `/golden` (`authz.ts:72`, `screen.golden.enter`,
@@ -102,6 +103,7 @@ export function GoldenScreen() {
           </ul>
         </Card>
       )}
+      <RelatedDoor to="/seed-correction">Correcting a seed is a different act, with its own record →</RelatedDoor>
     </div>
   );
 }

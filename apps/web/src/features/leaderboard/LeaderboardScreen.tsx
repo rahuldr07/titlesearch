@@ -3,6 +3,7 @@ import { Segment, SegmentedControl } from "../../components/ui";
 import { EngineReadings } from "./EngineReadings";
 import { EngineRoster } from "./EngineRoster";
 import { SeatPane } from "./SeatPane";
+import { RelatedDoor } from "../../app/chrome/RelatedDoor";
 
 /** Which of the three reads is on screen. Three panes, three endpoints. */
 type EngineView = "readings" | "roster" | "seats";
@@ -100,6 +101,7 @@ export function LeaderboardScreen() {
         {view === "roster" && <EngineRoster />}
         {view === "seats" && <SeatPane />}
       </div>
+      <RelatedDoor to="/bench">The bench run these readings come from →</RelatedDoor>
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { useRead } from "../../app/useRead";
 import { benchResults } from "../../shared/benchQueries";
 import { QueryState } from "../../entities/state/QueryState";
 import { BenchResults } from "./BenchResults";
+import { RelatedDoor } from "../../app/chrome/RelatedDoor";
 
 /**
  * BENCH, at `/bench` (`authz.ts:74`, `screen.bench.enter`, ENGINEER + ADMIN).
@@ -68,6 +69,7 @@ export function BenchScreen() {
           {(data) => <BenchResults results={data} />}
         </QueryState>
       </div>
+      <RelatedDoor to="/golden">The golden set every cell is scored against →</RelatedDoor>
     </div>
   );
 }

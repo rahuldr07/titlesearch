@@ -55,6 +55,14 @@ export function GoldenRow(props: {
           <span className="font-mono text-meta leading-close font-semibold text-ink-secondary">
             {props.seed.path}
           </span>
+          {/*
+           * NOT A LINK, and that is measured rather than assumed. The golden
+           * set's orders are the SEED CORPUS, not orders in the shop's book:
+           * `GET /api/orders/ord_seed_greene/context` answers 404 "no such
+           * order". A link-crawl of every cross-screen join caught four dead
+           * ones here. An id that names a corpus entry is printed as the id it
+           * is; a door to nowhere is worse than no door.
+           */}
           <span className="font-mono text-label leading-flat text-ink-faint">
             {props.seed.order_id}
           </span>

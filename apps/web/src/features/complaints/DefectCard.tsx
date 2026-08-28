@@ -1,5 +1,6 @@
 import type { Complaint } from "@titlepipe/contract";
 import { Card, CardBody, CardHeader } from "../../components/ui";
+import { OrderLink } from "../../app/chrome/OrderLink";
 
 /**
  * THE DEFECT RECORD: what the report shipped, and what the client says is of
@@ -23,10 +24,15 @@ export function DefectCard({ complaint }: { readonly complaint: Complaint }) {
     <Card padding="none">
       <CardHeader>
         <span>The defect</span>
-        {/* Rule 3: an order ref is an identifier, so it is mono. */}
-        <span className="font-mono text-label leading-flat text-ink-faint">
+        {/* Rule 3: an order ref is an identifier, so it is mono. The
+            complaint names an order and now reaches it — a defect you cannot
+            open is the dead end intake.ts:192-196 names. */}
+        <OrderLink
+          orderId={complaint.order_id}
+          className="font-mono text-label leading-flat text-ink-faint"
+        >
           {complaint.order_id}
-        </span>
+        </OrderLink>
       </CardHeader>
       <CardBody className="flex flex-col gap-8">
         <p className="font-mono text-meta leading-close text-ink-secondary">

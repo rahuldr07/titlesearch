@@ -5,6 +5,7 @@ import { Card } from "../../components/ui";
 import { DivergenceList } from "./DivergenceList";
 import { ProgrammeGaps } from "./ProgrammeGaps";
 import { RosterGaps } from "./RosterGaps";
+import { RelatedDoor } from "../../app/chrome/RelatedDoor";
 
 /**
  * SCREEN — CAPTURE STATUS, at `/blind-status` (`authz.ts:77`,
@@ -87,6 +88,7 @@ export function BlindStatusScreen() {
         <RosterGaps />
         <ProgrammeGaps />
       </div>
+      <RelatedDoor to="/reconciliation">Rule on a divergence in reconciliation →</RelatedDoor>
     </div>
   );
 }
