@@ -64,7 +64,7 @@ export function NotFound() {
       className="flex h-full flex-col items-center justify-center gap-4 p-14"
     >
       <span className="text-label font-semibold leading-flat text-ink-faint">
-        No screen at this address
+        Nothing lives at this address.
       </span>
       <p className="text-body leading-body text-ink-secondary">
         <span className="font-mono">{window.location.pathname}</span> is not a door in
