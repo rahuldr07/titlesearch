@@ -66,6 +66,11 @@ export function ProfileBlock() {
         </span>
       </div>
 
+      {/* The design's `roleHint` under the name row. `seat` is the design's own
+          word for the job; the pill above carries the contract role. Two
+          vocabularies, stated separately, neither standing in for the other. */}
+      <p className="text-label leading-body text-rail-ink-muted">{account.seat}</p>
+
       <div className="border-t border-rail-line pt-5">
         <button
           type="button"
