@@ -1,4 +1,4 @@
-import type { SourcePage } from "@titlepipe/contract";
+import type { LineCoords, SourcePage } from "@titlepipe/contract";
 import { cx } from "../../components/ui";
 import { PaperSheet } from "../../entities/evidence/PaperSheet";
 import { ClerkStamp } from "../../entities/evidence/ClerkStamp";
@@ -35,6 +35,13 @@ export function PageSheet(props: {
   readonly page: SourcePage | null;
   readonly line: number | null;
   readonly pinned: boolean;
+  /**
+   * The recorded region, when the open field's reading carried one AND it is on
+   * this sheet. The caller does that comparison — a box drawn on the wrong page
+   * would be a citation pointing at the wrong document. Drawn by `PageBody`,
+   * which owns the block the coordinates are measured against.
+   */
+  readonly box: LineCoords | null;
   readonly zoom: ZoomLevel;
 }) {
   return (
@@ -56,6 +63,7 @@ export function PageSheet(props: {
             page={props.page}
             line={props.line}
             pinned={props.pinned}
+            box={props.box}
           />
         </PaperSheet>
       </div>

@@ -22,12 +22,83 @@ import {
  */
 
 /**
- * Line-coordinate payload for click-to-source. Exact shape is fixed when the
- * LLMWhisperer adapter lands (P2); consumed only by the PDF overlay component.
- * Engines without coordinates declare null — never a faked placeholder box.
+ * WHERE ON THE PAGE THE VALUE WAS READ — one box, in page-relative units.
+ *
+ * Was `z.unknown()` and marked OPEN until 2026-08-28. `unknown` is not a
+ * deferral, it is a hole: every consumer had to cast before it could draw, so
+ * the overlay drew nothing and the review screen's citation pin marked the PAGE
+ * and said no coordinate was recorded — for fields that had one all along.
+ *
+ * ORIGIN TOP-LEFT, EVERY MEMBER NORMALIZED 0–1 against the rendered page box,
+ * and the range is CHECKED rather than described. A pixel box is meaningless
+ * without the raster's own dimensions, which no response carries; a fraction is
+ * meaningful against whatever the client renders. `.min(0).max(1)` is not
+ * validation theatre — a box outside the page is a box the overlay would draw
+ * off the sheet, and a defect the boundary parser should name rather than
+ * paint. `w`/`h` are extents, not a second corner, so a zero-height box is
+ * impossible to confuse with a point.
+ *
+ * `page` rides ON THE BOX because a reading may cite a different page from the
+ * field that adopted it (`FieldReading.page`), and a coordinate that had to be
+ * paired with a page from elsewhere is a coordinate a caller can mis-pair.
+ *
+ * ONE BOX, NOT AN ARRAY. This is a LINE's box — the smallest thing an engine
+ * reports a position for. A value spanning two lines has two readings behind
+ * it, each with its own box; folding them into one array here would ask the
+ * client to decide which of them the citation means.
+ *
+ * NULLABLE AT EVERY SITE THAT HOLDS ONE, and null is a real state, not a
+ * placeholder: engines without coordinate output (pdftotext, a plain LLM read)
+ * declare null. `null` = "this engine recorded no position". It never means
+ * "position zero", which is why there is no companion `has_coords` boolean —
+ * nullability already says it (`Preferences.nav_collapsed`, intake.ts).
  */
-export const LineCoords = z.unknown();
+export const LineCoords = z.object({
+  page: z.number().int(),
+  x: z.number().min(0).max(1),
+  y: z.number().min(0).max(1),
+  w: z.number().min(0).max(1),
+  h: z.number().min(0).max(1),
+});
 export type LineCoords = z.infer<typeof LineCoords>;
+
+/**
+ * THE EXCERPT, SPLIT AT THE MATCH — and it carries its own citation.
+ *
+ * `source_snippet` is the excerpt as one string, and it stays: it is what the
+ * page says, verbatim, and every consumer that only needs to quote reads that.
+ * What it cannot do is say WHICH SUBSTRING the engine matched, so the review
+ * screen could quote the line and not show the reader what in it was read. The
+ * split is the engine's own — an extractor knows the offsets it matched at, and
+ * nothing else does. Recomputing it in the browser with `indexOf` would be the
+ * client deciding what the engine matched, and would land on the wrong
+ * occurrence the first time a word appeared twice in one line.
+ *
+ * `pre + hit + post` IS `source_snippet`, character for character. Two members
+ * stating one excerpt is a fixture invariant, not a suggestion: a server that
+ * lets them drift has published two different quotations of one line.
+ *
+ * `doc_id` AND `page` RIDE ON THE EXCERPT. A quotation without its source is a
+ * value with no citation (principle 6), and an excerpt that had to be paired
+ * with a document from its container is one a caller can pair wrongly — the
+ * failure being guarded against is a snippet rendered beside another page's
+ * reference. They are stated here so the quotation is self-locating.
+ *
+ * `note` is the RULEBOOK'S remark about this excerpt — "the statement skips
+ * from 2024 to nothing; the 2023 installment is absent from the package, not
+ * paid". Server-authored like `asking`/`why`, for the same reason: it is a
+ * claim about what the document means, and the browser has no standing to make
+ * one. `null` = the rulebook had nothing to add, which is the ordinary case.
+ */
+export const SourceExcerpt = z.object({
+  doc_id: z.string(),
+  page: z.number().int(),
+  pre: z.string(),
+  hit: z.string(),
+  post: z.string(),
+  note: z.string().nullable(),
+});
+export type SourceExcerpt = z.infer<typeof SourceExcerpt>;
 
 export const Order = z.object({
   id: z.string(),
@@ -147,6 +218,40 @@ export const Field = z.object({
    */
   asking: z.string().nullable().optional(),
   why: z.string().nullable().optional(),
+  /**
+   * WHAT FOLLOWS FROM GETTING THIS ONE WRONG — "an unpaid prior-year
+   * installment survives closing as a lien against the parcel."
+   *
+   * The third member written for a person, and it joins `asking`/`why` because
+   * it answers the third question a reviewer has: what is being asked, why it
+   * is being asked, and what it costs to answer it badly. The design prints it
+   * as the amber line under an open decision (`isReview`'s `openConsequence`).
+   *
+   * SERVER-AUTHORED, and that is the constraint rather than a convenience. A
+   * consequence is a claim about EXPOSURE — the rulebook's judgement about what
+   * a wrong answer does to the policy — and the browser composing one would be
+   * the UI inventing legal exposure from a field path. The design's own copy
+   * makes the point: the sentences differ per field in ways nothing on the wire
+   * predicts, because they come out of the rulebook, not out of the path.
+   *
+   * Optional AND nullable, exactly as `asking`/`why` above and for the same
+   * three-way reason. ABSENT on a field that never went to review — no decision
+   * was ever put, so there is nothing a wrong answer would cost. `null` on one
+   * that did and for which the rulebook has authored no consequence yet, which
+   * is the ordinary state of a newly routed field. A string is the claim.
+   *
+   * NOT DERIVED FROM `rule_refs`, and deliberately not. A T1 tag says the
+   * exposure is ruinous; it does not say what the exposure IS, and a client
+   * mapping tag → sentence would be a consequence table living in a component.
+   */
+  consequence: z.string().nullable().optional(),
+  /**
+   * The excerpt split at the match, when the engine recorded its offsets.
+   * ABSENT where no reader typed an excerpt; `null` where one was typed as
+   * flat text and no match offsets came with it. Never reconstructed from
+   * `source_snippet` — see `SourceExcerpt`.
+   */
+  source_excerpt: SourceExcerpt.nullable().optional(),
 });
 export type Field = z.infer<typeof Field>;
 

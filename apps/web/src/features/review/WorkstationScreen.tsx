@@ -15,6 +15,7 @@ import { DecisionPanel } from "./DecisionPanel";
 import { CountersignPanel } from "./CountersignPanel";
 import { WorkstationFooter } from "./WorkstationFooter";
 import { ScanPane } from "./ScanPane";
+import type { PageRequest } from "./ScanViewer";
 import { DecisionDock } from "./DecisionDock";
 import { OrderRail } from "./OrderRail";
 import { sectionsOf, fieldLabel } from "./fieldNaming";
@@ -43,6 +44,9 @@ export function WorkstationScreen(props: {
      already carries from the server's own queue membership — nothing here
      counts, scores or re-derives what is flagged. */
   const [flaggedFirst, setFlaggedFirst] = useState(false);
+  /* The excerpt's "View on page" door, held here because it crosses the split:
+     the door is in the decision column and the sheet is in the other one. */
+  const [request, setRequest] = useState<PageRequest | null>(null);
 
   const all = fields.data?.fields ?? [];
   const step = (direction: 1 | -1) => {
@@ -66,6 +70,7 @@ export function WorkstationScreen(props: {
             <>
               <WorkstationBar
                 orderRef={context.data?.order_ref ?? null}
+                remaining={data.census?.remaining}
                 openLabel={open === null ? null : fieldLabel(open.path)}
                 flaggedFirst={flaggedFirst}
                 onFlaggedFirst={setFlaggedFirst}
@@ -93,7 +98,11 @@ export function WorkstationScreen(props: {
                       canSelect={isQueued}
                       onSelect={(field) => props.onSelectField(field.path)}
                       renderOpen={() => (
-                        <DecisionPanel field={open} orderId={props.orderId} />
+                        <DecisionPanel
+                          field={open}
+                          orderId={props.orderId}
+                          onViewPage={(page) => setRequest({ page })}
+                        />
                       )}
                     />
                   </div>
@@ -104,15 +113,18 @@ export function WorkstationScreen(props: {
                 <SplitPanel className="bg-surface-app">
                   {/*
                    * INVARIANT 33: the citation renders as a pin on the source
-                   * page. `source_line_coords` is `z.unknown()` until the
-                   * LLMWhisperer adapter lands (entities.ts:29), so the pin
-                   * marks the PAGE and says no line coordinate was recorded
-                   * rather than guessing an index.
+                   * page, and — since `LineCoords` was given a real shape on
+                   * 2026-08-28 — as a box over the region it was read from.
+                   * `line` stays null: a coordinate is a position, not an
+                   * ordinal, and guessing an index off `y` would be the browser
+                   * deciding which line the engine meant.
                    */}
                   <ScanPane
                     orderId={props.orderId}
                     page={open?.source_page ?? null}
                     line={null}
+                    box={open?.source_line_coords ?? null}
+                    request={request}
                   />
                 </SplitPanel>
               </Split>

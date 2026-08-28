@@ -193,6 +193,30 @@ export const OrderCensus = z.object({
   decisions: z.number().int().optional(),
   settled: z.number().int().optional(),
   queue_rest: z.number().int().optional(),
+  /**
+   * HOW MANY OF THIS ORDER'S DECISIONS THE SERVER IS STILL WAITING ON, and it
+   * is the server's figure for the same reason every other member here is.
+   *
+   * The design's top bar prints it as a pill ("6 fields"). It was not printed,
+   * because the only way to get it was `decisions - settled` — a subtraction in
+   * the browser, and the identical arithmetic `queue_rest` exists to remove one
+   * line above. The two are NOT the same number and the distinction is the
+   * reason both exist: `queue_rest` is how much of the queue is left to WALK
+   * (settled rulings included — a reviewer moving back through one is still
+   * walking the queue), `remaining` is how many still want an ANSWER.
+   *
+   * Nor is the subtraction reliably right. `decisions - settled` assumes every
+   * decision is either settled or awaiting this reviewer, and a field parked on
+   * a countersign or held behind an escalation is neither. Only the server
+   * knows which of its own decisions it is still waiting on.
+   *
+   * OPTIONAL, like its three neighbours: absent is "the server did not say",
+   * and the bar prints that silence rather than filling it in with a zero. Zero
+   * is a real and different answer — nothing outstanding, the order is done.
+   *
+   * A CENSUS, NEVER A RATE (§4.5). How many sit here now, and nothing per-hour.
+   */
+  remaining: z.number().int().optional(),
 });
 export type OrderCensus = z.infer<typeof OrderCensus>;
 
@@ -681,10 +705,56 @@ export const SourcePage = z.object({
 });
 export type SourcePage = z.infer<typeof SourcePage>;
 
+/**
+ * ONE RECORDED INSTRUMENT INSIDE THE PACKAGE — a boundary THE PIPELINE DREW.
+ *
+ * A county package is a stack of scans; the instruments in it are found by the
+ * partitioning stage, which the pipeline already runs and already names
+ * ("Quarantine & Document Boundary Partitioning"). This shape is that stage's
+ * output reaching a screen for the first time.
+ *
+ * IT IS ON THE WIRE BECAUSE THE ALTERNATIVE WAS INVENTING IT. The design's
+ * "Package Instrument Index" could have been built by grouping runs of equal
+ * `SourcePage.kind` — and that would have drawn document boundaries the
+ * pipeline never drew. Two consecutive deeds would have merged into one
+ * instrument; a deed continued on a page the classifier labelled differently
+ * would have split into two. A boundary is a finding, not a `groupBy`.
+ *
+ * `first_page`/`last_page` are INCLUSIVE and both are the server's. The design
+ * derives its own highlight from a `next` cursor; a half-open range would have
+ * the client subtract one to render the label, which is arithmetic about a
+ * document's extent that the partitioner already did.
+ *
+ * `recorded_ref` is the instrument's reference OF RECORD — a book/page or an
+ * instrument number. `null` where the package holds no index entry for it (a
+ * plat cover sheet, an unrecorded affidavit), which is a real and ordinary
+ * state, not a missing lookup.
+ */
+export const PackageInstrument = z.object({
+  id: z.string(),
+  /** The instrument as the recorder's index names it. Server-authored. */
+  label: z.string(),
+  /** The partitioner's classification — "deed", "security_deed", "judgment". */
+  kind: z.string(),
+  first_page: z.number().int(),
+  last_page: z.number().int(),
+  recorded_ref: z.string().nullable(),
+});
+export type PackageInstrument = z.infer<typeof PackageInstrument>;
+
+/**
+ * `instruments` is REQUIRED, unlike the optional censuses elsewhere in this
+ * file, because a package that reached this endpoint has been through
+ * partitioning by definition — the stage runs before extraction, so there is
+ * always an answer. An EMPTY array is that answer for a package the partitioner
+ * found no boundary in (a single-instrument bringdown, a package it could not
+ * segment), and the screen says so rather than drawing an empty list.
+ */
 export const OrderPagesResponse = z.object({
   order_id: z.string(),
   total_pages: z.number().int(),
   pages: z.array(SourcePage),
+  instruments: z.array(PackageInstrument),
 });
 export type OrderPagesResponse = z.infer<typeof OrderPagesResponse>;
 

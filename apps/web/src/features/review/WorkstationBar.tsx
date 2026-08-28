@@ -1,4 +1,4 @@
-import { Kbd, Switch } from "../../components/ui";
+import { cx, Kbd, Switch } from "../../components/ui";
 
 /**
  * THE WORKSTATION'S TOP BAR, measured off `reference-app.html`'s `isReview`:
@@ -11,14 +11,17 @@ import { Kbd, Switch } from "../../components/ui";
  * printed with nothing behind them; `useReviewKeys.ts` now installs all six,
  * so the legend and the bindings are one list.
  *
- * NO MEASURE, NO PILL. The design draws a per-decision dot strip and an "N
- * fields" pill beside it. The strip is `DecisionDock`'s (it holds the server's
- * `settled`/`decisions`); the pill is `decisions - settled`, and that is count
- * arithmetic in the browser — `OrderCensus` carries no `remaining`, so it is
- * not printed. CONTRACT GAP: `OrderCensus.remaining: z.number().int().optional()`.
+ * THE PILL IS THE SERVER'S FIGURE. The design draws a per-decision dot strip
+ * and an "N fields" pill beside it. The strip is `DecisionDock`'s (it holds the
+ * server's `settled`/`decisions`); the pill went unprinted for a month because
+ * the only way to get it here was `decisions - settled`, which is count
+ * arithmetic in the browser. `OrderCensus.remaining` closed that on 2026-08-28,
+ * and `undefined` — the server not saying — still prints as silence, never 0.
  */
 export function WorkstationBar(props: {
   readonly orderRef: string | null;
+  /** `OrderCensus.remaining`. `undefined` = the server did not say. */
+  readonly remaining: number | undefined;
   readonly openLabel: string | null;
   readonly flaggedFirst: boolean;
   readonly onFlaggedFirst: (on: boolean) => void;
@@ -59,6 +62,8 @@ export function WorkstationBar(props: {
         Flagged sections first
       </Switch>
 
+      <RemainingPill remaining={props.remaining} />
+
       <div className="flex shrink-0 items-center gap-4 border-l border-line-strong pl-6">
         <Chip k="C" label="Confirm" />
         <Chip k="E" label="Correct" />
@@ -68,6 +73,40 @@ export function WorkstationBar(props: {
         <Chip k="Z" label="Zoom" />
       </div>
     </header>
+  );
+}
+
+/**
+ * WHAT THE SERVER IS STILL WAITING ON. Zero is a real answer and reads settled;
+ * absent is the server declining to say, and prints as that rather than as 0.
+ */
+function RemainingPill(props: { readonly remaining: number | undefined }) {
+  const remaining = props.remaining;
+  if (remaining === undefined) {
+    return (
+      <span
+        data-testid="remaining-pill"
+        className="shrink-0 rounded-pill bg-surface-sunken px-5 py-2 text-label leading-flat text-ink-muted"
+      >
+        No count sent
+      </span>
+    );
+  }
+  return (
+    <span
+      data-testid="remaining-pill"
+      data-remaining={remaining}
+      className={cx(
+        "shrink-0 rounded-pill px-5 py-2 font-mono text-label leading-flat font-bold tabular-nums",
+        remaining === 0
+          ? "bg-state-settled-surface text-state-settled"
+          : "bg-surface-sunken text-ink-secondary",
+      )}
+    >
+      {remaining === 0
+        ? "Nothing outstanding"
+        : `${remaining} ${remaining === 1 ? "field" : "fields"} outstanding`}
+    </span>
   );
 }
 

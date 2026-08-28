@@ -1,5 +1,6 @@
-import type { SourcePage } from "@titlepipe/contract";
+import type { LineCoords, SourcePage } from "@titlepipe/contract";
 import { CitationBox } from "../../entities/evidence/PaperSheet";
+import { CitedRegion } from "./CitedRegion";
 
 /**
 
@@ -7,16 +8,31 @@ import { CitationBox } from "../../entities/evidence/PaperSheet";
 
  * render as a pin on the source page raster".
 
+ *
+ * THE THIRD SENTENCE IS NEW AND THE OTHER TWO ARE NOT. `source_line_coords` was
+ * `z.unknown()` until 2026-08-28, so this pin could only ever say the page was
+ * cited and no coordinate existed — for fields that had carried one all along.
+ * With a real `LineCoords` the pin says which of the three actually happened,
+ * and `CitedRegion` draws the box the third case describes.
  */
-function Pin(props: { readonly n: number; readonly marked: number | null }) {
+function Pin(props: {
+  readonly n: number;
+  readonly marked: number | null;
+  readonly box: LineCoords | null;
+}) {
+  const text =
+    props.marked !== null
+      ? `p${props.n} · line ${props.marked + 1} — the selected field cites the marked line.`
+      : props.box !== null
+        ? `p${props.n} — the selected field cites this page, and the boxed region is where the reading was taken.`
+        : `p${props.n} — the selected field cites this page. No line coordinate was recorded, so the pin marks the page.`;
+
   return (
     <p
       data-testid="scan-pin"
       className="rounded-paper bg-surface-pin px-4 py-3 font-mono text-meta leading-body text-scan-ink"
     >
-      {props.marked === null
-        ? `p${props.n} — the selected field cites this page. No line coordinate was recorded, so the pin marks the page.`
-        : `p${props.n} · line ${props.marked + 1} — the selected field cites the marked line.`}
+      {text}
     </p>
   );
 }
@@ -66,6 +82,7 @@ export function PageBody(props: {
   readonly page: SourcePage | null;
   readonly line: number | null;
   readonly pinned: boolean;
+  readonly box: LineCoords | null;
 }) {
   const page = props.page;
   if (page === null) return <Unread n={props.n} />;
@@ -78,8 +95,16 @@ export function PageBody(props: {
 
   return (
     <div className="flex flex-col gap-6">
-      {props.pinned && <Pin n={props.n} marked={marked} />}
-      <div data-testid="scan-lines" className="flex flex-col">
+      {props.pinned && <Pin n={props.n} marked={marked} box={props.box} />}
+      {/*
+        THE BOX IS MEASURED AGAINST THE LINES, NOT THE SHEET, and that is the
+        whole reason this div is positioned. Hung off `PaperSheet` the overlay
+        stretched over the stock's padding, the clerk stamp and the pin
+        paragraph too — about 168px of chrome that is not the page's text —
+        and every region landed a line and a half high.
+      */}
+      <div data-testid="scan-lines" className="relative flex flex-col">
+        {props.box !== null && <CitedRegion box={props.box} />}
         {page.lines.map((text, i) => (
           <p key={`${props.n}:${i}`} className="whitespace-pre-wrap">
             {/* A blank line in the source is a blank line on the page. */}

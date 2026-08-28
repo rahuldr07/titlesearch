@@ -1,8 +1,9 @@
 import { useState } from "react";
+import type { LineCoords } from "@titlepipe/contract";
 import { useRead } from "../../app/useRead";
 import { orderPages } from "../../shared/queries";
 import { QueryState } from "../../entities/state/QueryState";
-import { ScanViewer } from "./ScanViewer";
+import { ScanViewer, type PageRequest } from "./ScanViewer";
 import type { ZoomLevel } from "./PageBar";
 import { useZoomKey } from "./useReviewKeys";
 
@@ -28,9 +29,14 @@ export function ScanPane(props: {
   readonly page: number | null;
   /**
    * INVARIANT 33's other half: the cited LINE, as a zero-based index into that page's
-   * `lines[]`. CONTRACT GAP: nothing on the wire supplies this yet.
+   * `lines[]`. Still nothing on the wire supplies an INDEX — `LineCoords` records a
+   * position, not an ordinal — so this stays null until a reader emits one.
    */
   readonly line: number | null;
+  /** The open field's recorded region. Null = the engine recorded no position. */
+  readonly box: LineCoords | null;
+  /** A page the decision pane asked to be shown. */
+  readonly request: PageRequest | null;
 }) {
   const pages = useRead(orderPages(props.orderId));
   const [zoom, setZoom] = useState<ZoomLevel>("fit");
@@ -61,8 +67,11 @@ export function ScanPane(props: {
           <ScanViewer
             total={data.total_pages}
             described={data.pages}
+            instruments={data.instruments}
             page={props.page}
             line={props.line}
+            box={props.box}
+            request={props.request}
             zoom={zoom}
             onZoom={setZoom}
             following={following}

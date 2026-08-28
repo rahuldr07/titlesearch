@@ -182,10 +182,14 @@ export function orderContextFor(orderId: string): OrderContextResponse {
 const pagesHandler = http.get("/api/orders/:id/pages", ({ params }) => {
   const id = String(params["id"]);
   const doc = demoPages[id];
+  /* An order with no package fixture has no partition to report. `[]` is that
+     answer, and it is not the same claim as "one instrument spanning
+     everything" — which is what grouping the empty `pages[]` would produce. */
   return HttpResponse.json({
     order_id: id,
     total_pages: doc?.total ?? 0,
     pages: doc?.pages ?? [],
+    instruments: doc?.instruments ?? [],
   });
 });
 
@@ -597,6 +601,16 @@ export const handlers = [
         decisions: settled.length + queued.length,
         settled: settled.length,
         queue_rest: Math.max(settled.length + queued.length - 1, 0),
+        /*
+         * WHAT THE SERVER IS STILL WAITING ON — the queued fields, counted
+         * here rather than left to the client as `decisions - settled`.
+         *
+         * The two happen to agree in this fixture and they are not the same
+         * question: `queue_rest` is how much queue is left to WALK, and this
+         * is how many still want an answer. Written off `queued` directly so
+         * the definition sits with the filter that makes it.
+         */
+        remaining: queued.length,
       },
     };
     return HttpResponse.json(body);

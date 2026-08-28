@@ -86,7 +86,65 @@ function inFilter(row: OrderRow, f: OrderFilter): boolean {
   return row.stage !== "delivered";
 }
 
-const composition = (orderId: string): CompositionResponse => ({
+/**
+ * THE ORDER WHOSE GATES ARE GREEN. Quoted from the fixture table rather than
+ * written as a literal, for the reason `FIELDS_ORDER_ID` is quoted in
+ * `handlers.ts`: a second copy of an id is a second answer.
+ */
+const CLEARED_ORDER_ID = "ord_demo_14";
+
+/**
+ * SEALS FILED THIS PAGE SESSION, `order_id` → digest.
+ *
+ * The seal is what makes a release IRREVERSIBLE, so it has to survive the
+ * request that made it — a handler that recomputed `seal_sha256: null` on the
+ * next read would let the same order be released twice, and the second release
+ * is the exact act `releaseHold` refuses on. Reset on reload, like every other
+ * mutation in this package.
+ */
+const seals = new Map<string, { sha256: string; at: string; version: number }>();
+
+const composition = (orderId: string): CompositionResponse =>
+  orderId === CLEARED_ORDER_ID ? clearedComposition(orderId) : blockedComposition(orderId);
+
+/**
+ * 4176028-5 — every gate answered, and the sheet is releasable until it is
+ * released. Once it is, `seal_sha256` is the server's record that it happened.
+ */
+function clearedComposition(orderId: string): CompositionResponse {
+  const filed = seals.get(orderId) ?? null;
+  return {
+    order_id: orderId,
+    template_version: "v4.2",
+    blocks: [
+      { id: "b1", numeral: "I", title: "Header information", body: "Order 4176028-5 · Clayton County, GA · two-owner search.", field_count: 6, cited: 6 },
+      { id: "b2", numeral: "II", title: "Property identification", body: "310 Wrenfield Ln, Demoville GA · parcel 13-0044-0231.", field_count: 5, cited: 5 },
+      { id: "b3", numeral: "III", title: "Vesting & title chain", body: "Adaline P. Rooke, by warranty deed from Wrenfield Homes LLC.", field_count: 7, cited: 7 },
+      { id: "b4", numeral: "IV", title: "Encumbrances & open liens", body: "One open security deed to Ashfield Savings. No other liens of record.", field_count: 6, cited: 6 },
+      { id: "b5", numeral: "V", title: "Tax assessment & status", body: "2025 installment paid in full. Land 31,500 · building 142,900.", field_count: 4, cited: 4 },
+      { id: "b6", numeral: "VI", title: "Judgments & general liens", body: "Searched. Nothing indexed against the owner of record.", field_count: 3, cited: 3 },
+      { id: "b7", numeral: "VII", title: "Provenance & audit trail", body: "Every value carries a page and line citation.", field_count: 2, cited: 2 },
+    ],
+    gates: [
+      { id: "g1", label: "Every flagged decision answered", passed: true, detail: null },
+      { id: "g2", label: "Every value carries a citation", passed: true, detail: null },
+      { id: "g3", label: "Chain of title unbroken through the statutory period", passed: true, detail: null },
+      { id: "g4", label: "T1 second read countersigned", passed: true, detail: "countersigned by R. Menon (QC)" },
+      { id: "g5", label: "Completeness gate cleared", passed: true, detail: null },
+    ],
+    // Released once. A sealed sheet is no longer releasable, and the server
+    // says so in its own sentence rather than leaving the client to infer it
+    // from the digest.
+    releasable: filed === null,
+    blocked_reason:
+      filed === null
+        ? null
+        : "This order was released and sealed. A release files once; a further copy is a reissue, not a release.",
+    seal_sha256: filed?.sha256 ?? null,
+  };
+}
+
+const blockedComposition = (orderId: string): CompositionResponse => ({
   order_id: orderId,
   template_version: "v4.2",
   blocks: [
@@ -152,17 +210,46 @@ export const designHandlers = [
     HttpResponse.json(composition(String(params["id"]))),
   ),
 
-  http.post("/api/orders/:id/release", async ({ request }) => {
+  http.post("/api/orders/:id/release", async ({ params, request }) => {
     const denied = guard(request, "release.execute");
     if (denied) return denied;
+    const orderId = String(params["id"]);
     const body = (await request.json()) as { signature?: string };
+    // Unsigned is refused BEFORE the gates, for every order: an unsigned act
+    // never reaches a gate to be judged by it.
     if (!body?.signature) {
       return HttpResponse.json({ error: "a release is refused without its signature" }, { status: 422 });
     }
-    return HttpResponse.json(
-      { error: "four gates are open — the release gate refuses" },
-      { status: 409 },
-    );
+    if (orderId !== CLEARED_ORDER_ID) {
+      return HttpResponse.json(
+        { error: "four gates are open — the release gate refuses" },
+        { status: 409 },
+      );
+    }
+    if (seals.has(orderId)) {
+      return HttpResponse.json(
+        { error: "this order is already released and sealed — a release files once" },
+        { status: 409 },
+      );
+    }
+    // The digest is over the composed manifest, which is what the seal claims
+    // to fix. Seeded from the blocks so it could not be mistaken for a nonce.
+    const filed = {
+      sha256: fixtureDigest(
+        clearedComposition(orderId)
+          .blocks.map((b) => `${b.numeral}:${b.title}:${b.body}`)
+          .join("|"),
+      ),
+      at: new Date().toISOString(),
+      version: 1,
+    };
+    seals.set(orderId, filed);
+    return HttpResponse.json({
+      order_id: orderId,
+      version: filed.version,
+      seal_sha256: filed.sha256,
+      released_at: filed.at,
+    });
   }),
 
   /*

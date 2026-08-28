@@ -9,6 +9,7 @@ import { confirmValue, readCited } from "../../shared/provenance";
 import { useReviewWrites } from "./useReviewWrites";
 import { DecisionActions } from "./DecisionActions";
 import { DecisionEditor, type EditorMode } from "./DecisionEditor";
+import { ExcerptStrip } from "./ExcerptStrip";
 import { useDecisionKeys } from "./useReviewKeys";
 
 /**
@@ -23,15 +24,17 @@ import { useDecisionKeys } from "./useReviewKeys";
  * unwritable: nothing on this screen could file one, though
  * `CorrectFieldRequest.na_reason` has carried them since 2026-07-26.
  *
- * NO CONSEQUENCE LINE. The design prints an amber "what follows from getting
- * this wrong" sentence and `DecisionCard` has the slot for it, but a claim
- * about consequence is the rulebook's to make, not the browser's.
- * CONTRACT GAP: `Field.consequence: z.string().nullable().optional()`,
- * server-authored beside `asking`/`why`.
+ * THE CONSEQUENCE LINE AND THE EXCERPT ARE THE SERVER'S SENTENCES. `Field
+ * .consequence` and `Field.source_excerpt` landed on 2026-08-28; both are
+ * passed straight through and neither is composed here. A claim about what a
+ * wrong answer costs is the rulebook's to make, and the split of an excerpt at
+ * its match is the engine's — see `ExcerptStrip`.
  */
 export function DecisionPanel(props: {
   readonly field: Field | null;
   readonly orderId: string;
+  /** The excerpt's door to the sheet, which lives across the split. */
+  readonly onViewPage: (page: number) => void;
 }) {
   const writes = useReviewWrites(props.orderId);
   const [mode, setMode] = useState<EditorMode>(null);
@@ -85,6 +88,7 @@ export function DecisionPanel(props: {
       <DecisionCard
         field={field}
         label={fieldLabel(field.path)}
+        consequence={field.consequence}
         rubric={panelRubric(field, readCited(field)).text}
         readings={nominatedPair(field.readings ?? []) ?? undefined}
         onAdoptReading={(reading) => {
@@ -100,6 +104,15 @@ export function DecisionPanel(props: {
           />
         }
       />
+
+      {/* The quoted line with the read marked in it. Absent where no reader
+          typed an excerpt; null where one arrived without match offsets. */}
+      {field.source_excerpt !== null && field.source_excerpt !== undefined && (
+        <ExcerptStrip
+          excerpt={field.source_excerpt}
+          onView={props.onViewPage}
+        />
+      )}
 
       {/*
        * The server's last word, held rather than flashed. `Alert`'s `message`
