@@ -1,0 +1,70 @@
+import { OrderFilter } from "@titlepipe/contract";
+import { Segment, SegmentedControl } from "../../components/ui";
+import { QueryState } from "../../entities/state/QueryState";
+import { useRead } from "../../app/useRead";
+import { ordersPage } from "../../shared/ordersQueries";
+import { OrdersSearch } from "./OrdersSearch";
+import { OrdersTable } from "./OrdersTable";
+import { useOrdersBrowse } from "./useOrdersBrowse";
+
+/**
+ * ALL ORDERS — every order in the pipeline and the delivered record.
+ *
+ * THE SERVER DOES THE WORK. Searching, filtering and paging are three query
+ * parameters on `GET /api/orders`; this screen never filters an array, never
+ * slices one, and never counts one. `total` and `page_count` are printed as
+ * they arrived (`design.ts:50-56`), and `due` is the server's own label — no
+ * countdown is derived from it, which INVARIANT 23 forbids outright.
+ *
+ * The header stays OUTSIDE `QueryState` on purpose: it holds an uncontrolled
+ * search box, and a box that unmounts while its own request is in flight loses
+ * both the caret and the text that started the request.
+ */
+export function OrdersListScreen() {
+  const browse = useOrdersBrowse();
+  const query = useRead(
+    ordersPage({ query: browse.query, filter: browse.filter, page: browse.page }),
+  );
+
+  return (
+    <div className="tp-screen-enter flex h-full min-h-0 flex-col overflow-hidden">
+      <header className="flex flex-col gap-8 px-16 pt-14 pb-8">
+        <div className="flex flex-wrap items-end justify-between gap-8">
+          <div className="flex flex-col gap-3">
+            <h1 className="text-title font-semibold leading-tight text-ink-primary">
+              All orders
+            </h1>
+            <p className="max-w-400 text-meta leading-body text-ink-secondary">
+              Every order in the pipeline and the delivered record — search, filter, page.
+            </p>
+          </div>
+          <OrdersSearch browse={browse} />
+        </div>
+        <div>
+          <SegmentedControl
+            label="Which orders to show"
+            selectedKeys={new Set([browse.filter])}
+            onSelectionChange={(keys) => {
+              const [first] = keys;
+              const chosen = OrderFilter.safeParse(first);
+              if (chosen.success) browse.choose(chosen.data);
+            }}
+          >
+            <Segment id="all">All orders</Segment>
+            <Segment id="active">In pipeline</Segment>
+            <Segment id="waiting">Queries and gaps</Segment>
+            <Segment id="delivered">Delivered history</Segment>
+          </SegmentedControl>
+        </div>
+      </header>
+
+      <div className="flex min-h-0 flex-1 flex-col px-16 pb-32">
+        <QueryState query={query} of="the order list">
+          {(data) => (
+            <OrdersTable data={data} clear={browse.clear} goToPage={browse.goToPage} />
+          )}
+        </QueryState>
+      </div>
+    </div>
+  );
+}

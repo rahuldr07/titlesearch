@@ -15,6 +15,7 @@ import { BlindSeatScreen } from "../../features/blind/BlindSeatScreen";
 import { BlindStatusScreen } from "../../features/blindStatus/BlindStatusScreen";
 import { TemplatesScreen } from "../../features/templates/TemplatesScreen";
 import { JurisdictionScreen } from "../../features/jurisdiction/JurisdictionScreen";
+import { OrdersListScreen } from "../../features/ordersList/OrdersListScreen";
 
 /**
 
@@ -102,4 +103,5 @@ export const BUILT_SCREENS: Readonly<Record<string, () => JSX.Element>> = {
   "/blind-status": BlindStatusScreen,
   "/templates": TemplatesScreen,
   "/jurisdiction": JurisdictionScreen,
+  "/orders-list": OrdersListScreen,
 };
