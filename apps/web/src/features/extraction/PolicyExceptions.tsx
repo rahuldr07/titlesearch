@@ -1,49 +1,28 @@
-import { useQuery } from "@tanstack/react-query";
-import { get } from "../../shared/api";
+import { useRead } from "../../app/useRead";
 import { escalations as escalationsRead } from "../../shared/queries";
 
 /**
- * POLICY EXCEPTIONS (design §Screens 6's last card).
+ * POLICY EXCEPTIONS (design §Screens 6's last card). An exception here is an
+ * `Escalation` (entities.ts:166) naming this order: a question the pipeline
+ * could not answer from the rulebook. `Escalation.order_ids` is the server's
+ * own join, so the membership test below is not a judgement about relevance.
  *
- * An exception on this screen is an `Escalation` (entities.ts:166) touching
- * this order: a question the pipeline could not answer from the rulebook.
- * `Escalation.order_ids` is the join, so the filter is a membership test on a
- * server-supplied array rather than a judgement about which escalations are
- * relevant.
- *
- * ══ WHAT IS SHOWN, AND THE ONE THING THAT IS NOT ═══════════════════════════
- *
- * `question`, `resolution`, `rule_id` and `resolved_by` are printed as the
- * server holds them. There is NO resolve control here, and its absence is a
- * product requirement rather than scope:
- *
+ * THERE IS NO RESOLVE CONTROL, and its absence is a product requirement:
  *   - Resolution is REFUSED WITHOUT A RULE (endpoints.ts:233-236,
- *     `INVARIANTS:109-110`), and drafting a rule is not something this screen
- *     can do.
- *   - `escalation.resolve` is held by senior/admin only (authz.ts:104), and
- *     this screen is reached by anyone with the order door.
- *   - The escalations world has its own door (`/escalations`, authz.ts:68).
- *     Duplicating the determination here would be a second place the same
- *     mutation is authored.
+ *     `INVARIANTS:109-110`), and drafting a rule is not something this can do.
+ *   - `escalation.resolve` is senior/admin only (authz.ts:104); this screen is
+ *     reached by anyone holding the order door.
+ *   - `/escalations` (authz.ts:68) is where that mutation is authored, once.
  *
- * So an unresolved exception states that it is unresolved and names where it
- * is settled. `resolution` non-null with `rule_id` null is drawn as the server
- * has it and is not "corrected" here — a resolution the client re-judged is a
- * client rulebook.
+ * `resolution` non-null with `rule_id` null is drawn as the server has it — a
+ * resolution the client re-judged is a client rulebook.
  *
- * ══ NO COUNT ══════════════════════════════════════════════════════════════
- *
- * The design puts a "2 items" capsule on this card's header bar. It is not
- * drawn. The card prints rows, never "N exceptions". No endpoint serves an
- * exception census for an order, and `escalations.length` after a filter is
- * a number nobody could reconcile against the hub — rule 11 wants one
- * variable, and this would be the only literal.
+ * NO COUNT. The design puts a "2 items" capsule on the header bar; no endpoint
+ * serves an exception census for an order, and a length after a filter is a
+ * number nothing else in the product could reconcile against (rule 11).
  */
 export function PolicyExceptions(props: { readonly orderId: string }) {
-  const escalations = useQuery({
-    queryKey: escalationsRead.key,
-    queryFn: () => get(escalationsRead.path, escalationsRead.schema),
-  });
+  const escalations = useRead(escalationsRead);
 
   if (escalations.data === undefined) {
     return (
@@ -55,11 +34,11 @@ export function PolicyExceptions(props: { readonly orderId: string }) {
     );
   }
 
-  const mine = escalations.data.escalations.filter((e) =>
-    e.order_ids.includes(props.orderId),
+  const namingThisOrder = escalations.data.escalations.filter((escalation) =>
+    escalation.order_ids.includes(props.orderId),
   );
 
-  if (mine.length === 0) {
+  if (namingThisOrder.length === 0) {
     return (
       <p
         data-testid="policy-exceptions-none"
@@ -71,20 +50,16 @@ export function PolicyExceptions(props: { readonly orderId: string }) {
     );
   }
 
-  /*
-   * The design's item: a 13px bold title over an 11px body, items separated by
-   * a hairline and spaced 16px apart. The QUESTION is the title, because the
-   * question is what the exception is; the cluster path and the disposition are
-   * the body beneath it.
-   */
   return (
     <ul data-testid="policy-exceptions" className="flex flex-col gap-8">
-      {mine.map((exception) => (
+      {namingThisOrder.map((exception) => (
         <li
           key={exception.id}
           data-testid={`policy-exception-${exception.id}`}
           className="flex flex-col gap-3 border-b border-line-subtle pb-8 last:border-b-0 last:pb-0"
         >
+          {/* The question is the title, because the question is what the
+              exception is. */}
           <span className="font-sans text-meta font-bold leading-close text-ink-primary">
             {exception.question}
           </span>

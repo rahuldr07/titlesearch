@@ -3,14 +3,12 @@ import type { GrantedPermissionSchema } from "@titlepipe/contract";
 import { RouteButton } from "../../app/chrome/RouteButton";
 
 /**
- * The header band, drawn to the prototype's two-sided geometry. The kicker pill
- * ("TitleFlow Engine · Production Pipeline") is dropped: nothing in the contract
- * tells this screen which environment it is pointed at.
- *
- * The subhead is `LifecycleResponse.scope_note` — the server's sentence about
- * what this caller can see. The prototype's fixed sentence ends in "SOC 2
- * delivery certification", a certification claim no member of the contract
- * backs, and a screen is not the place to assert one on the server's behalf.
+ * The header band. Two refusals from the prototype: the kicker pill ("TitleFlow
+ * Engine · Production Pipeline"), because nothing in the contract tells this
+ * screen which environment it is pointed at; and the fixed subhead ending in
+ * "SOC 2 delivery certification", a claim no member of the contract backs. The
+ * subhead is `LifecycleResponse.scope_note` instead — the server's own sentence
+ * about what this caller can see.
  */
 export function OverviewHeader(props: {
   readonly scopeNote: string | undefined;

@@ -2,41 +2,29 @@ import { useRead } from "../../app/useRead";
 import { clients as clientsRead } from "../../shared/clientsQueries";
 
 /**
- * THE RULEBOOK BANNER (design §Screens 5: "rulebook banner — amber until
- * quarantine passes, then green with 3 layer chips").
+ * THE RULEBOOK BANNER. It states which rulebook applies and does not pretend to
+ * know whether the package cleared.
  *
- * ══ THE TRAFFIC LIGHT IS NOT BUILT; THE LAYERS ARE ═════════════════════════
+ * THE DESIGN'S AMBER→GREEN FLIP IS NOT BUILT: it is driven by the quarantine
+ * gateway passing, and there is no quarantine shape (ANALYSIS-screens.md §7
+ * conversation 3). A banner that turned green on an event the client invented
+ * would be the clearest possible version of the browser deciding a server
+ * state.
  *
- * The design's amber→green flip is driven by the quarantine gateway passing,
- * and there is no quarantine shape (ANALYSIS-screens.md §7 conversation 3).
- * A banner that turned green on an event the client invented would be the
- * clearest possible version of the browser deciding a server state, so the
- * flip is absent — the banner states which rulebook applies and does not
- * pretend to know whether the package cleared.
+ * THE THREE LAYERS ARE REAL; THE THREE COUNTS ARE NOT. `EffectiveChecklist`
+ * (workspace.ts:118) is the resolved checklist for one client against one
+ * product and `EffectiveLine.application` (workspace.ts:107) carries the three
+ * ways a standard line can land — applies / narrowed / excluded. So the lines
+ * are LISTED and nothing is tallied. A first draft drew the design's chips as
+ * `lines.filter(...).length` per application: no endpoint serves that census,
+ * nothing else in the product could reconcile against it, and rule 11 wants one
+ * variable rather than a second literal (`QueueBand.count` and
+ * `LifecycleStage.count` are server-supplied for exactly this reason).
  *
- * ══ THE THREE LAYERS ARE REAL; THE THREE COUNTS ARE NOT ═══════════════════
- *
- * The design's "3 layer chips" have no named shape, but the layering they
- * describe does exist and is served: `EffectiveChecklist` (workspace.ts:118)
- * is the resolved checklist for one client against one product, and
- * `EffectiveLine.application` (workspace.ts:107) carries the three ways a
- * standard line can land — applies / narrowed / excluded.
- *
- * SO THE LINES ARE LISTED AND NOTHING IS TALLIED. A first draft of this
- * component drew the design's chips as `lines.filter(...).length` per
- * application, and that is a count authored in a browser: no endpoint serves
- * it, nothing else in the product could be reconciled against it, and rule 11
- * wants one variable rather than a second literal. `QueueBand.count` and
- * `LifecycleStage.count` are both server-supplied for precisely this reason
- * (endpoints.ts:124, intake.ts:220). A layer census is a legitimate thing to
- * WANT — it is added to the backend conversation, not computed here.
- *
- * The resolution itself is likewise never recomputed: workspace.ts:100-104 is
+ * The resolution itself is never recomputed either — workspace.ts:100-104 is
  * explicit that two resolvers disagreeing is the defect that ships a search
- * missing a line somebody thought was covered.
- *
- * `conflict` is a SERVER-DETECTED contradiction between two overrides
- * (workspace.ts:120) and is printed verbatim when present.
+ * missing a line somebody thought was covered. `conflict` is a SERVER-DETECTED
+ * contradiction between two overrides (workspace.ts:120), printed verbatim.
  */
 export function RulebookBanner(props: { readonly clientId: string }) {
   const clients = useRead(clientsRead);

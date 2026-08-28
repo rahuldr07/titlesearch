@@ -5,36 +5,24 @@ import { ClientPicker } from "./ClientPicker";
 import { MANIFEST } from "./manifest";
 
 /**
- * THE RIGHT COLUMN — "THE ORDER: WHAT THE PDF CANNOT SAY".
+ * THE RIGHT COLUMN — "the order: what the PDF cannot say". One row per
+ * `CreateOrderRequest` member (endpoints.ts:39), label in mono (rule 3: it
+ * names a data key), the reason beside it in prose.
  *
- * One row per `CreateOrderRequest` member (endpoints.ts:39), label in mono
- * (rule 3: it names a data key), the reason beside it in prose.
+ * NOTHING HERE VALIDATES. No `required`, no client-side "please fill this in",
+ * no submit gating. INVARIANTS 60-61: the SERVER names what is missing and the
+ * client does not author that list, so an empty form is SENT and the refusal
+ * that comes back is the one the reader sees. A client-side check would be a
+ * second, drifting list nobody could audit against the pipeline.
  *
- * ══ NOTHING HERE VALIDATES ═════════════════════════════════════════════════
- *
- * No `required`, no client-side "please fill this in", no submit gating on
- * completeness. INVARIANTS 60-61: the SERVER names what is missing and the
- * client does not author that list — so an empty form is SENT, and the refusal
- * that comes back is the one the reader sees. A client-side check would
- * produce a second, drifting list that nobody could audit against the
- * pipeline, and it would hide the server's own refusal behind a cheaper one.
- *
- * ══ PAGE COUNT AND JURISDICTION READ-ONLY — AND ONLY ONE OF THEM ═══════════
- *
- * Design §Screens 5 asks for "page count + jurisdiction read-only ('read from
- * clerk stamp')". Only PAGE COUNT is drawn that way here, and the difference
- * is in the contract:
- *
- *   - `Order.pages` (entities.ts:60) is nullable and SERVER-RESOLVED, and a
- *     freshly ingested package has it `null` — "a count asserts somebody
- *     looked". So it is read-only, and it says so rather than showing a dash.
- *   - `jurisdiction` is a `CreateOrderRequest` FIELD (endpoints.ts:42). The
- *     server takes it FROM this form; it does not read it off a stamp. Drawing
- *     it read-only would make the upload impossible, because the value would
- *     never be sent and the server would name it missing every time. The
- *     design's "read from clerk stamp" describes a pipeline that does not
- *     exist upstream yet — CONTRACT CONFLICT, flagged, and the writable field
- *     wins because the contract is upstream.
+ * The design asks for "page count + jurisdiction read-only (read from clerk
+ * stamp)" and only PAGE COUNT is drawn that way, because the contract splits
+ * them: `Order.pages` (entities.ts:60) is nullable and SERVER-RESOLVED and is
+ * `null` on a fresh package, while `jurisdiction` is a `CreateOrderRequest`
+ * FIELD (endpoints.ts:42) the server takes FROM this form. Drawing jurisdiction
+ * read-only would make the upload impossible — the value would never be sent
+ * and the server would name it missing every time. CONTRACT CONFLICT flagged;
+ * the writable field wins because the contract is upstream.
  */
 export function OrderFields(props: {
   readonly values: CreateOrderRequest;
@@ -60,13 +48,10 @@ export function OrderFields(props: {
                 onChange={(id) => props.onChange("client_id", id)}
               />
             ) : (
-              /*
-               * The composite owns the value, not the box. `TextField` injects
-               * a controlled `value` through `InputContext`, so an `Input`
-               * carrying its own collides with it and React drops one --
-               * REVIEW-03 B2, which rendered ten fields blank. `InputProps`
-               * now Omit-s both, so this is the only shape that compiles.
-               */
+              /* The composite owns the value, not the box. `TextField` injects
+                 a controlled `value` through `InputContext`, so an `Input`
+                 carrying its own collides with it and React drops one —
+                 REVIEW-03 B2, which rendered ten fields blank. */
               <TextField
                 aria-label={entry.label}
                 value={props.values[entry.key]}

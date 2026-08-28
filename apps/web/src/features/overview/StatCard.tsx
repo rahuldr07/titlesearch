@@ -1,12 +1,9 @@
 import { Card, cx } from "../../components/ui";
 
 /**
- * One census card, drawn to the prototype's geometry: 18px padding, 11px w600
- * label, 28px w700 figure. The prototype's third line — a note under the
- * figure — has no member on `LifecycleResponse` and is not invented here.
- *
- * That refusal, and the four labels this card carries instead of the
- * prototype's, are ruled on in full by
+ * One census card. The prototype's third line — a note under the figure — has
+ * no member on `LifecycleResponse` and is not invented. That refusal, and the
+ * four labels this card carries instead of the prototype's, are ruled on by
  * `docs/frontend/design-2026-08/CONFLICT-overview-stats.md` §5.
  */
 const FIGURE_TONE = {
@@ -35,8 +32,7 @@ export function StatCard(props: {
             The server has not said.
           </span>
         ) : (
-          /* The unit noun is the prototype's ("6 orders"), pluralised — every
-             one of these four counts orders. */
+          /* The unit noun is the prototype's, pluralised — all four count orders. */
           <span
             data-stat-value={props.value}
             className={cx(

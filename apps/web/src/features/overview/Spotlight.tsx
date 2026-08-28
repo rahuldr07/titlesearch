@@ -3,16 +3,29 @@ import type { Order } from "@titlepipe/contract";
 import { Card } from "../../components/ui";
 import { SpotlightOrder } from "./SpotlightOrder";
 
-/** The three answers the queue can give. `SpotlightOrder` draws the served one. */
+/** The four answers the queue read can give. `SpotlightOrder` draws the served one. */
 export function Spotlight(props: {
   readonly order: Order | null;
   readonly pending: boolean;
+  readonly failed: boolean;
 }) {
   if (props.pending) {
     return (
       <Card>
         <p className="text-meta leading-body text-ink-muted">
           Asking the queue what is next…
+        </p>
+      </Card>
+    );
+  }
+
+  // A failed read is not the queue answering "nothing". Saying so would put a
+  // server answer nobody sent on the screen.
+  if (props.failed) {
+    return (
+      <Card>
+        <p role="alert" className="text-meta leading-body text-state-halt">
+          The queue could not be asked what is next.
         </p>
       </Card>
     );

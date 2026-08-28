@@ -24,7 +24,9 @@ export function RecentOrders() {
             </span>
           )}
         </div>
-        <RouteButton to="/orders" size="sm">
+        {/* `/orders-list` is the browse door (doors.ts:17). `/orders` is the
+            ORDER-SCOPED hub door and renders the unbuilt card with no id. */}
+        <RouteButton to="/orders-list" size="sm">
           View all orders →
         </RouteButton>
       </div>

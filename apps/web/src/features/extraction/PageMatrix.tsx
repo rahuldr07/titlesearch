@@ -1,45 +1,33 @@
 import { useNavigate } from "@tanstack/react-router";
 import type { SourcePage } from "@titlepipe/contract";
 import { cx } from "../../components/ui";
-import { LEGEND, PAINT, describe, stateOf } from "./pageCell";
+import { LEGEND, PAINT, cellLabel, stateOf } from "./pageCell";
 
 /**
- * THE PAGE MATRIX — the design's "high-density raster scan matrix"
- * (`/tmp/ref.html` §isProcessing): a wrapped field of 12x18 blocks, a legend
- * on the title row, and a hint line under a hairline.
+ * THE PAGE MATRIX — the design's "high-density raster scan matrix": a wrapped
+ * field of 12x18 blocks, a legend on the title row, a hint line under a
+ * hairline.
  *
- * ══ INVARIANT 34: ONE CELL PER PACKAGE PAGE, NOT JUST READ ONES ════════════
+ * INVARIANT 34: ONE CELL PER PACKAGE PAGE, NOT JUST READ ONES. The denominator
+ * is `OrderPagesResponse.total_pages` — the server's count — and NEVER
+ * `pages.length`. The live fixture makes that failure loud: `total_pages` is 64
+ * and the array holds 7. Mapping the array draws seven cells and tells a
+ * reviewer the search covered the whole package while fifty-seven pages of it
+ * were never read by anybody. A page with no entry gets a cell in the sunken
+ * paint and a title saying nobody read it (`pageCell.ts`).
  *
- * The denominator is `OrderPagesResponse.total_pages` — the server's count.
- * It is NEVER `pages.length`, and the live fixture is built to make that
- * failure loud: `total_pages` is 64 and the array holds 7. This component used
- * to map the array, so it drew seven cells and quietly claimed the package was
- * seven pages long. That is not a cosmetic bug: it told a reviewer the search
- * covered the whole package when fifty-seven pages of it were never read by
- * anybody. The reference app agrees — its own loop is `for (n = 1; n <= pages)`.
+ * WCAG 2.2 §2.5.8 exempts an undersized target where the presentation is
+ * ESSENTIAL, and this is that case: PRODUCT.md puts a real package at 36-181
+ * pages, and 181 cells at 24px is a 4,344px row, which is not a matrix. Every
+ * cell carries a `title` and an `aria-label` naming its page and what happened
+ * to it, so the colour is never the only carrier. Same finding as
+ * `CoverageSpine`.
  *
- * A page with no entry in `pages[]` gets a cell in the sunken paint and a
- * title that says nobody read it. The four paints, and the argument that each
- * is the server's word rather than an inference, live in `pageCell.ts`.
+ * INVARIANT 55: selection is URL-owned, so a cell navigates to the frozen door
+ * `/orders/$orderId` with `page` in the search string beside `field`.
  *
- * ══ WCAG 2.2 §2.5.8 — CELLS UNDER 24px, AND WHY THAT IS THE EXCEPTION ══════
- *
- * §2.5.8 exempts an undersized target when the presentation is ESSENTIAL:
- * PRODUCT.md puts a real package at 36-181 pages, and at 181 cells of 24px the
- * matrix is 4,344px wide, which is not a matrix and not a screen. Every cell
- * also carries a `title` and an `aria-label` naming its page and what happened
- * to it, so what the block encodes in colour is reachable without hitting a
- * 12px target at all. Same finding, same justification, as `CoverageSpine`.
- *
- * ══ THE CLICK TARGET IS THE FROZEN DOOR, WITH A PARAM ══════════════════════
- *
- * INVARIANT 55: deep links land on the exact thing in context, and selection
- * is URL-owned. The route is `/orders/$orderId` (authz.ts:66 covers the
- * prefix) and `page` rides in the search string beside `field`.
- *
- * REFUSED FROM THE DESIGN: its footer's right-hand caption, "Auto-scaling
- * (10k+ pages)". That is a claim about the system's capacity, not a fact any
- * response carries, and nothing on this screen could reconcile it.
+ * REFUSED FROM THE DESIGN: its footer caption "Auto-scaling (10k+ pages)" — a
+ * claim about system capacity that no response carries.
  */
 export function PageMatrix(props: {
   readonly orderId: string;
@@ -68,9 +56,10 @@ export function PageMatrix(props: {
         aria-label={`Package coverage — every page of ${props.total}`}
         className="flex flex-wrap gap-1"
       >
-        {Array.from({ length: props.total }, (_, i) => i + 1).map((n) => {
+        {Array.from({ length: props.total }, (_, index) => {
+          const n = index + 1;
           const page = byPage.get(n);
-          const label = describe(n, page);
+          const label = cellLabel(n, page);
           return (
             <li key={n}>
               <button

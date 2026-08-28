@@ -2,31 +2,25 @@ import { useState } from "react";
 import { IngestForm } from "./IngestForm";
 import { BLANK_ORDER, packageForm, type Stage } from "./stages";
 import { RefusedCard } from "./RefusedCard";
-import { AcceptCard, AcceptedCard } from "./AcceptCard";
+import { AcceptCard } from "./AcceptCard";
+import { AcceptedCard } from "./AcceptedCard";
 import { useAcceptOrder, useUploadPackage } from "./useIngest";
 
 /**
- * SCREEN 5 — INTAKE / UPLOAD, at `/ingest` (authz.ts:67, ops+admin).
- *
- * Four stages: form → (refused) → accept → accepted.
+ * SCREEN 5 — INTAKE / UPLOAD, at `/ingest` (authz.ts:67, ops+admin). The stage
+ * router for `form → (refused) → accept → accepted`, and nothing else.
  *
  * INVARIANT 47 (`docs/INVARIANTS.md:131`): "Acceptance is explicit — an upload
- * alone never queues an order." `accept` is a stage rather than a button on
- * the form because the two acts have to be visibly separate: the order EXISTS
- * after the upload and is NOT queued, and a design that draws one "Sign"
- * button cannot say that. Nothing chains the mutations — `useUploadPackage`'s
- * success handler advances the stage and does not call accept.
+ * alone never queues an order." `accept` is a STAGE rather than a button on the
+ * form because the two acts have to be visibly separate: after the upload the
+ * order EXISTS and is NOT queued, and a design that draws one "Sign" button
+ * cannot say that. Nothing chains the mutations.
  *
  * `banner` carries the SERVER's sentence for a failure that is not a
- * field-level rejection, which is where a duplicate lands: INVARIANT 48 /
- * `INVARIANTS:132`, a byte-identical re-upload surfaces the server's
- * sha256-match notice, and it surfaces verbatim (INVARIANTS 58-59). The client
- * never writes that sentence, which is also why there is no sha256 rendering
- * of our own — no response in the contract carries the hash as data.
- *
- * What this screen deliberately does NOT draw is recorded on `IngestForm`:
- * the quarantine gateway checklist and the optical profile card, both
- * unbacked (ANALYSIS-screens.md §7 conversation 3).
+ * field-level rejection, which is where a duplicate lands: a byte-identical
+ * re-upload surfaces the server's sha256-match notice verbatim (INVARIANT 48,
+ * `INVARIANTS:132`, 58-59). That is also why there is no sha256 rendering of
+ * our own — no response in the contract carries the hash as data.
  */
 export function IngestScreen() {
   const [stage, setStage] = useState<Stage>({ kind: "form" });
@@ -65,7 +59,11 @@ export function IngestScreen() {
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
       <div className="flex flex-col gap-12 p-14">
-        <ScreenHeading />
+        <header className="flex flex-col gap-2">
+          <h1 className="font-sans text-title font-bold leading-tight text-ink-primary">
+            Package intake &amp; registration
+          </h1>
+        </header>
 
         {banner !== null && (
           <p
@@ -112,16 +110,5 @@ export function IngestScreen() {
         )}
       </div>
     </div>
-  );
-}
-
-/** Rule 4: ALL-CAPS is legal on a rubric; the title beneath it is sentence case. */
-function ScreenHeading() {
-  return (
-    <header className="flex flex-col gap-2">
-      <h1 className="font-sans text-title font-bold leading-tight text-ink-primary">
-        Package intake &amp; registration
-      </h1>
-    </header>
   );
 }

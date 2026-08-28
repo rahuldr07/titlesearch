@@ -5,14 +5,13 @@ import { SpotlightMeta } from "./SpotlightMeta";
 import { RouteButton } from "../../app/chrome/RouteButton";
 
 /**
- * The served order in the prototype's spotlight card: 4px accent rail, 24px
- * padding, solid accent pill, then ref · place, then the meta row.
+ * The served order in the prototype's spotlight card.
  *
  * Three of the prototype's values have no member on `Order` (`entities.ts:32`)
  * and are not invented: the SLA chip, the "Assigned:" line, and the street
- * address the prototype puts ahead of the county. `county` and `state` DO ride
- * on the shape, so the place line is those two rather than the `jurisdiction`
- * slug, which is a routing key and not a name a person reads.
+ * address it puts ahead of the county. `county` and `state` DO ride on the
+ * shape, so the place line is those two rather than the `jurisdiction` slug,
+ * which is a routing key and not a name a person reads.
  */
 export function SpotlightOrder(props: { readonly order: Order }) {
   const order = props.order;

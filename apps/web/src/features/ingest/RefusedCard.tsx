@@ -9,21 +9,16 @@ import { glossFor } from "./manifest";
  * the server's missing-field list verbatim; the client does not author the
  * list." Every structural decision here follows from that one sentence:
  *
- *   - The rows are `rejection.missing_fields.map(...)`. Not `MANIFEST` filtered
- *     by what looks empty, not the union of both. If the server names six
- *     fields, six rows appear; if it names one this screen has never heard of,
- *     that one row appears, spelled the way the server spelled it.
- *   - `rejection.reason` is rendered as a whole sentence, unedited. No prefix,
- *     no "Error:", no appended period. `shared/notify.ts` carries the same rule
- *     for toasts and the reason is identical: improving the server's sentence
- *     belongs in the server.
- *   - `glossFor` may add the screen's own explanation BESIDE a key. It can
- *     never remove a key, reorder the list, or supply one the server omitted —
- *     and where it knows nothing, the raw key stands alone rather than being
- *     dressed up.
+ *   - The rows are `rejection.missing_fields.map(...)` — not `MANIFEST` filtered
+ *     by what looks empty, not the union of both. A key this screen has never
+ *     heard of still renders, spelled the way the server spelled it.
+ *   - `rejection.reason` is a whole sentence, unedited: no prefix, no "Error:",
+ *     no appended period. Improving the server's sentence belongs in the server.
+ *   - `glossFor` may add an explanation BESIDE a key. It can never remove one,
+ *     reorder the list, or supply one the server omitted.
  *
  * The way out is back to the form with everything still typed. A refusal that
- * clears the form is a refusal that costs the operator the work twice.
+ * clears the form costs the operator the work twice.
  */
 export function RefusedCard(props: {
   readonly rejection: IngestRejection;

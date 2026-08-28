@@ -26,6 +26,11 @@ const SETTLE_MS = 200;
  * table. Clearing works by remounting the box under a new `key` — `InputProps`
  * omits `value` and `defaultValue`, and the React compiler rejects reading a ref
  * across a component boundary.
+ *
+ * The settle timer is armed only when `typed` and `query` actually differ. It
+ * used to arm on mount and on every round trip back to the settled term, and
+ * each of those firings called `setPage(1)` — so a page chosen inside the settle
+ * window was silently undone by a term that had not changed.
  */
 export function useOrdersBrowse(): OrdersBrowseState {
   const [typed, setTyped] = useState("");
@@ -35,6 +40,7 @@ export function useOrdersBrowse(): OrdersBrowseState {
   const [resetKey, setResetKey] = useState(0);
 
   useEffect(() => {
+    if (typed === query) return;
     const settle = setTimeout(() => {
       setQuery(typed);
       setPage(1);
@@ -42,7 +48,7 @@ export function useOrdersBrowse(): OrdersBrowseState {
     return () => {
       clearTimeout(settle);
     };
-  }, [typed]);
+  }, [typed, query]);
 
   return {
     typed,

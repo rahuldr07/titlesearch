@@ -1,23 +1,14 @@
 import type { CreateOrderRequest } from "@titlepipe/contract";
 
 /**
- * THE FIVE ORDER FIELDS AND WHY EACH ONE MUST EXIST.
+ * THE FIVE ORDER FIELDS AND WHY EACH ONE MUST EXIST — the label and reason the
+ * form prints beside every input, for the operator filling it in.
  *
- * ══ THIS IS NOT THE MISSING-FIELD LIST ══════════════════════════════════════
- *
- * INVARIANTS 60-61: an incomplete upload renders THE SERVER'S missing-field
- * list verbatim; the client does not author the list. So this table is not
- * consulted to decide what is missing — the server names that, and
- * `RefusedCard` prints the server's key verbatim beside whatever gloss is
- * found here. A key the server names and this table does not know still
- * renders, as itself. A key this table knows and the server did not name never
- * appears at all.
- *
- * What it IS: the design's right column, which prints a label and a reason
- * beside every input. Those are the screen's own words for the operator
- * filling the form, and they exist because a package missing its order
- * identity does not fail at upload — it fails four stages later, silently, as
- * a wrong value on a delivered report.
+ * THIS IS NOT THE MISSING-FIELD LIST. INVARIANTS 60-61: the SERVER names what
+ * is missing and the client does not author that list, so this table is never
+ * consulted to decide. A key the server names and this table does not know
+ * still renders, as itself; a key this table knows and the server did not name
+ * never appears at all.
  *
  * The keys are `CreateOrderRequest`'s (endpoints.ts:39), typed against it so a
  * contract rename is a compile error rather than a label that stops matching.

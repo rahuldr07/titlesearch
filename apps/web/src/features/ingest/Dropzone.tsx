@@ -2,27 +2,18 @@ import { useRef, useState, type DragEvent } from "react";
 import { Button, cx } from "../../components/ui";
 
 /**
- * THE DROPZONE AND THE FILE ROW (design §Screens 5: "dropzone (dashed, hover
- * accent) → file row").
+ * THE DROPZONE AND THE FILE ROW. It stops at the file — name, size, and nothing
+ * it cannot cite. The design's Quarantine Gateway checklist would sit under
+ * this, and `IngestForm` renders a `BackendGap` in its place instead: there is
+ * no quarantine-step shape in the contract, and a four-step state machine
+ * written in the browser is what hard rule 3 forbids.
  *
- * ══ WHAT SITS BETWEEN THE FILE ROW AND THE SHA LINE IS NOT BUILT ═══════════
+ * The size is printed in BYTES rather than converted to MB — a converted figure
+ * is arithmetic on a value the screen is showing.
  *
- * The design puts the Quarantine Gateway checklist here — AV → real-PDF →
- * SHA-256, sequential, with a pulsing dot and per-step "queued / checking… /
- * clear". There is no shape for it anywhere in the contract, and inventing a
- * four-step state machine in the browser is precisely what hard rule 3
- * forbids. `IngestScreen` renders a `BackendGap` in its place. This component
- * therefore stops at the file: name, size, and nothing it cannot cite.
- *
- * The size is printed in BYTES rather than converted to MB. A converted figure
- * is arithmetic on a value the screen is showing, and the honest number is the
- * one the browser has.
- *
- * ══ THE INPUT IS REAL AND IS NOT HIDDEN FROM ASSISTIVE TECH ════════════════
- *
- * `sr-only` rather than `display:none` — a hidden input is not focusable and a
- * keyboard user cannot reach the dropzone at all. The visible surface is a
- * `<label>`, which is what makes Enter/Space open the picker with no key
+ * The input is `sr-only`, not `display:none`: a hidden input is not focusable
+ * and a keyboard user could not reach the dropzone at all. The visible surface
+ * is a `<label>`, which is what makes Enter/Space open the picker with no key
  * handler of our own.
  */
 export function Dropzone(props: {
@@ -33,13 +24,11 @@ export function Dropzone(props: {
   const input = useRef<HTMLInputElement>(null);
 
   /*
-   * THE FILE ROW'S ✕, and the line that makes it work twice.
-   *
    * An `<input type="file">` keeps its `value` after a change, so clearing only
    * React's state leaves the element still holding the file: re-choosing the
    * SAME package fires no `change` event and the row stays empty with no way
-   * back. Clearing the element is what makes "remove, look again, change your
-   * mind" reach the same file a second time.
+   * back. Clearing the element is what makes "remove, then change your mind"
+   * reach the same file a second time.
    */
   function remove() {
     if (input.current !== null) input.current.value = "";

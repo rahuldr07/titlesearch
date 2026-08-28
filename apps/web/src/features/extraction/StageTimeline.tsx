@@ -2,34 +2,25 @@ import type { PipelineStage } from "@titlepipe/contract";
 import { cx } from "../../components/ui";
 
 /**
- * THE SEQUENTIAL STAGES TIMELINE — the design's rail (`/tmp/ref.html`
- * §isProcessing): a 2px hairline running behind a column of 20px ringed dots,
- * each row a 16px bold label over a 13px note, with a mono chip on the right.
+ * THE SEQUENTIAL STAGES TIMELINE — one row per `PipelineStage` (intake.ts:83)
+ * in the order the server sent them. Nothing here sorts, filters, renumbers, or
+ * decides a stage is running because the one before it is done: `phase` arrives
+ * already decided and `StagePhase` (intake.ts:77) has exactly four members.
+ * `label`, `detail` and `owner` are printed verbatim — a client-side
+ * `Record<StageId, string>` would be a second copy of product copy drifting
+ * silently from the first.
  *
- * One row per `PipelineStage` (intake.ts:83) in the order the server sent
- * them. The screen does not sort, filter, renumber, or decide that a stage is
- * running because the one before it is done — `phase` arrives already decided
- * and `StagePhase` (intake.ts:77) has exactly four members.
- *
- * `label`, `detail` and `owner` are the server's words and are printed
- * verbatim. A client-side `Record<StageId, string>` would be a second copy of
- * product copy drifting silently from the first.
- *
- * ══ WHAT SITS IN THE DESIGN'S RIGHT-HAND CHIP, AND WHAT DOES NOT ═══════════
- *
- * The design puts a COUNT there ("38 of 64 pages", "6 engine passes"). There
- * is no count field on `PipelineStage`: the counts the design draws live
- * inside `detail`, already composed by the server, and that is where they are
- * rendered. Splitting a numeral back out of that sentence to set it in mono
- * would be the client re-authoring a server string.
- *
- * So the chip carries `owner` — the one short, fixed-vocabulary fact a stage
- * row has (`StageOwner`, intake.ts:80). It is sans rather than mono because
- * rule 3 reserves mono for data, and "LLM agent" is a word.
+ * THE RIGHT-HAND CHIP CARRIES `owner`, NOT A COUNT. The design puts a count
+ * there ("38 of 64 pages"); `PipelineStage` has no count member, and the
+ * figures the design draws already live inside `detail`, composed by the
+ * server. Splitting a numeral back out of that sentence to set it in mono is
+ * the client re-authoring a server string. `owner` (`StageOwner`,
+ * intake.ts:80) is sans rather than mono because rule 3 reserves mono for data
+ * and "LLM agent" is a word.
  *
  * REPLAY IS REFUSED. The design draws a "↺ Replay" control beside the header.
- * It is a MUTATION and no endpoint exists — there is no re-run action in
- * `PERMISSIONS` (authz.ts:59-118) and no replay route in the contract.
+ * It is a MUTATION, and there is no re-run action in `PERMISSIONS`
+ * (authz.ts:59-118) and no replay route in the contract.
  *
  * Rule 7's glyph vocabulary carries the phase: ✓ done, • running/waiting,
  * ◆ halted. No icons, no fifth mark.
@@ -46,11 +37,9 @@ const PHASE: Readonly<
 export function StageTimeline(props: { readonly stages: readonly PipelineStage[] }) {
   return (
     <ol data-testid="stage-timeline" className="relative flex flex-col gap-10">
-      {/*
-       * The design's rail: 2px, behind the dots, stopping short of the first
-       * and last so it reads as a connector rather than a border. Every dot
-       * below is `relative`, so each paints over it.
-       */}
+      {/* The rail stops short of the first and last dot so it reads as a
+          connector rather than a border; every dot below is `relative` and
+          paints over it. */}
       <span
         aria-hidden
         className="pointer-events-none absolute top-5 bottom-5 left-5 w-1 bg-line-subtle"

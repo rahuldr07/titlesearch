@@ -9,33 +9,23 @@ import { RulebookBanner } from "./RulebookBanner";
  * THE INTAKE CARD — the package on the left, the order on the right, one act
  * across the bottom. `reference-app.html`'s `isUpload`, and act one of two.
  *
- * ══ THE TWO OBJECTS THE DESIGN DRAWS BETWEEN THE FILE ROW AND THE BUTTON ═══
+ * Three objects the design draws are not built, and each renders a `BackendGap`
+ * in its place that states the refusal on screen: the QUARANTINE GATEWAY
+ * checklist (no quarantine-step shape exists, and a four-step state machine
+ * written in the browser is what hard rule 3 forbids), the OPTICAL PROFILE card
+ * (three thresholds, and thresholds are server-owned; probe visibility is
+ * additionally open — CONTEXT §14), and the PRODUCT select.
  *
- * Neither is built, and neither is mocked. `ANALYSIS-screens.md` §7
- * conversation 3 is the record of asking the backend owner for both:
+ * The product gap has a visible consequence one line below it:
+ * `CreateOrderRequest` (endpoints.ts:39-45) has five members and no product, so
+ * a product chosen here would be sent nowhere, and `EffectiveChecklist`
+ * (workspace.ts:118) is keyed on client AND product — with no product to narrow
+ * by, `RulebookBanner` names every checklist the client has rather than the one
+ * this order will use.
  *
- *   - THE QUARANTINE GATEWAY CHECKLIST (AV → real-PDF → SHA-256, sequential,
- *     three states each, pulsing dot). No quarantine-step shape exists
- *     anywhere in the contract. A four-step state machine written in the
- *     browser is exactly what AGENTS.md hard rule 3 forbids, and its step
- *     LABELS would be a second copy of product copy drifting from the
- *     server's — the argument `LifecycleStamp.label` (intake.ts:275) settles.
- *   - THE OPTICAL PROFILE CARD (DPI, clerk stamp located, contrast floor).
- *     Three THRESHOLDS, and thresholds are server-owned without exception.
- *     Whether they may be shown at all is additionally an open question about
- *     probe visibility (CONTEXT §14, entities.ts:17-19) — which is a question
- *     for the owner, not something to resolve by drawing it.
- *
- * There is no sha256 line either, for the same reason: no response in the
- * contract carries the hash as data. It arrives only as prose inside a 409,
- * which is where the screen renders it — verbatim, in the banner above.
- *
- * ══ RULE 1: THE ACCENT IS NOT SPENT HERE ═══════════════════════════════════
- *
- * "Upload the package" is a SECONDARY button. The screen's one accent spend is
- * "Accept — sign for it" on the next stage, because acceptance is the act that
- * matters (INVARIANT 47) and the accent goes to the decision, not to the
- * transfer.
+ * RULE 1: THE ACCENT IS NOT SPENT HERE. "Upload the package" is a SECONDARY
+ * button; the screen's one accent spend is "Accept — sign for it" on the next
+ * stage, because acceptance is the act that matters (INVARIANT 47).
  */
 export function IngestForm(props: {
   readonly values: CreateOrderRequest;
@@ -46,13 +36,8 @@ export function IngestForm(props: {
   readonly onSubmit: () => void;
 }) {
   return (
-    /*
-     * ONE CARD, TWO COLUMNS, ONE FOOTER — `reference-app.html`'s `isUpload`.
-     * This was two side-by-side cards, which reads as two unrelated forms; the
-     * design puts both halves in one surface under "Package Document" and
-     * "Order Configuration" precisely because neither is submittable without
-     * the other, and it spans the act across the bottom of both.
-     */
+    /* One card, two columns, one footer: neither half is submittable without
+       the other, so two side-by-side cards would read as two unrelated forms. */
     <Card padding="none">
       <div className="grid grid-cols-2 items-start">
         <div className="flex flex-col gap-8 border-r border-line-subtle p-12">
@@ -88,20 +73,6 @@ export function IngestForm(props: {
           </h2>
           <OrderFields values={props.values} onChange={props.onValue} />
 
-          {/*
-           * CONTRACT GAP: the design's PRODUCT select has no field to write to.
-           * `CreateOrderRequest` (endpoints.ts:39-45) has exactly five members —
-           * `client_id`, `external_ref`, `jurisdiction`, `state`, `county` — and
-           * no `product_id: string`. `Order.product` (entities.ts) is nullable
-           * and SERVER-RESOLVED, so a product chosen here would be sent nowhere
-           * and silently dropped.
-           *
-           * It is stated on screen rather than left as a hole because the gap
-           * has a visible consequence one line below: `EffectiveChecklist`
-           * (workspace.ts:118) is keyed on client AND product, so with no
-           * product to narrow by, the banner names EVERY product's checklist
-           * for the chosen client rather than the one this order will use.
-           */}
           <BackendGap
             object="Product — the second half of the checklist key"
             conversation="CONTRACT GAP: CreateOrderRequest, endpoints.ts:39-45"

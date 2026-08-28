@@ -3,28 +3,20 @@ import { useRead } from "../../app/useRead";
 import { clients as clientsRead } from "../../shared/clientsQueries";
 
 /**
- * THE CLIENT IS CHOSEN, NEVER TYPED.
+ * THE CLIENT IS CHOSEN, NEVER TYPED. A mistyped `client_id` resolves the WRONG
+ * sign-off checklist, which is the one thing intake decides —
+ * `EffectiveChecklist` (workspace.ts:118) is keyed on it, and the defect that
+ * produces is a search missing a line somebody thought was covered.
+ * `GET /api/clients` (workspace.ts:131) serves the list, so the screen asks.
  *
- * `client_id` is a `CreateOrderRequest` member (endpoints.ts:39) and the old
- * screen took it as free text. A mistyped id is a mistype away from resolving
- * the WRONG sign-off checklist, which is the one thing intake decides —
- * `EffectiveChecklist` (workspace.ts:118) is keyed on `client_id`, and a
- * search missing a line somebody thought was covered is the defect that
- * produces. `GET /api/clients` (workspace.ts:131) has always served the list,
- * so the screen asks rather than guesses.
+ * Radios, not a combobox: the roster is short and a disclosure widget hides the
+ * one fact the operator is choosing between. `code` is mono beside the name —
+ * rule 3, and it is what the operator recognises from the county paperwork.
  *
- * The rows are radios, not a combobox: the demo roster is short, and a
- * disclosure widget hides the one fact the operator is choosing between.
- * `code` renders in mono beside the name — it is a data key (rule 3), and it
- * is what the operator recognises from the county paperwork.
- *
- * ══ NO CLIENT IS PRE-SELECTED, AND THAT IS DELIBERATE ══════════════════════
- *
- * Defaulting to the first row would send an unexamined `client_id` on every
- * upload where the operator never looked at this control. The absence of a
- * choice must reach the server as an absence, so the SERVER names it in the
- * missing-field list (INVARIANTS 60-61) rather than the screen quietly
- * supplying one.
+ * NO CLIENT IS PRE-SELECTED. Defaulting to the first row would send an
+ * unexamined `client_id` on every upload where the operator never looked here.
+ * The absence must reach the server as an absence, so the SERVER names it in
+ * the missing-field list (INVARIANTS 60-61).
  */
 export function ClientPicker(props: {
   readonly value: string;

@@ -1,6 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { get } from "../../shared/api";
+import { useRead } from "../../app/useRead";
 import { lifecycle, queueNext } from "../../shared/queries";
 import { useSignedIn } from "../../app/session/signedIn";
 import { usePermissions } from "../../app/session/permissions";
@@ -19,15 +18,8 @@ export function OverviewScreen() {
   const account = useSignedIn((s) => s.account);
   const permissions = usePermissions(account !== null);
 
-  const board = useQuery({
-    queryKey: lifecycle.key,
-    queryFn: () => get(lifecycle.path, lifecycle.schema),
-  });
-
-  const served = useQuery({
-    queryKey: queueNext.key,
-    queryFn: () => get(queueNext.path, queueNext.schema),
-  });
+  const board = useRead(lifecycle);
+  const served = useRead(queueNext);
 
   return (
     <div className="tp-screen-enter flex h-full min-h-0 flex-col gap-12 overflow-y-auto px-16 pt-14 pb-32">
@@ -58,7 +50,11 @@ export function OverviewScreen() {
         ))}
       </div>
 
-      <Spotlight order={served.data?.order ?? null} pending={served.isPending} />
+      <Spotlight
+        order={served.data?.order ?? null}
+        pending={served.isPending}
+        failed={served.isError}
+      />
 
       <RecentOrders />
 

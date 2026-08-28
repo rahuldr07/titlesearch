@@ -3,11 +3,10 @@ import type { CreateOrderRequest, IngestRejection, Order } from "@titlepipe/cont
 /**
  * THE FOUR STAGES OF INTAKE, AND THE ONE FUNCTION THAT BUILDS THE UPLOAD.
  *
- * Split out of `IngestScreen` so that screen is the stage router and nothing
- * else. The union is the product rule made unrepresentable-otherwise: there is
- * no state in which an order is uploaded AND queued in one step, because
- * `accept` and `accepted` are different members and only the server's
- * acknowledgement moves between them (INVARIANT 47, `docs/INVARIANTS.md:131`).
+ * The union makes the product rule unrepresentable-otherwise: there is no state
+ * in which an order is uploaded AND queued in one step, because `accept` and
+ * `accepted` are different members and only the server's acknowledgement moves
+ * between them (INVARIANT 47, `docs/INVARIANTS.md:131`).
  */
 export type Stage =
   | { readonly kind: "form" }
@@ -28,17 +27,11 @@ export const BLANK_ORDER: CreateOrderRequest = {
 };
 
 /**
- * SEND WHAT WE HAVE, AND NOTHING WE DO NOT.
- *
- * An empty field is OMITTED rather than sent blank, so the server sees an
- * ABSENCE and names it — INVARIANTS 60-61, the missing-field list is the
- * server's and the client does not author it. Nothing is validated here: a
- * client-side gate would hide the server's refusal behind a cheaper one nobody
- * can audit against the pipeline, and would be a second list drifting from the
- * first from the day it was written.
- *
- * A missing FILE is likewise simply not appended, so `package` arrives in the
- * server's `missing_fields` array like any other absent key.
+ * SEND WHAT WE HAVE, AND NOTHING WE DO NOT. An empty field is OMITTED rather
+ * than sent blank, and a missing FILE is simply not appended, so the server sees
+ * an ABSENCE and names it — INVARIANTS 60-61. Nothing is validated here: a
+ * client-side gate would be a second list drifting from the server's from the
+ * day it was written.
  */
 export function packageForm(
   values: CreateOrderRequest,
