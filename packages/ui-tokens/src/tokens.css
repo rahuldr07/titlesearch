@@ -213,6 +213,19 @@
    * 3.73:1 and fails. Same ruling as --color-ink-faint above.
    */
   --color-rail-ink-muted: #8881a2; /* 4.56:1 on rail-surface; 3.73:1 where it is used */
+  /*
+   * The prototype's third rail tone, for the tagline, the quick-jump label and
+   * its key cap. 6.71:1 on the rail and 5.49:1 on the lifted quick-jump fill,
+   * where --color-rail-ink-muted measures 3.73 and fails AA — so this closes
+   * the second half of CONFLICT-ink-faint-contrast.md §3 as well as matching
+   * the design. Not in the design system's own :root; it is an inline value in
+   * reference-app.html, measured off the rendered rail.
+   */
+  --color-rail-ink-soft: #a6a0be;
+  /* The design's three rail alphas: .06 fill, .08 border, .10 key cap. */
+  --color-rail-fill: rgb(255 255 255 / 0.06);
+  --color-rail-edge: rgb(255 255 255 / 0.08);
+  --color-rail-cap: rgb(255 255 255 / 0.1);
   --color-rail-line: rgb(255 255 255 / 0.07);
   --color-rail-accent: #b7a6ee; /* 8.16:1 — the accent AS SEEN ON THE COLUMN */
 

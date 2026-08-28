@@ -22,7 +22,7 @@ export function RailBrand(props: { readonly connected: boolean }) {
             TitlePipe
           </span>
         </div>
-        <span className="truncate text-label leading-flat text-rail-ink-muted">
+        <span className="truncate text-label leading-flat text-rail-ink-soft">
           Title abstract engine
         </span>
       </div>
@@ -62,7 +62,7 @@ export function RailSearch() {
         type="button"
         data-testid="rail-search"
         onClick={() => toggle("palette")}
-        className="tp-state tp-press flex h-19 w-full items-center gap-4 rounded-lg border border-rail-line bg-rail-line px-6 text-meta leading-flat text-rail-ink-muted hover:text-rail-ink"
+        className="tp-state tp-press flex h-18 w-full items-center gap-4 rounded-lg border border-rail-edge bg-rail-fill px-6 text-meta leading-flat text-rail-ink-soft hover:text-rail-ink"
       >
         <SearchGlyph />
         <span className="min-w-0 flex-1 truncate text-left">Quick jump…</span>
@@ -70,7 +70,7 @@ export function RailSearch() {
             the innermost object in rule 5's ladder, but this one sits INSIDE a
             14px field and the design draws it at the field's radius, not a
             step below it. Still a token, still on the six-radius scale. */}
-        <Kbd className="shrink-0 rounded-lg border-transparent bg-rail-line text-rail-ink">
+        <Kbd className="shrink-0 rounded-lg border-transparent bg-rail-cap text-surface-panel">
           ⌘K
         </Kbd>
       </button>
