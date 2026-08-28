@@ -78,24 +78,17 @@ export function Section(props: {
         })}
       </SidebarMenu>
       {/*
-       * The design's numbered stages, BELOW the door — §App shell, "Active Order
-       * (numbered stages 1-5 with state dots)". A door is somewhere you may go
-       * and a stage is where the work has got to: two different objects, so the
-       * stages sit under the Review door rather than replacing it.
+       * The design's numbered stages, BELOW the doors. It draws one list of six
+       * rows; a door is somewhere you may go and a stage is where the work has
+       * got to, so ours are two lists on one rhythm rather than one list that
+       * conflates them.
        */}
       {props.section === "order" && <ActiveOrderStages />}
     </SidebarGroup>
   );
 }
 
-/**
-
- * THE ACTIVE ORDER'S REF, beside its rubric — mono and accent, as the design draws it
-
- * (`4176034-1`, not `ord_demo_1`). THE ID IN THE URL IS NOT THE REF.
-
- */
-/** The stages, gated on an order-scoped route exactly as the ref above is. */
+/** The stages, gated on an order-scoped route exactly as the ref below is. */
 function ActiveOrderStages() {
   const orderId = useRouterState({
     select: (s) => /^\/orders\/([^/]+)/.exec(s.location.pathname)?.[1] ?? null,
@@ -104,6 +97,10 @@ function ActiveOrderStages() {
   return <OrderStages orderId={orderId} />;
 }
 
+/**
+ * THE ACTIVE ORDER'S REF, beside its rubric — mono and accent, as the design
+ * draws it (`4176034-1`, not `ord_demo_1`). THE ID IN THE URL IS NOT THE REF.
+ */
 function ActiveOrderRef(props: { readonly section: RailSection }) {
   const orderId = useRouterState({
     select: (s) => /^\/orders\/([^/]+)/.exec(s.location.pathname)?.[1] ?? null,

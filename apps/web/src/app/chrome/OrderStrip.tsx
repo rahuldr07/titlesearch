@@ -3,6 +3,7 @@ import { useRouterState } from "@tanstack/react-router";
 import { OrderContextResponse } from "@titlepipe/contract";
 import { get } from "../../shared/api";
 import { cx } from "../../components/ui";
+import { OrderStripStages } from "./OrderStripStages";
 
 /**
 
@@ -12,6 +13,15 @@ import { cx } from "../../components/ui";
 
  * from `GET /api/orders/{id}/context` (`intake.ts:301`), which exists…
 
+ *
+ * THREE THINGS THE DESIGN DRAWS HERE ARE REFUSED. The SLA chip
+ * ("Due today · 5h 20m left") is INVARIANT 23 — no countdown, no elapsed. The
+ * property address has no order-scoped read: `addr`/`place` live on `OrderRow`
+ * (design.ts:31), the permission-scoped browse row, and fetching a paginated
+ * list to find one order's address is not a source. CONTRACT GAP: an address on
+ * `OrderContextResponse`. The primary-action button is the design computing
+ * which action comes next from client state — hard rule 3 — and each screen
+ * already carries its own.
  */
 const ORDER_PATH = /^\/orders\/([^/]+)/;
 
@@ -32,31 +42,35 @@ export function OrderStrip() {
   return (
     <header
       data-testid="order-strip"
-      className="flex h-26 shrink-0 items-center gap-10 border-b border-line-strong bg-surface-panel px-12"
+      className="flex shrink-0 flex-col gap-5 border-b border-line-strong bg-surface-panel px-14 py-6"
     >
-      {context.data === undefined ? (
-        /* INVARIANT 59 — a partial failure degrades this region only. The id
-           from the URL is the one thing that is true without the server. */
-        <span className="font-mono text-subject leading-flat text-ink-muted">
-          {orderId}
-        </span>
-      ) : (
-        <>
-          <span
-            data-testid="order-ref"
-            className="font-mono text-subject font-semibold leading-flat text-ink-primary"
-          >
-            {context.data.order_ref}
+      <div className="flex min-h-14 items-center gap-10">
+        {context.data === undefined ? (
+          /* INVARIANT 59 — a partial failure degrades this region only. The id
+             from the URL is the one thing that is true without the server. */
+          <span className="font-mono text-subject leading-flat text-ink-muted">
+            {orderId}
           </span>
-          <Fact value={context.data.product} absent="No resolved product" pill />
-          <Fact value={context.data.period_label} absent="No period on record" />
-          <Fact
-            value={context.data.pages === null ? null : `${context.data.pages} pages`}
-            absent="Page count unread"
-          />
-          <Stamp stamp={context.data.stamp} />
-        </>
-      )}
+        ) : (
+          <>
+            <span
+              data-testid="order-ref"
+              className="font-mono text-subject font-bold leading-flat text-ink-secondary"
+            >
+              {context.data.order_ref}
+            </span>
+            <Fact value={context.data.product} absent="No resolved product" pill />
+            <Fact value={context.data.period_label} absent="No period on record" />
+            <Fact
+              value={context.data.pages === null ? null : `${context.data.pages} pages`}
+              absent="Page count unread"
+            />
+            <Stamp stamp={context.data.stamp} />
+          </>
+        )}
+      </div>
+      {/* Its own query, so a failed context still leaves the stages standing. */}
+      <OrderStripStages orderId={orderId} />
     </header>
   );
 }
