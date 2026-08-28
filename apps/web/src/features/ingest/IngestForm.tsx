@@ -1,13 +1,13 @@
 import type { CreateOrderRequest } from "@titlepipe/contract";
-import { Button, Card, CardBody, CardHeader } from "../../components/ui";
+import { Button, Card } from "../../components/ui";
 import { BackendGap } from "../../entities/gap/BackendGap";
 import { Dropzone } from "./Dropzone";
 import { OrderFields } from "./OrderFields";
 import { RulebookBanner } from "./RulebookBanner";
 
 /**
- * THE TWO-COLUMN CARD — the package on the left, the order on the right.
- * Design §Screens 5's opening state, and act one of two.
+ * THE INTAKE CARD — the package on the left, the order on the right, one act
+ * across the bottom. `reference-app.html`'s `isUpload`, and act one of two.
  *
  * ══ THE TWO OBJECTS THE DESIGN DRAWS BETWEEN THE FILE ROW AND THE BUTTON ═══
  *
@@ -46,10 +46,19 @@ export function IngestForm(props: {
   readonly onSubmit: () => void;
 }) {
   return (
-    <div className="grid grid-cols-2 items-start gap-12">
-      <Card padding="none">
-        <CardHeader>The package</CardHeader>
-        <CardBody className="flex flex-col gap-8">
+    /*
+     * ONE CARD, TWO COLUMNS, ONE FOOTER — `reference-app.html`'s `isUpload`.
+     * This was two side-by-side cards, which reads as two unrelated forms; the
+     * design puts both halves in one surface under "Package Document" and
+     * "Order Configuration" precisely because neither is submittable without
+     * the other, and it spans the act across the bottom of both.
+     */
+    <Card padding="none">
+      <div className="grid grid-cols-2 items-start">
+        <div className="flex flex-col gap-8 border-r border-line-subtle p-12">
+          <h2 className="text-label font-semibold leading-flat text-ink-faint">
+            Package document
+          </h2>
           <Dropzone file={props.file} onFile={props.onFile} />
 
           <BackendGap
@@ -71,31 +80,30 @@ export function IngestForm(props: {
             are server-owned, and whether they may be shown at all is an open
             question about probe visibility (CONTEXT §14).
           </BackendGap>
+        </div>
 
-          <div className="flex flex-wrap items-center gap-6">
-            <Button
-              data-testid="upload-btn"
-              onPress={props.onSubmit}
-              disabledBecause={
-                props.uploading ? "Uploading the package…" : undefined
-              }
-            >
-              Upload the package
-            </Button>
-            <span className="font-sans text-label leading-close text-ink-muted">
-              Uploading does not queue it. Signing does.
-            </span>
-          </div>
-        </CardBody>
-      </Card>
-
-      <Card padding="none">
-        <CardHeader>The order — what the PDF cannot say</CardHeader>
-        <CardBody className="flex flex-col gap-8">
+        <div className="flex flex-col gap-8 p-12">
+          <h2 className="text-label font-semibold leading-flat text-ink-faint">
+            Order configuration
+          </h2>
           <OrderFields values={props.values} onChange={props.onValue} />
           <RulebookBanner clientId={props.values.client_id} />
-        </CardBody>
-      </Card>
-    </div>
+        </div>
+      </div>
+
+      {/* The footer spans both columns, as the design's does. */}
+      <div className="flex flex-wrap items-center justify-between gap-6 border-t border-line-subtle px-12 py-8">
+        <span className="font-sans text-meta leading-close text-ink-muted">
+          Uploading does not queue it. Signing does.
+        </span>
+        <Button
+          data-testid="upload-btn"
+          onPress={props.onSubmit}
+          disabledBecause={props.uploading ? "Uploading the package…" : undefined}
+        >
+          Upload the package
+        </Button>
+      </div>
+    </Card>
   );
 }
