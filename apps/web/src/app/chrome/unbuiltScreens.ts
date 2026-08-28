@@ -13,9 +13,10 @@ export const UNBUILT_SCREENS: readonly ScreenDescriptor[] = [
   {
     path: "/",
     screen: "Overview",
-    binds: "MetricsResponse (endpoints.ts:423) · LifecycleResponse (intake.ts:246)",
+    binds:
+      "LifecycleResponse (intake.ts:246) · OrdersPageResponse (design.ts) for the recent rows",
     missing:
-      "The design's 'Recent orders table (last 10)' has no endpoint — no order-list endpoint exists, and INVARIANTS:82-83 forbids one. The stat cards bind to MetricsResponse verbatim; nothing on this screen may be counted in the browser.",
+      "BUILT (features/overview). The recent-orders table arrived with GET /api/orders, which the 2026-08-28 ruling added; the server owns the page and its total, so nothing here is counted in the browser. Still absent for want of a shape: the stat-card note line (LifecycleResponse carries no note per figure) and the spotlight's SLA chip and assignee (no member on Order).",
   },
   {
     path: "/ingest",
