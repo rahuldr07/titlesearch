@@ -1,19 +1,27 @@
-import { Kbd } from "../../components/ui";
-import type { OrderCensus } from "@titlepipe/contract";
+import { Kbd, Switch } from "../../components/ui";
 
 /**
-
- * THE WORKSTATION'S TOP BAR, measured off `reference-app.html`'s `isReview`: 8px 16px
-
- * on white, 1px #E4E7ED underneath, gap 16, wraps h1 "Examination Workstation" 16px
-
- * w700 ← 16, not 28: this is a toolbar reviewSub 11px mono #6E7480…
-
+ * THE WORKSTATION'S TOP BAR, measured off `reference-app.html`'s `isReview`:
+ * 8px 16px on white, 1px underneath, gap 16, wrapping — h1 "Examination
+ * Workstation" 16px w700 (16, not 28: this is a toolbar), the order ref in
+ * mono, the active field, the flagged-first toggle and the chord legend.
+ *
+ * SIX CHORDS, AND EVERY ONE IS INSTALLED. Rule 11: a screen may not advertise
+ * a key it does not bind. `Z` was missing from this legend and C/E/Q/J/K were
+ * printed with nothing behind them; `useReviewKeys.ts` now installs all six,
+ * so the legend and the bindings are one list.
+ *
+ * NO MEASURE, NO PILL. The design draws a per-decision dot strip and an "N
+ * fields" pill beside it. The strip is `DecisionDock`'s (it holds the server's
+ * `settled`/`decisions`); the pill is `decisions - settled`, and that is count
+ * arithmetic in the browser — `OrderCensus` carries no `remaining`, so it is
+ * not printed. CONTRACT GAP: `OrderCensus.remaining: z.number().int().optional()`.
  */
 export function WorkstationBar(props: {
   readonly orderRef: string | null;
-  readonly census: OrderCensus | undefined;
   readonly openLabel: string | null;
+  readonly flaggedFirst: boolean;
+  readonly onFlaggedFirst: (on: boolean) => void;
 }) {
   return (
     <header className="flex shrink-0 flex-wrap items-center gap-8 border-b border-line-strong bg-surface-panel px-8 py-4">
@@ -40,12 +48,24 @@ export function WorkstationBar(props: {
         )}
       </p>
 
+      {/* A VIEW ORDER OVER THE SECTIONS, and it re-ranks nothing: it reads the
+          `flagged` boolean each section already carries from the server's own
+          queue membership. No count, no score, no threshold. */}
+      <Switch
+        data-testid="flagged-first"
+        isSelected={props.flaggedFirst}
+        onChange={props.onFlaggedFirst}
+      >
+        Flagged sections first
+      </Switch>
+
       <div className="flex shrink-0 items-center gap-4 border-l border-line-strong pl-6">
         <Chip k="C" label="Confirm" />
-        <Chip k="E" label="Edit" />
+        <Chip k="E" label="Correct" />
         <Chip k="Q" label="Escalate" />
         <Chip k="J" label="Next" />
         <Chip k="K" label="Previous" />
+        <Chip k="Z" label="Zoom" />
       </div>
     </header>
   );

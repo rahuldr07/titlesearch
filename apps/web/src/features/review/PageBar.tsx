@@ -1,4 +1,4 @@
-import { Button, SegmentedControl, Segment } from "../../components/ui";
+import { Button, SegmentedControl, Segment, Toggle } from "../../components/ui";
 
 /**
 
@@ -34,6 +34,13 @@ export function PageBar(props: {
   readonly zoom: ZoomLevel;
   readonly onGo: (n: number) => void;
   readonly onZoom: (z: ZoomLevel) => void;
+  /**
+   * The design's "◉ Following / ○ Free" — "when on, the page follows the field
+   * you focus on the left". A VIEW preference and nothing else: it changes
+   * which sheet is on screen, never what any field says.
+   */
+  readonly following: boolean;
+  readonly onFollowing: (following: boolean) => void;
 }) {
   const first = props.shown <= 1;
   const last = props.shown >= props.total;
@@ -69,6 +76,16 @@ export function PageBar(props: {
         </Button>
       </div>
 
+      <div className="flex items-center gap-4">
+      <Toggle
+        data-testid="follow-citation"
+        aria-label="Follow the open field's citation"
+        isSelected={props.following}
+        onChange={props.onFollowing}
+      >
+        {props.following ? "Following the citation" : "Free — the page stays put"}
+      </Toggle>
+
       <SegmentedControl
         label="Page magnification — a view control, not a measurement"
         selectedKeys={[props.zoom]}
@@ -83,6 +100,7 @@ export function PageBar(props: {
           </Segment>
         ))}
       </SegmentedControl>
+      </div>
     </div>
   );
 }

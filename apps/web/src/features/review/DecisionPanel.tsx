@@ -1,22 +1,33 @@
 import { useState } from "react";
 import type { Field } from "@titlepipe/contract";
-import { Alert, Button, Card } from "../../components/ui";
+import { Alert, Card } from "../../components/ui";
 import { DecisionCard } from "../../entities/decision/DecisionCard";
 import { nominatedPair } from "./readings";
 import { fieldLabel } from "./fieldNaming";
 import { panelRubric } from "./panelRubric";
 import { confirmValue, readCited } from "../../shared/provenance";
 import { useReviewWrites } from "./useReviewWrites";
+import { DecisionActions } from "./DecisionActions";
 import { DecisionEditor, type EditorMode } from "./DecisionEditor";
+import { useDecisionKeys } from "./useReviewKeys";
 
 /**
-
- * THE OPEN DECISION — the workstation's subject, and the one place rule 1's accent is
-
- * spent on this screen. `DecisionCard` (`entities/decision`) already draws RECIPES'
-
- * "Open decision" row exactly as specified — a 3px left rail and NO fill…
-
+ * THE OPEN DECISION — the workstation's subject, and the one place rule 1's
+ * accent is spent on this screen. `DecisionCard` (`entities/decision`) draws
+ * RECIPES' "Open decision" row; the acts are composed here because the feature
+ * owns the chords.
+ *
+ * FOUR ACTS, NOT THREE. Confirm, correct, escalate — and declare an absence,
+ * which is the design's "Law 3 Protocol: Declare Null Provenance" panel
+ * (`AbsencePicker`). Without it the four ratified NA reasons were readable and
+ * unwritable: nothing on this screen could file one, though
+ * `CorrectFieldRequest.na_reason` has carried them since 2026-07-26.
+ *
+ * NO CONSEQUENCE LINE. The design prints an amber "what follows from getting
+ * this wrong" sentence and `DecisionCard` has the slot for it, but a claim
+ * about consequence is the rulebook's to make, not the browser's.
+ * CONTRACT GAP: `Field.consequence: z.string().nullable().optional()`,
+ * server-authored beside `asking`/`why`.
  */
 export function DecisionPanel(props: {
   readonly field: Field | null;
@@ -24,9 +35,39 @@ export function DecisionPanel(props: {
 }) {
   const writes = useReviewWrites(props.orderId);
   const [mode, setMode] = useState<EditorMode>(null);
-  const [adopted, setAdopted] = useState<string | null>(null);
+  /* The value being filed. Held HERE so an adopt can write into an editor that
+     is already open without remounting it — INVARIANT 31. */
+  const [value, setValue] = useState("");
 
-  if (props.field === null) {
+  const field = props.field;
+  const machineRead = field === null ? null : confirmValue(field);
+
+  const open = (next: Exclude<EditorMode, null>, seed?: string) => {
+    if (seed !== undefined) setValue(seed);
+    setMode(next);
+  };
+
+  const close = () => {
+    setMode(null);
+    setValue("");
+  };
+
+  useDecisionKeys({
+    enabled: field !== null && mode === null,
+    /*
+     * ORPHAN O9 — the confirm CHORD never accepts a blank. A field the server
+     * sent no value for is settled by declaring which absence it is, and a
+     * held-down `c` must not bulk-accept absences. The BUTTON still files it:
+     * a click is an explicit act, which is the whole distinction.
+     */
+    onConfirm: () => {
+      if (field !== null && machineRead !== null) writes.confirm(field.id, machineRead);
+    },
+    onCorrect: () => open("correct", machineRead ?? ""),
+    onEscalate: () => open("escalate"),
+  });
+
+  if (field === null) {
     return (
       <div className="shrink-0 border-b border-line-strong bg-surface-app p-8">
         <Card>
@@ -39,46 +80,24 @@ export function DecisionPanel(props: {
     );
   }
 
-  const field = props.field;
-
   return (
     <div className="flex shrink-0 flex-col gap-6 border-b border-line-strong bg-surface-app p-8">
-      {/* `label`/`rubric` are passed in: an entity may not import a feature,
-          and these are what the specs address the selection by (sel-label,
-          sel-state — eighty assertions). `panelRubric` was orphaned until now;
-          StatePill says "Needs review" where the rubric says "NEEDS REVIEW",
-          and the specs pin the second. See CONFLICT-caps-in-strings.md. */}
       <DecisionCard
         field={field}
         label={fieldLabel(field.path)}
         rubric={panelRubric(field, readCited(field)).text}
         readings={nominatedPair(field.readings ?? []) ?? undefined}
         onAdoptReading={(reading) => {
-          // INVARIANT 31 — into the editor, never retyped.
-          setAdopted(reading.value); // rules-allow: FieldReading.value, not Field.value — a pre-merge reading has no provenance union to read through
-          setMode("correct");
+          // INVARIANT 31 — into the editor, never retyped, and into one that is
+          // ALREADY OPEN without discarding what has been typed beside it.
+          open("correct", reading.value ?? ""); // rules-allow: FieldReading.value, not Field.value — a pre-merge reading has no provenance union to read through
         }}
         actions={
-          <div className="flex flex-wrap items-center gap-4">
-            {/*
-             * `disabledBecause`, not `isDisabled` — the kit has no boolean
-             * disable, because rule 9 says every blocked control states its
-             * reason. The type refuses the shortcut, which is the point.
-             */}
-            <Button
-              variant="primary"
-              disabledBecause={writes.pending ? "Filing the last act…" : null}
-              onPress={() => writes.confirm(field.id, confirmValue(field))}
-            >
-              Confirm
-            </Button>
-            <Button variant="secondary" onPress={() => setMode("correct")}>
-              Correct
-            </Button>
-            <Button variant="ghost" onPress={() => setMode("escalate")}>
-              Escalate
-            </Button>
-          </div>
+          <DecisionActions
+            pending={writes.pending}
+            onConfirm={() => writes.confirm(field.id, machineRead)}
+            onOpen={(next) => open(next, next === "correct" ? (machineRead ?? "") : "")}
+          />
         }
       />
 
@@ -87,28 +106,27 @@ export function DecisionPanel(props: {
        * is a plain string slot, so nothing can be composed into the sentence.
        */}
       {writes.serverNote !== null && (
-        <Alert tone="halt" title="The server answered" message={writes.serverNote} />
+        <div data-testid="confirm-note">
+          <Alert tone="halt" title="The server answered" message={writes.serverNote} />
+        </div>
       )}
 
       {mode !== null && (
         <DecisionEditor
-          key={adopted ?? "blank"}
+          key={field.id}
           mode={mode}
-          seeded={adopted}
+          value={value}
+          onValueChange={setValue}
+          machineRead={machineRead ?? ""}
           pending={writes.pending}
           onCancel={() => {
-            setMode(null);
-            setAdopted(null);
+            close();
             writes.clearNote();
           }}
-          onCorrect={(body) =>
-            writes.correct(field.id, body, () => {
-              setMode(null);
-              setAdopted(null);
-            })
-          }
-          onEscalate={(question) =>
-            writes.escalate(field.id, question, () => setMode(null))
+          onCorrect={(body) => writes.correct(field.id, body, close)}
+          onEscalate={(question) => writes.escalate(field.id, question, close)}
+          onDeclareAbsence={(body) =>
+            writes.correct(field.id, { ...body, value: null }, close)
           }
         />
       )}

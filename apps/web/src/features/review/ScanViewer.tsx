@@ -19,14 +19,19 @@ export function ScanViewer(props: {
   readonly described: readonly SourcePage[];
   readonly page: number | null;
   readonly line: number | null;
+  /** Magnification. Owned by `ScanPane` so the `Z` chord can reach it. */
+  readonly zoom: ZoomLevel;
+  readonly onZoom: (zoom: ZoomLevel) => void;
+  /** The design's ◉ Following / ○ Free. When off, selection stops paging. */
+  readonly following: boolean;
+  readonly onFollowing: (following: boolean) => void;
 }) {
   const [shown, setShown] = useState(props.page ?? props.described[0]?.n ?? 1);
   const [citedAt, setCitedAt] = useState(props.page);
-  const [zoom, setZoom] = useState<ZoomLevel>("fit");
 
   if (citedAt !== props.page) {
     setCitedAt(props.page);
-    if (props.page !== null) setShown(props.page);
+    if (props.page !== null && props.following) setShown(props.page);
   }
 
   /*
@@ -55,16 +60,18 @@ export function ScanViewer(props: {
       <PageBar
         shown={shown}
         total={props.total}
-        zoom={zoom}
+        zoom={props.zoom}
         onGo={setShown}
-        onZoom={setZoom}
+        onZoom={props.onZoom}
+        following={props.following}
+        onFollowing={props.onFollowing}
       />
       <ScrollArea label="Source page sheet" axis="both">
         <PageSheet
           n={shown}
           total={props.total}
           page={here}
-          zoom={zoom}
+          zoom={props.zoom}
           line={pinned ? props.line : null}
           pinned={pinned}
         />

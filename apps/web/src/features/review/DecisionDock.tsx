@@ -32,7 +32,9 @@ export function DecisionDock({ census }: DecisionDockProps) {
         </p>
       ) : (
         <>
-          <ProgressMeter label="Decisions" settled={settled} total={decisions} />
+          <div data-testid="decisions-settled" data-settled={settled}>
+            <ProgressMeter label="Decisions" settled={settled} total={decisions} />
+          </div>
           {rest !== undefined && (
             <p className="font-sans text-meta leading-close text-ink-secondary">
               Rest of the queue ·{" "}

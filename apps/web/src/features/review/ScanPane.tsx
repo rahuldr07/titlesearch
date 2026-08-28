@@ -1,16 +1,22 @@
+import { useState } from "react";
 import { useRead } from "../../app/useRead";
 import { orderPages } from "../../shared/queries";
 import { QueryState } from "../../entities/state/QueryState";
 import { ScanViewer } from "./ScanViewer";
+import type { ZoomLevel } from "./PageBar";
+import { useZoomKey } from "./useReviewKeys";
 
 /**
-
- * THE SOURCE-PAGE PANE — the workstation's right-hand column. `reference-app.html`'s
-
- * `isReview` block draws it as: a ground, a Prev / page label / Next row with a zoom
-
- * control, the sheet (clerk stamp, instrument title, page text, the…
-
+ * THE SOURCE-PAGE PANE — the workstation's right-hand column.
+ * `reference-app.html`'s `isReview` draws a ground, a Prev / page label / Next
+ * row with the zoom control and a follow toggle, the sheet, and the coverage
+ * spine along the bottom.
+ *
+ * ZOOM IS OWNED HERE, NOT IN THE VIEWER, so `Z` can reach it. The design binds
+ * `Z` to "zoom to the citation" and prints the chord in the top bar; the state
+ * has to sit above `QueryState` for the chord to exist while the pages are
+ * still loading, and `data-zoomed` has to be on a node that is always mounted.
+ * The chord is a VIEW toggle — it files nothing and derives nothing.
  */
 export function ScanPane(props: {
   readonly orderId: string;
@@ -27,11 +33,22 @@ export function ScanPane(props: {
   readonly line: number | null;
 }) {
   const pages = useRead(orderPages(props.orderId));
+  const [zoom, setZoom] = useState<ZoomLevel>("fit");
+  /* Whether the sheet follows the open field. On is the design's default
+     ("◉ Following"); off lets a reviewer read around the citation without the
+     next selection yanking the page away. */
+  const [following, setFollowing] = useState(true);
+
+  useZoomKey({
+    enabled: true,
+    onToggle: () => setZoom((at) => (at === "fit" ? "double" : "fit")),
+  });
 
   return (
     <section
       aria-label="Source page"
-      data-testid="scan-pane"
+      data-testid="evidence-pane"
+      data-zoomed={zoom === "fit" ? "0" : "1"}
       className="flex min-h-0 min-w-0 flex-1 flex-col bg-surface-app"
     >
       {/*
@@ -46,6 +63,10 @@ export function ScanPane(props: {
             described={data.pages}
             page={props.page}
             line={props.line}
+            zoom={zoom}
+            onZoom={setZoom}
+            following={following}
+            onFollowing={setFollowing}
           />
         )}
       </QueryState>

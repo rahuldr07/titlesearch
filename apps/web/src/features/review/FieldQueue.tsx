@@ -15,15 +15,27 @@ import type { Section } from "./fieldNaming";
  */
 export function FieldQueue(props: {
   readonly sections: readonly Section[];
+  /**
+   * The design's "Flagged first" toggle. A VIEW ORDER over the sections the
+   * server sent, driven by the `flagged` boolean each one already carries —
+   * nothing is counted, scored or re-ranked, and the fields inside a section
+   * keep the server's order either way (`fieldNaming.ts`: "NOT SORTED BY
+   * ANYTHING").
+   */
+  readonly flaggedFirst: boolean;
   readonly selectedId: string | null;
   readonly canSelect: (field: Field) => boolean;
   readonly onSelect: (field: Field) => void;
   /** The open decision, dropped under the row it belongs to. */
   readonly renderOpen: () => ReactNode;
 }) {
+  const sections = props.flaggedFirst
+    ? [...props.sections].sort((a, b) => Number(b.flagged) - Number(a.flagged))
+    : props.sections;
+
   return (
     <div className="flex flex-col">
-      {props.sections.map((section) => (
+      {sections.map((section) => (
         <section
           key={section.id}
           id={`section-${section.id}`}
