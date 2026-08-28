@@ -34,8 +34,30 @@
 /* State change: 140ms ease. Colour and shadow only — never geometry, because
    a control that resizes on hover is a control that moves under the pointer. */
 @utility tp-state {
-  transition-property: color, background-color, border-color, box-shadow, opacity;
+  /*
+   * THE SHORTHAND GOES FIRST, AND THE ORDER IS THE WHOLE POINT.
+   *
+   * `transition: var(--ease-state)` expands to `transition: 140ms ease`, and a
+   * shorthand RESETS every longhand it does not name — including
+   * `transition-property`, which goes back to its initial value, `all`. Written
+   * the other way round, the property list below was dead on arrival. Measured
+   * in the browser before this change:
+   *
+   *     tp_state_property: "all"     ← not the five named
+   *     tp_move_property:  "all"
+   *
+   * `all` is not a harmless superset. This utility is on 32 files' worth of
+   * interactive elements, and `all` transitions LAYOUT properties too — width,
+   * height, padding, insets — so any of them changing on hover or selection
+   * animated over 140ms instead of applying. That is what the explicit list was
+   * written to prevent, and the reason Impeccable's detector flags the pair.
+   *
+   * Same family as REVIEW-03's B3 and B5: a correct declaration, documented in
+   * detail, cancelled by the next line, and invisible to every gate because the
+   * class name is present and the stylesheet compiles.
+   */
   transition: var(--ease-state);
+  transition-property: color, background-color, border-color, box-shadow, opacity;
 }
 
 /*
@@ -73,8 +95,11 @@
 
 /* Movement: 300ms, for a thing that travels rather than appears. */
 @utility tp-move {
-  transition-property: transform, height, width;
+  /* Shorthand first — see `tp-state` for why the order is load-bearing.
+     `width` is here because the progress fill genuinely travels by growing
+     (`progress.tsx:113`); the switch thumb uses `transform` (`switch.tsx:67`). */
   transition: var(--ease-move);
+  transition-property: transform, height, width;
 }
 
 /*
