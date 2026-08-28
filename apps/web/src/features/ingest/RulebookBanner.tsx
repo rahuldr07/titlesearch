@@ -1,6 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
-import { ClientsResponse } from "@titlepipe/contract";
-import { get } from "../../shared/api";
+import { useRead } from "../../app/useRead";
+import { clients as clientsRead } from "../../shared/clientsQueries";
 
 /**
  * THE RULEBOOK BANNER (design §Screens 5: "rulebook banner — amber until
@@ -40,10 +39,7 @@ import { get } from "../../shared/api";
  * (workspace.ts:120) and is printed verbatim when present.
  */
 export function RulebookBanner(props: { readonly clientId: string }) {
-  const clients = useQuery({
-    queryKey: ["clients"],
-    queryFn: () => get("/api/clients", ClientsResponse),
-  });
+  const clients = useRead(clientsRead);
 
   if (props.clientId === "") {
     return (

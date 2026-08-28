@@ -1,7 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
-import { ClientsResponse } from "@titlepipe/contract";
 import { RadioGroup, RadioGroupItem } from "../../components/ui";
-import { get } from "../../shared/api";
+import { useRead } from "../../app/useRead";
+import { clients as clientsRead } from "../../shared/clientsQueries";
 
 /**
  * THE CLIENT IS CHOSEN, NEVER TYPED.
@@ -31,10 +30,7 @@ export function ClientPicker(props: {
   readonly value: string;
   readonly onChange: (clientId: string) => void;
 }) {
-  const clients = useQuery({
-    queryKey: ["clients"],
-    queryFn: () => get("/api/clients", ClientsResponse),
-  });
+  const clients = useRead(clientsRead);
 
   if (clients.data === undefined) {
     return (

@@ -23,6 +23,16 @@ import { BlockedHint } from "./blockedHint";
  * and is banned for exactly that reason: it is the one radius that could be
  * written without consulting the scale.
  *
+ * THE HIT TARGET IS 24px AND SO IS THE ROW, WHICH IS WHY BOTH LINES CHANGED.
+ * `after:-inset` is absolute, and the indicator carried no `position`, so it
+ * resolved against the ITEM's `relative` instead: a 738x26 rectangle bleeding
+ * 6px into the group gap, not the 28x24 around the square the checkbox comment
+ * describes. `relative` on the indicator anchors it where it was meant to go.
+ * That alone leaves the row short — a 24px target cannot sit inside a 17.55px
+ * box (13px at `leading-close`), which is what `scrollHeight 22 > clientHeight
+ * 18` was reporting. `tp-target` supplies the floor `checkbox` reasons about
+ * but never applied here, so the box and its target are both 24 and coincide.
+ *
  * The dot is `bg-ink-on-action` on an accent fill, matching the checkbox, so a
  * selected radio and a checked box read as the same act. Rule 1 is not violated
  * by this: a form's selected control is the same single accent spend as the
@@ -61,7 +71,7 @@ function RadioGroupItem({
         {...props}
         {...disabledAttributes(disabledBecause)}
         className={cx(
-          "tp-state tp-press tp-ring group/radio-group-item relative flex cursor-pointer",
+          "tp-state tp-press tp-ring tp-target group/radio-group-item relative flex cursor-pointer",
           "items-center gap-4 font-sans text-meta leading-close text-ink-primary",
           "data-disabled:cursor-not-allowed data-disabled:text-ink-disabled",
           className,
@@ -73,7 +83,7 @@ function RadioGroupItem({
               data-slot="radio-group-indicator"
               aria-hidden
               className={cx(
-                "tp-state flex size-8 shrink-0 items-center justify-center rounded-pill border",
+                "tp-state relative flex size-8 shrink-0 items-center justify-center rounded-pill border",
                 "after:absolute after:-inset-x-3 after:-inset-y-2",
                 isSelected
                   ? "border-action bg-action"

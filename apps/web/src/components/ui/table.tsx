@@ -47,9 +47,23 @@ export type TableProps<TRow> = {
   readonly rowKey: (row: TRow) => string;
   /** Rendered instead of the grid when `rows` is empty. */
   readonly empty: React.ReactNode;
+  /**
+   * Activating a whole row. Omitted leaves the row inert, as every table
+   * written before this one expects. See `tableRow.tsx`: this is a wider MOUSE
+   * target over a control that is already inside the row, never a new tab stop
+   * and never a link wrapped around a button.
+   */
+  readonly onRowActivate?: (row: TRow) => void;
 };
 
-export function Table<TRow>({ label, rows, columns, rowKey, empty }: TableProps<TRow>) {
+export function Table<TRow>({
+  label,
+  rows,
+  columns,
+  rowKey,
+  empty,
+  onRowActivate,
+}: TableProps<TRow>) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const virtualizer = useVirtualizer({
     count: rows.length,
@@ -113,6 +127,7 @@ export function Table<TRow>({ label, rows, columns, rowKey, empty }: TableProps<
                 template={template}
                 index={item.index}
                 offset={item.start}
+                onActivate={onRowActivate}
               />
             );
           })}

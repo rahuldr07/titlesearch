@@ -86,7 +86,7 @@ export {
  * exactly what stops it virtualizing. A screen supplies COLUMNS.
  */
 export { Table, type TableProps } from "./table";
-export { DataCell, statusColumn, type RowStatus, type TableColumn } from "./tableColumns";
+export { DataCell, statusColumn, type ColumnAlign, type RowStatus, type TableColumn } from "./tableColumns";
 
 /* ── overlays ─────────────────────────────────────────────────────────────── */
 export { Dialog, DialogBody, DialogFooter, DialogTrigger, type DialogProps } from "./dialog";

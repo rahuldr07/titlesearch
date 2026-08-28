@@ -14,6 +14,14 @@ import type { ReactNode } from "react";
  * size, and it is unavoidable: column widths are a property of the DATA, not of
  * the design system.
  */
+export type ColumnAlign = "start" | "end";
+
+/** The one place the two edges are spelled, for the header and the cell alike. */
+export const ALIGN_CLASS: Readonly<Record<ColumnAlign, string>> = {
+  start: "text-left",
+  end: "text-right",
+};
+
 export type TableColumn<TRow> = {
   /** Stable id. Used as the React key and as the cell's `data-column`. */
   readonly id: string;
@@ -21,6 +29,16 @@ export type TableColumn<TRow> = {
   readonly header: string;
   /** A `grid-template-columns` track, e.g. `"1fr"` or `"minmax(0,2fr)"`. */
   readonly width: string;
+  /**
+   * Which edge the header AND its cells sit against. Omitted is `"start"`, so
+   * every column written before this renders unchanged.
+   *
+   * It is one member rather than two because the defect it exists to close was
+   * a header disagreeing with its own cells: All Orders right-aligned Due and
+   * Action inside `cell` while the header stayed left, and a column whose two
+   * halves can be aligned separately is a column that will drift apart again.
+   */
+  readonly align?: ColumnAlign;
   /** Renders one cell. Return a plain node; the cell chrome is the table's. */
   readonly cell: (row: TRow) => ReactNode;
 };
