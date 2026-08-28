@@ -1,11 +1,11 @@
 import { Link } from "@tanstack/react-router";
 import type { Order } from "@titlepipe/contract";
-import { Card, LinkButton } from "../../components/ui";
-import { OrderRef } from "../../entities/order/OrderRef";
+import { Card } from "../../components/ui";
+import { SpotlightOrder } from "./SpotlightOrder";
 
 /**
- * THE ACTIVE SPOTLIGHT — design §Screens 2: "Active Spotlight card (accent left
- * border 4px, order ref 28px mono accent, Launch Workstation primary)."
+ * THE ACTIVE SPOTLIGHT — the three answers the queue can give, and nothing
+ * about how a served order is drawn. That is `SpotlightOrder`.
  *
  * ══ WHICH ORDER IS "ACTIVE", AND WHO DECIDES ═══════════════════════════════
  *
@@ -20,19 +20,6 @@ import { OrderRef } from "../../entities/order/OrderRef";
  * (`shared/queries.ts`), rule 11's "one variable, never two literals" applied
  * across two screens. If they ever disagreed it would mean the server had
  * changed its mind between two reads, which is the truth and worth seeing.
- *
- * ══ RULE 1 AND WHY THE ACCENT IS SPENT HERE ════════════════════════════════
- *
- * "Spend the accent once per screen: the open decision or the single primary
- * action." On the overview there is no open decision, so it goes on the one
- * action worth taking from this screen: opening the served order. The four stat
- * cards above are graphite, the recent-orders pane is graphite, and the rail's
- * own accent belongs to the rail's palette (`--color-rail-accent`), not this
- * screen's budget.
- *
- * The design's label is "Launch Workstation". The CONTRACT'S word is REVIEW
- * (`authz.ts:66`, `screen.review.enter`, path `/orders`) — ANALYSIS-screens §3
- * says to rename, and the path is not cosmetic even where the title is.
  */
 export function Spotlight(props: {
   readonly order: Order | null;
@@ -57,9 +44,9 @@ export function Spotlight(props: {
   if (props.order === null) {
     return (
       <Card>
-        <div className="flex flex-col gap-4">
-          <span className="text-label font-bold uppercase leading-flat tracking-caps text-ink-faint">
-            Active order
+        <div className="flex flex-col gap-5">
+          <span className="text-label font-semibold leading-flat text-ink-faint">
+            Active spotlight
           </span>
           <p className="text-meta leading-body text-ink-secondary">
             The queue has nothing for this seat right now. There is no list to
@@ -76,36 +63,5 @@ export function Spotlight(props: {
     );
   }
 
-  const order = props.order;
-
-  return (
-    <Card className="border-l-4 border-l-action">
-      <div className="flex items-center justify-between gap-12">
-        <div className="flex flex-col gap-4">
-          <span className="text-label font-bold uppercase leading-flat tracking-caps text-ink-faint">
-            Active order
-          </span>
-          <OrderRef orderRef={order.external_ref} emphasis="spotlight" />
-          <span className="text-meta leading-close text-ink-secondary">
-            {order.jurisdiction}
-            {order.product === null
-              ? " · no resolved product"
-              : ` · ${order.product}`}
-          </span>
-        </div>
-        {/*
-         * A LINK, not a button that navigates. It is navigation, so it is an
-         * anchor to the browser — middle-click, copy-link and the back button
-         * all keep working, and INVARIANT 55's deep links stay first-class.
-         */}
-        <LinkButton
-          variant="primary"
-          href={`/orders/${order.id}`}
-          data-testid="spotlight-open"
-        >
-          Open review
-        </LinkButton>
-      </div>
-    </Card>
-  );
+  return <SpotlightOrder order={props.order} />;
 }

@@ -3,7 +3,9 @@ import { Link } from "@tanstack/react-router";
 import { get } from "../../shared/api";
 import { lifecycle, queueNext } from "../../shared/queries";
 import { useSignedIn } from "../../app/session/signedIn";
+import { usePermissions } from "../../app/session/permissions";
 import { Card } from "../../components/ui";
+import { OverviewHeader } from "./OverviewHeader";
 import { StatCard } from "./StatCard";
 import { RecentOrdersRefusal } from "./RecentOrdersRefusal";
 import { Spotlight } from "./Spotlight";
@@ -14,38 +16,65 @@ import { Spotlight } from "./Spotlight";
  * Typists never see it: they go straight to the capture seat (§0.7), which is
  * why `SIGHTED` excludes them and why this screen never has to remember to.
  *
- * ══ THE FOUR STAT CARDS ARE THE SERVER'S FOUR NUMBERS ══════════════════════
+ * ══ REBUILT AGAINST THE RUNNING PROTOTYPE, NOT THE README ══════════════════
  *
- * Design §Screens 2 asks for "4 stat cards (label 11px grey, value 28px, note
- * 13px — NO INVENTED METRICS)" and names none of them. `LifecycleResponse`
- * (`intake.ts:246`) carries exactly four top-level figures — `total`, `halted`,
- * `moving`, `failed` — each decided on the server, so the count and the card
- * are one to one and nothing is added up here.
+ * The first version was written from the README's prose summary and drifted in
+ * the way that guarantees: it invented its own copy ("Every order the book
+ * knows about", "The machine is working on these"), titled the screen with the
+ * reader's NAME, and dropped the header's whole right-hand side.
+ * `reference-app.html`'s `isQueue` block is the source now, read as markup:
  *
- * `/api/metrics` is deliberately NOT read on this screen, and the reason is not
- * that it is the dashboard's endpoint. It carries `median_minutes_per_order`,
- * which is a PACE INDICATOR: `INVARIANTS:84-85` bans them, AGENTS.md bans
- * throughput counters "anywhere", and a stat card is the most likely place in
- * the product for one to end up. The lifecycle figures are a census of WHAT IS
- * LEFT — endpoints.ts:99 states the distinction outright, "a count of what is
- * left, never a rate" — which is the only shape of number this screen may draw.
+ *     header band                                    → OverviewHeader
+ *     4 stat cards, grid-cols-4, gap 16, mt 24       → StatCard
+ *     Active Spotlight card, 4px accent rail, mt 24  → Spotlight
+ *     "Recent orders" heading + table, mt 32         → RecentOrdersRefusal
+ *     screen padding 28px 32px 64px                  → px-16 pt-14 pb-32
  *
- * `scope_note` is printed verbatim beside them because the numbers mean
- * different things to different seats: a reviewer's board is scoped to their
- * own orders plus anything unclaimed, and the census is not scoped at all. The
- * server says which; the screen does not compose that sentence.
+ * Each of those four files carries the measurements it was built to and the
+ * reason for anything the prototype draws that it does not.
  *
- * ══ THE RECENT ORDERS TABLE IS NOT BUILT ═══════════════════════════════════
+ * ══ THE FOUR STAT CARDS: THE DESIGN'S NAMES DO NOT FIT THE CONTRACT ════════
  *
- * Design §Screens 2, verbatim: "Recent orders table (last 10) linking to All
- * Orders." There is NO ORDER-LIST ENDPOINT — `endpoints.ts:69` says so in
- * words, `INVARIANTS:82-83` forbids one, and the screen it links to is the
- * conflict recorded in `CONFLICT-all-orders.md`. A "last 10" is a browse
- * affordance with a smaller number on it. Refused, and the pane below says so
- * rather than leaving a hole a reader reads as a loading failure.
+ * The prototype names four cards — Total Active Queue / In Examination Review /
+ * Open Queries & Gaps / Delivered This Week — and computes all four in the
+ * browser by filtering a 35-row `ALL_ORDERS` array by stage.
+ *
+ * `LifecycleResponse` (`intake.ts:246`) carries a different four:
+ * `total` / `halted` / `moving` / `failed`, each decided on the server, so the
+ * count and the card are one to one and nothing is added up here. The two
+ * taxonomies meet in one place and diverge everywhere else, which is a
+ * `CONFLICT` in the design under `INVARIANTS:26-27`, written up with the ask
+ * for the backend owner in
+ * `docs/frontend/design-2026-08/CONFLICT-overview-stats.md`. It is NOT resolved
+ * here in either direction: the prototype's names are not pasted over figures
+ * that do not mean them, and `INVARIANTS` is not edited to make the names legal.
+ *
+ * The reason they cannot simply be adopted is the one `CONFLICT-all-orders.md`
+ * §4 records for the hub's meter: "A meter measuring one thing under a caption
+ * naming another is the defect; a meter measuring what it says is not."
+ * "Delivered This Week" over an all-time delivered count is exactly that, and
+ * "Total Active Queue" would need `total` minus the delivered stage — browser
+ * arithmetic over a server census, which INVARIANT 5 forbids and which
+ * `endpoints.ts:143-150` calls "a count nobody can audit against the pipeline".
+ * So the labels name the contract member each card prints, and nothing more.
+ *
+ * `/api/metrics` is deliberately NOT read here, and the reason is not that it
+ * is the dashboard's endpoint. It carries `median_minutes_per_order`, a PACE
+ * INDICATOR: `INVARIANTS:84-85` bans them, AGENTS.md bans throughput counters
+ * "anywhere", and a stat card is the most likely place in the product for one
+ * to end up. The lifecycle figures are a census of WHAT IS LEFT —
+ * `endpoints.ts:99` states the distinction outright, "a count of what is left,
+ * never a rate" — which is the only shape of number this screen may draw.
+ *
+ * `/api/queue/bands` is refused as a source too, and it is the tempting one:
+ * four bands, each with a server-authored `title`, `note` and `count`, which is
+ * the stat card's exact shape. It is ⚠ AWAITING RATIFICATION and whether its
+ * Mine band may be DRAWN AT ALL is open ruling Q11 (`endpoints.ts:99-102`).
+ * AGENTS.md: do not build past `OPEN`.
  */
 export function OverviewScreen() {
   const account = useSignedIn((s) => s.account);
+  const permissions = usePermissions(account !== null);
 
   const board = useQuery({
     queryKey: lifecycle.key,
@@ -58,23 +87,12 @@ export function OverviewScreen() {
   });
 
   return (
-    <div className="tp-screen-enter flex h-full min-h-0 flex-col gap-10 overflow-y-auto p-14">
-      <header className="flex flex-col gap-2">
-        <span className="text-label font-semibold uppercase leading-flat tracking-caps text-ink-faint">
-          Overview
-        </span>
-        {/* The greeting names the reader and claims nothing else. The design's
-            time-of-day greeting is dropped: it needs a clock reading whose only
-            purpose is decoration, and §8 keeps date handling to one module. */}
-        <h1 className="text-title font-bold leading-tight text-ink-primary">
-          {account === null ? "The shop" : account.name}
-        </h1>
-        {board.data !== undefined && (
-          <p className="max-w-240 text-meta leading-body text-ink-secondary">
-            {board.data.scope_note}
-          </p>
-        )}
-      </header>
+    <div className="tp-screen-enter flex h-full min-h-0 flex-col gap-12 overflow-y-auto px-16 pt-14 pb-32">
+      <OverviewHeader
+        scopeNote={board.data?.scope_note}
+        role={account?.role}
+        rules={permissions.data?.rules}
+      />
 
       {board.isError && (
         <Card>
@@ -85,26 +103,10 @@ export function OverviewScreen() {
       )}
 
       <div className="grid grid-cols-4 gap-8">
-        <StatCard
-          label="In the shop"
-          value={board.data?.total}
-          note="Every order the book knows about."
-        />
-        <StatCard
-          label="Stopped"
-          value={board.data?.halted}
-          note="Waiting on a person, not on the machine."
-        />
-        <StatCard
-          label="Moving"
-          value={board.data?.moving}
-          note="The machine is working on these."
-        />
-        <StatCard
-          label="Failed"
-          value={board.data?.failed}
-          note="Stopped in the stage they broke in."
-        />
+        <StatCard label="Total in the shop" value={board.data?.total} tone="primary" />
+        <StatCard label="Halted" value={board.data?.halted} tone="attend" />
+        <StatCard label="Moving" value={board.data?.moving} tone="secondary" />
+        <StatCard label="Failed" value={board.data?.failed} tone="halt" />
       </div>
 
       <Spotlight order={served.data?.order ?? null} pending={served.isPending} />
@@ -115,7 +117,7 @@ export function OverviewScreen() {
           this one's — drawing them here would be two screens counting the same
           thing. The link is the join. */}
       {board.data !== undefined && board.data.stages.length > 0 && (
-        <p className="text-label leading-close text-ink-faint">
+        <p className="text-meta leading-close text-ink-faint">
           Seven stages hold these orders.{" "}
           <Link to="/dashboard" className="tp-state text-action hover:underline">
             The lifecycle board
