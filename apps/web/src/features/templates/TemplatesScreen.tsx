@@ -23,7 +23,10 @@ export function TemplatesScreen() {
   return (
     <div
       data-testid="templates-screen"
-      className="flex h-full min-h-0 flex-col gap-12 overflow-y-auto px-16 pt-14 pb-32"
+      tabIndex={0}
+      role="region"
+      aria-label="Templates architect"
+      className="tp-state flex h-full min-h-0 flex-col gap-12 overflow-y-auto px-16 pt-14 pb-32"
     >
       <header className="flex min-w-0 flex-col gap-3">
         <div className="flex flex-wrap items-baseline gap-6">
