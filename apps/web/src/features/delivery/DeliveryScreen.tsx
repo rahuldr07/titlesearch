@@ -1,21 +1,36 @@
 import { useState } from "react";
 import type { DeliveryWithReport } from "@titlepipe/contract";
-import { Card, CardBody, CardHeader, Empty, Skeleton, cx } from "../../components/ui";
+import { Empty, Skeleton } from "../../components/ui";
 import { useDeliveries } from "./useDeliveries";
 import { CertifiedDeliverables } from "./CertifiedDeliverables";
 import { TransmissionReceipt } from "./TransmissionReceipt";
 import { VersionLedger } from "./VersionLedger";
+import { ReissueGateway } from "./ReissueGateway";
+import { OrderPicker } from "./OrderPicker";
 
 /**
  * SCREEN 9 — DELIVERED, at `/delivery` (authz.ts:70, `ops`/`admin`).
  *
+ * ══ THE PROTOTYPE'S SHELL, MEASURED ════════════════════════════════════════
+ *
+ * `reference-app.html`'s `isDelivered` block:
+ *
+ *     page padding 32px 32px 64px on the app canvas
+ *     header: kicker pill, h1 28px w700, note 16px max-width 640px
+ *             (SHA-256 chip on the right — refused, see CertifiedDeliverables)
+ *     grid minmax(0,1fr) / 340px, gap 24px, align-start
+ *       left  column: Certified deliverables, Transmission receipt
+ *       right column: Version ledger, Reissue gateway (refused)
+ *
  * ══ THE SCREEN IS ORDER-SCOPED AND THE ENDPOINT IS NOT ═════════════════════
  *
- * The design draws ONE delivered order: its header, its deliverables, its
- * receipt, its ledger. `GET /api/deliveries` returns every delivery across
- * every order, and there is no per-order delivery endpoint. So the left column
- * is the orders that have a delivery, grouped from the one response, and
- * everything to the right is scoped to the selected one.
+ * The design draws ONE delivered order. `GET /api/deliveries` returns every
+ * delivery across every order, and there is no per-order delivery endpoint. So
+ * the orders that have a delivery become a picker under the header — the
+ * design's own tab-track shape, borrowed from its escalations pane — and
+ * everything in the grid is scoped to the selected one. It sits BELOW the
+ * header rather than in a left rail so the grid keeps the full width the
+ * prototype gives it.
  *
  * The grouping is by `report.order_id` — the server's own field — and is not a
  * derivation of state: it is the same rows, arranged. `endpoints.ts:615-616`
@@ -25,7 +40,7 @@ import { VersionLedger } from "./VersionLedger";
  * ══ NO REISSUE, NO SHA, NO NAMED RECEIPT STEPS ═════════════════════════════
  *
  * Three refusals, each stated where the design put the thing. See
- * `VersionLedger` (reissue), `CertifiedDeliverables` (SHA and View) and
+ * `ReissueGateway` (reissue), `CertifiedDeliverables` (SHA and View) and
  * `TransmissionReceipt` (the four steps, blocked on `DeliveryStatus` being
  * `z.string()` and explicitly OPEN).
  */
@@ -37,13 +52,27 @@ export function DeliveryScreen() {
   const current = orders.find(([id]) => id === selected) ?? orders[0] ?? null;
 
   return (
-    <div data-testid="delivery-screen" className="flex h-full min-h-0 flex-col gap-12 overflow-y-auto p-14">
-      <header className="flex flex-col gap-3">
+    <div
+      data-testid="delivery-screen"
+      className="tp-screen-enter flex h-full min-h-0 flex-col gap-16 overflow-y-auto px-16 pt-16 pb-32"
+    >
+      <header className="flex min-w-0 flex-col gap-3">
+        {/*
+         * The prototype's kicker pill is a green capsule. It is a plain label
+         * here: rule 6 spends a tinted capsule on a moment of record, and the
+         * ledger rows below are that. A green pill over a screen that also
+         * carries a bounced delivery would be colour making a claim the rows
+         * contradict.
+         */}
+        <span className="font-sans text-label leading-flat font-semibold text-ink-muted">
+          Delivery gateway · read-only record
+        </span>
         <h1 className="font-sans text-title leading-tight font-bold text-ink-primary">
           Delivered
         </h1>
-        <p className="font-sans text-meta leading-body text-ink-secondary">
-          What left the building, and the record of it leaving.
+        <p className="max-w-320 font-sans text-body leading-body text-ink-secondary">
+          What left the building, and the record of it leaving. Both versions of
+          a reissued order stay on the record — the pair is the defect record.
         </p>
       </header>
 
@@ -55,44 +84,28 @@ export function DeliveryScreen() {
           reason="No report has been transmitted yet. A delivery appears here once a released report is sent."
         />
       ) : (
-        <div className="grid grid-cols-[minmax(0,300px)_minmax(0,1fr)] gap-12">
-          <Card padding="none">
-            <CardHeader>Delivered orders</CardHeader>
-            <CardBody className="flex flex-col p-0">
-              {orders.map(([orderId, rows]) => (
-                <button
-                  key={orderId}
-                  type="button"
-                  data-testid={`delivered-order-${orderId}`}
-                  aria-current={current !== null && current[0] === orderId}
-                  onClick={() => setSelected(orderId)}
-                  className={cx(
-                    "tp-state flex cursor-pointer flex-col gap-2 border-b border-line-subtle px-10 py-8 text-left",
-                    "last:border-b-0 hover:bg-surface-sunken",
-                    current !== null && current[0] === orderId && "bg-surface-sunken",
-                  )}
-                >
-                  <span className="font-mono text-meta leading-close text-ink-primary">
-                    {orderId}
-                  </span>
-                  <span className="font-sans text-label leading-flat text-ink-faint">
-                    {rows.length === 1 ? "one version" : `${String(rows.length)} versions`}
-                  </span>
-                </button>
-              ))}
-            </CardBody>
-          </Card>
+        <>
+          <OrderPicker
+            orders={orders}
+            current={current === null ? null : current[0]}
+            onSelect={setSelected}
+          />
 
           {current !== null && (
-            <div className="flex flex-col gap-12">
-              <CertifiedDeliverables deliveries={current[1]} />
-              {current[1].map((delivery) => (
-                <TransmissionReceipt key={delivery.id} delivery={delivery} />
-              ))}
-              <VersionLedger versions={current[1]} />
+            <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,340px)] items-start gap-12">
+              <div className="flex min-w-0 flex-col gap-12">
+                <CertifiedDeliverables deliveries={current[1]} />
+                {current[1].map((delivery) => (
+                  <TransmissionReceipt key={delivery.id} delivery={delivery} />
+                ))}
+              </div>
+              <div className="flex min-w-0 flex-col gap-12">
+                <VersionLedger versions={current[1]} />
+                <ReissueGateway />
+              </div>
             </div>
           )}
-        </div>
+        </>
       )}
     </div>
   );

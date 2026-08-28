@@ -1,9 +1,15 @@
 import type { DeliveryWithReport } from "@titlepipe/contract";
-import { Card, CardBody, CardHeader, cx } from "../../components/ui";
+import { Card, CardBody, CardHeader } from "../../components/ui";
+import { ClerkStamp } from "../../entities/evidence/ClerkStamp";
 import { ContractGap } from "../../entities/contract/ContractGap";
+import { ReceiptStep } from "./ReceiptStep";
 
 /**
  * THE TRANSMISSION RECEIPT, WITH THE STEPS THE SERVER ACTUALLY SENDS.
+ *
+ * The prototype's row is a three-column grid — time, mark, then what/who
+ * stacked — under a header whose right end names the transport. That shape is
+ * kept exactly. What is NOT kept is its four rows.
  *
  * Design §Screens 9 draws four named, timestamped steps: signed → hash →
  * transmitted → acked. `DeliveryStatus` is `z.string()` (enums.ts:118) and
@@ -18,9 +24,14 @@ import { ContractGap } from "../../entities/contract/ContractGap";
  * delivery had stalled at "hash", which nothing in the record says.
  *
  * What renders instead is what a `Delivery` (entities.ts:226-235) genuinely
- * carries: the method, the server's status STRING verbatim, the two instants,
- * and the evidence line. Timestamps are mono (rule 3) and pass through
+ * carries: the two instants as the two rows, the method and the evidence line
+ * beneath them, and the server's status STRING verbatim in the header chip the
+ * prototype gives the transport. Timestamps are mono (rule 3) and pass through
  * untouched (`shared/date.ts` — a server's instant is not re-rendered here).
+ *
+ * The clerk stamp is rule 8: a delivery that reached somebody is a moment of
+ * record, and the two values on it — the method and the terminal instant — are
+ * the server's own. A delivery that reached nobody gets no stamp.
  *
  * ══ A FAILURE HERE IS TRANSIT, NEVER QUALITY ═══════════════════════════════
  *
@@ -32,29 +43,42 @@ export function TransmissionReceipt({ delivery }: { readonly delivery: DeliveryW
   const reached = delivery.delivered_at !== null;
   return (
     <Card padding="none">
-      <CardHeader>Transmission receipt</CardHeader>
+      <CardHeader>
+        <span>Transmission receipt</span>
+        <span
+          data-testid="delivery-status"
+          className="font-mono text-label leading-flat font-semibold text-ink-muted"
+        >
+          {delivery.status}
+        </span>
+      </CardHeader>
+
       <CardBody className="flex flex-col gap-8">
-        <dl className="flex flex-col gap-6">
-          <Line term="Method" value={delivery.method} data />
-          <Line term="Status" value={delivery.status} data testId="delivery-status" />
-          <Line
-            term="Attempted"
-            value={delivery.attempted_at ?? "not attempted"}
-            data={delivery.attempted_at !== null}
+        {/* A log, so an ordered list: the two instants are in order. */}
+        <ol className="flex flex-col">
+          <ReceiptStep
+            at={delivery.attempted_at}
+            settled={delivery.attempted_at !== null}
+            what="Transmission attempted"
+            detail={`method ${delivery.method}`}
           />
-          <Line
-            term="Delivered"
-            value={delivery.delivered_at ?? "reached nobody — retryable transit failure"}
-            data={reached}
+          <ReceiptStep
+            at={delivery.delivered_at}
+            settled={reached}
+            what={
+              reached
+                ? "Delivered to the client"
+                : "Reached nobody — retryable transit failure"
+            }
+            detail={delivery.evidence ?? "no evidence recorded"}
           />
-          <Line
-            term="Evidence"
-            /* Rule 14's argument applied to an evidence line: a null is a
-               STATEMENT (nothing was recorded), never a blank. */
-            value={delivery.evidence ?? "none recorded"}
-            data={false}
-          />
-        </dl>
+        </ol>
+
+        {reached && delivery.delivered_at !== null && (
+          <div className="flex justify-end">
+            <ClerkStamp caption="Transmitted" detail={`${delivery.method} · ${delivery.delivered_at}`} />
+          </div>
+        )}
 
         <ContractGap
           drawn="Signed → hash → transmitted → acked, each timestamped (design §Screens 9)"
@@ -64,7 +88,7 @@ export function TransmissionReceipt({ delivery }: { readonly delivery: DeliveryW
               marks it OPEN until the Flask models are ported, so the four steps
               cannot be named. `Delivery` also carries two instants, not four:
               `attempted_at` and `delivered_at` (entities.ts:231-232). The status
-              above is the server's own string, printed.
+              in the header is the server's own string, printed.
             </>
           }
           needs={
@@ -77,34 +101,5 @@ export function TransmissionReceipt({ delivery }: { readonly delivery: DeliveryW
         />
       </CardBody>
     </Card>
-  );
-}
-
-function Line({
-  term,
-  value,
-  data,
-  testId,
-}: {
-  readonly term: string;
-  readonly value: string;
-  readonly data: boolean;
-  readonly testId?: string | undefined;
-}) {
-  return (
-    <div className="grid grid-cols-[120px_minmax(0,1fr)] gap-8">
-      <dt className="font-sans text-label leading-airy font-bold text-ink-faint">{term}</dt>
-      <dd
-        {...(testId === undefined ? {} : { "data-testid": testId })}
-        className={cx(
-          "text-meta leading-body text-ink-secondary",
-          // Rule 3: mono for DATA — instants, methods, status codes. The
-          // fallback sentences are prose and stay sans.
-          data ? "font-mono" : "font-sans",
-        )}
-      >
-        {value}
-      </dd>
-    </div>
   );
 }

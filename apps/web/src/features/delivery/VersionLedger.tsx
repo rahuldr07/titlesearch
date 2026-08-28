@@ -1,9 +1,14 @@
 import type { DeliveryWithReport } from "@titlepipe/contract";
-import { Card, CardBody, CardHeader, cx } from "../../components/ui";
-import { ContractGap } from "../../entities/contract/ContractGap";
+import { Badge, Card, CardBody, CardHeader, cx } from "../../components/ui";
 
 /**
  * THE VERSION LEDGER — v1 immutable, v2 the reissue, v1 "Superseded · retained".
+ *
+ * The prototype's card: header with "Law 9 · append-only" on the right, then
+ * bordered rows at the 10px rung, each carrying the version numeral in mono, a
+ * tinted status capsule, a mono meta line, and — where there is one — a reason
+ * line beneath. That shape is kept; the row's "View →" is not, for the same
+ * reason `CertifiedDeliverables` has no View: nothing routes to a report file.
  *
  * ══ SUPERSESSION IS READ OFF THE SERVER'S ROWS, NOT DECIDED HERE ═══════════
  *
@@ -22,6 +27,9 @@ import { ContractGap } from "../../entities/contract/ContractGap";
  * "Retained" is not a status either — it is the OBSERVATION that the row is
  * still in the response, which is `endpoints.ts:615-616`'s point: both v1 and
  * v2 appear, "the pair is the defect record."
+ *
+ * The capsule is rule 6's one licensed spend on this screen: a version on a
+ * ledger is a moment of record, which is exactly what a tinted capsule is for.
  */
 export function VersionLedger({
   versions,
@@ -35,8 +43,13 @@ export function VersionLedger({
 
   return (
     <Card padding="none">
-      <CardHeader>Version ledger</CardHeader>
-      <CardBody className="flex flex-col gap-10">
+      <CardHeader>
+        <span>Version ledger</span>
+        <span className="font-mono text-label leading-flat font-semibold text-ink-muted">
+          Law 9 · append-only
+        </span>
+      </CardHeader>
+      <CardBody className="flex flex-col gap-4">
         {versions.map((row) => {
           const version = row.report?.version ?? null;
           const superseded = version !== null && version < highest;
@@ -45,64 +58,46 @@ export function VersionLedger({
               key={row.id}
               data-testid={`version-${String(version)}`}
               data-superseded={superseded}
-              className="flex flex-col gap-3 border-b border-line-subtle pb-8 last:border-b-0 last:pb-0"
+              className={cx(
+                "flex flex-col gap-3 rounded-md border px-6 py-5",
+                superseded
+                  ? "border-line-subtle bg-surface-sunken"
+                  : "border-line-strong bg-surface-panel",
+              )}
             >
-              <span className="font-mono text-body leading-close font-semibold text-ink-primary">
-                {version === null ? "no report on this delivery" : `v${String(version)}`}
-              </span>
-              <span
-                className={cx(
-                  "font-sans text-meta leading-close",
-                  superseded ? "text-ink-muted" : "text-ink-secondary",
+              <div className="flex flex-wrap items-baseline justify-between gap-3">
+                <span className="font-mono text-body leading-close font-bold text-ink-primary">
+                  {version === null ? "no report on this delivery" : `v${String(version)}`}
+                </span>
+                {/* Grey for the superseded row, green for the latest — the
+                    prototype's own two tints. Rule 6 spends the tinted capsule
+                    on the moment of record only, so the superseded row gets a
+                    plain neutral pill rather than a second `Badge` tone. */}
+                {superseded ? (
+                  <span className="shrink-0 rounded-pill bg-control-fill px-5 py-1 font-sans text-label leading-flat font-semibold text-ink-muted">
+                    Superseded · retained
+                  </span>
+                ) : (
+                  <Badge tone="settled">Highest version</Badge>
                 )}
-              >
-                {superseded
-                  ? "Superseded · retained — a later version exists and this row is still in the record"
-                  : "Highest version in the record"}
-              </span>
+              </div>
               {row.report !== null && (
-                <span className="font-mono text-label leading-flat text-ink-faint">
+                <span className="font-mono text-label leading-close break-all text-ink-muted">
                   rendered {row.report.rendered_at} · shape {row.report.shape}
+                </span>
+              )}
+              {superseded && (
+                /* The prototype's "Reason:" line. The reason a reissue was
+                   ordered has nowhere to live in the contract (see
+                   `ReissueGateway`), so what stands here is the only thing
+                   this row's position actually means. */
+                <span className="font-sans text-label leading-close text-ink-secondary">
+                  A later version exists and this row is still in the record.
                 </span>
               )}
             </div>
           );
         })}
-
-        {/*
-         * THE REISSUE GATEWAY IS NOT BUILT, AND THIS IS THE REFUSAL.
-         *
-         * Design §Screens 9 draws a one-way gateway with radio-button reasons
-         * that closes after v2, and design README:33 states the gate: "reissue
-         * requires reason". Nothing carries a reason. Building the radio
-         * buttons anyway would produce a control whose entire purpose — capture
-         * the reason — is discarded on submit, to an endpoint that does not
-         * exist, satisfying a gate nothing can enforce.
-         */}
-        <ContractGap
-          drawn="Reissue Gateway — radio-button reasons, one-way, closes after v2 (design §Screens 9)"
-          has={
-            <>
-              No reissue endpoint anywhere in `endpoints.ts`, and no
-              `release.execute`-style action in `PERMISSIONS` (authz.ts:59-118) —
-              `delivery.retry` (authz.ts:118) is the only delivery mutation in
-              the table, and a retry re-sends the same file rather than
-              rendering a new version. `Report` (entities.ts:216-222) is five
-              fields: `id`, `order_id`, `version`, `shape`, `rendered_at`. There
-              is no `reason` and no `supersedes`, so the reason the gate
-              requires has nowhere to live and the v1→v2 link is inferred from
-              version numbers rather than recorded.
-            </>
-          }
-          needs={
-            <>
-              A reissue endpoint, a permission row for who may execute one, and
-              a home for the reason — `Report.reason` + `Report.supersedes`, or a
-              separate reissue entity. Backend conversation 2
-              (ANALYSIS-screens.md §Conversation 2).
-            </>
-          }
-        />
       </CardBody>
     </Card>
   );

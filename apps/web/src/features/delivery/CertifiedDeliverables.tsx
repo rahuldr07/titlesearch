@@ -12,10 +12,16 @@ import { ContractGap } from "../../entities/contract/ContractGap";
  * count and no digest; `Delivery.evidence` is a free-text line, not an
  * artifact.
  *
- * So the row prints the delivery as the identity of the thing that was sent —
- * order, version, method — and there is no View control, because a control that
- * cannot route anywhere is worse than an absent one: it teaches a reader the
- * file exists somewhere they have not looked.
+ * So the row keeps the prototype's shape — tile, name, tag, meta line — and
+ * drops the View control, because a control that cannot route anywhere is
+ * worse than an absent one: it teaches a reader the file exists somewhere they
+ * have not looked.
+ *
+ * THE TILE IS PAPER, NOT A "PDF" CHIP AND NOT A GREY BAR (rule 8). The
+ * prototype letters it "PDF", which asserts a file; what the contract asserts
+ * is that a report was RENDERED (`rendered_at`) at a VERSION, so the tile is a
+ * page edge in the paper stock carrying the version numeral in serif. Nothing
+ * on it claims a downloadable object.
  *
  * ══ THE SHA CHIP IS THE SHARPEST CASE ══════════════════════════════════════
  *
@@ -37,25 +43,47 @@ export function CertifiedDeliverables({
 }) {
   return (
     <Card padding="none">
-      <CardHeader>Certified deliverables</CardHeader>
-      <CardBody className="flex flex-col gap-8">
+      <CardHeader>
+        <span>Certified deliverables</span>
+        {/* The prototype's "N files · immutable". Rows, not files: a file is
+            the thing the contract does not have. */}
+        <span className="font-mono text-label leading-flat font-semibold text-ink-muted">
+          {deliveries.length === 1
+            ? "one on the record"
+            : `${String(deliveries.length)} on the record`}
+        </span>
+      </CardHeader>
+
+      <div className="flex flex-col">
         {deliveries.map((delivery) => (
           <div
             key={delivery.id}
             data-testid={`deliverable-${delivery.id}`}
-            className="flex flex-col gap-3 border-b border-line-subtle pb-8 last:border-b-0 last:pb-0"
+            className="flex items-center gap-8 border-b border-line-subtle px-12 py-8 last:border-b-0"
           >
-            <span className="font-sans text-body leading-close font-semibold text-ink-primary">
-              Title report · {delivery.report?.order_id ?? "no report on this delivery"}
+            <span className="flex h-24 w-20 shrink-0 items-center justify-center rounded-paper border border-page-line bg-surface-paper font-serif text-label leading-flat font-bold text-page-ink">
+              {delivery.report === null ? "—" : `v${String(delivery.report.version)}`}
             </span>
-            <span className="font-mono text-label leading-flat text-ink-muted">
-              {delivery.report === null
-                ? `delivery ${delivery.id}`
-                : `v${String(delivery.report.version)} · shape ${delivery.report.shape} · ${delivery.method}`}
+            <span className="flex min-w-0 flex-1 flex-col gap-2">
+              <span className="flex min-w-0 items-center gap-4">
+                <span className="truncate font-sans text-body leading-close font-semibold text-ink-primary">
+                  Title report · {delivery.report?.order_id ?? "no report on this delivery"}
+                </span>
+                <span className="shrink-0 rounded-pill bg-control-fill px-4 py-1 font-mono text-label leading-flat font-semibold text-ink-muted">
+                  {delivery.method}
+                </span>
+              </span>
+              <span className="font-mono text-label leading-close text-ink-muted">
+                {delivery.report === null
+                  ? `delivery ${delivery.id}`
+                  : `shape ${delivery.report.shape} · rendered ${delivery.report.rendered_at}`}
+              </span>
             </span>
           </div>
         ))}
+      </div>
 
+      <CardBody>
         <ContractGap
           drawn="SHA chip on the header, and a PDF chip with a View action per artifact row (design §Screens 9)"
           has={
