@@ -9,6 +9,7 @@ import { OverviewHeader } from "./OverviewHeader";
 import { StatCard } from "./StatCard";
 import { RecentOrdersRefusal } from "./RecentOrdersRefusal";
 import { Spotlight } from "./Spotlight";
+import { CENSUS_FIGURES } from "../../entities/lifecycle/census";
 
 /**
  * SCREEN 2 — OVERVIEW, at `/` (`authz.ts:62`, `screen.home.enter`, SIGHTED).
@@ -102,11 +103,21 @@ export function OverviewScreen() {
         </Card>
       )}
 
+      {/*
+       * The four labels and tones come from `entities/lifecycle/census`, which
+       * the lifecycle board reads too. They were spelled out twice — rule 11's
+       * "one variable, never two literals" — and matched only because somebody
+       * matched them by hand.
+       */}
       <div className="grid grid-cols-4 gap-8">
-        <StatCard label="Total in the shop" value={board.data?.total} tone="primary" />
-        <StatCard label="Halted" value={board.data?.halted} tone="attend" />
-        <StatCard label="Moving" value={board.data?.moving} tone="secondary" />
-        <StatCard label="Failed" value={board.data?.failed} tone="halt" />
+        {CENSUS_FIGURES.map((figure) => (
+          <StatCard
+            key={figure.member}
+            label={figure.label}
+            value={board.data?.[figure.member]}
+            tone={figure.tone}
+          />
+        ))}
       </div>
 
       <Spotlight order={served.data?.order ?? null} pending={served.isPending} />

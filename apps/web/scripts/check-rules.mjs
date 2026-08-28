@@ -163,6 +163,40 @@ const BANNED = [
     why: "rule 4 is sentence case — ALL-CAPS only in rail rubrics and serif certificate headings",
   },
   {
+    /*
+     * THE ANTI-PATTERNS, AS A GATE. AGENTS.md lists six things whose
+     * reintroduction is "a defect, not a feature request", and until now
+     * nothing checked for any of them — they were prose in a rulebook, which
+     * is exactly the shape of enforcement REVIEW-03 warns about.
+     *
+     * These three are gated because they are IDENTIFIERS and a path literal,
+     * so a match is a real read rather than a mention. Note that comment lines
+     * are skipped before the ban list runs, which is why the many doc comments
+     * saying "`/api/metrics` is deliberately NOT read here" do not trip it.
+     *
+     * DELIBERATELY NOT GATED: the pace VOCABULARY ("throughput", "elapsed",
+     * "per hour", "SLA"). Those words appear legitimately in JSX prose that
+     * explains what a future endpoint may not carry — `blindStatus/RosterGaps`
+     * asks for coverage and says INVARIANT 23 "refuses rates, elapsed time,
+     * estimates" — and a rule that fires on its own refusal being written down
+     * is a rule people switch off. That one stays a review question.
+     */
+    name: "probe-visibility",
+    re: /\bprobes_planted\b|\bprobes_caught\b|\bcatch_rate\b/,
+    why: "no probe visibility (AGENTS.md anti-patterns) — /api/metrics carries these and no screen may draw them",
+  },
+  {
+    name: "pace-endpoint",
+    // The path as a STRING, which is the only way a screen reaches it.
+    re: /["'`]\/api\/metrics/,
+    why: "/api/metrics carries median_minutes_per_order, a pace indicator (INVARIANTS 23) — it is the dashboard's alone",
+  },
+  {
+    name: "approve-all",
+    re: /\bapproveAll\b|\bconfirmAll\b|\bbulkConfirm\b|\bapprove-all\b/i,
+    why: "no approve-all (AGENTS.md anti-patterns) — one act files one record",
+  },
+  {
     name: "browser-storage",
     re: /\b(localStorage|sessionStorage)\b|\[\s*["'](local|session)Storage["']\s*\]/,
     why: "nothing in localStorage or sessionStorage (§9.11) — preferences live on the server (§7)",

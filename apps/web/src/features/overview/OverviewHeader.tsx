@@ -1,6 +1,6 @@
-import { LinkButton } from "../../components/ui";
 import { hasDoor } from "../../app/session/permissions";
 import type { GrantedPermissionSchema } from "@titlepipe/contract";
+import { RouteButton } from "../../app/chrome/RouteButton";
 
 /**
  * THE OVERVIEW'S HEADER BAND, drawn to the prototype's geometry.
@@ -74,9 +74,9 @@ export function OverviewHeader(props: {
 
       <div className="flex shrink-0 items-center gap-6">
         {hasDoor(props.rules, "/ingest") && (
-          <LinkButton variant="secondary" href="/ingest">
+          <RouteButton variant="secondary" to="/ingest">
             Intake new package
-          </LinkButton>
+          </RouteButton>
         )}
         {props.role !== undefined && (
           <span className="flex items-center gap-4 rounded-lg border border-line-strong bg-surface-panel px-7 py-4 text-meta leading-flat text-ink-muted">

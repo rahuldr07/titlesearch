@@ -1,7 +1,8 @@
 import type { Order } from "@titlepipe/contract";
-import { Card, LinkButton } from "../../components/ui";
+import { Card } from "../../components/ui";
 import { OrderRef } from "../../entities/order/OrderRef";
 import { SpotlightMeta } from "./SpotlightMeta";
+import { RouteButton } from "../../app/chrome/RouteButton";
 
 /**
  * THE SERVED ORDER, drawn in the prototype's spotlight card.
@@ -88,20 +89,27 @@ export function SpotlightOrder(props: { readonly order: Order }) {
         </div>
 
         <div className="flex shrink-0 items-center gap-6">
-          <LinkButton
+          {/*
+           * `RouteButton`, not `LinkButton`: these are internal destinations
+           * and `LinkButton` takes react-aria's `href`, a plain string that
+           * nothing checks. `to`/`params` are checked against the route tree.
+           */}
+          <RouteButton
             variant="secondary"
-            href={`/orders/${order.id}`}
+            to="/orders/$orderId"
+            params={{ orderId: order.id }}
             data-testid="spotlight-history"
           >
             Audit history
-          </LinkButton>
-          <LinkButton
+          </RouteButton>
+          <RouteButton
             variant="primary"
-            href={`/orders/${order.id}/review`}
+            to="/orders/$orderId/review"
+            params={{ orderId: order.id }}
             data-testid="spotlight-open"
           >
             Open review
-          </LinkButton>
+          </RouteButton>
         </div>
       </div>
     </Card>

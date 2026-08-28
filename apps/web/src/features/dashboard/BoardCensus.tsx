@@ -1,5 +1,6 @@
 import type { LifecycleResponse } from "@titlepipe/contract";
 import { Card, cx } from "../../components/ui";
+import { CENSUS_FIGURES } from "../../entities/lifecycle/census";
 
 /**
  * THE FOUR TOP-LEVEL FIGURES, PRINTED VERBATIM.
@@ -47,24 +48,12 @@ const FIGURE_TONE = {
   halt: "text-state-halt",
 } as const;
 
-type FigureTone = keyof typeof FIGURE_TONE;
-
-const FIGURES: readonly {
-  readonly member: keyof Pick<LifecycleResponse, "total" | "halted" | "moving" | "failed">;
-  readonly label: string;
-  readonly tone: FigureTone;
-}[] = [
-  { member: "total", label: "Total in the shop", tone: "primary" },
-  { member: "halted", label: "Halted", tone: "attend" },
-  { member: "moving", label: "Moving", tone: "secondary" },
-  { member: "failed", label: "Failed", tone: "halt" },
-];
 
 export function BoardCensus(props: { readonly board: LifecycleResponse }) {
   return (
     <Card padding="none">
       <dl className="grid grid-cols-4">
-        {FIGURES.map((figure) => (
+        {CENSUS_FIGURES.map((figure) => (
           <div
             key={figure.member}
             data-census={figure.member}

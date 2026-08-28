@@ -1,6 +1,7 @@
 import type { LifecycleStamp, OrderCensus } from "@titlepipe/contract";
-import { Card, LinkButton } from "../../components/ui";
+import { Card } from "../../components/ui";
 import { ProgressMeter } from "../../entities/order/ProgressMeter";
+import { RouteButton } from "../../app/chrome/RouteButton";
 
 /**
  * THE VERDICT CARD — design §Screens 4: "kicker pill, verdict 40px, note,
@@ -92,13 +93,14 @@ export function VerdictCard(props: {
          * this invents no path. The hub is where you land; review is where you
          * work.
          */}
-        <LinkButton
+        <RouteButton
           variant="primary"
-          href={`/orders/${props.orderId}/review`}
+          to="/orders/$orderId/review"
+          params={{ orderId: props.orderId }}
           data-testid="hub-cta"
         >
           Open review
-        </LinkButton>
+        </RouteButton>
       </div>
     </Card>
   );
