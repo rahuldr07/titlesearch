@@ -16,6 +16,7 @@ export const DOORS: readonly Door[] = [
   // ── Pipeline ────────────────────────────────────────────────────────────
   { path: "/", label: "Overview", section: "pipeline" },
   { path: "/queue", label: "Queue", section: "pipeline" },
+  { path: "/orders-list", label: "All orders", section: "pipeline" },
   { path: "/ingest", label: "Intake", section: "pipeline" },
   { path: "/dashboard", label: "Lifecycle", section: "pipeline" },
   { path: "/delivery", label: "Delivery", section: "pipeline" },
@@ -34,6 +35,8 @@ export const DOORS: readonly Door[] = [
   { path: "/leaderboard", label: "Engines", section: "platform" },
   { path: "/blind", label: "Capture seat", section: "platform" },
   { path: "/blind-status", label: "Capture status", section: "platform" },
+  { path: "/templates", label: "Templates", section: "platform" },
+  { path: "/jurisdiction", label: "Jurisdiction", section: "platform" },
   { path: "/account", label: "Account", section: "platform" },
 ];
 

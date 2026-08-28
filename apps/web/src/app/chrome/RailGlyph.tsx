@@ -11,6 +11,9 @@ const GLYPHS: Readonly<Record<string, string>> = {
   "/delivery": "M21 3 10.5 13.5M21 3l-6.5 18-4-8-8-4z",
   "/orders":
     "M14 3H7a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7zM14 3v4h4M9 14l2 2 4-4",
+  "/orders-list": "M3 5h18M3 10h18M3 15h12M3 20h12",
+  "/templates": "M4 4h16v5H4zM4 12h7v8H4zM14 12h6v8h-6z",
+  "/jurisdiction": "M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11M12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5",
   "/escalations": "M12 4 2.8 20h18.4zM12 10v3.5M12 17h.01",
   "/complaints": "M20 14a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2z",
   "/reconciliation": "M4 8h13m-3-3 3 3-3 3M20 16H7m3-3-3 3 3 3",

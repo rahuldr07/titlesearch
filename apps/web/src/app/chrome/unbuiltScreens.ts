@@ -119,6 +119,24 @@ export const UNBUILT_SCREENS: readonly ScreenDescriptor[] = [
     missing: "Nothing — absent from the design.",
   },
   {
+    path: "/orders-list",
+    screen: "All orders",
+    binds: "OrdersPageResponse (design.ts) — GET /api/orders",
+    missing: "Nothing. Added under the 2026-08-28 ruling.",
+  },
+  {
+    path: "/templates",
+    screen: "Templates",
+    binds: "TemplateResponse (design2.ts) — GET /api/templates",
+    missing: "No write endpoint, so the design's editor is absent rather than disabled.",
+  },
+  {
+    path: "/jurisdiction",
+    screen: "Jurisdiction",
+    binds: "JurisdictionResponse (design2.ts) — GET /api/jurisdictions/{code}",
+    missing: "Nothing. Added under the 2026-08-28 ruling.",
+  },
+  {
     path: "/account",
     screen: "Account",
     binds:

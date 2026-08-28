@@ -13,6 +13,7 @@ import { BenchScreen } from "../../features/bench/BenchScreen";
 import { LeaderboardScreen } from "../../features/leaderboard/LeaderboardScreen";
 import { BlindSeatScreen } from "../../features/blind/BlindSeatScreen";
 import { BlindStatusScreen } from "../../features/blindStatus/BlindStatusScreen";
+import { TemplatesScreen } from "../../features/templates/TemplatesScreen";
 
 /**
 
@@ -98,4 +99,5 @@ export const BUILT_SCREENS: Readonly<Record<string, () => JSX.Element>> = {
   /* The OPS read of capture, which is a different world from the seat and
      keeps its rail. Most of it has no contract surface and says so. */
   "/blind-status": BlindStatusScreen,
+  "/templates": TemplatesScreen,
 };
