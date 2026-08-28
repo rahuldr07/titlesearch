@@ -5,6 +5,25 @@ import { cx } from "../../components/ui";
  * INVARIANT 34: "The coverage spine renders ONE CELL PER PACKAGE PAGE, not just
  * read ones."
  *
+ * ══ WCAG 2.2 §2.5.8 — 64 CELLS UNDER 24px, AND WHY THAT IS THE EXCEPTION ═══
+ *
+ * axe reports one `target-size` violation per cell — 64 of them, measured at
+ * 6.7 x 20px each. That is not sloppiness and it is not fixable by widening:
+ *
+ *   - **Essential.** INVARIANT 34 requires one cell per package page, and
+ *     PRODUCT.md puts a real package at 36-181 pages. At 181 cells of 24px the
+ *     spine is 4,344px wide, which is not a spine and not a screen. The
+ *     presentation is essential to the requirement, which §2.5.8 exempts.
+ *   - **Equivalent.** §2.5.8 also exempts an undersized target when another
+ *     control on the same page achieves the same function and meets the
+ *     criterion. `PageBar`'s Prev and Next do exactly that, and they pass:
+ *     measured 62x30 and 64x30 in the running app.
+ *
+ * So the cells stay, and this is a KNOWN, JUSTIFIED axe finding rather than a
+ * clean sweep. Every cell also carries a `title` and an `aria-label` naming its
+ * page and what happened to it, so the information the spine encodes in colour
+ * is reachable without hitting a 6px target at all.
+ *
  * The denominator is `total_pages`. It is never `pages.length`, and the live
  * fixture is built to make that failure loud: `total_pages` is 64 and the array
  * holds 7. A spine driven off the array would draw seven cells and quietly
