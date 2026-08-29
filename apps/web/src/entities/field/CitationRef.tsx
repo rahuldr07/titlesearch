@@ -52,8 +52,15 @@ export function CitationRef({ citation, onOpen, className }: CitationRefProps) {
       aria-label={`Open ${label} in the evidence pane`}
       className={cx(
         REF,
-        "tp-state inline-flex cursor-pointer items-baseline gap-3 rounded-xs",
+        "tp-state relative inline-flex cursor-pointer items-baseline gap-3 rounded-xs",
         "border-0 bg-transparent p-0 text-left",
+        // WCAG 2.2 §2.5.8: the drawn text is one 11px line, the hit area is
+        // not — the `after:` pseudo grows the target past 24px without the
+        // citation gaining padding it must not show. The same mechanism as
+        // checkbox/switch/radio-group; `relative` is load-bearing (see
+        // `radio-group.tsx` — an absolute inset with no positioned ancestor
+        // lands on the wrong box).
+        "after:absolute after:-inset-x-2 after:-inset-y-4",
         "hover:text-action hover:underline",
         className,
       )}

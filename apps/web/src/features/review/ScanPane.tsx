@@ -45,6 +45,13 @@ export function ScanPane(props: {
      next selection yanking the page away. */
   const [following, setFollowing] = useState(true);
 
+  /* DECIDED, not an oversight: the reference animates a zoom-to-bbox (scale
+     1.85 over 300ms, transform-origin at the citation box) and this build
+     simplified it to fit↔200% plus the sheet's scroll-into-view of the cited
+     region. A bbox-anchored scale needs an inline transform-origin computed
+     from coordinates, which check-rules bans, and 1.85 would be a seventh
+     magnification literal beside PageBar's three steps. Revisit only with a
+     tokenised mechanism; until then the Z cap describes THIS behaviour. */
   useZoomKey({
     enabled: true,
     onToggle: () => setZoom((at) => (at === "fit" ? "double" : "fit")),

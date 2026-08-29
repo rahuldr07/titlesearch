@@ -87,7 +87,8 @@ export function useDecisionKeys(props: {
   useChords(bindings, { enabled: props.enabled });
 }
 
-/** Z — zoom the source page to the citation. A VIEW toggle; it files nothing. */
+/** Z — toggle the sheet between fit and 200% (`ScanPane`). A VIEW toggle; it
+    files nothing. */
 export function useZoomKey(props: {
   readonly enabled: boolean;
   readonly onToggle: () => void;

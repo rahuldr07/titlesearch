@@ -23,8 +23,12 @@ import { LEGEND, PAINT, cellLabel, stateOf } from "./pageCell";
  * to it, so the colour is never the only carrier. Same finding as
  * `CoverageSpine`.
  *
- * INVARIANT 55: selection is URL-owned, so a cell navigates to the frozen door
- * `/orders/$orderId` with `page` in the search string beside `field`.
+ * INVARIANT 55: selection is URL-owned, so a cell navigates to the workstation
+ * — `/orders/$orderId/review`, beneath the same frozen `/orders` door — with
+ * `page` in the search string. The design (README §Screens 6) says a cell click
+ * opens the workstation AT that page, and `orderSearch.ts` is the typed half of
+ * that promise; the workstation route consumes the key and hands it to the
+ * evidence pane as an outright page ask.
  *
  * REFUSED FROM THE DESIGN: its footer caption "Auto-scaling (10k+ pages)" — a
  * claim about system capacity that no response carries.
@@ -71,7 +75,7 @@ export function PageMatrix(props: {
                 aria-label={label}
                 onClick={() =>
                   void navigate({
-                    to: "/orders/$orderId",
+                    to: "/orders/$orderId/review",
                     params: { orderId: props.orderId },
                     search: { page: n },
                   })

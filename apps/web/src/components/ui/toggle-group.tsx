@@ -79,8 +79,10 @@ export function ToggleGroupItem({
 }: ToggleGroupItemProps) {
   return (
     /*
-     * `BlockedHint`, matching `segmented-control.tsx`, which wraps this same
-     * primitive.
+     * `BlockedHint`, and the wrapper is SAFE on this primitive — measured, not
+     * assumed. (`segmented-control.tsx`, on the same primitive, has since gone
+     * the other way: its items carry `data-disabled-reason` only, aligning
+     * with the collection-item convention `tabs.tsx` documents.)
      *
      * This comment previously said the opposite — that `ToggleButtonGroup`
      * builds a collection and a wrapper makes the builder stop seeing the item.

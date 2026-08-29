@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Countersign } from "@titlepipe/contract";
 import { post } from "../../shared/api";
 import { countersigns } from "../../shared/countersignQueries";
+import { orderTimeline } from "../../shared/queries";
 
 /**
  * ONE COUNTERSIGN, FILED ONCE.
@@ -40,6 +41,9 @@ export function useCountersign(orderId: string) {
           setPending(false);
           // The list repaints from the server: `countersigned_by` is its word.
           void client.invalidateQueries({ queryKey: countersigns(orderId).key });
+          // A countersign is an event the trail appends LIVE (README §4) — by
+          // re-reading the server's timeline, never by an optimistic append.
+          void client.invalidateQueries({ queryKey: orderTimeline(orderId).key });
         });
     },
     [client, orderId],

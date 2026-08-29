@@ -82,7 +82,14 @@ export const REVIEW_CHORDS: readonly ChordSpec[] = [
     id: "review-zoom",
     chord: "z",
     cap: "Z",
-    desc: "Zoom the source page to the citation",
+    /*
+     * What the handler DOES, not what the design drew: `Z` toggles the source
+     * page between fit and 200% (`ScanPane.tsx` — the reference's animated
+     * zoom-to-bbox was deliberately simplified, and the note there records
+     * it). Rule 11 backwards: a cap describing a behaviour nothing performs
+     * is the same lie as a key nothing binds.
+     */
+    desc: "Toggle the source page between fit and 200% magnification",
     action: null,
     install: "review",
     alwaysOn: false,

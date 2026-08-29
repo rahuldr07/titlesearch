@@ -56,7 +56,15 @@ export const TwoCells: Story = {
   ),
 };
 
-/** ONE cell blocked, with its rule. Rule 12: rendered disabled, not hidden. */
+/**
+ * ONE cell blocked, with its rule. Rule 12: rendered disabled, not hidden —
+ * the COUNT is the assertion, as in `combobox.blocked.stories.tsx`.
+ *
+ * No `[title]` assertion any more: the item-level `BlockedHint` wrapper is
+ * deleted (see `Segment`'s comment — a group item carries
+ * `data-disabled-reason` only, per `tabs.tsx`), so the reason's carrier on a
+ * single blocked cell is the data attribute, asserted verbatim below.
+ */
 export const OneSegmentBlocked: Story = {
   args: { defaultSelectedKeys: ["all"] },
   render: (args) => (
@@ -72,10 +80,16 @@ export const OneSegmentBlocked: Story = {
     </SegmentedControl>
   ),
   play: ({ canvasElement }) => {
-    expect(
-      canvasElement.querySelector('[data-slot="segment"][data-disabled-reason]'),
-    ).not.toBeNull();
-    expect(canvasElement.querySelector("[title]")?.getAttribute("title")).toContain("role");
+    // All three cells exist — the blocked one is barred, never dropped.
+    expect(canvasElement.querySelectorAll('[data-slot="segment"]')).toHaveLength(3);
+    const blocked = canvasElement.querySelector(
+      '[data-slot="segment"][data-disabled-reason]',
+    );
+    expect(blocked).not.toBeNull();
+    expect(blocked?.getAttribute("data-disabled-reason")).toBe(
+      "Blocked: your role cannot view escalations.",
+    );
+    expect(blocked?.textContent).toContain("Escalated");
   },
 };
 

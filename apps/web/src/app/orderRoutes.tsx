@@ -53,10 +53,11 @@ function ReviewRoute() {
  * Enter on the served order lands. A door the whole test suite names and the
  * router does not know is a not-found card standing where a screen is expected.
  *
- * It renders the same composition as the hub route for now. The Examination
- * Workstation itself is NOT built and cannot be: the design's T1 second read
- * and countersign have no contract surface at all, and AGENTS.md forbids
- * building past OPEN. `OrderRoute` says so on screen rather than by omission.
+ * It renders `WorkstationScreen` — the Examination Workstation, built under
+ * RULING-2026-08-28, which gave the T1 second read its contract surface:
+ * `Countersign`/`CountersignsResponse` (design.ts), `POST
+ * /api/fields/{id}/countersign`, and `field.countersign` in PERMISSIONS
+ * (authz.ts). Nothing here is past OPEN any more.
  */
 const reviewWorkstationRoute = createRoute({
   getParentRoute: parent,
@@ -77,15 +78,23 @@ const reviewWorkstationRoute = createRoute({
  * nineteen fields would otherwise push nineteen history entries and make the
  * back button walk the reviewer backwards through their own cursor instead of
  * out of the screen.
+ *
+ * `?page=` is the OTHER key `orderSearch.ts` validates: the extraction matrix
+ * (design §Screens 6) links here with it, and the screen hands it to the
+ * evidence pane as an outright page ask. It rides through selection changes
+ * untouched — `navigate({ search })` below replaces the whole search string,
+ * which is correct: once the reviewer moves their cursor, the deep-linked page
+ * has served its purpose.
  */
 function ReviewWorkstationRoute() {
   const { orderId } = reviewWorkstationRoute.useParams();
-  const { field } = reviewWorkstationRoute.useSearch();
+  const { field, page } = reviewWorkstationRoute.useSearch();
   const navigate = reviewWorkstationRoute.useNavigate();
   return (
     <WorkstationScreen
       orderId={orderId}
       fieldPath={field}
+      page={page}
       onSelectField={(path) =>
         void navigate({ search: { field: path }, replace: true })
       }

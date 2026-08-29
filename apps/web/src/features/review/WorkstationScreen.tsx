@@ -15,7 +15,7 @@ import { DecisionPanel } from "./DecisionPanel";
 import { CountersignPanel } from "./CountersignPanel";
 import { WorkstationFooter } from "./WorkstationFooter";
 import { ScanPane } from "./ScanPane";
-import type { PageRequest } from "./ScanViewer";
+import { usePageAsk } from "./usePageAsk";
 import { DecisionDock } from "./DecisionDock";
 import { OrderRail } from "./OrderRail";
 import { sectionsOf, fieldLabel } from "./fieldNaming";
@@ -36,17 +36,23 @@ export function WorkstationScreen(props: {
   readonly orderId: string;
   /** `?field=` off the route, matching `orderSearch.ts`'s optional key. */
   readonly fieldPath: string | undefined;
+  /** `?page=` off the route — the extraction matrix's "open the workstation AT
+      this page" (design §Screens 6). Treated below as an outright page ask. */
+  readonly page: number | undefined;
   readonly onSelectField: (path: string) => void;
 }) {
   const fields = useRead(orderFields(props.orderId));
   const context = useRead(orderContext(props.orderId));
   /* A VIEW ORDER, not a re-ranking. It reads the `flagged` boolean the section
      already carries from the server's own queue membership — nothing here
-     counts, scores or re-derives what is flagged. */
-  const [flaggedFirst, setFlaggedFirst] = useState(false);
-  /* The excerpt's "View on page" door, held here because it crosses the split:
-     the door is in the decision column and the sheet is in the other one. */
-  const [request, setRequest] = useState<PageRequest | null>(null);
+     counts, scores or re-derives what is flagged. ON by default: the reference
+     opens with sections sorted flagged-first (README §Screens 7, "sorted
+     flagged-first (toggle)") — the toggle is for turning it OFF. */
+  const [flaggedFirst, setFlaggedFirst] = useState(true);
+  /* The outstanding page ask — the excerpt's "View on page" door AND the
+     URL's `?page=` deep link, one state. See `usePageAsk.ts` for why the URL
+     key wins over "following" exactly once. */
+  const { ask, setAsk } = usePageAsk(props.page);
 
   const all = fields.data?.fields ?? [];
   const step = (direction: 1 | -1) => {
@@ -76,8 +82,10 @@ export function WorkstationScreen(props: {
                 onFlaggedFirst={setFlaggedFirst}
               />
               <Split className="min-h-0 flex-1">
+                {/* 60, not an even split: the reference's `splitPct: 60` —
+                    the decision column leads. Inside splitBand's 38–74. */}
                 <SplitPanel
-                  defaultSize="50"
+                  defaultSize="60"
                   minSize={DECISION_MIN}
                   maxSize={DECISION_MAX}
                   className="border-r border-line-strong bg-surface-panel"
@@ -101,7 +109,7 @@ export function WorkstationScreen(props: {
                         <DecisionPanel
                           field={open}
                           orderId={props.orderId}
-                          onViewPage={(page) => setRequest({ page })}
+                          onViewPage={(page) => setAsk({ page })}
                         />
                       )}
                     />
@@ -124,11 +132,11 @@ export function WorkstationScreen(props: {
                     page={open?.source_page ?? null}
                     line={null}
                     box={open?.source_line_coords ?? null}
-                    request={request}
+                    request={ask}
                   />
                 </SplitPanel>
               </Split>
-              <WorkstationFooter census={data.census} />
+              <WorkstationFooter orderId={props.orderId} census={data.census} />
             </>
           );
         }}

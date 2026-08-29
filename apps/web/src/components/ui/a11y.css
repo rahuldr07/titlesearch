@@ -27,8 +27,8 @@
    *
    * The guard is deliberately narrow: WCAG 2.2 §2.5.8 wants 24px MINIMUM, and
    * a component asking for MORE already satisfies it. A component asking for
-   * less is the case worth catching, and `textarea.test.ts` catches it by
-   * measuring rather than by reading the class.
+   * less is the case worth catching, and `input.blocked.stories.tsx` catches
+   * it by measuring the computed min-height rather than by reading the class.
    */
   &:not([class*="min-h-"]) {
     min-block-size: var(--size-control-md);

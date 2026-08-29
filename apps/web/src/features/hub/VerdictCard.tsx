@@ -1,5 +1,5 @@
 import type { LifecycleStamp, OrderCensus } from "@titlepipe/contract";
-import { ProgressMeter } from "../../entities/order/ProgressMeter";
+import { ProgressMeter } from "../../components/ui";
 import { RouteButton } from "../../app/chrome/RouteButton";
 
 /**
@@ -7,9 +7,14 @@ import { RouteButton } from "../../app/chrome/RouteButton";
  *
  * `LifecycleStamp.label` is the server's already-chosen word — nothing here
  * reads it, and `tone` drives paint and nothing else (`intake.ts:290-294`).
- * `OrderCensus` carries no settled count, and `fields - needs_review` is the
- * arithmetic the shape exists to remove, so the meter is drawn over the pair the
- * server does state and labelled as that. The gap is `CONFLICT-all-orders.md` §4.
+ *
+ * The meter draws the pair the design draws (README §Screens 4, "'N of M
+ * decisions settled'"): `OrderCensus.settled`/`decisions` — server-counted,
+ * never `fields - needs_review`, which is the arithmetic the shape exists to
+ * remove. It is the KIT meter (`components/ui/progress-meter.tsx`), the same
+ * one `DecisionDock` renders, so the hub and the workstation cannot draw the
+ * same figure two ways — one dot PER decision, and past MAX_DOTS the graphic
+ * is refused and the mono count stands alone (rule 11).
  */
 export function VerdictCard(props: {
   readonly stamp: LifecycleStamp;
@@ -40,16 +45,21 @@ export function VerdictCard(props: {
           number below is added up here.
         </p>
 
-        {props.census === undefined ? (
+        {/* `settled`/`decisions` are AWAITING RATIFICATION on `OrderCensus`
+            (endpoints.ts, the ⚠ block) — optional, and absent is "the server
+            did not say", printed as silence rather than filled in. */}
+        {props.census?.settled === undefined ||
+        props.census.decisions === undefined ? (
           <p data-testid="census-silent" className="text-meta leading-close text-ink-muted">
-            The server sent no census with this order's fields. That is not zero — it
+            The server sent no decision census for this order. That is not zero — it
             is the server not saying.
           </p>
         ) : (
           <ProgressMeter
-            settled={props.census.auto_confirmed}
-            total={props.census.fields}
-            noun="fields auto-confirmed by the pipeline"
+            label="Decisions settled"
+            settled={props.census.settled}
+            total={props.census.decisions}
+            caption={`${props.census.settled} of ${props.census.decisions} decisions settled`}
           />
         )}
       </div>

@@ -9,8 +9,8 @@ import { disabledAttributes, disabledNativeAttributes } from "./disabled";
  * which is exactly what the invariant specs assert against.
  *
  * So these assert the PROP NAME, because the prop name was the bug. The
- * rendered-behaviour half lives in `input.blocked.test.ts`, which types into a
- * real element.
+ * rendered-behaviour half lives in `input.blocked.stories.tsx`, whose play
+ * functions type into the real elements and assert nothing lands.
  */
 test("a composite gets isDisabled and never the native prop", () => {
   const a = disabledAttributes("Blocked: T1 second read not countersigned.");

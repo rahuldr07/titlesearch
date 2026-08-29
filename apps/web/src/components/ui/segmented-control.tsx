@@ -11,8 +11,10 @@ import { BlockedHint } from "./blockedHint";
 
 /**
  * PORTED FROM apps/web-v2's `SegmentedControl.tsx` — the registry has no
- * equivalent, and `toggle-group` (which another agent owns) is not one: that is
- * a multi-select formatting control, this is a single-select filter.
+ * equivalent. `toggle-group.tsx` is built on the same single-select
+ * `ToggleButtonGroup` primitive; the difference is chrome, not selection
+ * model: its cells wear the toggle's dress, these read as a raised white cell
+ * on a sunken track.
  *
  * A SEGMENTED CONTROL IS A FILTER, NOT NAVIGATION — the whole distinction from
  * Tabs. Design §Screens 3: the All Orders filter tabs are "a 10px/4px/6px
@@ -74,23 +76,29 @@ export type SegmentProps = Omit<
 > &
   Disablement & { readonly children: ReactNode };
 
+/*
+ * NO ITEM-LEVEL `BlockedHint`. `tabs.tsx` documents why an item inside a
+ * selection group carries `data-disabled-reason` only: wrapping a collection
+ * item is the shape that made a `<Tab>` vanish from its strip, trading rule
+ * 12's "never hidden" for rule 9's hover half. A blocked SEGMENT keeps the
+ * reason on the data attribute (and its group keeps the group-level wrapper
+ * above, so a whole blocked control still states its rule on hover).
+ */
 export function Segment({ disabledBecause, children, ...props }: SegmentProps) {
   return (
-    <BlockedHint reason={disabledBecause}>
-      <ToggleButton
-        {...props}
-        {...disabledAttributes(disabledBecause)}
-        data-slot="segment"
-        className={cx(
-          "tp-state tp-press tp-target tp-ring flex cursor-pointer items-center justify-center rounded-sm px-6",
-          "font-sans text-meta leading-close font-medium text-ink-secondary",
-          "hover:not-data-disabled:text-ink-primary",
-          "data-selected:bg-surface-panel data-selected:font-semibold data-selected:text-ink-primary data-selected:shadow-card",
-          "data-disabled:cursor-not-allowed data-disabled:text-ink-disabled",
-        )}
-      >
-        {children}
-      </ToggleButton>
-    </BlockedHint>
+    <ToggleButton
+      {...props}
+      {...disabledAttributes(disabledBecause)}
+      data-slot="segment"
+      className={cx(
+        "tp-state tp-press tp-target tp-ring flex cursor-pointer items-center justify-center rounded-sm px-6",
+        "font-sans text-meta leading-close font-medium text-ink-secondary",
+        "hover:not-data-disabled:text-ink-primary",
+        "data-selected:bg-surface-panel data-selected:font-semibold data-selected:text-ink-primary data-selected:shadow-card",
+        "data-disabled:cursor-not-allowed data-disabled:text-ink-disabled",
+      )}
+    >
+      {children}
+    </ToggleButton>
   );
 }

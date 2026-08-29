@@ -2,22 +2,27 @@ import type { ScreenDescriptor } from "./unbuiltScreens";
 
 /**
 
- * The two order-scoped screens. Separate from `unbuiltScreens.ts` because they are
+ * The order-scoped screens still awaiting a build. Separate from `unbuiltScreens.ts`
 
- * wired by hand rather than looped: both take a path param, and it is the hand-written
+ * because they are wired by hand rather than looped: each takes a path param, and it
 
- * `createRoute` that makes a misspelled param a compile error.
+ * is the hand-written `createRoute` that makes a misspelled param a compile error.
+
+ *
+
+ * REVIEW_SCREEN is GONE from this file, deliberately: the Examination Workstation is
+
+ * built (`WorkstationScreen` at `/orders/{id}/review`), and its once-missing contract
+
+ * surface landed under RULING-2026-08-28 — `Countersign`/`CountersignsResponse` and
+
+ * `POST /api/fields/{id}/countersign` in `packages/contract/src/design.ts`, plus
+
+ * `field.countersign` in PERMISSIONS (`authz.ts`). A descriptor claiming otherwise
+
+ * was a false comment rendered on screen.
 
  */
-export const REVIEW_SCREEN: ScreenDescriptor = {
-  path: "/orders/{id}",
-  screen: "Review",
-  binds:
-    "OrderFieldsResponse (endpoints.ts:169) · Field (entities.ts:90) · OrderCensus (:160) · SourcePage (:642)",
-  missing:
-    "Backend conversation 1, the largest gap. The design's 'T1 second read / countersign' has NO contract surface: no second-read entity, no countersign endpoint, no countersigned_by on Field, no such action in PERMISSIONS. Reconciliation (entities.ts:202) is a DIFFERENT mechanism — blind-typist capture quality, not post-ruling QC — and binding one to the other would silently redefine what the blind protocol measures. A countersign with no contract surface is OPEN, and AGENTS.md forbids building past OPEN.",
-};
-
 export const BLIND_SEAT_SCREEN: ScreenDescriptor = {
   path: "/blind/{id}",
   screen: "Capture seat",

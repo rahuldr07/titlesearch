@@ -26,9 +26,11 @@
  * A PARTY NAME FROM A DOMAIN REFUSAL". This client sent the raw `.message`
  * under a key that is not `exception`, so that function never touched it.
  * ══ THE DECISION: NO WIRE SINK ═════════════════════════════════════════════
- * `packages/contract` is FROZEN. Adding `POST /api/client-events` is a real
- * contract change and needs the owner, not an agent assuming one. So the fetch
- * is DELETED rather than left pointing at a 404 — a sink with no receiver is
+ * RULING-2026-08-28 unfroze `packages/contract` — for endpoints A DESIGN
+ * SCREEN NEEDS. A crash sink is not one: no screen in `reference-app.html`
+ * draws it, so `POST /api/client-events` remains an addition that needs the
+ * owner asked, not an agent inferring it from the ruling's edge. So the fetch
+ * stays DELETED rather than pointed at a 404 — a sink with no receiver is
  * not observability, it is the appearance of it, and the appearance is what
  * stopped anyone checking that the redaction ran.
  * What remains is a console channel with a payload that is already safe to

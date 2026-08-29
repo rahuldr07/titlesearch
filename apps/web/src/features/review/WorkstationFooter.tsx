@@ -1,4 +1,5 @@
 import type { OrderCensus } from "@titlepipe/contract";
+import { RouteButton } from "../../app/chrome/RouteButton";
 
 /**
 
@@ -9,7 +10,10 @@ import type { OrderCensus } from "@titlepipe/contract";
  * left "✓ 128 cited fields verified · 6 fields pending confirmation" right…
 
  */
-export function WorkstationFooter(props: { readonly census: OrderCensus | undefined }) {
+export function WorkstationFooter(props: {
+  readonly orderId: string;
+  readonly census: OrderCensus | undefined;
+}) {
   const census = props.census;
 
   return (
@@ -38,17 +42,23 @@ export function WorkstationFooter(props: { readonly census: OrderCensus | undefi
       </p>
 
       {/*
-       * The design's right half is a single disabled control. A full
-       * `ContractGap` block here would dwarf the census beside it and turn a
-       * footer into an essay — the gap is stated in one line, and the long form
-       * lives in `CountersignPanel`, which blocks the same release.
+       * The design's right half is "Advance to publication", and it is REAL
+       * now: the compiler lives at `/orders/{id}/release` (`ReleaseScreen`),
+       * with `release.compile`/`release.execute` in PERMISSIONS. The same link
+       * the hub's `VerdictCard` draws, so the two doors cannot drift. Not
+       * gated here: the release gates (0 open fields, T1 countersign, no
+       * uncovered gaps) are the SERVER's, enforced at compile/execute and
+       * surfaced verbatim on that screen — a client-side pre-check would be
+       * the browser re-deriving a state machine it does not own.
        */}
-      <p className="max-w-260 text-meta leading-close text-state-attend">
-        Advance to publication is not built and not disabled: there is no compile
-        endpoint, no gate shape and no{" "}
-        <code className="font-mono text-label">release.execute</code>, so there is no
-        control to disable.
-      </p>
+      <RouteButton
+        variant="secondary"
+        to="/orders/$orderId/release"
+        params={{ orderId: props.orderId }}
+        data-testid="footer-release"
+      >
+        Advance to publication →
+      </RouteButton>
     </footer>
   );
 }

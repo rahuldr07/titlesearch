@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Ack, PassOrderResponse } from "@titlepipe/contract";
 import { post } from "../../shared/api";
-import { orderFields } from "../../shared/queries";
+import { orderFields, orderTimeline } from "../../shared/queries";
 
 /**
 
@@ -37,6 +37,11 @@ export function useReviewWrites(orderId: string) {
 
   const repaint = useCallback(() => {
     void client.invalidateQueries({ queryKey: orderFields(orderId).key });
+    /* The hub's event trail is LIVE (design README §Screens 4: rulings append
+       as they happen) — and every act here is an event the server records. A
+       RE-READ, never an optimistic append: `EventTrail` refuses to invent a
+       row, so the trail moves only when the server says it has. */
+    void client.invalidateQueries({ queryKey: orderTimeline(orderId).key });
   }, [client, orderId]);
 
   /**

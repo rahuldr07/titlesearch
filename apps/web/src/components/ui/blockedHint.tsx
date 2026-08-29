@@ -17,8 +17,14 @@ import type { ReactNode } from "react";
  * and wrong — the exact failure family `disabled.ts` was written to stop, one
  * layer below where it was looking.
  *
- * Native elements (`<button>`, `<input>`) are unaffected; this is a composite
- * problem, which is why it went unnoticed: the Button kept working.
+ * Native elements (`<button>`, `<input>`) keep their `title` — the stripping
+ * is a composite problem, which is why it went unnoticed: the Button kept
+ * working. But "unaffected" oversold it, and REVIEW-03 B1 is the correction:
+ * a native wrapper needs the NATIVE prop too. react-aria's `Input` reads
+ * `disabled`, not `isDisabled`, so a "blocked" Input handed the composite
+ * spelling rendered its reason faithfully while staying fully editable —
+ * `disabled.ts` splits the two spellings (`disabledNativeAttributes`), and
+ * `input.blocked.stories.tsx` types at the real element to prove it.
  *
  * ══ WHY A WRAPPER AND NOT A PATCH TO disabled.ts ═════════════════════════════
  *

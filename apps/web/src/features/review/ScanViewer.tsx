@@ -33,7 +33,12 @@ export function ScanViewer(props: {
   readonly following: boolean;
   readonly onFollowing: (following: boolean) => void;
 }) {
-  const [shown, setShown] = useState(props.page ?? props.described[0]?.n ?? 1);
+  /* An ask outstanding AT MOUNT is still an ask — the matrix's `?page=` deep
+     link arrives that way — so it outranks the open field's citation in the
+     initial position exactly as a later ask would in the block below. */
+  const [shown, setShown] = useState(
+    props.request?.page ?? props.page ?? props.described[0]?.n ?? 1,
+  );
   const [citedAt, setCitedAt] = useState(props.page);
   const [askedAt, setAskedAt] = useState(props.request);
 
