@@ -2,6 +2,7 @@
 
 **Date** 2026-08-27 · **Branch** `frontend/rebuild-2026-08` · **HEAD** `08f18f4`
 **Scope** all of `apps/web` EXCEPT `src/features/review` and `src/features/queue` (in flight).
+*[2026-08-29: `src/features/queue` was deleted 2026-08-28 — see `CONFLICT-deleted-queue-and-rail-controls.md`.]*
 **Method** everything below was PROVEN by running something. Dev server on `127.0.0.1:5176`, headless
 Chromium via `@playwright/test`, `getComputedStyle`, a production `vite build` grepped for emitted
 rules, `axe-core` with the five WCAG tags, `tsc -b`, `eslint`, `vitest run` (322 pass),
@@ -16,6 +17,8 @@ theme of this review.
 ## BLOCKERS
 
 ### B1 — `Input` and `Textarea` leak `isDisabled` to the DOM, so `disabledBecause` DOES NOT DISABLE THEM
+
+*[2026-08-29: CLOSED — see `components/ui/disabled.ts` `disabledNativeAttributes()`, spread by `input.tsx`/`textarea.tsx`; the behavioral typing-refused test is being added 2026-08-29.]*
 
 `src/components/ui/input.tsx:41` · `src/components/ui/textarea.tsx:38`
 
@@ -68,6 +71,8 @@ the attribute, which is precisely what survived the bug.
 
 ### B2 — `defaultValue` on `Input` inside a `TextField` renders an EMPTY field
 
+*[2026-08-29: CLOSED — see `input.tsx:43-45`: `InputProps` omits `value`/`defaultValue`, the type-level refusal this section prefers.]*
+
 `src/components/ui/input.tsx:34-45`
 
 Second console error on the workbench, reproduced on a three-line probe
@@ -100,6 +105,8 @@ sites fail to compile, which is the only way they get found.
 
 ### B3 — `tp-target` silently caps every `min-h-*` in the kit; `Textarea`'s three-line floor is 24px
 
+*[2026-08-29: CLOSED — see `components/ui/a11y.css`: `tp-target` guards with `&:not([class*="min-h-"])`.]*
+
 `src/components/ui/ui.css:83` vs `src/components/ui/textarea.tsx:44`
 
 `textarea.tsx` sets `min-h-36` and documents it as "72px, three lines of 13px". `controlClass`
@@ -128,6 +135,8 @@ sizing at all. Add a test asserting the computed `min-height` of a `Textarea` is
 
 ### B4 — Nested cards are NOT structurally forbidden; `InnerPanel` is the hole
 
+*[2026-08-29: CLOSED — see `card.tsx` (`InsideCard` is never cleared, `Card > InnerPanel > Card` throws) and `card.nesting.stories.tsx` (the throw is a play test).]*
+
 `src/components/ui/card.tsx:62-66, 128-131`
 
 `card.tsx`'s header claims: "A context flag makes the violation a runtime throw … `InnerPanel`
@@ -155,6 +164,8 @@ sets the second and leaves the first alone. Add the `Card > InnerPanel > Card` c
 ---
 
 ### B5 — Rule 8's entire paper register renders FLAT: no grain, no tilt, no NOT_STATED hatch
+
+*[2026-08-29: CLOSED — see `styles.css` (`@import "./entities/entities.css"`) and `entities/paper.test.ts`.]*
 
 `src/entities/entities.css` is imported by NOTHING.
 
@@ -247,6 +258,8 @@ same fact.
 
 ### S3 — `entities/order/ProgressMeter.tsx` is dead, and it duplicates the kit's
 
+*[2026-08-29: the evidence line below is now inverted — `features/hub/VerdictCard.tsx` imports the entities copy. Being resolved 2026-08-29 by deleting the entities copy.]*
+
 Nothing imports it (`knip` misses it because its `.stories.tsx` counts as a use). The kit's
 `components/ui/progress-meter.tsx` is the one the workbench and the barrel use. Two components, same
 name, same job, different props (`label`/`caption` vs `noun`), and **different math**:
@@ -254,6 +267,8 @@ name, same job, different props (`label`/`caption` vs `noun`), and **different m
 documents refusing to draw a graphic above `MAX_DOTS`. Delete the entities copy and its story.
 
 ### S4 — Table exposes no `aria-colcount` and the header row no `aria-rowindex`
+
+*[2026-08-29: FIXED — `table.tsx` sets `aria-colcount={columns.length}` and `aria-rowcount={rows.length + 1}`; `tableRow.tsx` sets the header to `aria-rowindex={1}` and data rows to `index + 2`.]*
 
 `src/components/ui/table.tsx:88-93`, `tableRow.tsx:33`
 
@@ -308,6 +323,8 @@ B3 recommends generalising.
 ## NITS
 
 ### N1 — `playwright.tmp.config.ts` is committed scaffolding
+
+*[2026-08-29: removed.]*
 
 `apps/web/playwright.tmp.config.ts`, landed in `08f18f4`. Its own docstring describes running the
 `e2e/invariants` suite and mentions `web-v2` (deleted in `f2af433`). A file named `.tmp` in VCS is a
