@@ -4,9 +4,9 @@ import { CensusTile } from "../../shared/ui/CensusTile";
 /**
  * Pages in, pages read, and why the second number is so much smaller.
  *
- * The sentence beside the two numerals is the point of this strip. "11 of 64"
- * with no explanation reads as 53 pages skipped; with the classifier's reason
- * beside it, it reads as 53 pages that hold nothing the report needs. The
+ * The sentence beside the two numerals is the point of this strip. "11 of 38"
+ * with no explanation reads as 27 pages skipped; with the classifier's reason
+ * beside it, it reads as 27 pages that hold nothing the report needs. The
  * numbers are useless — actively misleading — without it, which is why they
  * share one bordered block rather than sitting as two loose stats, and why the
  * sentence arrives from the server rather than being written here.

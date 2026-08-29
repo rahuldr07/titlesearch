@@ -88,10 +88,10 @@ export function DecisionDock({
         <Eyebrow variant="section" tone="action">
           Decision queue
         </Eyebrow>
-        <span className="tnum text-xs text-ink-muted">
+        <span className="text-xs text-ink-muted">
           {answered} of {needTotal} answered
         </span>
-        <span className="tnum text-xs text-ink-muted">{needTotal - answered} remaining</span>
+        <span className="text-xs text-ink-muted">{needTotal - answered} remaining</span>
         <span className="ml-auto whitespace-nowrap text-tiny text-ink-muted">
           <span className="font-mono font-semibold">C</span> confirm ·{" "}
           <span className="font-mono font-semibold">E</span> correct ·{" "}

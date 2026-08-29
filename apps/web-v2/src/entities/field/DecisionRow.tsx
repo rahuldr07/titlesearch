@@ -79,9 +79,7 @@ export function DecisionRow({
       aria-current={selected}
       onClick={onActivate}
       className={cn(
-        // 9×15 — the hybrid's decision-row density (`.qrow` padding:9px 15px;
-        // tokens.css: "decision row 9 x 15 → py-4.5 px-7.5").
-        "flex w-full flex-wrap items-baseline gap-4 border-t border-line-subtle px-7.5 py-4.5 text-left first:border-t-0",
+        "flex w-full flex-wrap items-baseline gap-4 border-t border-line-subtle px-6 py-4 text-left first:border-t-0",
         "hover:bg-row-hover",
         selected && "bg-surface-sunken",
       )}
@@ -97,7 +95,7 @@ export function DecisionRow({
 
       <span className="flex-1">
         {field.value !== null ? (
-          <span className="font-mono tnum text-base text-ink-primary">{field.value}</span>
+          <span className="font-mono text-base text-ink-primary">{field.value}</span>
         ) : field.na_reason !== null ? (
           <span className="font-mono text-base text-ink-secondary">Not Available</span>
         ) : (

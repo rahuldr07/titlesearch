@@ -38,7 +38,7 @@ export function PageNav({
       >
         ‹
       </button>
-      <span className="font-mono tnum text-xs text-ink-primary">
+      <span className="font-mono text-xs text-ink-primary">
         p{page} <span className="text-ink-muted">/ {totalPages}</span>
       </span>
       <button
@@ -58,7 +58,7 @@ export function PageNav({
         >
           −
         </button>
-        <span className="font-mono tnum text-xs text-ink-muted">
+        <span className="font-mono text-xs text-ink-muted">
           {Math.round(zoom * 100)}%
         </span>
         <button

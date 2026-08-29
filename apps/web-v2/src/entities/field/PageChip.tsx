@@ -36,7 +36,7 @@ export function PageChip({
       className={cn(
         "inline-flex items-center rounded-3 border px-3 py-1",
         "border-page-ref-border bg-page-ref-surface",
-        "font-mono tnum text-micro font-semibold text-page-ref",
+        "font-mono text-micro font-semibold text-page-ref",
         className,
       )}
     >

@@ -59,7 +59,7 @@ export function PageFacsimile({
         <Eyebrow variant="caption" tone="strong" className="text-document-ink">
           {page.kind}
         </Eyebrow>
-        <span className="font-mono tnum text-tiny text-document-ink-soft">
+        <span className="font-mono text-tiny text-document-ink-soft">
           page {page.n} of the package
         </span>
         {page.degraded ? (

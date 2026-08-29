@@ -68,7 +68,7 @@ export function SignoffLineRow({
     >
       <div className="flex flex-wrap items-baseline gap-5">
         <p className="min-w-0 flex-1 text-sm leading-close text-ink-primary">
-          <span className="mr-3 font-mono tnum text-tiny font-semibold text-ink-muted">
+          <span className="mr-3 font-mono text-tiny font-semibold text-ink-muted">
             L{String(line.n).padStart(2, "0")}
           </span>
           {line.label}

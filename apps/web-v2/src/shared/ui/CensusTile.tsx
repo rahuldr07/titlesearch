@@ -14,12 +14,11 @@ import { cn } from "./classNames";
  * three of them were private near-misses of each other that had already drifted
  * to three numeral sizes and two colour vocabularies.
  *
- * TONE IS STATE, NOT EMPHASIS. The action accent means "stopped on a person",
- * which is the product working correctly — most of the pipeline is meant to be
- * waiting on somebody. It is not the alarm colour by hue alone: accent and
- * halt are separated by hue plus a second axis (lightness + stroke, tokens.css
- * header), so the two stay apart in greyscale. Halt is kept for the figure
- * where the order is in no stage at all and nothing will move it.
+ * TONE IS STATE, NOT EMPHASIS. Violet means "stopped on a person", which is the
+ * product working correctly — most of the pipeline is meant to be waiting on
+ * somebody, and drawing that as an alarm teaches a reviewer to read normal
+ * operation as failure. Halt is kept for the figure where the order is in no
+ * stage at all and nothing will move it.
  *
  * An UNTONED tile is the loudest ink, not the quietest: on a census tile the
  * figure is the content. `tone="muted"` is therefore a real choice — the

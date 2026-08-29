@@ -32,7 +32,7 @@ export function PageStrip({
     <div className="flex flex-col gap-4">
       <div className="flex items-baseline gap-4">
         <Eyebrow variant="caption">Pages read in full</Eyebrow>
-        <span className="font-mono tnum text-xs text-ink-muted">
+        <span className="font-mono text-xs text-ink-muted">
           {pages.length} of {totalPages}
         </span>
       </div>
@@ -52,7 +52,7 @@ export function PageStrip({
                 aria-current={current ? "page" : undefined}
                 onClick={() => onSelect(page)}
                 className={cn(
-                  "h-15 min-w-17 rounded-5 border px-4 font-mono tnum text-sm",
+                  "h-15 min-w-17 rounded-5 border px-4 font-mono text-sm",
                   current
                     ? "border-action bg-action font-semibold text-ink-on-action"
                     : "border-line-strong bg-surface-panel text-ink-primary",

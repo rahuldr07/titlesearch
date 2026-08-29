@@ -8,7 +8,7 @@ const SEAT = ["A", "B", "C", "D"] as const;
 
 function Diffed({ value, against }: { value: string; against: string }) {
   return (
-    <span className="font-mono tnum text-base text-ink-primary">
+    <span className="font-mono text-base text-ink-primary">
       {diffChars(value, against).map((part, index) =>
         part.differs ? (
           <mark
@@ -91,7 +91,7 @@ export function EngineReadings({
             )}
 
             {reading.page === null ? null : (
-              <span className="font-mono tnum text-micro font-semibold text-page-ref">
+              <span className="font-mono text-micro font-semibold text-page-ref">
                 p{reading.page}
               </span>
             )}

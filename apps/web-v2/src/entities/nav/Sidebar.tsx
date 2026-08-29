@@ -66,8 +66,7 @@ export function Sidebar({ collapsed, onToggle, onNavigate, brand, sections, foot
   const ref = useRef<HTMLElement>(null);
   // The persisted CHOICE, or the measured lack of room — either folds the rail,
   // and only the first of them is ever written back (`useForcedCollapse`).
-  const forced = useForcedCollapse(ref);
-  const isCollapsed = forced || collapsed;
+  const isCollapsed = useForcedCollapse(ref) || collapsed;
 
   /*
    * A DARK COLUMN, 2026-08-13, and a hairline of its own light instead of a
@@ -113,10 +112,7 @@ export function Sidebar({ collapsed, onToggle, onNavigate, brand, sections, foot
     >
       <div className="flex items-center justify-between gap-2 px-12">
         {isCollapsed ? null : brand}
-        {/* ABSENT while collapse is FORCED (design spec 2026-07-30, Wave 0):
-            a click here would write `nav_collapsed` with no visible effect —
-            a preference the user never saw themselves choose. */}
-        {forced ? null : <RailFold collapsed={isCollapsed} onToggle={onToggle} />}
+        <RailFold collapsed={isCollapsed} onToggle={onToggle} />
       </div>
 
       {sections.map((section) => (
