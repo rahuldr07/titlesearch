@@ -125,7 +125,7 @@ export function FieldValue({
 
   return (
     <span className="flex flex-wrap items-baseline gap-3">
-      <span className="font-mono text-base text-ink-primary">{field.value}</span>
+      <span className="font-mono tnum text-base text-ink-primary">{field.value}</span>
       {page === null ? (
         <span className="text-tiny font-semibold text-state-halt-ink">
           no page cited

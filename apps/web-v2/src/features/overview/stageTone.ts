@@ -5,9 +5,10 @@ import type { StageKind } from "@titlepipe/contract";
  *
  * Seven stages, four colours — because the reader is not being asked to learn
  * seven hues, they are being asked one question per column: is this moving, or
- * is it stopped on somebody? Violet answers "a person holds this", and it is
- * the same violet the rest of the product uses for "yours to act on", so the
- * meaning is already learned by the time anyone reaches this board.
+ * is it stopped on somebody? The action ink answers "a person holds this" —
+ * the same sealing-wax accent the rest of the product spends on "yours to act
+ * on", kept apart from the halt family by hue AND a second axis (lightness +
+ * stroke, tokens.css header) so the distinction survives greyscale.
  *
  * `idle` and `machine` deliberately share the grey bar: neither is anybody's
  * problem yet. They differ in the count's ink, which is enough — an unassigned

@@ -106,10 +106,12 @@ export function reviewAugment(data: {
   fields: OrderFieldsResponse | undefined;
 }): StageAugment {
   const done = phaseDone(data.pipeline, "qc");
-  // Same filter `OrderCounts`'s "Need you" tile counts — server-labelled
-  // state, never confidence.
-  const needYou =
-    data.fields?.fields.filter((f) => f.state === "needs_review").length ?? 0;
+  // The census's `needs_review` — the same served figure `OrderCounts`'s "Need
+  // you" tile prints, never the `fields` array filtered here: the array is
+  // scoped to what the caller may see, the census is not (`OrderCensus`). An
+  // absent census is "the server did not say" — no badge, not a number this
+  // file worked out for itself.
+  const needYou = data.fields?.census?.needs_review ?? 0;
   // Amber, as the export marks an unanswered review: work waiting on a person
   // is not the same signal as a run that has stopped.
   return { done, badge: needYou > 0 ? String(needYou) : null, badgeTone: "attend" };

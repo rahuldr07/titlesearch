@@ -31,7 +31,7 @@ export function SignoffLineNotes({ line }: { line: OrderSignoffLine }) {
         <Eyebrow variant="caption" className="shrink-0">
           MAY BE ANSWERED
         </Eyebrow>
-        <span className="font-mono text-tiny font-semibold text-ink-secondary">
+        <span className="font-mono tnum text-tiny font-semibold text-ink-secondary">
           {line.answers.join(" · ")}
         </span>
       </div>
@@ -43,7 +43,7 @@ export function SignoffLineNotes({ line }: { line: OrderSignoffLine }) {
           ) : (
             <>
               Client policy suggests{" "}
-              <span className="font-mono font-semibold">{line.policy_suggestion}</span>
+              <span className="font-mono tnum font-semibold">{line.policy_suggestion}</span>
             </>
           )}{" "}
           —{" "}

@@ -52,7 +52,9 @@ export function CompareMatrix({
           through it as they pass.
         */}
         <div className="sticky top-0 z-(--z-raised) flex rounded-t-8 border-b border-line-strong bg-surface-panel">
-          <Eyebrow variant="field" className={cn(LABEL_CELL, "px-7 py-5")}>
+          {/* 8×16 — the hybrid's matrix-cell density (tokens.css: "matrix cell
+              8 x 16 → py-4 px-8"; hybrid `.matrix tbody th` padding:8px 16px). */}
+          <Eyebrow variant="field" className={cn(LABEL_CELL, "px-8 py-4")}>
             Sign-off line · {productName} baseline
           </Eyebrow>
           {columns.map((c) => (
@@ -79,7 +81,7 @@ export function CompareMatrix({
             key={row.line_id}
             className="flex items-stretch border-t border-line-subtle"
           >
-            <div className={cn(LABEL_CELL, "flex items-baseline gap-5 px-7 py-5")}>
+            <div className={cn(LABEL_CELL, "flex items-baseline gap-5 px-8 py-4")}>
               <span className="shrink-0 font-mono text-tiny font-semibold text-ink-muted">
                 {row.line_id}
               </span>

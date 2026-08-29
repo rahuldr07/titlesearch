@@ -381,7 +381,7 @@
   /* ── neutral chip (machine/automated badges) ──────────────────────────── */
   /* The mockup's --sheet #F1ECDF, the fifth rung of the paper ladder: the
      keyboard chip and the quiet inset note block. No other token holds it. */
-  --color-chip-neutral-surface: #f1ece0;
+  --color-chip-neutral-surface: #f1ecdf;
 
   /*
    * Modal scrim. A COLOUR token, not a shadow one — and --shadow-scrim was

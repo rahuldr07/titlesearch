@@ -109,7 +109,7 @@ export function SectionRail({
               {SECTION_HEADING[section] ?? section.replaceAll("_", " ")}
             </span>
             {page === null ? null : (
-              <span className="font-mono text-tiny text-ink-muted">p{page}</span>
+              <span className="font-mono tnum text-tiny text-ink-muted">p{page}</span>
             )}
             {need > 0 ? (
               <Chip tone="attend" shape="pill" size="micro" bordered>

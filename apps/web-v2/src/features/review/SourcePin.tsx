@@ -44,7 +44,7 @@ export function SourcePin({
         matches this with a case-sensitive regex, and a CSS transform does not
         change what the text actually says.
       */}
-      <p className="font-mono text-micro tracking-badge font-bold text-ink-secondary">
+      <p className="font-mono tnum text-micro tracking-badge font-bold text-ink-secondary">
         READER {seat} LINE — {engineId}
         {page === null ? "" : ` · page ${page}`}
       </p>

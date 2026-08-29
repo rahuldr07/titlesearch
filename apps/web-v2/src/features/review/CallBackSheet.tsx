@@ -94,7 +94,7 @@ export function CallBackSheet({
                   {SECTION_HEADING[section] ?? section.replaceAll("_", " ")}
                 </Eyebrow>
                 {page === null ? null : (
-                  <span className="font-mono text-tiny text-ink-muted">p{page}</span>
+                  <span className="font-mono tnum text-tiny text-ink-muted">p{page}</span>
                 )}
               </div>
             </CardHeader>

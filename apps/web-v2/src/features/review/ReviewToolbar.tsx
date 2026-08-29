@@ -59,7 +59,7 @@ export function ReviewToolbar({
       <Eyebrow variant="caption">Review</Eyebrow>
 
       {context?.pages == null ? null : (
-        <span className="font-mono text-tiny text-ink-muted">
+        <span className="font-mono tnum text-tiny text-ink-muted">
           {context.pages} pages
         </span>
       )}

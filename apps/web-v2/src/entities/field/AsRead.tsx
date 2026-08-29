@@ -11,7 +11,7 @@ import { Eyebrow } from "../../shared/ui/Eyebrow";
  * least prominent text on the surface built to confirm it. Leading is flat
  * because the mockup's band is 50px; at the inherited 1.45 it opens to 65px.
  */
-const VALUE = "font-mono text-4xl leading-flat font-semibold text-ink-primary";
+const VALUE = "font-mono tnum text-4xl leading-flat font-semibold text-ink-primary";
 
 /**
  * THE READING, SHOWN ONCE.
@@ -92,7 +92,7 @@ export function AsRead({
              `PageChip`: that is a button, and this cite navigates nowhere. */
           <span
             data-testid="as-read-cite"
-            className="ml-auto rounded-3 border border-page-ref-border bg-page-ref-surface px-3 py-1 font-mono text-micro font-semibold text-page-ref"
+            className="ml-auto rounded-3 border border-page-ref-border bg-page-ref-surface px-3 py-1 font-mono tnum text-micro font-semibold text-page-ref"
           >
             p{page}
           </span>
