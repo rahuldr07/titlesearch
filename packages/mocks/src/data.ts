@@ -320,16 +320,6 @@ export const demoQueue: readonly DemoOrderRow[] = demoOrders
   .filter((r) => r.queue_position !== null)
   .sort((a, b) => (a.queue_position ?? 0) - (b.queue_position ?? 0));
 
-/**
- * @deprecated Projections of the shared set, kept only so `handlers.ts` and
- * `index.ts` keep compiling while the queue handler is repointed at
- * `demoQueue`. Delete both with that change — a named singleton is how the
- * second copy started.
- */
-export const demoOrder: Order = demoOrderEntity(rowOrThrow("ord_demo_1"));
-/** @deprecated See `demoOrder`. */
-export const demoOrder2: Order = demoOrderEntity(rowOrThrow("ord_demo_2"));
-
 /** The live review order — the package `demoFields` and `demoPages` describe. */
 const oid = "ord_demo_1";
 
@@ -1156,14 +1146,30 @@ const nextUpOrder = rowOrThrow("ord_demo_2");
  *
  * Page counts are quoted, never restated: the 38 that used to sit on the first
  * line was the number this whole wave exists to kill.
+ *
+ * The review and escalation lines are QUOTED from the stores they summarize
+ * (`demoFields` / `demoEscalations`), never restated: this spine used to say
+ * "review 14/19 · 5 fields queued" over a field store serving 21 values with 6
+ * queued, and cite a mortgages.1.amount escalation the escalation store does
+ * not hold.
  */
+const liveFieldsQueued = demoFields.filter((f) => f.state === "needs_review").length;
+const liveFieldsDecided = demoFields.length - liveFieldsQueued;
+const liveOpenEscalations = demoEscalations.filter(
+  (e) => e.order_ids.includes(liveOrder.id) && e.resolution === null,
+);
+
 export const demoTimelines: Record<string, OrderTimelineEvent[]> = {
   [liveOrder.id]: [
     { at: liveOrder.arrived_at, kind: "arrived", label: "arrived", detail: `SFTP · ${liveOrder.jurisdiction}`, attend: false },
     { at: liveOrder.accepted_at ?? liveOrder.arrived_at, kind: "accepted", label: "accepted", detail: "signed R. Okafor", attend: false },
     { at: "2026-07-24T13:41:00Z", kind: "extracted", label: "extracted", detail: `${PACKAGE_PAGES_RELEVANT} relevant pages · 2 engines`, attend: false },
-    { at: "2026-07-24T15:02:00Z", kind: "review", label: "review 14/19", detail: "5 fields queued", attend: false },
-    { at: "2026-07-24T15:20:00Z", kind: "escalated", label: "escalations open — 1, rule pending", detail: "mortgages.1.amount", attend: true },
+    { at: "2026-07-24T15:02:00Z", kind: "review", label: `review ${liveFieldsDecided}/${demoFields.length}`, detail: `${liveFieldsQueued} fields queued`, attend: false },
+    {
+      at: "2026-07-24T15:20:00Z", kind: "escalated", attend: true,
+      label: `escalations open — ${liveOpenEscalations.length}`,
+      detail: [...new Set(liveOpenEscalations.map((e) => e.field_path_cluster))].join(" · "),
+    },
   ],
   // Unclaimed: arrival and the machine's pre-read, and nothing a person did.
   [nextUpOrder.id]: [
@@ -1258,11 +1264,25 @@ export const demoPages: Record<string, { total: number; pages: { n: number; read
         "BUILDING VALUE ... 158,400",
         "2025 STATUS ...... (not printed on this card)",
       ] },
+      { n: 28, read_in_full: true, degraded: false, kind: "FIFA SEARCH — FEDERAL TAX LIEN INDEX", lines: [
+        "CLAYTON COUNTY · FEDERAL TAX LIEN INDEX",
+        "SEARCHED: QUENBY MARLOWE D · QUENBY TESSA R",
+        "",
+        "no federal tax lien index entries for the subject owner",
+      ] },
+      { n: 29, read_in_full: true, degraded: false, kind: "FIFA SEARCH — GENERAL EXECUTION DOCKET", lines: [
+        "GENERAL EXECUTION DOCKET · CLAYTON COUNTY",
+        "WRIT OF FIERI FACIAS",
+        "",
+        "CREEKBANK RECOVERY SPV LLC vs. MARLOWE D. QUENBY",
+        "",
+        "Attorney of record: Q. T. FENWICK & ASSOC., P.C.",
+      ] },
       { n: 30, read_in_full: true, degraded: true, kind: "FIFA SEARCH — SUPERIOR COURT", lines: [
         "IN THE SUPERIOR COURT OF CLAYTON COUNTY",
         "STATE OF GEORGIA · CIVIL DIVISION",
         "",
-        "MERIDIAN FUNDING LLC, Plaintiff,",
+        "CREEKBANK RECOVERY SPV LLC, Plaintiff,",
         "v.",
         "M. QUENBY, Defendant.",
         "",
