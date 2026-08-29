@@ -1,17 +1,20 @@
 import { http, HttpResponse } from "msw";
 import type {
   CompositionResponse,
+  Countersign,
+  DeliveryWithReport,
   JurisdictionResponse,
   OrderFilter,
   OrderRow,
   OrdersPageResponse,
   QuarantineResponse,
+  ReissueResponse,
   TemplateResponse,
   CaptureScheduleResponse,
   ArtifactsResponse,
   CountersignsResponse,
 } from "@titlepipe/contract";
-import { demoOrders, demoDeliveries } from "./data.js";
+import { demoOrders, demoDeliveries, demoFields } from "./data.js";
 import { guard } from "./guard.js";
 
 /** Handlers for the surface added under the 2026-08-28 ruling. */
@@ -94,6 +97,103 @@ function inFilter(row: OrderRow, f: OrderFilter): boolean {
 const CLEARED_ORDER_ID = "ord_demo_14";
 
 /**
+ * THE ORDER THE FIELD FIXTURE DESCRIBES — quoted from `demoFields` for the
+ * reason `CLEARED_ORDER_ID` is quoted from the order table: a second copy of
+ * an id is a second answer. (`handlers.ts` quotes the same cell as
+ * `FIELDS_ORDER_ID`; it imports this module, so it cannot be imported here.)
+ */
+const REVIEW_ORDER_ID = demoFields[0]?.order_id ?? "";
+
+type CountersignRow = CountersignsResponse["required"][number];
+
+/**
+ * The design's second reader for the cleared order — the "Switch user:
+ * R. Menon (QC)" seat. Written once so the countersign row and gate g4's
+ * "countersigned by …" detail cannot name two different people.
+ */
+const CLEARED_SECOND_READER = "R. Menon (QC)";
+
+/**
+ * THE T1 SECOND-READ LEDGER, PER ORDER.
+ *
+ * One store answers both `GET /orders/:id/countersigns` and gate g4 on the
+ * composition, so the two endpoints cannot tell different stories about one
+ * order. Until 2026-08-29 every order was served the review order's three
+ * outstanding rows while `clearedComposition` swore ord_demo_14's gate was
+ * already "countersigned by R. Menon (QC)" — one order, two answers.
+ *
+ * Mutable for the reason `seals` is: a filed countersign has to survive the
+ * request that filed it, or the row could be second-read twice. Reset on
+ * reload, like every other mutation in this package.
+ *
+ * An order with no entry has no T1-tagged rulings — the empty list is the
+ * true answer for it, not a placeholder.
+ */
+const countersignStore = new Map<string, CountersignRow[]>([
+  [
+    REVIEW_ORDER_ID,
+    // The three ruinous-exposure rulings 4176034-1 still owes a second read —
+    // the count blockedComposition's gate g4 quotes.
+    [
+      { field_id: "fld_jgmt_hit", path: "judgments.1.hit_identity", value: "SMITH, JOHN A.", ruled_by: "L. Vance", countersigned_by: null },
+      { field_id: "fld_mtg_amount", path: "mortgages.1.amount", value: "$412,000", ruled_by: "L. Vance", countersigned_by: null },
+      { field_id: "fld_legal_desc", path: "legal.description", value: "Lot 14, Block C", ruled_by: "L. Vance", countersigned_by: null },
+    ],
+  ],
+  [
+    CLEARED_ORDER_ID,
+    // The one ruinous exposure 4176028-5's own sheet states — block IV's open
+    // security deed to Ashfield Savings — already second-read, which is what
+    // its cleared gate g4 asserts. Ruled by the examiner the order table
+    // assigns the seat (D. Okafor); countersigned by the QC second reader.
+    [
+      { field_id: "fld_14_lender", path: "mortgages.1.lender", value: "Ashfield Savings", ruled_by: "D. Okafor", countersigned_by: CLEARED_SECOND_READER },
+    ],
+  ],
+]);
+
+/**
+ * Gate g4, QUOTED from the ledger rather than restated beside it: passed is
+ * "no row still open", and the detail names either the open count or the
+ * signers the rows actually carry.
+ */
+function t1Gate(orderId: string): { passed: boolean; detail: string | null } {
+  const rows = countersignStore.get(orderId) ?? [];
+  const open = rows.filter((r) => r.countersigned_by === null).length;
+  if (open > 0) {
+    return {
+      passed: false,
+      detail: open === 1 ? "1 ruling awaits a second examiner" : `${String(open)} rulings await a second examiner`,
+    };
+  }
+  const signers = [...new Set(rows.flatMap((r) => (r.countersigned_by === null ? [] : [r.countersigned_by])))];
+  return {
+    passed: true,
+    detail: signers.length === 0 ? null : `countersigned by ${signers.join(", ")}`,
+  };
+}
+
+/**
+ * THE DELIVERY LEDGER THIS FILE MUTATES — the rows `GET /api/deliveries`
+ * serves and the version ledger reads.
+ *
+ * `handlers.ts` keeps its own copy of `demoDeliveries` for the list and for
+ * retry, but a reissue has to APPEND a draft row that the same list then
+ * shows, and `handlers.ts` imports this module — the cycle `guard.ts`
+ * documents — so its store cannot be imported here. `designHandlers` are
+ * spread AHEAD of `handlers.ts`'s own in the assembled array and MSW resolves
+ * the first match, so this store is the one the wire serves: the GET and
+ * retry handlers below shadow the ones in `handlers.ts` precisely so every
+ * reader and every writer of a delivery touches the same rows. One store,
+ * one answer.
+ */
+const deliveryStore: DeliveryWithReport[] = demoDeliveries.map((d) => ({
+  ...d,
+  report: d.report ? { ...d.report } : null,
+}));
+let reissueCount = 0;
+
+/**
  * SEALS FILED THIS PAGE SESSION, `order_id` → digest.
  *
  * The seal is what makes a release IRREVERSIBLE, so it has to survive the
@@ -129,7 +229,9 @@ function clearedComposition(orderId: string): CompositionResponse {
       { id: "g1", label: "Every flagged decision answered", passed: true, detail: null },
       { id: "g2", label: "Every value carries a citation", passed: true, detail: null },
       { id: "g3", label: "Chain of title unbroken through the statutory period", passed: true, detail: null },
-      { id: "g4", label: "T1 second read countersigned", passed: true, detail: "countersigned by R. Menon (QC)" },
+      // Quoted from the countersign ledger — the same rows
+      // `GET /orders/:id/countersigns` serves for this order.
+      { id: "g4", label: "T1 second read countersigned", ...t1Gate(orderId) },
       { id: "g5", label: "Completeness gate cleared", passed: true, detail: null },
     ],
     // Released once. A sealed sheet is no longer releasable, and the server
@@ -144,7 +246,25 @@ function clearedComposition(orderId: string): CompositionResponse {
   };
 }
 
-const blockedComposition = (orderId: string): CompositionResponse => ({
+function blockedComposition(orderId: string): CompositionResponse {
+  const gates: CompositionResponse["gates"] = [
+    { id: "g1", label: "Every flagged decision answered", passed: false, detail: "6 still open" },
+    { id: "g2", label: "Every value carries a citation", passed: false, detail: "1 value has no provenance" },
+    { id: "g3", label: "Chain of title unbroken through the statutory period", passed: true, detail: null },
+    /*
+     * Quoted from the review order's countersign ledger, whatever id this
+     * sheet is served under: the blocked composition IS 4176034-1's sheet
+     * (its blocks name the order), reused as the fixture's stand-in for every
+     * order that is not cleared. Restating "3 rulings await" as a literal here
+     * is how it and the countersigns endpoint drifted apart.
+     */
+    { id: "g4", label: "T1 second read countersigned", ...t1Gate(REVIEW_ORDER_ID) },
+    { id: "g5", label: "Completeness gate cleared", passed: false, detail: "package contradicts the intake sign-off" },
+  ];
+  // The count is the gate list's, not a restated numeral — filing the three
+  // countersigns live closes g4, and the sentence must not go on saying four.
+  const open = gates.filter((g) => !g.passed).length;
+  return {
   order_id: orderId,
   template_version: "v4.2",
   blocks: [
@@ -156,17 +276,12 @@ const blockedComposition = (orderId: string): CompositionResponse => ({
     { id: "b6", numeral: "VI", title: "Judgments & general liens", body: "One indexed judgment, party identity escalated.", field_count: 3, cited: 2 },
     { id: "b7", numeral: "VII", title: "Provenance & audit trail", body: "Every value carries a page and line citation.", field_count: 2, cited: 2 },
   ],
-  gates: [
-    { id: "g1", label: "Every flagged decision answered", passed: false, detail: "6 still open" },
-    { id: "g2", label: "Every value carries a citation", passed: false, detail: "1 value has no provenance" },
-    { id: "g3", label: "Chain of title unbroken through the statutory period", passed: true, detail: null },
-    { id: "g4", label: "T1 second read countersigned", passed: false, detail: "3 rulings await a second examiner" },
-    { id: "g5", label: "Completeness gate cleared", passed: false, detail: "package contradicts the intake sign-off" },
-  ],
+  gates,
   releasable: false,
-  blocked_reason: "Four gates are open. The report cannot compose until each is answered.",
+  blocked_reason: `${String(open)} gate${open === 1 ? " is" : "s are"} open. The report cannot compose until each is answered.`,
   seal_sha256: null,
-});
+  };
+}
 
 /**
  * A stable 64-hex digest per fixture artifact. It is NOT a hash of any file —
@@ -221,8 +336,11 @@ export const designHandlers = [
       return HttpResponse.json({ error: "a release is refused without its signature" }, { status: 422 });
     }
     if (orderId !== CLEARED_ORDER_ID) {
+      // The count is the composition's own — quoted, so a countersign filed
+      // live cannot leave this sentence claiming a gate that since closed.
+      const open = blockedComposition(orderId).gates.filter((g) => !g.passed).length;
       return HttpResponse.json(
-        { error: "four gates are open — the release gate refuses" },
+        { error: `${open === 1 ? "one gate is" : `${String(open)} gates are`} open — the release gate refuses` },
         { status: 409 },
       );
     }
@@ -257,6 +375,10 @@ export const designHandlers = [
    * a v1 and a v2 has two rows and each joins to its own report. Before this
    * every order got a single `rep_1` row carrying one shared digest — a hash
    * that hashed nothing and a join that landed on another order's report.
+   *
+   * Read from `demoDeliveries` — the immutable released record — and NOT from
+   * `deliveryStore`, deliberately: a reissue DRAFT lives only in the store,
+   * and a draft has no certified artifact until it releases.
    */
   http.get("/api/orders/:id/artifacts", ({ params }) => {
     const orderId = String(params["id"]);
@@ -280,39 +402,146 @@ export const designHandlers = [
     return HttpResponse.json(body);
   }),
 
-  http.post("/api/deliveries/:id/reissue", async ({ request }) => {
+  /*
+   * The delivery list and retry, served off the SAME store the reissue below
+   * appends to. These two shadow their `handlers.ts` twins (see the note on
+   * `deliveryStore`): a reissue that mutated a store the list never reads
+   * would file a version nobody can see.
+   */
+  http.get("/api/deliveries", () => HttpResponse.json({ deliveries: deliveryStore })),
+
+  /** Retry re-SENDS the same file — the report is never re-rendered. */
+  http.post("/api/deliveries/:id/retry", ({ params, request }) => {
+    const denied = guard(request, "delivery.retry");
+    if (denied) return denied;
+    const d = deliveryStore.find((x) => x.id === params["id"]);
+    if (!d) return HttpResponse.json({ error: "no such delivery" }, { status: 404 });
+    d.status = "delivered";
+    d.delivered_at = new Date().toISOString();
+    d.evidence = "delivered on retry — same file, same report version";
+    return HttpResponse.json({ ok: true });
+  }),
+
+  /*
+   * REISSUE — Law 9's one licensed act on a released version. Until
+   * 2026-08-29 the reason check fell through to "no released version to
+   * supersede" for EVERY delivery, while the store above holds delivered
+   * v1s — the refusal contradicted the fixture it guards. The rule, made
+   * true:
+   *   - a delivery whose report exists names a released version; the reissue
+   *     opens the next version as a DRAFT row the version ledger reads, with
+   *     the stated reason on the row (`evidence` carries it — `Report` has no
+   *     `reissue_reason` member yet; `VersionLedger.tsx` records that gap);
+   *   - ONE-WAY: while that draft is open the gateway is closed — a draft is
+   *     not a released version, so there is nothing further to supersede;
+   *   - a delivery with no report keeps the refusal verbatim: there truly is
+   *     no released version behind it.
+   */
+  http.post("/api/deliveries/:id/reissue", async ({ params, request }) => {
     const denied = guard(request, "delivery.reissue");
     if (denied) return denied;
     const body = (await request.json()) as { reason?: string };
     if (!body?.reason) {
       return HttpResponse.json({ error: "a reissue is refused without its reason" }, { status: 422 });
     }
-    return HttpResponse.json({ error: "this order has no released version to supersede" }, { status: 409 });
+    const target = deliveryStore.find((d) => d.id === String(params["id"]));
+    if (target === undefined || target.report === null) {
+      return HttpResponse.json({ error: "this order has no released version to supersede" }, { status: 409 });
+    }
+    const released = target.report;
+    const versions = deliveryStore.filter((d) => d.report?.order_id === released.order_id);
+    if (versions.some((d) => d.status === "draft")) {
+      return HttpResponse.json(
+        { error: "a reissue draft is already open for this order — a draft is not a released version, and only a released version can be superseded" },
+        { status: 409 },
+      );
+    }
+    // Supersedes the order's HIGHEST version, whichever row was posted — the
+    // server's arithmetic, not the client's row choice.
+    const supersedes = versions.reduce((max, d) => Math.max(max, d.report?.version ?? 0), 0);
+    reissueCount += 1;
+    const report = {
+      id: `rep_reissue_${String(reissueCount)}`,
+      order_id: released.order_id,
+      version: supersedes + 1,
+      shape: released.shape,
+      rendered_at: new Date().toISOString(),
+    };
+    deliveryStore.push({
+      id: `del_reissue_${String(reissueCount)}`,
+      report_id: report.id,
+      method: target.method,
+      status: "draft",
+      // A draft has been transmitted to nobody — both instants are honestly null.
+      attempted_at: null,
+      delivered_at: null,
+      evidence: `reissue draft · reason: ${body.reason}`,
+      report,
+    });
+    const res: ReissueResponse = { report, supersedes, reason: body.reason };
+    return HttpResponse.json(res);
   }),
 
+  // Per order, off the ledger — the same rows gate g4 quotes. An order the
+  // ledger has no entry for owes no second read, and the empty list says so.
   http.get("/api/orders/:id/countersigns", ({ params }) => {
+    const orderId = String(params["id"]);
     const body: CountersignsResponse = {
-      order_id: String(params["id"]),
-      required: [
-        { field_id: "fld_jgmt_hit", path: "judgments.1.hit_identity", value: "SMITH, JOHN A.", ruled_by: "L. Vance", countersigned_by: null },
-        { field_id: "fld_mtg_amount", path: "mortgages.1.amount", value: "$412,000", ruled_by: "L. Vance", countersigned_by: null },
-        { field_id: "fld_legal_desc", path: "legal.description", value: "Lot 14, Block C", ruled_by: "L. Vance", countersigned_by: null },
-      ],
+      order_id: orderId,
+      required: countersignStore.get(orderId) ?? [],
     };
     return HttpResponse.json(body);
   }),
 
-  http.post("/api/fields/:id/countersign", async ({ request }) => {
+  /*
+   * DESIGN RULE 13, ENFORCED RATHER THAN RECITED. Until 2026-08-29 this
+   * handler answered the same-examiner 409 unconditionally — the refusal
+   * existed and the act it guards did not, so "Switch user: R. Menon (QC)"
+   * led nowhere. The acting examiner is the authenticated identity:
+   * `x-mock-actor` stands in for the session/JWT claim, the same convention
+   * `handlers.ts` uses to sign golden corrections — never the typed
+   * signature, which is a client field.
+   */
+  http.post("/api/fields/:id/countersign", async ({ params, request }) => {
     const denied = guard(request, "field.countersign");
     if (denied) return denied;
     const body = (await request.json()) as { signature?: string };
     if (!body?.signature) {
       return HttpResponse.json({ error: "a countersign is refused without a signature" }, { status: 422 });
     }
-    return HttpResponse.json(
-      { error: "a second read must come from a different examiner than the one who ruled" },
-      { status: 409 },
-    );
+    const fieldId = String(params["id"]);
+    let row: CountersignRow | undefined;
+    for (const rows of countersignStore.values()) {
+      row = rows.find((r) => r.field_id === fieldId);
+      if (row !== undefined) break;
+    }
+    if (row === undefined) {
+      return HttpResponse.json({ error: "no countersign is required on this field" }, { status: 404 });
+    }
+    if (row.countersigned_by !== null) {
+      return HttpResponse.json(
+        { error: "this ruling already carries its second read — a countersign files once" },
+        { status: 409 },
+      );
+    }
+    // An unidentified actor cannot PROVE a second pair of eyes, so a missing
+    // identity refuses exactly as the ruling examiner does.
+    const actor = request.headers.get("x-mock-actor");
+    if (actor === null || actor === row.ruled_by) {
+      return HttpResponse.json(
+        { error: "a second read must come from a different examiner than the one who ruled" },
+        { status: 409 },
+      );
+    }
+    row.countersigned_by = actor;
+    const filed: Countersign = {
+      id: `cs_${fieldId}`,
+      field_id: fieldId,
+      ruled_by: row.ruled_by,
+      countersigned_by: actor,
+      at: new Date().toISOString(),
+    };
+    return HttpResponse.json(filed);
   }),
 
   http.get("/api/orders/:id/quarantine", ({ params }) => {

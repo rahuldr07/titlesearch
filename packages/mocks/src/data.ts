@@ -1251,6 +1251,36 @@ export const demoGolden: GoldenField[] = [
 const liveOrder = rowOrThrow("ord_demo_1");
 const nextUpOrder = rowOrThrow("ord_demo_2");
 
+/*
+ * QUOTE, DON'T RESTATE — the live order's review and escalation lines
+ * summarize `demoFields` and `demoEscalations`, so their numbers and cluster
+ * names are DERIVED from those stores rather than written beside them. The
+ * "review 14/19 · 5 fields queued · escalations open — 1 · mortgages.1.amount"
+ * this timeline used to assert was four restated figures, and every one of
+ * them had drifted from the store it claimed to summarize (21 fields, 6
+ * queued, 2 open escalations, all clustered on judgments.hit_identity).
+ *
+ * The decision census follows the definition the fields endpoint states
+ * (`handlers.ts`, `GET /api/orders/:id/fields`): settled is confirmed +
+ * corrected + escalated, queued is needs_review, and the denominator is
+ * settled + queued — the 2 auto-confirmed nobody saw and the 1 pending
+ * nothing has read were never anybody's decision.
+ */
+const liveFields = demoFields.filter((f) => f.order_id === liveOrder.id);
+const liveQueued = liveFields.filter((f) => f.state === "needs_review").length;
+const liveSettled = liveFields.filter(
+  (f) => f.state === "confirmed" || f.state === "corrected" || f.state === "escalated",
+).length;
+// Open = unresolved. The old line also claimed "rule pending", which no open
+// escalation on this order carries (`rule_id: null` on both) — a pending rule
+// would be quoted from the escalation's own `rule_id`, not asserted here.
+const liveOpenEscalations = demoEscalations.filter(
+  (e) => e.resolution === null && e.order_ids.includes(liveOrder.id),
+);
+const liveEscalationClusters = [
+  ...new Set(liveOpenEscalations.map((e) => e.field_path_cluster)),
+];
+
 /**
  * Order timelines — the spine each order draws through the pipeline
  * (StatusRail). Server-authored in production; kinds stay an open vocabulary
@@ -1275,8 +1305,8 @@ export const demoTimelines: Record<string, OrderTimelineEvent[]> = {
     { at: liveOrder.arrived_at, kind: "arrived", label: "arrived", detail: `SFTP · ${liveOrder.jurisdiction}`, attend: false },
     { at: liveOrder.accepted_at ?? liveOrder.arrived_at, kind: "accepted", label: "accepted", detail: "signed R. Okafor", attend: false },
     { at: "2026-07-24T13:41:00Z", kind: "extracted", label: "extracted", detail: `${PACKAGE_PAGES_RELEVANT} relevant pages · 2 engines`, attend: false },
-    { at: "2026-07-24T15:02:00Z", kind: "review", label: "review 14/19", detail: "5 fields queued", attend: false },
-    { at: "2026-07-24T15:20:00Z", kind: "escalated", label: "escalations open — 1, rule pending", detail: "mortgages.1.amount", attend: true },
+    { at: "2026-07-24T15:02:00Z", kind: "review", label: `review ${liveSettled}/${liveSettled + liveQueued}`, detail: `${liveQueued} fields queued`, attend: false },
+    { at: "2026-07-24T15:20:00Z", kind: "escalated", label: `escalations open — ${liveOpenEscalations.length}`, detail: liveEscalationClusters.length === 0 ? null : liveEscalationClusters.join(" · "), attend: liveOpenEscalations.length > 0 },
   ],
   // Unclaimed: arrival and the machine's pre-read, and nothing a person did.
   [nextUpOrder.id]: [
