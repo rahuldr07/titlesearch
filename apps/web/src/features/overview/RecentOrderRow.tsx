@@ -1,6 +1,8 @@
 import { Link } from "@tanstack/react-router";
 import type { OrderRow } from "@titlepipe/contract";
+import { buttonVariants, cx } from "../../components/ui";
 import { RouteButton } from "../../app/chrome/RouteButton";
+import { useOverlays } from "../../app/keyboard/overlays";
 
 /**
  * One browse row over the prototype's seven tracks. Its action cell holds two
@@ -58,7 +60,10 @@ export function RecentOrderRow(props: { readonly row: OrderRow }) {
         {row.due ?? "No due date"}
       </span>
 
-      <span className="relative flex w-60 shrink-0 justify-end px-6">
+      {/* The reference's two row actions: the audit-history modal, then Open →.
+          Both sit above the row's covering anchor and take their own clicks. */}
+      <span className="relative flex w-60 shrink-0 items-center justify-end gap-4 px-6">
+        <HistoryButton id={row.id} orderRef={row.order_ref} />
         <RouteButton
           size="sm"
           to="/orders/$orderId/review"
@@ -69,5 +74,36 @@ export function RecentOrderRow(props: { readonly row: OrderRow }) {
         </RouteButton>
       </span>
     </div>
+  );
+}
+
+/**
+ * The row's clock button — `openOrderHistory(row.id)` names the order for the
+ * ONE history overlay (`app/keyboard/overlays.ts`). A twin of the button in
+ * `features/ordersList/orderColumns.tsx` rather than one shared component:
+ * `check-rules` forbids a cross-feature import, and the shared home would be a
+ * kit primitive this 15-line affordance has not yet earned. A native
+ * `<button>` in the kit's chrome, because react-aria's Button drops `title`
+ * and the reference draws this affordance as a tooltip-bearing icon.
+ */
+function HistoryButton(props: { readonly id: string; readonly orderRef: string }) {
+  const openHistory = useOverlays((s) => s.openOrderHistory);
+  return (
+    <button
+      type="button"
+      title="Inspect full audit history"
+      aria-label={`Inspect the full audit history of order ${props.orderRef}`}
+      onClick={() => openHistory(props.id)}
+      className={cx(
+        buttonVariants({ variant: "secondary", size: "sm", icon: true }),
+        "text-ink-muted",
+      )}
+    >
+      {/* The reference's clock glyph, verbatim. */}
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden>
+        <path d="M12 8v4l3 3" />
+        <circle cx="12" cy="12" r="9" />
+      </svg>
+    </button>
   );
 }

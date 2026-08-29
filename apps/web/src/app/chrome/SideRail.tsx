@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useRouterState } from "@tanstack/react-router";
 import {
-  LifecycleResponse,
   EscalationsResponse,
   type GrantedPermissionSchema,
 } from "@titlepipe/contract";
@@ -32,18 +31,11 @@ export function SideRail(props: {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   /*
-   * THE SHOP'S VOLUME, and it is the SERVER'S `total` — never `stages` summed
-   * or `orders.length`. `intake.ts:218-221`: the order list is scoped to what
-   * the caller may see and the census is not, so a count added up in the
-   * browser shrinks with your permissions and reads as work disappearing.
-   */
-  const lifecycle = useQuery({
-    queryKey: ["lifecycle"],
-    queryFn: () => get("/api/lifecycle", LifecycleResponse),
-    enabled: hasDoor(props.rules, "/dashboard"),
-  });
-
-  /*
+   * NO `/api/lifecycle` READ HERE ANY MORE. It fed a `RailCount` on a
+   * `/dashboard` door that `doors.ts` does not contain — a fetch nothing
+   * rendered. INVARIANT 66 (attention rides the doors as DOTS, never counts)
+   * means the count is deleted rather than rehomed onto All Orders.
+   *
    * WHETHER anything is unresolved — a boolean, deliberately, not a count.
    * INVARIANT 66: attention rides the doors as DOTS, never counts. `.some` is
    * not "re-deriving a count" (INVARIANT 5); it asks whether the list the
@@ -71,7 +63,6 @@ export function SideRail(props: {
               section={section}
               rules={props.rules}
               pathname={pathname}
-              total={lifecycle.data?.total}
               openEscalation={openEscalation}
             />
           ))}

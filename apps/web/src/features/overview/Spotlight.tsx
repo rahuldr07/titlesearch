@@ -32,6 +32,13 @@ export function Spotlight(props: {
   }
 
   // Null is the server's answer, not a failed load, so the card stays.
+  //
+  // This branch used to send the reader to /queue — a screen deleted because
+  // the reference app draws none (CONFLICT-deleted-queue-and-rail-controls §1).
+  // What is true now: the hand-over is still one server-chosen order (the
+  // 2026-08-28 ruling NARROWED invariant 22, it did not delete it), it is
+  // served HERE, and the separate browse surface the same ruling authorised is
+  // All Orders.
   if (props.order === null) {
     return (
       <Card>
@@ -40,14 +47,14 @@ export function Spotlight(props: {
             Active spotlight
           </span>
           <p className="text-meta leading-body text-ink-secondary">
-            The queue has nothing for this seat right now. There is no list to look
-            through — work arrives by being served.
+            The queue has nothing for this seat right now. Served work appears
+            here, one order at a time — it cannot be picked by hand.
           </p>
           <Link
-            to="/queue"
+            to="/orders-list"
             className="tp-state w-fit text-meta font-semibold leading-close text-action underline-offset-4 hover:underline"
           >
-            The queue
+            Browse all orders
           </Link>
         </div>
       </Card>

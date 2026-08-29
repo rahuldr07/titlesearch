@@ -1,6 +1,7 @@
 import type { OrderRow } from "@titlepipe/contract";
-import { DataCell, type TableColumn } from "../../components/ui";
+import { cx, buttonVariants, DataCell, type TableColumn } from "../../components/ui";
 import { RouteButton } from "../../app/chrome/RouteButton";
+import { useOverlays } from "../../app/keyboard/overlays";
 import { Absent, Address } from "./orderCells";
 
 /** The enum's own words, capitalised — so `stage:gate` still finds the "Gate" row. */
@@ -76,8 +77,34 @@ export const ORDER_COLUMNS: readonly TableColumn<OrderRow>[] = [
     id: "action",
     header: "Action",
     width: "120px",
+    /*
+     * The reference's two row actions: the audit-history modal, then Open →.
+     * The clock button is the call site `openOrderHistory` was built for —
+     * it names the order for the ONE history overlay (`app/keyboard/overlays.ts`
+     * argues why a second copy of that surface was refused). A native
+     * `<button>` in the kit's chrome, because react-aria's Button drops
+     * `title` and the reference draws a tooltip-bearing icon; `getState()`
+     * rather than the hook because a cell is a render function, not a
+     * component (same imperative seam `shared/session.ts` uses).
+     */
     cell: (row) => (
-      <span className="flex justify-end">
+      <span className="flex items-center justify-end gap-4">
+        <button
+          type="button"
+          title="Inspect full audit history"
+          aria-label={`Inspect the full audit history of order ${row.order_ref}`}
+          onClick={() => useOverlays.getState().openOrderHistory(row.id)}
+          className={cx(
+            buttonVariants({ variant: "secondary", size: "sm", icon: true }),
+            "text-ink-muted",
+          )}
+        >
+          {/* The reference's clock glyph, verbatim. */}
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden>
+            <path d="M12 8v4l3 3" />
+            <circle cx="12" cy="12" r="9" />
+          </svg>
+        </button>
         <RouteButton
           to="/orders/$orderId"
           params={{ orderId: row.id }}

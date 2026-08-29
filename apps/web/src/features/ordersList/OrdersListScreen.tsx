@@ -29,7 +29,7 @@ export function OrdersListScreen() {
       <header className="flex flex-col gap-8 px-16 pt-14 pb-8">
         <div className="flex flex-wrap items-end justify-between gap-8">
           <div className="flex flex-col gap-3">
-            <h1 className="text-title font-semibold leading-tight text-ink-primary">
+            <h1 className="text-title font-bold leading-tight text-ink-primary">
               All orders
             </h1>
             <p className="max-w-400 text-meta leading-body text-ink-secondary">

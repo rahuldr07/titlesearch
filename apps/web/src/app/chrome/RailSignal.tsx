@@ -2,38 +2,17 @@ import { cx } from "../../components/ui";
 
 /**
 
- * The two things that ride a door, and they are not interchangeable. The design's rail
+ * The one signal that rides a door. `RailCount` — a volume capsule the design's
 
- * carries `35` on All Orders, `6` on Examination, `1 QC` on QC & Escalations and
+ * rail carries (`35` on All Orders, `6` on Examination) — used to live beside
 
- * `v4.2` on Templates Architect.
+ * this and was DELETED, not rehomed: INVARIANT 66 says attention rides the
 
- */
+ * doors as dots, never counts, and its only call site was a `/dashboard` door
 
-/**
-
- * A VOLUME. Mono per rule 3 — a count is data — and tabular so the capsule does not
-
- * resize between 9 and 10.
+ * `doors.ts` does not contain.
 
  */
-export function RailCount(props: { readonly value: number; readonly label: string }) {
-  return (
-    <span
-      data-testid="rail-count"
-      // The count is decoration beside a door whose LABEL already names the
-      // screen; `aria-label` gives the figure its unit so a screen reader hears
-      // "All orders, 13 orders" and not "All orders, 13".
-      aria-label={props.label}
-      className={cx(
-        "ml-auto shrink-0 rounded-pill bg-rail-line px-4 py-1",
-        "font-mono text-label font-semibold leading-flat tabular-nums text-rail-ink",
-      )}
-    >
-      {props.value}
-    </span>
-  );
-}
 
 /**
 

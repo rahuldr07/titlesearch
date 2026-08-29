@@ -243,12 +243,54 @@ export const LifecycleStage = z.object({
 });
 export type LifecycleStage = z.infer<typeof LifecycleStage>;
 
+/**
+ * ⚠ RULED 2026-08-28 — `docs/frontend/design-2026-08/RULING-2026-08-28.md`,
+ * resolving `CONFLICT-overview-stats.md` by its Option A: "`LifecycleResponse`
+ * gains the members the four named cards need." READ FIELDS ONLY.
+ *
+ * One Overview stat card, WHOLE: the figure, the note under it, and the label
+ * over it are one server-authored statement. The note exists on the wire for
+ * the reason `QueueBand.note` and `LifecycleStage.sub` do — "a client-side
+ * `Record<…, string>` is a second copy of product copy that drifts silently
+ * from the first" (endpoints.ts:96-98) — and the label rides with it because
+ * `delivered_recent`'s label NAMES ITS WINDOW ("Delivered This Week" is a
+ * period only the server can define; printing a window the client chose would
+ * be the caption defect one layer down). A CENSUS, NEVER A RATE (§4.5): each
+ * is a count of what sits or was delivered, and no per-hour, per-person or
+ * per-period figure may ever join it.
+ */
+export const LifecycleFigure = z.object({
+  /** The card's caption. For `delivered_recent` it states the window too. */
+  label: z.string(),
+  value: z.number().int(),
+  /** The design's third line — what this figure means, in the pipeline's words. */
+  note: z.string(),
+});
+export type LifecycleFigure = z.infer<typeof LifecycleFigure>;
+
 export const LifecycleResponse = z.object({
   scope_note: z.string(),
   total: z.number().int(),
   halted: z.number().int(),
   moving: z.number().int(),
   failed: z.number().int(),
+  /**
+   * The four Option-A figures, in the design's card order.
+   *
+   * `active` is one server-side definition of "not delivered" instead of a
+   * browser subtraction. `in_review` is a MEMBER rather than a
+   * `stages[id="review"]` lookup because `LifecycleStage.id` is an incidental
+   * string, not a stable contract value (CONFLICT-overview-stats §4) — a
+   * headline that vanishes when the shop renames a stage is the fragility the
+   * census exists to prevent. `queries_and_gaps` is the shop's own bucket
+   * (gate + escalated — the same bucket `OrderFilter` "waiting" names).
+   * `delivered_recent` is a windowed COUNT of what was delivered, never a
+   * pace; its label carries the window.
+   */
+  active: LifecycleFigure,
+  in_review: LifecycleFigure,
+  queries_and_gaps: LifecycleFigure,
+  delivered_recent: LifecycleFigure,
   stages: z.array(LifecycleStage),
 });
 export type LifecycleResponse = z.infer<typeof LifecycleResponse>;

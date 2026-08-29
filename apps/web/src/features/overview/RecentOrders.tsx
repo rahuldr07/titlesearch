@@ -18,9 +18,15 @@ export function RecentOrders() {
       <div className="flex flex-wrap items-baseline justify-between gap-6">
         <div className="flex items-baseline gap-5">
           <h2 className="text-body font-bold leading-tight text-ink-primary">Recent orders</h2>
+          {/* The reference's windowed form ("Latest 10 of 35"), from the
+              server's own two numbers. `page_size` clamped to `total` rather
+              than `orders.length` counted — the rows are never re-counted
+              here, and a first page shorter than the window means the shop
+              holds fewer orders than the window, which `total` already says. */}
           {recent.data !== undefined && (
             <span className="font-mono text-meta leading-close tabular-nums text-ink-faint">
-              {recent.data.total} in all
+              Latest {Math.min(recent.data.page_size, recent.data.total)} of{" "}
+              {recent.data.total}
             </span>
           )}
         </div>

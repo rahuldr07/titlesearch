@@ -1,8 +1,9 @@
 import type { Order } from "@titlepipe/contract";
-import { Card } from "../../components/ui";
+import { Button, Card } from "../../components/ui";
 import { OrderRef } from "../../entities/order/OrderRef";
 import { SpotlightMeta } from "./SpotlightMeta";
 import { RouteButton } from "../../app/chrome/RouteButton";
+import { useOverlays } from "../../app/keyboard/overlays";
 
 /**
  * The served order in the prototype's spotlight card.
@@ -15,6 +16,7 @@ import { RouteButton } from "../../app/chrome/RouteButton";
  */
 export function SpotlightOrder(props: { readonly order: Order }) {
   const order = props.order;
+  const openHistory = useOverlays((s) => s.openOrderHistory);
 
   return (
     <Card className="border-l-4 border-l-action">
@@ -34,17 +36,20 @@ export function SpotlightOrder(props: { readonly order: Order }) {
           <SpotlightMeta order={order} />
         </div>
 
-        {/* `RouteButton`, not `LinkButton`: `to`/`params` are checked against
-            the route tree; react-aria's `href` is an unchecked string. */}
+        {/* "Audit history" is the MODAL, not a navigation — the reference's
+            history affordance opens the overlay everywhere it appears, and
+            `openOrderHistory` names the order so it works off any route.
+            `RouteButton` for the navigation, not `LinkButton`: `to`/`params`
+            are checked against the route tree; react-aria's `href` is an
+            unchecked string. */}
         <div className="flex shrink-0 items-center gap-6">
-          <RouteButton
+          <Button
             variant="secondary"
-            to="/orders/$orderId"
-            params={{ orderId: order.id }}
+            onPress={() => openHistory(order.id)}
             data-testid="spotlight-history"
           >
             Audit history
-          </RouteButton>
+          </Button>
           <RouteButton
             variant="primary"
             to="/orders/$orderId/review"

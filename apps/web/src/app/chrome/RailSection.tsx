@@ -8,7 +8,7 @@ import {
 import { get } from "../../shared/api";
 import { DOORS, SECTION_RUBRIC, type RailSection } from "./doors";
 import { hasDoor } from "../session/permissions";
-import { RailCount, RailDot } from "./RailSignal";
+import { RailDot } from "./RailSignal";
 import { RailGlyph } from "./RailGlyph";
 import {
   SidebarGroup,
@@ -30,7 +30,6 @@ export function Section(props: {
   readonly section: RailSection;
   readonly rules: readonly GrantedPermissionSchema[] | undefined;
   readonly pathname: string;
-  readonly total: number | undefined;
   readonly openEscalation: boolean;
 }) {
   const doors = DOORS.filter(
@@ -63,9 +62,10 @@ export function Section(props: {
             >
               <RailGlyph path={door.path} active={active} />
               <SidebarMenuLabel>{door.label}</SidebarMenuLabel>
-              {door.path === "/dashboard" && props.total !== undefined && (
-                <RailCount value={props.total} label={`${props.total} orders`} />
-              )}
+              {/* No door carries a COUNT — INVARIANT 66: attention rides the
+                  doors as dots, never counts. A `/dashboard` branch rendered
+                  one here for a door `doors.ts` does not contain; it is
+                  deleted, not rehomed onto All Orders. */}
               {door.path === "/escalations" && props.openEscalation && (
                 <RailDot
                   path="/escalations"

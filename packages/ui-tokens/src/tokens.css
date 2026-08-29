@@ -228,6 +228,14 @@
   --color-rail-cap: rgb(255 255 255 / 0.1);
   --color-rail-line: rgb(255 255 255 / 0.07);
   --color-rail-accent: #b7a6ee; /* 8.16:1 — the accent AS SEEN ON THE COLUMN */
+  /*
+   * The sign-in screen's radial accent glow, a COLOUR token carrying its own
+   * alpha the way --color-scrim does. Like --color-rail-ink-soft above it is
+   * not in the design system's own :root — it is an inline value in
+   * reference-app.html (`rgba(138,117,209,.14)`, sign-in backdrop). Decorative
+   * paint on the dark chrome, so no contrast claim attaches to it.
+   */
+  --color-rail-glow: rgb(138 117 209 / 0.14);
 
   /* ── paper: evidence scans and certificates (rule 8) ──────────────────── */
   /*

@@ -83,6 +83,24 @@ body {
   scroll-margin-block: 5rem;
 }
 
+/*
+ * THE SIGN-IN SCREEN'S RADIAL ACCENT GLOW. Design README §Screens 1: "dark
+ * canvas, radial accent glow". The gradient's geometry is the reference app's
+ * own (`radial-gradient(80% 60% at 50% 0%, …, transparent 70%)`); the colour
+ * is a token because check-rules bans literal colours everywhere, CSS
+ * included. An app-level utility, not a kit one — exactly one screen is this
+ * register — and an @utility rather than a class so `SigninScreen`'s
+ * `bg-radial-accent-glow` composes with Tailwind instead of silently emitting
+ * nothing, which is what it did before this rule existed.
+ */
+@utility bg-radial-accent-glow {
+  background-image: radial-gradient(
+    80% 60% at 50% 0%,
+    var(--color-rail-glow),
+    transparent 70%
+  );
+}
+
 /* Design rule 10: nothing bounces -- and nothing moves at all for a reader who
    asked it not to (WCAG §2.3.3). */
 @media (prefers-reduced-motion: reduce) {

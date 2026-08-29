@@ -444,6 +444,49 @@ export function lifecycleFor(role: string): LifecycleResponse {
       demoOrders.filter((row) => haltIds.includes(row.stage)).length + CENSUS_ONLY_IN_GATE,
     moving: demoOrders.filter((row) => row.stage === "machine").length,
     failed: demoOrders.filter((row) => row.failed).length,
+    /*
+     * THE FOUR OPTION-A CARDS (RULING-2026-08-28; CONFLICT-overview-stats §6).
+     * Labels and notes are the prototype's own copy (`reference-app.html`,
+     * `queueStats`), authored HERE because the server owns product copy; the
+     * values come off the same table as every census above, UN-scoped like
+     * `total` is — a card that shrank with your permissions would read as work
+     * disappearing (intake.ts, LifecycleStage.count).
+     *
+     *   - `active` counts the census, so the invisible Gate order is in it —
+     *     the columns must never sum past their own headline.
+     *   - `in_review` equals `stages[id="review"].count` by construction; the
+     *     member exists so no client hardcodes the stage id (§4).
+     *   - `queries_and_gaps` is gate + escalated — the same bucket the browse
+     *     endpoint's `waiting` filter names (design.ts `inFilter`).
+     *   - `delivered_recent` counts DELIVERIES THAT ARRIVED (`delivered_at`
+     *     set), not the delivered stage: 4176003-4 sits at that stage flagged
+     *     failed-in-transit, and "Delivered This Week" over a bounced delivery
+     *     would be the caption defect this figure was added to end. A count,
+     *     never a pace — the window is named, the rate is not stated.
+     */
+    active: {
+      label: "Total Active Queue",
+      value:
+        demoOrders.filter((row) => row.stage !== "delivered").length + CENSUS_ONLY_IN_GATE,
+      note: "Open work, sorted by deadline",
+    },
+    in_review: {
+      label: "In Examination Review",
+      value: demoOrders.filter((row) => row.stage === "review").length,
+      note: "Dual-engine values ready for human call",
+    },
+    queries_and_gaps: {
+      label: "Open Queries & Gaps",
+      value:
+        demoOrders.filter((row) => row.stage === "gate" || row.stage === "escalated").length +
+        CENSUS_ONLY_IN_GATE,
+      note: "Awaiting QC or county portal records",
+    },
+    delivered_recent: {
+      label: "Delivered This Week",
+      value: demoOrders.filter((row) => row.delivered_at !== null).length,
+      note: "Signed and sealed by an examiner",
+    },
     stages: OV_DEF.map((stage) => ({
       id: stage.id,
       label: stage.label,
