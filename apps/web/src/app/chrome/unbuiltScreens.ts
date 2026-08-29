@@ -22,17 +22,17 @@ export const UNBUILT_SCREENS: readonly ScreenDescriptor[] = [
     path: "/ingest",
     screen: "Intake",
     binds:
-      "CreateOrderRequest (endpoints.ts:39) · IngestRejection (:49) · POST /api/orders/{id}/accept (:60)",
+      "CreateOrderRequest (endpoints.ts:39) · IngestRejection (:49) · POST /api/orders/{id}/accept (:60) · QuarantineResponse (design2.ts:35) — GET /api/orders/{id}/quarantine",
     missing:
-      "BUILT (features/ingest), minus two objects. The Quarantine Gateway checklist (AV → real-PDF → SHA-256) and the Optical Profile card (DPI, clerk stamp, contrast floor) have no schema at all — a four-step state machine and three server-owned thresholds. Both render an honest waiting-on-the-backend statement rather than a mock; backend conversation 3. Acceptance is explicit (INVARIANTS:47), so the design's single Sign button is two acts here.",
+      "BUILT (features/ingest), quarantine included. The Quarantine Gateway checklist and the Optical Profile card render from GET /api/orders/{id}/quarantine (design2.ts:35-42, added under the 2026-08-28 ruling): every step state and every optical verdict is the server's, and the sha256 renders as data. Still absent for want of a member: product on CreateOrderRequest (endpoints.ts:39-46) — so the checklist key is half-resolved and the banner names every checklist the client has — and a readiness member on QuarantineResponse, so the design's sign-disabled-until-ready gate stays the server's accept refusal rather than button state. Acceptance is explicit (INVARIANTS:47), so the design's single Sign button is two acts here.",
   },
   {
     path: "/delivery",
     screen: "Delivery",
     binds:
-      "DeliveriesResponse (endpoints.ts:625) · DeliveryWithReport (:617) · Report (entities.ts:216)",
+      "DeliveriesResponse (endpoints.ts:679) · DeliveryWithReport (:671) · Report (entities.ts:321) · ArtifactsResponse / ReissueRequest (design.ts)",
     missing:
-      "Backend conversation 2. No compile endpoint, no gate-evaluation shape, no sign-and-execute endpoint and no release.execute action; no manifest model; no reissue endpoint and no Report.reason or Report.supersedes to carry the v2 reason. DeliveryStatus is still z.string() (enums.ts:118), so the four receipt steps cannot be named.",
+      "BUILT (features/delivery; the compiler is features/release under /orders/{id}). What this entry used to name as absent arrived with the 2026-08-28 ruling: compile is GET /api/orders/{id}/composition (CompositionResponse with ManifestBlock + GateCheck, design.ts:71-102), sign-and-execute is POST /api/orders/{id}/release with release.compile/release.execute in PERMISSIONS (authz.ts:89-90), and reissue is POST /api/deliveries/{id}/reissue with delivery.reissue (authz.ts:91; design.ts:135-146). Still true: DeliveryStatus is z.string() (enums.ts:118), so the four receipt steps cannot be named and TransmissionReceipt refuses them; and Report (entities.ts:321-328) carries no reason/supersedes member, so a reloaded version ledger cannot state WHY v2 exists — ReissueResponse carries both only in the mutation's answer.",
   },
   {
     path: "/escalations",
@@ -54,7 +54,7 @@ export const UNBUILT_SCREENS: readonly ScreenDescriptor[] = [
     screen: "Review",
     binds: "OrderContextResponse (intake.ts:301) · QueueNextResponse (endpoints.ts:70)",
     missing:
-      "AN ORDER. This door is order-scoped — every screen beneath it needs an id, and there is deliberately no endpoint that lists orders to pick one from (endpoints.ts:69; INVARIANTS:82-83). The route exists because authz.ts:66 declares the door and the rail must be able to draw it; the way in is /api/queue/next handing you one, not a chooser here.",
+      "AN ORDER. This door is order-scoped — every screen beneath it needs an id. A list endpoint now EXISTS — GET /api/orders, the 2026-08-28 ruling's Option C — and /orders-list is its door, so 'no list endpoint' is no longer the reason there is no chooser here. The reason that remains: the ruling narrowed INVARIANT 22 rather than deleting it — review hand-over stays one server-chosen order with no cherry-picking, and All Orders is a separate ops surface. The route exists because authz.ts:66 declares the door and the rail must be able to draw it; the way in is /api/queue/next handing you one, or a context-carrying deep link.",
   },
   {
     path: "/orders-list",

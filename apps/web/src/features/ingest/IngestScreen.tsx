@@ -5,6 +5,7 @@ import { RefusedCard } from "./RefusedCard";
 import { AcceptCard } from "./AcceptCard";
 import { AcceptedCard } from "./AcceptedCard";
 import { useAcceptOrder, useUploadPackage } from "./useIngest";
+import { QuarantinePanel } from "./QuarantinePanel";
 
 /**
  * SCREEN 5 — INTAKE / UPLOAD, at `/ingest` (authz.ts:67, ops+admin). The stage
@@ -19,8 +20,10 @@ import { useAcceptOrder, useUploadPackage } from "./useIngest";
  * `banner` carries the SERVER's sentence for a failure that is not a
  * field-level rejection, which is where a duplicate lands: a byte-identical
  * re-upload surfaces the server's sha256-match notice verbatim (INVARIANT 48,
- * `INVARIANTS:132`, 58-59). That is also why there is no sha256 rendering of
- * our own — no response in the contract carries the hash as data.
+ * `INVARIANTS:132`, 58-59). The hash itself is DATA since the 2026-08-28
+ * ruling — `QuarantineResponse.sha256` (design2.ts:37) — and renders on the
+ * accept stage via `QuarantinePanel`, where an order id exists to read it
+ * against.
  */
 export function IngestScreen() {
   const [stage, setStage] = useState<Stage>({ kind: "form" });
@@ -97,12 +100,18 @@ export function IngestScreen() {
         )}
 
         {stage.kind === "accept" && (
-          <AcceptCard
-            order={stage.order}
-            fileName={stage.fileName}
-            pending={accept.pending}
-            onAccept={() => accept.send(stage.order)}
-          />
+          <>
+            <AcceptCard
+              order={stage.order}
+              fileName={stage.fileName}
+              pending={accept.pending}
+              onAccept={() => accept.send(stage.order)}
+            />
+            {/* The server's quarantine verdicts, readable now the order has an
+                id. Rendering them here rather than on the form is INVARIANT
+                47's split, restated for a read. */}
+            <QuarantinePanel order={stage.order} />
+          </>
         )}
 
         {stage.kind === "accepted" && (

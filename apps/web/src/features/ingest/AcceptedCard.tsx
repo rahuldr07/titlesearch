@@ -27,11 +27,13 @@ export function AcceptedCard(props: {
       </p>
 
       <div className="flex flex-wrap items-center gap-8">
+        {/* /queue was deleted (CONFLICT-deleted-queue-and-rail-controls §1);
+            the browse table is where an accepted order can be seen. */}
         <Link
-          to="/queue"
+          to="/orders-list"
           className="font-sans text-meta font-semibold leading-close text-action underline underline-offset-4"
         >
-          Review queue →
+          See it in all orders →
         </Link>
         <Button data-testid="ingest-again" onPress={props.onAgain}>
           Ingest another

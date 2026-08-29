@@ -57,7 +57,7 @@ export function OrderFields(props: {
                 value={props.values[entry.key]}
                 onChange={(next) => props.onChange(entry.key, next)}
               >
-                <Input id={`order-${entry.key}`} data data-testid={`order-${entry.key}`} />
+                <Input id={`order-${entry.key}`} data-testid={`order-${entry.key}`} />
               </TextField>
             )}
             <span className="font-sans text-label leading-body text-ink-muted">

@@ -9,17 +9,17 @@ import { RulebookBanner } from "./RulebookBanner";
  * THE INTAKE CARD — the package on the left, the order on the right, one act
  * across the bottom. `reference-app.html`'s `isUpload`, and act one of two.
  *
- * Three objects the design draws are not built, and each renders a `BackendGap`
- * in its place that states the refusal on screen: the QUARANTINE GATEWAY
- * checklist (no quarantine-step shape exists, and a four-step state machine
- * written in the browser is what hard rule 3 forbids), the OPTICAL PROFILE card
- * (three thresholds, and thresholds are server-owned; probe visibility is
- * additionally open — CONTEXT §14), and the PRODUCT select.
+ * The design's Quarantine Gateway checklist and Optical Profile card are NOT
+ * gaps any more: `GET /api/orders/{id}/quarantine` (design2.ts:35-42, mocks
+ * design.ts:318) serves both since the 2026-08-28 ruling. They do not render on
+ * THIS stage because the read is order-scoped and no order exists until the
+ * upload returns one — `QuarantinePanel` draws them on the accept stage, and
+ * the note under the dropzone says exactly that, on screen.
  *
- * The product gap has a visible consequence one line below it:
- * `CreateOrderRequest` (endpoints.ts:39-45) has five members and no product, so
+ * ONE gap card remains, and its claim is still true: the PRODUCT select.
+ * `CreateOrderRequest` (endpoints.ts:39-46) has five members and no product, so
  * a product chosen here would be sent nowhere, and `EffectiveChecklist`
- * (workspace.ts:118) is keyed on client AND product — with no product to narrow
+ * (workspace.ts:121) is keyed on client AND product — with no product to narrow
  * by, `RulebookBanner` names every checklist the client has rather than the one
  * this order will use.
  *
@@ -46,25 +46,17 @@ export function IngestForm(props: {
           </h2>
           <Dropzone file={props.file} onFile={props.onFile} />
 
-          <BackendGap
-            object="Quarantine gateway — AV, real-PDF, SHA-256"
-            conversation="ANALYSIS-screens.md §7 conversation 3"
+          {/* Where the design's checklist sits, the true sentence about when it
+              arrives — not a skeleton, which would claim it is loading now. */}
+          <p
+            data-testid="quarantine-note"
+            className="font-sans text-label leading-body text-ink-muted"
           >
-            The design runs three named checks in sequence with a state each. No
-            quarantine-step shape exists in the contract, and no response
-            carries the sha256 as data — it arrives only as prose inside a
-            duplicate&apos;s 409. Drawing the checklist would put a four-step
-            state machine, and its product copy, in the browser.
-          </BackendGap>
-
-          <BackendGap
-            object="Optical profile — DPI, clerk stamp, contrast floor"
-            conversation="ANALYSIS-screens.md §7 conversation 3"
-          >
-            Three quality thresholds with no home in the contract. Thresholds
-            are server-owned, and whether they may be shown at all is an open
-            question about probe visibility (CONTEXT §14).
-          </BackendGap>
+            The quarantine gateway — antivirus, real-PDF, SHA-256 de-dup — runs
+            against the order the upload creates. Its checklist and the optical
+            profile render on the next stage, once the server has an order to
+            report against.
+          </p>
         </div>
 
         <div className="flex flex-col gap-8 p-12">
@@ -75,7 +67,7 @@ export function IngestForm(props: {
 
           <BackendGap
             object="Product — the second half of the checklist key"
-            conversation="CONTRACT GAP: CreateOrderRequest, endpoints.ts:39-45"
+            conversation="CONTRACT GAP: CreateOrderRequest, endpoints.ts:39-46"
           >
             The design picks a product here and resolves one checklist from it.
             There is no product field on the create request, so nothing carries
@@ -84,7 +76,7 @@ export function IngestForm(props: {
             which one applies.
           </BackendGap>
 
-          <RulebookBanner clientId={props.values.client_id} />
+          <RulebookBanner clientId={props.values.client_id} quarantine={null} />
         </div>
       </div>
 

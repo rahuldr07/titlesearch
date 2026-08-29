@@ -3,10 +3,10 @@ import { Button, cx } from "../../components/ui";
 
 /**
  * THE DROPZONE AND THE FILE ROW. It stops at the file — name, size, and nothing
- * it cannot cite. The design's Quarantine Gateway checklist would sit under
- * this, and `IngestForm` renders a `BackendGap` in its place instead: there is
- * no quarantine-step shape in the contract, and a four-step state machine
- * written in the browser is what hard rule 3 forbids.
+ * it cannot cite. The design's Quarantine Gateway checklist sits under this in
+ * the drawing; here it renders one stage later (`QuarantinePanel`), because
+ * `GET /api/orders/{id}/quarantine` (design2.ts:35-42, added 2026-08-28) is
+ * order-scoped and no order exists until the upload returns one.
  *
  * The size is printed in BYTES rather than converted to MB — a converted figure
  * is arithmetic on a value the screen is showing.
