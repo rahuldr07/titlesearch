@@ -62,7 +62,8 @@ export function RecentOrderRow(props: { readonly row: OrderRow }) {
 
       {/* The reference's two row actions: the audit-history modal, then Open →.
           Both sit above the row's covering anchor and take their own clicks. */}
-      <span className="relative flex w-60 shrink-0 items-center justify-end gap-4 px-6">
+      {/* w-85: the cell must hold the clock AND Open →, or it overflows the due column. */}
+      <span className="relative flex w-85 shrink-0 items-center justify-end gap-4 px-6">
         <HistoryButton id={row.id} orderRef={row.order_ref} />
         <RouteButton
           size="sm"

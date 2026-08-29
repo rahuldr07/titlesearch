@@ -76,7 +76,8 @@ export const ORDER_COLUMNS: readonly TableColumn<OrderRow>[] = [
   {
     id: "action",
     header: "Action",
-    width: "120px",
+    /* Wide enough for BOTH actions — at 120px the clock clipped into Due. */
+    width: "150px",
     /*
      * The reference's two row actions: the audit-history modal, then Open →.
      * The clock button is the call site `openOrderHistory` was built for —
