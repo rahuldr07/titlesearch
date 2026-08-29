@@ -190,6 +190,30 @@ frame-level assertion, so they were repointed to `/`, `/escalations` and
 
 ---
 
+## 8. `ux.spec` — five reds, three causes, all of them this file's subjects
+
+Added 2026-08-29, after the full suite ran with everything else green
+(typecheck, lint, 389 unit, check-rules) and `ux.spec` carrying the only
+e2e failures. Nothing below is weakened or edited; this section records why
+each red is a design decision colliding with a harvested invariant, not a
+defect introduced by the rebuild.
+
+| Test | Why it cannot pass | Which decision owns it |
+|---|---|---|
+| `the queue's pass refusal nudges too` (:128) | There is NO pass affordance anywhere in the app — `grep -rn "act-pass\|a pass needs its why" src/` is empty. Pass rode the queue's hand-over and left with it. | Section 1 (INVARIANTS 24–25, owner's call pending) |
+| `refused submits SAY so — escalate, correct, pass all nudge` (:105) | Two collisions: the final clause presses `p` for the missing pass control (above), and the first two expect a SPOKEN nudge (`data-testid="nudge"`, copy "needs its question") from an enabled submit. The rebuilt editor holds instead: `features/review/editorHold.ts` disables the submit and states the reason as a sentence ("An escalation is refused without its question."), per design rule 12's disabled-with-reason. Same refusal, different mechanism and vocabulary. | Rule 12 vs the harvested spoken-nudge shape — the same unruled axis as HANDOFF's owner decision #3 |
+| `a correction is inert until it differs from the machine read` (:85) | The spec expects a changed VALUE alone to arm the submit; `holdFor` keeps it held until the reason is also non-empty ("A correction is refused without its reason." — INVARIANT 9 moved INTO the arming gate). The spec's own comment calls must-change "the courtesy" and min(1) "the enforcement"; the rebuild put both in the hold. | Rule 12, as above |
+| `c never accepts a blank — missing fields demand a click` (:65) | The click half expects one click to file `✓ accepted N/A`. A declared absence is now a REASONED, four-state act (`editorHold.ts`: "Say which of the four absences this is." / "A declared absence is refused without its reason.") — one click can no longer accept an absence, by design. The `c`-refuses-blank half still holds. | `CONFLICT-na-taxonomy.md` — this is its spec-level appearance |
+| `a reading can be adopted into the correction editor without retyping` (:43) | Passes in the full-suite run, failed once in an isolated run — timing-dependent, not a standing red. Recorded so a future red is compared against this note instead of re-diagnosed. | — |
+
+**Not done, pending the rulings above:** none of the five assertions edited.
+When the owner rules on pass (section 1) and on hold-vs-nudge (decision #3),
+whichever way, these five either pass after a mechanical retarget or become
+the record of the superseded behaviour and can be retired with the ruling
+cited.
+
+---
+
 ## 5. Keyboard `g`-sequences are asserted and were never built
 
 `e2e/invariants/navigation.spec.ts` asserts `g d` → `/delivered` and `g q` →
