@@ -62,10 +62,17 @@ export function IngestScreen() {
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
       <div className="flex flex-col gap-12 p-14">
-        <header className="flex flex-col gap-2">
+        <header className="flex flex-col gap-4">
           <h1 className="font-sans text-title font-bold leading-tight text-ink-primary">
             Package intake &amp; registration
           </h1>
+          {/* The reference's lede, kept because every clause is true of this
+              flow: quarantine (design2.ts) runs before the sign that queues. */}
+          <p className="max-w-320 font-sans text-body leading-body text-ink-muted">
+            Upload scanned county abstract documents. Files undergo automated
+            SHA-256 verification and antivirus quarantine before an examiner
+            signs for the package.
+          </p>
         </header>
 
         {banner !== null && (

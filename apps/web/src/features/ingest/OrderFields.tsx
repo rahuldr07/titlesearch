@@ -27,6 +27,8 @@ import { MANIFEST } from "./manifest";
 export function OrderFields(props: {
   readonly values: CreateOrderRequest;
   readonly onChange: (key: keyof CreateOrderRequest, value: string) => void;
+  /** Rendered after the client row — the reference seats Product there. */
+  readonly productSlot?: React.ReactNode;
 }) {
   return (
     <div className="flex flex-col">
@@ -63,6 +65,7 @@ export function OrderFields(props: {
             <span className="font-sans text-label leading-body text-ink-muted">
               {entry.why}
             </span>
+            {entry.key === "client_id" && props.productSlot}
           </div>
         </div>
       ))}

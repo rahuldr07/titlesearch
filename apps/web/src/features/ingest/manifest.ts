@@ -20,16 +20,20 @@ export interface ManifestEntry {
   readonly why: string;
 }
 
+/* Row order follows the reference's Order Configuration column: client first,
+   then the client's own order number. The three the reference does not draw
+   writable (jurisdiction/state/county) follow — see
+   docs/frontend/design-2026-08/CONFLICT-intake-hand-typed-jurisdiction.md. */
 export const MANIFEST: readonly ManifestEntry[] = [
-  {
-    key: "external_ref",
-    label: "ORDER #",
-    why: "Identity — nothing else ties this file to anything.",
-  },
   {
     key: "client_id",
     label: "CLIENT",
     why: "Decides delivery and which sign-off checklist resolves.",
+  },
+  {
+    key: "external_ref",
+    label: "CLIENT ORDER #",
+    why: "Identity — nothing else ties this file to anything.",
   },
   {
     key: "jurisdiction",

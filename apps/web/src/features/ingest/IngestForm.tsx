@@ -63,18 +63,24 @@ export function IngestForm(props: {
           <h2 className="text-label font-semibold leading-flat text-ink-faint">
             Order configuration
           </h2>
-          <OrderFields values={props.values} onChange={props.onValue} />
-
-          <BackendGap
-            object="Product — the second half of the checklist key"
-            conversation="CONTRACT GAP: CreateOrderRequest, endpoints.ts:39-46"
-          >
-            The design picks a product here and resolves one checklist from it.
-            There is no product field on the create request, so nothing carries
-            the choice to the server. Until there is, the banner below names
-            every checklist this client has rather than pretending to know
-            which one applies.
-          </BackendGap>
+          {/* The gap card sits where the reference seats its Product select —
+              directly under Client — so the absence reads in place. */}
+          <OrderFields
+            values={props.values}
+            onChange={props.onValue}
+            productSlot={
+              <BackendGap
+                object="Product — the second half of the checklist key"
+                conversation="CONTRACT GAP: CreateOrderRequest, endpoints.ts:39-46"
+              >
+                The design picks a product here and resolves one checklist from
+                it. There is no product field on the create request, so nothing
+                carries the choice to the server. Until there is, the banner
+                below names every checklist this client has rather than
+                pretending to know which one applies.
+              </BackendGap>
+            }
+          />
 
           <RulebookBanner clientId={props.values.client_id} quarantine={null} />
         </div>
