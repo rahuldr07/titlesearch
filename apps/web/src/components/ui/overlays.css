@@ -1,0 +1,71 @@
+/*
+ * OVERLAY CHROME: THE SCRIM, THE Z-LEVELS AND THE FADE.
+ *
+ * Split out of `ui.css`, which owns motion and control surfaces. These four
+ * utilities exist for the same reason as everything in that file: they are the
+ * only legal spelling of a value the design asks for and Tailwind's scales or
+ * namespaces do not supply.
+ */
+/*
+ * THE MODAL SCRIM, AS A UTILITY, BECAUSE ITS BLUR CANNOT BE WRITTEN AS ONE.
+ *
+ * RECIPES.md §Elevation: "Modal `0 24px 60px rgba(0,0,0,.3)` + `rgba(20,18,30,.45)`
+ * blurred scrim". Tailwind's blur namespace ships 4px (`backdrop-blur-xs`) as
+ * its smallest step and the design asks for 3px; the only other spelling is
+ * `backdrop-blur-[3px]`, which check-rules.mjs bans as an arbitrary length —
+ * correctly, since a lone magic number in a component is exactly what that
+ * rule is for. So the value lives here, once, next to the other kit surfaces.
+ *
+ * The colour comes from `--color-scrim`, not from the recipe's literal: the
+ * token file's value (20 22 28 / .4) is the same ink at the same job, and
+ * rule "no raw hex in TSX" makes the token the authority. The half-point of
+ * alpha and the two points of blue are not worth a second scrim token.
+ */
+@utility tp-scrim {
+  background-color: var(--color-scrim);
+  @supports (backdrop-filter: blur(1px)) {
+    backdrop-filter: blur(3px);
+  }
+}
+
+/*
+ * The modal card's own entry. Rule 10: 220ms is not one of the three timings,
+ * so the design note's "220ms pop" is spent as the ENTRY token (260ms) — the
+ * curve that decelerates to rest. `tp-enter` already does this; this utility
+ * exists only to add the scrim's fade, which must not scale or translate.
+ */
+@utility tp-fade {
+  &[data-entering] {
+    animation: tp-fade-in var(--ease-enter);
+  }
+  &[data-exiting] {
+    animation: tp-fade-in var(--ease-enter) reverse;
+  }
+}
+
+@keyframes tp-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/*
+ * LAYERING. `--z-*` IS NOT A TAILWIND V4 THEME NAMESPACE — tokens.css says so
+ * itself ("--space-*, --z-* and --filter-*" are named as the three that are
+ * not), so `z-popup` and `z-overlay` generate NO utility at all and would have
+ * left every overlay in this kit at `z-index: auto` while the build stayed
+ * green. That is the same silent class of failure the token file warns about
+ * for line-height, and the previous kit shipped it.
+ *
+ * Two of the four levels are needed here: an anchored panel and a scrim.
+ */
+@utility tp-z-popup {
+  z-index: var(--z-popup);
+}
+
+@utility tp-z-overlay {
+  z-index: var(--z-overlay);
+}

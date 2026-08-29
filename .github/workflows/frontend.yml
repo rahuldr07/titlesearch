@@ -57,28 +57,28 @@ jobs:
       # Ordered cheapest-first so a trivial failure reports in seconds rather
       # than after the browser suite.
       - name: Rule gate (BRIEF §6)
-        run: pnpm --filter web-v2 check:rules
+        run: pnpm --filter @titlepipe/web check:rules
 
       - name: Lint
-        run: pnpm --filter web-v2 lint
+        run: pnpm --filter @titlepipe/web lint
 
       - name: Typecheck (all workspace projects)
         run: pnpm typecheck
 
       - name: Build
-        run: pnpm --filter web-v2 build
+        run: pnpm --filter @titlepipe/web build
 
       # Installs only chromium — the browser project pins that one instance.
       - name: Install Playwright chromium
-        run: pnpm --filter web-v2 exec playwright install --with-deps chromium
+        run: pnpm --filter @titlepipe/web exec playwright install --with-deps chromium
 
       # Static gates + every Storybook story as a browser test with axe at
       # `error`. This is the step that actually catches accessibility defects.
       - name: Tests (static gates + Storybook a11y)
-        run: pnpm --filter web-v2 test
+        run: pnpm --filter @titlepipe/web test
 
       - name: Storybook build
-        run: pnpm --filter web-v2 build-storybook
+        run: pnpm --filter @titlepipe/web build-storybook
 
   invariants:
     name: harvested invariants (e2e)
@@ -94,20 +94,20 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter web-v2 exec playwright install --with-deps chromium
+      - run: pnpm --filter @titlepipe/web exec playwright install --with-deps chromium
 
       # 111 harvested product rules. ALL ARE CURRENTLY test.skip — this job
       # passes vacuously today and says so in its own output rather than
       # letting a green tick imply coverage that does not exist. It becomes a
       # real gate one feature at a time during BRIEF §5 Phase 5.
       - name: E2E invariants
-        run: pnpm --filter web-v2 test:e2e
+        run: pnpm --filter @titlepipe/web test:e2e
 
       - name: Report how many invariants are actually enforced
         if: always()
         run: |
-          total=$(grep -roh "test\.skip(\|^test(" apps/web-v2/e2e | wc -l)
-          skipped=$(grep -roh "test\.skip(" apps/web-v2/e2e | wc -l)
+          total=$(grep -roh "test\.skip(\|^test(" apps/web/e2e | wc -l)
+          skipped=$(grep -roh "test\.skip(" apps/web/e2e | wc -l)
           active=$((total - skipped))
           echo "::notice title=Invariant coverage::${active} of ${total} harvested invariants are enforced; ${skipped} still skipped."
           if [ "$active" -eq 0 ]; then

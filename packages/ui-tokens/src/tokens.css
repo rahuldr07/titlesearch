@@ -1,662 +1,415 @@
 /*
  * TitlePipe design tokens.
  *
- * REVALUED 2026-08-01 to the owner-approved HYBRID mockup (directions/hybrid.html,
- * rendered directions/hybrid-full.png). Register: WARM ARCHIVAL PAPER, sealing-wax
- * accent, Fraunces/Switzer/Geist Mono/Courier Prime. This supersedes the light
- * cool-grey + violet register (2026-07-26 export) and the navy warm-archival
- * revision (2026-07-28) before it. Four registers are now in the record; this is
- * the live one.
+ * REVALUED 2026-08-27 to the 2026-08 design handoff (docs/frontend/design-2026-08/
+ * tokens.css + tokens.json, gated by claude-design-rules.md's 14 rules). Register:
+ * COOL GRAPHITE ON PAPER-WHITE, a single violet accent spent once per screen,
+ * Plus Jakarta Sans / JetBrains Mono / Source Serif 4, with warm paper reserved
+ * for evidence and deliverables. This supersedes the warm archival paper +
+ * sealing-wax register (2026-08-01 hybrid mockup), the navy warm-archival
+ * revision (2026-07-28) and the cool-grey + violet export (2026-07-26) before it.
+ * FIVE registers are now in the record; this is the live one.
  *
- * Rules of this file — unchanged, and this revision is the proof of them:
- *   - Names are SEMANTIC (what the colour means), never hue or hex. NOT ONE
- *     TOKEN NAME CHANGED in this revision. 94 --color-* names, every component
- *     reading by name, and the whole palette swapped underneath them. That is
- *     what makes a reskin cheap; it is the only reason this was a one-file job.
+ * Rules of this file — unchanged, and this revision is the fourth proof of them:
+ *   - Names are SEMANTIC (what the colour means), never hue or hex. The names
+ *     survived a FOURTH full revaluation intact: every concept in the new handoff
+ *     landed on a name that was already here, and the migration forced ZERO
+ *     renames. 8 names were added for concepts the old set never had; ~55 colour
+ *     names (plus the off-scale type, radius, stroke and shadow entries) were
+ *     deleted because the new register has no counterpart for them. That is the
+ *     argument for semantic naming restated as evidence rather than as principle.
  *   - Components reference tokens only. No raw hex in TSX — enforced by lint.
  *   - Scales (type, radius, space, shadow) are IMPOSED, and were re-imposed here
- *     against the mockup's own measurements rather than carried over.
+ *     against the handoff's own values rather than carried over.
  *
- * Meaning of the four state families is inherited and unchanged:
- *   settled = done, no action   ·  decide = a person must choose
- *   attend  = look at this      ·  halt   = stopped, actionable
+ * Meaning of the state families, now THREE not five:
+ *   settled = done, no action   ·  attend = look at this
+ *   halt    = stopped, actionable
+ * `decide` collapsed into the ACCENT — an open decision is precisely where the
+ * accent is spent (rule 1) — and `idle` collapsed into ordinary graphite. Both
+ * families are deleted rather than left holding stale values.
  *
- * ══ THE ACCENT / HALT COLLISION, AND HOW IT IS RESOLVED ═════════════════════
+ * ══ TWO SCALES ARE DELIBERATELY ABSENT, AND THEIR ABSENCE IS LOAD-BEARING ════
  *
- * THE PROBLEM. The approved accent is sealing-wax red #8A3222. The previous
- * --color-state-halt was oxblood #9c2b1e. Primary ACTION ("press this") and the
- * HALT state ("this order is stopped") would have been near-identical hues on a
- * tool where that distinction is load-bearing.
+ *   - the numeric --text-* scale (xs…6xl, plus micro/tiny/census). Rule 2 allows
+ *     SIX sizes: 11 / 13 / 16 / 20 / 28 / 40. Deleting the scale means Tailwind
+ *     generates no `text-sm` utility at all.
+ *   - the numeric --radius-* scale (1…10). Rule 5 allows SIX radii with fixed
+ *     arithmetic between them (inner = outer − gap).
+ * Tailwind failing to generate a class is SILENT — `text-sm` renders at the
+ * inherited size and nothing errors — so the enforcement is THREE layers deep:
+ * the `--text-*: initial` / `--radius-*: initial` namespace resets at the head
+ * of the @theme block below (deleting our entries alone is NOT enough — see the
+ * note there), apps/web-v2/scripts/check-rules.mjs naming both families, and
+ * apps/web-v2/src/shared/tokens.test.ts pinning rule 5's arithmetic and rule
+ * 2's cardinality.
  *
- * WHAT DOES NOT WORK, measured rather than assumed:
- *   - Separating them by LIGHTNESS alone. The accent sits at relative luminance
- *     0.0780 and --color-ink-primary at 0.0122. Any halt placed between them is
- *     at best 1.43:1 from BOTH — an imperceptible greyscale step from either the
- *     action or from ordinary body text. There is no room.
- *   - Separating them by HUE alone. Greyscale erases hue by definition, and the
- *     brief's test is explicitly a greyscale test.
- *   - Separating them by TINT. --color-action-surface (0.778) and any plausible
- *     halt tint (0.729) differ by 1.07:1 in greyscale. Nothing.
+ * ══ THERE IS NO DARK THEME IN THIS REGISTER ═════════════════════════════════
  *
- * WHAT DOES WORK, and is what this file encodes — a three-part resolution:
+ * The `[data-theme="mocha"]` block that lived here (Catppuccin Mocha, ~130
+ * overrides) is REMOVED rather than left carrying values from a palette that no
+ * longer exists. The new handoff ships one light register plus a DARK CHROME
+ * family (--color-rail-*) for the navigator, auth screens and code panels; that
+ * is a surface vocabulary, not a theme. A stale dark block would have kept
+ * `data-theme="mocha"` typechecking and rendering the previous register's
+ * oxblood and mauve underneath the new screens, which is worse than not
+ * shipping a dark theme. If one is wanted, it is a new derivation against these
+ * values, not a resurrection of that block.
  *
- *   1. HUE, for the colour-sighted reader. The accent stays FRESH wax (#8A3222,
- *      saturated, warm). Halt becomes BURNT umber-oxblood (#4A231B) — the same
- *      lineage, so red still reads as danger, but visibly cooked: darker,
- *      browner, desaturated. Nobody confuses hot wax with a burnt seal.
+ * ══ THE ACCENT / HALT COLLISION IS GONE ══════════════════════════════════════
  *
- *   2. LIGHTNESS, for what room there is. Halt takes the deep end: 1.65:1
- *      greyscale step from the accent (0.0780 vs 0.0274). Real, perceptible,
- *      and honestly not sufficient on its own — hence 3.
+ * The previous register's accent was sealing-wax red and its halt was oxblood,
+ * a collision that took a three-part hue/lightness/stroke resolution to make
+ * safe. The new accent is violet (#5b4b8a) and halt is red (#a4291f): different
+ * hues, and 1.34:1 apart in greyscale luminance. The structural half of the old
+ * rule still binds and is now rule 1 as well — the accent is the only token in
+ * this palette drawn as a SOLID FILL, and it is spent once per screen.
  *
- *   3. STROKE, which is what actually carries greyscale, and is the mechanism
- *      the five no-value states already prove works:
- *        --color-action-border  #E4C9BF  — a HAIRLINE. Luminance 0.620.
- *        --color-state-halt-border #B08475 — a STROKE.   Luminance 0.270.
- *      2.09:1 between the two outlines. In greyscale a halt chip is a firmly
- *      OUTLINED object and an action chip is an unoutlined tint. That reads at a
- *      glance, at 9.5px, with no colour at all.
+ * ══ THE FOUR NO-VALUE STATES ARE RETAINED DESPITE THE HANDOFF ════════════════
  *
- *   And the structural half of the rule: the accent is the ONLY token in this
- *   palette ever drawn as a solid fill under light text. The approved mockup has
- *   no filled halt control — halt appears as chip (tint + stroke), stamp (double
- *   border) and severity edge. `--color-ink-on-action` still clears AA on
- *   --color-state-halt so the pairing is safe if it is ever needed, but "solid
- *   fill = you may press it" is the invariant the screens should hold.
- *
- * PINNED BY TEST. apps/web-v2/src/shared/contrast.test.ts now gates both the
- * 1.5:1 base separation and the 1.8:1 outline separation, so a future palette
- * edit cannot quietly re-collapse them.
- *
- * SIDE EFFECT, deliberate: PRESENT_UNREADABLE left the halt family for the
- * attend family (--color-na-unreadable-*), which is both what the mockup draws
- * and the more correct reading — "it is on the page and I cannot read it" is
- * look-at-this, not stopped. It also takes one more red off the screen.
- *
- * Four families, greyscale luminance, mutually ordered:
- *   attend 0.166  >  settled 0.136  >  decide/action 0.078  >  halt 0.027
- * settled↔attend is only 1.16:1 apart in greyscale — that is A's palette
- * verbatim and not mine to move; those two are separated by hue and by chip
- * form, and neither ever means "press this".
+ * --color-na-* and the --color-scan-* / --filter-scan pair have NO counterpart
+ * in the new handoff. They are kept and revalued into this register, not
+ * deleted. Rule 14's typed-absence taxonomy needs them and the handoff simply
+ * does not cover NA states: that is a gap in the new set, not dead weight in the
+ * old one. A mechanical "delete what the handoff omits" pass would collapse
+ * NOT_PRESENT and PRESENT_UNREADABLE into a shared grey dash, which AGENTS.md
+ * and CONTEXT §11 both name as a design defect.
  */
 
 @theme {
-  /* ── surfaces ─────────────────────────────────────────────────────────── */
   /*
-   * The mockup's stacked-paper ladder, darkest to lightest:
-   *   ground E3DCCA < sheet-dim E9E3D2 < sheet F1ECDF < card FAF7EF < card-high FFFDF6
-   * Two things INVERT from the previous palette and both are deliberate:
-   *   - `raised` is now the BRIGHTEST surface, above `panel`. It used to be a
-   *     step darker, which meant "raised" was drawn as a recess. The mockup's
-   *     open decision card is its brightest paper; the name now matches physics.
-   *   - `document` is now DARK (#383129, the mockup's viewer surround) in the
-   *     LIGHT theme too. See the document block below — this reverses D2's
-   *     reversal, on the mockup's authority, and it changes which ink family is
-   *     legal on that pane.
+   * ══ THE NAMESPACE RESETS, AND THEY ARE THE ACTUAL ENFORCEMENT ═══════════
+   *
+   * DELETING our --text-* / --radius-* entries is NOT sufficient and this was
+   * verified, not assumed: with the numeric scales simply removed, Tailwind
+   * still emitted `.text-sm { font-size: var(--text-sm) }` from its OWN default
+   * theme, because `@theme` MERGES with the defaults rather than replacing
+   * them. Rule 2 would have been silently unenforced at the token layer,
+   * leaving only the lint.
+   *
+   * `--namespace-*: initial` is the documented v4 way to clear a namespace.
+   * These two lines are why `text-sm`, `text-2xl`, `rounded-xl` and
+   * `rounded-3xl` do not exist as utilities at all — only the six sizes and six
+   * radii declared below do. Order matters: the reset must precede the
+   * declarations it does not intend to remove.
+   *
+   * `rounded-full` and `rounded-none` are STATIC utilities, not namespace
+   * members, so they survive this and are banned by check-rules.mjs instead.
    */
-  --color-surface-app: #e3dcca; /* the desk — window background behind everything */
-  --color-surface-panel: #faf7ef; /* row containers, cards, primary panels */
-  --color-surface-sunken: #e9e3d2; /* sidebar column, segmented tracks, table caps, inset wells */
-  --color-surface-raised: #fffdf6; /* the open decision card — brightest paper in the system */
-  --color-row-hover: #fffdf6; /* = raised: a hovered row lifts toward the open card */
-  /*
-   * REVERSES the light document pane. D2 was reversed by the owner in 2026-07-26
-   * ("the design-mock pane ships as drawn") to a LIGHT pane; the approved mockup
-   * draws the reading room dark (--surround #383129) and the mockup wins on
-   * values. Consequence, stated because it is not free: --color-ink-primary and
-   * --color-ink-secondary are NO LONGER legal on this surface in the light theme
-   * (1.32:1 and 2.55:1). The pane now uses --color-document-ink* in BOTH themes,
-   * which is what that family was built for. contrast.test.ts was re-pointed
-   * accordingly — same 4.5:1 gate, different (correct) ink family.
-   */
-  --color-surface-document: #383129; /* the viewer surround, dark in both themes */
-  --color-surface-paper: #f8f3e4; /* the scanned page itself — PINNED, both themes */
-
-  /* page-reference chip — "this value was read from page N". Now the same wax
-     family as --color-action; the legacy collision that justified a separate
-     hue retired with apps/web. Kept as its own name so it can diverge again. */
-  --color-page-ref: #8a3222;
-  --color-page-ref-ink: #6e2718; /* text sitting ON page-ref-surface — 8.42:1 */
-  --color-page-ref-surface: #f2e1da;
-  --color-page-ref-border: #e4c9bf;
-
-  /* evidence highlight — the marker drawn over a cited line on the page. The
-     mockup outlines the cited token in wax over a gold wash, so the border
-     leaves the old ochre and joins the accent. Both PINNED (see rule 1 below). */
-  --color-surface-evidence: rgb(240 205 90 / 0.55);
-  --color-border-evidence: #8a3222;
-  /*
-   * The PIN is a weaker mark — "this field points here", vs the highlight's
-   * "this is the cited line". Re-derived warm: the accent hue at a fraction of
-   * the highlight's strength, so the two marks read as one grammar rather than
-   * two unrelated colours. Not hex-testable (rgba token), so a visual judgment
-   * call, not a gate-verified one.
-   */
-  --color-surface-pin: rgb(138 50 34 / 0.14);
+  --text-*: initial;
+  --radius-*: initial;
 
   /* ── ink ──────────────────────────────────────────────────────────────── */
-  --color-ink-primary: #221c13; /* 12.54:1 on app, 16.10:1 on panel */
-  --color-ink-secondary: #5b5342; /* 5.56:1 on app, 7.10:1 on panel */
+  /* Five tiers where the old register had three. `faint` and `disabled` are new
+     names: the old palette had no tier below `muted`, so a disabled control and
+     a receding label were the same value. 15.42:1 / 8.28:1 / 4.63:1 on panel. */
+  --color-ink-primary: #14161c;
+  --color-ink-secondary: #454a55;
+  --color-ink-muted: #6e7480;
   /*
-   * DARKENED from the mockup's --ink-3 #8D8471, and this is a correctness fix,
-   * not a taste call. The mockup's own panel admits the problem ("≈4.2:1 …
-   * marginal for 9.5px tracked caps") and understates it — measured, #8D8471 is
-   * 3.45:1 on card and 2.70:1 on the ground, failing AA on every surface in the
-   * system, and this design puts 9.5–11px tracked caps everywhere. Compensating
-   * with weight, as the mockup does, is not a contrast fix.
+   * ⚠ FAILS WCAG 2.2 AA FOR NORMAL TEXT ON EVERY SURFACE IN THIS PALETTE.
+   * Measured 2026-08-28: 3.28:1 on panel, 3.17:1 on sunken, 2.83:1 on the app
+   * canvas, 2.86:1 on action-surface, against a 4.5:1 floor. It is the ink on
+   * every 11px label, and 11px is normal text — WCAG's large-text exemption
+   * starts at 18.66px bold.
    *
-   * Warmest ink off #8D8471 that clears 4.5:1 on ALL FOUR chrome surfaces:
-   *
-   *                app     sunken   panel   raised
-   *    #8D8471     2.70     2.88     3.45    3.63    <- fails AA everywhere
-   *    #6B6250     4.40     4.69     5.62    5.91    <- still short on the ground
-   *    #675E4D     4.67     4.99     5.97    6.28    <- clears AA on all four
-   *
-   * The hue and the recede INTENT are preserved; it just reads legibly. Pinned
-   * by apps/web-v2/src/shared/contrast.test.ts.
-   *
-   * NOT available on --color-surface-document (2.00:1) — that pane is dark now
-   * and has its own ink vocabulary. Same constraint as before, new arithmetic.
+   * The value is UNCHANGED because it is the design system's, and the fix is a
+   * token rather than a screen: there is no surface to move a label onto.
+   * `#686C76` is the same hue darkened enough to clear all four (worst 4.53).
+   * Ruling and options: docs/frontend/design-2026-08/CONFLICT-ink-faint-contrast.md
    */
-  --color-ink-muted: #675e4d; /* eyebrow labels, meta, "recede" */
+  --color-ink-faint: #8a8e98;
+  --color-ink-disabled: #b9bec9;
 
-  /* ── lines ────────────────────────────────────────────────────────────── */
-  --color-line-strong: #d9d1bc; /* card borders, dividers that must read */
-  --color-line-subtle: #e4ddcb; /* row separators inside a card */
-  /* The mockup's --ink-4. It draws every DASHED border (the `searched — not
-     found` chip) and the scrollbar thumb; a step heavier than the ordinary rule
-     is exactly what "dashed" needs to survive being broken into segments. */
-  --color-line-dashed: #b3aa95;
+  /* ── action — spend once per screen (rule 1) ──────────────────────────── */
+  /* The ONLY colour in this palette drawn as a solid fill under light text, and
+     rule 1 says it appears at most once per screen: the open decision, or the
+     single primary action. Everything else is graphite. `--color-action-hover`
+     is NEW — hover used to be alpha-composited over the base; the handoff ships
+     an explicit pressed value. `--color-action-border-strong` is REPURPOSED
+     from the old wax-callout border to the handoff's `--accent-tint-border`,
+     the rule drawn around an accent tint. */
+  --color-action: #5b4b8a;
+  --color-action-hover: #4c3e75;
+  --color-action-border: #c6bae4;
+  --color-action-surface: #f1eef9;
+  --color-action-border-strong: #e4ddf4;
+  --color-ink-on-action: #ffffff; /* 8.23:1 on action, 9.94:1 on action-hover */
 
-  /* ── action (sealing wax) — the primary affordance, and "your correction" ─ */
-  /* The ONLY colour in this palette drawn as a solid fill under light text.
-     See the accent/halt resolution in the file header before changing any of
-     these four — --color-action-border being a HAIRLINE is load-bearing. */
-  --color-action: #8a3222;
-  --color-action-ink: #6e2718; /* text on action-surface — 8.42:1 */
-  --color-action-surface: #f2e1da;
-  --color-action-border: #e4c9bf; /* HAIRLINE (lum .620) — the greyscale foil to halt's stroke */
-  --color-ink-on-action: #fbf3ee; /* 7.48:1 on action, 5.15:1 on settled, 12.38:1 on halt */
-  --color-key-chip-on-action: rgb(255 255 255 / 0.1);
+  /* ── surfaces ─────────────────────────────────────────────────────────── */
+  /* Three rungs, not five. The old ladder's `raised` and `document` rungs are
+     gone: the open decision card is now separated by the accent and by shadow
+     rather than by a fourth paper tone, and the document pane is the paper
+     family below. A hovered row lifts to `sunken`. */
+  --color-surface-app: #eceef3; /* the canvas behind everything */
+  --color-surface-panel: #ffffff; /* cards, rows, primary panels */
+  --color-surface-sunken: #fbfbfd; /* wells, table caps, inset tracks */
+  --color-row-hover: #fbfbfd; /* = sunken */
 
+  /* ── lines and controls ───────────────────────────────────────────────── */
   /*
-   * ══ THE NAVIGATOR'S OWN INK FAMILY ═════════════════════════════════════════
+   * `--color-line-faint` is NEW: the old set had strong / subtle / dashed and
+   * the handoff adds a third-lightest rule with no counterpart.
    *
-   * THE RAIL IS DARK IN BOTH THEMES, 2026-08-13. It was warm paper one tone off
-   * the sheet (--color-surface-sunken); the approved navigator draws it as a
-   * dark column so the chrome reads as furniture and the paper is spent on the
-   * work. That inverts every ink that stands ON it, which is why the rail gets
-   * NAMES OF ITS OWN rather than reaching for the app's ink tiers: on
-   * --color-rail-surface, --color-ink-primary measures 1.00:1 — the same
-   * luminance, invisible, not merely low — and --color-action measures 2.06:1.
-   * A component that reaches into the app palette while standing on this column
-   * is not slightly off, it is blank.
-   *
-   * This is the SECOND surface in the system with its own vocabulary; the first
-   * is --color-surface-document, and the argument is identical. Both are gated
-   * in contrast.test.ts against this surface rather than against the app's.
-   *
-   * Ratios below are measured against --color-rail-surface and asserted in
-   * `contrast.test.ts` ("the navigator has its own ink vocabulary") — they are
-   * not decoration and they are not re-derivable by eye on a dark ground.
+   * `--color-control-border` / `--color-control-fill` are NEW and the split is
+   * worth keeping: the handoff separates CONTROL CHROME from STRUCTURAL RULES,
+   * where inputs previously borrowed --color-line-strong. It is why a disabled
+   * input can recede without the table it sits in receding with it.
    */
-  --color-rail-surface: #1c1a32;
-  --color-rail-ink: #f4f2f8; /* 15.21 col / 12.11 band — hover, the wordmark's upright half */
-  --color-rail-ink-secondary: #b6b3c6; /* 8.25 / 6.57 — the resting row label */
-  --color-rail-ink-muted: #9a97ad; /* 5.96 / 4.74 — group headers, resting marks, the fold */
-  /*
-   * THE ACCENT, LIGHTENED TO SURVIVE THE COLUMN. Same sealing-wax hue, raised
-   * until it clears AA on the rail (6.30:1 where --color-action manages 2.06).
-   * It is a SEPARATE NAME, not a redefinition of --color-action, because the
-   * accent still has to mean one thing app-wide: this is the wax AS SEEN AGAINST
-   * THE DARK COLUMN. It draws the marked row's bar, the marked row's pictograph,
-   * the wordmark's two halves, and the FOCUS RING (see `rail.css`) — everything
-   * that means "here" on this column.
-   */
-  --color-rail-accent: #d98a72;
-  /*
-   * THE MARKED ROW IS A LIFT OF THE COLUMN, NOT A SHEET OF PAPER.
-   *
-   * It was #faf7ef, the app's panel white, on the reasoning that paper is the
-   * scarcest material on a dark rail and therefore the loudest. That was true
-   * and it was still wrong, because it gave the light theme TWO GROUNDS: a dark
-   * column and a paper band. Every filled descendant then had to read on both,
-   * and no single value does — `RailBadge`'s halt pill measured 1.24:1 on the
-   * column, `StageDot`'s resting disc 13.18:1 (a bright paper disc on a dark
-   * rail), and the lifecycle spine INVERTED, with the not-yet-walked segment
-   * eleven times louder than the walked one. Four separate defects, one cause.
-   *
-   * Mocha never had them, because mocha's band was always a step of its column.
-   * The light theme now does the same thing, so the rail has ONE ground in both
-   * themes and one vocabulary that works on it. The lift is deliberately small
-   * (1.26:1) — the 3px accent bar at the margin is what says "here", which is
-   * what this rail's own design has claimed from the start, and a bigger lift
-   * buys loudness by spending the contrast every mark on the row needs.
-   *
-   * The row stays FULL-BLEED — a floating rounded pill would need a horizontal
-   * inset, and the column's 12px of headroom over the 204px measured floor (see
-   * `Sidebar.tsx`) is not big enough to spend on one.
-   */
-  --color-rail-active-surface: #2e2b4a; /* 1.26:1 lift over the column */
-  --color-rail-ink-active: #f4f2f8; /* 12.11:1 on the band — same value as
-                                       --color-rail-ink now that both grounds are
-                                       dark; kept as its own name so the marked
-                                       row can diverge without touching hover. */
-  /*
-   * THE MARKS THE FLOW RAIL DRAWS — `StageDot`'s discs and `StageLink`'s spine.
-   * Both stood on app tokens and both broke on the dark column: --color-state-settled
-   * measured 2.99:1 (the DONE step, the one the design most wants read as
-   * "behind you") while --color-line-strong measured 11.10:1, so the spine ran
-   * backwards. These two restore the order the flow rail's docblocks specify —
-   * settled reads louder than track on the column, 5.78 against 4.95.
-   *
-   * Gated at 3:1 on BOTH grounds: discs and 1px spines are marks, not glyphs.
-   */
-  --color-rail-settled: #6fa377; /* 5.78 col / 4.60 band — done disc, walked spine */
-  --color-rail-track: #8b87ac; /* 4.95 / 3.95 — the spine ahead of you, resting disc edge */
-  /*
-   * The halt BADGE's fill, and it is a different value from the halt DOT above
-   * because it is a different kind of object. The dot is a 4px disc gated at the
-   * 3:1 non-text bar; the badge carries a numeral, so its fill has to hold dark
-   * text at AA. #bd6450 does not (4.10:1) — this does, at 5.29:1, while still
-   * clearing 3:1 as a shape on both grounds.
-   *
-   * SOLID, where attend is an outline. `RailBadge`'s own docblock is the reason:
-   * fill-vs-outline survives greyscale where two hues do not, and "six open" and
-   * "three unresolved" are not the same news.
-   */
-  --color-rail-halt-surface: #cd7a66;
-  /*
-   * Hover, and the foot rule. Alpha over the rail rather than two more opaque
-   * hexes: both must sit on whatever --color-rail-surface becomes, and neither
-   * is text, so neither is AA-gated. Resolved HERE because §6 bans every CSS
-   * colour function inside apps/web-v2/src — including color-mix.
-   */
-  --color-rail-row-hover: rgb(244 242 248 / 0.07);
-  --color-rail-line: rgb(244 242 248 / 0.1);
-  /*
-   * THE ATTENTION DOTS, and they are the reason this family is not just about
-   * text. `RailDot` drew --color-state-halt straight, which is oxblood #4a231b
-   * and measures 1.24:1 on this column — the rail's MOST URGENT mark, invisible,
-   * in the light theme only. It survived review because `useAttention` returns
-   * only "attend" or null today, so nothing on screen or in a test ever drew it;
-   * `sidebar.spec` nonetheless specifies the red dot, and the type permits it.
-   * A signal that vanishes the day it is first needed is worse than one that was
-   * never built.
-   *
-   * Gated at 3:1, the NON-TEXT threshold — these are 4px discs, not glyphs.
-   *
-   * ⚠ THEY SEPARATE FROM EACH OTHER AT ONLY 1.42:1, and the motion that was
-   * supposed to carry that distinction IS NOT ALWAYS THERE. `red pulses, amber
-   * is still` is the rail's documented split, but this file ships a global
-   * `prefers-reduced-motion` block that kills every animation — so a user with
-   * reduced motion AND a red-green deficiency gets two 4px discs separated by
-   * colour alone. The `aria-label` covers assistive tech, not sighted users.
-   * The honest position: this is a KNOWN GAP, not a solved problem, and closing
-   * it needs a second non-motion channel (a ring, or a different shape) rather
-   * than another pair of hexes. Recorded here so the next person does not read
-   * the motion sentence and conclude it is handled.
-   */
-  --color-rail-attention-halt: #bd6450; /* 4.10 col / 3.27 band */
-  --color-rail-attention-attend: #c28f22; /* 5.83 / 4.64 */
+  --color-line-strong: #e4e7ed;
+  --color-line-subtle: #edeff3;
+  --color-line-faint: #f3f4f7;
+  --color-control-border: #d6d9e1;
+  --color-control-fill: #fbfbfd;
 
-  /* ── state: settled — confirmed, delivered, gate passed ───────────────── */
-  --color-state-settled: #45714b;
-  --color-state-settled-ink: #35573a; /* body text on settled-surface — 6.65:1 */
-  --color-state-settled-surface: #e4eadd;
-  --color-state-settled-border: #c3d3be;
-
-  /* ── state: decide — a person must answer; the decision queue ─────────── */
-  /* Deliberately the same family as action: "this is yours" and "you may act"
-     are one signal in this design, and the mockup draws the live decision card
-     with the accent. Kept as separate names so they can diverge. */
-  --color-state-decide: #8a3222;
-  --color-state-decide-surface: #f2e1da;
-  --color-state-decide-border: #e4c9bf;
-
-  /* ── state: attend — escalated, disclosed, narrowed, provisional ──────── */
+  /* ── status: settled / attend / halt ──────────────────────────────────── */
   /*
-   * DARKENED from the mockup's --amber #96690F, and it is the same class of
-   * correctness fix as --color-ink-muted rather than a taste edit. The mockup
-   * never fills a solid amber control — it draws attend as tint + amber text —
-   * so #96690F was never measured as a FILL. This app does fill it (the PENDING
-   * chip, the attend button), and --color-ink-on-action on #96690F is 4.42:1:
-   * a real axe failure, caught by the Storybook a11y run the moment it started
-   * compiling Tailwind for real. #916509 measures 4.71:1 under the same pair.
-   * Two percent of lightness, the hue and the ochre reading untouched.
-   * Now gated at the palette level in contrast.test.ts, not just by axe.
+   * Rule 6 governs how these are spent: ONE status signal per table row, a mark
+   * (✓ ◆ •) plus weight. The tinted `-surface` capsules are for moments of
+   * record only — released, quarantine clear, T1 — never for ordinary rows.
+   *
+   * The `-muted` tiers are NEW (settled and halt only; attend has no muted
+   * counterpart in the handoff and one is not invented here). They are the
+   * desaturated form used for RESTING marks — a ✓ on a row you are not being
+   * asked to act on.
    */
-  --color-state-attend: #916509;
-  --color-state-attend-ink: #7a5409; /* 5.56:1 on its own tint, 4.95:1 on the ground */
-  --color-state-attend-surface: #f3e8cd;
-  --color-state-attend-border: #dfcb9c;
+  --color-state-settled: #2e6b4f;
+  --color-state-settled-surface: #eaf2ed;
+  --color-state-settled-border: #c2dec9;
+  --color-state-settled-muted: #9dc0ac;
 
-  /* ── state: halt — package incomplete, failed, unreadable, conflict ───── */
+  --color-state-attend: #8a5b12;
+  --color-state-attend-surface: #fbf3e4;
+  --color-state-attend-border: #f3e7d3;
+
+  --color-state-halt: #a4291f;
+  --color-state-halt-surface: #fdf3f2;
+  --color-state-halt-border: #f2a8a2;
+  --color-state-halt-muted: #e4b0aa;
+
+  /* ── dark chrome: rail, auth, code panels ─────────────────────────────── */
   /*
-   * BURNT umber-oxblood, not the accent's fresh wax. Read the accent/halt
-   * resolution in the file header — this value and --color-state-halt-border
-   * are the two halves of one mechanism and must not be tuned independently.
-   * Luminance 0.0274 = a 1.65:1 greyscale step below the accent's 0.0780.
+   * THE NAVIGATOR'S OWN INK FAMILY, and the argument for it is unchanged from
+   * the previous register: on --color-rail-surface, --color-ink-primary is
+   * 1.03:1 — the same luminance, invisible, not merely low — and --color-action
+   * is 1.72:1. A component that reaches into the app palette while standing on
+   * this column is not slightly off, it is blank.
+   *
+   * `--color-rail-deep` is NEW: a second, deeper chrome tone BELOW the rail
+   * surface, for auth screens and code panels.
+   *
+   * The old rail extras (attention dots, halt surface, settled, track, active
+   * ink) are DELETED — the handoff declares text / muted / hairline / accent
+   * only, and the marks those tokens drew are now mark-plus-weight per rule 6.
    */
-  --color-state-halt: #4a231b;
-  --color-state-halt-ink: #3c1b15; /* 11.46:1 on halt-surface */
-  --color-state-halt-surface: #eadbd3; /* greyer and a step darker than action-surface */
-  --color-state-halt-border: #b08475; /* STROKE (lum .270) — 2.09:1 from action's hairline */
-
-  /* ── the four no-value states ─────────────────────────────────────────── */
+  --color-rail-surface: #1e1b2e;
+  --color-rail-deep: #171424;
+  --color-rail-ink: #c9c5d8; /* 10.51:1 on rail */
   /*
-   * These MUST stay visually distinct (CONTEXT §11). Colour alone does not carry
-   * the distinction and is not asked to: each has a border STYLE and a FILL —
-   * solid+filled / dashed+empty / solid+dotted / hatched / dotted+empty. That is
-   * what survives greyscale. See entities/field/noValueStates.ts (the authority)
-   * and naReasonMapping.test.ts (the gate).
+   * The 5.03:1 this used to claim is wrong twice over, measured 2026-08-28.
+   * On the bare rail (--color-rail-surface #1e1b2e) it is 4.56:1, not 5.03. And
+   * the app does not render it on the bare rail: the quick-jump button carries
+   * --color-rail-line over the surface, compositing to #2e2b3d, where it is
+   * 3.73:1 and fails. Same ruling as --color-ink-faint above.
+   */
+  --color-rail-ink-muted: #8881a2; /* 4.56:1 on rail-surface; 3.73:1 where it is used */
+  /*
+   * The prototype's third rail tone, for the tagline, the quick-jump label and
+   * its key cap. 6.71:1 on the rail and 5.49:1 on the lifted quick-jump fill,
+   * where --color-rail-ink-muted measures 3.73 and fails AA — so this closes
+   * the second half of CONFLICT-ink-faint-contrast.md §3 as well as matching
+   * the design. Not in the design system's own :root; it is an inline value in
+   * reference-app.html, measured off the rendered rail.
+   */
+  --color-rail-ink-soft: #a6a0be;
+  /* The design's three rail alphas: .06 fill, .08 border, .10 key cap. */
+  --color-rail-fill: rgb(255 255 255 / 0.06);
+  --color-rail-edge: rgb(255 255 255 / 0.08);
+  --color-rail-cap: rgb(255 255 255 / 0.1);
+  --color-rail-line: rgb(255 255 255 / 0.07);
+  --color-rail-accent: #b7a6ee; /* 8.16:1 — the accent AS SEEN ON THE COLUMN */
+
+  /* ── paper: evidence scans and certificates (rule 8) ──────────────────── */
+  /*
+   * Warm stock, and it is the ONE warm family left in the register. Rule 8:
+   * evidence and deliverables render AS PAPER — serif, warm stock, clerk
+   * stamps, justified text — never grey placeholder bars. `--color-paper-stamp`
+   * is NEW: clerk-stamp brown, with no counterpart anywhere in the old set.
+   */
+  --color-surface-paper: #f7f5ef; /* the scanned page stock */
+  --color-page: #fdfcfa; /* the clean rendered/printed page */
+  --color-page-line: #ddd9d0;
+  --color-page-ink: #2c281f; /* 14.31:1 on page */
+  --color-scan-ink: #5c5647; /* the page's meta/marginalia tier */
+  --color-paper-stamp: #7c6a55;
+
+  /* ── the four no-value states (rule 14) ───────────────────────────────── */
+  /*
+   * RETAINED THROUGH THIS REVALUATION, not carried over by accident — the new
+   * handoff does not cover NA at all. See the file header. Revalued onto the
+   * graphite/attend register; the RELATIONSHIPS are what matter and they are
+   * preserved exactly.
+   *
+   * These MUST stay visually distinct (CONTEXT §11, AGENTS.md). Colour alone
+   * does not carry the distinction and is not asked to: each has a border STYLE
+   * and a FILL — solid+filled / dashed+empty / solid+dotted-hatch / tinted —
+   * and that is what survives greyscale and a red-green deficiency both. See
+   * entities/field/noValueStates.ts (the authority) and naReasonMapping.test.ts
+   * (the gate).
    *
    * WARNING: the four-member set is an UNRESOLVED RULING. packages/contract
-   * currently ships two members. Do not treat these tokens as ratification —
-   * see docs/frontend/open-rulings.md Q1.
+   * currently ships two members. These tokens are not ratification — see
+   * docs/frontend/open-rulings.md Q1 and ANALYSIS-tokens.md §6 item 2.
    *
    * The two `-ink` tiers reuse measured-AA values (--color-ink-muted and
-   * --color-ink-secondary) exactly as the prior palette did; they carry real
-   * sentences ("n/a — not used in this jurisdiction") and must clear AA
-   * independently of the tier they borrow from.
+   * --color-ink-secondary) exactly as every prior palette did; they carry real
+   * sentences ("n/a — not used in this jurisdiction") and clear AA independently
+   * of the tier they borrow from.
    */
-  --color-na-not-present-ink: #675e4d; /* structurally absent — = --color-ink-muted */
-  --color-na-not-present-border: #b3aa95; /* solid stroke + solid fill */
-  --color-na-not-found-ink: #5b5342; /* searched, none of record — = --color-ink-secondary */
-  --color-na-not-found-border: #b3aa95; /* same stroke colour, DASHED, empty fill */
-  --color-na-silent-ink: #5b5342; /* document does not state it — = --color-ink-secondary */
-  --color-na-silent-hatch: #c4baa2; /* the hatch/dot stripe — darkened so it survives 1px */
+  --color-na-not-present-ink: #6e7480; /* structurally absent — = --color-ink-muted */
+  --color-na-not-present-border: #d6d9e1; /* solid stroke + solid fill */
+  --color-na-not-found-ink: #454a55; /* searched, none of record — = --color-ink-secondary */
+  --color-na-not-found-border: #d6d9e1; /* same stroke colour, DASHED, empty fill */
+  --color-na-silent-ink: #454a55; /* document does not state it — = --color-ink-secondary */
+  --color-na-silent-hatch: #b9bec9; /* the hatch/dot stripe — = ink-disabled, survives 1px */
   /*
-   * MOVED OUT OF THE HALT FAMILY, 2026-08-01. The mockup draws
-   * PRESENT_UNREADABLE as an amber diagonal hatch, not a red chip, and it is
-   * right to: "it is on the page and I cannot read it" is look-at-this, not
-   * stopped. It also removes one more red from a screen that now spends red on
-   * the action. The chip is still unmistakable — it is the only HATCHED member
-   * of the set, which is what CONTEXT §11 actually relies on.
+   * PRESENT_UNREADABLE stays in the ATTEND family, where it moved 2026-08-01,
+   * and the reasoning survives the revaluation intact: "it is on the page and I
+   * cannot read it" is look-at-this, not stopped. It is the only TINTED member
+   * of the set, which is what CONTEXT §11 relies on.
    */
-  --color-na-unreadable-ink: #6e5212; /* 6.07:1 on its own surface */
-  --color-na-unreadable-surface: #f3e8cd; /* = --color-state-attend-surface */
-  --color-na-unreadable-border: #dfcb9c; /* = --color-state-attend-border */
+  --color-na-unreadable-ink: #8a5b12; /* 5.63:1 on its own surface */
+  --color-na-unreadable-surface: #fbf3e4; /* = --color-state-attend-surface */
+  --color-na-unreadable-border: #f3e7d3; /* = --color-state-attend-border */
 
-  /* ── neutral chip (machine/automated badges) ──────────────────────────── */
-  /* The mockup's --sheet #F1ECDF, the fifth rung of the paper ladder: the
-     keyboard chip and the quiet inset note block. No other token holds it. */
-  --color-chip-neutral-surface: #f1ece0;
-
+  /* ── the degraded scan, and the marks drawn ON a page ─────────────────── */
   /*
-   * Modal scrim. A COLOUR token, not a shadow one — and --shadow-scrim was
-   * DELETED 2026-07-27 because it shipped anyway despite this warning, emitting
-   * `.shadow-scrim { box-shadow: rgb(20 20 30 / .34) }` — a bare colour with no
-   * offsets, which is not a valid box-shadow and renders nothing.
-   * The original reasoning: `--shadow-scrim` emits no `bg-*` utility, so a
-   * `bg-[var(--shadow-scrim)]` class silently produces nothing and the modal
-   * loses its backdrop while the build stays green. Now ink-based, not navy.
+   * RETAINED for the same reason as the NA set: the handoff has one clean paper
+   * stock and the product's whole problem is that most pages are the other kind
+   * (CONTEXT §5 — median text-layer coverage well under 25%). Revalued as a warm
+   * step below --color-surface-paper.
    */
-  --color-scrim: rgb(34 28 19 / 0.36);
-
-  /* ── idle — "nothing is happening here", distinct from settled ────────── */
-  /* Warm, quiet, and NOT a state accent: idle must never look like a fifth
-     state. Used by dashboard bar segments and idle delivery/complaint rows. */
-  --color-state-idle: #6e6653;
-  --color-state-idle-surface: #ede7d8;
-  --color-state-idle-border: #cfc7b2;
-
-  /* progress track — Blind Fifty Status coverage bar. = --color-line-strong,
-     which is what the mockup's own segmented meter uses for its empty cells. */
-  --color-track: #d9d1bc;
-
-  /* ── the document pane — DARK, AND NOW IN BOTH THEMES ─────────────────── */
+  --color-scan: #f2efe6; /* the degraded-fax stock */
+  --color-scan-line: #ddd9d0; /* = --color-page-line */
+  --color-scan-line-soft: #e8e4da;
+  --color-page-bar: #ddd9d0;
+  --color-scan-ink-degraded: #736c5c; /* 4.55:1 on scan, under --filter-scan-degraded */
   /*
-   * SCOPE CHANGED 2026-08-01. Read decisions.md D2 in full before editing.
-   *
-   * History: D2 said the pane is dark; the owner reversed it 2026-07-26 ("the
-   * design-mock pane ships as drawn") and Review moved to a light pane. The
-   * approved hybrid mockup draws the reading room DARK again (--surround
-   * #383129, a warm near-black, with the page floating on it under a deep
-   * shadow). The mockup wins on values, so the pane is dark everywhere:
-   *
-   *   Review           → DARK pane. --color-surface-document == --color-document-bg.
-   *   Extraction Bench ┐ the three measurement screens that were always dark by
-   *   Reconciliation   ├ earlier owner direction. Unchanged in behaviour; they
-   *   Seed Correction  ┘ now share the register instead of owning it.
-   *
-   * PdfPane keeps its `surround: "light" | "dark"` variant — nothing forces it
-   * to one register — but there is no longer a light value for it to point at.
-   *
-   * The measurement D2 was argued on is now simply true again: the page against
-   * this surround is 12.5:1, against the export's light surround it was 1.29:1.
-   *
-   * REGISTER SHIFTED WARM. The old set was cool (#23252b family) to sit in the
-   * violet/navy palette. Structure and lightness are preserved; hues moved onto
-   * the archival axis so a dark pane no longer reads as a different product.
+   * The evidence marks. RETAINED (the handoff draws citations but names no
+   * token for the marker) and moved onto the ACCENT: the highlight is the
+   * strong mark, "this is the cited line"; the pin is the weak one, "this field
+   * points here". One grammar, two strengths, and no fourth hue on a screen
+   * that now spends colour deliberately. Not hex-testable (rgba), so a visual
+   * judgment rather than a gate-verified one.
    */
-  --color-document-bg: #383129; /* the pane behind the page — = --color-surface-document */
-  --color-document-deep: #2e2822; /* Seed Correction's deeper terminal register */
-  --color-document-card: #423a30;
-  --color-document-panel: #4a4137;
-  --color-document-line: #554b3f;
-  --color-document-line-strong: #6a5e4e;
-  --color-document-ink: #ede6d6; /* 10.30:1 on pane */
-  --color-document-ink-soft: #cfc5af; /* 7.48:1 */
-  --color-document-ink-strong: #fbf6e8; /* 11.63:1 */
-  /* state accents on the dark pane — same four semantics, dark-surface variants */
-  --color-document-settled: #9cc49b; /* 6.94:1 */
-  --color-document-attend: #e2c07a; /* 7.62:1 */
-  --color-document-halt: #d9a08d; /* 5.99:1 — and browner than the accent below, same
-                                     hue argument as the light register */
-  --color-document-ink-on-accent: #221c13;
-  /* borders for the state accents on dark — a tinted surface alone does not
-     separate a card from the pane at these luminances */
-  --color-document-settled-border: #56705a;
-  --color-document-attend-border: #7d6a3a;
-  --color-document-halt-border: #7a4a3e;
-  --color-document-halt-surface: #35281f;
-  /*
-   * The ACCENT tier on dark. The light register's accent (#8A3222) is 1.53:1 on
-   * this pane — unreadable — while its tint (#F2E1DA) is 9.6:1 and reads as
-   * near-white, turning every rule code and seat label into a shout. Neither is
-   * usable, so the dark register gets its own wax at a legible-but-not-shouting
-   * weight.
-   */
-  --color-document-accent: #e0a086; /* 6.72:1 on bg, 7.56:1 on deep */
-  --color-document-accent-border: #8a5442;
-  --color-document-accent-surface: #402e26;
-
-  /* keyboard chips on the dark pane — the review screen's key hints */
-  --color-document-kbd-surface: #453c31;
-  /* a note/annotation block on dark: quieter than attend, still legible */
-  --color-document-note-ink: #d6cbb2;
-  --color-document-note-surface: #3d352b;
-  --color-document-note-border: #574c3e;
-  /* an informational (not attention) block on dark */
-  --color-document-info: #bfb9a6;
-  --color-document-info-surface: #362f27;
-  --color-document-info-row: #3b342b;
-
-  /* ── the scanned page itself ──────────────────────────────────────────── */
-  /* Distinct from --color-surface-paper: `paper` is the clean modern print,
-     `scan` is the degraded-fax register the measurement screens simulate. Both
-     exist because the product's whole problem is that most pages are the second
-     kind (CONTEXT §5 — median text-layer coverage well under 25%). All PINNED. */
-  --color-scan: #dfd7c2;
-  --color-scan-line: #d5cdb6;
-  --color-scan-line-soft: #e2dbc8;
-  --color-page: #fdfbf2;
-  --color-page-bar: #d9d1bc;
-  --color-page-line: #e9e2ce;
-
-  /* ── type ─────────────────────────────────────────────────────────────── */
-  /*
-   * Four faces, two hosts. Fraunces / Geist Mono / Courier Prime come from
-   * Google Fonts; Switzer comes from Fontshare, which is why index.html carries
-   * a second preconnect pair. Fraunces is VARIABLE on ital + opsz + wght and
-   * the opsz axis is used — see the `opsz-*` utilities in web-v2's index.css.
-   */
-  --font-sans: "Switzer", "Helvetica Neue", system-ui, sans-serif;
-  --font-mono: "Geist Mono", ui-monospace, "SFMono-Regular", monospace;
-  /* Serif is semantic here: it renders HUMAN TESTIMONY — a reviewer's comment,
-     a senior's ruling, a rule citation, an abstractor's stated reason. Never
-     used for machine output. Fraunces now carries it; the convention holds. */
-  --font-quote: "Fraunces", Georgia, serif;
-  /* Display: h1, the featured order number, admin h2, the italic decision
-     question, the brand word. Same family as --font-quote by design — one
-     serif voice for "a person is speaking" and "this is the title of the
-     thing" — kept as two names because only one of them may carry testimony. */
-  --font-display: "Fraunces", Georgia, serif;
-  /*
-   * ADDED 2026-08-01, and it closes a real hole. The scanned facsimile was
-   * painting itself `font-quote`, i.e. the TESTIMONY serif — so a machine-read
-   * county tax card was rendered in the same voice as a senior's ruling. The
-   * mockup draws the page in Courier Prime, a typewriter face, because that is
-   * what the page IS. features/review/PageFacsimile.tsx must move from
-   * `font-quote` to `font-document`; it is the only consumer.
-   */
-  --font-document: "Courier Prime", "Courier New", monospace;
+  --color-surface-evidence: rgb(91 75 138 / 0.16);
+  --color-border-evidence: #5b4b8a; /* = --color-action */
+  --color-surface-pin: rgb(91 75 138 / 0.07);
 
   /*
-   * Imposed scale. RE-IMPOSED 2026-08-01 against the mockup's own type panel
-   * (13px base, 38px h1; --text-6xl added because there was no slot above 26px).
-   * RAISED 2026-08-04 on the owner's call — the app read too small on the
-   * machine it is actually used on.
+   * Modal scrim. RETAINED and revalued to ink-900 alpha. A COLOUR token, not a
+   * shadow one — `--shadow-scrim` was deleted 2026-07-27 because it emitted
+   * `.shadow-scrim { box-shadow: rgb(...) }`, a bare colour with no offsets,
+   * which is not a valid box-shadow and rendered nothing. A `--shadow-*` name
+   * emits no `bg-*` utility, so the modal would silently lose its backdrop
+   * while the build stayed green.
+   */
+  --color-scrim: rgb(20 22 28 / 0.4);
+
+  /* ── radii — inner = outer − gap (rule 5) ─────────────────────────────── */
+  /* Asserted in apps/web-v2/src/shared/tokens.test.ts: sm = md − 4, md = lg − 4.
+     `--radius-paper` is NEW: 2px, the "documents are not rounded" value.
+     THE NUMERIC SCALE (--radius-1 … --radius-10) IS DELETED — see header. */
+  --radius-xs: 4px; /* kbd */
+  --radius-sm: 6px; /* inner, inside a 10px wrapper */
+  --radius-md: 10px; /* inputs */
+  --radius-lg: 14px; /* surfaces */
+  --radius-pill: 999px;
+  --radius-paper: 2px;
+
+  /* ── type: SIX sizes (rule 2), nothing between ────────────────────────── */
+  /*
+   * Three faces, SELF-HOSTED via @fontsource-variable — never the Google Fonts
+   * CDN. This is an internal tool for title examiners and airgapped/proxied
+   * deployments are decisive on their own: the failure mode is a 30-second DNS
+   * timeout per face before first paint, not a graceful fallback. Self-hosting
+   * also keeps the policy at `font-src 'self'` rather than widening `style-src`
+   * to a third-party origin. See ANALYSIS-tokens.md §5.
    *
-   * The bump is GRADED, not a uniform multiply. Reading tiers move most
-   * (`lg`, the default body, 13 -> 15px, ~+15%) because that is what "too small"
-   * meant; display tiers move least (`6xl` 38 -> 40px, ~+5%) because they were
-   * never the complaint and a proportional bump there would have cost the h1 its
-   * relationship to the frame. The scale's SHAPE is therefore deliberately
-   * slightly compressed from the mockup's, which is a departure from it — the
-   * mockup remains the reference for everything except these values.
-   *
-   * The dense-row sizes (`micro`..`sm`, the tracked caps) move a full step each
-   * rather than fractionally: below ~10px the tracked uppercase eyebrow that is
-   * this design's signature stops being legible before it stops being small.
-   *
-   * ⚠ THESE SET SIZE ONLY, AND TAILWIND STILL SUPPLIES THE LEADING.
-   *
-   * Tailwind v4 pairs every `--text-*` with a `--text-*--line-height`, and a
-   * `text-lg` utility emits BOTH. Overriding the size alone — which is what this
-   * block does — leaves each utility carrying the stock ratio for Tailwind's own
-   * step of that name, applied to our value. `text-lg` is 15px here and inherits
-   * the ratio meant for Tailwind's 18px `lg` (1.556), so it renders a 23.3px line
-   * box where the design wants 21.8px.
-   *
-   * NOTE ON THE 2026-08-04 BUMP: the stock ratios are unitless (Tailwind emits
-   * them as `calc(1.75 / 1.125)`), so they SCALE with these values rather than
-   * staying fixed. Raising the sizes therefore leaves the leading defect exactly
-   * as proportionally wrong as it was — it neither fixed nor worsened it, and
-   * the paragraph below still stands unchanged.
-   *
-   * That is not theoretical: the navigator's rows measured 32.2px against the
-   * mockup's 27.6px with every padding value correct, and it was found by
+   * --font-serif was --font-document; --font-display and --font-quote are
+   * DELETED, collapsing into --font-sans and --font-serif. Rule 3: mono is for
+   * DATA ONLY — order refs, money, citations, hashes, timestamps, kbd. Never
+   * labels, buttons or prose.
+   */
+  --font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-serif: 'Source Serif 4', Georgia, serif; /* PAPER ONLY — rule 8 */
+
+  /*
+   * ⚠ THESE SET SIZE ONLY, AND TAILWIND STILL SUPPLIES THE LEADING. Tailwind v4
+   * pairs every `--text-*` with a `--text-*--line-height`; overriding the size
+   * alone leaves each utility carrying a stock ratio applied to our value. Use
+   * an explicit `leading-*` utility from the block below at each site. The
+   * previous register lost 4.6px per navigator row to exactly this, found by
    * measuring a screenshot rather than by any test. ANY dense row is exposed.
-   *
-   * The fix at each site is an explicit `leading-*` utility from the block near
-   * the end of this file. Declaring `--text-*--line-height` pairs here would fix
-   * it globally and is the better answer, but it would silently restyle every
-   * screen at once — a change that needs its own pass and its own screenshots,
-   * not a side effect of a rail rebuild.
    */
-  --text-micro: 0.65625rem; /* 10.5px — tracked micro caps: chips, no-value, key labels */
-  --text-tiny: 0.6875rem; /* 11px   — mono cite, scope note, legend */
-  --text-xs: 0.71875rem; /* 11.5px — band-head caps, screen eyebrow, the waiting age */
-  --text-sm: 0.78125rem; /* 12.5px — meta caps, field label, secondary detail */
-  --text-base: 0.84375rem; /* 13.5px — dense body, county, row note */
-  --text-md: 0.875rem; /* 14px   — mono values, order id, step labels, buttons */
-  --text-lg: 0.9375rem; /* 15px   — THE DEFAULT: body, rows, addresses */
-  --text-census: 0.9375rem; /* 15px — the chrome strip's census numeral (D10), mono */
-  --text-xl: 0.96875rem; /* 15.5px — ledes and section leads */
-  --text-2xl: 1.1875rem; /* 19px   — panel titles */
-  --text-3xl: 1.4375rem; /* 23px   — brand word, admin h2 */
-  --text-4xl: 1.75rem; /* 28px   — the decision question, the as-read value */
-  --text-5xl: 2rem; /* 32px   — featured order number, screen h2 */
-  --text-6xl: 2.5rem; /* 40px   — screen h1 */
+  --text-label: 11px; /* tracked rubrics, chips, key labels */
+  --text-meta: 13px; /* meta, field labels, secondary detail */
+  --text-body: 16px; /* THE DEFAULT: body, rows, addresses */
+  --text-subject: 20px; /* panel titles, the subject of a screen */
+  --text-title: 28px; /* screen h1, the decision question */
+  --text-verdict: 40px; /* the featured verdict numeral */
 
-  /* Tracking — the uppercase eyebrow label is a signature of this design, and
-     the mockup runs five distinct steps of it. Values re-imposed; names kept. */
-  --tracking-badge: 0.12em; /* chips, state chips, no-value chips — the most common */
-  --tracking-label: 0.14em; /* band head, card-header band label */
-  --tracking-eyebrow: 0.16em; /* screen eyebrow, "AS READ", flag label */
-  --tracking-caps: 0.18em; /* ADDED — nav group label, "NEXT ORDER IN LINE" */
-  --tracking-stamp: 0.2em; /* rubber stamp, section cut label */
+  /* Rule 4: sentence case everywhere. ALL-CAPS is legal in exactly two places —
+     sidebar rubrics (11px at this tracking) and serif certificate headings — so
+     the design needs exactly ONE tracking step, not the previous register's
+     five. check-rules.mjs bans `uppercase` outside rail/sidebar/certificate. */
+  --tracking-caps: 0.14em;
 
-  /* ── radius ───────────────────────────────────────────────────────────── */
+  /* ── elevation ────────────────────────────────────────────────────────── */
+  /* Three shadows ship, down from eight. Depth separates a card from the
+     canvas; hairlines stay for INTERIOR divisions (row separators). */
+  --shadow-card: 0 1px 2px rgb(20 22 28 / 0.04), 0 10px 28px rgb(20 22 28 / 0.06);
+  /* The press. Inset, so a control looks pushed INTO the surface rather than
+     lifted off it — the inverse of --shadow-card, and the reason it is a token
+     rather than an inline value in ui.css's tp-press utility. */
+  --shadow-press: inset 0 1px 2px rgb(20 22 28 / 0.12);
+  --shadow-modal: 0 24px 60px rgb(0 0 0 / 0.3); /* was --shadow-drawer */
+  --shadow-page: 0 1px 2px rgb(0 0 0 / 0.18), 0 10px 26px rgb(0 0 0 / 0.13);
+
+  /* ── motion (rule 10). Nothing bounces. ───────────────────────────────── */
   /*
-   * LEGACY 6-step scale, frozen. New code uses the numeric scale below.
+   * Three timings and no fourth. Tailwind's default duration scale is
+   * deliberately not re-declared here, and check-rules.mjs bans `duration-N`,
+   * `duration-[…]`, `delay-N`, `transition-[…]` and `animate-[…]`, so there is
+   * no legal way to write one. "Nothing bounces" follows from there being no
+   * bouncy easing token to reach for.
    */
-  --radius-xs: 3px; /* evidence marker, inline tags */
-  --radius-sm: 5px; /* small chips, page refs */
-  --radius-md: 7px; /* buttons, inputs */
-  --radius-lg: 10px; /* cards, panels */
-  --radius-xl: 12px; /* drawers, modal panels */
+  --ease-state: 140ms ease; /* state change */
+  --ease-enter: 260ms cubic-bezier(.32, .72, 0, 1); /* entry */
+  --ease-move: 300ms cubic-bezier(.32, .72, 0, 1); /* movement */
 
   /*
-   * The numeric scale, RE-IMPOSED against the mockup's four-step system —
-   * chip 3 · button 5 · card 8 · panel 14. The intermediate rungs are kept
-   * (the mockup does use 4, 6, 7 and 10 for the toggle cell, the large button,
-   * the inset well and the decision card) but the scale now TOPS OUT at 14
-   * rather than 12, because the app sheet itself is a rounded panel now.
-   */
-  --radius-1: 2px; /* inline correction mark */
-  --radius-2: 3px; /* chip — the mockup's --r-chip */
-  --radius-3: 3px; /* cite chip, stamp inner */
-  --radius-4: 4px; /* segmented cell */
-  --radius-5: 5px; /* button — the mockup's --r-btn */
-  --radius-6: 6px; /* large button */
-  --radius-7: 7px; /* inset well, segmented track, tint panel */
-  --radius-8: 8px; /* card — the mockup's --r-card */
-  --radius-9: 10px; /* the open decision card */
-  --radius-10: 14px; /* app sheet, drawer — the mockup's --r-panel */
-
-  --radius-pill: 20px; /* pill filter, toggle track */
-
-  /* ── motion ───────────────────────────────────────────────────────────── */
-  /*
-   * The design's only animation: `tp-pulse 1.4s infinite`, on the dot of a
-   * stage that is halted or waiting on a person. `--animate-*` IS a Tailwind v4
-   * namespace (unlike --space-*, --z-* and --filter-*), so this emits
-   * `animate-tp-pulse` directly. The keyframes are declared below the @theme
-   * block, and the global prefers-reduced-motion rule kills it.
+   * `--animate-*` IS a Tailwind v4 namespace (unlike --space-*, --z-* and
+   * --filter-*), so this emits `animate-tp-pulse` directly. Keyframes are
+   * declared below the @theme block; the global prefers-reduced-motion rule at
+   * the foot of this file kills it.
    */
   --animate-tp-pulse: tp-pulse 1.4s infinite;
 
-  /* ── stroke weight — a semantic axis, not decoration ──────────────────── */
-  /*
-   * In this design border WIDTH carries meaning, consistently:
-   *   1px    structure — card edges, row separators, resting controls
-   *   1.5px  load-bearing — selected, required, or "this is the live choice"
-   *   2px    accent — the inset top stripe on the block you are working
-   *   3px    stamp double-border
-   *   4px    severity — the left edge on a banner
-   * Accent and severity are DIFFERENT axes and must not converge: the top
-   * stripe says "this is live", the left edge says "this is a problem".
-   */
-  --stroke-structure: 1px;
-  --stroke-emphasis: 1.5px;
-  /*
-   * 3px, NOT 2.5px, AND THE VALUE IS LOAD-BEARING. `border-style: double`
-   * paints three parts — line, gap, line — and a browser cannot divide fewer
-   * than 3px into three, so at 2.5px it silently falls back to a single solid
-   * line. Every stamp in the app rendered as a plain rounded rectangle for that
-   * one reason. Lowering this token again would flatten four stamps with
-   * nothing failing.
-   */
-  --stroke-stamp: 3px;
-  --stroke-accent: 2px;
-  --stroke-severity: 4px;
+  /* ── document rendering ───────────────────────────────────────────────── */
+  /* RETAINED with the scan family. The scan is meant to look scanned, not like
+     a clean render. `--filter-scan-degraded` is DELETED; one filter ships, and
+     the degraded register is carried by --color-scan-ink-degraded instead. */
+  --filter-scan: grayscale(0.35) contrast(0.96) brightness(1.01);
 
   /* ── space ────────────────────────────────────────────────────────────── */
   /*
    * The app's spacing base is 2px (set in web-v2's index.css), so every value
    * here is `N x 2px` and reads directly as a utility: --space-6 (12px) is
-   * `p-6`. The mockup's densities in that currency:
-   *   queue row     11 x 18   →  py-5.5  px-9
-   *   decision row   9 x 15   →  py-4.5  px-7.5
-   *   matrix cell    8 x 16   →  py-4    px-8
-   *   band gap          24    →  gap-12  (--space-12)
-   *   sheet padding  30–36    →  p-15 … p-18
-   * 11, 15 and 9 are half-steps on the 2px grid; Tailwind's decimal multipliers
-   * (`py-5.5`) express them without an arbitrary value, which is why the grid is
-   * 2px and not 4px.
+   * `p-6`. Tailwind's decimal multipliers (`py-5.5`) express the half-steps
+   * without an arbitrary value, which is why the grid is 2px and not 4px.
+   * Structural, not palette — untouched by this revaluation.
    */
   --space-1: 2px;
   --space-2: 4px;
@@ -674,74 +427,6 @@
   --space-14: 32px;
   --space-15: 36px; /* sheet padding, outer edge */
 
-  /* ── elevation ────────────────────────────────────────────────────────── */
-  /*
-   * DEPTH IS NOW THE SEPARATION MECHANISM, replacing hairlines. The previous
-   * palette separated cards with `1px solid var(--rule)` and explicitly told you
-   * NOT to reach for a card shadow. That is reversed: the mockup stacks
-   * ground → sheet → card → card-high with three soft, warm, ink-tinted
-   * shadows, and keeps hairlines for INTERIOR divisions only (row separators
-   * inside a card). Shadows are ink-tinted (#221C13), never neutral black —
-   * a grey shadow on warm paper reads as dirt.
-   */
-  --shadow-1: 0 1px 2px rgb(34 28 19 / 0.05), 0 2px 8px -2px rgb(34 28 19 / 0.07);
-  --shadow-2: 0 1px 2px rgb(34 28 19 / 0.06), 0 10px 28px -14px rgb(34 28 19 / 0.22);
-  --shadow-3: 0 2px 4px rgb(34 28 19 / 0.07), 0 22px 48px -20px rgb(34 28 19 / 0.3);
-  /* Semantic aliases onto the same three steps, so existing consumers do not
-     have to change and new code can use whichever name reads better. */
-  --shadow-card: 0 1px 2px rgb(34 28 19 / 0.05), 0 2px 8px -2px rgb(34 28 19 / 0.07);
-  --shadow-pop: 0 1px 2px rgb(34 28 19 / 0.06), 0 10px 28px -14px rgb(34 28 19 / 0.22);
-  --shadow-menu: 0 2px 4px rgb(34 28 19 / 0.07), 0 22px 48px -20px rgb(34 28 19 / 0.3);
-  --shadow-drawer: -8px 0 30px rgb(34 28 19 / 0.24);
-  /*
-   * The page lifting off its pane. The pane is dark in both themes now, so the
-   * deep value is the only value — .22 disappeared against a near-black
-   * surround, which is exactly the bug the 2026-07-27 retune introduced when
-   * D2 was reversed. --shadow-page-on-dark is kept as a name (three screens
-   * reference it) and now holds the same value.
-   */
-  --shadow-page: 0 14px 34px -10px rgb(0 0 0 / 0.55), 0 2px 6px rgb(0 0 0 / 0.35);
-  --shadow-page-on-dark: 0 14px 34px -10px rgb(0 0 0 / 0.55), 0 2px 6px rgb(0 0 0 / 0.35);
-  /* toggle-switch knob */
-  --shadow-knob: 0 1px 3px rgb(34 28 19 / 0.28);
-  /*
-   * The halo on the flow rail's CURRENT stage dot. Not an elevation — the dot is
-   * not floating — but a soft ring that separates the one outlined disc from the
-   * five other discs in the column without adding a second stroke weight to a
-   * rail that already spends stroke on "done". The mockup's value, and it is
-   * deliberately near-invisible: the tick marks behind you are what the eye
-   * should count, and a bright "you are here" competes with them.
-   *
-   * THE ONE THEME-SCOPED SHADOW, and the exception is stated rather than hidden:
-   * this file's header says non-colour tokens are structural and not themed,
-   * which is true of every other --shadow-* here because they are all near-black
-   * depth on light paper and depth reads the same way in both themes. This one
-   * carries no offset and no blur — it is a flat ring, i.e. a COLOUR wearing a
-   * shadow's syntax — so a dark ink ring is simply invisible on Mocha's ground.
-   * Overridden below.
-   */
-  --shadow-stage-current: 0 0 0 3px rgb(34 28 19 / 0.06);
-
-  /* ── document rendering ───────────────────────────────────────────────── */
-  /* The scan is meant to look scanned, not like a clean render. */
-  --filter-scan: grayscale(0.35) contrast(0.96) brightness(1.01);
-  --filter-scan-degraded: grayscale(0.4) contrast(0.94);
-
-  /* ── ink ON the page, as distinct from ink on the UI ──────────────────── */
-  /*
-   * The page's BACKGROUNDS have tokens (--color-page, --color-scan,
-   * --color-surface-paper); these are the text printed on them. Document text
-   * is the product's dominant visual and needs its own vocabulary. Warm now,
-   * matching the mockup's #33291B typewriter ink on cream. All PINNED.
-   */
-  --color-page-ink: #33291b; /* clean rendered page */
-  --color-scan-ink: #3a3020; /* scanned page — Courier Prime, leading 2.1 */
-  --color-scan-ink-degraded: #4a4030; /* degraded scan, sits under --filter-scan-degraded */
-
-  /* A heavier action border — the mockup's wax callout, whose text stays
-     --color-action-ink. Sits between action (#8A3222) and action-ink. */
-  --color-action-border-strong: #7c2d1d;
-
   /* ── leading ──────────────────────────────────────────────────────────── */
   /*
    * NAMED DELIBERATELY OFF TAILWIND'S DEFAULTS. `--leading-*` is a Tailwind v4
@@ -752,22 +437,17 @@
   --leading-flat: 1;
   --leading-tight: 1.25;
   --leading-close: 1.35;
-  --leading-body: 1.45; /* the design's default — the mockup's body and lede */
+  --leading-body: 1.45; /* the design's default */
   --leading-open: 1.5;
   --leading-airy: 1.7;
-  --leading-document: 1.7; /* rendered page body — the mockup's facsimile */
+  --leading-document: 1.7; /* rendered page body */
   --leading-scan: 2.1; /* typed / degraded scan body */
 
   /* ── weight ───────────────────────────────────────────────────────────── */
-  /* 400–700 are the UI weights. The four fractional ones are Fraunces variable
-     axis positions the mockup calls out by number; they exist so a display
-     heading can hit 430 without an arbitrary value. Fraunces only. */
+  /* Four weights. The four fractional ones (420/430/480/520) were Fraunces
+     variable-axis positions and are DELETED with that face. */
   --font-weight-normal: 400;
-  --font-weight-book: 420; /* the italic decision question */
-  --font-weight-title: 430; /* screen h1 */
-  --font-weight-demi: 480; /* featured order number, screen h2 */
   --font-weight-medium: 500;
-  --font-weight-strong: 520; /* brand word, admin h2 */
   --font-weight-semibold: 600; /* the UI workhorse */
   --font-weight-bold: 700;
 
@@ -782,9 +462,9 @@
   /* Observed as width==height boxes: icon buttons, status dots, segmented
      control cells, the logo mark. NOT a semantic family — the design reuses
      the same box for unrelated things — so these are sized, not named by role. */
-  --size-control-xs: 20px; /* the flow-step dot */
+  --size-control-xs: 20px;
   --size-control-sm: 22px;
-  --size-control-md: 24px; /* the reviewer avatar */
+  --size-control-md: 24px;
   --size-control-lg: 26px;
   --size-control-xl: 40px;
   --size-control-2xl: 44px;
@@ -792,286 +472,8 @@
 }
 
 /*
- * Catppuccin Mocha — the dark theme.
- *
- * Every token the @theme block above defines under `--color-*` gets a value
- * here under the SAME name. Non-colour tokens (type/space/radius/shadow/etc.)
- * are not theme-scoped — they are structural, not palette.
- *
- * RE-DERIVED 2026-08-01 against the new light values. Four things moved:
- *   1. SURFACE ORDER now mirrors light exactly. Light inverted `raised` above
- *      `panel` (the open card is the brightest paper), and `sunken` now sits
- *      BETWEEN app and panel rather than below both. Mocha follows:
- *        app (base) < sunken < panel (surface0) < raised
- *      The old block put sunken at mantle, below base, and raised below panel —
- *      neither of which is true of the design any more.
- *   2. THE DOCUMENT REGISTER IS SHARED. The pane is dark in both themes now, so
- *      `--color-surface-document` and every `--color-document-*` holds the same
- *      warm value here as in @theme. There is no longer a light-pane case.
- *   3. THE PINNED PAGE FAMILY took the new warm values, unchanged between
- *      themes. documentIsPaper.test.ts proves it.
- *   4. THE ACCENT/HALT MECHANISM is mirrored, not copied. Mocha's action
- *      (mauve) and halt (red) are already different hues, but hue is not the
- *      mechanism — the STROKE is. `--color-state-halt-border` is a visible
- *      stroke here too and `--color-action-border` stays a quiet tint, so the
- *      same greyscale cue reads in both themes. Gated by contrast.test.ts.
- *
- * Two rules bind every value below:
- *   1. The document does not invert. A scan is a photograph of paper — the
- *      surround darkens, the page stays light. Marked PINNED below, including
- *      the evidence/pin marks, which are drawn ON that page rather than being
- *      UI chrome.
- *   2. Strict AA applies to both themes. contrast.test.ts runs its generic
- *      ink/surface invariants against this block exactly as it does against
- *      @theme. Where stock Catppuccin's own "muted" swatch fails, this file
- *      deviates and cites the measured ratio — never by loosening the gate.
- *
- * Stock Catppuccin Mocha reference (github.com/catppuccin/catppuccin):
- *   rosewater #f5e0dc  flamingo #f2cdcd  pink   #f5c2e7  mauve #cba6f7
- *   red       #f38ba8  maroon   #eba0ac  peach  #fab387  yellow #f9e2af
- *   green     #a6e3a1  teal     #94e2d5  sky    #89dceb  sapphire #74c7ec
- *   blue      #89b4fa  lavender #b4befe  text   #cdd6f4
- *   subtext1  #bac2de  subtext0 #a6adc8
- *   overlay2  #9399b2  overlay1 #7f849c  overlay0 #6c7086
- *   surface2  #585b70  surface1 #45475a  surface0 #313244
- *   base      #1e1e2e  mantle   #181825  crust    #11111b
- */
-[data-theme="mocha"] {
-  /* ── surfaces ─────────────────────────────────────────────────────────── */
-  --color-surface-app: #1e1e2e; /* base */
-  --color-surface-panel: #313244; /* surface0 */
-  /* DERIVED — between base and surface0, mirroring light's app < sunken < panel.
-     Muted ink measures 6.64:1 here, the easiest of the four surfaces. */
-  --color-surface-sunken: #26263a;
-  /* DERIVED — above surface0, mirroring light's raised-is-brightest inversion.
-     The tightest AA case in this theme: --color-state-halt-ink is 4.73:1 here. */
-  --color-surface-raised: #3a3b4f;
-  --color-row-hover: #3a3b4f; /* = raised, mirrors the @theme relationship */
-  /*
-   * SHARED WITH @theme, not derived. The document surround is one register in
-   * both themes now (see header note 2), so a page floats against the same warm
-   * near-black whether the app chrome is light or dark. Not AA-gated
-   * (surface-document is excluded from contrast.test.ts's SURFACES set in both
-   * themes — the pane has its own ink family).
-   */
-  --color-surface-document: #383129;
-  --color-surface-paper: #f8f3e4; /* PINNED — @theme value, unchanged. Rule 1. */
-
-  /* page-reference chip — same family as --color-action in @theme; kept so here. */
-  --color-page-ref: #cba6f7; /* mauve, = action */
-  --color-page-ref-ink: #cba6f7; /* = action-ink */
-  --color-page-ref-surface: #302d45; /* = action-surface */
-  --color-page-ref-border: #453f66; /* = action-border */
-
-  /* PINNED, extending rule 1 — markers drawn ON the page, not UI chrome. */
-  --color-surface-evidence: rgb(240 205 90 / 0.55); /* PINNED */
-  --color-border-evidence: #8a3222; /* PINNED */
-  --color-surface-pin: rgb(138 50 34 / 0.14); /* PINNED */
-
-  /* ── ink ──────────────────────────────────────────────────────────────── */
-  --color-ink-primary: #cdd6f4; /* text */
-  --color-ink-secondary: #bac2de; /* subtext1 */
-  /*
-   * DEVIATION from stock Catppuccin, unchanged in substance from the previous
-   * revision and re-measured against the new surfaces. The obvious pick for the
-   * "recede" tier is overlay0 (#6c7086), which measures 2.58:1 on
-   * --color-surface-panel — well below the 4.5:1 floor. Deviated to subtext0
-   * (#a6adc8): 6.64:1 on sunken, 5.66:1 on panel, 4.92:1 on the new raised
-   * surface (the lightest, so the hardest case). Clears AA on all four.
-   */
-  --color-ink-muted: #a6adc8; /* subtext0 — DEVIATION, see above */
-
-  /* ── lines ────────────────────────────────────────────────────────────── */
-  --color-line-strong: #585b70; /* surface2 */
-  --color-line-subtle: #45475a; /* surface1 */
-  /* "Heavier than the ordinary rule", same relationship @theme's
-     --color-line-dashed has to --color-line-strong — but on a dark surface,
-     heavier means LIGHTER (more contrast from the background), not darker. */
-  --color-line-dashed: #7f849c; /* overlay1 */
-
-  /* ── action (mauve) — the primary affordance, and "your correction" ───── */
-  --color-action: #cba6f7; /* mauve */
-  --color-action-ink: #cba6f7; /* mauve itself, used as text on the dark tint below */
-  /* DERIVED — no stock swatch for "mauve darkened toward crust"; a dark,
-     low-chroma tint in the accent's hue family, dark enough that mauve text
-     sits at high contrast on it (measured by contrast.test.ts's ON_TINT sweep). */
-  --color-action-surface: #302d45;
-  --color-action-border: #453f66; /* QUIET TINT — the foil to halt's stroke, as in @theme */
-  /*
-   * Filled buttons need DARK text here, not white. Mocha's accent colours
-   * (mauve/green/red) are themselves light/pastel — white-on-mauve is close to
-   * white-on-white. Catppuccin's own convention is base/crust text on an accent
-   * fill; crust gives the largest margin. Reused unchanged across all three
-   * filled fills exactly as @theme's single --color-ink-on-action is.
-   */
-  --color-ink-on-action: #11111b; /* crust */
-  --color-key-chip-on-action: rgb(17 17 27 / 0.18); /* mirrors the ink-on-action flip */
-
-  /*
-   * ── the navigator's own ink family ──────────────────────────────────────
-   *
-   * The rail is dark in BOTH themes now, so mocha is the easy half: the column
-   * simply steps DOWN to mantle where the light theme steps all the way over
-   * from paper. Every name in the @theme block appears here, and the ratios are
-   * asserted against --color-rail-surface in contrast.test.ts exactly the same
-   * way — one gate, two themes, no theme-specific exemption.
-   *
-   * The marked row inverts with the theme rather than staying pale: on a dark
-   * app a sheet of white in the rail is the brightest object on screen, which is
-   * the failure `rail-wash` was replaced to avoid, arriving from the other side.
-   * surface-raised is the same "one step above the panel" the light band takes.
-   */
-  --color-rail-surface: #181825; /* mantle */
-  --color-rail-ink: #cdd6f4; /* text — 12.14:1 */
-  --color-rail-ink-secondary: #bac2de; /* subtext1 — 9.91:1 */
-  --color-rail-ink-muted: #a6adc8; /* subtext0 — 7.89:1 */
-  /* Mauve needs no lightening — the pastel accent already clears the column at
-     8.64:1, where the light theme's wax had to be raised to reach 6.30. */
-  --color-rail-accent: #cba6f7; /* = --color-action */
-  --color-rail-active-surface: #3a3b4f; /* = --color-surface-raised, 1.60:1 on the rail */
-  --color-rail-ink-active: #cdd6f4; /* 7.57:1 on the band above */
-  --color-rail-row-hover: rgb(205 214 244 / 0.07);
-  --color-rail-line: rgb(205 214 244 / 0.1);
-  /* The state colours unchanged: Mocha's are pastels, so both already clear the
-     dark column (7.58:1 and 9.92:1) where the light theme's oxblood could not.
-     Named anyway so `RailDot` reads ONE token per state in both themes. */
-  --color-rail-attention-halt: #f38ba8; /* = --color-state-halt */
-  --color-rail-attention-attend: #fab387; /* = --color-state-attend */
-  /* The flow rail's marks. Green needs no lifting here; the TRACK does — mocha's
-     --color-line-strong measures 2.63:1 on this column, under the non-text bar,
-     so the un-walked spine was the segment that vanished in this theme (the
-     mirror of the light theme's defect, where the walked one did). */
-  --color-rail-settled: #a6e3a1; /* = --color-state-settled, 11.81 col / 7.36 band */
-  --color-rail-track: #8d92ab; /* 5.71 / 3.56 — overlay1, lifted */
-  /* Mocha's halt pastel already carries dark numerals at 7.58:1, so the badge
-     fill and the dot are one value here where the light theme needs two. */
-  --color-rail-halt-surface: #f38ba8; /* = --color-rail-attention-halt */
-
-  /* ── state: settled — confirmed, delivered, gate passed ───────────────── */
-  --color-state-settled: #a6e3a1; /* green */
-  --color-state-settled-ink: #a6e3a1; /* green itself, text on the dark tint below */
-  --color-state-settled-surface: #24312b; /* DERIVED — dark green tint */
-  --color-state-settled-border: #3d5245; /* DERIVED */
-
-  /* ── state: decide — a person must answer; the decision queue ─────────── */
-  /* Same family as action, exactly as in @theme. */
-  --color-state-decide: #cba6f7;
-  --color-state-decide-surface: #302d45;
-  --color-state-decide-border: #453f66;
-
-  /* ── state: attend — escalated, disclosed, narrowed, provisional ──────── */
-  --color-state-attend: #fab387; /* peach */
-  --color-state-attend-ink: #fab387; /* peach itself, text on the dark tint below */
-  --color-state-attend-surface: #3a2f28; /* DERIVED — dark peach tint */
-  --color-state-attend-border: #5c4a3a; /* DERIVED */
-
-  /* ── state: halt — package incomplete, failed, unreadable, conflict ───── */
-  --color-state-halt: #f38ba8; /* red */
-  --color-state-halt-ink: #f38ba8; /* red itself, text on the dark tint below */
-  --color-state-halt-surface: #3a262b; /* DERIVED — dark red tint */
-  /*
-   * MIRRORS THE LIGHT RESOLUTION. Was #5c3640, a tint indistinguishable in
-   * greyscale from --color-action-border (#453f66). Raised to a real STROKE so
-   * the same cue reads here: a halt chip is outlined, an action chip is not.
-   * Measured 2.14:1 against --color-action-border and 3.10:1 against its own
-   * fill — the light theme's mechanism (2.09:1 / 2.43:1), inverted for a dark
-   * ground where heavier means lighter. Gated by contrast.test.ts.
-   */
-  --color-state-halt-border: #a76270;
-
-  /* ── the four no-value states ─────────────────────────────────────────── */
-  /* Same "reuse a measured-AA tier" relationships as @theme, see that block.
-     PRESENT_UNREADABLE follows @theme out of the halt family into attend. */
-  --color-na-not-present-ink: #a6adc8; /* = ink-muted */
-  --color-na-not-present-border: #7f849c; /* = line-dashed */
-  --color-na-not-found-ink: #bac2de; /* = ink-secondary */
-  --color-na-not-found-border: #7f849c; /* = line-dashed */
-  --color-na-silent-ink: #bac2de; /* = ink-secondary */
-  --color-na-silent-hatch: #585b70; /* = line-strong — the hatch must survive 1px */
-  --color-na-unreadable-ink: #fab387; /* = state-attend-ink */
-  --color-na-unreadable-surface: #3a2f28; /* = state-attend-surface */
-  --color-na-unreadable-border: #5c4a3a; /* = state-attend-border */
-
-  /* ── neutral chip (machine/automated badges) ──────────────────────────── */
-  --color-chip-neutral-surface: #45475a; /* surface1 */
-
-  /* Modal scrim. Crust-based, heavier alpha since it is dimming an already-dark
-     background. Not hex-testable (rgba). */
-  --color-scrim: rgb(17 17 27 / 0.6);
-
-  /* ── idle — "nothing is happening here", distinct from settled ────────── */
-  --color-state-idle: #7f849c; /* overlay1 — quiet, cool, not a state accent */
-  --color-state-idle-surface: #2c2e3a; /* DERIVED — dark neutral tint */
-  --color-state-idle-border: #585b70; /* surface2 */
-
-  /* progress track */
-  --color-track: #45475a; /* surface1 */
-
-  /* ── the document pane — SHARED WITH @theme ───────────────────────────── */
-  /*
-   * IDENTICAL to @theme, and now for a positive reason rather than as a
-   * deferral. The pane is dark in BOTH themes (see @theme's document block), so
-   * there is exactly one document register and it is warm. Values are gated by
-   * contrast.test.ts's document-pane block, which runs over both themes and
-   * therefore measures these numbers twice.
-   */
-  --color-document-bg: #383129;
-  --color-document-deep: #2e2822;
-  --color-document-card: #423a30;
-  --color-document-panel: #4a4137;
-  --color-document-line: #554b3f;
-  --color-document-line-strong: #6a5e4e;
-  --color-document-ink: #ede6d6;
-  --color-document-ink-soft: #cfc5af;
-  --color-document-ink-strong: #fbf6e8;
-  --color-document-settled: #9cc49b;
-  --color-document-attend: #e2c07a;
-  --color-document-halt: #d9a08d;
-  --color-document-ink-on-accent: #221c13;
-  --color-document-settled-border: #56705a;
-  --color-document-attend-border: #7d6a3a;
-  --color-document-halt-border: #7a4a3e;
-  --color-document-halt-surface: #35281f;
-  --color-document-accent: #e0a086;
-  --color-document-accent-border: #8a5442;
-  --color-document-accent-surface: #402e26;
-  --color-document-kbd-surface: #453c31;
-  --color-document-note-ink: #d6cbb2;
-  --color-document-note-surface: #3d352b;
-  --color-document-note-border: #574c3e;
-  --color-document-info: #bfb9a6;
-  --color-document-info-surface: #362f27;
-  --color-document-info-row: #3b342b;
-
-  /* ── the scanned page itself — PINNED, rule 1 ─────────────────────────── */
-  --color-scan: #dfd7c2;
-  --color-scan-line: #d5cdb6;
-  --color-scan-line-soft: #e2dbc8;
-  --color-page: #fdfbf2;
-  --color-page-bar: #d9d1bc;
-  --color-page-line: #e9e2ce;
-
-  /* ── ink ON the page — PINNED, rule 1 ─────────────────────────────────── */
-  --color-page-ink: #33291b;
-  --color-scan-ink: #3a3020;
-  --color-scan-ink-degraded: #4a4030;
-
-  /* "Between action and action-ink" in @theme's wax family. Mocha's
-     action/action-ink are already the same value (mauve), so this is a deeper,
-     more saturated mauve for the one callout border that must read heavier than
-     the fill. Not AA-gated (not in ON_TINT). */
-  --color-action-border-strong: #b389e8;
-
-  /* The flow rail's current-stage halo, inverted. See the @theme declaration for
-     why this one shadow is themed at all: it is a flat ring with no offset and
-     no blur, so on a dark ground the ring has to be LIGHT to exist. Same near-
-     invisible weight — the ring separates the disc, it does not announce it. */
-  --shadow-stage-current: 0 0 0 3px rgb(205 214 244 / 0.1);
-}
-
-/*
- * Motion. The design animates exactly one thing — a pulsing dot on a halted
- * gate — and honours prefers-reduced-motion globally. Keep both properties.
+ * Motion. The design animates three things and honours prefers-reduced-motion
+ * globally. Keep both properties in the media block below.
  */
 @keyframes tp-pulse {
   0%,
@@ -1084,38 +486,40 @@
 }
 
 /* Highlight arrival: fires ONCE when click-to-source lands on a cited line.
-   Ring colour is the evidence wash, so the arrival reads as the highlight
+   Ring colour is the evidence mark, so the arrival reads as the highlight
    expanding rather than as a second, unrelated flash. */
 @keyframes tp-highlight-arrive {
   0% {
-    box-shadow: 0 0 0 0 rgb(240 205 90 / 0.55);
+    box-shadow: 0 0 0 0 rgb(91 75 138 / 0.4);
   }
   100% {
-    box-shadow: 0 0 0 14px rgb(240 205 90 / 0);
+    box-shadow: 0 0 0 14px rgb(91 75 138 / 0);
   }
 }
 
 /*
  * Rail ACT dot: one slow, low-opacity ring, reserved for the ACT signal (an
- * unresolved complaint). Amber ATTENTION dots stay still — the distinction is
- * pinned by sidebar.spec #2 (INVARIANT: red for a complaint, amber for a gap).
- * Ring colour is the HALT value (#4A231B), not the accent: this ring means
- * "stopped", and after the accent/halt resolution those are different colours.
+ * unresolved complaint). Ring colour is the HALT value (#a4291f), not the
+ * accent: this ring means "stopped", and the accent means "you may press this".
  */
 @keyframes tp-act-ring {
   0% {
-    box-shadow: 0 0 0 0 rgb(74 35 27 / 0.45);
+    box-shadow: 0 0 0 0 rgb(164 41 31 / 0.45);
   }
   100% {
-    box-shadow: 0 0 0 5px rgb(74 35 27 / 0);
+    box-shadow: 0 0 0 5px rgb(164 41 31 / 0);
   }
 }
 
+/*
+ * Durations rather than `animation: none`, so a transitionend listener still
+ * fires and no component waits forever for an event that was cancelled.
+ */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
-    animation: none !important;
-    transition: none !important;
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
   }
 }

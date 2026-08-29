@@ -6,6 +6,7 @@ import type {
   GoldenField,
   Order,
   OrderTimelineEvent,
+  PackageInstrument,
   Rule,
 } from "@titlepipe/contract";
 
@@ -17,9 +18,14 @@ import type {
  * degraded-scan unreadable, a pending field, and an auto-confirmed value that
  * arrived with no provenance (principle 6's failure shape, rendered flagged).
  *
- * line_coords use the minimal normalized placeholder {page,x0,y0,x1,y1}
- * consumed only by the PDF overlay (final shape lands with the LLMWhisperer
- * adapter, P2).
+ * line_coords are the ratified `LineCoords` — {page,x,y,w,h}, origin top-left,
+ * every member a fraction of the rendered page box. They were an unvalidated
+ * {x0,y0,x1,y1} placeholder under `z.unknown()` until 2026-08-28; the contract
+ * now checks the range, so a box here that runs off its page fails to parse.
+ *
+ * Excerpts are built with `excerpt()` below rather than written out, so a
+ * field's flat `source_snippet` and its split `source_excerpt` cannot drift
+ * into two different quotations of one line.
  */
 
 /**
@@ -271,6 +277,29 @@ export const demoOrders: readonly DemoOrderRow[] = [
     waited: "1d", waiting_on: "Delivered", state_label: null,
     stamp_label: "Finalized", stamp_tone: "settled",
   }),
+  /*
+   * THE ONE ORDER WHOSE GATES ARE ALL GREEN — added 2026-08-28.
+   *
+   * Every other order in this table refuses release, and until now so did the
+   * handler: `POST /release` answered 409 for all thirteen and `composition()`
+   * returned `seal_sha256: null` unconditionally. So the sealed sheet, the
+   * clerk stamp, `IntegritySeal`'s present branch and "already released" were
+   * code nobody could reach from a browser — reviewable only by reading them.
+   *
+   * This order exists so BOTH paths are exercisable, not so the refusal goes
+   * away: 4176034-1 still refuses with its four open gates, and this one seals.
+   * A fixture that only has the happy path is the same defect as one that only
+   * has the refusal.
+   */
+  row({
+    id: "ord_demo_14", order_ref: "4176028-5", queue_position: null,
+    band: "in_flight", stage: "review", mine: true, failed: false,
+    addr: "310 Wrenfield Ln, Demoville GA", place: "Clayton County · GA",
+    jurisdiction: "clayton-ga", county: "Clayton", state: "GA",
+    product: "Two-Owner Search", period: "current owner + one prior owner", pages: 27,
+    waited: "18m", waiting_on: "Release signature", state_label: null,
+    stamp_label: "Cleared for release", stamp_tone: "settled",
+  }),
 ];
 
 export function demoOrderRow(id: string): DemoOrderRow | undefined {
@@ -333,6 +362,57 @@ export const demoOrder2: Order = demoOrderEntity(rowOrThrow("ord_demo_2"));
 /** The live review order — the package `demoFields` and `demoPages` describe. */
 const oid = "ord_demo_1";
 
+/**
+ * THE THREE T1 RULE REFS — RUINOUS EXPOSURE, TAGGED BY THE RULEBOOK.
+ *
+ * The design's review screen draws "T1 pills on ruinous fields" and its own
+ * copy names the count: "the three ruinous-exposure (T1) rulings await a second
+ * examiner's countersign — no single-examiner release"
+ * (ANALYSIS-behavior §5, quoted from the reference prototype).
+ *
+ * WHICH fields carry the exposure is a RULEBOOK judgement, so it rides on
+ * `rule_refs` where every other rulebook judgement rides, and the review screen
+ * reads the tag rather than holding a path list (`features/review/T1Pill.tsx`
+ * argues that at length). Tagging them HERE is what makes the pill server-said
+ * rather than browser-decided.
+ *
+ * The three are the three the rulebook already has rules about, not a
+ * selection made to fill the design's number:
+ *   - the lender of record — a wrong lender is a wrong lien holder;
+ *   - the secured principal — S5 words-over-numerals exists for this field;
+ *   - the judgment party — R13's whole subject is whether a hit is OUR owner.
+ */
+const T1_LENDER = "T1-lien-holder-identity";
+const T1_PRINCIPAL = "T1-secured-principal";
+const T1_JUDGMENT_PARTY = "T1-judgment-party-identity";
+
+/**
+ * ONE EXCERPT, WRITTEN ONCE, EMITTED TWICE.
+ *
+ * `source_snippet` (the flat quotation) and `source_excerpt` (the same
+ * quotation split at what the engine matched) are two statements about one line
+ * of one page, and the contract requires `pre + hit + post` to BE the snippet.
+ * Writing both by hand is how that stops being true, so the flat one is
+ * concatenated here and neither can drift from the other.
+ *
+ * A field whose merged read adopted NO excerpt gets neither member — the two
+ * A/B-disagreement fields below are exactly that case, and inventing a
+ * highlight for them would be the fixture asserting a match nothing made.
+ */
+function excerpt(
+  docId: string,
+  page: number,
+  pre: string,
+  hit: string,
+  post: string,
+  note: string | null = null,
+): Pick<Field, "source_snippet" | "source_excerpt"> {
+  return {
+    source_snippet: `${pre}${hit}${post}`,
+    source_excerpt: { doc_id: docId, page, pre, hit, post, note },
+  };
+}
+
 export const demoFields: Field[] = [
   // ---- OWNER ---------------------------------------------------------------
   {
@@ -346,7 +426,7 @@ export const demoFields: Field[] = [
     source_page: 6,
     source_snippet:
       "…unto MARLOWE D. QUENBY and TESSA R. QUENBY, as joint tenants…",
-    source_line_coords: [{ page: 6, x0: 0.08, y0: 0.3, x1: 0.92, y1: 0.335 }],
+    source_line_coords: { page: 6, x: 0.08, y: 0.3, w: 0.84, h: 0.035 },
     engine_id: "gemini-2.5-flash",
     engine_confidence_raw: 0.98,
     rule_refs: [],
@@ -363,7 +443,7 @@ export const demoFields: Field[] = [
     source_doc_id: "doc_deed",
     source_page: 6,
     source_snippet: "…known as 4152 Creekstone Drive, Demoville, Georgia…",
-    source_line_coords: [{ page: 6, x0: 0.08, y0: 0.44, x1: 0.88, y1: 0.472 }],
+    source_line_coords: { page: 6, x: 0.08, y: 0.44, w: 0.8, h: 0.032 },
     engine_id: "gemini-2.5-flash",
     engine_confidence_raw: 0.97,
     rule_refs: [],
@@ -380,8 +460,8 @@ export const demoFields: Field[] = [
     state: "needs_review",
     source_doc_id: "doc_tax",
     source_page: 22,
-    source_snippet: "DEMOVILLE GA 30296",
-    source_line_coords: [{ page: 22, x0: 0.09, y0: 0.22, x1: 0.5, y1: 0.25 }],
+    ...excerpt("doc_tax", 22, "DEMOVILLE GA ", "30296", ""),
+    source_line_coords: { page: 22, x: 0.08, y: 0.43, w: 0.42, h: 0.13 },
     engine_id: "llmwhisperer-hq",
     engine_confidence_raw: 0.62,
     rule_refs: [],
@@ -391,6 +471,8 @@ export const demoFields: Field[] = [
     // (`TitlePipe.dc.html:2386-2392`). Present on the six queued decisions and
     // ABSENT — not null — on every field that never went to review.
     asking: "Confirm the ZIP on the tax card.",
+    consequence:
+      "A wrong ZIP on the tax card indexes the policy against a parcel this report does not describe.",
     why: "Both readers returned the same digits, but the region's OCR confidence is below the routing threshold.",
     readings: [
       {
@@ -415,7 +497,7 @@ export const demoFields: Field[] = [
         confidence_raw: 0.62,
         cost_usd: 0.015,
         latency_ms: 3100,
-        line_coords: [{ page: 22, x0: 0.09, y0: 0.22, x1: 0.5, y1: 0.25 }],
+        line_coords: { page: 22, x: 0.08, y: 0.43, w: 0.42, h: 0.13 },
       },
     ],
   },
@@ -430,7 +512,7 @@ export const demoFields: Field[] = [
     source_doc_id: "doc_deed",
     source_page: 7,
     source_snippet: "…all that tract being Lot 18, Block C…",
-    source_line_coords: [{ page: 7, x0: 0.08, y0: 0.38, x1: 0.86, y1: 0.41 }],
+    source_line_coords: { page: 7, x: 0.08, y: 0.38, w: 0.78, h: 0.03 },
     engine_id: "pdftotext",
     engine_confidence_raw: 0.99,
     rule_refs: [],
@@ -466,7 +548,7 @@ export const demoFields: Field[] = [
     source_doc_id: "doc_deed",
     source_page: 6,
     source_snippet: "HUNTCREST BUILDERS LLC, Grantor, to…",
-    source_line_coords: [{ page: 6, x0: 0.08, y0: 0.26, x1: 0.8, y1: 0.29 }],
+    source_line_coords: { page: 6, x: 0.08, y: 0.26, w: 0.72, h: 0.03 },
     engine_id: "pdftotext",
     engine_confidence_raw: 0.98,
     rule_refs: [],
@@ -483,7 +565,7 @@ export const demoFields: Field[] = [
     source_doc_id: "doc_deed",
     source_page: 6,
     source_snippet: "BK 10944 PG 213",
-    source_line_coords: [{ page: 6, x0: 0.08, y0: 0.06, x1: 0.5, y1: 0.09 }],
+    source_line_coords: { page: 6, x: 0.08, y: 0.06, w: 0.42, h: 0.03 },
     engine_id: "pdftotext",
     engine_confidence_raw: 0.99,
     rule_refs: [],
@@ -500,7 +582,7 @@ export const demoFields: Field[] = [
     source_doc_id: "doc_deed",
     source_page: 6,
     source_snippet: "…for the sum of $215,000.00…",
-    source_line_coords: [{ page: 6, x0: 0.08, y0: 0.58, x1: 0.84, y1: 0.61 }],
+    source_line_coords: { page: 6, x: 0.08, y: 0.58, w: 0.76, h: 0.03 },
     engine_id: "pdftotext",
     engine_confidence_raw: 0.97,
     rule_refs: ["R3-cons-never-from-transfer-tax"],
@@ -522,10 +604,12 @@ export const demoFields: Field[] = [
     source_line_coords: null,
     engine_id: null,
     engine_confidence_raw: null,
-    rule_refs: [],
+    rule_refs: [T1_LENDER],
     approved_by: null,
     approved_at: null,
     asking: "Is the lender SOUTHSTONE MORTGAGE LLC?",
+    consequence:
+      "Naming the wrong holder of an open security deed sends the payoff to a stranger and leaves the real lien of record.",
     why: "Two independent readers disagreed — one returned zeroes where the other returned the letter O.",
     readings: [
       {
@@ -550,9 +634,7 @@ export const demoFields: Field[] = [
         confidence_raw: 0.71,
         cost_usd: 0.015,
         latency_ms: 3400,
-        line_coords: [
-          { page: 12, x0: 0.09, y0: 0.255, x1: 0.69, y1: 0.285 },
-        ],
+        line_coords: { page: 12, x: 0.09, y: 0.255, w: 0.6, h: 0.03 },
       },
     ],
   },
@@ -566,14 +648,25 @@ export const demoFields: Field[] = [
     state: "needs_review",
     source_doc_id: "doc_secdeed",
     source_page: 14,
-    source_snippet: null,
-    source_line_coords: null,
+    /* The MERGE could not adopt a value, and it still located the line: the
+       readers disagree about the numerals, not about where they sit. */
+    ...excerpt(
+      "doc_secdeed",
+      14,
+      "Borrower owes Lender the principal sum of One Hundred Sixty-Six Thousand Ninety-Seven and 00/100 Dollars ",
+      "($1ß6,097.00)",
+      "",
+      "The words line is legible and the numerals carry a fax artefact. S5 reads words over numerals; do not key what the digits appear to say.",
+    ),
+    source_line_coords: { page: 14, x: 0.08, y: 0.37, w: 0.36, h: 0.13 },
     engine_id: null,
     engine_confidence_raw: null,
-    rule_refs: ["S5-words-over-numerals"],
+    rule_refs: [T1_PRINCIPAL, "S5-words-over-numerals"],
     approved_by: null,
     approved_at: null,
     asking: "Confirm the original principal amount of the security deed.",
+    consequence:
+      "An understated secured principal understates the payoff, and the shortfall survives closing as a lien against the parcel.",
     why: "The numerals print over a fax artefact; the readers split on one digit, and the words line above is legible.",
     readings: [
       {
@@ -598,7 +691,7 @@ export const demoFields: Field[] = [
         confidence_raw: 0.71,
         cost_usd: 0.015,
         latency_ms: 3250,
-        line_coords: [{ page: 14, x0: 0.09, y0: 0.465, x1: 0.61, y1: 0.495 }],
+        line_coords: { page: 14, x: 0.09, y: 0.465, w: 0.52, h: 0.03 },
       },
     ],
   },
@@ -612,7 +705,7 @@ export const demoFields: Field[] = [
     source_doc_id: "doc_secdeed",
     source_page: 12,
     source_snippet: "BK 10944 PG 218 — Security Deed dated 03/14/2019",
-    source_line_coords: [{ page: 12, x0: 0.08, y0: 0.08, x1: 0.7, y1: 0.11 }],
+    source_line_coords: { page: 12, x: 0.08, y: 0.08, w: 0.62, h: 0.03 },
     engine_id: "pdftotext",
     engine_confidence_raw: 0.98,
     rule_refs: [],
@@ -630,7 +723,7 @@ export const demoFields: Field[] = [
     source_doc_id: "doc_tax",
     source_page: 22,
     source_snippet: "LAND 28,000   BLDG 158,400",
-    source_line_coords: [{ page: 22, x0: 0.09, y0: 0.48, x1: 0.62, y1: 0.51 }],
+    source_line_coords: { page: 22, x: 0.09, y: 0.48, w: 0.53, h: 0.03 },
     engine_id: "llmwhisperer-hq",
     engine_confidence_raw: 0.96,
     rule_refs: [],
@@ -647,7 +740,7 @@ export const demoFields: Field[] = [
     source_doc_id: "doc_tax",
     source_page: 22,
     source_snippet: "LAND 28,000   BLDG 158,400",
-    source_line_coords: [{ page: 22, x0: 0.09, y0: 0.48, x1: 0.62, y1: 0.51 }],
+    source_line_coords: { page: 22, x: 0.09, y: 0.48, w: 0.53, h: 0.03 },
     engine_id: "llmwhisperer-hq",
     engine_confidence_raw: 0.96,
     rule_refs: [],
@@ -665,7 +758,7 @@ export const demoFields: Field[] = [
     source_doc_id: "doc_tax",
     source_page: 22,
     source_snippet: "TOTAL APPRAISED VALUE 189,200",
-    source_line_coords: [{ page: 22, x0: 0.09, y0: 0.54, x1: 0.66, y1: 0.57 }],
+    source_line_coords: { page: 22, x: 0.09, y: 0.54, w: 0.57, h: 0.03 },
     engine_id: "llmwhisperer-hq",
     engine_confidence_raw: 0.96,
     rule_refs: ["v99-mixed-valuation-bases"],
@@ -701,7 +794,7 @@ export const demoFields: Field[] = [
     source_doc_id: "doc_fifa",
     source_page: 29,
     source_snippet: "CREEKBANK RECOVERY SPV LLC vs. MARLOWE D. QUENBY",
-    source_line_coords: [{ page: 29, x0: 0.08, y0: 0.2, x1: 0.82, y1: 0.23 }],
+    source_line_coords: { page: 29, x: 0.08, y: 0.2, w: 0.74, h: 0.03 },
     engine_id: "pdftotext",
     engine_confidence_raw: 0.97,
     rule_refs: [],
@@ -722,10 +815,12 @@ export const demoFields: Field[] = [
     source_line_coords: null,
     engine_id: null,
     engine_confidence_raw: null,
-    rule_refs: [],
+    rule_refs: [T1_JUDGMENT_PARTY],
     approved_by: null,
     approved_at: null,
     asking: "Is Q. T. FENWICK & ASSOC., P.C. the plaintiff's attorney of record?",
+    consequence:
+      "The attorney of record is who a satisfaction is demanded from; the wrong firm means the demand reaches nobody.",
     why: "One reader found the line and the other returned nothing — a blank is never filled in from the reader that did.",
     readings: [
       {
@@ -750,7 +845,7 @@ export const demoFields: Field[] = [
         confidence_raw: 0.88,
         cost_usd: 0.015,
         latency_ms: 3050,
-        line_coords: [{ page: 29, x0: 0.09, y0: 0.32, x1: 0.73, y1: 0.35 }],
+        line_coords: { page: 29, x: 0.09, y: 0.32, w: 0.64, h: 0.03 },
       },
     ],
   },
@@ -764,14 +859,23 @@ export const demoFields: Field[] = [
     state: "needs_review",
     source_doc_id: "doc_fifa",
     source_page: 30,
-    source_snippet: null,
-    source_line_coords: null,
+    ...excerpt(
+      "doc_fifa",
+      30,
+      "CASE NO. ",
+      "[ microfilm frame degraded — density loss ]",
+      "",
+      "Law 3: the frame is present and below the contrast floor. Declare it unreadable by name — never key a case number the frame does not carry.",
+    ),
+    source_line_coords: { page: 30, x: 0.08, y: 0.72, w: 0.66, h: 0.11 },
     engine_id: null,
     engine_confidence_raw: null,
     rule_refs: [],
     approved_by: null,
     approved_at: null,
     asking: "Read the case number — or escalate if the frame cannot support one.",
+    consequence:
+      "A judgment with no case number cannot be searched or satisfied of record, and a guessed one attaches the wrong docket.",
     why: "The microfilm frame is degraded in this region; the number is on the page and neither reader could resolve it.",
   },
   {
@@ -805,14 +909,23 @@ export const demoFields: Field[] = [
     state: "needs_review",
     source_doc_id: "doc_deed",
     source_page: 6,
-    source_snippet: "…executed this ____ day of ____…",
-    source_line_coords: null,
+    ...excerpt(
+      "doc_deed",
+      6,
+      "IN WITNESS WHEREOF, the Grantor has executed this ",
+      "____ day of ____",
+      ", 2019.",
+      "The clause is printed and left blank. NOT_STATED, not NOT_PRESENT — the instrument carries the line and says nothing on it.",
+    ),
+    source_line_coords: { page: 6, x: 0.08, y: 0.87, w: 0.78, h: 0.1 },
     engine_id: "gemini-2.5-flash",
     engine_confidence_raw: null,
     rule_refs: [],
     approved_by: null,
     approved_at: null,
     asking: "Confirm the deed states no execution date.",
+    consequence:
+      "Recording an execution date the deed does not carry invents a date the chain can be challenged on.",
     why: "The instrument was returned and the execution date is left blank on its face.",
   },
   {
@@ -1202,7 +1315,22 @@ export const demoTimelines: Record<string, OrderTimelineEvent[]> = {
  * cited pages plus the unread one. Nothing may count it to learn how much was
  * read — `PACKAGE_PAGES_RELEVANT` is that number.
  */
-export const demoPages: Record<string, { total: number; pages: { n: number; read_in_full: boolean; kind: string; lines: string[]; degraded: boolean }[] }> = {
+export const demoPages: Record<
+  string,
+  {
+    total: number;
+    pages: { n: number; read_in_full: boolean; kind: string; lines: string[]; degraded: boolean }[];
+    /**
+     * THE PARTITIONER'S OWN BOUNDARIES, not a grouping of `pages[].kind`.
+     * `PackageInstrument` (endpoints.ts) argues the distinction; this fixture
+     * has to honour it, so the ranges below COVER the package contiguously —
+     * 1 through `total`, ascending, no overlap and no hole — the way a
+     * partition of a stack of paper does. `pages[]` is a sample of the text;
+     * this is the whole package, described.
+     */
+    instruments: PackageInstrument[];
+  }
+> = {
   [liveOrder.id]: {
     total: liveOrder.pages ?? PACKAGE_PAGES,
     pages: [
@@ -1221,6 +1349,8 @@ export const demoPages: Record<string, { total: number; pages: { n: number; read
         "property described in Exhibit A, situate in Clayton County, Georgia.",
         "Consideration: $215,000.00",
         "Property address: 4152 CREEKSTONE DR, DEMOVILLE GA 30296",
+        "",
+        "IN WITNESS WHEREOF, the Grantor has executed this ____ day of ____, 2019.",
       ] },
       { n: 7, read_in_full: true, degraded: false, kind: "EXHIBIT A — LEGAL DESCRIPTION", lines: [
         "The land referred to is situated in the County of Clayton,",
@@ -1269,6 +1399,19 @@ export const demoPages: Record<string, { total: number; pages: { n: number; read
         "CASE NO. [ microfilm frame degraded — density loss ]",
         "JUDGMENT entered in the sum of $4,112.83",
       ] },
+    ],
+    instruments: [
+      { id: "ins_cover", kind: "cover", label: "Search package cover & abstractor certification", first_page: 1, last_page: 5, recorded_ref: null },
+      { id: "ins_deed", kind: "deed", label: "Warranty Deed — Huntcrest Builders LLC to Quenby", first_page: 6, last_page: 11, recorded_ref: "BK 10944 PG 213" },
+      { id: "ins_secdeed", kind: "security_deed", label: "Security Deed — Quenby to Southstone Mortgage LLC", first_page: 12, last_page: 17, recorded_ref: "BK 10944 PG 218" },
+      { id: "ins_plat", kind: "plat", label: "Plat reference — cover sheet only", first_page: 18, last_page: 21, recorded_ref: null },
+      { id: "ins_tax", kind: "tax_card", label: "Clayton County tax commissioner card", first_page: 22, last_page: 27, recorded_ref: "PARCEL 13-0044-0018" },
+      { id: "ins_fedlien", kind: "lien_search", label: "Federal tax lien search — nothing of record", first_page: 28, last_page: 28, recorded_ref: null },
+      // The docket reference is what `fld_j1case` is queued about: the frame is
+      // below the contrast floor, so the partitioner drew the boundary and
+      // recorded no reference. `null` is that, and not a lookup nobody ran.
+      { id: "ins_fifa", kind: "judgment", label: "FiFa search — Superior Court of Clayton County", first_page: 29, last_page: 34, recorded_ref: null },
+      { id: "ins_index", kind: "index", label: "Grantor / grantee chain index", first_page: 35, last_page: 64, recorded_ref: null },
     ],
   },
 };

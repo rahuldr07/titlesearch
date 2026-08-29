@@ -1,0 +1,73 @@
+import { Link } from "@tanstack/react-router";
+import type { OrderRow } from "@titlepipe/contract";
+import { RouteButton } from "../../app/chrome/RouteButton";
+
+/**
+ * One browse row over the prototype's seven tracks. Its action cell holds two
+ * destinations — the order's history and the workstation — so the history is an
+ * anchor laid over the whole row, which keeps the row clickable without nesting
+ * one interactive element inside another; the button follows it in the DOM and
+ * takes its own clicks.
+ *
+ * NOT CARRIED: the prototype's tinted ink on a delivered row. The row already
+ * prints the server's stage word in its own column, and a second colour-coded
+ * encoding of the same fact would be a client-side taxonomy over `OrderStage` —
+ * rule 7 keeps state colour closed.
+ */
+export function RecentOrderRow(props: { readonly row: OrderRow }) {
+  const row = props.row;
+
+  return (
+    <div
+      data-recent-order={row.id}
+      className="relative flex h-30 items-center border-b border-line-subtle last:border-b-0 hover:bg-surface-sunken"
+    >
+      <Link
+        to="/orders/$orderId"
+        params={{ orderId: row.id }}
+        aria-label={`Order ${row.order_ref} — ${row.addr}, ${row.place}`}
+        className="tp-state absolute inset-0"
+      />
+
+      <span className="w-65 shrink-0 truncate px-6 font-mono text-meta leading-close tabular-nums text-ink-muted">
+        {row.order_ref}
+      </span>
+
+      <span className="flex min-w-0 flex-1 flex-col px-6">
+        <span className="truncate text-body font-semibold leading-close text-ink-primary">
+          {row.addr}
+        </span>
+        <span className="truncate text-label leading-flat text-ink-disabled">{row.place}</span>
+      </span>
+
+      <span className="w-85 shrink-0 truncate px-6 text-meta leading-close text-ink-faint">
+        {row.client}
+      </span>
+
+      {/* The server's own stage word, not a second label table. */}
+      <span className="w-55 shrink-0 truncate px-6 text-meta leading-close text-ink-faint">
+        {row.stage}
+      </span>
+
+      <span className="w-60 shrink-0 truncate px-6 text-meta leading-close text-ink-secondary">
+        {row.assigned_to ?? "Unassigned"}
+      </span>
+
+      {/* INVARIANT 23: the server's own due label, never a countdown from it. */}
+      <span className="w-65 shrink-0 truncate px-6 text-right font-mono text-meta leading-close text-ink-secondary">
+        {row.due ?? "No due date"}
+      </span>
+
+      <span className="relative flex w-60 shrink-0 justify-end px-6">
+        <RouteButton
+          size="sm"
+          to="/orders/$orderId/review"
+          params={{ orderId: row.id }}
+          aria-label={`Open the review for order ${row.order_ref}`}
+        >
+          Open →
+        </RouteButton>
+      </span>
+    </div>
+  );
+}

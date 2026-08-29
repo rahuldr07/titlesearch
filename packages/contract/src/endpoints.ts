@@ -163,6 +163,60 @@ export const OrderCensus = z.object({
   needs_review: z.number().int(),
   /** Values the pipeline produced with no document, page or reading behind them. */
   no_source: z.number().int(),
+  /**
+   * ⚠ UI-DRIVEN REQUEST — AWAITING RATIFICATION (2026-08-27, review workstation).
+   * READ FIELDS ONLY, and they exist because the alternative was arithmetic.
+   *
+   * The review dock prints "12 of 18 answered · rest of the queue 17". Every
+   * one of those three numbers was being computed in the browser — `settled`
+   * as a filter over `fields[].state`, `decisions` as `settled + queued`, and
+   * `queue_rest` as `decisions - 1` for the open one. That is the browser
+   * deciding what counts as a decision, which is the same class of judgement
+   * `no_source` above was moved off the client for, and it is the exact shape
+   * of the `answered = base + a` bug the reference prototype shipped
+   * (`derived()` in ANALYSIS-behavior §5, which AGENTS.md forbids surviving
+   * into this build as authority).
+   *
+   * `decisions` is how many fields this order ever put in front of a person —
+   * NOT `fields`, which includes the auto-confirmed nobody saw and the pending
+   * nothing has read yet. `settled` is how many of those carry a ruling.
+   * `queue_rest` is what remains behind the open one, and it is the server's
+   * because only the server knows what else it would hand over.
+   *
+   * OPTIONAL for the same reason `census` itself is: absent is not zero, it is
+   * "the server did not say", and the dock prints that silence rather than
+   * filling it in.
+   *
+   * A CENSUS, NEVER A RATE (§4.5). Nothing here is per-hour or per-person, and
+   * §4.5 means nothing here ever may be.
+   */
+  decisions: z.number().int().optional(),
+  settled: z.number().int().optional(),
+  queue_rest: z.number().int().optional(),
+  /**
+   * HOW MANY OF THIS ORDER'S DECISIONS THE SERVER IS STILL WAITING ON, and it
+   * is the server's figure for the same reason every other member here is.
+   *
+   * The design's top bar prints it as a pill ("6 fields"). It was not printed,
+   * because the only way to get it was `decisions - settled` — a subtraction in
+   * the browser, and the identical arithmetic `queue_rest` exists to remove one
+   * line above. The two are NOT the same number and the distinction is the
+   * reason both exist: `queue_rest` is how much of the queue is left to WALK
+   * (settled rulings included — a reviewer moving back through one is still
+   * walking the queue), `remaining` is how many still want an ANSWER.
+   *
+   * Nor is the subtraction reliably right. `decisions - settled` assumes every
+   * decision is either settled or awaiting this reviewer, and a field parked on
+   * a countersign or held behind an escalation is neither. Only the server
+   * knows which of its own decisions it is still waiting on.
+   *
+   * OPTIONAL, like its three neighbours: absent is "the server did not say",
+   * and the bar prints that silence rather than filling it in with a zero. Zero
+   * is a real and different answer — nothing outstanding, the order is done.
+   *
+   * A CENSUS, NEVER A RATE (§4.5). How many sit here now, and nothing per-hour.
+   */
+  remaining: z.number().int().optional(),
 });
 export type OrderCensus = z.infer<typeof OrderCensus>;
 
@@ -651,10 +705,56 @@ export const SourcePage = z.object({
 });
 export type SourcePage = z.infer<typeof SourcePage>;
 
+/**
+ * ONE RECORDED INSTRUMENT INSIDE THE PACKAGE — a boundary THE PIPELINE DREW.
+ *
+ * A county package is a stack of scans; the instruments in it are found by the
+ * partitioning stage, which the pipeline already runs and already names
+ * ("Quarantine & Document Boundary Partitioning"). This shape is that stage's
+ * output reaching a screen for the first time.
+ *
+ * IT IS ON THE WIRE BECAUSE THE ALTERNATIVE WAS INVENTING IT. The design's
+ * "Package Instrument Index" could have been built by grouping runs of equal
+ * `SourcePage.kind` — and that would have drawn document boundaries the
+ * pipeline never drew. Two consecutive deeds would have merged into one
+ * instrument; a deed continued on a page the classifier labelled differently
+ * would have split into two. A boundary is a finding, not a `groupBy`.
+ *
+ * `first_page`/`last_page` are INCLUSIVE and both are the server's. The design
+ * derives its own highlight from a `next` cursor; a half-open range would have
+ * the client subtract one to render the label, which is arithmetic about a
+ * document's extent that the partitioner already did.
+ *
+ * `recorded_ref` is the instrument's reference OF RECORD — a book/page or an
+ * instrument number. `null` where the package holds no index entry for it (a
+ * plat cover sheet, an unrecorded affidavit), which is a real and ordinary
+ * state, not a missing lookup.
+ */
+export const PackageInstrument = z.object({
+  id: z.string(),
+  /** The instrument as the recorder's index names it. Server-authored. */
+  label: z.string(),
+  /** The partitioner's classification — "deed", "security_deed", "judgment". */
+  kind: z.string(),
+  first_page: z.number().int(),
+  last_page: z.number().int(),
+  recorded_ref: z.string().nullable(),
+});
+export type PackageInstrument = z.infer<typeof PackageInstrument>;
+
+/**
+ * `instruments` is REQUIRED, unlike the optional censuses elsewhere in this
+ * file, because a package that reached this endpoint has been through
+ * partitioning by definition — the stage runs before extraction, so there is
+ * always an answer. An EMPTY array is that answer for a package the partitioner
+ * found no boundary in (a single-instrument bringdown, a package it could not
+ * segment), and the screen says so rather than drawing an empty list.
+ */
 export const OrderPagesResponse = z.object({
   order_id: z.string(),
   total_pages: z.number().int(),
   pages: z.array(SourcePage),
+  instruments: z.array(PackageInstrument),
 });
 export type OrderPagesResponse = z.infer<typeof OrderPagesResponse>;
 

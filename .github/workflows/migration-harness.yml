@@ -155,7 +155,7 @@ jobs:
       #
       # `contract-parity.test.ts` reads `contract-fixtures/rules-response.json` —
       # produced by core-api's Pydantic models — and parses it with the real Zod
-      # schemas. It is in `frontend.yml` too (as part of `pnpm --filter web-v2
+      # schemas. It is in `frontend.yml` too (as part of `pnpm --filter @titlepipe/web
       # test`), but that workflow's filter names `apps/**` and `packages/**` and NOT
       # `services/**`. So the change class this gate exists for — edit
       # `api/schemas/rules.py`, regenerate the fixture — ran `backend.yml` alone,
@@ -163,17 +163,17 @@ jobs:
       # regenerated from the new models, and the only check that can say "the
       # contract refuses this shape" never executed.
       #
-      # `--project gates` and not `pnpm --filter web-v2 test`: the `storybook`
+      # `--project gates` and not `pnpm --filter @titlepipe/web test`: the `storybook`
       # project is a real browser suite, and dragging it onto every backend commit
       # is the cost this workflow exists to avoid. The gates project is node-env and
       # needs no browser, so it runs BEFORE the chromium install below and fails
       # fast. Adding `services/**` to `frontend.yml` would have been the other way
       # to close the hole and would have had exactly that cost.
       - name: Contract parity (Pydantic fixture vs the real Zod schemas)
-        run: pnpm --filter web-v2 exec vitest run --project gates
+        run: pnpm --filter @titlepipe/web exec vitest run --project gates
 
       - name: Install Playwright chromium
-        run: pnpm --filter web-v2 exec playwright install --with-deps chromium
+        run: pnpm --filter @titlepipe/web exec playwright install --with-deps chromium
 
       # --frozen so a drifted lock fails here rather than producing a core-api
       # that is not the one under test.
@@ -272,7 +272,7 @@ jobs:
       #
       #   live-reaches-core-api       core-api's ROWS, its x-request-id and its
       #                               database-minted UUIDs arrive IN THE BROWSER
-      #   live-frozen-rulebook        `apps/web-v2/e2e` ITSELF, unmodified, run
+      #   live-frozen-rulebook        `apps/web/e2e` ITSELF, unmodified, run
       #                               against the live build
       #   live-halts-without-core-api the rulebook halts, showing no mock rows
       #   live-refuses-stale-worker   a leftover worker refuses the live boot
@@ -296,7 +296,7 @@ jobs:
       # role. Without it the seed refuses by name rather than letting the browser
       # assertions fail against an empty table.
       - name: Live migration harness
-        working-directory: apps/web-v2
+        working-directory: apps/web
         env:
           VITE_API_PROXY_TARGET: http://127.0.0.1:${{ env.CORE_API_PORT }}
           TITLEPIPE_DATABASE_URL: postgresql+psycopg://titlepipe_migration:${{ env.DB_PASSWORD }}@${{ env.DB_HOST }}:${{ env.DB_PORT }}/${{ env.DB_NAME }}
@@ -312,6 +312,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: live-harness-report
-          path: apps/web-v2/test-results
+          path: apps/web/test-results
           retention-days: 7
           if-no-files-found: ignore

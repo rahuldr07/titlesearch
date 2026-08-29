@@ -1,5 +1,6 @@
 import { http, HttpResponse } from "msw";
 import { workspaceHandlers } from "./workspace.js";
+import { designHandlers } from "./design.js";
 import {
   BlindEntriesRequest,
   ConfirmFieldRequest,
@@ -181,10 +182,14 @@ export function orderContextFor(orderId: string): OrderContextResponse {
 const pagesHandler = http.get("/api/orders/:id/pages", ({ params }) => {
   const id = String(params["id"]);
   const doc = demoPages[id];
+  /* An order with no package fixture has no partition to report. `[]` is that
+     answer, and it is not the same claim as "one instrument spanning
+     everything" — which is what grouping the empty `pages[]` would produce. */
   return HttpResponse.json({
     order_id: id,
     total_pages: doc?.total ?? 0,
     pages: doc?.pages ?? [],
+    instruments: doc?.instruments ?? [],
   });
 });
 
@@ -422,6 +427,7 @@ const REQUIRED_ORDER_FIELDS = [
 
 export const handlers = [
   ...workspaceHandlers,
+  ...designHandlers,
   timelineHandler,
   pagesHandler,
   /**
@@ -552,6 +558,27 @@ export const handlers = [
   http.get("/api/orders/:id/fields", ({ params }) => {
     const id = String(params["id"]);
     const fields = id === FIELDS_ORDER_ID ? fieldStore : [];
+    /*
+     * THE DECISION FIGURES, DECIDED HERE.
+     *
+     * `decisions` is every field this order ever put in front of a person —
+     * the ones a reviewer settled plus the ones still queued. It is NOT
+     * `fields.length`: the 2 auto-confirmed nobody saw and the 1 pending
+     * nothing has read yet were never anybody's decision, and counting them
+     * would silently inflate the denominator the dock prints.
+     *
+     * `queue_rest` is everything this order still holds BEHIND the open
+     * decision — the whole of what the reviewer has left to walk, not just the
+     * unsettled part of it, because a reviewer moving back through a settled
+     * ruling is still walking this order's queue. Written as its own figure
+     * rather than left to the client as `decisions - 1`, because that
+     * subtraction is precisely the `answered = base + a` arithmetic the
+     * contract comment above this endpoint exists to forbid.
+     */
+    const queued = fields.filter((f) => f.state === "needs_review");
+    const settled = fields.filter(
+      (f) => f.state === "confirmed" || f.state === "corrected" || f.state === "escalated",
+    );
     const body: OrderFieldsResponse = {
       order_id: id,
       fields,
@@ -571,6 +598,19 @@ export const handlers = [
             f.source_page === null &&
             (f.readings ?? []).length === 0,
         ).length,
+        decisions: settled.length + queued.length,
+        settled: settled.length,
+        queue_rest: Math.max(settled.length + queued.length - 1, 0),
+        /*
+         * WHAT THE SERVER IS STILL WAITING ON — the queued fields, counted
+         * here rather than left to the client as `decisions - settled`.
+         *
+         * The two happen to agree in this fixture and they are not the same
+         * question: `queue_rest` is how much queue is left to WALK, and this
+         * is how many still want an answer. Written off `queued` directly so
+         * the definition sits with the filter that makes it.
+         */
+        remaining: queued.length,
       },
     };
     return HttpResponse.json(body);
