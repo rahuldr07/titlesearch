@@ -20,6 +20,6 @@ Read `CLAUDE.md` at repo root first (doc order: docs/HANDOFF.md → docs/CONTEXT
 - Backend (from `services/core-api`, as CI runs it): `uv run ruff check .` · `uv run ruff format --check .` · `uv run pyright` · `uv run pytest`
 
 ## Conventions
-- Visual reference (approved 2026-08-01): `docs/frontend/directions/hybrid.html` — warm-paper palette; Fraunces display, Switzer body/UI, Geist Mono values/cites, Courier Prime in the facsimile. `design-export/TitlePipe.dc.html` stays the behavior spec (`design-export/README.md`). Colors ONLY via tokens in `packages/ui-tokens/src/tokens.css` (app entry `apps/web-v2/src/styles/index.css`) — no raw hex in TSX.
+- Design pixel spec: `docs/archive/Title report review tool.zip` → `.dc.html` files (warm-paper palette, IBM Plex). Colors ONLY via tokens in `apps/web/src/index.css` — no raw hex in TSX.
 - Every API response parses through `@titlepipe/contract` at the boundary (`apps/web/src/api.ts`). Never widen a contract type locally — emit `CONTRACT GAP:` notes instead.
 - Refusal rules (correction needs reason, escalation needs question, ruling needs citation, golden correction needs source+reason+signature) live in contract schemas + Playwright tests — never hand-rolled.

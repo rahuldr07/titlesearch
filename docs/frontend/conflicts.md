@@ -1,6 +1,6 @@
 # Design conflicts — must not be implemented as drawn
 
-**Twenty conflicts and twenty deliberate departures.** Two different kinds of record,
+**Nineteen conflicts and eleven deliberate departures.** Two different kinds of record,
 kept in one file because a reader who finds a difference between the app and the export
 needs both to know what they are looking at:
 
@@ -15,7 +15,7 @@ A difference not in either list is a defect. Find one and it goes in one of thes
 sections before it is fixed, so the next audit reports a decision rather than finding it
 again.
 
-**Three were release-blocking** — C8, C9, C11 contradicted harvested INVARIANT specs. All three are now resolved: D1 settled C11, and C8/C9 were built to the suggested redraw (`4267830`…`8412036`). C17 — once the last open blocker — was resolved 2026-07-29 when the navigator returned; no release-blocking entry remains open.
+**Three were release-blocking** — C8, C9, C11 contradicted harvested INVARIANT specs. All three are now resolved: D1 settled C11, and C8/C9 were built to the suggested redraw (`4267830`…`8412036`). **C17 is the one open blocker.**
 
 ---
 
@@ -203,11 +203,6 @@ The reason is required for the same argument as a correction's, and it binds har
 **Archive** (`Escalation Inbox.dc.html`): a clustered inbox grouped by what is confusing people.
 **Resolution.** The cluster shape stands: `GET /api/escalations` returns `field_path_cluster` on every row and there is no per-field escalation record, so the server sends a cluster. Grouping by it is what turns five people hitting one wall into one missing rule. The design's per-field context (`Escalated by {by} · {when}`, `View on p{page} →`) is unbuildable — `Escalation` has no asker, timestamp, field id or page. Its resolution flow was already overridden by D1.
 
-### C22 — the held band's state chips assert a severity nothing sent
-**Design of record** (`hybrid.html:588`, `:597`): held rows carry chips toned by state — "Package incomplete" red, "Escalated" amber.
-**Breaks** constraint 9 — mapping `state_label` to a severity in the browser is a client-side state machine. `QueueBandOrder` carries `state_label` and no tone (`packages/contract/src/endpoints.ts:106-118`).
-**Redraw.** The server supplies the tone beside the label. Until it does, the chip prints the server's word in the neutral family — the `CONTRACT GAP` is stated where the chip is drawn (`features/queue/BandOrders.tsx:135-141`).
-
 ---
 
 ## Not conflicts — recorded so they are not "found" again
@@ -222,15 +217,10 @@ These looked like conflicts and are not:
 
 ---
 
-## Deliberate departures — not defects
+## Deliberate departures — ruled 2026-07-30, not defects
 
-Twenty. Each: the design of record, the ruling, and the rule that outranked fidelity.
-D1–D10 were ruled 2026-07-30 and number by the design spec's own decision ids
-(`docs/superpowers/specs/2026-07-30-design-fidelity-design.md`), so a departure can be
-traced back to where it was decided. D11 files the fidelity audit's ruling of that id as
-finally built; D14 onward are post-2026-08-03 rulings, numbered past the audit's table
-(it ends at D13), that lived only in code comments and commit messages until filed here —
-the preamble above makes an unlisted difference a defect, so they are filed.
+Eleven. Each: the design of record, the ruling, and the rule that outranked fidelity.
+Numbering follows the design spec's own decision ids (`docs/superpowers/specs/2026-07-30-design-fidelity-design.md`), so a departure can be traced back to where it was decided.
 
 ### D1 — the order comes from the URL; there is no global current order
 **Design of record:** the top strip carries full order context on every screen, gated only on `showChrome`.
@@ -249,7 +239,7 @@ the preamble above makes an unlisted difference a defect, so they are filed.
 
 ### D5 — the rail glyph tie-break; the export's `P`/`P` collision is not copied
 **Design of record:** `sbItem` takes `label.charAt(0)`, so "Products & sign-off" and "People" both draw `P`, and the export's own collapsed rail carries that ambiguity.
-**Ruling — REVERSED 2026-08-03.** The first ruling resolved glyphs across the whole drawn set (`entities/nav/glyphs.ts`): walk the catalogue in order, and each door takes the first free mark from its INITIAL, then its CHORD KEY, then a later letter of its label, then any free letter. That file and its resolver were deleted with the rail rebuild (HANDOFF-2026-08-01 §9); the mark is now a stored ICON in `entities/nav/doorCatalogue.ts`, whose header states the reversal — an icon is not derivable from a label, so there is nothing for it to drift from, which was the whole objection to storing a letter. What survives both rulings is the requirement that actually mattered: no two rail marks collide, gated directly by `doors.test.ts`, which carries the full history.
+**Ruling.** Glyphs resolve across the whole drawn set (`entities/nav/glyphs.ts`): walk the catalogue in order, and each door takes the first free mark from its INITIAL, then its CHORD KEY, then a later letter of its label, then any free letter. First claim wins, so the export's letter survives on every door but the one that arrives second — which falls back to the chord the row `title` and the `?` map already print beside it.
 **Rule that won.** At 78px the square is the only thing a collapsed row draws, so two identical squares are two rows a reader can separate only by hovering. Fidelity loses on exactly the row where it costs a reader the ability to tell two doors apart, and nowhere else.
 
 ### D6 — `Pass — say why` stays, and the export is the stale artefact
@@ -288,51 +278,6 @@ the preamble above makes an unlisted difference a defect, so they are filed.
 **Ruling.** The render governs, so the plain caption stays (`features/processing/StageRow.tsx`) and the pill tones are dead style. "Make it look the same" means the rendered artefact. Ranking owners by colour would say a stage the machine runs is a different KIND of thing from one you run, when the column only answers "who touches this one" — and a second coloured object at the row's right edge is what made `waiting` read as a warning.
 **Rule that won.** The settled fidelity rule: the rendered artefact is the target. `StageRow.stories.tsx` now asserts the three owners carry an identical class list, so the ruling is a gate rather than a description.
 
-### D11 — the fold control: hidden while forced, directional icons, no `[` hint
-**Design of record:** the fidelity audit's own D11 ruling (`fidelity-audit-2026-07-30.md` §4): hide the toggle while forced, then a directional chevron **with the `[` hint in the title**, keeping the aria wiring.
-**Ruling.** Built to the first two clauses and deliberately not the third. A forced collapse is display-only and never writes the preference (`entities/nav/useForcedCollapse.ts`) — the silent `nav_collapsed:true` write the audit called a defect is gone; the toggle is hidden while the collapse is forced, per the Wave-0 spec rule the consistency audit flagged as taskless (`2026-07-30-consistency-audit.md`); otherwise it draws a directional icon pair (`PanelLeftOpen`/`PanelLeftClose`, `entities/nav/RailFold.tsx`) carrying **no `[` title hint**. The chord is taught in the `?` map, where every other chord in this app is learned, and `aria-label` names the action in words in both states.
-**Rule that won.** One control, one family (`RailFold.tsx`'s own note): a printed mnemonic beside nine geometric door marks reads as debris, and a hint in a title is a second place a binding can go stale — D6a's argument, applied to a tooltip.
-
-### D14 — the navigator is a dark column
-**Design of record:** `hybrid.html:16` — the sidebar is `--sheet-dim #E9E3D2`, warm paper one tone off the sheet.
-**Ruling.** The rail leaves the paper ladder entirely: `--color-rail-surface: #1c1a32` (`tokens.css:203`), with an ink vocabulary of its own because the app's ink tiers go blank on it — reasoning at `entities/nav/Sidebar.tsx:71-111` ("A DARK COLUMN, 2026-08-13") and the token block's "THE NAVIGATOR'S OWN INK FAMILY". The chrome goes dark so the paper is spent on the WORK. Authority: commit `16fbf40`, merged to main via PR #10 (owner-merged).
-**Rule that won.** The owner's merge. Note what it did not settle: `#1c1a32` sits off the warm archival axis — a cool navy framing a warm-paper app — and the owner may still want the column re-warmed. This entry records the departure; it does not bless the hue.
-
-### D15 — the review split is reversed: the draft leads
-**Design of record:** `hybrid.html:276` — `.rbody` is `grid-template-columns:566px 1fr`, document LEFT; the export likewise leads with the document, at 52/48 (`TitlePipe.dc.html:664-1082`).
-**Ruling.** Fields/draft left at 62%, document right at 38% (`features/review/ReviewScreen.tsx:22-32`, "Stated as a deviation"). The reviewer's object is the DELIVERABLE and the scan is what they consult about it; 38% is a floor chosen for the page, not the mockup — the reskin drew 26%, and at that width a county deed is a grey ribbon. Authority: commit `903ad3e`, merged via PR #11/#12 (owner-merged).
-**Rule that won.** Reading order — the thing being decided, then the evidence for it.
-
-### D16 — every screen measure flattened to `w-full max-w-full`
-**Design of record:** the export's per-screen `max-width` table — sixteen widths, 380px to 1340px.
-**Ruling.** All sixteen `measure` values emit `w-full max-w-full` (`shared/ui/screenClasses.ts:82-99`); the keys survive as public API at eleven call sites. Owner's call, commit `6d6f6d4` (2026-08-06), made with the measurements in hand — and the commit itemises what it costs, because the code can no longer say it: four tests deleted, one a harvested width INVARIANT ("a screen renders at the width the export draws, not the shell's"), and the six centred screens render top-aligned. Restoring the measure table restores all four tests together.
-**Rule that won.** The owner's call, and nothing else — which is why the cost is written down beside the decision instead of hidden by it.
-
-### D17 — the rail is 216px, not the mockup's 264
-**Design of record:** `hybrid.html:81` — `.screen` is `grid-template-columns:264px 1fr`.
-**Ruling.** 216px on the owner's call of 2026-08-04 (`entities/nav/Sidebar.tsx:93-94` — the column held 264 until then). 204px is a MEASURED floor: `products & sign-off` truncates at 203 and not at 204, and the floor ROSE with the same day's type bump, so neither width nor type moves without re-measuring the other. The 24px rhythm is unchanged and still the mockup's.
-**Rule that won.** The owner's call.
-
-### D18 — the type scale raised 13→15px, compressing its shape
-**Design of record:** the mockup's own type panel — 13px base (`hybrid.html:57`).
-**Ruling.** Raised 2026-08-04 on the owner's call — the app read too small on the machine it is actually used on. The bump is GRADED, not a uniform multiply: reading tiers move most (`lg` 13→15px, ~+15%), display tiers least (`6xl` 38→40px, ~+5%), so the scale's SHAPE is deliberately slightly compressed from the mockup's — `tokens.css:516-558` documents it as a departure, and the mockup remains the reference for everything except these values.
-**Rule that won.** The owner's call.
-
-### D19 — the band-head census prints the server's case
-**Design of record:** `hybrid.html:534`, `:581` — the band-head count is a caps literal: `2 IN PROGRESS`, `4 STOPPED`.
-**Ruling.** The figure is mono and tabular like every census in the product, but the words after it are the server's own and print in the case it sent — `2 in progress` (`features/queue/QueueBand.tsx:69-76`). CSS caps would be the screen restyling a sentence it did not write.
-**Rule that won.** Principle 6's small print — the label is the server's sentence, rendered, not recomposed.
-
-### D20 — a fourth rail group: REFERENCE, carrying the `/gallery` door
-**Design of record:** the mockup draws exactly three groups — Work, This order, Admin (`hybrid.html:491-517`).
-**Ruling.** A REFERENCE group renders when a role holds a reference door (`app/chrome/railSections.ts:80-88`), and it exists for one: `/gallery`, the "states" door (`entities/nav/doorCatalogue.ts:82`). It claims `foot` only when ADMIN is absent, so the free space over the foot is spent once.
-**Rule that won.** The gallery is "a reference shelf, not a place work happens" (`doorCatalogue.ts`) — the mockup draws the product, not its documentation, and a door the rail does not draw is reachable only by chord.
-
-### D21 — "Rest of the queue" lists answered decisions, and their values print twice
-**Design of record:** the export's `decRest` read literally (`TitlePipe.dc.html:3149-3151`) — every decision except the open one, answered ones included.
-**Ruling.** Adopted (`features/review/QueueRest.tsx:30-36`): twelve answered rows whose values also render on the draft sheet below, on one screen. The duplication is ACCEPTED and flagged for the owner as a design cost, not hidden as a design win — survivable because the rows are one-line collapsed and sit inside the bounded decision block where a reader can match them against the sheet — and it is pinned by `review.spec:180`, which asserts 17 as this order's rest-of-queue.
-**Rule that won.** The heading and its rows must be the same set or the label is a lie; the export's set is the one the passing assertion pins.
-
 ---
 
 ## Open gaps — the app is not yet what a ruling says it should be
@@ -348,16 +293,9 @@ Not conflicts (nothing refuses them) and not departures (nobody ruled for the ap
 **Ruling (same spec):** `NO SOURCE` stays muted rather than turning red — red makes it louder than `NEED YOU`, which is the actionable tile.
 **State:** unbuilt. `app/OrderCounts.tsx` gives the tile `text-state-halt-ink` and mutes it only at zero, and its comment argues the opposite case ("any other figure is the loudest thing on the strip"). One of the two records has to yield; the spec is the later artefact.
 
-### G3 — ~~the count numerals are not mono~~ CLOSED — built
+### G3 — the count numerals are not mono
 **Design of record:** `font-family:'IBM Plex Mono'; font-size:15px; font-weight:600` (`TitlePipe.dc.html:141-153`), and the same spec ruling adopts it.
-**State:** built. `shared/ui/CensusTile.tsx:100` renders `tnum font-mono` on every tile (`text-census` on the strip tier), and the component's "MONO NUMERALS WITH `tnum`" note carries the reasoning. Struck rather than deleted, per G1's own closing rule.
+**State:** unbuilt. The tiles render `text-md font-semibold` with no mono face.
 
 ### G4 — comments across the tree cite specs that were never migrated
 **State:** `blind-blindness.spec` and `roles.spec` were harvested and never built as spec files; `leaderboard.spec`, `account.spec`, `home.spec`, `delivery-complaints.spec` and `golden.spec` likewise. Fourteen sites outside `src/app/` still cite one of them as a passing gate — `entities/document/{CitedText,coordinates,coordinates.test,DocumentPane.stories}`, `entities/nav/doors.ts` (×4), `features/delivered/ReissuedSheet.tsx`, `shared/session.ts`, `shared/ui/ClaimVsEvidence{,.stories}.tsx`. The four in `src/app/` were corrected on 2026-07-30 and `app/whyComments.test.ts` gates that directory; widen the gate when the rest are corrected.
-
-### G5 — profile preferences do not persist although the endpoint exists
-**Ruling (C16, already built for the fold and the theme):** preferences live server-side. `GET`/`PATCH /api/me/preferences` exists and `Preferences` carries `default_zoom` and `reduced_motion` — `app/preferences.ts` reads the same endpoint.
-**State:** unbuilt wiring. `features/profile/PreferencesCard.tsx:20-28` holds all three controls in mount-local `useState` and says so — left visibly non-persistent rather than faked, because browser storage is forbidden and a toggle that quietly forgets is worse than one that never claimed to remember. The shortcuts switch is the one with no carrier: nothing on `Preferences` says whether the chord layer is live.
-
-### G6 — the order history block on Review — awaiting an owner ruling
-**State:** contested, not merely unbuilt, and filed here because it is neither a resolved conflict nor a ruled departure. `features/review/ReportPane.tsx:34-43`: the export draws no order-history block on Review at all and the audit's Review entry says to delete it; three harvested invariants (`navigation.spec` ×2, `errors.spec` #3) require `order-rail` on Review to carry queue, escalation and delivery state and to survive a timeline 500. Deleting it would weaken three assertions, which is refused; it sits after the read-only sign-off block instead, out of the document pane it competed with. "Owner ruling wanted on which is right."
