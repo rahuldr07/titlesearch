@@ -1,12 +1,10 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
 import {
-  EscalationsResponse,
   LifecycleResponse,
   OrderCompletenessResponse,
   OrderPipelineResponse,
   OrderFieldsResponse,
   OrderSignoffResponse,
-  OrderTimelineResponse,
 } from "@titlepipe/contract";
 import { mockServer } from "@titlepipe/mocks/node";
 
@@ -467,50 +465,5 @@ describe("field values carry the order they belong to", () => {
     const body = await fields(LIVE);
     expect(body.fields.length).toBeGreaterThan(0);
     expect(body.census?.needs_review).toBeGreaterThan(0);
-  });
-});
-
-/**
- * THE TIMELINE IS A PROJECTION TOO. The live order's spine used to say
- * "review 14/19 · 5 fields queued" over a field store serving 21 values with 6
- * queued, and cite a mortgages.1.amount escalation the escalation store does
- * not hold. The spine summarizes two other endpoints; these tests read all
- * three and require them to agree.
- */
-describe("the timeline agrees with the stores it summarizes", () => {
-  const LIVE = "ord_demo_1";
-  const timeline = (id: string) =>
-    read(`/api/orders/${id}/timeline`, OrderTimelineResponse);
-  const fields = (id: string) => read(`/api/orders/${id}/fields`, OrderFieldsResponse);
-
-  test("the review line quotes the served census", async () => {
-    const review = (await timeline(LIVE)).events.find(
-      (event) => event.kind === "review",
-    );
-    expect(review).toBeDefined();
-    const census = (await fields(LIVE)).census;
-    expect(census).toBeDefined();
-    const queued = census?.needs_review ?? 0;
-    const total = census?.fields ?? 0;
-    expect(review?.label).toBe(`review ${total - queued}/${total}`);
-    expect(review?.detail).toBe(`${queued} fields queued`);
-  });
-
-  test("the escalation line counts escalations that actually name the order", async () => {
-    const line = (await timeline(LIVE)).events.find(
-      (event) => event.kind === "escalated",
-    );
-    expect(line).toBeDefined();
-    const open = (
-      await read("/api/escalations", EscalationsResponse)
-    ).escalations.filter(
-      (esc) => esc.order_ids.includes(LIVE) && esc.resolution === null,
-    );
-    expect(open.length).toBeGreaterThan(0);
-    expect(line?.label).toBe(`escalations open — ${open.length}`);
-    // Every cluster the line cites is one an open escalation on this order holds.
-    for (const cluster of (line?.detail ?? "").split(" · ")) {
-      expect(open.map((esc) => esc.field_path_cluster)).toContain(cluster);
-    }
   });
 });

@@ -651,17 +651,14 @@ const GATE_PASSED_STAGES: readonly DemoStageId[] = ["machine", "review", "escala
  */
 export function pipelineFor(orderId: string): OrderPipelineResponse {
   const row = demoOrderRow(orderId);
-  // Same policy as `orderContextFor` (handlers.ts): an id that names no order
-  // THROWS — never an invented pipeline. The route turns it into a 404.
-  if (row === undefined) throw new Error(`no such order: ${orderId}`);
-  const stage: DemoStageId = row.stage;
-  const pages = row.pages;
+  const stage: DemoStageId = row?.stage ?? "gate";
+  const pages = row === undefined ? PACKAGE_PAGES : row.pages;
   const readable = pages !== null;
   const signed = isSigned(row);
   const gatePassed = GATE_PASSED_STAGES.includes(stage);
   const running = stage === "machine";
   const delivered = stage === "delivered";
-  const deliveryFailed = delivered && row.failed;
+  const deliveryFailed = delivered && row?.failed === true;
   const machinePhase: StagePhase = gatePassed && !running ? "done" : "waiting";
   const signoffPhase: StagePhase = signed ? "done" : readable && stage !== "unassigned" ? "halted" : "waiting";
 
@@ -861,12 +858,9 @@ const CLOSED_NOTES: Readonly<Record<string, string>> = {
  */
 export function completenessFor(orderId: string): OrderCompletenessResponse {
   const row = demoOrderRow(orderId);
-  // Same policy as `orderContextFor` (handlers.ts): an id that names no order
-  // THROWS — never an invented gate. The route turns it into a 404.
-  if (row === undefined) throw new Error(`no such order: ${orderId}`);
-  const pages = row.pages ?? PACKAGE_PAGES;
+  const pages = row?.pages ?? PACKAGE_PAGES;
   const raised = isSigned(row);
-  const passed = GATE_PASSED_STAGES.includes(row.stage);
+  const passed = GATE_PASSED_STAGES.includes(row?.stage ?? "gate");
   const closure = (id: string) =>
     passed
       ? { closed_by: SIGNER, closed_note: CLOSED_NOTES[id] ?? null }
@@ -898,7 +892,7 @@ export function completenessFor(orderId: string): OrderCompletenessResponse {
       kind: "period_short",
       line_number: lineSpec("L06").n,
       line_label: lineSpec("L06").label,
-      claim: `This order is a ${row.product} — ${row.period}. Line ${lineSpec("L06").n} requires the chain abstracted across that whole span.`,
+      claim: `This order is a ${row?.product ?? PRODUCT_NAME} — ${row?.period ?? PERIOD_LABEL}. Line ${lineSpec("L06").n} requires the chain abstracted across that whole span.`,
       evidence: "The earliest instrument segmented is dated 03/14/2011 — only a 15-year span.",
       close_options: [UPLOAD_OPTION, ROOT_OF_TITLE_OPTION, CHANGE_PRODUCT_OPTION],
       ...closure("g3"),
@@ -908,8 +902,8 @@ export function completenessFor(orderId: string): OrderCompletenessResponse {
   return {
     order_id: orderId,
     gate_open: raised && !passed,
-    product_name: row.product,
-    period_label: row.period,
+    product_name: row?.product ?? PRODUCT_NAME,
+    period_label: row?.period ?? PERIOD_LABEL,
     gaps: raised ? gaps : [],
   };
 }
@@ -948,19 +942,8 @@ export const workspaceHandlers = [
   }),
 
   http.get("/api/orders/:id/signoff", ({ params }) => HttpResponse.json(signoffFor(String(params["id"])))),
-  /**
-   * An id that names no order is a 404 — never an invented pipeline or gate.
-   * Same policy, and the same caller pattern, as `/api/orders/:id/context`
-   * (`orderContextFor`, handlers.ts).
-   */
-  http.get("/api/orders/:id/pipeline", ({ params }) => {
-    const row = demoOrderRow(String(params["id"]));
-    if (row === undefined) return HttpResponse.json({ error: "no such order" }, { status: 404 });
-    return HttpResponse.json(pipelineFor(row.id));
-  }),
-  http.get("/api/orders/:id/completeness", ({ params }) => {
-    const row = demoOrderRow(String(params["id"]));
-    if (row === undefined) return HttpResponse.json({ error: "no such order" }, { status: 404 });
-    return HttpResponse.json(completenessFor(row.id));
-  }),
+  http.get("/api/orders/:id/pipeline", ({ params }) => HttpResponse.json(pipelineFor(String(params["id"])))),
+  http.get("/api/orders/:id/completeness", ({ params }) =>
+    HttpResponse.json(completenessFor(String(params["id"]))),
+  ),
 ];
