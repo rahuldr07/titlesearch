@@ -86,8 +86,32 @@ export const PipelineStage = z.object({
   detail: z.string(),
   owner: StageOwner,
   phase: StagePhase,
+  /**
+   * ⚠ RULED 2026-08-29 — `docs/frontend/design-2026-08/RULING-2026-08-29.md`:
+   * the reference draws a mono count chip on every stage row ("38 pages → 6
+   * recorded instruments"), so the string rides the wire, SERVER-COMPOSED —
+   * never a numeral the client parses back out of `detail`. Null = the server
+   * has no figure for this stage, printed as silence.
+   */
+  count: z.string().nullable(),
 });
 export type PipelineStage = z.infer<typeof PipelineStage>;
+
+/**
+ * ⚠ RULED 2026-08-29 — `docs/frontend/design-2026-08/RULING-2026-08-29.md`
+ * item 4: "the extraction terminal log … and the other previously refused
+ * elements are all in scope: they are drawn, so they are built." One line of
+ * the run's log, as the reference's dark terminal draws it: a mono timestamp,
+ * the server's sentence, and the two emphases the drawing carries (a WARN
+ * register and a bold line). READ SHAPE ONLY — nothing writes a log line.
+ */
+export const PipelineLogLine = z.object({
+  time: z.string(),
+  text: z.string(),
+  warn: z.boolean(),
+  strong: z.boolean(),
+});
+export type PipelineLogLine = z.infer<typeof PipelineLogLine>;
 
 export const OrderPipelineResponse = z.object({
   order_id: z.string(),
@@ -97,6 +121,29 @@ export const OrderPipelineResponse = z.object({
   /** Server state. The screen never infers a halt from a stage list. */
   gate_halted: z.boolean(),
   stages: z.array(PipelineStage),
+  /**
+   * ⚠ RULED 2026-08-29 (RULING-2026-08-29.md) — the drawn members of the
+   * extraction screen, all SERVER-AUTHORED STRINGS so the client composes
+   * nothing:
+   *
+   * `package_name` / `volume_label` — the meta strip's second and third cells
+   * ("4176034-1_fulton_package.pdf" · "64 Scanned Raster Pages"). Null = the
+   * server has no package to name, printed as its own sentence.
+   *
+   * `eta_label` — the "Time to examination" chip. The ruling supersedes
+   * INVARIANT 23's reading for this drawn element; the string is still the
+   * server's, never a subtraction of timestamps in the browser.
+   *
+   * `run_log` — the dark terminal's lines, in the server's order.
+   *
+   * `verified_checks` — the hub's "Deterministic Verification Checks"
+   * sentences, each one a claim only the pipeline can make.
+   */
+  package_name: z.string().nullable(),
+  volume_label: z.string().nullable(),
+  eta_label: z.string(),
+  run_log: z.array(PipelineLogLine),
+  verified_checks: z.array(z.string()),
 });
 export type OrderPipelineResponse = z.infer<typeof OrderPipelineResponse>;
 
@@ -340,6 +387,27 @@ export type LifecycleStamp = z.infer<typeof LifecycleStamp>;
  * product and an unreadable package has no page count. `null` is that
  * statement — `0` would be a count, and a count is a claim.
  */
+/**
+ * ⚠ RULED 2026-08-29 — `docs/frontend/design-2026-08/RULING-2026-08-29.md`:
+ * the reference app's rail stage rows and order-bar stage tabs are drawn, so
+ * they are built, and their state arrives DECIDED. One item of either list.
+ *
+ * `done`/`badge` are the server's word — the browser never derives a check
+ * from a count reaching a total, and `badge` is the finished string the pill
+ * prints ("6", "ready"), never a number the client formats. `badge_tone` is
+ * the only machine-readable axis and drives paint alone, exactly as
+ * `LifecycleStamp.tone` does.
+ */
+export const OrderStageTab = z.object({
+  /** Stable stage id ("upload" | "processing" | "review" | "composer" | "delivered"). */
+  id: z.string(),
+  label: z.string(),
+  done: z.boolean(),
+  badge: z.string().nullable(),
+  badge_tone: z.enum(["attend", "settled"]),
+});
+export type OrderStageTab = z.infer<typeof OrderStageTab>;
+
 export const OrderContextResponse = z.object({
   order_id: z.string(),
   order_ref: z.string(),
@@ -347,6 +415,29 @@ export const OrderContextResponse = z.object({
   period_label: z.string().nullable(),
   pages: z.number().int().nullable(),
   stamp: LifecycleStamp,
+  /*
+   * ⚠ RULED 2026-08-29 (RULING-2026-08-29.md) — the members the reference
+   * app's order bar, rail and spotlight draw and the wire lacked. All
+   * server-authored, all nullable where an order can honestly not have one.
+   */
+  /** The finished place line the bar prints — "1856 Defoor Ave NW, Atlanta · Fulton County, GA". */
+  place: z.string().nullable(),
+  /** The CLIENT'S NAME, resolved server-side — `client_id` is a join key, not a word a reader reads. */
+  client: z.string().nullable(),
+  /** Who holds the order. Null while nobody has taken it. */
+  assigned: z.string().nullable(),
+  /**
+   * The finished due label — "Due today · 5h 20m left". SERVED, never computed:
+   * the reference app ticks this down in the browser; here the string arrives
+   * whole so the demo is stable and the client never runs a clock.
+   */
+  due: z.string().nullable(),
+  /** Outstanding examination decisions — the census figure the Review (N) button prints. */
+  outstanding: z.number().int().nullable(),
+  /** The rail's five numbered stage rows, in order. */
+  stage_nav: z.array(OrderStageTab),
+  /** The order bar's five stage tabs, in order. */
+  stage_tabs: z.array(OrderStageTab),
 });
 export type OrderContextResponse = z.infer<typeof OrderContextResponse>;
 

@@ -24,10 +24,12 @@ export function isRuinous(field: Field): boolean {
  */
 export function T1Pill() {
   return (
+    /* The drawn chip register (RULING-2026-08-29): the reference sets T1 in
+       the accent violet — action ink on the action surface — not in halt red. */
     <span
       data-testid="t1-pill"
       title="Ruinous exposure — a second examiner must countersign this ruling before release."
-      className="inline-flex items-center rounded-pill border border-state-halt-border bg-state-halt-surface px-4 font-mono text-label leading-flat font-bold text-state-halt"
+      className="inline-flex items-center rounded-pill border border-action-border bg-action-surface px-4 font-mono text-label leading-flat font-bold text-action"
     >
       T1
     </span>

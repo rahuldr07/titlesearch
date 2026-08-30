@@ -35,19 +35,42 @@ export function FieldQueue(props: {
 
   return (
     <div className="flex flex-col">
-      {sections.map((section) => (
+      {sections.map((section) => {
+        /* The drawn header captions (RULING-2026-08-29): the section's cited
+           page range in mono beside the title, and "N flagged" on the right —
+           the count of THIS section's rows still in the server's queue, the
+           same membership `canSelect` reads. Both are summaries of what the
+           rows below already show, never a second source. */
+        const queued = section.fields.filter(props.canSelect).length;
+        const cited = section.fields
+          .map((field) => field.source_page)
+          .filter((n): n is number => n !== null);
+        const range =
+          cited.length === 0
+            ? null
+            : Math.min(...cited) === Math.max(...cited)
+              ? `p${Math.min(...cited)}`
+              : `p${Math.min(...cited)}–p${Math.max(...cited)}`;
+        return (
         <section
           key={section.id}
           id={`section-${section.id}`}
           className="border-b border-line-subtle px-9 py-9"
         >
           <div className="mb-4 flex items-baseline justify-between gap-4">
-            <h3 className="text-meta font-bold leading-close text-ink-primary">
-              {section.title}
-            </h3>
-            {section.flagged && (
-              <span className="text-label font-semibold leading-flat text-state-attend">
-                flagged
+            <span className="flex min-w-0 items-baseline gap-4">
+              <h3 className="text-meta font-bold leading-close text-ink-primary">
+                {section.title}
+              </h3>
+              {range !== null && (
+                <span className="font-mono text-label leading-flat tabular-nums text-ink-faint">
+                  {range}
+                </span>
+              )}
+            </span>
+            {section.flagged && queued > 0 && (
+              <span className="text-label font-semibold leading-flat text-ink-muted">
+                {queued} flagged
               </span>
             )}
           </div>
@@ -66,7 +89,8 @@ export function FieldQueue(props: {
             </div>
           ))}
         </section>
-      ))}
+        );
+      })}
     </div>
   );
 }

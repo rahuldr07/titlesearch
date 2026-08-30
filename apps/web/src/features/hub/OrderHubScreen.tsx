@@ -85,6 +85,7 @@ export function OrderHubScreen(props: { readonly orderId: string }) {
         <DeterministicChecks
           gateOpen={completeness.data?.gate_open}
           gaps={completeness.data?.gaps}
+          verifiedChecks={pipeline.data?.verified_checks}
         />
       </Card>
 

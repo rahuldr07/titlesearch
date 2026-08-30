@@ -1,5 +1,9 @@
+import { useQueryClient } from "@tanstack/react-query";
+import { Ack } from "@titlepipe/contract";
 import { useSignedIn } from "../session/signedIn";
+import { ROLE_HINTS } from "../session/demoAccounts";
 import { useOverlays } from "../keyboard/overlays";
+import { post } from "../../shared/api";
 import { Kbd } from "../../components/ui";
 
 /**
@@ -66,12 +70,15 @@ export function ProfileBlock() {
         </span>
       </div>
 
-      {/* The design's `roleHint` under the name row. `seat` is the design's own
-          word for the job; the pill above carries the contract role. Two
-          vocabularies, stated separately, neither standing in for the other. */}
-      <p className="text-label leading-body text-rail-ink-muted">{account.seat}</p>
+      {/* ⚠ RULED 2026-08-29 (RULING-2026-08-29.md): the reference's `roleHint`
+          line — what this role may do, under the name row. The lines live in
+          `demoAccounts.ts` beside the roster, per role, the reference's own
+          wording wherever its roster carries the role. */}
+      <p data-testid="role-hint" className="text-label leading-body text-rail-ink-muted">
+        {ROLE_HINTS[account.role]}
+      </p>
 
-      <div className="border-t border-rail-line pt-5">
+      <div className="flex items-center justify-between gap-4 border-t border-rail-line pt-5">
         <button
           type="button"
           data-testid="sign-out"
@@ -81,7 +88,35 @@ export function ProfileBlock() {
         >
           Switch user / Sign out
         </button>
+        <ResetButton />
       </div>
     </div>
+  );
+}
+
+/**
+ * ⚠ RULED 2026-08-29 (RULING-2026-08-29.md): the reference's `resetWalkthrough`
+ * control — "Restore the demo to fresh intake". `POST /api/demo/reset` re-seeds
+ * the mock stores server-side (the reset is the SERVER'S, not a client purge of
+ * its own caches pretending to be one), and every query is then refetched so
+ * the screens show the reseeded truth. The signed-in seat survives, exactly as
+ * the reference preserves `user` through its reset.
+ */
+function ResetButton() {
+  const queryClient = useQueryClient();
+  return (
+    <button
+      type="button"
+      data-testid="demo-reset"
+      title="Restore the demo to fresh intake"
+      onClick={() => {
+        void post("/api/demo/reset", Ack).then(() =>
+          queryClient.invalidateQueries(),
+        );
+      }}
+      className="tp-state tp-press flex items-center gap-2 rounded-pill border border-rail-line px-4 py-1 text-label leading-flat text-rail-ink hover:text-surface-panel"
+    >
+      ↺ Reset
+    </button>
   );
 }

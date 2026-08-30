@@ -1,3 +1,5 @@
+import type { Escalation } from "@titlepipe/contract";
+import { Card, CardBody, CardHeader } from "../../components/ui";
 import { useRead } from "../../app/useRead";
 import { escalations as escalationsRead } from "../../shared/queries";
 
@@ -17,26 +19,60 @@ import { escalations as escalationsRead } from "../../shared/queries";
  * `resolution` non-null with `rule_id` null is drawn as the server has it — a
  * resolution the client re-judged is a client rulebook.
  *
- * NO COUNT. The design puts a "2 items" capsule on the header bar; no endpoint
- * serves an exception census for an order, and a length after a filter is a
- * number nothing else in the product could reconcile against (rule 11).
+ * THE "N items" CAPSULE — ⚠ RULED 2026-08-29
+ * (`docs/frontend/design-2026-08/RULING-2026-08-29.md`): the reference draws
+ * it on this header, so it is built as drawn. It counts the rows THIS card
+ * renders — the server's join, filtered by the server's own `order_ids` —
+ * which is the one length the card can honestly caption.
  */
 export function PolicyExceptions(props: { readonly orderId: string }) {
   const escalations = useRead(escalationsRead);
 
-  if (escalations.data === undefined) {
+  const namingThisOrder = (escalations.data?.escalations ?? []).filter(
+    (escalation) => escalation.order_ids.includes(props.orderId),
+  );
+
+  return (
+    <Card padding="none">
+      <CardHeader>
+        Policy exceptions
+        {escalations.data !== undefined && namingThisOrder.length > 0 && (
+          <span
+            data-testid="policy-exceptions-count"
+            className="rounded-pill border border-state-halt-border bg-state-halt-surface px-4 py-1 font-mono text-label font-bold leading-flat text-state-halt"
+          >
+            {namingThisOrder.length === 1 ? "1 item" : `${namingThisOrder.length} items`}
+          </span>
+        )}
+      </CardHeader>
+      <CardBody>
+        <ExceptionRows
+          orderId={props.orderId}
+          loaded={escalations.data !== undefined}
+          isError={escalations.isError}
+          namingThisOrder={namingThisOrder}
+        />
+      </CardBody>
+    </Card>
+  );
+}
+
+function ExceptionRows(props: {
+  readonly orderId: string;
+  readonly loaded: boolean;
+  readonly isError: boolean;
+  readonly namingThisOrder: readonly Escalation[];
+}) {
+  const namingThisOrder = props.namingThisOrder;
+  if (!props.loaded) {
     return (
       <p className="font-sans text-meta leading-body text-ink-faint">
-        {escalations.isError
+        {props.isError
           ? "The escalation list could not be read."
           : "Reading policy exceptions…"}
       </p>
     );
   }
-
-  const namingThisOrder = escalations.data.escalations.filter((escalation) =>
-    escalation.order_ids.includes(props.orderId),
-  );
 
   if (namingThisOrder.length === 0) {
     return (

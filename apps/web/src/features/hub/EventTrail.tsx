@@ -3,19 +3,26 @@ import { Card, Empty } from "../../components/ui";
 import { HubSectionLabel } from "./HubSectionLabel";
 
 /**
- * The order's thread through the pipeline. Three refusals kept from the design:
- * the "SOC 2" and "immutable" claims (nothing in the contract backs either),
- * optimistic append (`INVARIANTS:39` — the trail appends when the server says it
- * has), and durations (`INVARIANTS:84` — two timestamps and a subtraction is a
- * timer). `kind` is `z.string()` and deliberately OPEN, so nothing switches on
- * it; the mark comes from `attend`, which the server owns.
+ * The order's thread through the pipeline — ⚠ RULED 2026-08-29
+ * (`docs/frontend/design-2026-08/RULING-2026-08-29.md`): titled and composed
+ * as the reference draws it. The drawn title is "Immutable SOC 2 Event Trail"
+ * (the prior refusal of the SOC 2 / immutable wording is superseded — it is
+ * drawn, so it is built), and each row is the drawn composition: the mono
+ * timestamp column, then the event's sentence with the trailing arrow glyph.
+ *
+ * Two refusals stand, because the reference draws nothing against them:
+ * optimistic append (`INVARIANTS:39` — the trail appends when the server says
+ * it has; a filed countersign lands here by the mock appending it and the
+ * screen re-reading) and durations (`INVARIANTS:84`). `kind` is `z.string()`
+ * and deliberately OPEN, so nothing switches on it; the attend register comes
+ * from `attend`, which the server owns.
  */
 export function EventTrail(props: {
   readonly events: readonly OrderTimelineEvent[] | undefined;
 }) {
   return (
     <Card className="flex flex-col gap-8">
-      <HubSectionLabel>Event trail</HubSectionLabel>
+      <HubSectionLabel>Immutable SOC 2 Event Trail</HubSectionLabel>
 
       {props.events === undefined ? (
         <p className="text-meta leading-body text-ink-muted">
@@ -27,7 +34,7 @@ export function EventTrail(props: {
           reason="The server holds no events for this order. Events are appended by the pipeline, never by this screen."
         />
       ) : (
-        <ol className="flex flex-col gap-6 text-meta">
+        <ol className="flex flex-col gap-2 text-meta">
           {props.events.map((event, index) => (
             <li
               // `at` + `kind` is not unique — an order can be delivered twice.
@@ -37,33 +44,27 @@ export function EventTrail(props: {
               data-event-attend={event.attend}
               className="flex gap-6 rounded-lg p-4 hover:bg-surface-sunken"
             >
-              <span
-                aria-hidden
-                className={
-                  event.attend
-                    ? "shrink-0 font-mono text-meta leading-body text-state-attend"
-                    : "shrink-0 font-mono text-meta leading-body text-state-settled"
-                }
-              >
-                {event.attend ? "◆" : "✓"}
-              </span>
-              {event.attend && <span className="sr-only">needs attention</span>}
-
               {/* Rule 3: a timestamp is data, printed as the server sent it —
                   never parsed, never re-rendered in a locale (§8). */}
               <span className="w-70 shrink-0 font-mono text-label leading-body whitespace-nowrap tabular-nums text-ink-muted">
                 {event.at}
               </span>
 
-              <span className="flex min-w-0 flex-1 flex-col gap-1">
-                <span className="text-meta font-semibold leading-close text-ink-primary">
+              <span className="min-w-0 flex-1 leading-body text-ink-secondary">
+                <span
+                  className={
+                    event.attend
+                      ? "font-semibold text-state-attend"
+                      : "font-semibold text-ink-primary"
+                  }
+                >
                   {event.label}
                 </span>
-                {event.detail !== null && (
-                  <span className="text-meta leading-body text-ink-secondary">
-                    {event.detail}
-                  </span>
-                )}
+                {event.attend && <span className="sr-only"> — needs attention</span>}
+                {event.detail !== null && <span> · {event.detail}</span>}{" "}
+                <span aria-hidden className="font-bold text-ink-secondary">
+                  →
+                </span>
               </span>
             </li>
           ))}

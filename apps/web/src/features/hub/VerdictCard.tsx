@@ -25,11 +25,12 @@ export function VerdictCard(props: {
   return (
     <section className="flex flex-wrap items-start justify-between gap-8 border-b border-line-subtle p-12">
       <div className="flex min-w-0 flex-1 flex-col gap-6">
+        {/* The reference's kicker, as drawn (RULING-2026-08-29). */}
         <span
           data-testid="verdict-kicker"
           className={`w-fit rounded-pill border px-5 py-1 text-label font-bold leading-flat ${PILL[props.stamp.tone]}`}
         >
-          Order life-cycle hub
+          Order Life-Cycle Hub
         </span>
 
         {/* 40px — the sixth type size, and the one place the product spends it. */}
@@ -74,6 +75,10 @@ export function VerdictCard(props: {
         >
           Release compiler
         </RouteButton>
+        {/* ⚠ RULED 2026-08-29 — the drawn CTA copy is the SERVER'S
+            `census.verdict_action` (endpoints.ts), a word chosen by its
+            five-branch verdict machine, never re-derived here. Absent = the
+            server did not say, and the button names the door instead. */}
         <RouteButton
           variant="primary"
           size="lg"
@@ -81,7 +86,7 @@ export function VerdictCard(props: {
           params={{ orderId: props.orderId }}
           data-testid="hub-cta"
         >
-          Open review →
+          {props.census?.verdict_action ?? "Open review"} →
         </RouteButton>
       </div>
     </section>

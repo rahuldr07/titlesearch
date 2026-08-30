@@ -76,7 +76,7 @@ export function WorkstationScreen(props: {
             <>
               <WorkstationBar
                 orderRef={context.data?.order_ref ?? null}
-                remaining={data.census?.remaining}
+                census={data.census}
                 openLabel={open === null ? null : fieldLabel(open.path)}
                 flaggedFirst={flaggedFirst}
                 onFlaggedFirst={setFlaggedFirst}

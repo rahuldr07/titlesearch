@@ -1,53 +1,61 @@
-import { useQuery } from "@tanstack/react-query";
-import { orderPipeline } from "../../shared/queries";
-import { get } from "../../shared/api";
+import { useRouterState } from "@tanstack/react-router";
+import type { OrderStageTab } from "@titlepipe/contract";
 import { cx } from "../../components/ui";
-import { StageMark } from "./StageMark";
+import { StageLink, stageIsCurrent } from "./StageLink";
+import { StageBadge, StageCircle } from "./StageMark";
 
 /**
- * The strip's second row — the design's stage tabs, on the same server list the
- * rail draws and with the same positional numerals.
+ * The strip's second row — the reference app's five stage tabs.
  *
- * THEY ARE NOT TABS. The design's tabs navigate; no route in this app addresses
- * a stage, and a control that looks like a tab and moves nothing is a lie about
- * what it does. This is an ordered list with the tab's chrome.
- *
- * It WRAPS rather than dropping stages, shortening their labels or scrolling
- * sideways: nine server-written labels do not fit a 1600px strip, and the first
- * two alternatives are the browser editing the server's words while the third
- * clips them out of sight. The design's own first row wraps for the same reason.
+ * ⚠ RULED 2026-08-29 — `docs/frontend/design-2026-08/RULING-2026-08-29.md`:
+ * the reference's tabs NAVIGATE (each to its stage's surface), draw a green ✓
+ * on done stages, highlight the current one, and hang the served badge on
+ * Examination — so ours do all four. The list is
+ * `OrderContextResponse.stage_tabs`, served whole: `done` and every badge
+ * string arrive decided; the only thing computed here is which tab the
+ * CURRENT URL shows, which is the router's fact, not the server's.
  */
-export function OrderStripStages(props: { readonly orderId: string }) {
-  const descriptor = orderPipeline(props.orderId);
-  const pipeline = useQuery({
-    queryKey: descriptor.key,
-    queryFn: () => get(descriptor.path, descriptor.schema),
-  });
-
-  if (pipeline.data === undefined) return null;
+export function OrderStripStages(props: {
+  readonly orderId: string;
+  readonly tabs: readonly OrderStageTab[];
+}) {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   return (
     <ol
       data-testid="order-strip-stages"
       className="flex flex-wrap items-center gap-2 border-t border-line-faint pt-4"
     >
-      {pipeline.data.stages.map((stage, index) => (
-        <li
-          key={stage.id}
-          data-slot="strip-stage"
-          data-phase={stage.phase}
-          className={cx(
-            "flex shrink-0 items-center gap-4 rounded-lg px-6 py-2",
-            "text-meta leading-flat whitespace-nowrap",
-            stage.phase === "running"
-              ? "bg-action-surface font-bold text-ink-secondary"
-              : "font-medium text-ink-muted",
-          )}
-        >
-          <StageMark phase={stage.phase} ordinal={index + 1} ground="strip" />
-          {stage.label}
-        </li>
-      ))}
+      {props.tabs.map((tab, index) => {
+        const current = stageIsCurrent(tab.id, pathname);
+        return (
+          <li key={tab.id} data-slot="strip-stage" data-done={tab.done}>
+            <StageLink
+              id={tab.id}
+              orderId={props.orderId}
+              testId={`strip-stage-${tab.id}`}
+              className={cx(
+                "tp-state flex shrink-0 items-center gap-4 rounded-lg px-6 py-2",
+                "text-meta leading-flat whitespace-nowrap",
+                current
+                  ? "bg-action-surface font-bold text-ink-secondary"
+                  : "font-medium text-ink-muted",
+              )}
+            >
+              <StageCircle
+                done={tab.done}
+                current={current}
+                ordinal={index + 1}
+                ground="strip"
+              />
+              {tab.label}
+              {tab.badge !== null && (
+                <StageBadge tone={tab.badge_tone}>{tab.badge}</StageBadge>
+              )}
+            </StageLink>
+          </li>
+        );
+      })}
     </ol>
   );
 }

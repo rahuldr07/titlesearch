@@ -194,6 +194,12 @@ test("section rail jumps to the matching report section", async ({ page }) => {
 // account trigger. `ord_demo_1`'s field fixture is 21 fields (2 auto-confirmed
 // + 12 confirmed + 6 needs_review + 1 pending), so "21" pins the total the
 // same way the decision-dock test above pins "18" for the queued subset.
+// UPDATED under RULING-2026-08-29 (docs/frontend/design-2026-08/
+// RULING-2026-08-29.md): the strip now draws the reference app's bar — the
+// bare mono ref (no "ORDER" rubric; the reference draws none), the served
+// place line, the served due chip and the Review (N) button. The refusal
+// assertions survive untouched: the URL id never appears, the counts are the
+// served census, and the stamp is the server's word.
 test("the order strip shows the ref, the four counts, and the sign-off stamp", async ({
   page,
 }) => {
@@ -202,8 +208,17 @@ test("the order strip shows the ref, the four counts, and the sign-off stamp", a
   // The HUMAN ref, from `GET /api/orders/{id}/context`. This asserted
   // "ORDER ord_demo_1" while no endpoint carried the ref; it does now, and the
   // URL id must not appear at all — a strip that prints the id is the defect.
-  await expect(strip).toContainText("ORDER 4176034-1");
+  await expect(strip.getByTestId("order-ref")).toHaveText("4176034-1");
   await expect(strip).not.toContainText("ord_demo_1");
+  // The reference bar's served members (RULING-2026-08-29): the finished due
+  // label — never a countdown computed here — and the Review (N) button
+  // printing the served outstanding census figure.
+  await expect(strip.getByTestId("order-due")).toHaveText("Due today · 5h 20m left");
+  await expect(strip.getByTestId("order-review-cta")).toHaveText("Review (6)");
+  // The five stage tabs, served per order, with Examination badged "6".
+  const tabs = strip.getByTestId("order-strip-stages");
+  await expect(tabs).toContainText("Examination Workstation");
+  await expect(tabs).toContainText("Delivery & Gateway Seal");
   const counts = page.getByTestId("order-counts");
   await expect(counts).toContainText("21");
   for (const label of ["Fields", "Auto-confirmed", "Need you", "No source"]) {
@@ -244,6 +259,9 @@ test("the strip prints the server's stamp — it does not compose one", async ({
     method: "GET",
     match: "/api/orders/ord_demo_1/context",
     status: 200,
+    // Body widened under RULING-2026-08-29 with the members the reference bar
+    // draws (place, client, assigned, due, outstanding, the two stage lists) —
+    // the boundary parser refuses a context without them, exactly as it should.
     body: {
       order_id: "ord_demo_1",
       order_ref: "4176034-1",
@@ -253,6 +271,13 @@ test("the strip prints the server's stamp — it does not compose one", async ({
       // Not derivable from any field the browser holds, and deliberately not a
       // word this product's vocabulary contains anywhere else.
       stamp: { label: "Held for counsel", tone: "attend" },
+      place: "4152 Creekstone Dr, Demoville GA · Clayton County, GA",
+      client: "Riverbend Title",
+      assigned: "R. Okafor",
+      due: "Due today · 5h 20m left",
+      outstanding: 6,
+      stage_nav: [],
+      stage_tabs: [],
     },
   });
   await go(page);

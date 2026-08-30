@@ -1,6 +1,13 @@
 import { http, HttpResponse } from "msw";
 import { workspaceHandlers } from "./workspace.js";
-import { designHandlers } from "./design.js";
+import {
+  CLIENT_NAME,
+  TEMPLATE_VERSION,
+  assignedFor,
+  designHandlers,
+  openCountersignCount,
+  slaFor,
+} from "./design.js";
 import {
   BlindEntriesRequest,
   ConfirmFieldRequest,
@@ -28,6 +35,8 @@ import {
   type Field,
   type OrderContextResponse,
   type OrderFieldsResponse,
+  type OrderStageTab,
+  type RailBadgesResponse,
   type PassOrderResponse,
   type QueueBandId,
   type QueueBandOrder,
@@ -172,7 +181,102 @@ export function orderContextFor(orderId: string): OrderContextResponse {
     period_label: row.period,
     pages: row.pages,
     stamp: { label: row.stamp_label, tone: row.stamp_tone },
+    /*
+     * ⚠ RULED 2026-08-29 (RULING-2026-08-29.md) — the members the reference
+     * app's order bar, rail rows and spotlight draw. All decided HERE, never
+     * in the browser: the place line is finished, the due label is the whole
+     * string, and the stage marks/badges arrive as booleans and finished pills.
+     */
+    place: `${row.addr} · ${row.county} County, ${row.state}`,
+    client: CLIENT_NAME,
+    assigned: assignedFor(row),
+    due: slaFor(row),
+    outstanding: outstandingFor(row.id),
+    stage_nav: stageItems(row, STAGE_NAV_LABELS),
+    stage_tabs: stageItems(row, STAGE_TAB_LABELS),
   };
+}
+
+/*
+ * ── the five stages, as the reference app's rail and order bar draw them ────
+ *
+ * Two label sets over ONE state derivation: the rail's short names and the
+ * bar's long ones are the reference's own two spellings of the same list
+ * (`stageNav` / `stageTabs` in reference-app.html). The STATE is computed once,
+ * server-side, off the same order row every other projection reads — a done
+ * check is never a count reaching a total in the browser.
+ */
+const STAGE_NAV_LABELS: Readonly<Record<DemoContextStageId, string>> = {
+  upload: "Intake / Upload",
+  processing: "Extraction",
+  review: "Examination",
+  composer: "Release Compiler",
+  delivered: "Delivered",
+};
+
+const STAGE_TAB_LABELS: Readonly<Record<DemoContextStageId, string>> = {
+  upload: "Upload & Quarantine",
+  processing: "Dual-Engine Extraction",
+  review: "Examination Workstation",
+  composer: "Report Composer Studio",
+  delivered: "Delivery & Gateway Seal",
+};
+
+type DemoContextStageId = "upload" | "processing" | "review" | "composer" | "delivered";
+const STAGE_IDS: readonly DemoContextStageId[] = [
+  "upload",
+  "processing",
+  "review",
+  "composer",
+  "delivered",
+];
+
+/**
+ * Outstanding examination decisions for one order — the LIVE census figure
+ * (`needs_review` over the field store, so it falls as a reviewer rules,
+ * exactly as the reference's Examination badge does). Null for an order this
+ * server holds no extracted values for: absent is not zero.
+ */
+function outstandingFor(orderId: string): number | null {
+  if (orderId !== FIELDS_ORDER_ID) return null;
+  return fieldStore.filter((f) => f.state === "needs_review").length;
+}
+
+function stageItems(
+  row: DemoOrderRow,
+  labels: Readonly<Record<DemoContextStageId, string>>,
+): OrderStageTab[] {
+  const claimed = row.stage !== "unassigned" && row.stage !== "intake";
+  const extracted =
+    row.stage === "review" || row.stage === "escalated" || row.stage === "delivered";
+  const delivered = row.stage === "delivered";
+  /** "Cleared for release" — the settled stamp on an undelivered order. */
+  const cleared = row.stamp_tone === "settled" && !delivered;
+  const outstanding = outstandingFor(row.id);
+  const reviewBadge = outstanding !== null && outstanding > 0 ? String(outstanding) : null;
+
+  const state: Record<
+    DemoContextStageId,
+    { done: boolean; badge: string | null; tone: "attend" | "settled" }
+  > = {
+    upload: { done: claimed, badge: null, tone: "attend" },
+    processing: { done: extracted || cleared, badge: null, tone: "attend" },
+    review: { done: delivered || cleared, badge: reviewBadge, tone: "attend" },
+    composer: {
+      done: delivered,
+      badge: cleared ? "ready" : null,
+      tone: cleared ? "settled" : "attend",
+    },
+    delivered: { done: delivered && !row.failed, badge: null, tone: "attend" },
+  };
+
+  return STAGE_IDS.map((id) => ({
+    id,
+    label: labels[id],
+    done: state[id].done,
+    badge: state[id].badge,
+    badge_tone: state[id].tone,
+  }));
 }
 
 /**
@@ -611,6 +715,19 @@ export const handlers = [
          * the definition sits with the filter that makes it.
          */
         remaining: queued.length,
+        /*
+         * ⚠ RULED 2026-08-29 (RULING-2026-08-29.md) — the hub's drawn CTA
+         * copy, CHOSEN HERE. The reference's five-branch verdict machine is a
+         * lifecycle state machine and hard rule 3 puts it on the server; this
+         * is the server, standing in. The second-read branch quotes the
+         * countersign ledger (`openCountersignCount`), never a second copy.
+         */
+        verdict_action:
+          queued.length > 0
+            ? `Verify ${String(queued.length)} Fields`
+            : openCountersignCount(id) > 0
+              ? "Open Second Read"
+              : "Open Publication Studio",
       },
     };
     return HttpResponse.json(body);
@@ -1429,6 +1546,68 @@ export const handlers = [
   http.get("/api/escalations", () =>
     HttpResponse.json({ escalations: escalationStore }),
   ),
+
+  /*
+   * ── rail badges ─────────────────────────────────────────────────────────
+   * ⚠ RULED 2026-08-29 (RULING-2026-08-29.md) — "counts on rail doors, stage
+   * badges … are drawn, so they are built." The three door ornaments the
+   * reference rail draws, each quoted from the store it summarises rather
+   * than restated: the All Orders total is the browse table's, the QC pill
+   * counts the unresolved escalations this same file serves, and the
+   * template version is the templates resource's own constant.
+   */
+  http.get("/api/rail", () => {
+    const open = escalationStore.filter((e) => e.resolution === null).length;
+    const body: RailBadgesResponse = {
+      orders_total: demoOrders.length,
+      qc: open === 0 ? null : `${open} QC`,
+      template_version: TEMPLATE_VERSION,
+    };
+    return HttpResponse.json(body);
+  }),
+
+  /**
+   * ── demo reset ──────────────────────────────────────────────────────────
+   * The rail's "↺ Reset" control (RULING-2026-08-29 — the reference's
+   * `resetWalkthrough`, "Restore the demo to fresh intake"). Re-seeds this
+   * file's mutable stores from the fixtures they were copied from; the
+   * signed-in seat is untouched, exactly as the reference preserves `user`.
+   * DEV-ONLY BY CONSTRUCTION: this endpoint exists only in the mock package
+   * and is not part of the contract a real backend implements.
+   */
+  http.post("/api/demo/reset", () => {
+    fieldStore.splice(
+      0,
+      fieldStore.length,
+      ...demoFields.map((f) => ({
+        ...f,
+        rule_refs: [...f.rule_refs],
+        readings: f.readings?.map((r) => ({ ...r })),
+      })),
+    );
+    escalationStore.splice(
+      0,
+      escalationStore.length,
+      ...demoEscalations.map((e) => ({ ...e, order_ids: [...e.order_ids] })),
+    );
+    ruleStore.splice(0, ruleStore.length, ...demoRules.map((r) => ({ ...r })));
+    deliveryStore.splice(
+      0,
+      deliveryStore.length,
+      ...demoDeliveries.map((d) => ({
+        ...d,
+        report: d.report ? { ...d.report } : null,
+      })),
+    );
+    complaintStore.splice(0, complaintStore.length, ...demoComplaints.map((c) => ({ ...c })));
+    goldenStore.splice(0, goldenStore.length, ...demoGolden.map((g) => ({ ...g })));
+    queueHead = 0;
+    draftCount = 0;
+    complaintCount = 0;
+    createdOrders = 0;
+    seenPackages.clear();
+    return HttpResponse.json(ok);
+  }),
 
   /**
    * Rules-as-data: the caller's authz projection, holder lists redacted.

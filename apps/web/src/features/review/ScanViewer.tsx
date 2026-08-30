@@ -29,6 +29,9 @@ export function ScanViewer(props: {
   /** Magnification. Owned by `ScanPane` so the `Z` chord can reach it. */
   readonly zoom: ZoomLevel;
   readonly onZoom: (zoom: ZoomLevel) => void;
+  /** The drawn zoom-to-citation (RULING-2026-08-29). Owned by `ScanPane` for `Z`. */
+  readonly citeZoom: boolean;
+  readonly onCiteZoom: (on: boolean) => void;
   /** The design's ◉ Following / ○ Free. When off, selection stops paging. */
   readonly following: boolean;
   readonly onFollowing: (following: boolean) => void;
@@ -97,8 +100,15 @@ export function ScanViewer(props: {
           line={pinned ? props.line : null}
           pinned={pinned}
           box={box}
+          citeZoom={props.citeZoom}
+          onCiteZoom={props.onCiteZoom}
         />
-        <CitedRegionNote box={props.box} citedPage={props.page} shown={shown} />
+        <CitedRegionNote
+          box={props.box}
+          citedPage={props.page}
+          shown={shown}
+          zoomed={props.citeZoom && box !== null}
+        />
         <InstrumentIndex
           instruments={props.instruments}
           shown={shown}

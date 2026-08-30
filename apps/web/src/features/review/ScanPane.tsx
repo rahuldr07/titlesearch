@@ -13,11 +13,18 @@ import { useZoomKey } from "./useReviewKeys";
  * row with the zoom control and a follow toggle, the sheet, and the coverage
  * spine along the bottom.
  *
- * ZOOM IS OWNED HERE, NOT IN THE VIEWER, so `Z` can reach it. The design binds
- * `Z` to "zoom to the citation" and prints the chord in the top bar; the state
- * has to sit above `QueryState` for the chord to exist while the pages are
- * still loading, and `data-zoomed` has to be on a node that is always mounted.
- * The chord is a VIEW toggle — it files nothing and derives nothing.
+ * `Z` IS ZOOM-TO-CITATION — ⚠ RULED 2026-08-29
+ * (`docs/frontend/design-2026-08/RULING-2026-08-29.md`): the reference scales
+ * the sheet to 1.85 at the citation box over 300ms and the ruling builds it as
+ * drawn, replacing the fit↔200% simplification that stood here. `Z` toggles
+ * it, `Escape` fits, double-clicking the sheet toggles it, and stepping the
+ * manual magnifier drops it — each exactly the reference's behaviour. It is a
+ * VIEW toggle: it files nothing and derives nothing, and the scale lands only
+ * when the open field's recorded box is on the sheet being shown
+ * (`PageSheet`).
+ *
+ * ZOOM IS OWNED HERE, NOT IN THE VIEWER, so `Z` can reach it while the pages
+ * are still loading, and `data-zoomed` sits on a node that is always mounted.
  */
 export function ScanPane(props: {
   readonly orderId: string;
@@ -40,28 +47,24 @@ export function ScanPane(props: {
 }) {
   const pages = useRead(orderPages(props.orderId));
   const [zoom, setZoom] = useState<ZoomLevel>("fit");
+  /* The drawn zoom-to-citation. A view state, nothing else. */
+  const [citeZoom, setCiteZoom] = useState(false);
   /* Whether the sheet follows the open field. On is the design's default
      ("◉ Following"); off lets a reviewer read around the citation without the
      next selection yanking the page away. */
   const [following, setFollowing] = useState(true);
 
-  /* DECIDED, not an oversight: the reference animates a zoom-to-bbox (scale
-     1.85 over 300ms, transform-origin at the citation box) and this build
-     simplified it to fit↔200% plus the sheet's scroll-into-view of the cited
-     region. A bbox-anchored scale needs an inline transform-origin computed
-     from coordinates, which check-rules bans, and 1.85 would be a seventh
-     magnification literal beside PageBar's three steps. Revisit only with a
-     tokenised mechanism; until then the Z cap describes THIS behaviour. */
   useZoomKey({
     enabled: true,
-    onToggle: () => setZoom((at) => (at === "fit" ? "double" : "fit")),
+    onToggle: () => setCiteZoom((at) => !at),
+    onExit: () => setCiteZoom(false),
   });
 
   return (
     <section
       aria-label="Source page"
       data-testid="evidence-pane"
-      data-zoomed={zoom === "fit" ? "0" : "1"}
+      data-zoomed={citeZoom ? "1" : "0"}
       className="flex min-h-0 min-w-0 flex-1 flex-col bg-surface-app"
     >
       {/*
@@ -80,7 +83,14 @@ export function ScanPane(props: {
             box={props.box}
             request={props.request}
             zoom={zoom}
-            onZoom={setZoom}
+            onZoom={(next) => {
+              /* The reference drops the citation zoom when the magnifier is
+                 stepped by hand — one magnification statement at a time. */
+              setCiteZoom(false);
+              setZoom(next);
+            }}
+            citeZoom={citeZoom}
+            onCiteZoom={setCiteZoom}
             following={following}
             onFollowing={setFollowing}
           />

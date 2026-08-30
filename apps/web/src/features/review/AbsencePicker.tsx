@@ -1,90 +1,96 @@
 import type { NaReason } from "@titlepipe/contract";
-import { Option, Select } from "../../components/ui";
+import { cx } from "../../components/ui";
 
 /**
  * LAW 3 — DECLARING WHICH ABSENCE THIS IS, AND THERE ARE FOUR OF THEM.
  *
- * The design draws a "Declare Null Provenance" grid of four choices
- * (`reference-app.html` §isReview, `naOnly`). Its own model carried two; the
- * contract ratified FOUR on 2026-07-26 (`enums.ts:20-52`), and the sentences
- * below are that enum's own prose rather than the prototype's — they route
- * differently and must never collapse.
+ * ⚠ RULED 2026-08-29 (`docs/frontend/design-2026-08/RULING-2026-08-29.md`):
+ * the reference draws this as a 2×2 GRID of the four absence options under the
+ * heading "Law 3 Protocol: Declare Null Provenance" — a bold label over a
+ * small body on each cell — not as a select. Rebuilt as the drawn grid, with
+ * the drawn copy; the four still map one-to-one onto the contract's ratified
+ * `NaReason` members (`enums.ts:20-52`) and still never collapse.
  *
- * NOT GATED ON `value === null`. The prototype shows this grid INSTEAD of
+ * NOT GATED ON `value === null`. The reference shows this grid INSTEAD of
  * confirm/edit for a field its fixture flags `NA_ONLY`. Nothing on the wire
  * carries that flag, and `enums.ts:44-48` forbids the obvious substitute:
- * "never key anything off `value === null`". So the declaration is a fourth act
- * available on every open decision, and the reviewer decides — which is what
- * the act is for.
+ * "never key anything off `value === null`". So the declaration is a fourth
+ * act available on every open decision, and the reviewer decides.
  */
 const ABSENCE_OPTIONS: readonly {
   readonly reason: NaReason;
   readonly label: string;
-  readonly sentence: string;
+  readonly body: string;
 }[] = [
   {
     reason: "NOT_PRESENT",
-    label: "Structurally absent in this jurisdiction",
-    sentence:
-      "The field does not exist for instruments of this kind here. Correct, and never surfaced for review again.",
+    label: "Structurally absent",
+    body: "Legal concept does not exist for this instrument (e.g. GA security deed trustee)",
   },
   {
     reason: "NOT_FOUND",
-    label: "Searched — nothing of record",
-    sentence:
-      "The field exists in this jurisdiction and was searched for. A real gap in the record is a finding, not a blank.",
+    label: "Not found in package",
+    body: "Search index was examined and instrument was omitted by client/searcher",
   },
   {
     reason: "NOT_STATED",
-    label: "Instrument silent",
-    sentence:
-      "The search returned the document and the document does not say. Distinct from nothing of record.",
+    label: "Not stated in instrument",
+    body: "Instrument is physically present but leaves clause or amount blank",
   },
   {
     reason: "PRESENT_UNREADABLE",
-    label: "Present — could not be read",
-    sentence:
-      "It is on the page and the scan could not resolve it. The only absence that carries a page reference.",
+    label: "Unreadable / degraded",
+    body: "Document scan contrast is below optical resolution threshold",
   },
 ];
-
-function isNaReason(key: unknown): key is NaReason {
-  return ABSENCE_OPTIONS.some((option) => option.reason === key);
-}
 
 export function AbsencePicker(props: {
   readonly reason: NaReason | null;
   readonly onPick: (reason: NaReason) => void;
 }) {
-  const picked = ABSENCE_OPTIONS.find((option) => option.reason === props.reason);
-
   return (
-    <div className="flex flex-col gap-3">
-      <Select
-        data-testid="na-state-select"
-        label="Which absence is this?"
-        placeholder="Choose the absence this field is"
-        {...(props.reason === null ? {} : { selectedKey: props.reason })}
-        onSelectionChange={(key) => {
-          if (isNaReason(key)) props.onPick(key);
-        }}
-      >
-        {ABSENCE_OPTIONS.map((option) => (
-          <Option key={option.reason} id={option.reason}>
-            {option.label}
-          </Option>
-        ))}
-      </Select>
+    <div className="flex flex-col gap-4">
+      <p className="text-meta font-semibold leading-close text-ink-primary">
+        Law 3 Protocol: Declare Null Provenance
+      </p>
 
-      {/* The taxonomy's own sentence, at the point of choice. The four route
-          differently downstream, so the reviewer is told how before filing. */}
+      <div data-testid="na-state-grid" className="grid grid-cols-2 gap-4">
+        {ABSENCE_OPTIONS.map((option) => {
+          const picked = option.reason === props.reason;
+          return (
+            <button
+              key={option.reason}
+              type="button"
+              data-testid={`na-option-${option.reason}`}
+              aria-pressed={picked}
+              onClick={() => props.onPick(option.reason)}
+              className={cx(
+                "tp-state flex cursor-pointer flex-col items-start gap-1 rounded-lg border p-6 text-left",
+                picked
+                  ? "border-action bg-action-surface"
+                  : "border-line-strong bg-surface-panel hover:border-action-border",
+              )}
+            >
+              <span className="text-meta font-bold leading-close text-ink-secondary">
+                {option.label}
+              </span>
+              <span className="text-label leading-body font-normal text-ink-muted">
+                {option.body}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* The four route differently downstream — say so at the point of choice. */}
       <p
         data-testid="na-state-sentence"
         className="text-meta leading-body text-ink-secondary"
       >
-        {picked === undefined
+        {props.reason === null
           ? "Four absences, and they are not interchangeable. Choose the one the document supports."
-          : picked.sentence}
+          : (ABSENCE_OPTIONS.find((option) => option.reason === props.reason)?.body ??
+            "")}
       </p>
     </div>
   );

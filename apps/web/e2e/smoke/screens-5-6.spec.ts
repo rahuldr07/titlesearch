@@ -17,9 +17,10 @@ import { expect, test } from "@playwright/test";
  * `QuarantineResponse` (design2.ts:35-42) and `GET /api/orders/{id}/quarantine`
  * (mocks design.ts:318), so those assertions pinned a false premise and are
  * replaced — with pins on the WIRE rendering, which is the same discipline
- * pointed at the surface that now exists. The dark streaming terminal stays a
- * refusal (entities.ts:17-19), and the product select stays a real gap
- * (CreateOrderRequest, endpoints.ts:39-46).
+ * pointed at the surface that now exists. The dark terminal's refusal was
+ * superseded on 2026-08-29 (docs/frontend/design-2026-08/RULING-2026-08-29.md:
+ * "the extraction terminal log … they are drawn, so they are built") — the
+ * panel now renders the pipeline's served `run_log`, and this file pins THAT.
  */
 test("intake renders quarantine and optical verdicts from the wire, and states the one real gap", async ({
   page,
@@ -108,10 +109,16 @@ test("extraction draws the server's stages, matrix and exceptions", async ({
   await expect(page.getByTestId("classifier-note")).not.toBeEmpty();
   await expect(page.getByTestId("page-matrix").locator("li").first()).toBeVisible();
 
-  // The run-log terminal is a REFUSAL (entities.ts:17-19), not a gap to fill.
+  // The run-log terminal, built as drawn (RULING-2026-08-29): one row per
+  // served `run_log` line, rendered verbatim — nothing streamed or composed.
+  await expect(page.getByTestId("run-log-terminal")).toBeVisible();
   await expect(
-    page.getByTestId("backend-gap").filter({ hasText: "Run log terminal" }),
+    page.getByTestId("run-log-terminal").locator("li[data-warn]").first(),
   ).toBeVisible();
+
+  // The drawn header controls: the Replay act and the server's ETA string.
+  await expect(page.getByTestId("pipeline-replay")).toBeVisible();
+  await expect(page.getByTestId("pipeline-eta")).not.toBeEmpty();
 
   expect(errors, "extraction must mount without throwing").toEqual([]);
 });

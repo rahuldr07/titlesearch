@@ -1,4 +1,5 @@
 import type { DemoAccount } from "../../app/session/signedIn";
+import { ACCOUNT_LICENSES } from "../../app/session/demoAccounts";
 
 /**
  * One "demo — continue as" row: avatar initials, name, role, →.
@@ -33,9 +34,13 @@ export function AccountRow(props: {
           {account.name}
         </span>
         {/* The design sets this line at 10.5px; rule 2 allows six sizes and
-            10.5 is not one. 11px, flagged — see `ProfileBlock`. */}
+            10.5 is not one. 11px, flagged — see `ProfileBlock`.
+            RULING-2026-08-29: the reference roster's licence strings ride the
+            description for the two people it licenses ("· #GA-8841"). */}
         <span className="truncate text-label leading-close text-ink-faint">
           {account.seat} · {account.role}
+          {ACCOUNT_LICENSES[account.id] !== undefined &&
+            ` · ${ACCOUNT_LICENSES[account.id]}`}
         </span>
       </span>
       <span aria-hidden className="text-body font-bold leading-flat text-ink-disabled">

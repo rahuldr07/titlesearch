@@ -87,11 +87,18 @@ export function useDecisionKeys(props: {
   useChords(bindings, { enabled: props.enabled });
 }
 
-/** Z — toggle the sheet between fit and 200% (`ScanPane`). A VIEW toggle; it
-    files nothing. */
+/**
+ * Z — zoom the evidence page to the focused citation, Escape — back to fit
+ * (`ScanPane`). ⚠ RULED 2026-08-29 (RULING-2026-08-29.md): the drawn
+ * behaviour, replacing the fit↔200% simplification. A VIEW toggle; it files
+ * nothing. `Escape` is not a review chord in the registry — it is the drawn
+ * exit for this one view state, and it stands down behind overlays and text
+ * entry exactly as `z` does (`shared/chords.ts` guards both).
+ */
 export function useZoomKey(props: {
   readonly enabled: boolean;
   readonly onToggle: () => void;
+  readonly onExit: () => void;
 }) {
   const latest = useLatest(props);
   const bindings = useMemo(
@@ -99,6 +106,9 @@ export function useZoomKey(props: {
       z: (event: KeyboardEvent) => {
         event.preventDefault();
         latest.current.onToggle();
+      },
+      Escape: () => {
+        latest.current.onExit();
       },
     }),
     [latest],

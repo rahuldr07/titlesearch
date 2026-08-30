@@ -4,11 +4,12 @@ import { ActiveOrderStages as OrderStages } from "./ActiveOrderStages";
 import {
   OrderContextResponse,
   type GrantedPermissionSchema,
+  type RailBadgesResponse,
 } from "@titlepipe/contract";
 import { get } from "../../shared/api";
 import { DOORS, SECTION_RUBRIC, type RailSection } from "./doors";
 import { hasDoor } from "../session/permissions";
-import { RailDot } from "./RailSignal";
+import { DoorBadge } from "./DoorBadge";
 import { RailGlyph } from "./RailGlyph";
 import {
   SidebarGroup,
@@ -30,7 +31,7 @@ export function Section(props: {
   readonly section: RailSection;
   readonly rules: readonly GrantedPermissionSchema[] | undefined;
   readonly pathname: string;
-  readonly openEscalation: boolean;
+  readonly badges: RailBadgesResponse | undefined;
 }) {
   const doors = DOORS.filter(
     (door) => door.section === props.section && hasDoor(props.rules, door.path),
@@ -62,17 +63,11 @@ export function Section(props: {
             >
               <RailGlyph path={door.path} active={active} />
               <SidebarMenuLabel>{door.label}</SidebarMenuLabel>
-              {/* No door carries a COUNT — INVARIANT 66: attention rides the
-                  doors as dots, never counts. A `/dashboard` branch rendered
-                  one here for a door `doors.ts` does not contain; it is
-                  deleted, not rehomed onto All Orders. */}
-              {door.path === "/escalations" && props.openEscalation && (
-                <RailDot
-                  path="/escalations"
-                  tone="attend"
-                  title="Unresolved escalations are waiting"
-                />
-              )}
+              {/* ⚠ RULED 2026-08-29 (RULING-2026-08-29.md): the reference rail
+                  BADGES these doors, so ours does — every string below arrives
+                  finished off `GET /api/rail` (`RailSignal.tsx` carries the
+                  history of the dot this supersedes). */}
+              <DoorBadge path={door.path} badges={props.badges} />
             </SidebarMenuLink>
           );
         })}

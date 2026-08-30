@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { interceptApi } from "../helpers/net";
 
 /**
  * [INVARIANT] — rule: a global chord is SUSPENDED, not cancelled, while a text
@@ -52,29 +53,38 @@ test("Escape leaves the editor and the chords resume WITHOUT a click", async ({
   await expect(page.getByTestId("sel-label")).toHaveText("MTG 1 — LENDER");
 });
 
-test("an open react-aria listbox owns its typeahead — q does not escalate", async ({
+/*
+ * UPDATED under RULING-2026-08-29 (docs/frontend/design-2026-08/
+ * RULING-2026-08-29.md): the absence picker is the reference's drawn 2×2 GRID
+ * of buttons now, not a react-aria Select, so there is no listbox on this
+ * screen to own a typeahead — that suppression rule stays pinned DOM-free in
+ * src/shared/focusOwnership.test.ts. What this pins instead is the drawn
+ * behaviour that replaced it: the four absence options render as the grid,
+ * and `z` performs the drawn zoom-to-citation (scale to the recorded box) and
+ * `Escape` fits again.
+ */
+test("the drawn NA grid stands where the select was, and z zooms to the citation", async ({
   page,
 }) => {
   await openReview(page);
-  await page.getByTestId("na-state-select").click();
-  const listbox = page.getByRole("listbox");
-  await expect(listbox).toBeVisible();
-  // `q` is typeahead inside the popover, never the escalate chord.
-  await page.keyboard.press("q");
-  await expect(page.getByTestId("escalate-confirm")).toHaveCount(0);
-  await expect(listbox).toBeVisible();
-  // `z` likewise must not toggle the citation zoom behind the popover.
-  await page.keyboard.press("z");
-  await expect(page.getByTestId("evidence-pane")).toHaveAttribute(
-    "data-zoomed",
-    "0",
-  );
+  // The drawn grid: all four Law 3 absences, as buttons, 2×2.
+  await page.getByTestId("act-absence").click();
+  await expect(page.getByTestId("na-state-grid")).toBeVisible();
+  await expect(page.getByTestId("na-state-grid").getByRole("button")).toHaveCount(4);
+  // Leave the editor, so the chords resume without a click…
   await page.keyboard.press("Escape");
-  await expect(listbox).toHaveCount(0);
+  await expect(page.getByTestId("na-state-grid")).toHaveCount(0);
+  // …then `z` toggles the drawn citation zoom…
   await page.keyboard.press("z");
   await expect(page.getByTestId("evidence-pane")).toHaveAttribute(
     "data-zoomed",
     "1",
+  );
+  // …and Escape fits again, as the drawn note says.
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("evidence-pane")).toHaveAttribute(
+    "data-zoomed",
+    "0",
   );
 });
 
@@ -121,17 +131,31 @@ test("every chord is DEAD until signed in", async ({ page }) => {
   await expect(page.getByTestId("command-palette-input")).toHaveCount(0);
 });
 
+/*
+ * UPDATED for the built surface (RULING-2026-08-29 completed this flow): the
+ * act is per ruling at POST /api/fields/{id}/countersign — one act, one
+ * record — and design rule 13 is the SERVER's 409, rendered verbatim in the
+ * panel, never button state. The 409 is forced at the fetch layer so the pin
+ * holds whichever examiner the session happens to hold.
+ */
 test("countersign is refused by the SERVER with a 409, not by button state", async ({
   page,
 }) => {
+  await interceptApi(page, {
+    method: "POST",
+    match: "/countersign",
+    status: 409,
+    body: { error: "a second read must come from a different examiner than the one who ruled" },
+  });
   await openReview(page);
-  const [res] = await Promise.all([
-    page.waitForResponse((r) => r.url().includes("/second-reads")),
-    page.getByTestId("countersign").click({ force: true }),
-  ]);
-  expect(res.status()).toBe(409);
-  await expect(page.getByTestId("countersign")).toHaveAttribute(
-    "title",
-    /cannot countersign your own rulings/i,
+  const signature = page.getByTestId("countersign-signature");
+  await signature.fill("L. Vance");
+  await page
+    .getByTestId("countersign-panel")
+    .getByRole("button", { name: "Countersign" })
+    .first()
+    .click();
+  await expect(page.getByTestId("countersign-refusal")).toContainText(
+    "a second read must come from a different examiner",
   );
 });

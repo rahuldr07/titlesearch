@@ -14,10 +14,18 @@ import type {
   ArtifactsResponse,
   CountersignsResponse,
 } from "@titlepipe/contract";
-import { demoOrders, demoDeliveries, demoFields } from "./data.js";
+import { demoOrders, demoDeliveries, demoFields, demoTimelines } from "./data.js";
 import { guard } from "./guard.js";
 
 /** Handlers for the surface added under the 2026-08-28 ruling. */
+
+/** One template version, quoted everywhere a screen prints it — the pill on
+ * the Templates Architect door (`GET /api/rail`) and the templates resource
+ * below both read THIS. RULING-2026-08-29 draws the pill. */
+export const TEMPLATE_VERSION = "v4.2";
+
+/** The client the demo orders belong to — the one NAME `cli_riverbend` resolves to. */
+export const CLIENT_NAME = "Riverbend Title";
 
 const ASSIGNEES: Readonly<Record<string, string | null>> = {
   gate: "R. Okafor",
@@ -29,15 +37,53 @@ const ASSIGNEES: Readonly<Record<string, string | null>> = {
   delivered: "D. Okafor",
 };
 
-const DUE: Readonly<Record<string, string | null>> = {
-  gate: "today",
-  review: "today",
-  escalated: "tomorrow",
-  intake: "tomorrow",
-  machine: "in 2 days",
-  unassigned: "unscheduled",
-  delivered: null,
+/** Who holds an order, as the server answers it. Null while nobody does. */
+export function assignedFor(o: (typeof demoOrders)[number]): string | null {
+  return ASSIGNEES[o.stage] ?? null;
+}
+
+/**
+ * ⚠ RULED 2026-08-29 (RULING-2026-08-29.md) — the finished due labels the
+ * reference app draws ("Due today · 5h 20m left"). The reference computes them
+ * client-side from a ticking clock; here they are SERVED, per order, demo-
+ * stable, in the reference's own register. Never derived from a timestamp in
+ * the browser — there is no timestamp; the label IS the fact.
+ */
+const SLA: Readonly<Record<string, string | null>> = {
+  ord_demo_1: "Due today · 5h 20m left",
+  ord_demo_2: "Due tomorrow 10:00 AM",
+  ord_demo_4: "Due tomorrow 2:00 PM",
+  ord_demo_5: "Due today · 7h 10m left",
+  ord_demo_6: "Waiting on QC",
+  ord_demo_7: "Due today · 6h 45m left",
+  ord_demo_8: "Waiting on ops",
+  ord_demo_9: "Due tomorrow 10:00 AM",
+  ord_demo_10: "Due today · 6h 45m left",
+  ord_demo_11: "Due in 2 days",
+  ord_demo_12: "Delivered Aug 18",
+  ord_demo_13: "Delivered Aug 16",
+  ord_demo_14: "Due today · 3h 05m left",
 };
+
+/** The bar chip's whole string. Null = the server states no due at all. */
+export function slaFor(o: (typeof demoOrders)[number]): string | null {
+  return SLA[o.id] ?? null;
+}
+
+/**
+ * The browse row's Due cell — the reference's own derivation, run SERVER-side
+ * (`rowMap` in reference-app.html: delivered rows print the word "delivered",
+ * live rows drop the "Due today · " / "Due " / " left" furniture).
+ */
+function dueCell(o: (typeof demoOrders)[number]): string | null {
+  if (o.stage === "delivered") return "delivered";
+  const sla = slaFor(o);
+  if (sla === null) return null;
+  return sla
+    .replace(/^Due today · /, "")
+    .replace(/^Due /, "")
+    .replace(/ left$/, "");
+}
 
 function toRow(o: (typeof demoOrders)[number]): OrderRow {
   return {
@@ -45,11 +91,11 @@ function toRow(o: (typeof demoOrders)[number]): OrderRow {
     order_ref: o.order_ref,
     addr: o.addr,
     place: o.place,
-    client: "Riverbend Title",
+    client: CLIENT_NAME,
     product: o.product,
     stage: o.stage as OrderRow["stage"],
-    assigned_to: ASSIGNEES[o.stage] ?? null,
-    due: DUE[o.stage] ?? null,
+    assigned_to: assignedFor(o),
+    due: dueCell(o),
     pages: o.pages,
   };
 }
@@ -157,6 +203,16 @@ const countersignStore = new Map<string, CountersignRow[]>([
  * "no row still open", and the detail names either the open count or the
  * signers the rows actually carry.
  */
+/**
+ * ⚠ RULED 2026-08-29 (RULING-2026-08-29.md) — how many T1 rulings still await
+ * their second read, QUOTED from the ledger. Exported for the fields census's
+ * `verdict_action`: the hub's CTA names the second read only while the ledger
+ * actually holds one open, and this is the one place that answer lives.
+ */
+export function openCountersignCount(orderId: string): number {
+  return (countersignStore.get(orderId) ?? []).filter((r) => r.countersigned_by === null).length;
+}
+
 function t1Gate(orderId: string): { passed: boolean; detail: string | null } {
   const rows = countersignStore.get(orderId) ?? [];
   const open = rows.filter((r) => r.countersigned_by === null).length;
@@ -511,9 +567,13 @@ export const designHandlers = [
     }
     const fieldId = String(params["id"]);
     let row: CountersignRow | undefined;
-    for (const rows of countersignStore.values()) {
+    let ledgerOrderId: string | null = null;
+    for (const [orderId, rows] of countersignStore.entries()) {
       row = rows.find((r) => r.field_id === fieldId);
-      if (row !== undefined) break;
+      if (row !== undefined) {
+        ledgerOrderId = orderId;
+        break;
+      }
     }
     if (row === undefined) {
       return HttpResponse.json({ error: "no countersign is required on this field" }, { status: 404 });
@@ -541,6 +601,27 @@ export const designHandlers = [
       countersigned_by: actor,
       at: new Date().toISOString(),
     };
+    /*
+     * ⚠ RULED 2026-08-29 (RULING-2026-08-29.md) — the drawn trail line. When
+     * the LAST open T1 ruling on this order's ledger gains its second read,
+     * the SERVER appends the event the reference draws ("R. Menon (QC)
+     * countersigned 3 T1 rulings — second read complete") to the order's
+     * timeline, and the trail re-reads it — never an optimistic append in the
+     * browser (`useCountersign.ts` already invalidates the timeline read).
+     */
+    if (ledgerOrderId !== null) {
+      const ledger = countersignStore.get(ledgerOrderId) ?? [];
+      if (ledger.every((r) => r.countersigned_by !== null)) {
+        const trail = (demoTimelines[ledgerOrderId] ??= []);
+        trail.push({
+          at: filed.at,
+          kind: "countersigned",
+          label: `${actor} countersigned ${String(ledger.length)} T1 ${ledger.length === 1 ? "ruling" : "rulings"} — second read complete`,
+          detail: ledger.map((r) => r.path).join(" · "),
+          attend: false,
+        });
+      }
+    }
     return HttpResponse.json(filed);
   }),
 
@@ -565,7 +646,7 @@ export const designHandlers = [
 
   http.get("/api/templates", () => {
     const body: TemplateResponse = {
-      version: "v4.2",
+      version: TEMPLATE_VERSION,
       blocks: [
         { id: "t1", numeral: "I", title: "Header information", included: true, note: "Order, jurisdiction, product, period" },
         { id: "t2", numeral: "II", title: "Property identification", included: true, note: "Situs, parcel, legal description" },

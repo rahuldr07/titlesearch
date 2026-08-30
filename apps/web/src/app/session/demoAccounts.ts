@@ -1,3 +1,4 @@
+import type { Role } from "@titlepipe/contract";
 import type { DemoAccount } from "./signedIn";
 
 /**
@@ -64,3 +65,32 @@ export const DEMO_ACCOUNTS: readonly DemoAccount[] = [
     initials: "LV",
   },
 ];
+
+/**
+ * ⚠ RULED 2026-08-29 — `docs/frontend/design-2026-08/RULING-2026-08-29.md`:
+ * the reference's profile block draws a per-role hint line (`roleHint` in
+ * reference-app.html), so ours does. The four lines the reference authors are
+ * taken verbatim for the roles that exist in both rosters (its "Typist
+ * (Reviewer)" seat maps to our `reviewer`, its "QC Reviewer" to `senior`);
+ * the two roles the reference roster does not carry get lines written in the
+ * same register, from what the permission table (`authz.ts`) actually grants.
+ */
+export const ROLE_HINTS: Readonly<Record<Role, string>> = {
+  admin: "Full access · rules, templates, people, release",
+  reviewer: "Rulings only · no countersign · library read-only",
+  senior: "Countersigns T1 · rules on escalated queries",
+  engineer: "Pipeline & telemetry · no order mutations",
+  typist: "Blind capture · keys the sheet · sees no engine output",
+  ops: "Intake & delivery · accepts packages, executes release",
+};
+
+/**
+ * The reference roster's licence strings ("#GA-8841"), by demo account id —
+ * RULING-2026-08-29 draws them on the sign-in rows, attached to the two
+ * people the reference licenses (D. Okafor and R. Menon). Nobody else holds
+ * one, so nobody else gets one invented.
+ */
+export const ACCOUNT_LICENSES: Readonly<Partial<Record<string, string>>> = {
+  okafor: "#GA-8841",
+  menon: "#GA-9104",
+};

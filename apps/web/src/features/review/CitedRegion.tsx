@@ -93,9 +93,12 @@ export function CitedRegionNote(props: {
   /** The cited page, when a field with provenance is open. */
   readonly citedPage: number | null;
   readonly shown: number;
+  /** The drawn zoom state (RULING-2026-08-29) — the note names the way back. */
+  readonly zoomed: boolean;
 }) {
-  const text =
-    props.citedPage === null
+  const text = props.zoomed
+    ? "Zoomed to citation — Z or Esc to fit, double-click the page"
+    : props.citedPage === null
       ? "Choose a field on the left to mark where its value was read."
       : props.box === null
         ? `The open field cites p${props.citedPage}. The engine that read it recorded no coordinate, so the page is marked and no region is.`

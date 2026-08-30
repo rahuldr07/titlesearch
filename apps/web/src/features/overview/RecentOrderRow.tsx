@@ -55,8 +55,18 @@ export function RecentOrderRow(props: { readonly row: OrderRow }) {
         {row.assigned_to ?? "Unassigned"}
       </span>
 
-      {/* INVARIANT 23: the server's own due label, never a countdown from it. */}
-      <span className="w-65 shrink-0 truncate px-6 text-right font-mono text-meta leading-close text-ink-secondary">
+      {/* The server's own due label, never a countdown from it — the varied
+          strings ("5h 20m", "tomorrow 10:00 AM", "Waiting on QC") arrive
+          finished. A delivered row's cell dims, as the reference draws it
+          (RULING-2026-08-29) — keyed on the served stage, not on the text. */}
+      <span
+        className={cx(
+          "w-65 shrink-0 truncate px-6 text-right font-mono text-meta leading-close",
+          row.stage === "delivered"
+            ? "text-ink-disabled"
+            : "font-semibold text-ink-secondary",
+        )}
+      >
         {row.due ?? "No due date"}
       </span>
 

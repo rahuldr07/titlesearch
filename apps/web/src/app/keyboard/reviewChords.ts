@@ -83,13 +83,14 @@ export const REVIEW_CHORDS: readonly ChordSpec[] = [
     chord: "z",
     cap: "Z",
     /*
-     * What the handler DOES, not what the design drew: `Z` toggles the source
-     * page between fit and 200% (`ScanPane.tsx` — the reference's animated
-     * zoom-to-bbox was deliberately simplified, and the note there records
-     * it). Rule 11 backwards: a cap describing a behaviour nothing performs
-     * is the same lie as a key nothing binds.
+     * What the handler DOES — which, since ⚠ RULING-2026-08-29
+     * (docs/frontend/design-2026-08/RULING-2026-08-29.md), is the reference's
+     * drawn behaviour: `ScanPane.tsx` scales the sheet to the focused
+     * citation (1.85, 300ms, origin at the recorded box). The cap keeps
+     * rule 11 true by describing that behaviour, in the reference's own
+     * shortcut-sheet wording.
      */
-    desc: "Toggle the source page between fit and 200% magnification",
+    desc: "Zoom the evidence page to the focused citation",
     action: null,
     install: "review",
     alwaysOn: false,

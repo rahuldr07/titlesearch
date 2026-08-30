@@ -1,36 +1,35 @@
-import { cx, Kbd, Switch } from "../../components/ui";
+import type { OrderCensus } from "@titlepipe/contract";
+import { cx, Kbd, ProgressMeter, Switch } from "../../components/ui";
 
 /**
- * THE WORKSTATION'S TOP BAR, measured off `reference-app.html`'s `isReview`:
- * 8px 16px on white, 1px underneath, gap 16, wrapping — h1 "Examination
- * Workstation" 16px w700 (16, not 28: this is a toolbar), the order ref in
- * mono, the active field, the flagged-first toggle and the chord legend.
+ * THE WORKSTATION'S TOP BAR, measured off `reference-app.html`'s `isReview` —
+ * and completed to the drawing under ⚠ RULING-2026-08-29
+ * (`docs/frontend/design-2026-08/RULING-2026-08-29.md`): the bar now carries
+ * the drawn meter with its mono "N/M VERIFIED" caption (both figures the
+ * SERVER'S census — never a filter length), the drawn pill copy ("6 fields" /
+ * "✓ Done"), and the drawn chord captions (C Confirm · E Edit · Q QC ·
+ * J/K Nav · Z Zoom).
  *
  * SIX CHORDS, AND EVERY ONE IS INSTALLED. Rule 11: a screen may not advertise
- * a key it does not bind. `Z` was missing from this legend and C/E/Q/J/K were
- * printed with nothing behind them; `useReviewKeys.ts` now installs all six,
- * so the legend and the bindings are one list.
- *
- * THE PILL IS THE SERVER'S FIGURE. The design draws a per-decision dot strip
- * and an "N fields" pill beside it. The strip is `DecisionDock`'s (it holds the
- * server's `settled`/`decisions`); the pill went unprinted for a month because
- * the only way to get it here was `decisions - settled`, which is count
- * arithmetic in the browser. `OrderCensus.remaining` closed that on 2026-08-28,
- * and `undefined` — the server not saying — still prints as silence, never 0.
+ * a key it does not bind — `useReviewKeys.ts` installs all six, so the legend
+ * and the bindings are one list (J and K share the drawn "J/K" chip).
  */
 export function WorkstationBar(props: {
   readonly orderRef: string | null;
-  /** `OrderCensus.remaining`. `undefined` = the server did not say. */
-  readonly remaining: number | undefined;
+  /** `OrderCensus`. `undefined` members = the server did not say. */
+  readonly census: OrderCensus | undefined;
   readonly openLabel: string | null;
   readonly flaggedFirst: boolean;
   readonly onFlaggedFirst: (on: boolean) => void;
 }) {
+  const settled = props.census?.settled;
+  const decisions = props.census?.decisions;
+
   return (
     <header className="flex shrink-0 flex-wrap items-center gap-8 border-b border-line-strong bg-surface-panel px-8 py-4">
       <div className="flex shrink-0 items-center gap-4">
         <h1 className="text-body font-bold leading-tight text-ink-primary">
-          Examination workstation
+          Examination Workstation
         </h1>
         {/* Rule 3: an order reference is an identifier. */}
         {props.orderRef !== null && (
@@ -40,12 +39,25 @@ export function WorkstationBar(props: {
         )}
       </div>
 
+      {/* The drawn meter: mono caption, then the dots — both server figures. */}
+      {settled !== undefined && decisions !== undefined && (
+        <div className="flex shrink-0 items-center gap-4">
+          <span
+            data-testid="verified-meter-label"
+            className="font-mono text-label font-bold leading-flat tabular-nums text-ink-primary"
+          >
+            {settled}/{decisions} VERIFIED
+          </span>
+          <ProgressMeter label="Decisions settled" settled={settled} total={decisions} />
+        </div>
+      )}
+
       <p className="min-w-0 flex-1 truncate text-label leading-flat text-ink-muted">
         {props.openLabel === null ? (
           "No field open."
         ) : (
           <>
-            Active field{" "}
+            Active Field{" "}
             <span className="font-semibold text-ink-primary">{props.openLabel}</span>
           </>
         )}
@@ -59,17 +71,16 @@ export function WorkstationBar(props: {
         isSelected={props.flaggedFirst}
         onChange={props.onFlaggedFirst}
       >
-        Flagged sections first
+        Flagged first
       </Switch>
 
-      <RemainingPill remaining={props.remaining} />
+      <RemainingPill remaining={props.census?.remaining} />
 
       <div className="flex shrink-0 items-center gap-4 border-l border-line-strong pl-6">
         <Chip k="C" label="Confirm" />
-        <Chip k="E" label="Correct" />
-        <Chip k="Q" label="Escalate" />
-        <Chip k="J" label="Next" />
-        <Chip k="K" label="Previous" />
+        <Chip k="E" label="Edit" />
+        <Chip k="Q" label="QC" />
+        <Chip k="J/K" label="Nav" />
         <Chip k="Z" label="Zoom" />
       </div>
     </header>
@@ -77,8 +88,9 @@ export function WorkstationBar(props: {
 }
 
 /**
- * WHAT THE SERVER IS STILL WAITING ON. Zero is a real answer and reads settled;
- * absent is the server declining to say, and prints as that rather than as 0.
+ * WHAT THE SERVER IS STILL WAITING ON, in the drawn register: "6 fields", or
+ * "✓ Done" once nothing is. Zero is a real answer; absent is the server
+ * declining to say, and prints as that rather than as 0.
  */
 function RemainingPill(props: { readonly remaining: number | undefined }) {
   const remaining = props.remaining;
@@ -104,8 +116,8 @@ function RemainingPill(props: { readonly remaining: number | undefined }) {
       )}
     >
       {remaining === 0
-        ? "Nothing outstanding"
-        : `${remaining} ${remaining === 1 ? "field" : "fields"} outstanding`}
+        ? "✓ Done"
+        : `${remaining} ${remaining === 1 ? "field" : "fields"}`}
     </span>
   );
 }

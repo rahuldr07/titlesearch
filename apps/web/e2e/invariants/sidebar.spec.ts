@@ -30,18 +30,27 @@ import { expect, test } from "@playwright/test";
  * that is a CONFLICT in the design: stop and report (BRIEF §5 Phase 5).
  */
 
-// RECOVERED [INVARIANT] — attention rides the doors as DOTS, never counts.
-// The pre-rebuild test also asserted a RED dot on `/complaints`; that screen
-// was deleted in Phase 0 (no route in routeTree), so the red/`/complaints`
-// clause is dropped, not weakened — the amber/gap clause survives on the live
-// `/escalations` door, and the "no counts" rule is asserted in full.
-test("attention rides the doors as dots, never counts", async ({ page }) => {
+// RETARGETED under RULING-2026-08-29 (docs/frontend/design-2026-08/
+// RULING-2026-08-29.md): the reference app BADGES the rail doors — a count on
+// All Orders, a "1 QC" pill on Escalations, a version pill on Templates — so
+// the pre-ruling "dots, never counts" rendering is superseded and this test
+// now pins the drawn one. What SURVIVES, retargeted rather than weakened: the
+// ornaments are SERVED FINISHED off `GET /api/rail` (asserted by pinning the
+// fixture's exact strings), and the rail still composes no caption of its own
+// — the "N unresolved"/"N open" refusals hold as written.
+test("the rail doors wear the served badges the reference draws", async ({ page }) => {
   await page.goto("/orders/ord_demo_1");
   const rail = page.getByTestId("side-rail");
   await expect(rail).toBeVisible();
-  // an open escalation pulls an amber dot onto its door (the demo admin holds it)
-  await expect(page.getByTestId("rail-dot-/escalations")).toBeVisible();
-  // the rail carries NO counts — dots only (numbers live on the screen itself)
+  // the All Orders door carries the served orders total — the browse table's
+  // own count (13 demo orders), never a length counted in the browser
+  await expect(page.getByTestId("rail-badge-/orders-list")).toHaveText("13");
+  // the open escalations pull the served QC pill onto the door, WHOLE — the
+  // fixture holds 4 unresolved escalations and the server captions them
+  await expect(page.getByTestId("rail-badge-/escalations")).toHaveText("4 QC");
+  // Templates Architect wears the template resource's own version
+  await expect(page.getByTestId("rail-badge-/templates")).toHaveText("v4.2");
+  // the rail still AUTHORS no caption — a served pill is not a composed count
   const railText = await rail.innerText();
   expect(railText).not.toMatch(/\d+\s+unresolved/);
   expect(railText).not.toMatch(/\d+\s+open/);

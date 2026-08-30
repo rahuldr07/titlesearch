@@ -1,34 +1,39 @@
 import type { OrderPipelineResponse } from "@titlepipe/contract";
 
 /**
- * THE META STRIP — the design's cell bar under the heading.
+ * THE META STRIP — the reference's three cells, as drawn: Order ref · Source
+ * package · Volume. ⚠ RULED 2026-08-29
+ * (`docs/frontend/design-2026-08/RULING-2026-08-29.md`): the strip was held to
+ * two cells so the order ref would print once; the ruling builds the drawn
+ * three, and the ref cell quotes the SAME `order_ref` the strip above reads
+ * (`GET /api/orders/{id}/context`) — one variable, passed down, never a second
+ * literal.
  *
- * It is two cells wide, not the design's three: the first cell is the order
- * ref, and `OrderStrip` already prints that from `GET /api/orders/{id}/context`
- * at the top of every order-scoped screen. A second printing from a second
- * response is the second literal rule 11 forbids — the same value with two
- * chances to disagree.
- *
- * THE TWO FIGURES ARE PRINTED, NEVER SUBTRACTED. "53 pages carried nothing" is
- * arithmetic on server data, and a difference the client computes is a third
- * number nobody serves. `classifier_note` already says what the other pages
- * were, in the server's words, so it is a full-width row rather than a fourth
- * cell.
- *
- * `total_pages` is `z.number().int()` and cannot express "the package could not
- * be read" — packages/mocks records that gap at workspace.ts:667-673, where an
- * unreadable package arrives as `0`. The strip labels it as the server's count
- * and adds no meaning of its own on top.
+ * `package_name` and `volume_label` are SERVER-COMPOSED strings on the
+ * pipeline response (intake.ts, same ruling). Null is the server having no
+ * package to name, printed as that. `classifier_note` stays the full-width
+ * row: it is the server's own sentence about what the other pages were.
  */
-export function MetaStrip(props: { readonly pipeline: OrderPipelineResponse }) {
+export function MetaStrip(props: {
+  readonly pipeline: OrderPipelineResponse;
+  /** From `/context` — the one order-ref read every order screen shares. */
+  readonly orderRef: string | null;
+}) {
   return (
     <div
       data-testid="extraction-meta"
       className="overflow-hidden rounded-lg border border-line-strong bg-surface-panel"
     >
-      <dl className="grid grid-cols-2">
-        <Cell label="Source package" value={`${props.pipeline.total_pages} pages`} />
-        <Cell label="Carried forward" value={`${props.pipeline.pages_relevant} pages`} />
+      <dl className="grid grid-cols-3">
+        <Cell label="Order ref" value={props.orderRef ?? "Not served"} />
+        <Cell
+          label="Source package"
+          value={props.pipeline.package_name ?? "No package named"}
+        />
+        <Cell
+          label="Volume"
+          value={props.pipeline.volume_label ?? "No count — the package could not be read"}
+        />
       </dl>
       <p
         data-testid="classifier-note"

@@ -3,35 +3,40 @@ import type { GrantedPermissionSchema } from "@titlepipe/contract";
 import { RouteButton } from "../../app/chrome/RouteButton";
 
 /**
- * The header band. Two refusals from the prototype: the kicker pill ("TitleFlow
- * Engine · Production Pipeline"), because nothing in the contract tells this
- * screen which environment it is pointed at; and the fixed subhead ending in
- * "SOC 2 delivery certification", a claim no member of the contract backs. The
- * subhead is `LifecycleResponse.scope_note` instead — the server's own sentence
- * about what this caller can see.
+ * The header band.
+ *
+ * ⚠ RULED 2026-08-29 — `docs/frontend/design-2026-08/RULING-2026-08-29.md`:
+ * the two refusals this header used to carry (the kicker pill and the fixed
+ * lede) are superseded — the reference draws both, so both are built, with
+ * our product's name in the kicker. They are SCREEN COPY, like the h1: fixed
+ * product prose, not a server figure, which is why neither rides the wire.
  */
 export function OverviewHeader(props: {
-  readonly scopeNote: string | undefined;
   readonly role: string | undefined;
   readonly rules: readonly GrantedPermissionSchema[] | undefined;
 }) {
   return (
     <header className="flex flex-wrap items-start justify-between gap-8">
       <div className="flex min-w-0 flex-col gap-3">
+        {/* The reference's kicker pill, with our product name. */}
+        <span className="flex w-fit items-center gap-4 rounded-pill border border-action-border bg-action-surface px-5 py-2 text-label font-semibold leading-flat text-ink-secondary">
+          <KickerGlyph />
+          TitlePipe Engine · Production Pipeline
+        </span>
         <h1 className="text-title font-bold leading-tight tracking-tight text-ink-primary">
-          Orders overview
+          Orders Overview
         </h1>
-        {props.scopeNote !== undefined && (
-          <p className="max-w-320 text-body leading-body text-ink-secondary">
-            {props.scopeNote}
-          </p>
-        )}
+        {/* The reference's lede, verbatim. */}
+        <p className="max-w-320 text-body leading-body text-ink-secondary">
+          Real-time abstract tracking across incoming packages, dual-engine
+          extraction, human verification, and SOC 2 delivery certification.
+        </p>
       </div>
 
       <div className="flex shrink-0 items-center gap-6">
         {hasDoor(props.rules, "/ingest") && (
           <RouteButton variant="secondary" to="/ingest">
-            Intake new package
+            Intake New Package
           </RouteButton>
         )}
         {props.role !== undefined && (
@@ -45,5 +50,26 @@ export function OverviewHeader(props: {
         )}
       </div>
     </header>
+  );
+}
+
+/** The reference kicker's four-square glyph, verbatim. */
+function KickerGlyph() {
+  return (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      aria-hidden="true"
+      className="shrink-0"
+    >
+      <rect x="3" y="3" width="7" height="7" rx="1.5" />
+      <rect x="14" y="3" width="7" height="7" rx="1.5" />
+      <rect x="14" y="14" width="7" height="7" rx="1.5" />
+      <rect x="3" y="14" width="7" height="7" rx="1.5" />
+    </svg>
   );
 }

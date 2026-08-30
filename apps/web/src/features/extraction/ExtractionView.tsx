@@ -1,11 +1,13 @@
-import { Badge, Card, CardBody, CardHeader } from "../../components/ui";
-import { BackendGap } from "../../entities/gap/BackendGap";
+import { Badge, Card } from "../../components/ui";
+import { RouteButton } from "../../app/chrome/RouteButton";
 import { useRead } from "../../app/useRead";
-import { orderPages, orderPipeline } from "../../shared/queries";
+import { orderContext, orderFields, orderPages, orderPipeline } from "../../shared/queries";
+import { ExtractionHeader } from "./ExtractionHeader";
 import { MetaStrip } from "./MetaStrip";
 import { PageMatrix, PageMatrixLegend } from "./PageMatrix";
 import { PolicyExceptions } from "./PolicyExceptions";
 import { StageTimeline } from "./StageTimeline";
+import { TerminalLog } from "./TerminalLog";
 import { CardTitle } from "./cardTitle";
 
 /**
@@ -16,25 +18,20 @@ import { CardTitle } from "./cardTitle";
  * `gate_halted` is READ (intake.ts:97). The halt badge never scans `stages` for
  * a halted phase — the two can legitimately differ.
  *
- * FOUR THINGS THE DESIGN DRAWS AND THIS SCREEN REFUSES:
- *
- * 1. "Time to examination" and its ETA chip — INVARIANT 23 bans rates, elapsed
- *    time and estimates outright, and an estimate is a promise the server never
- *    made.
- * 2. The "↺ Replay" button — a mutation with no endpoint and no permission
- *    (authz.ts:59-118). See `StageTimeline`.
- * 3. The eyebrow pill above the heading. At 11px on `ink-faint` it measures
- *    2.82:1; commit 496ca62 removed the last two for the same reason.
- * 4. The stage card's CTA footer, "N exceptions securely routed to human
- *    review" beside an "Enter Examination Workstation →" button. N is a count no
- *    response carries — `PipelineStage` (intake.ts:83) has no count member. The
- *    button is a duplicate: `VerdictCard` already carries the one accented way
- *    into `/orders/$orderId/review`, from the hub rendered directly above this
- *    view on the same scrolling route.
+ * ⚠ RULED 2026-08-29 (`docs/frontend/design-2026-08/RULING-2026-08-29.md`):
+ * the four elements this screen previously REFUSED are now built as the
+ * reference draws them — the "Time to examination" ETA chip and the "↺ Replay"
+ * control (`ExtractionHeader`), the eyebrow pill, the dark run-log terminal
+ * (`TerminalLog`, fed by the served `run_log`), and the stage card's CTA
+ * footer, whose count is the SERVER'S `census.remaining` — never an
+ * arithmetic here.
  */
 export function ExtractionView(props: { readonly orderId: string }) {
   const pipeline = useRead(orderPipeline(props.orderId));
   const pages = useRead(orderPages(props.orderId));
+  const context = useRead(orderContext(props.orderId));
+  const fields = useRead(orderFields(props.orderId));
+  const remaining = fields.data?.census?.remaining;
 
   if (pipeline.data === undefined) {
     return (
@@ -51,16 +48,17 @@ export function ExtractionView(props: { readonly orderId: string }) {
 
   return (
     <div className="flex flex-col gap-12 bg-surface-app p-14" data-testid="extraction">
-      <h2 className="font-sans text-title font-bold leading-flat text-ink-primary">
-        Extraction &amp; provenance telemetry
-      </h2>
+      <ExtractionHeader orderId={props.orderId} etaLabel={pipeline.data.eta_label} />
 
       {/* Rule 6: a coloured capsule at a moment of record. A halt is one. */}
       {pipeline.data.gate_halted && (
         <Badge tone="halt">◆ The gate has halted this order</Badge>
       )}
 
-      <MetaStrip pipeline={pipeline.data} />
+      <MetaStrip
+        pipeline={pipeline.data}
+        orderRef={context.data?.order_ref ?? null}
+      />
 
       <div className="grid grid-cols-[minmax(0,1fr)_340px] items-start gap-12">
         <div className="flex min-w-0 flex-col gap-12">
@@ -75,6 +73,26 @@ export function ExtractionView(props: { readonly orderId: string }) {
               bypass a human read. Every conflict is confirmed by an examiner,
               and no escalation is resolved without a rule.
             </p>
+            {/* The drawn CTA footer (RULING-2026-08-29). `remaining` is the
+                server's census figure; absent = the server did not say, and
+                the footer stays down rather than inventing a count. */}
+            {remaining !== undefined && remaining > 0 && (
+              <div className="mt-12 flex items-center justify-between gap-8 rounded-lg border border-line-subtle bg-surface-sunken p-8">
+                <span className="font-sans text-meta font-bold leading-close text-ink-primary">
+                  {remaining === 1
+                    ? "1 exception securely routed to human review"
+                    : `${remaining} exceptions securely routed to human review`}
+                </span>
+                <RouteButton
+                  variant="primary"
+                  to="/orders/$orderId/review"
+                  params={{ orderId: props.orderId }}
+                  data-testid="extraction-enter-review"
+                >
+                  Enter Examination Workstation →
+                </RouteButton>
+              </div>
+            )}
           </Card>
 
           <Card>
@@ -96,23 +114,8 @@ export function ExtractionView(props: { readonly orderId: string }) {
         </div>
 
         <div className="flex min-w-0 flex-col gap-12">
-          <BackendGap
-            object="Run log terminal"
-            conversation="entities.ts:17-19 · CONTEXT §14"
-          >
-            The design streams the run&apos;s log lines into a dark terminal.
-            This is a refusal rather than a missing shape: probes are never
-            visible in any client, and the contract deliberately holds no schema
-            a screen could consume. Run output is the pipeline describing its
-            own attempts, which is what that rule names.
-          </BackendGap>
-
-          <Card padding="none">
-            <CardHeader>Policy exceptions</CardHeader>
-            <CardBody>
-              <PolicyExceptions orderId={props.orderId} />
-            </CardBody>
-          </Card>
+          <TerminalLog lines={pipeline.data.run_log} />
+          <PolicyExceptions orderId={props.orderId} />
         </div>
       </div>
     </div>

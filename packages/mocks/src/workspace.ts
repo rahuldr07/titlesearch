@@ -24,8 +24,10 @@ import {
   PACKAGE_PAGES_RELEVANT,
   PERIOD_LABEL,
   PRODUCT_NAME,
+  demoFields,
   demoOrderRow,
   demoOrders,
+  demoPages,
 } from "./data.js";
 import type { DemoOrderRow, DemoStageId } from "./data.js";
 
@@ -705,6 +707,57 @@ export function pipelineFor(orderId: string): OrderPipelineResponse {
   const machinePhase: StagePhase = gatePassed && !running ? "done" : "waiting";
   const signoffPhase: StagePhase = signed ? "done" : readable && stage !== "unassigned" ? "halted" : "waiting";
 
+  /*
+   * ⚠ RULED 2026-08-29 (RULING-2026-08-29.md) — the drawn figures, QUOTED from
+   * the same fixtures every other endpoint quotes. Only the live review order
+   * has a described package and field census; any other order gets the honest
+   * silence (nulls, an empty log) rather than a borrowed number.
+   */
+  const doc = demoPages[orderId];
+  const orderFields = demoFields.filter((f) => f.order_id === orderId);
+  const fieldCount = orderFields.length;
+  const flaggedCount = orderFields.filter((f) => f.state === "needs_review").length;
+  const clearedCount = orderFields.filter((f) => f.state === "auto_confirmed").length;
+  const instrumentCount = doc?.instruments.length ?? null;
+  const degradedPages = (doc?.pages ?? []).filter((p) => p.degraded).map((p) => `p${String(p.n)}`);
+  /* Whether extraction has served values for this order. Read off the SAME
+     fixture `/fields` serves — for ord_demo_1 that endpoint serves 21 cited
+     values while the row sits at the gate (the FIXTURE CONFLICT handlers.ts
+     records); the log and the checks follow the fields, not the stage, so the
+     two endpoints tell one story about what extraction produced. */
+  const extracted = doc !== undefined && fieldCount > 0;
+
+  /* The dark terminal's lines — static demo telemetry in the reference's own
+     register, served only once extraction has actually run for this order. */
+  const runLog =
+    extracted
+      ? [
+          { time: "09:26:04", text: `Ingestion started · UUID ${orderId}`, warn: false, strong: false },
+          { time: "09:26:11", text: `Pages split at 300 DPI · ${String(pages)} pages structured`, warn: false, strong: false },
+          ...(degradedPages.length > 0
+            ? [{ time: "09:26:48", text: `WARN: ${degradedPages.join(", ")} flagged below contrast floor (Law 3 limit)`, warn: true, strong: false }]
+            : []),
+          { time: "09:27:02", text: `${String(instrumentCount ?? 0)} recorded instruments successfully partitioned`, warn: false, strong: false },
+          { time: "09:27:20", text: "Dual-engine NLP passing spatial verification…", warn: false, strong: false },
+          { time: "09:27:40", text: `${String(fieldCount)} fields extracted with strict bounding-box provenance`, warn: false, strong: true },
+          { time: "09:27:41", text: `${String(flaggedCount)} conflicts routed to examiner · ${String(clearedCount)} auto-cleared by hard validators`, warn: false, strong: false },
+        ]
+      : [];
+
+  /* The hub's "Deterministic Verification Checks" — sentences only the
+     pipeline can assert, so they ride its response. Empty until it has run. */
+  const verifiedChecks =
+    extracted
+      ? [
+          "Legal description on p8 matches the tax parcel on p2",
+          "Every value on the draft points at a verifiable page and line citation",
+          "Chain of title is unbroken back through the statutory period",
+          ...(degradedPages.length > 0
+            ? [`${degradedPages.join(", ")} explicitly recorded as unreadable, not collapsed into absent (Law 3)`]
+            : []),
+        ]
+      : [];
+
   return {
     order_id: orderId,
     /**
@@ -724,6 +777,19 @@ export function pipelineFor(orderId: string): OrderPipelineResponse {
     classifier_note: `The classifier found nothing the report needs on the other pages. You review ${PACKAGE_PAGES_RELEVANT}.`,
     /** Server state. `stage === "gate"` IS the halt; the screen never infers it. */
     gate_halted: stage === "gate" && signed,
+    /* ⚠ RULED 2026-08-29 — the meta strip's drawn cells, the ETA chip, the
+       terminal, and the hub's verified checks. All server-authored strings. */
+    package_name: readable && row !== undefined ? `${row.order_ref}_package.pdf` : null,
+    volume_label: readable ? `${String(pages)} Scanned Raster Pages` : null,
+    eta_label: running
+      ? "Extracting…"
+      : gatePassed || extracted
+        ? "Dual-Engine Extraction Complete"
+        : readable
+          ? "Awaiting the completeness gate"
+          : "Awaiting a readable package",
+    run_log: runLog,
+    verified_checks: verifiedChecks,
     stages: [
       {
         id: "ingest",
@@ -733,6 +799,7 @@ export function pipelineFor(orderId: string): OrderPipelineResponse {
           : "Halted — the cover could not be read, so the package was never counted.",
         owner: "Automated",
         phase: readable ? "done" : "halted",
+        count: readable ? `${String(pages)} pages` : null,
       },
       {
         id: "classify",
@@ -742,6 +809,7 @@ export function pipelineFor(orderId: string): OrderPipelineResponse {
           : "Waits until the package can be read at all.",
         owner: "LLM agent",
         phase: readable ? "done" : "waiting",
+        count: readable ? `${String(PACKAGE_PAGES_RELEVANT)} of ${String(pages)} pages` : null,
       },
       {
         id: BADGED_STAGE_ID,
@@ -753,6 +821,7 @@ export function pipelineFor(orderId: string): OrderPipelineResponse {
             : "Waits until there is a readable package to answer against.",
         owner: "You",
         phase: signoffPhase,
+        count: signed ? "13 lines" : null,
       },
       {
         id: "gate",
@@ -764,6 +833,7 @@ export function pipelineFor(orderId: string): OrderPipelineResponse {
             : "Waits until the sign-off is signed — there is nothing to check yet.",
         owner: "Automated",
         phase: gatePassed ? "done" : signed ? "halted" : "waiting",
+        count: null,
       },
       {
         id: "extract",
@@ -775,6 +845,12 @@ export function pipelineFor(orderId: string): OrderPipelineResponse {
             : "Held — an incomplete package never reaches extraction.",
         owner: "LLM agent",
         phase: running ? "running" : gatePassed ? "done" : "waiting",
+        count:
+          extracted
+            ? instrumentCount === null
+              ? `${String(fieldCount)} fields`
+              : `${String(instrumentCount)} instruments × 2 engines · ${String(fieldCount)} fields`
+            : null,
       },
       {
         id: "assemble",
@@ -785,6 +861,7 @@ export function pipelineFor(orderId: string): OrderPipelineResponse {
             : "Waits until extraction has values to map.",
         owner: "Automated",
         phase: machinePhase,
+        count: machinePhase === "done" ? "7 sections" : null,
       },
       {
         id: "validate",
@@ -795,6 +872,10 @@ export function pipelineFor(orderId: string): OrderPipelineResponse {
             : "Waits until there is a draft to check the two readers against.",
         owner: "LLM agent",
         phase: machinePhase,
+        count:
+          machinePhase === "done" && fieldCount > 0
+            ? `${String(clearedCount)} auto-cleared · ${String(flaggedCount)} flagged`
+            : null,
       },
       {
         id: "qc",
@@ -808,6 +889,10 @@ export function pipelineFor(orderId: string): OrderPipelineResponse {
               : "Waits until the completeness gate passes.",
         owner: "You",
         phase: delivered ? "done" : stage === "review" || stage === "escalated" ? "halted" : "waiting",
+        count:
+          (stage === "review" || stage === "escalated") && flaggedCount > 0
+            ? `${String(flaggedCount)} flagged → you`
+            : null,
       },
       {
         id: "finalize",
@@ -819,6 +904,7 @@ export function pipelineFor(orderId: string): OrderPipelineResponse {
             : "Waits until every flag has been answered.",
         owner: "Automated",
         phase: deliveryFailed ? "halted" : delivered ? "done" : "waiting",
+        count: delivered ? "v1 rendered" : null,
       },
     ],
   };
@@ -986,6 +1072,15 @@ export const workspaceHandlers = [
 
   http.get("/api/orders/:id/signoff", ({ params }) => HttpResponse.json(signoffFor(String(params["id"])))),
   http.get("/api/orders/:id/pipeline", ({ params }) => HttpResponse.json(pipelineFor(String(params["id"])))),
+  /**
+   * ⚠ RULED 2026-08-29 (RULING-2026-08-29.md) — the drawn "↺ Replay" control.
+   * Re-serves the stage timeline for the order; a demo replay, not a re-run —
+   * nothing recomputes, no state transitions, and the response is the same
+   * projection the GET serves. POST because the reference draws it as an act.
+   */
+  http.post("/api/orders/:id/pipeline/replay", ({ params }) =>
+    HttpResponse.json(pipelineFor(String(params["id"]))),
+  ),
   http.get("/api/orders/:id/completeness", ({ params }) =>
     HttpResponse.json(completenessFor(String(params["id"]))),
   ),

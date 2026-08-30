@@ -217,6 +217,17 @@ export const OrderCensus = z.object({
    * A CENSUS, NEVER A RATE (§4.5). How many sit here now, and nothing per-hour.
    */
   remaining: z.number().int().optional(),
+  /**
+   * ⚠ RULED 2026-08-29 — `docs/frontend/design-2026-08/RULING-2026-08-29.md`.
+   * THE VERDICT CARD'S CTA COPY, SERVER-CHOSEN. The reference derives "Verify
+   * 6 Fields" / "Open Second Read" / "Open Publication Studio" from a
+   * five-branch state read in the browser; hard rule 3 puts that machine on
+   * the server, so the WORD arrives here beside the census it summarises.
+   * A free string, deliberately not an enum — nothing may switch on it.
+   * Optional: absent is "the server did not say", and the hub falls back to
+   * naming the door rather than inventing a verdict.
+   */
+  verdict_action: z.string().optional(),
 });
 export type OrderCensus = z.infer<typeof OrderCensus>;
 

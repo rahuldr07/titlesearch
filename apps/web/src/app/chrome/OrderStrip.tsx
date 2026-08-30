@@ -6,6 +6,7 @@ import { cx } from "../../components/ui";
 import { OrderStripStages } from "./OrderStripStages";
 import { OrderCounts } from "./OrderCounts";
 import { OrderStamp } from "./OrderStamp";
+import { RouteButton } from "./RouteButton";
 
 /**
 
@@ -13,17 +14,17 @@ import { OrderStamp } from "./OrderStamp";
 
  * so it stays put while the screen scrolls under it (INVARIANT 62). Every value comes
 
- * from `GET /api/orders/{id}/context` (`intake.ts:301`), which exists…
+ * from `GET /api/orders/{id}/context` (`intake.ts`), which exists…
 
  *
- * THREE THINGS THE DESIGN DRAWS HERE ARE REFUSED. The SLA chip
- * ("Due today · 5h 20m left") is INVARIANT 23 — no countdown, no elapsed. The
- * property address has no order-scoped read: `addr`/`place` live on `OrderRow`
- * (design.ts:31), the permission-scoped browse row, and fetching a paginated
- * list to find one order's address is not a source. CONTRACT GAP: an address on
- * `OrderContextResponse`. The primary-action button is the design computing
- * which action comes next from client state — hard rule 3 — and each screen
- * already carries its own.
+
+ * ⚠ RULED 2026-08-29 — `docs/frontend/design-2026-08/RULING-2026-08-29.md`:
+ * the three refusals this header used to carry are superseded, because the
+ * reference app DRAWS all three. The due chip prints the SERVED string whole
+ * ("Due today · 5h 20m left" — no clock runs here); the place line arrives
+ * finished on the context; and the Review (N) button prints the served
+ * `outstanding` census figure and navigates to the workstation. The stage
+ * tabs row below is the reference's, served per order (`stage_tabs`).
  */
 const ORDER_PATH = /^\/orders\/([^/]+)/;
 
@@ -46,9 +47,10 @@ export function OrderStrip() {
       data-testid="order-strip"
       className="flex shrink-0 flex-col gap-5 border-b border-line-strong bg-surface-panel px-14 py-6"
     >
-      {/* WRAPS, for the reason the stage row below wraps: the ref, three server
-          facts, four census figures and a stamp do not fit one 1360px line, and
-          the alternatives are all the browser shortening the server's words. */}
+      {/* WRAPS: the ref, the place line, three server facts, four census
+          figures, the due chip, the button and the stamp do not fit one 1360px
+          line, and the alternatives are all the browser shortening the
+          server's words. */}
       <div className="flex min-h-14 flex-wrap items-center gap-10">
         {context.data === undefined ? (
           /* INVARIANT 59 — a partial failure degrades this region only. The id
@@ -58,33 +60,62 @@ export function OrderStrip() {
           </span>
         ) : (
           <>
-            {/* "ORDER 4176034-1" — the design's own spelling (intake.ts:289).
-                The rubric is a sibling so `order-ref` still carries the ref and
-                nothing else; the space between them is a real text node. */}
-            <span className="flex items-baseline gap-4">
-              <span className="text-label font-semibold leading-flat tracking-caps text-ink-muted">
-                ORDER
-              </span>{" "}
+            {/* The reference's opening pair: the mono ref, then the finished
+                place line ("1856 Defoor Ave NW, Atlanta · Fulton County, GA"). */}
+            <span className="flex min-w-0 items-baseline gap-6">
               <span
                 data-testid="order-ref"
                 className="font-mono text-subject font-bold leading-flat text-ink-secondary"
               >
                 {context.data.order_ref}
-              </span>
+              </span>{" "}
+              {context.data.place !== null && (
+                <span className="truncate text-meta font-semibold leading-flat text-ink-primary">
+                  {context.data.place}
+                </span>
+              )}
             </span>
             <Fact value={context.data.product} absent="No resolved product" pill />
-            <Fact value={context.data.period_label} absent="No period on record" />
-            <Fact
-              value={context.data.pages === null ? null : `${context.data.pages} pages`}
-              absent="Page count unread"
-            />
+            {/* Client name · page count, mono, the reference's own pairing. */}
+            {context.data.client !== null && (
+              <span className="font-mono text-meta leading-flat text-ink-muted">
+                {context.data.client}
+                {context.data.pages !== null && ` · ${context.data.pages} pp`}
+              </span>
+            )}
             <OrderCounts orderId={orderId} />
-            <OrderStamp stamp={context.data.stamp} />
+            <span className="ml-auto flex flex-wrap items-center gap-6">
+              {/* The due chip — the SERVED label, whole. No countdown runs in
+                  this browser; the string is the server's statement. */}
+              {context.data.due !== null && (
+                <span
+                  data-testid="order-due"
+                  className="rounded-pill bg-state-settled-surface px-5 py-2 font-mono text-meta font-semibold leading-flat text-state-settled"
+                >
+                  {context.data.due}
+                </span>
+              )}
+              {/* Review (N) — N is the served census figure, never a tally. */}
+              {context.data.outstanding !== null && context.data.outstanding > 0 && (
+                <RouteButton
+                  variant="primary"
+                  size="sm"
+                  to="/orders/$orderId/review"
+                  params={{ orderId }}
+                  data-testid="order-review-cta"
+                >
+                  Review ({context.data.outstanding})
+                </RouteButton>
+              )}
+              <OrderStamp stamp={context.data.stamp} />
+            </span>
           </>
         )}
       </div>
-      {/* Its own query, so a failed context still leaves the stages standing. */}
-      <OrderStripStages orderId={orderId} />
+      {/* The reference's five stage tabs, off the same context read. */}
+      {context.data !== undefined && (
+        <OrderStripStages orderId={orderId} tabs={context.data.stage_tabs} />
+      )}
     </header>
   );
 }

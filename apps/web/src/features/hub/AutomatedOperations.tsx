@@ -2,15 +2,16 @@ import type { PipelineStage } from "@titlepipe/contract";
 import { HubSectionLabel } from "./HubSectionLabel";
 
 /**
- * The pipeline's own stages, drawn as the prototype's operation rows.
+ * The pipeline's own stages, drawn as the reference's operation rows.
  *
- * Two refusals. The design titles the block "Zero Manual Touch" — false of the
- * two stages the pipeline stops on for a person, and `StageOwner` (`Automated` |
- * `LLM agent` | `You`) is what keeps a halted human stage from reading as a
- * machine that failed, so the owner holds the right-hand column. The design puts
- * a COUNT there; `PipelineStage` has no count member, and the figure lives
- * inside the server-composed `detail` sentence — parsing it out would be the
- * browser re-deriving a number it cannot cite. CONTRACT GAP, not filled here.
+ * ⚠ RULED 2026-08-29 (`docs/frontend/design-2026-08/RULING-2026-08-29.md`):
+ * two prior refusals are superseded because the reference draws both. The
+ * block is titled "Automated Operations (Zero Manual Touch)" — the drawn
+ * title, kept verbatim — and each row carries the drawn mono COUNT chip and
+ * trailing arrow. The count is `PipelineStage.count`, a SERVER-COMPOSED
+ * string added under the same ruling; where the server sends none the row
+ * falls back to `owner`, so a halted human stage still never reads as a
+ * machine that failed.
  */
 export function AutomatedOperations(props: {
   readonly stages: readonly PipelineStage[] | undefined;
@@ -20,7 +21,7 @@ export function AutomatedOperations(props: {
   return (
     <section className="flex flex-col gap-6 border-b border-line-subtle p-12">
       <HubSectionLabel>
-        Automated operations
+        Automated Operations (Zero Manual Touch)
         {props.gateHalted === true && (
           // Server state (`intake.ts:99`) — never inferred from the stage list.
           <span
@@ -57,8 +58,17 @@ export function AutomatedOperations(props: {
                 {/* The server's sentence, with its own count already in it. */}
                 <span className="font-normal text-ink-faint">· {stage.detail}</span>
               </span>
-              <span className="shrink-0 text-meta leading-close text-ink-secondary">
-                {stage.owner}
+              {stage.count === null ? (
+                <span className="shrink-0 text-meta leading-close text-ink-secondary">
+                  {stage.owner}
+                </span>
+              ) : (
+                <span className="shrink-0 font-mono text-meta font-semibold leading-close tabular-nums text-ink-secondary">
+                  {stage.count}
+                </span>
+              )}
+              <span aria-hidden className="shrink-0 text-meta font-bold text-ink-secondary">
+                →
               </span>
             </li>
           ))}

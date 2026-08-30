@@ -1,12 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { useRouterState } from "@tanstack/react-router";
 import {
-  EscalationsResponse,
+  RailBadgesResponse,
   type GrantedPermissionSchema,
 } from "@titlepipe/contract";
 import { get } from "../../shared/api";
 import { SECTION_ORDER } from "./doors";
-import { hasDoor } from "../session/permissions";
 import { RailBrand, RailSearch } from "./RailBrand";
 import { Section } from "./RailSection";
 import { ProfileBlock } from "./ProfileBlock";
@@ -31,23 +30,20 @@ export function SideRail(props: {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   /*
-   * NO `/api/lifecycle` READ HERE ANY MORE. It fed a `RailCount` on a
-   * `/dashboard` door that `doors.ts` does not contain — a fetch nothing
-   * rendered. INVARIANT 66 (attention rides the doors as DOTS, never counts)
-   * means the count is deleted rather than rehomed onto All Orders.
-   *
-   * WHETHER anything is unresolved — a boolean, deliberately, not a count.
-   * INVARIANT 66: attention rides the doors as DOTS, never counts. `.some` is
-   * not "re-deriving a count" (INVARIANT 5); it asks whether the list the
-   * server sent is empty, which is the only question the dot answers.
+   * ⚠ RULED 2026-08-29 (RULING-2026-08-29.md): the reference rail carries a
+   * COUNT on All Orders, a QC pill on Escalations and a version pill on
+   * Templates Architect — drawn, so built. This read replaces the
+   * escalations-list read the dot used: every ornament arrives FINISHED off
+   * `GET /api/rail` (the pill's whole text, the version string), so the rail
+   * still counts, captions and formats nothing itself. INVARIANT 66's dot is
+   * superseded on these doors by that ruling; the refusal that survives is
+   * that no figure here is a rate and none is derived in the browser.
    */
-  const escalations = useQuery({
-    queryKey: ["escalations"],
-    queryFn: () => get("/api/escalations", EscalationsResponse),
-    enabled: hasDoor(props.rules, "/escalations"),
+  const rail = useQuery({
+    queryKey: ["rail"],
+    queryFn: () => get("/api/rail", RailBadgesResponse),
+    enabled: props.rules !== undefined,
   });
-  const openEscalation =
-    escalations.data?.escalations.some((e) => e.resolution === null) ?? false;
 
   return (
     <SidebarProvider collapsed={false} onCollapsedChange={NOT_WIRED}>
@@ -63,7 +59,7 @@ export function SideRail(props: {
               section={section}
               rules={props.rules}
               pathname={pathname}
-              openEscalation={openEscalation}
+              badges={rail.data}
             />
           ))}
         </SidebarContent>

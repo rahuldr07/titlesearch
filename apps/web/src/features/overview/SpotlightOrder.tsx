@@ -1,4 +1,6 @@
-import type { Order } from "@titlepipe/contract";
+import { useQuery } from "@tanstack/react-query";
+import { OrderContextResponse, type Order } from "@titlepipe/contract";
+import { get } from "../../shared/api";
 import { Button, Card } from "../../components/ui";
 import { OrderRef } from "../../entities/order/OrderRef";
 import { SpotlightMeta } from "./SpotlightMeta";
@@ -8,23 +10,46 @@ import { useOverlays } from "../../app/keyboard/overlays";
 /**
  * The served order in the prototype's spotlight card.
  *
- * Three of the prototype's values have no member on `Order` (`entities.ts:32`)
- * and are not invented: the SLA chip, the "Assigned:" line, and the street
- * address it puts ahead of the county. `county` and `state` DO ride on the
- * shape, so the place line is those two rather than the `jurisdiction` slug,
- * which is a routing key and not a name a person reads.
+ * ⚠ RULED 2026-08-29 — `docs/frontend/design-2026-08/RULING-2026-08-29.md`:
+ * the reference's spotlight draws the due chip and the "Assigned:" line, so
+ * ours does. Neither rides on `Order`; both are members of the order-scoped
+ * context (`GET /api/orders/{id}/context`), read here for the served order —
+ * the due label arrives WHOLE (no clock runs in this browser) and `assigned`
+ * is the server's word for who holds the work.
  */
 export function SpotlightOrder(props: { readonly order: Order }) {
   const order = props.order;
   const openHistory = useOverlays((s) => s.openOrderHistory);
+  const context = useQuery({
+    queryKey: ["orders", order.id, "context"],
+    queryFn: () => get(`/api/orders/${order.id}/context`, OrderContextResponse),
+  });
 
   return (
     <Card className="border-l-4 border-l-action">
       <div className="flex flex-wrap items-center justify-between gap-12">
         <div className="flex min-w-0 flex-col gap-6">
-          <span className="w-fit rounded-pill bg-action px-5 py-1 text-label font-bold leading-flat text-ink-on-action">
-            Active spotlight
-          </span>
+          <div className="flex flex-wrap items-center gap-5">
+            <span className="w-fit rounded-pill bg-action px-5 py-1 text-label font-bold leading-flat text-ink-on-action">
+              Active Spotlight
+            </span>
+            {context.data?.due != null && (
+              <span
+                data-testid="spotlight-due"
+                className="rounded-pill bg-state-settled-surface px-5 py-1 font-mono text-label font-semibold leading-flat text-state-settled"
+              >
+                {context.data.due}
+              </span>
+            )}
+            {context.data?.assigned != null && (
+              <span
+                data-testid="spotlight-assigned"
+                className="font-mono text-label leading-flat text-ink-faint"
+              >
+                Assigned: {context.data.assigned}
+              </span>
+            )}
+          </div>
 
           <div className="flex flex-wrap items-baseline gap-7">
             <OrderRef orderRef={order.external_ref} emphasis="spotlight" />
@@ -48,7 +73,7 @@ export function SpotlightOrder(props: { readonly order: Order }) {
             onPress={() => openHistory(order.id)}
             data-testid="spotlight-history"
           >
-            Audit history
+            Audit History
           </Button>
           <RouteButton
             variant="primary"
@@ -56,7 +81,7 @@ export function SpotlightOrder(props: { readonly order: Order }) {
             params={{ orderId: order.id }}
             data-testid="spotlight-open"
           >
-            Open review
+            Launch Workstation →
           </RouteButton>
         </div>
       </div>

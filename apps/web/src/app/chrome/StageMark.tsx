@@ -1,68 +1,87 @@
-import type { StagePhase } from "@titlepipe/contract";
+import type { ReactNode } from "react";
 import { cx } from "../../components/ui";
 
 /**
- * The design's stage circle — 16px, filled by the stage's phase, drawn on the
- * rail's dark column and on the strip's white one.
+ * The reference app's stage circle and stage badge — drawn on the rail's dark
+ * column and on the order bar's white one.
  *
- * `ordinal` is POSITIONAL: the stage's place in the server's own `stages`
- * array, and nothing else. ANALYSIS-screens.md §3 — the design's "1–5" fuses
- * three separate state machines into a numbering the browser invented, and this
- * numeral is a list index rather than a state.
+ * ⚠ RULED 2026-08-29 — `docs/frontend/design-2026-08/RULING-2026-08-29.md`:
+ * the reference draws a green ✓ on a DONE stage, the stage's number otherwise,
+ * an accent fill on the CURRENT one, and a finished badge pill where the
+ * server hangs one. `done` and the badge string arrive off the wire
+ * (`OrderStageTab`); `ordinal` is POSITIONAL — the item's place in the
+ * server's own list, never a state the browser computed.
  */
 type StageGround = "rail" | "strip";
 
-const FILL: Readonly<Record<StageGround, Readonly<Record<StagePhase, string>>>> = {
+const CIRCLE: Readonly<
+  Record<StageGround, { done: string; current: string; waiting: string }>
+> = {
   rail: {
     done: "bg-state-settled text-ink-on-action",
     // The design's accent fill wants white; --color-rail-accent is a light
     // lilac, so the ink inverts to keep the glyph legible.
-    running: "bg-rail-accent text-rail-surface",
-    halted: "bg-state-halt text-ink-on-action",
+    current: "bg-rail-accent text-rail-surface",
     waiting: "bg-rail-cap text-rail-ink-soft",
   },
   strip: {
     done: "bg-state-settled text-ink-on-action",
-    running: "bg-action text-ink-on-action",
-    halted: "bg-state-halt text-ink-on-action",
+    current: "bg-action text-ink-on-action",
     waiting: "bg-line-strong text-ink-muted",
   },
 };
 
-/** Rule 7's closed vocabulary. A phase with no glyph shows its position. */
-const GLYPH: Readonly<Partial<Record<StagePhase, string>>> = {
-  done: "✓",
-  halted: "•",
-};
-
-/** The phase in words — `waiting` and `running` differ only by fill otherwise. */
-const PHASE_WORD: Readonly<Record<StagePhase, string>> = {
-  done: "Done",
-  running: "Running",
-  halted: "Halted",
-  waiting: "Waiting",
-};
-
-export function StageMark(props: {
-  readonly phase: StagePhase;
+export function StageCircle(props: {
+  readonly done: boolean;
+  readonly current: boolean;
   readonly ordinal: number;
   readonly ground: StageGround;
 }) {
+  const fill = props.done
+    ? CIRCLE[props.ground].done
+    : props.current
+      ? CIRCLE[props.ground].current
+      : CIRCLE[props.ground].waiting;
   return (
     <>
       <span
         aria-hidden
         data-slot="stage-mark"
-        data-phase={props.phase}
+        data-done={props.done}
         className={cx(
           "flex size-8 shrink-0 items-center justify-center rounded-pill",
           "font-mono text-label font-bold leading-flat tabular-nums",
-          FILL[props.ground][props.phase],
+          fill,
         )}
       >
-        {GLYPH[props.phase] ?? props.ordinal}
+        {props.done ? "✓" : props.ordinal}
       </span>
-      <span className="sr-only">{PHASE_WORD[props.phase]}</span>
+      <span className="sr-only">{props.done ? "Done" : "Not done"}</span>
     </>
+  );
+}
+
+/**
+ * The stage's badge pill — the SERVED string, whole ("6", "ready", "2nd
+ * read"). The reference paints "ready" green and workload amber; `tone` is
+ * the server's word for which (`OrderStageTab.badge_tone`).
+ */
+export function StageBadge(props: {
+  readonly tone: "attend" | "settled";
+  readonly children: ReactNode;
+}) {
+  return (
+    <span
+      data-slot="stage-badge"
+      data-tone={props.tone}
+      className={cx(
+        "ml-auto shrink-0 rounded-pill px-4 py-1 font-mono text-label font-bold leading-flat tabular-nums",
+        props.tone === "settled"
+          ? "bg-state-settled text-ink-on-action"
+          : "bg-state-attend-surface text-state-attend",
+      )}
+    >
+      {props.children}
+    </span>
   );
 }

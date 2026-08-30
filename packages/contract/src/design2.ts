@@ -130,3 +130,24 @@ export const JurisdictionResponse = z.object({
   null_states: z.array(NullStateRow),
 });
 export type JurisdictionResponse = z.infer<typeof JurisdictionResponse>;
+
+// ---- rail badges ------------------------------------------------------------
+
+/**
+ * ⚠ RULED 2026-08-29 — `docs/frontend/design-2026-08/RULING-2026-08-29.md`:
+ * "counts on rail doors, stage badges … are drawn, so they are built."
+ *
+ * `GET /api/rail` — the three door ornaments the reference app's rail draws.
+ * Each arrives FINISHED: `qc` is the pill's whole text ("1 QC"), not a number
+ * the client captions, and `template_version` is quoted from the templates
+ * resource rather than restated. A count of what sits, never a rate.
+ */
+export const RailBadgesResponse = z.object({
+  /** The All Orders door's pill — the browse endpoint's own total. */
+  orders_total: z.number().int(),
+  /** The QC & Escalations badge, finished ("1 QC"). Null = no badge drawn. */
+  qc: z.string().nullable(),
+  /** The Templates Architect pill ("v4.2"), quoted from the templates mock. */
+  template_version: z.string(),
+});
+export type RailBadgesResponse = z.infer<typeof RailBadgesResponse>;

@@ -12,16 +12,19 @@ export interface Door {
   readonly section: RailSection;
 }
 
+/* Casing is the reference app's own (RULING-2026-08-29 — match copy and
+   casing): "All Orders", "Overview Hub", "QC & Escalations", "Templates
+   Architect", exactly as its rail prints them. */
 export const DOORS: readonly Door[] = [
   { path: "/", label: "Overview", section: "pipeline" },
-  { path: "/orders-list", label: "All orders", section: "pipeline" },
+  { path: "/orders-list", label: "All Orders", section: "pipeline" },
 
-  { path: "/orders", label: "Overview hub", section: "order" },
-  { path: "/ingest", label: "Intake & upload", section: "order" },
+  { path: "/orders", label: "Overview Hub", section: "order" },
+  { path: "/ingest", label: "Intake & Upload", section: "order" },
   { path: "/delivery", label: "Delivered", section: "order" },
 
-  { path: "/escalations", label: "QC & escalations", section: "platform" },
-  { path: "/templates", label: "Templates architect", section: "platform" },
+  { path: "/escalations", label: "QC & Escalations", section: "platform" },
+  { path: "/templates", label: "Templates Architect", section: "platform" },
   { path: "/account", label: "Settings & RBAC", section: "platform" },
 
   /* Off the rail: the design reaches these by role switch, not by a door. */

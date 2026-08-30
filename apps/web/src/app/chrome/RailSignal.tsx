@@ -1,43 +1,45 @@
+import type { ReactNode } from "react";
 import { cx } from "../../components/ui";
 
 /**
-
- * The one signal that rides a door. `RailCount` — a volume capsule the design's
-
- * rail carries (`35` on All Orders, `6` on Examination) — used to live beside
-
- * this and was DELETED, not rehomed: INVARIANT 66 says attention rides the
-
- * doors as dots, never counts, and its only call site was a `/dashboard` door
-
- * `doors.ts` does not contain.
-
+ * The signals that ride a rail door.
+ *
+ * ⚠ RULED 2026-08-29 — `docs/frontend/design-2026-08/RULING-2026-08-29.md`:
+ * "counts on rail doors, stage badges … are drawn, so they are built." The
+ * attention DOT this file used to carry (INVARIANT 66's replacement for a
+ * count) is superseded for every door the reference app badges: All Orders
+ * carries its served total, QC & Escalations its served "1 QC" pill, and
+ * Templates Architect its served version. Every string here arrives FINISHED
+ * off `GET /api/rail` — nothing on the rail is counted, captioned or
+ * formatted in the browser.
  */
+export type RailBadgeTone = "count" | "accent" | "attend";
 
-/**
+const TONE: Readonly<Record<RailBadgeTone, string>> = {
+  /** The reference's white-on-translucent count capsule (All Orders). */
+  count: "bg-rail-cap text-surface-panel",
+  /** The reference's lilac version pill (Templates Architect "v4.2"). */
+  accent: "bg-rail-cap text-rail-accent",
+  /** The reference's amber workload badge ("1 QC", the Examination count). */
+  attend: "bg-state-attend-surface text-state-attend",
+};
 
- * AN ATTENTION DOT — rule 66's replacement for a workload count. `title` carries what
-
- * the dot MEANS in words, because a coloured circle is not a sentence and the count it
-
- * replaced at least said "1".
-
- */
-export function RailDot(props: {
+export function RailBadge(props: {
   readonly path: string;
+  readonly tone: RailBadgeTone;
   readonly title: string;
-  readonly tone: "attend" | "halt";
+  readonly children: ReactNode;
 }) {
   return (
     <span
-      data-testid={`rail-dot-${props.path}`}
+      data-testid={`rail-badge-${props.path}`}
       title={props.title}
-      role="img"
-      aria-label={props.title}
       className={cx(
-        "ml-auto size-3 shrink-0 rounded-pill",
-        props.tone === "halt" ? "bg-state-halt" : "bg-state-attend",
+        "ml-auto shrink-0 rounded-pill px-4 py-1 font-mono text-label font-semibold leading-flat tabular-nums",
+        TONE[props.tone],
       )}
-    />
+    >
+      {props.children}
+    </span>
   );
 }

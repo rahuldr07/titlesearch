@@ -10,17 +10,16 @@ import { cx } from "../../components/ui";
  * `Record<StageId, string>` would be a second copy of product copy drifting
  * silently from the first.
  *
- * THE RIGHT-HAND CHIP CARRIES `owner`, NOT A COUNT. The design puts a count
- * there ("38 of 64 pages"); `PipelineStage` has no count member, and the
- * figures the design draws already live inside `detail`, composed by the
- * server. Splitting a numeral back out of that sentence to set it in mono is
- * the client re-authoring a server string. `owner` (`StageOwner`,
- * intake.ts:80) is sans rather than mono because rule 3 reserves mono for data
- * and "LLM agent" is a word.
+ * THE RIGHT-HAND CHIP — ⚠ RULED 2026-08-29
+ * (`docs/frontend/design-2026-08/RULING-2026-08-29.md`): the reference draws a
+ * mono COUNT chip on every stage row, so `PipelineStage.count` now rides the
+ * wire as a SERVER-COMPOSED string and the chip prints it verbatim — still
+ * never a numeral parsed back out of `detail`. Where the server sends no
+ * count (null), the chip falls back to `owner` (`StageOwner`, intake.ts:80),
+ * in sans because rule 3 reserves mono for data and "LLM agent" is a word.
  *
- * REPLAY IS REFUSED. The design draws a "↺ Replay" control beside the header.
- * It is a MUTATION, and there is no re-run action in `PERMISSIONS`
- * (authz.ts:59-118) and no replay route in the contract.
+ * REPLAY lives beside the header in `ExtractionHeader` — the same ruling
+ * built the drawn "↺ Replay" against `POST /pipeline/replay`.
  *
  * Rule 7's glyph vocabulary carries the phase: ✓ done, • running/waiting,
  * ◆ halted. No icons, no fifth mark.
@@ -73,14 +72,27 @@ export function StageTimeline(props: { readonly stages: readonly PipelineStage[]
             {/* The phase word, for a reader who cannot see the mark. */}
             <span className="sr-only">{stage.phase}</span>
           </span>
-          <span
-            className={cx(
-              "shrink-0 rounded-lg border border-line-strong bg-surface-sunken px-4 py-2",
-              "font-sans text-meta font-bold leading-flat text-ink-secondary",
-            )}
-          >
-            {stage.owner}
-          </span>
+          {stage.count === null ? (
+            <span
+              className={cx(
+                "shrink-0 rounded-lg border border-line-strong bg-surface-sunken px-4 py-2",
+                "font-sans text-meta font-bold leading-flat text-ink-secondary",
+              )}
+            >
+              {stage.owner}
+            </span>
+          ) : (
+            /* The drawn count chip — the server's string, in the data register. */
+            <span
+              data-testid="stage-count"
+              className={cx(
+                "shrink-0 rounded-lg border border-line-strong bg-surface-sunken px-4 py-2",
+                "font-mono text-meta font-bold leading-flat tabular-nums text-ink-secondary",
+              )}
+            >
+              {stage.count}
+            </span>
+          )}
         </li>
       ))}
     </ol>

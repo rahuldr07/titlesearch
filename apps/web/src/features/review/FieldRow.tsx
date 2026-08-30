@@ -50,25 +50,29 @@ export function FieldRow({ field, selected, onSelect, ruinous }: FieldRowProps) 
         selected ? "bg-action-surface" : "hover:bg-row-hover",
       )}
     >
-      {/* 140px — the label. 11px, mono, the rubric register (fieldNaming.ts). */}
-      <span className="truncate font-mono text-label leading-flat text-ink-muted">
-        {fieldLabel(field.path)}
+      {/* 140px — the label, with the T1 chip BESIDE it, as the reference
+          composes the row (RULING-2026-08-29). 11px, mono, the rubric
+          register (fieldNaming.ts). */}
+      <span className="flex min-w-0 items-center gap-3">
+        <span className="truncate font-mono text-label leading-flat text-ink-muted">
+          {fieldLabel(field.path)}
+        </span>
+        {ruinous && <T1Pill />}
       </span>
 
       {/* 1fr — the value, with the reading signals under it. */}
       <span className="flex min-w-0 flex-col gap-2">
         <RowValue value={value} />
-        <span className="flex flex-wrap items-center gap-3">
-          {disagree && (
+        {disagree && (
+          <span className="flex flex-wrap items-center gap-3">
             <span
               data-testid="row-disagreement"
               className="rounded-sm border border-state-attend-border bg-state-attend-surface px-3 font-mono text-label leading-flat text-state-attend"
             >
               A≠B
             </span>
-          )}
-          {ruinous && <T1Pill />}
-        </span>
+          </span>
+        )}
       </span>
 
       {/* 70px — the citation, mono grey. Absent is not a dash: a field with no

@@ -66,3 +66,26 @@
 @utility tp-citation-box {
   border: 1.5px solid var(--color-border-evidence);
 }
+
+/*
+ * ZOOM-TO-CITATION — ⚠ RULED 2026-08-29
+ * (docs/frontend/design-2026-08/RULING-2026-08-29.md): the reference animates
+ * the evidence sheet to scale(1.85) over 300ms cubic-bezier(.32,.72,0,1) with
+ * the transform-origin at the cited region's centre, and the ruling builds it
+ * as drawn. The origin arrives at runtime as two percentages computed from
+ * `LineCoords`; §6 bans both an inline `style` attribute and an arbitrary
+ * Tailwind length, so — like `CitedRegion`'s SVG geometry — the data rides
+ * outside the class system: the component writes the two custom properties
+ * through the DOM API and this utility reads them. 1.85 and the curve are the
+ * reference's own values, quoted. Reduced motion still wins: styles.css's
+ * @media block zeroes every transition-duration.
+ */
+@utility tp-zoom-cite {
+  transition: transform 300ms cubic-bezier(0.32, 0.72, 0, 1);
+  transform-origin: var(--tp-zoom-cx, 50%) var(--tp-zoom-cy, 50%);
+  transform: scale(1);
+}
+
+@utility tp-zoom-cite-on {
+  transform: scale(1.85);
+}

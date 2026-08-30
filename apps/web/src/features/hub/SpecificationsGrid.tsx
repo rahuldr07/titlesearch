@@ -23,7 +23,8 @@ export function SpecificationsGrid(props: {
 }) {
   return (
     <Card className="flex flex-col gap-8">
-      <HubSectionLabel>Abstract specifications</HubSectionLabel>
+      {/* The reference's block title, as drawn (RULING-2026-08-29). */}
+      <HubSectionLabel>Abstract Specifications</HubSectionLabel>
 
       {props.context === undefined ? (
         <p className="text-meta leading-body text-ink-muted">

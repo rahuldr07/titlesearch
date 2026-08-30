@@ -23,11 +23,9 @@ export function OverviewScreen() {
 
   return (
     <div className="tp-screen-enter flex h-full min-h-0 flex-col gap-12 overflow-y-auto px-16 pt-14 pb-32">
-      <OverviewHeader
-        scopeNote={board.data?.scope_note}
-        role={account?.role}
-        rules={permissions.data?.rules}
-      />
+      {/* The scope note moved off this header when RULING-2026-08-29 restored
+          the reference's fixed lede; the served sentence still gates nothing. */}
+      <OverviewHeader role={account?.role} rules={permissions.data?.rules} />
 
       {board.isError && (
         <Card>
