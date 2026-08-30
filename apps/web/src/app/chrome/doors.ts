@@ -20,8 +20,11 @@ export const DOORS: readonly Door[] = [
   { path: "/orders-list", label: "All Orders", section: "pipeline" },
 
   { path: "/orders", label: "Overview Hub", section: "order" },
-  { path: "/ingest", label: "Intake & Upload", section: "order" },
-  { path: "/delivery", label: "Delivered", section: "order" },
+  /* Intake and Delivered ride the numbered stage rows (`ActiveOrderStages`),
+     as the reference draws them — a flat door beside the same row printed the
+     destination twice (RULING-2026-08-29). */
+  { path: "/ingest", label: "Intake & Upload", section: "more" },
+  { path: "/delivery", label: "Delivered", section: "more" },
 
   { path: "/escalations", label: "QC & Escalations", section: "platform" },
   { path: "/templates", label: "Templates Architect", section: "platform" },
