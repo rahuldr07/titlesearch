@@ -353,6 +353,20 @@ const effective: ClientsResponse["effective"] = [
   },
 ];
 
+/**
+ * ⚠ RULED 2026-08-29 (RULING-2026-08-29.md): the intake client select draws a
+ * per-client "(N sign-offs)". The census is the SERVER'S — counted here off
+ * the same effective checklists this endpoint serves, so the option and the
+ * checklist it summarises cannot drift, and no browser ever tallies it.
+ */
+for (const checklist of effective) {
+  const client = clients.find((c) => c.id === checklist.client_id);
+  if (client !== undefined && client.sign_offs === undefined) {
+    const n = checklist.lines.filter((l) => l.application !== "excluded").length;
+    client.sign_offs = `${String(n)} sign-offs`;
+  }
+}
+
 // ---- the lifecycle board -----------------------------------------------------
 
 /**
@@ -503,15 +517,23 @@ export function lifecycleFor(role: string): LifecycleResponse {
 
 // ---- people and profile ------------------------------------------------------
 
-const people: PeopleResponse = {
+/**
+ * Exported for the settings handlers (`settings.ts`): the role picker's PATCH
+ * mutates THIS store, so `GET /api/people` reflects the change on re-read —
+ * one store, one answer. (RULED 2026-08-29: the People pane's picker is drawn,
+ * so it is built.)
+ */
+export const people: PeopleResponse = {
   privileged_without_mfa: 1,
+  // Roles are the RBAC matrix's column vocabulary (settings.ts ROLES4) — the
+  // picker PATCHes against that list, so the seed rows speak it too.
   people: [
-    { id: "u1", name: "L. Vance", email: "l.vance@titlepipe.internal", role: "Senior examiner", privileged: true, status: "Active", mfa: "enrolled" },
-    { id: "u2", name: "M. Okonkwo", email: "m.okonkwo@titlepipe.internal", role: "Reviewer", privileged: false, status: "Active", mfa: "enrolled" },
-    { id: "u3", name: "R. Okafor", email: "r.okafor@titlepipe.internal", role: "Reviewer", privileged: false, status: "Active", mfa: "enrolled" },
-    { id: "u4", name: "S. Whitfield", email: "s.whitfield@titlepipe.internal", role: "Reviewer", privileged: false, status: "Suspended", mfa: "enrolled" },
+    { id: "u1", name: "L. Vance", email: "l.vance@titlepipe.internal", role: "QC Reviewer", privileged: true, status: "Active", mfa: "enrolled" },
+    { id: "u2", name: "M. Okonkwo", email: "m.okonkwo@titlepipe.internal", role: "Typist (Reviewer)", privileged: false, status: "Active", mfa: "enrolled" },
+    { id: "u3", name: "R. Okafor", email: "r.okafor@titlepipe.internal", role: "Typist (Reviewer)", privileged: false, status: "Active", mfa: "enrolled" },
+    { id: "u4", name: "S. Whitfield", email: "s.whitfield@titlepipe.internal", role: "Typist (Reviewer)", privileged: false, status: "Suspended", mfa: "enrolled" },
     { id: "u5", name: "D. Pruitt", email: "d.pruitt@titlepipe.internal", role: "Engineer", privileged: true, status: "Active", mfa: "absent" },
-    { id: "u6", name: "k.nyx@titlepipe.internal", email: "invitation sent 07/22", role: "Reviewer", privileged: false, status: "Invited", mfa: "pending" },
+    { id: "u6", name: "k.nyx@titlepipe.internal", email: "invitation sent 07/22", role: "Typist (Reviewer)", privileged: false, status: "Invited", mfa: "pending" },
   ],
 };
 

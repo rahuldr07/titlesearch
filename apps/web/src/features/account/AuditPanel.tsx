@@ -19,7 +19,7 @@ export function AuditPanel() {
   return (
     <PanelFrame
       title="Audit log"
-      note="The append-only record. There is no write endpoint in the contract, ever — and no filter, so a missing row means a missing event."
+      note="The append-only record, and it appends LIVE: a release, reissue, countersign, ruling, template save or access change files its row server-side the moment it happens (RULED 2026-08-29). There is no write endpoint in the contract, ever — and no filter, so a missing row means a missing event."
     >
       <QueryState query={log} of="the audit log">
         {(data) =>

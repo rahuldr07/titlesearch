@@ -2,39 +2,34 @@ import { useState } from "react";
 import { IngestForm } from "./IngestForm";
 import { BLANK_ORDER, packageForm, type Stage } from "./stages";
 import { RefusedCard } from "./RefusedCard";
-import { AcceptCard } from "./AcceptCard";
 import { AcceptedCard } from "./AcceptedCard";
-import { useAcceptOrder, useUploadPackage } from "./useIngest";
-import { QuarantinePanel } from "./QuarantinePanel";
+import { useSignForPackage } from "./useIngest";
+import { useQuarantineScan } from "./useQuarantineScan";
 
 /**
- * SCREEN 5 — INTAKE / UPLOAD, at `/ingest` (authz.ts:67, ops+admin). The stage
- * router for `form → (refused) → accept → accepted`, and nothing else.
- *
- * INVARIANT 47 (`docs/INVARIANTS.md:131`): "Acceptance is explicit — an upload
- * alone never queues an order." `accept` is a STAGE rather than a button on the
- * form because the two acts have to be visibly separate: after the upload the
- * order EXISTS and is NOT queued, and a design that draws one "Sign" button
- * cannot say that. Nothing chains the mutations.
+ * SCREEN 5 — INTAKE, at `/ingest` (authz.ts:67, ops+admin), built as the
+ * reference draws it under RULING-2026-08-29 (`docs/frontend/design-2026-08/
+ * RULING-2026-08-29.md`): kicker pill, Title-Case h1, the gateway INLINE on
+ * the form (the pre-order scan runs the moment a file lands), and ONE signed
+ * act — the ruling supersedes the two-act split this screen used to stage
+ * under INVARIANT 47. The stage router is `form → (refused | accepted)`.
  *
  * `banner` carries the SERVER's sentence for a failure that is not a
  * field-level rejection, which is where a duplicate lands: a byte-identical
  * re-upload surfaces the server's sha256-match notice verbatim (INVARIANT 48,
- * `INVARIANTS:132`, 58-59). The hash itself is DATA since the 2026-08-28
- * ruling — `QuarantineResponse.sha256` (design2.ts:37) — and renders on the
- * accept stage via `QuarantinePanel`, where an order id exists to read it
- * against.
+ * `INVARIANTS:132`, 58-59).
  */
 export function IngestScreen() {
   const [stage, setStage] = useState<Stage>({ kind: "form" });
   const [values, setValues] = useState(BLANK_ORDER);
   const [file, setFile] = useState<File | null>(null);
   const [banner, setBanner] = useState<string | null>(null);
+  const scan = useQuarantineScan();
 
-  const upload = useUploadPackage({
-    onUploaded: (order) => {
+  const sign = useSignForPackage({
+    onSigned: (order) => {
       setBanner(null);
-      setStage({ kind: "accept", order, fileName: file?.name ?? "the package" });
+      setStage({ kind: "accepted", order });
     },
     onRefused: (rejection) => {
       setBanner(null);
@@ -47,41 +42,45 @@ export function IngestScreen() {
     onFailed: setBanner,
   });
 
-  const accept = useAcceptOrder({
-    onAccepted: (order) => setStage({ kind: "accepted", order }),
-    onFailed: setBanner,
-  });
+  function choose(next: File | null) {
+    setFile(next);
+    if (next === null) scan.reset();
+    else scan.scan(next);
+  }
 
   function restart() {
     setStage({ kind: "form" });
     setValues(BLANK_ORDER);
     setFile(null);
     setBanner(null);
+    scan.reset();
   }
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
       <div className="flex flex-col gap-12 p-14">
         <header className="flex flex-col gap-4">
-          <h1 className="font-sans text-title font-bold leading-tight text-ink-primary">
-            Package intake &amp; registration
+          {/* The reference's kicker pill and Title-Case h1, verbatim. */}
+          <span className="w-fit rounded-pill border border-action-border bg-action-surface px-5 py-2 font-sans text-label font-semibold leading-flat text-ink-secondary">
+            Intake &amp; Quarantine Gateway
+          </span>
+          <h1 className="font-sans text-title font-bold leading-tight tracking-tight text-ink-primary">
+            Package Intake &amp; Registration
           </h1>
-          {/* The reference's lede, kept because every clause is true of this
-              flow: quarantine (design2.ts) runs before the sign that queues. */}
           <p className="max-w-320 font-sans text-body leading-body text-ink-muted">
             Upload scanned county abstract documents. Files undergo automated
-            SHA-256 verification and antivirus quarantine before an examiner
-            signs for the package.
+            SHA-256 verification and antivirus quarantine before binding to
+            examiner workstation.
           </p>
         </header>
 
-        {banner !== null && (
+        {(banner !== null || scan.failure !== null) && (
           <p
             data-testid="ingest-banner"
             role="alert"
             className="rounded-md border border-state-attend-border bg-state-attend-surface px-8 py-6 font-sans text-meta leading-body text-state-attend"
           >
-            {banner}
+            {banner ?? scan.failure}
           </p>
         )}
 
@@ -89,12 +88,13 @@ export function IngestScreen() {
           <IngestForm
             values={values}
             file={file}
-            uploading={upload.pending}
+            scan={scan}
+            pending={sign.pending}
             onValue={(key, value) =>
               setValues((previous) => ({ ...previous, [key]: value }))
             }
-            onFile={setFile}
-            onSubmit={() => upload.send(packageForm(values, file))}
+            onFile={choose}
+            onSign={() => sign.send(packageForm(values, file))}
           />
         )}
 
@@ -104,21 +104,6 @@ export function IngestScreen() {
             fileName={stage.fileName}
             onBack={() => setStage({ kind: "form" })}
           />
-        )}
-
-        {stage.kind === "accept" && (
-          <>
-            <AcceptCard
-              order={stage.order}
-              fileName={stage.fileName}
-              pending={accept.pending}
-              onAccept={() => accept.send(stage.order)}
-            />
-            {/* The server's quarantine verdicts, readable now the order has an
-                id. Rendering them here rather than on the form is INVARIANT
-                47's split, restated for a read. */}
-            <QuarantinePanel order={stage.order} />
-          </>
         )}
 
         {stage.kind === "accepted" && (

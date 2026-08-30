@@ -22,9 +22,9 @@ export const UNBUILT_SCREENS: readonly ScreenDescriptor[] = [
     path: "/ingest",
     screen: "Intake",
     binds:
-      "CreateOrderRequest (endpoints.ts:39) · IngestRejection (:49) · POST /api/orders/{id}/accept (:60) · QuarantineResponse (design2.ts:35) — GET /api/orders/{id}/quarantine",
+      "CreateOrderRequest (endpoints.ts, amended 2026-08-29: +product, −jurisdiction/state/county) · IngestRejection · POST /api/intake/quarantine + GET /api/orders/{id}/quarantine — QuarantineResponse with `resolved` (design2.ts) · GET /api/config/products · GET /api/clients (ClientRecord.sign_offs)",
     missing:
-      "BUILT (features/ingest), quarantine included. The Quarantine Gateway checklist and the Optical Profile card render from GET /api/orders/{id}/quarantine (design2.ts:35-42, added under the 2026-08-28 ruling): every step state and every optical verdict is the server's, and the sha256 renders as data. Still absent for want of a member: product on CreateOrderRequest (endpoints.ts:39-46) — so the checklist key is half-resolved and the banner names every checklist the client has — and a readiness member on QuarantineResponse, so the design's sign-disabled-until-ready gate stays the server's accept refusal rather than button state. Acceptance is explicit (INVARIANTS:47), so the design's single Sign button is two acts here.",
+      "BUILT (features/ingest) as the reference draws it, under RULING-2026-08-29. The gateway checklist and optical profile render INLINE the moment a file lands (the pre-order scan serves them; the reveal cadence is the reference's 480ms stagger over the server's states); jurisdiction/state/county are READ-ONLY, resolved server-side from the recorded clerk stamp (CONFLICT-intake-hand-typed-jurisdiction.md, resolved); the Product select carries CreateOrderRequest.product and the rulebook banner resolves by client+product; and the footer is ONE signed act — upload and accept chained under one press, superseding the two-act staging INVARIANT 47 imposed. Refusals kept: the server's missing-field rejection renders verbatim, and a byte-identical re-upload surfaces the 409 sha256-match notice.",
   },
   {
     path: "/delivery",

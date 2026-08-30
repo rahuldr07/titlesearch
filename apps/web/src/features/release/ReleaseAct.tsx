@@ -1,8 +1,8 @@
 import { useRef, useState } from "react";
+import { useRouter } from "@tanstack/react-router";
 import { TextField } from "react-aria-components";
 import type { CompositionResponse } from "@titlepipe/contract";
 import { Alert, Button, Input, Label } from "../../components/ui";
-import { RouteButton } from "../../app/chrome/RouteButton";
 import { notify } from "../../shared/notify";
 import { CompositionJson } from "./CompositionJson";
 import { releaseHold, useRelease } from "./useRelease";
@@ -23,28 +23,24 @@ import { releaseHold, useRelease } from "./useRelease";
  * client can know about itself: an unsigned act, an act in flight, and a sheet
  * already sealed.
  *
- * ══ THE WAY OUT IS A DOOR, NOT A DIAGNOSIS ═════════════════════════════════
+ * ══ THE GATE LINE IS A DOOR, AND THE SERVER NAMES IT ═══════════════════════
  *
- * The prototype makes its gate line a button to "the step that is blocking
- * release", choosing the destination by counting open fields and unread
- * countersigns. That choice is a re-derivation of release resolution and is not
- * made here. What IS offered is the workstation itself — one fixed door to
- * where every gate's work is done — so a reader told the gate is closed is not
- * left on a screen with no exit. Which gate, and what it wants, is the server's
- * sentence in the alert and the panel above it.
- *
- * The design's "Template Verified ✓" chip beside it is not drawn. It is a
- * verification claim about the template, and `CompositionResponse` carries
- * `template_version` — a name, not a verdict on it. The version is printed on
- * the sheet's dateline, without the tick.
+ * ⚠ RULED 2026-08-29 (RULING-2026-08-29.md): the reference's gate footer line
+ * is CLICKABLE and "opens the step that is blocking release". The reference
+ * chose the destination by counting open fields client-side; here the SERVER
+ * names it (`CompositionResponse.blocked_door`), so the drawn affordance
+ * exists without this screen re-deriving release resolution. The link is
+ * drawn verbatim off the wire and only while a door is named.
  */
 export function ReleaseAct(props: { readonly composed: CompositionResponse }) {
   const [signature, setSignature] = useState("");
   const release = useRelease(props.composed.order_id);
+  const router = useRouter();
   /* `isPending` is a render away, and three clicks inside one tick beat it —
      measured: three requests. The latch closes on the click itself. */
   const filing = useRef(false);
   const held = releaseHold(props.composed, signature, release.isPending);
+  const door = props.composed.blocked_door;
 
   return (
     <div data-testid="release-act" className="flex flex-col gap-8">
@@ -53,16 +49,25 @@ export function ReleaseAct(props: { readonly composed: CompositionResponse }) {
           tone="halt"
           title="The release gate is closed"
           message={props.composed.blocked_reason}
-          action={
-            <RouteButton
-              size="sm"
-              to="/orders/$orderId/review"
-              params={{ orderId: props.composed.order_id }}
-              data-testid="release-open-workstation"
-            >
-              Open the review workstation →
-            </RouteButton>
-          }
+          {...(door !== null
+            ? {
+                action: (
+                  /* The server-named door — a path, not a typed route, so it
+                     goes through the router's history rather than a typed
+                     `Link` the wire could never satisfy. */
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    data-testid="release-open-blocker"
+                    onPress={() => {
+                      void router.history.push(door);
+                    }}
+                  >
+                    Open the step that is blocking release →
+                  </Button>
+                ),
+              }
+            : {})}
         />
       )}
 

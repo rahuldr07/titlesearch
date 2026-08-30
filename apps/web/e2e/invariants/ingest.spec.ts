@@ -1,13 +1,18 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 /**
- * HARVESTED INVARIANTS — migrated from apps/web @ ade49af (pre-rebuild).
- * Source: apps/web/e2e/ingest.spec.ts
+ * INTAKE'S PRODUCT RULES, pinned against the DRAWN flow.
  *
- * Every test here is SKIPPED until the feature it covers lands in web-v2.
- * Un-skip as each feature lands. Rewrite selectors freely.
- * NEVER weaken an assertion — if one cannot pass against the new design,
- * that is a CONFLICT in the design: stop and report (BRIEF §5 Phase 5).
+ * ⚠ REWRITTEN 2026-08-29 under RULING-2026-08-29
+ * (`docs/frontend/design-2026-08/RULING-2026-08-29.md`): the ruling supersedes
+ * the two-act upload/accept staging these tests used to pin under INVARIANT 47
+ * — the reference draws ONE press ("Sign for Package & Begin Dual-Engine
+ * Extraction →") and the ruling is the authority this header's old "never
+ * weaken an assertion" note asks for. What is PIN-KEPT, restated for one act:
+ *   - the server's refusal renders its missing-field list verbatim (§4.3);
+ *   - a byte-identical re-upload surfaces the server's sha256-match notice;
+ *   - jurisdiction/state/county are never typed — they left the request
+ *     (CONFLICT-intake-hand-typed-jurisdiction.md, resolved by the ruling).
  */
 
 const PKG = {
@@ -16,71 +21,96 @@ const PKG = {
   buffer: Buffer.from("%PDF-1.4 demo package bytes"),
 };
 
-/**
- * SCAFFOLDING, NOT AN ASSERTION. The client is chosen from a card grid now, not
- * typed — the design draws a 2-column picker and `GET /api/clients` has always
- * served the list, so a free-text id was a mistype away from resolving the
- * wrong sign-off list, which is the one thing intake decides.
- *
- * Changing HOW this helper reaches the control is not weakening the invariant
- * it sets up: every assertion in the three tests below is untouched, and the
- * two-act rule they exist to pin is unchanged. The spec header's "never weaken
- * an assertion" still binds — this is not one.
- */
-async function fillOrder(page: import("@playwright/test").Page) {
-  await page.getByTestId("order-external_ref").fill("DEMO-9001");
-  await page.getByTestId("choice-client-cli_riverbend").check();
-  await page.getByTestId("order-jurisdiction").fill("clayton-ga");
-  await page.getByTestId("order-state").fill("GA");
-  await page.getByTestId("order-county").fill("Clayton");
+/** The drawn flow: drop the file (the gateway scans at once), pick client and
+ * product from the served rosters, type the client's own order number. */
+async function fillOrder(page: Page) {
   await page.getByTestId("package-input").setInputFiles(PKG);
+  await page.getByTestId("client-select").click();
+  await page.getByRole("option", { name: /Riverbend/ }).click();
+  await page.getByTestId("product-select").click();
+  await page.getByRole("option", { name: /Current Owner Search/ }).click();
+  await page.getByTestId("order-external_ref").fill("DEMO-9001");
 }
-// TODO(rebuild) [INVARIANT] — rule: §4.3 — the server's refusal renders its missing fields verbatim; the client does not author the list.
-test("an incomplete upload is refused with the server's missing fields, verbatim", async ({
+
+const SIGN = /sign for package/i;
+
+// [INVARIANT] — rule: §4.3 — the server's refusal renders its missing fields
+// verbatim; the client does not author the list.
+test("an incomplete sign is refused with the server's missing fields, verbatim", async ({
   page,
 }) => {
   await page.goto("/ingest");
-  // no file, no fields — the server names all six
-  await page.getByRole("button", { name: "upload the package" }).click();
+  // The one act is gated only on the file (RULING-2026-08-29): with a file
+  // attached and nothing else, the press reaches the server, which names the
+  // three request members — client_id, product, external_ref — and no more.
+  // Jurisdiction/state/county CANNOT appear: they are not request members.
+  await page.getByTestId("package-input").setInputFiles(PKG);
+  await page.getByRole("button", { name: SIGN }).click();
   await expect(page.getByTestId("refused-card")).toBeVisible();
-  const missing = page.getByTestId("missing-field");
-  await expect(missing).toHaveCount(6); // five order fields + the package itself
+  await expect(page.getByTestId("missing-field")).toHaveCount(3);
   await expect(page.getByTestId("refused-card")).toContainText("ORDER #");
+  await expect(page.getByTestId("refused-card")).toContainText("PRODUCT");
+  await expect(page.getByTestId("refused-card")).not.toContainText("JURISDICTION");
   await expect(page.getByTestId("refused-card")).toContainText(
     "a report cannot be produced from this file",
   );
 });
 
-// TODO(rebuild) [INVARIANT] — rule: acceptance is explicit — an upload alone never queues an order.
-test("acceptance is explicit — upload alone never queues the order", async ({
+// [DRAWN, RULING-2026-08-29] — one signed act: the press uploads AND signs;
+// the sealed card renders only on the server's acknowledgement of both.
+test("one press signs for the package — no second accept stage exists", async ({
   page,
 }) => {
   await page.goto("/ingest");
   await fillOrder(page);
-  await page.getByRole("button", { name: "upload the package" }).click();
-  // uploaded, but NOT accepted: the sign-for step is still in front of us
-  await expect(page.getByTestId("accept-btn")).toBeVisible();
-  await expect(page.getByTestId("accepted-card")).toHaveCount(0);
-  await page.getByTestId("accept-btn").click();
+  // The act is disabled until a file is chosen — here one is, so it fires.
+  await page.getByRole("button", { name: SIGN }).click();
+  await expect(page.getByTestId("accepted-card")).toBeVisible();
   await expect(page.getByTestId("accepted-card")).toContainText(
-    "Signed for. Order DEMO-9001 is queued.",
+    "Package Ingested & Signature Sealed",
   );
+  await expect(page.getByTestId("accepted-card")).toContainText("DEMO-9001");
+  // The old intermediate accept stage is gone — one act, one card.
+  await expect(page.getByTestId("accept-btn")).toHaveCount(0);
 });
 
-// TODO(rebuild) [INVARIANT] — rule: a duplicate package surfaces the server's sha256-match notice.
+// [INVARIANT] — rule: a duplicate package surfaces the server's sha256-match
+// notice (INVARIANT 48). The create still 409s; the banner prints it verbatim.
 test("a byte-identical re-upload surfaces the server's duplicate notice", async ({
   page,
 }) => {
   await page.goto("/ingest");
   await fillOrder(page);
-  await page.getByRole("button", { name: "upload the package" }).click();
-  await expect(page.getByTestId("accept-btn")).toBeVisible();
-  await page.getByTestId("accept-btn").click();
+  await page.getByRole("button", { name: SIGN }).click();
   await expect(page.getByTestId("accepted-card")).toBeVisible();
   await page.getByRole("button", { name: "ingest another" }).click();
   await fillOrder(page);
-  await page.getByRole("button", { name: "upload the package" }).click();
+  await page.getByRole("button", { name: SIGN }).click();
   await expect(page.getByTestId("ingest-banner")).toContainText(
     "duplicate package (sha256 match)",
   );
+});
+
+// [DRAWN, RULING-2026-08-29] — jurisdiction is read, never typed: no writable
+// jurisdiction/state/county input exists anywhere on the screen, and the
+// paired row states the absence until the server's clerk-stamp readout lands.
+test("jurisdiction is read from the clerk stamp — no input to hand-pick it wrong", async ({
+  page,
+}) => {
+  await page.goto("/ingest");
+  await expect(page.getByTestId("order-jurisdiction")).toHaveCount(0);
+  await expect(page.getByTestId("order-state")).toHaveCount(0);
+  await expect(page.getByTestId("order-county")).toHaveCount(0);
+  await expect(page.getByTestId("order-jurisdiction-readonly")).toContainText(
+    "read from clerk stamp",
+  );
+  await expect(page.getByTestId("rulebook-note")).toContainText(
+    "Rulebook binds after quarantine",
+  );
+  // Once quarantine clears, the readout is the SERVER's.
+  await page.getByTestId("package-input").setInputFiles(PKG);
+  await expect(page.getByTestId("order-jurisdiction-readonly")).toContainText(
+    "Clayton County, GA",
+  );
+  await expect(page.getByTestId("order-pages-readonly")).toContainText("pages");
 });

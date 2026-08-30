@@ -17,9 +17,11 @@ export function OpticalProfile(props: {
   readonly optical: readonly OpticalReading[];
 }) {
   return (
-    <div className="flex flex-col gap-6">
-      <h2 className="text-label font-semibold leading-flat text-ink-faint">
-        Optical profile
+    /* Boxed like the gateway card above it — the drawn frame
+       (RULING-2026-08-29): header strip, one bordered row per reading. */
+    <div className="overflow-hidden rounded-lg border border-line-strong bg-surface-panel">
+      <h2 className="border-b border-line-subtle bg-surface-sunken px-7 py-5 text-label font-bold leading-flat text-ink-faint">
+        Optical Profile — read from the file
       </h2>
 
       <ul data-testid="optical-profile" className="flex flex-col">
@@ -28,13 +30,16 @@ export function OpticalProfile(props: {
             key={reading.id}
             data-testid="optical-reading"
             data-ok={reading.ok ? "true" : "false"}
-            className="flex items-baseline gap-6 border-b border-line-subtle py-5"
+            className="flex items-baseline gap-5 border-b border-line-subtle px-7 py-5"
           >
+            {/* ◆ in the ATTEND tone, as the reference inks its flagged row:
+                a reading below the floor is a warning the pipeline degrades
+                around (Law 3), not a halt. */}
             <span
               aria-hidden
               className={cx(
                 "w-8 shrink-0 text-center font-mono text-meta leading-flat",
-                reading.ok ? "text-state-settled" : "text-state-halt",
+                reading.ok ? "text-state-settled" : "text-state-attend",
               )}
             >
               {reading.ok ? "✓" : "◆"}

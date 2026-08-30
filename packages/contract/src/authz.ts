@@ -125,6 +125,11 @@ export const PERMISSIONS = [
   // ops lead resolves complaints (PRD §5); refused unless still open
   { action: "complaint.resolve", roles: ["ops", "admin"], when: { resolution: [null] } },
   { action: "delivery.retry", roles: ["ops", "admin"] },
+  // ⚠ RULED 2026-08-29 (RULING-2026-08-29.md): the reference's Settings pane
+  // cycles RBAC cells and reassigns roles; both acts get real grants so the
+  // mock refuses them by the one table rather than by a hand-rolled check.
+  { action: "rbac.edit", roles: ["admin"] },
+  { action: "person.role.assign", roles: ["admin"] },
 ] as const satisfies readonly Permission[];
 
 /** Compile-time-safe action names — a typo in a canDo call fails typecheck. */

@@ -13,8 +13,13 @@ export function useRelease(orderId: string) {
   return useMutation({
     mutationFn: (signature: string) =>
       post(`/api/orders/${orderId}/release`, ReleaseResponse, { signature }),
-    onSuccess: () =>
-      client.invalidateQueries({ queryKey: ["orders", orderId, "composition"] }),
+    onSuccess: async () => {
+      // The release files an audit event server-side (RULED 2026-08-29).
+      await Promise.all([
+        client.invalidateQueries({ queryKey: ["orders", orderId, "composition"] }),
+        client.invalidateQueries({ queryKey: ["audit"] }),
+      ]);
+    },
     // The server's sentence, verbatim (INVARIANT 14). Never composed here.
     onError: (error: Error) => notify.error(error.message),
   });

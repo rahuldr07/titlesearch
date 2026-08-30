@@ -1,28 +1,24 @@
 import { expect, test } from "@playwright/test";
 
 /**
- * SELECTOR REWRITE 2026-07-28: the account tabs are getByRole("tab"), not
- * ("button"). Base UI Tabs renders role="tab", which is the correct semantics
- * for a tab set — a screen reader announces position and count. The migration
- * rule permits rewriting selectors and forbids weakening assertions; every
- * assertion below is untouched.
- *
  * HARVESTED INVARIANTS — migrated from apps/web @ ade49af (pre-rebuild).
  * Source: apps/web/e2e/authz.spec.ts
  *
- * Every test here is SKIPPED until the feature it covers lands in web-v2.
- * Un-skip as each feature lands. Rewrite selectors freely.
- * NEVER weaken an assertion — if one cannot pass against the new design,
- * that is a CONFLICT in the design: stop and report (BRIEF §5 Phase 5).
+ * REWRITTEN 2026-08-30 against the built app: the original tests navigated
+ * /rulebook, a screen that no longer exists (the rule catalog lives on
+ * /escalations' candidates pane and /account?tab=rules). Selectors and
+ * navigation moved, which the migration rule permits; the two WIRE invariants
+ * are asserted unchanged. The third test's UI half is updated to pin the
+ * DRAWN role-gating under RULING-2026-08-29 — see its header.
  */
 
-// TODO(rebuild) [INVARIANT] — rule: the role gate runs BEFORE validation — a role that lacks the action gets 403 even with an invalid body.
+// [INVARIANT] — rule: the role gate runs BEFORE validation — a role that lacks the action gets 403 even with an invalid body.
 test("the mock server refuses a mutation the role doesn't hold — before validation", async ({
   page,
 }) => {
-  await page.goto("/rulebook");
+  await page.goto("/escalations");
   // an MSW-served element proves the worker controls the page before we fetch
-  await expect(page.getByTestId("rule-row-R13")).toBeVisible();
+  await expect(page.getByTestId("escalation-esc_party_1")).toBeVisible();
   const statuses = await page.evaluate(async () => {
     const flip = (role: string) =>
       fetch("/api/engines/routing", {
@@ -41,14 +37,14 @@ test("the mock server refuses a mutation the role doesn't hold — before valida
   expect(statuses.engineer).toBe(422);
 });
 
-// TODO(rebuild) [INVARIANT] — rule: one permission table gates UI affordances and server mutations alike — they cannot drift.
+// [INVARIANT] — rule: one permission table gates UI affordances and server mutations alike — they cannot drift.
 test("a senior may resolve; an ops role may not — same endpoint, same table", async ({
   page,
 }) => {
-  await page.goto("/rulebook");
-  await expect(page.getByTestId("rule-row-R13")).toBeVisible();
+  await page.goto("/escalations");
+  await expect(page.getByTestId("escalation-esc_party_1")).toBeVisible();
   const status = await page.evaluate(() =>
-    fetch("/api/escalations/esc_1/resolve", {
+    fetch("/api/escalations/esc_party_1/resolve", {
       method: "POST",
       headers: { "content-type": "application/json", "x-mock-role": "ops" },
       body: JSON.stringify({}),
@@ -57,35 +53,47 @@ test("a senior may resolve; an ops role may not — same endpoint, same table", 
   expect(status).toBe(403);
 });
 
-// TODO(rebuild) [INVARIANT] — rule: a role-locked affordance is ABSENT, not disabled.
-test("the engineer gate's confirm affordance exists only for its holders", async ({
+/**
+ * ⚠ RULED 2026-08-29 — `docs/frontend/design-2026-08/RULING-2026-08-29.md`.
+ *
+ * ROLE-GATING FOR THE QC DETERMINATION, AS DRAWN. The pre-rebuild test here
+ * asserted "a role-locked affordance is ABSENT, not disabled" against the
+ * rulebook's confirm button. The ruling supersedes that reading FOR THE
+ * ESCALATIONS SURFACE: the reference draws the determination on a non-QC
+ * seat as VISIBLE + DISABLED with the "belongs to QC" hint, so that is what
+ * is pinned. THE REFUSAL COVERAGE IS NOT WEAKENED: the wire half below
+ * asserts the server still 403s a reviewer's resolve — the dimmed button is
+ * a courtesy, the table is the enforcement.
+ */
+test("the QC determination: enabled for a holder, dimmed-with-reason for a non-holder, 403 on the wire", async ({
   page,
 }) => {
-  await page.goto("/rulebook");
-  // the book opens on LIVE; a pending rule is behind its own filter
-  await page.getByRole("button", { name: /^Pending/ }).click();
-  await page.getByTestId("rule-row-DRAFT-HOA-AGE").click();
-  // admin (default) sees it
-  await expect(page.getByTestId("rule-confirm-btn")).toBeVisible();
-  // a reviewer sees the PENDING chip but no confirm button — the affordance
-  // is absent, not disabled
-  //
-  // COPY FIX 2026-07-29: the design's chip is the bare word "PENDING" — every
-  // status badge it draws (row, detail header, lifecycle rail) is one word.
-  // The old assertion here (`PENDING — CANNOT AFFECT THE PIPELINE`) checked
-  // ruleStatus.ts's stale pre-revision label; that sentence belongs only to
-  // the new-rule-form banner (`NewRuleForm.tsx`, "PENDING — AFFECTS NOTHING
-  // YET"), a different element entirely. This is a copy correction against the
-  // design, not a weakened assertion — the chip and the absent confirm button
-  // are still both checked.
-  await page.getByTestId("account-menu").click();
-  await page.getByTestId("role-reviewer").click();
-  await page.keyboard.press("Escape");
-  await expect(page.getByTestId("rule-status-chip")).toHaveText("PENDING");
-  await expect(page.getByTestId("rule-confirm-btn")).toHaveCount(0);
-  // an engineer gets it back
-  await page.getByTestId("account-menu").click();
-  await page.getByTestId("role-engineer").click();
-  await page.keyboard.press("Escape");
-  await expect(page.getByTestId("rule-confirm-btn")).toBeVisible();
+  await page.goto("/escalations");
+  // admin (dev default) holds escalation.resolve — the live card renders
+  await expect(page.getByTestId("resolve-card")).toBeVisible();
+  await expect(page.getByTestId("resolve-btn-locked")).toHaveCount(0);
+
+  // the wire refuses a reviewer regardless of what any screen draws
+  const status = await page.evaluate(() =>
+    fetch("/api/escalations/esc_party_1/resolve", {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-mock-role": "reviewer" },
+      body: JSON.stringify({}),
+    }).then((r) => r.status),
+  );
+  expect(status).toBe(403);
+
+  // switch seats in-page (no reload — the demo session store re-boots on one)
+  await page.getByTestId("sign-out").click();
+  await page.getByTestId("continue-as-reviewer").click();
+  // Continue-as lands on "/" — walk BACK to /escalations through SPA history
+  // (a page.goto would reload and re-boot the session store to admin).
+  await page.goBack();
+
+  // drawn: visible + disabled, carrying its reason (rule 9 / RULING-2026-08-29)
+  const locked = page.getByTestId("resolve-btn-locked");
+  await expect(locked).toBeVisible();
+  await expect(locked).toBeDisabled();
+  await expect(locked).toHaveAttribute("data-disabled-reason", /belongs to QC/);
+  await expect(page.getByTestId("resolve-card")).toHaveCount(0);
 });

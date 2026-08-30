@@ -110,10 +110,31 @@ export const JudgmentStatus = z.enum([
 export type JudgmentStatus = z.infer<typeof JudgmentStatus>;
 
 /**
- * Order/delivery status vocabularies are OPEN until the Flask models are ported
- * (P1) — they are the source of truth. Do not invent closed enums here.
+ * Order status vocabulary is OPEN until the Flask models are ported (P1) — it
+ * is the source of truth. Do not invent a closed enum here.
  */
 export const OrderStatus = z.string();
 export type OrderStatus = z.infer<typeof OrderStatus>;
-export const DeliveryStatus = z.string();
+
+/**
+ * ⚠ RULED 2026-08-29 — `docs/frontend/design-2026-08/RULING-2026-08-29.md`.
+ * Closed under the ruling: the reference app's Transmission Receipt draws a
+ * delivery as a four-step act — signed, digest recorded, transmitted,
+ * acknowledged — so the status vocabulary is the four terminal points of that
+ * sequence plus the two states the fixtures already carried: a reissue DRAFT
+ * that has been transmitted to nobody, and a transit failure (retryable,
+ * never a quality state — see `Delivery`).
+ *
+ * The pre-ruling `z.string()` was marked OPEN pending the Flask port; the
+ * ruling resolves it for the reference: the mocks serve these members and the
+ * Gate 6 port reconciles against them rather than the other way round.
+ */
+export const DeliveryStatus = z.enum([
+  "draft",
+  "signed",
+  "digest_recorded",
+  "transmitted",
+  "acknowledged",
+  "failed_transit",
+]);
 export type DeliveryStatus = z.infer<typeof DeliveryStatus>;

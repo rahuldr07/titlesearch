@@ -36,12 +36,21 @@ export type Ack = z.infer<typeof Ack>;
 
 // ---- ingest ----------------------------------------------------------------
 
+/**
+ * ⚠ AMENDED 2026-08-29 — `docs/frontend/design-2026-08/RULING-2026-08-29.md`.
+ * `jurisdiction`/`state`/`county` LEFT this request: the server resolves all
+ * three from the recorded clerk stamp once the package passes optical
+ * quarantine (`QuarantineResponse.resolved`, design2.ts), so the state overlay
+ * can never be hand-picked wrong — the resolution recorded in
+ * CONFLICT-intake-hand-typed-jurisdiction.md. `product` ARRIVED with the same
+ * ruling: intake picks it, and the effective checklist resolves by
+ * client + product (`EffectiveChecklist`, workspace.ts).
+ */
 export const CreateOrderRequest = z.object({
   client_id: z.string(),
   external_ref: z.string(),
-  jurisdiction: z.string(),
-  state: z.string(),
-  county: z.string(),
+  /** A `ConfigProduct.id` — the second half of the checklist key. */
+  product: z.string(),
 });
 export type CreateOrderRequest = z.infer<typeof CreateOrderRequest>;
 

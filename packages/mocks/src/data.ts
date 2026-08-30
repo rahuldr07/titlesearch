@@ -1010,6 +1010,15 @@ export const demoRules: Rule[] = [
  * order is a reviewer's question from a reviewer who does not exist.
  */
 export const demoEscalations: Escalation[] = [
+  /*
+   * ⚠ RULED 2026-08-29 (RULING-2026-08-29.md) — the evidence members the
+   * reference's QC & Escalations detail draws are SERVED: the raiser line,
+   * the finished age label (a label, never a ticking clock), the extraction
+   * context paragraph, the docket excerpt split at the boxed match
+   * (`SourceExcerpt`, self-locating), the debtor-vs-owner identity grid, and
+   * the QC seat the determination sits with. Null where a cluster carries no
+   * such evidence — that is an ordinary state, not a placeholder.
+   */
   {
     id: "esc_party_1",
     field_path_cluster: "judgments.hit_identity",
@@ -1019,6 +1028,25 @@ export const demoEscalations: Escalation[] = [
     resolution: null,
     rule_id: null,
     resolved_by: null,
+    raised_by: "R. Okafor · Judgments & Liens",
+    age: "3h ago",
+    context:
+      "A judgment for $18,410 was indexed to a name matching the record owner on the General Execution Docket. Three hits share the caption across different case series. The rulebook prohibits auto-deciding party identity without explicit human confirmation.",
+    excerpt: {
+      doc_id: "doc_demo_1",
+      page: 31,
+      pre: "Case No. 26-J-04412. DISCOVER BANK, Plaintiff, v. ",
+      hit: "SMITH, JOHN A.",
+      post: ", Defendant… in the principal amount of $18,410.00.",
+      note: "Source excerpt · p31 · line 9 · magnified",
+    },
+    identity: {
+      debtor_label: "Judgment debtor of record",
+      debtor: "SMITH, JOHN A.",
+      owner_label: "Vested owner of subject parcel",
+      owner: "QUENBY, MARLOWE D.",
+    },
+    qc_owner: "L. Vance",
   },
   {
     id: "esc_party_2",
@@ -1028,6 +1056,12 @@ export const demoEscalations: Escalation[] = [
     resolution: null,
     rule_id: null,
     resolved_by: null,
+    raised_by: "M. Okonkwo · Judgments & Liens",
+    age: "5h ago",
+    context: null,
+    excerpt: null,
+    identity: null,
+    qc_owner: "L. Vance",
   },
   {
     id: "esc_party_3",
@@ -1037,6 +1071,12 @@ export const demoEscalations: Escalation[] = [
     resolution: null,
     rule_id: null,
     resolved_by: null,
+    raised_by: "R. Okafor · Judgments & Liens",
+    age: "1d ago",
+    context: null,
+    excerpt: null,
+    identity: null,
+    qc_owner: "L. Vance",
   },
   {
     id: "esc_hoa_1",
@@ -1046,6 +1086,12 @@ export const demoEscalations: Escalation[] = [
     resolution: null,
     rule_id: null,
     resolved_by: null,
+    raised_by: "M. Okonkwo · Encumbrances",
+    age: "5h ago",
+    context: null,
+    excerpt: null,
+    identity: null,
+    qc_owner: "L. Vance",
   },
   {
     id: "esc_tax_1",
@@ -1057,6 +1103,12 @@ export const demoEscalations: Escalation[] = [
       "Use the current fiscal year's bill; the prior year appears only when unpaid.",
     rule_id: "rule_tax_vintage",
     resolved_by: "M. Estrada",
+    raised_by: "R. Okafor · Taxes",
+    age: "settled",
+    context: null,
+    excerpt: null,
+    identity: null,
+    qc_owner: null,
   },
 ];
 
@@ -1082,16 +1134,26 @@ export const demoDeliveries: DeliveryWithReport[] = [
     id: "del_1",
     report_id: "rep_1",
     method: "email",
-    status: "delivered",
+    status: "acknowledged",
     attempted_at: "2026-07-24T17:19:40Z",
     delivered_at: deliveredOrder.delivered_at,
     evidence: "smtp accepted · message-id 8812@demo",
+    // ⚠ RULED 2026-08-29: the Transmission Receipt's four drawn steps, per
+    // delivery, with the server's own instants and attributions.
+    receipt: [
+      { id: "signed", at: "2026-07-24T17:19:38Z", what: "Release signed & sealed", who: "L. Vance · after QC countersign", done: true },
+      { id: "digest", at: "2026-07-24T17:19:39Z", what: "SHA-256 digest recorded", who: "seal filed on the composition", done: true },
+      { id: "transmit", at: "2026-07-24T17:19:40Z", what: "Transmitted · smtp", who: "smtp accepted · message-id 8812@demo", done: true },
+      { id: "ack", at: "2026-07-24T17:21:02Z", what: "Client acknowledged receipt", who: "Riverbend Title portal · authorized user", done: true },
+    ],
     report: {
       id: "rep_1",
       order_id: deliveredOrder.id,
       version: 1,
       shape: "A",
       rendered_at: "2026-07-24T17:18:20Z",
+      supersedes: null,
+      reason: null,
     },
   },
   {
@@ -1103,44 +1165,70 @@ export const demoDeliveries: DeliveryWithReport[] = [
     // Null, and it agrees with the row: a bounced delivery reached nobody.
     delivered_at: bouncedOrder.delivered_at,
     evidence: "client portal returned 503 · credential valid",
+    receipt: [
+      { id: "signed", at: "2026-07-24T16:04:52Z", what: "Release signed & sealed", who: "L. Vance · after QC countersign", done: true },
+      { id: "digest", at: "2026-07-24T16:04:53Z", what: "SHA-256 digest recorded", who: "seal filed on the composition", done: true },
+      { id: "transmit", at: null, what: "Transmitted · client portal", who: "portal returned 503 · credential valid — retryable", done: false },
+      { id: "ack", at: null, what: "Client acknowledged receipt", who: "not yet acknowledged", done: false },
+    ],
     report: {
       id: "rep_2",
       order_id: bouncedOrder.id,
       version: 1,
       shape: "A",
       rendered_at: "2026-07-24T16:02:20Z",
+      supersedes: null,
+      reason: null,
     },
   },
   {
     id: "del_3",
     report_id: "rep_3",
     method: "email",
-    status: "delivered",
+    status: "transmitted",
     attempted_at: "2026-07-24T15:50:00Z",
     delivered_at: "2026-07-24T15:50:30Z",
     evidence: null,
+    receipt: [
+      { id: "signed", at: "2026-07-24T15:49:48Z", what: "Release signed & sealed", who: "L. Vance · after QC countersign", done: true },
+      { id: "digest", at: "2026-07-24T15:49:49Z", what: "SHA-256 digest recorded", who: "seal filed on the composition", done: true },
+      { id: "transmit", at: "2026-07-24T15:50:30Z", what: "Transmitted · smtp", who: "smtp accepted", done: true },
+      { id: "ack", at: null, what: "Client acknowledged receipt", who: "not yet acknowledged", done: false },
+    ],
     report: {
       id: "rep_3",
       order_id: complainedOrder.id,
       version: 1,
       shape: "B",
       rendered_at: "2026-07-24T15:48:10Z",
+      supersedes: null,
+      reason: null,
     },
   },
   {
     id: "del_4",
     report_id: "rep_4",
     method: "email",
-    status: "delivered",
+    status: "acknowledged",
     attempted_at: "2026-07-24T17:19:00Z",
     delivered_at: complainedOrder.delivered_at,
     evidence: "after complaint · changed: judgments.1.type",
+    receipt: [
+      { id: "signed", at: "2026-07-24T17:18:55Z", what: "Reissue signed & sealed", who: "L. Vance · reason on ledger", done: true },
+      { id: "digest", at: "2026-07-24T17:18:56Z", what: "SHA-256 digest recorded", who: "seal filed on the composition", done: true },
+      { id: "transmit", at: "2026-07-24T17:19:00Z", what: "Transmitted · smtp", who: "smtp accepted", done: true },
+      { id: "ack", at: "2026-07-24T17:22:41Z", what: "Client acknowledged receipt", who: "Riverbend Title portal · authorized user", done: true },
+    ],
     report: {
       id: "rep_4",
       order_id: complainedOrder.id,
       version: 2,
       shape: "B",
       rendered_at: "2026-07-24T17:17:00Z",
+      // The v1/v2 pair IS the defect record: the v2 row states, on the wire,
+      // which version it superseded and why (RULED 2026-08-29).
+      supersedes: 1,
+      reason: "A value in the delivered report requires correction or updating",
     },
   },
 ];

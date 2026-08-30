@@ -96,6 +96,14 @@ export const ClientRecord = z.object({
   product_ids: z.array(z.string()),
   signoff_defaults: z.record(z.string(), z.string()),
   overrides: z.array(ClientOverride),
+  /**
+   * ⚠ RULED 2026-08-29 (`docs/frontend/design-2026-08/RULING-2026-08-29.md`):
+   * the reference's intake client select draws "(14 sign-offs)" per option, so
+   * the figure rides the wire — FINISHED ("12 sign-offs"), the server's census
+   * of the client's effective checklist, never a browser tally over `effective`
+   * (hard rule 3). Optional: absent is "the server did not say".
+   */
+  sign_offs: z.string().optional(),
 });
 export type ClientRecord = z.infer<typeof ClientRecord>;
 

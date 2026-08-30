@@ -1,100 +1,101 @@
-import type { QuarantineResponse, QuarantineState } from "@titlepipe/contract";
+import type { QuarantineState } from "@titlepipe/contract";
 import { cx } from "../../components/ui";
+import type { GatewayRow } from "./useQuarantineScan";
 
 /**
- * THE QUARANTINE GATEWAY CHECKLIST — README §22's "AV → real-PDF → SHA-256
- * de-dup, sequential with pulsing dot". One row per `QuarantineStep`
- * (design2.ts:14-20), in the order the server sent them.
+ * THE QUARANTINE GATEWAY CHECKLIST, INLINE UNDER THE FILE ROW AS DRAWN.
  *
- * THERE IS NO CLIENT STATE MACHINE. `state` arrives decided (`QuarantineState`,
- * design2.ts:11 — exactly four members) and nothing here advances a step,
- * infers "running" from the row above, or re-orders the list. The design's
- * "queued / checking… / clear" are PRESENTATION WORDS keyed 1:1 to the server's
- * states — the same shape as `StageTimeline`'s `PHASE` map — and the typed
- * Record fails the build if the contract grows a fifth state.
+ * ⚠ RULED 2026-08-29 (`docs/frontend/design-2026-08/RULING-2026-08-29.md`):
+ * the reference runs this on the intake form the moment a file lands, so it
+ * renders HERE, fed by `useQuarantineScan` — the rows arrive with the SERVER's
+ * per-step states and only the reveal cadence is local. The words are keyed
+ * 1:1 to `QuarantineState` (design2.ts): nothing here advances a step, infers
+ * "running" from the row above, or re-orders the list, and the typed Record
+ * fails the build if the contract grows a fifth state.
  *
- * `sha256` renders VERBATIM, cited to `QuarantineResponse.sha256`
- * (design2.ts:37). The digest used to arrive only inside a duplicate's 409
- * prose; since the 2026-08-28 ruling it is data. A duplicate still refuses at
- * upload with the server's 409 sentence (INVARIANT 48, `RefusedCard`/banner) —
- * `duplicate_of` below is the same fact as data, shown only when the server
- * sent one.
- *
- * Rule 7's glyph vocabulary: ✓ done, • running/waiting, ◆ halted. No fourth
- * mark, and the pulse is the token file's own `tp-pulse`.
+ * `sha` renders VERBATIM once the reveal completes — the digest is DATA
+ * (`QuarantineResponse.sha256`), and the sentence beside it is the de-dup
+ * step's own `detail`, quoted rather than composed.
  */
 const STATE: Readonly<
   Record<QuarantineState, { mark: string; word: string; ink: string }>
 > = {
-  pending: { mark: "•", word: "queued", ink: "text-ink-faint" },
-  running: { mark: "•", word: "checking…", ink: "text-action animate-tp-pulse" },
+  pending: { mark: "○", word: "queued", ink: "text-ink-faint" },
+  running: { mark: "●", word: "checking…", ink: "text-action animate-tp-pulse" },
   passed: { mark: "✓", word: "clear", ink: "text-state-settled" },
   failed: { mark: "◆", word: "failed", ink: "text-state-halt" },
 };
 
-export function QuarantineGateway(props: { readonly data: QuarantineResponse }) {
+export function QuarantineGateway(props: {
+  readonly rows: readonly GatewayRow[];
+  /** The digest line, shown once every row is revealed. Null until then. */
+  readonly sha: { readonly digest: string; readonly note: string | null } | null;
+  readonly duplicateOf: string | null;
+}) {
   return (
-    <div className="flex flex-col gap-6">
-      <h2 className="text-label font-semibold leading-flat text-ink-faint">
-        Quarantine gateway
+    <div className="overflow-hidden rounded-lg border border-line-strong bg-surface-panel">
+      <h2 className="border-b border-line-subtle bg-surface-sunken px-7 py-5 text-label font-bold leading-flat text-ink-faint">
+        Quarantine Gateway
       </h2>
 
       <ol data-testid="quarantine-gateway" className="flex flex-col">
-        {props.data.steps.map((step) => (
+        {props.rows.map((row) => (
           <li
-            key={step.id}
+            key={row.id}
             data-testid="quarantine-step"
-            data-state={step.state}
-            className="flex items-baseline gap-6 border-b border-line-subtle py-5"
+            data-state={row.state}
+            className="flex items-center gap-5 border-b border-line-subtle px-7 py-5"
           >
             <span
               aria-hidden
               className={cx(
-                "w-8 shrink-0 text-center font-mono text-meta leading-flat",
-                STATE[step.state].ink,
+                "w-8 shrink-0 text-center font-mono text-meta font-bold leading-flat",
+                STATE[row.state].ink,
               )}
             >
-              {STATE[step.state].mark}
-            </span>
-            <span className="flex min-w-0 flex-1 flex-col gap-2">
-              <span className="font-sans text-meta font-semibold leading-close text-ink-primary">
-                {step.label}
-              </span>
-              {/* The server's sentence about the step, verbatim. */}
-              {step.detail !== null && (
-                <span className="font-sans text-label leading-close text-ink-muted">
-                  {step.detail}
-                </span>
-              )}
-              {/* The state word, for a reader who cannot see the mark. */}
-              <span className="sr-only">{step.state}</span>
+              {STATE[row.state].mark}
             </span>
             <span
               className={cx(
-                "shrink-0 font-mono text-label leading-flat",
-                STATE[step.state].ink,
+                "min-w-0 flex-1 font-sans text-meta leading-close",
+                row.state === "pending"
+                  ? "text-ink-faint"
+                  : "font-semibold text-ink-primary",
               )}
             >
-              {STATE[step.state].word}
+              {row.label}
             </span>
+            {/* The state word, mono, as the reference sets it. */}
+            <span
+              className={cx(
+                "shrink-0 font-mono text-label leading-flat",
+                STATE[row.state].ink,
+              )}
+            >
+              {STATE[row.state].word}
+            </span>
+            <span className="sr-only">{row.state}</span>
           </li>
         ))}
       </ol>
 
-      <p
-        data-testid="sha256"
-        className="font-mono text-label leading-body break-all text-ink-muted"
-      >
-        sha256 {props.data.sha256}
-      </p>
+      {props.sha !== null && (
+        <p
+          data-testid="sha256"
+          className="bg-state-settled-surface px-7 py-5 font-mono text-label leading-body break-all text-ink-muted"
+        >
+          sha256: {props.sha.digest}
+          {props.sha.note !== null && ` · ${props.sha.note}`}
+        </p>
+      )}
 
-      {props.data.duplicate_of !== null && (
+      {props.duplicateOf !== null && (
         <p
           data-testid="quarantine-duplicate"
-          className="font-sans text-meta leading-body text-state-halt"
+          className="bg-state-halt-surface px-7 py-5 font-sans text-label leading-body text-state-halt"
         >
           The server matched this digest to a prior intake:{" "}
-          <span className="font-mono">{props.data.duplicate_of}</span>
+          <span className="font-mono">{props.duplicateOf}</span>
         </p>
       )}
     </div>

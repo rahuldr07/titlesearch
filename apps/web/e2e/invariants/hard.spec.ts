@@ -10,13 +10,19 @@ import { expect, test } from "@playwright/test";
  * that is a CONFLICT in the design: stop and report (BRIEF §5 Phase 5).
  */
 
+/*
+ * SELECTOR REWRITE 2026-08-30: the ready() beacon addressed /rulebook, a
+ * screen that no longer exists — both wire tests below waited on a dead
+ * route. The beacon moves to /escalations (the screen these two refusals
+ * guard, rebuilt under RULING-2026-08-29); every assertion is untouched.
+ */
 const ready = async (page: import("@playwright/test").Page) => {
-  await page.goto("/rulebook");
+  await page.goto("/escalations");
   // an MSW-served element proves the worker controls the page before we fetch
-  await expect(page.getByTestId("rule-row-R13")).toBeVisible();
+  await expect(page.getByTestId("escalation-esc_party_1")).toBeVisible();
 };
 
-// TODO(rebuild) [INVARIANT] — rule: a forged or case-variant role is refused — roles are exact, and garbage never yields the admin world.
+// [INVARIANT] — rule: a forged or case-variant role is refused — roles are exact, and garbage never yields the admin world.
 test("a forged role header is refused — mutations 403, the projection 400", async ({
   page,
 }) => {
@@ -41,7 +47,7 @@ test("a forged role header is refused — mutations 403, the projection 400", as
   expect(statuses.caseVariant).toBe(400);
 });
 
-// TODO(rebuild) [INVARIANT] — rule: a replayed resolution is refused (409) — resolution is not idempotent-repeatable.
+// [INVARIANT] — rule: a replayed resolution is refused (409) — resolution is not idempotent-repeatable.
 test("resolving the same escalation twice is refused the second time", async ({
   page,
 }) => {

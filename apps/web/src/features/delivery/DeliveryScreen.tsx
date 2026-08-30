@@ -3,7 +3,7 @@ import type { DeliveryWithReport } from "@titlepipe/contract";
 import { Empty, Skeleton } from "../../components/ui";
 import { useDeliveries } from "./useDeliveries";
 import { CertifiedDeliverables } from "./CertifiedDeliverables";
-import { ReceiptGap, TransmissionReceipt } from "./TransmissionReceipt";
+import { TransmissionReceipt } from "./TransmissionReceipt";
 import { VersionLedger } from "./VersionLedger";
 import { ReissueGateway } from "./ReissueGateway";
 import { OrderPicker } from "./OrderPicker";
@@ -37,11 +37,13 @@ import { OrderPicker } from "./OrderPicker";
  * anticipates it ("both v1 and v2 rows appear — the pair is the defect
  * record"), which is only readable AS a pair once the two are adjacent.
  *
- * ══ ONE REFUSAL LEFT ═══════════════════════════════════════════════════════
+ * ══ NOTHING REFUSED ANY MORE ═══════════════════════════════════════════════
  *
- * The reissue gateway and the deliverable digests are built — both have wire
- * surface now. `TransmissionReceipt` still refuses the design's four named
- * steps, blocked on `DeliveryStatus` being `z.string()` and explicitly OPEN.
+ * RULED 2026-08-29 (RULING-2026-08-29.md): the four receipt steps ride on
+ * `Delivery.receipt`, `DeliveryStatus` is a closed enum, the reissue reasons
+ * are served radio options, and the ledger's supersession facts live on
+ * `Report.supersedes`/`Report.reason` — every drawn element binds to a wire
+ * member.
  */
 export function DeliveryScreen() {
   const deliveries = useDeliveries();
@@ -97,7 +99,6 @@ export function DeliveryScreen() {
                 {current[1].map((delivery) => (
                   <TransmissionReceipt key={delivery.id} delivery={delivery} />
                 ))}
-                <ReceiptGap />
               </div>
               <div className="flex min-w-0 flex-col gap-12">
                 <VersionLedger versions={current[1]} />

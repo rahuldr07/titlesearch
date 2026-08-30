@@ -32,43 +32,174 @@ export const OpticalReading = z.object({
 });
 export type OpticalReading = z.infer<typeof OpticalReading>;
 
+/**
+ * ⚠ RULED 2026-08-29 — `docs/frontend/design-2026-08/RULING-2026-08-29.md`.
+ * What the server READ OFF THE PACKAGE once quarantine passed: the reference's
+ * intake fills its read-only Page Count and Jurisdiction row from the recorded
+ * clerk stamp ("never hand-entered"), so the values arrive HERE rather than on
+ * `CreateOrderRequest`. The two `*_label` members and the note pair are
+ * finished sentences — the client captions nothing and composes nothing.
+ * `null` until every gateway step passes: an unread stamp resolves nothing.
+ */
+export const QuarantineResolved = z.object({
+  jurisdiction: z.string(),
+  state: z.string(),
+  county: z.string(),
+  /** The paired row's left cell, finished — "64 pages (raster verified)". */
+  page_count_label: z.string(),
+  /** The paired row's right cell, finished — "Clayton County, GA". */
+  jurisdiction_label: z.string(),
+  /** The green note once the rulebook binds, server-authored. */
+  note_title: z.string(),
+  note_body: z.string(),
+});
+export type QuarantineResolved = z.infer<typeof QuarantineResolved>;
+
+/**
+ * Served by `GET /api/orders/{id}/quarantine` and — since RULING-2026-08-29's
+ * one-act intake — by `POST /api/intake/quarantine` (multipart, the `package`
+ * file alone), the gateway the reference runs the moment a file is dropped,
+ * BEFORE any order exists. `order_id` is null on that pre-order read.
+ */
 export const QuarantineResponse = z.object({
-  order_id: z.string(),
+  order_id: z.string().nullable(),
   sha256: z.string(),
   duplicate_of: z.string().nullable(),
   steps: z.array(QuarantineStep),
   optical: z.array(OpticalReading),
+  resolved: QuarantineResolved.nullable(),
 });
 export type QuarantineResponse = z.infer<typeof QuarantineResponse>;
 
 // ---- Templates architect ----------------------------------------------------
 
-export const TemplateBlock = z.object({
-  id: z.string(),
-  numeral: z.string(),
+/**
+ * ⚠ RULED 2026-08-29 — `docs/frontend/design-2026-08/RULING-2026-08-29.md`.
+ * The whole region below is the reference app's Templates Architect, built as
+ * drawn. The pre-ruling surface was one read (`version`, seven blocks, two
+ * samples, a spec string); the reference draws a CATALOG of client templates,
+ * a live sheet per template, a per-block wording expression with its product
+ * baseline, a four-state NA matrix, token palettes, and scoped sample
+ * documents — so the wire carries each of those, server-authored.
+ */
+
+/** The four declared absence strings a block must state (never collapsed). */
+export const TemplateNaMatrix = z.object({
+  structurally_absent: z.string(),
+  not_found: z.string(),
+  not_stated: z.string(),
+  unreadable: z.string(),
+});
+export type TemplateNaMatrix = z.infer<typeof TemplateNaMatrix>;
+
+/** A wording token and the sample value the live preview interpolates. */
+export const TemplateToken = z.object({
+  token: z.string(),
+  sample: z.string(),
+});
+export type TemplateToken = z.infer<typeof TemplateToken>;
+
+/** One labelled row of the live sheet, as the server rendered it. */
+export const TemplateSheetRow = z.object({
+  label: z.string(),
+  value: z.string(),
+  /** Identifier-register rows (order refs, parcel ids, instants) draw mono. */
+  mono: z.boolean(),
+});
+export type TemplateSheetRow = z.infer<typeof TemplateSheetRow>;
+
+export const TemplateSheetBlock = z.object({
+  key: z.string(),
   title: z.string(),
-  /** Which report shape includes it, per the server. */
-  included: z.boolean(),
-  note: z.string(),
+  /** The product-lock chip ("Product Rule P-CO-1 · Structure Locked"). */
+  lock_note: z.string(),
+  rows: z.array(TemplateSheetRow),
+  /** The client's sentence-format expression for this block. */
+  wording: z.string(),
+  /** The product baseline default the Split Diff compares against. */
+  baseline: z.string(),
+  tokens: z.array(TemplateToken),
+  /** Null = this block declares no NA matrix (e.g. the locked header). */
+  na_matrix: TemplateNaMatrix.nullable(),
+  /** A state-overlay remark drawn on the block ("State Overlay R-GA-01: …"). */
+  overlay_note: z.string().nullable(),
 });
-export type TemplateBlock = z.infer<typeof TemplateBlock>;
+export type TemplateSheetBlock = z.infer<typeof TemplateSheetBlock>;
 
-export const TemplateSample = z.object({
-  client_id: z.string(),
+export const TemplateStatus = z.enum(["active", "draft"]);
+export type TemplateStatus = z.infer<typeof TemplateStatus>;
+
+/** One catalog card: name, client, product, status, mapped count, version. */
+export const TemplateSummary = z.object({
+  id: z.string(),
+  name: z.string(),
   client: z.string(),
-  shape: z.string(),
-  lines: z.number().int(),
-});
-export type TemplateSample = z.infer<typeof TemplateSample>;
-
-export const TemplateResponse = z.object({
+  product: z.string(),
   version: z.string(),
-  blocks: z.array(TemplateBlock),
-  samples: z.array(TemplateSample),
+  status: TemplateStatus,
+  mapped_fields: z.number().int(),
+  total_fields: z.number().int(),
+});
+export type TemplateSummary = z.infer<typeof TemplateSummary>;
+
+/**
+ * `GET /api/templates` — the catalog, with the filter vocabularies the rail's
+ * two selects offer. The vocabularies are SERVED: a client list spelled in a
+ * component is a client list the contract never named.
+ */
+export const TemplateCatalogResponse = z.object({
+  templates: z.array(TemplateSummary),
+  clients: z.array(z.string()),
+  products: z.array(z.string()),
+});
+export type TemplateCatalogResponse = z.infer<typeof TemplateCatalogResponse>;
+
+/** A scoped client sample document, with the citation fields the inspector draws. */
+export const TemplateSampleDoc = z.object({
+  id: z.string(),
+  name: z.string(),
+  doc_id: z.string(),
+  uploaded: z.string(),
+  blocks_extracted: z.number().int(),
+  notes: z.string(),
+  snippet: z.string(),
+  /** The recorded bounding box, verbatim ("[142, 320, 684, 410]"). */
+  box: z.string(),
+  page: z.number().int(),
+});
+export type TemplateSampleDoc = z.infer<typeof TemplateSampleDoc>;
+
+/** `GET /api/templates/{id}` — one template, whole. */
+export const TemplateDetailResponse = TemplateSummary.extend({
+  blocks: z.array(TemplateSheetBlock),
+  samples: z.array(TemplateSampleDoc),
+  /** The audit tab's provenance rows. */
+  sha256: z.string(),
+  source_ref: z.string(),
+  source_citation: z.string(),
   /** The compiled manifest the composer consumes, as the server emits it. */
   export_spec: z.string(),
 });
-export type TemplateResponse = z.infer<typeof TemplateResponse>;
+export type TemplateDetailResponse = z.infer<typeof TemplateDetailResponse>;
+
+/**
+ * `PATCH /api/templates/{id}` — the drawn Save. Posts the edited wording per
+ * block key; guarded by `template.edit` (the reference draws the Save DISABLED
+ * for the Typist seat with "Read-only — RBAC grants VIEW", which the ruling
+ * keeps for THIS surface in place of absent-not-dimmed). The server answers
+ * with the saved draft's version.
+ */
+export const TemplateSaveRequest = z.object({
+  wording: z.record(z.string(), z.string()),
+});
+export type TemplateSaveRequest = z.infer<typeof TemplateSaveRequest>;
+
+export const TemplateSaveResponse = z.object({
+  id: z.string(),
+  version: z.string(),
+  saved_at: z.string(),
+});
+export type TemplateSaveResponse = z.infer<typeof TemplateSaveResponse>;
 
 // ---- Typist capture: the Abstractor Call Back Sheet -------------------------
 

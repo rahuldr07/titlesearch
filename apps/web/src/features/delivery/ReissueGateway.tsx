@@ -1,16 +1,29 @@
 import { useRef, useState } from "react";
 import type { DeliveryWithReport } from "@titlepipe/contract";
-import { Alert, Button, Card, CardBody, CardHeader, Label, Textarea } from "../../components/ui";
+import {
+  Alert,
+  Button,
+  Card,
+  CardBody,
+  CardHeader,
+  RadioGroup,
+  RadioGroupItem,
+} from "../../components/ui";
 import { notify } from "../../shared/notify";
+import { useReissueReasons } from "./useDeliveries";
 import { reissueHold, useReissue } from "./useReissue";
 
 /**
  * REISSUE GATEWAY (Law 9) — the act that supersedes a delivered version.
  *
- * The reason is FREE TEXT, not the prototype's three radio buttons. A fixed
- * list would be this screen's vocabulary going onto an audit record as though
- * the pipeline had defined it; `ReissueRequest` asks for a sentence, so the
- * reviewer writes the sentence.
+ * ⚠ RULED 2026-08-29 — `docs/frontend/design-2026-08/RULING-2026-08-29.md`.
+ * The reason is the reference's CANNED RADIO OPTIONS, exactly as drawn (the
+ * reference draws no free-text box, so none is drawn here). The pre-ruling
+ * free-text stance ("a fixed list would be this screen's vocabulary") is
+ * answered by serving the list: `GET /api/reissue/reasons` owns the words,
+ * so what goes on the audit record is still the pipeline's vocabulary — just
+ * chosen by radio, as the reference draws it. The first option arrives
+ * pre-selected, as the reference's does.
  */
 export function ReissueGateway({
   deliveries,
@@ -23,11 +36,15 @@ export function ReissueGateway({
 }
 
 function Gateway({ delivery }: { readonly delivery: DeliveryWithReport }) {
-  const [reason, setReason] = useState("");
+  const reasons = useReissueReasons();
+  const [picked, setPicked] = useState<string | null>(null);
   const reissue = useReissue(delivery.id);
   /* `isPending` is a render away, and three clicks in one tick beat it. The
      latch closes on the click itself. */
   const filing = useRef(false);
+  const options = reasons.data?.reasons ?? [];
+  // The reference pre-checks its first radio; a served list keeps that.
+  const reason = picked ?? options[0] ?? "";
   const held = reissueHold(reason, reissue.isPending);
   const version = delivery.report?.version ?? null;
 
@@ -53,25 +70,30 @@ function Gateway({ delivery }: { readonly delivery: DeliveryWithReport }) {
           </div>
         )}
 
-        <div className="flex flex-col gap-4">
-          <Label htmlFor="reissue-reason">
-            The reason this reissue states
-          </Label>
-          <Textarea
-            id="reissue-reason"
-            data-testid="reissue-reason"
+        {options.length === 0 ? (
+          <p className="font-sans text-label leading-body text-ink-muted">
+            The reason vocabulary has not arrived; without it there is nothing
+            to state on the record, so the act stays closed.
+          </p>
+        ) : (
+          <RadioGroup
             aria-label="The reason this reissue states"
             value={reason}
-            onChange={(event) => {
-              setReason(event.target.value);
-            }}
-          />
-          <p className="font-sans text-label leading-body text-ink-muted">
-            The prototype offers three fixed reasons. They are not drawn: the
-            pipeline defines no reason vocabulary, so a list would put this
-            screen's words on the lender's record instead of yours.
-          </p>
-        </div>
+            onChange={setPicked}
+            className="flex flex-col gap-5"
+            data-testid="reissue-reasons"
+          >
+            {options.map((option, index) => (
+              <RadioGroupItem
+                key={option}
+                value={option}
+                data-testid={`reissue-reason-${String(index)}`}
+              >
+                {option}
+              </RadioGroupItem>
+            ))}
+          </RadioGroup>
+        )}
 
         <Button
           variant="primary"
@@ -82,7 +104,6 @@ function Gateway({ delivery }: { readonly delivery: DeliveryWithReport }) {
             filing.current = true;
             reissue.mutate(reason, {
               onSuccess: (result) => {
-                setReason("");
                 notify.success(
                   `Reissued — v${String(result.report.version)} supersedes v${String(result.supersedes)}.`,
                 );
@@ -93,7 +114,7 @@ function Gateway({ delivery }: { readonly delivery: DeliveryWithReport }) {
             });
           }}
         >
-          {held === null ? "File the reissue" : held}
+          {held === null ? "Initiate certified reissue" : held}
         </Button>
 
         {held !== null && (

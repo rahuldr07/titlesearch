@@ -5,46 +5,27 @@ import { Badge, Card, CardBody, CardHeader, cx } from "../../components/ui";
  * THE VERSION LEDGER — v1 immutable, v2 the reissue, v1 "Superseded · retained".
  *
  * The prototype's card: header with "Law 9 · append-only" on the right, then
- * bordered rows at the 10px rung, each carrying the version numeral in mono, a
- * tinted status capsule, a mono meta line, and — where there is one — a reason
- * line beneath. That shape is kept.
+ * bordered rows, each carrying the version numeral in mono, a tinted status
+ * capsule, a mono meta line, and — where there is one — a reason line beneath.
  *
- * The row's "View →" is not repeated here, and the reason is placement rather
- * than absence: `Artifact.href` (design.ts:121) is real and
- * `CertifiedDeliverables` already draws a View on it, on a row that carries the
- * same version numeral this one does. A second link to the same file, from a
- * card whose subject is the ledger rather than the file, is one control with
- * two homes.
- *
- * ══ SUPERSESSION IS READ OFF THE SERVER'S ROWS, NOT DECIDED HERE ═══════════
- *
- * `INVARIANTS:5` forbids the UI re-deriving counts, chain termination or
- * release resolution, and "which version is current" is the same kind of
- * question. But there is no `Report.supersedes` to read, so the honest position
- * is narrow: this lists every version the server returned for one order, in the
- * server's order, and says which is the HIGHEST NUMBER — which is arithmetic on
- * `Report.version` (entities.ts:219), not a state machine.
- *
- * The word "Superseded" is therefore attached to a v1 that has a v2 in the same
- * response, and nothing else about it changes. Specifically NOT claimed: that
- * the v2 replaced it, that the v1 was withdrawn, or that a client was told. All
- * three would be release-resolution, and all three are unbacked.
- *
- * "Retained" is not a status either — it is the OBSERVATION that the row is
- * still in the response, which is `endpoints.ts:615-616`'s point: both v1 and
- * v2 appear, "the pair is the defect record."
- *
- * The capsule is rule 6's one licensed spend on this screen: a version on a
- * ledger is a moment of record, which is exactly what a tinted capsule is for.
+ * ⚠ RULED 2026-08-29 — `docs/frontend/design-2026-08/RULING-2026-08-29.md`.
+ * Supersession is now READ OFF THE SERVER'S ROWS, not decided here: a
+ * reissued report states, on the wire, which version it superseded
+ * (`Report.supersedes`) and the reason it filed (`Report.reason`). The
+ * "Superseded · retained" capsule attaches to the row another row NAMES as
+ * superseded; "Draft — unreleased" is the row whose `status` is `draft`.
+ * Nothing takes a max() to decide which version is current any more.
  */
 export function VersionLedger({
   versions,
 }: {
   readonly versions: readonly DeliveryWithReport[];
 }) {
-  const highest = versions.reduce(
-    (max, row) => Math.max(max, row.report?.version ?? 0),
-    0,
+  /** Version numbers some row on this ledger claims to supersede. */
+  const supersededVersions = new Set(
+    versions.flatMap((row) =>
+      row.report?.supersedes === null || row.report === null ? [] : [row.report.supersedes],
+    ),
   );
 
   return (
@@ -58,7 +39,8 @@ export function VersionLedger({
       <CardBody className="flex flex-col gap-4">
         {versions.map((row) => {
           const version = row.report?.version ?? null;
-          const superseded = version !== null && version < highest;
+          const superseded = version !== null && supersededVersions.has(version);
+          const draft = row.status === "draft";
           return (
             <div
               key={row.id}
@@ -68,41 +50,49 @@ export function VersionLedger({
                 "flex flex-col gap-3 rounded-md border px-6 py-5",
                 superseded
                   ? "border-line-subtle bg-surface-sunken"
-                  : "border-line-strong bg-surface-panel",
+                  : draft
+                    ? "border-state-attend-border bg-state-attend-surface"
+                    : "border-line-strong bg-surface-panel",
               )}
             >
               <div className="flex flex-wrap items-baseline justify-between gap-3">
                 <span className="font-mono text-body leading-close font-bold text-ink-primary">
                   {version === null ? "no report on this delivery" : `v${String(version)}`}
                 </span>
-                {/* Grey for the superseded row, green for the latest — the
-                    prototype's own two tints. Rule 6 spends the tinted capsule
-                    on the moment of record only, so the superseded row gets a
-                    plain neutral pill rather than a second `Badge` tone. */}
-                {superseded ? (
+                {/* The reference's three capsules, each read off a server
+                    member: draft off `status`, superseded off another row's
+                    `supersedes`, released otherwise. Rule 6 spends the tinted
+                    capsule on the moment of record — the released row. */}
+                {draft ? (
+                  <span className="shrink-0 rounded-pill border border-state-attend-border bg-surface-panel px-5 py-1 font-sans text-label leading-flat font-semibold text-state-attend">
+                    Draft — unreleased
+                  </span>
+                ) : superseded ? (
                   <span className="shrink-0 rounded-pill bg-control-fill px-5 py-1 font-sans text-label leading-flat font-semibold text-ink-muted">
                     Superseded · retained
                   </span>
                 ) : (
-                  <Badge tone="settled">Highest version</Badge>
+                  <Badge tone="settled">Released · immutable</Badge>
                 )}
               </div>
               {row.report !== null && (
                 <span className="font-mono text-label leading-close break-all text-ink-muted">
-                  rendered {row.report.rendered_at} · shape {row.report.shape}
+                  {`rendered ${row.report.rendered_at} · shape ${row.report.shape}`}
+                  {row.report.supersedes !== null &&
+                    ` · supersedes v${String(row.report.supersedes)}`}
+                </span>
+              )}
+              {row.report !== null && row.report.reason !== null && (
+                /* The prototype's "Reason:" line — the reissue's stated
+                   reason, persisted on the report row (RULED 2026-08-29). */
+                <span className="font-sans text-label leading-close text-ink-secondary">
+                  {`Reason: ${row.report.reason}`}
                 </span>
               )}
               {superseded && (
-                /* The prototype's "Reason:" line. CONTRACT GAP: the reason a
-                   reissue stated is accepted (`ReissueRequest.reason`,
-                   design.ts:136) and echoed once (`ReissueResponse.reason`,
-                   :141), but nothing persists it — `Report` (entities.ts:216)
-                   is five fields and carries no `reissue_reason` and no
-                   `supersedes`. `Report.supersedes: number | null` and
-                   `Report.reissue_reason: string | null` would close it. Until
-                   then the row states only what its position actually means. */
                 <span className="font-sans text-label leading-close text-ink-secondary">
-                  A later version exists and this row is still in the record.
+                  A later version names this one superseded; the row stays on the
+                  record.
                 </span>
               )}
             </div>

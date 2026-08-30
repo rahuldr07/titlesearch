@@ -1,4 +1,5 @@
-import type { CompositionResponse } from "@titlepipe/contract";
+import { Link } from "@tanstack/react-router";
+import type { CompositionResponse, ManifestValue } from "@titlepipe/contract";
 import { PaperSheet } from "../../entities/evidence/PaperSheet";
 import { ClerkStamp } from "../../entities/evidence/ClerkStamp";
 import { AppendCondition } from "./AppendCondition";
@@ -8,19 +9,18 @@ import { DraftWatermark } from "./DraftWatermark";
 /**
  * THE COMPOSED REPORT, AS PAPER (rule 8).
  *
- * Every block's `body` is prose the server assembled; it is printed, never
- * reflowed into fields or summarised. There are no placeholder bars anywhere on
- * this sheet — a deliverable that renders as grey rectangles teaches a reviewer
- * to read a finished page as an unfinished one.
+ * ⚠ RULED 2026-08-29 — `docs/frontend/design-2026-08/RULING-2026-08-29.md`.
+ * Each block is the labelled value grid the reference draws (170px label
+ * column against a serif value), and a PENDING value renders exactly as the
+ * reference renders one: amber, dashed underline, clickable — the click lands
+ * on that field in the examination workstation (`?field=`, INVARIANT 55).
+ * Both the flag and the sentence are the SERVER's (`ManifestValue.pending`,
+ * `.field_id`); nothing here derives pendingness from the gates.
  *
  * The stamp is pressed only when the server has returned a seal. A stamp on an
  * unreleased sheet is a recording that never happened, and the watermark is the
  * same test read the other way: composed but unsealed is a draft, and it says so
  * across the page rather than only in the footer.
- *
- * The design's dateline reads "Order {ref} · {county} · Template v4.2". The
- * county is not on `CompositionResponse` and the version is never a literal, so
- * the line is the order id and the server's `template_version`, and stops there.
  */
 export function ManifestSheet(props: { readonly composed: CompositionResponse }) {
   const { composed } = props;
@@ -64,9 +64,21 @@ export function ManifestSheet(props: { readonly composed: CompositionResponse })
                 {`${String(block.cited)} of ${String(block.field_count)} cited`}
               </span>
             </h3>
-            <p className="pt-6 font-serif text-body leading-document text-page-ink">
-              {block.body}
-            </p>
+            <dl className="flex flex-col gap-5 pt-6">
+              {block.values.map((value) => (
+                <div
+                  key={`${block.id}-${value.label}`}
+                  className="grid grid-cols-[minmax(0,2fr)_minmax(0,5fr)] items-baseline gap-8"
+                >
+                  <dt className="font-sans text-label leading-close tracking-caps uppercase text-scan-ink">{/* rules-allow: the certificate's small-caps label column is drawn uppercase (RULING-2026-08-29) */}
+                    {value.label}
+                  </dt>
+                  <dd className="font-serif text-body leading-document text-page-ink">
+                    <ValueSpan orderId={composed.order_id} value={value} />
+                  </dd>
+                </div>
+              ))}
+            </dl>
           </section>
         ))}
       </div>
@@ -76,8 +88,45 @@ export function ManifestSheet(props: { readonly composed: CompositionResponse })
       </div>
 
       <footer className="mt-12 border-t-2 border-page-ink pt-8">
-        <IntegritySeal seal={composed.seal_sha256} />
+        <IntegritySeal seal={composed.seal_sha256} releasedAt={composed.released_at} />
       </footer>
     </PaperSheet>
+  );
+}
+
+/**
+ * One value span. Pending draws the reference's affordance — amber, dashed
+ * underline, clickable — and the destination is the workstation field the
+ * SERVER named. A pending value with no field to land on (null `field_id`)
+ * still reads amber, but there is nothing to click: a dead link would promise
+ * a jump the record cannot make.
+ */
+function ValueSpan({
+  orderId,
+  value,
+}: {
+  readonly orderId: string;
+  readonly value: ManifestValue;
+}) {
+  if (!value.pending) return <>{value.value}</>;
+  if (value.field_id === null) {
+    return (
+      <span data-pending className="text-state-attend">
+        {value.value}
+      </span>
+    );
+  }
+  return (
+    <Link
+      to="/orders/$orderId/review"
+      params={{ orderId }}
+      search={{ field: value.field_id }}
+      data-pending
+      data-testid={`pending-${value.field_id}`}
+      title="Pending — click to open in the examination workstation"
+      className="tp-state cursor-pointer border-b border-dashed border-state-attend text-state-attend hover:text-state-attend"
+    >
+      {value.value}
+    </Link>
   );
 }

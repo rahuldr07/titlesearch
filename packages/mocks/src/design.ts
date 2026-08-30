@@ -4,25 +4,29 @@ import type {
   Countersign,
   DeliveryWithReport,
   JurisdictionResponse,
+  ManifestValue,
   OrderFilter,
   OrderRow,
   OrdersPageResponse,
   QuarantineResponse,
   ReissueResponse,
-  TemplateResponse,
+  ReissueReasonsResponse,
   CaptureScheduleResponse,
   ArtifactsResponse,
   CountersignsResponse,
 } from "@titlepipe/contract";
 import { demoOrders, demoDeliveries, demoFields, demoTimelines } from "./data.js";
 import { guard } from "./guard.js";
+import { appendAudit, auditActor } from "./audit.js";
+import { TEMPLATE_VERSION } from "./templates.js";
 
 /** Handlers for the surface added under the 2026-08-28 ruling. */
 
 /** One template version, quoted everywhere a screen prints it — the pill on
- * the Templates Architect door (`GET /api/rail`) and the templates resource
- * below both read THIS. RULING-2026-08-29 draws the pill. */
-export const TEMPLATE_VERSION = "v4.2";
+ * the Templates Architect door (`GET /api/rail`) and the catalog's first card
+ * both read the templates module's constant; re-exported here because
+ * `handlers.ts` already imports it from this module. */
+export { TEMPLATE_VERSION } from "./templates.js";
 
 /** The client the demo orders belong to — the one NAME `cli_riverbend` resolves to. */
 export const CLIENT_NAME = "Riverbend Title";
@@ -263,6 +267,29 @@ const seals = new Map<string, { sha256: string; at: string; version: number }>()
 const composition = (orderId: string): CompositionResponse =>
   orderId === CLEARED_ORDER_ID ? clearedComposition(orderId) : blockedComposition(orderId);
 
+/** A settled row — no pending flag, no jump target. */
+const row = (label: string, value: string): ManifestValue => ({
+  label,
+  value,
+  pending: false,
+  field_id: null,
+});
+
+/**
+ * ⚠ RULED 2026-08-29 (RULING-2026-08-29.md) — a PENDING row, exactly as the
+ * reference's composer draws one: the amber " — pending examiner confirmation"
+ * sentence is SERVED, and `field_id` is the workstation field PATH the drawn
+ * dashed underline jumps to. Every path below is quoted from `demoFields`'
+ * needs_review rows for the review order, so the jump lands on a field that
+ * genuinely awaits a ruling.
+ */
+const pendingRow = (label: string, value: string, fieldPath: string): ManifestValue => ({
+  label,
+  value: `${value} — pending examiner confirmation`,
+  pending: true,
+  field_id: fieldPath,
+});
+
 /**
  * 4176028-5 — every gate answered, and the sheet is releasable until it is
  * released. Once it is, `seal_sha256` is the server's record that it happened.
@@ -271,15 +298,15 @@ function clearedComposition(orderId: string): CompositionResponse {
   const filed = seals.get(orderId) ?? null;
   return {
     order_id: orderId,
-    template_version: "v4.2",
+    template_version: TEMPLATE_VERSION,
     blocks: [
-      { id: "b1", numeral: "I", title: "Header information", body: "Order 4176028-5 · Clayton County, GA · two-owner search.", field_count: 6, cited: 6 },
-      { id: "b2", numeral: "II", title: "Property identification", body: "310 Wrenfield Ln, Demoville GA · parcel 13-0044-0231.", field_count: 5, cited: 5 },
-      { id: "b3", numeral: "III", title: "Vesting & title chain", body: "Adaline P. Rooke, by warranty deed from Wrenfield Homes LLC.", field_count: 7, cited: 7 },
-      { id: "b4", numeral: "IV", title: "Encumbrances & open liens", body: "One open security deed to Ashfield Savings. No other liens of record.", field_count: 6, cited: 6 },
-      { id: "b5", numeral: "V", title: "Tax assessment & status", body: "2025 installment paid in full. Land 31,500 · building 142,900.", field_count: 4, cited: 4 },
-      { id: "b6", numeral: "VI", title: "Judgments & general liens", body: "Searched. Nothing indexed against the owner of record.", field_count: 3, cited: 3 },
-      { id: "b7", numeral: "VII", title: "Provenance & audit trail", body: "Every value carries a page and line citation.", field_count: 2, cited: 2 },
+      { id: "b1", numeral: "I", title: "Header information", values: [row("Order", "4176028-5"), row("Jurisdiction", "Clayton County, GA"), row("Product", "Two-owner search")], field_count: 6, cited: 6 },
+      { id: "b2", numeral: "II", title: "Property identification", values: [row("Situs address", "310 Wrenfield Ln, Demoville GA"), row("Parcel", "13-0044-0231")], field_count: 5, cited: 5 },
+      { id: "b3", numeral: "III", title: "Vesting & title chain", values: [row("Vested owner", "Adaline P. Rooke"), row("Instrument", "Warranty deed from Wrenfield Homes LLC")], field_count: 7, cited: 7 },
+      { id: "b4", numeral: "IV", title: "Encumbrances & open liens", values: [row("Mortgage 1", "One open security deed to Ashfield Savings"), row("Secondary liens", "No other liens of record.")], field_count: 6, cited: 6 },
+      { id: "b5", numeral: "V", title: "Tax assessment & status", values: [row("2025 installment", "Paid in full"), row("Assessment", "Land 31,500 · building 142,900")], field_count: 4, cited: 4 },
+      { id: "b6", numeral: "VI", title: "Judgments & general liens", values: [row("1.", "Searched. Nothing indexed against the owner of record.")], field_count: 3, cited: 3 },
+      { id: "b7", numeral: "VII", title: "Provenance & audit trail", values: [row("Citations", "Every value carries a page and line citation.")], field_count: 2, cited: 2 },
     ],
     gates: [
       { id: "g1", label: "Every flagged decision answered", passed: true, detail: null },
@@ -298,7 +325,11 @@ function clearedComposition(orderId: string): CompositionResponse {
       filed === null
         ? null
         : "This order was released and sealed. A release files once; a further copy is a reissue, not a release.",
+    // Nothing blocks a cleared sheet; a sealed one is blocked by its own seal,
+    // and the door for THAT is the delivered record, not a work step.
+    blocked_door: filed === null ? null : "/delivery",
     seal_sha256: filed?.sha256 ?? null,
+    released_at: filed?.at ?? null,
   };
 }
 
@@ -322,20 +353,31 @@ function blockedComposition(orderId: string): CompositionResponse {
   const open = gates.filter((g) => !g.passed).length;
   return {
   order_id: orderId,
-  template_version: "v4.2",
+  template_version: TEMPLATE_VERSION,
+  /*
+   * ⚠ RULED 2026-08-29 — the pending rows below carry the workstation paths
+   * of 4176034-1's six needs_review fields (`demoFields`), so every amber
+   * dashed value on the certificate jumps to a field that truly awaits its
+   * ruling. The blocked composition IS that order's sheet, reused as the
+   * fixture stand-in for every order that is not cleared.
+   */
   blocks: [
-    { id: "b1", numeral: "I", title: "Header information", body: "Order 4176034-1 · Clayton County, GA · 40-year search.", field_count: 6, cited: 6 },
-    { id: "b2", numeral: "II", title: "Property identification", body: "4152 Creekstone Dr, Demoville GA · parcel 13-0044-0018.", field_count: 5, cited: 5 },
-    { id: "b3", numeral: "III", title: "Vesting & title chain", body: "Marlowe D. Quenby and Tessa R. Quenby, by warranty deed.", field_count: 7, cited: 7 },
-    { id: "b4", numeral: "IV", title: "Encumbrances & open liens", body: "One open security deed. One HOA lien, suppressed under R13.", field_count: 9, cited: 8 },
-    { id: "b5", numeral: "V", title: "Tax assessment & status", body: "2025 installment paid. Land 28,000 · building 158,400.", field_count: 4, cited: 4 },
-    { id: "b6", numeral: "VI", title: "Judgments & general liens", body: "One indexed judgment, party identity escalated.", field_count: 3, cited: 2 },
-    { id: "b7", numeral: "VII", title: "Provenance & audit trail", body: "Every value carries a page and line citation.", field_count: 2, cited: 2 },
+    { id: "b1", numeral: "I", title: "Header information", values: [row("Order", "4176034-1"), row("Jurisdiction", "Clayton County, GA"), row("Product", "40-year search")], field_count: 6, cited: 6 },
+    { id: "b2", numeral: "II", title: "Property identification", values: [row("Situs address", "4152 Creekstone Dr, Demoville GA"), row("Parcel", "13-0044-0018"), pendingRow("Owner ZIP", "30310 / 30310-4418", "owner.zip")], field_count: 5, cited: 5 },
+    { id: "b3", numeral: "III", title: "Vesting & title chain", values: [row("Vested owner", "Marlowe D. Quenby and Tessa R. Quenby"), row("Instrument", "Warranty deed"), pendingRow("Dated", "Instrument date unconfirmed", "deed.dated_date")], field_count: 7, cited: 7 },
+    { id: "b4", numeral: "IV", title: "Encumbrances & open liens", values: [pendingRow("Mortgage 1 lender", "Two readings disagree on the lender of record", "mortgages.1.lender"), pendingRow("Mortgage 1 amount", "$412,000 / $412,900", "mortgages.1.amount"), row("Secondary liens", "One HOA lien, suppressed under R13.")], field_count: 9, cited: 8 },
+    { id: "b5", numeral: "V", title: "Tax assessment & status", values: [row("2025 installment", "Paid"), row("Assessment", "Land 28,000 · building 158,400")], field_count: 4, cited: 4 },
+    { id: "b6", numeral: "VI", title: "Judgments & general liens", values: [pendingRow("1.", "Judgment indexed — plaintiff attorney unresolved", "judgments.1.plaintiff_attorney"), pendingRow("Case number", "Two case series carry this caption", "judgments.1.case_no")], field_count: 3, cited: 2 },
+    { id: "b7", numeral: "VII", title: "Provenance & audit trail", values: [row("Citations", "Every value carries a page and line citation.")], field_count: 2, cited: 2 },
   ],
   gates,
   releasable: false,
   blocked_reason: `${String(open)} gate${open === 1 ? " is" : "s are"} open. The report cannot compose until each is answered.`,
+  // The step blocking release, as a door (RULED 2026-08-29): open decisions
+  // and the second read both live on the workstation, so that is the door.
+  blocked_door: `/orders/${orderId}/review`,
   seal_sha256: null,
+  released_at: null,
   };
 }
 
@@ -355,6 +397,64 @@ const fixtureDigest = (seed: string): string => {
   }
   return out.slice(0, 64);
 };
+
+/**
+ * ⚠ RULED 2026-08-29 (RULING-2026-08-29.md) — THE CLERK-STAMP FIXTURE. The
+ * server reads jurisdiction off the recorded clerk stamp during optical
+ * quarantine; the create handler stamps THESE values on every order it files,
+ * and `quarantineBody` serves the same values on `resolved`, so intake's
+ * read-only row and the order it signs for can never disagree. Since the same
+ * ruling removed `jurisdiction`/`state`/`county` from `CreateOrderRequest`,
+ * this fixture is the ONLY author of those three members in the mock.
+ */
+export const CLERK_STAMP = {
+  jurisdiction: "clayton-ga",
+  state: "GA",
+  county: "Clayton",
+  pages: 64,
+} as const;
+
+/**
+ * The gateway's verdicts, served both order-scoped (`GET /orders/:id/
+ * quarantine`) and at the door (`POST /api/intake/quarantine`, the pre-order
+ * scan RULING-2026-08-29's one-act intake runs the moment a file lands).
+ * A digest already on the books fails the de-dup step in the SERVER'S words
+ * and resolves nothing — an unread stamp binds no rulebook.
+ */
+export function quarantineBody(
+  orderId: string | null,
+  duplicateOf: string | null,
+): QuarantineResponse {
+  return {
+    order_id: orderId,
+    sha256: "8e2f1d9a04cb6831b7c2a51e0d47f39a6c81b2e5470af9d3c6182b47e72df890",
+    duplicate_of: duplicateOf,
+    steps: [
+      { id: "av", label: "Antivirus scan", state: "passed", detail: "clean" },
+      { id: "pdf", label: "Real PDF structure", state: "passed", detail: "64 pages, no embedded script" },
+      duplicateOf === null
+        ? { id: "sha", label: "De-duplication (SHA-256)", state: "passed", detail: "no prior intake with this digest" }
+        : { id: "sha", label: "De-duplication (SHA-256)", state: "failed", detail: `duplicate package (sha256 match) — byte-identical to ${duplicateOf}` },
+    ],
+    optical: [
+      { id: "dpi", label: "Raster resolution", value: "300 DPI · bitonal", ok: true, note: null },
+      { id: "stamp", label: "Clerk stamp located", value: "p1 · Clayton County Superior Court", ok: true, note: null },
+      { id: "contrast", label: "Contrast floor", value: "3 pages below", ok: false, note: "p7, p22, p29 — flagged under Law 3" },
+    ],
+    resolved:
+      duplicateOf === null
+        ? {
+            jurisdiction: CLERK_STAMP.jurisdiction,
+            state: CLERK_STAMP.state,
+            county: CLERK_STAMP.county,
+            page_count_label: `${String(CLERK_STAMP.pages)} pages (raster verified)`,
+            jurisdiction_label: `${CLERK_STAMP.county} County, ${CLERK_STAMP.state}`,
+            note_title: "Georgia overlay bound from clerk stamp",
+            note_body: "Jurisdiction was read from the recorded clerk stamp on p1 — never hand-entered.",
+          }
+        : null,
+  };
+}
 
 export const designHandlers = [
   http.get("/api/orders", ({ request }) => {
@@ -411,13 +511,16 @@ export const designHandlers = [
     const filed = {
       sha256: fixtureDigest(
         clearedComposition(orderId)
-          .blocks.map((b) => `${b.numeral}:${b.title}:${b.body}`)
+          .blocks.map((b) => `${b.numeral}:${b.title}:${b.values.map((v) => `${v.label}=${v.value}`).join(";")}`)
           .join("|"),
       ),
       at: new Date().toISOString(),
       version: 1,
     };
     seals.set(orderId, filed);
+    // RULED 2026-08-29: a release is a moment of record — the audit ledger
+    // appends live, and the Settings pane shows it on its next read.
+    appendAudit(auditActor(request), "release_executed", "orders", orderId);
     return HttpResponse.json({
       order_id: orderId,
       version: filed.version,
@@ -472,10 +575,31 @@ export const designHandlers = [
     if (denied) return denied;
     const d = deliveryStore.find((x) => x.id === params["id"]);
     if (!d) return HttpResponse.json({ error: "no such delivery" }, { status: 404 });
-    d.status = "delivered";
-    d.delivered_at = new Date().toISOString();
+    const at = new Date().toISOString();
+    d.status = "transmitted";
+    d.delivered_at = at;
     d.evidence = "delivered on retry — same file, same report version";
+    // The receipt is the record of the act, so the retry writes its own rows.
+    d.receipt = d.receipt.map((step) =>
+      step.done ? step : { ...step, at, who: "retry — same file, same version", done: step.id !== "ack" },
+    );
     return HttpResponse.json({ ok: true });
+  }),
+
+  /**
+   * ⚠ RULED 2026-08-29 — the Reissue Gateway's canned reasons, served. The
+   * reference's `reissueReasons` array, verbatim; the vocabulary is the
+   * server's so the browser never puts its own words on the lender's record.
+   */
+  http.get("/api/reissue/reasons", () => {
+    const body: ReissueReasonsResponse = {
+      reasons: [
+        "A value in the delivered report requires correction or updating",
+        "Client requested expansion of statutory search period (e.g. 40-year)",
+        "An outstanding gap closed after initial delivery (e.g. 2023 county tax bill arrived)",
+      ],
+    };
+    return HttpResponse.json(body);
   }),
 
   /*
@@ -486,8 +610,8 @@ export const designHandlers = [
    * true:
    *   - a delivery whose report exists names a released version; the reissue
    *     opens the next version as a DRAFT row the version ledger reads, with
-   *     the stated reason on the row (`evidence` carries it — `Report` has no
-   *     `reissue_reason` member yet; `VersionLedger.tsx` records that gap);
+   *     the stated reason and the superseded version ON THE REPORT
+   *     (`Report.reason` / `Report.supersedes`, RULED 2026-08-29);
    *   - ONE-WAY: while that draft is open the gateway is closed — a draft is
    *     not a released version, so there is nothing further to supersede;
    *   - a delivery with no report keeps the refusal verbatim: there truly is
@@ -522,6 +646,10 @@ export const designHandlers = [
       version: supersedes + 1,
       shape: released.shape,
       rendered_at: new Date().toISOString(),
+      // The ledger's "Reason:" line and the superseded numeral, persisted on
+      // the row rather than echoed once (RULED 2026-08-29).
+      supersedes,
+      reason: body.reason,
     };
     deliveryStore.push({
       id: `del_reissue_${String(reissueCount)}`,
@@ -533,7 +661,17 @@ export const designHandlers = [
       delivered_at: null,
       evidence: `reissue draft · reason: ${body.reason}`,
       report,
+      // The receipt's four steps, all still ahead of a draft.
+      receipt: [
+        { id: "signed", at: null, what: "Reissue signed & sealed", who: "awaiting examiner sign-off", done: false },
+        { id: "digest", at: null, what: "SHA-256 digest recorded", who: "no digest until signed", done: false },
+        { id: "transmit", at: null, what: "Transmitted · secure webhook", who: "not yet transmitted", done: false },
+        { id: "ack", at: null, what: "Client acknowledged receipt", who: "not yet acknowledged", done: false },
+      ],
     });
+    // RULED 2026-08-29: the reissue is a moment of record — the audit ledger
+    // appends live.
+    appendAudit(auditActor(request), "reissue_draft_opened", "deliveries", `${released.order_id} v${String(report.version)}`);
     const res: ReissueResponse = { report, supersedes, reason: body.reason };
     return HttpResponse.json(res);
   }),
@@ -622,48 +760,18 @@ export const designHandlers = [
         });
       }
     }
+    // RULED 2026-08-29: a countersign is a moment of record — the audit
+    // ledger appends live.
+    appendAudit(actor, "field_countersigned", "fields", fieldId);
     return HttpResponse.json(filed);
   }),
 
-  http.get("/api/orders/:id/quarantine", ({ params }) => {
-    const body: QuarantineResponse = {
-      order_id: String(params["id"]),
-      sha256: "8e2f1d9a04cb6831b7c2a51e0d47f39a6c81b2e5470af9d3c6182b47e72df890",
-      duplicate_of: null,
-      steps: [
-        { id: "av", label: "Antivirus scan", state: "passed", detail: "clean" },
-        { id: "pdf", label: "Real-PDF check", state: "passed", detail: "64 pages, no embedded script" },
-        { id: "sha", label: "SHA-256 digest", state: "passed", detail: "no prior intake with this digest" },
-      ],
-      optical: [
-        { id: "dpi", label: "Raster resolution", value: "300 DPI · bitonal", ok: true, note: null },
-        { id: "stamp", label: "Clerk stamp located", value: "p1 · Clayton County Superior Court", ok: true, note: null },
-        { id: "contrast", label: "Contrast floor", value: "3 pages below", ok: false, note: "p7, p22, p29 — flagged under Law 3" },
-      ],
-    };
-    return HttpResponse.json(body);
-  }),
+  http.get("/api/orders/:id/quarantine", ({ params }) =>
+    HttpResponse.json(quarantineBody(String(params["id"]), null)),
+  ),
 
-  http.get("/api/templates", () => {
-    const body: TemplateResponse = {
-      version: TEMPLATE_VERSION,
-      blocks: [
-        { id: "t1", numeral: "I", title: "Header information", included: true, note: "Order, jurisdiction, product, period" },
-        { id: "t2", numeral: "II", title: "Property identification", included: true, note: "Situs, parcel, legal description" },
-        { id: "t3", numeral: "III", title: "Vesting & title chain", included: true, note: "Current owner and the chain behind them" },
-        { id: "t4", numeral: "IV", title: "Encumbrances & open liens", included: true, note: "Mortgages, HOA, mechanics" },
-        { id: "t5", numeral: "V", title: "Tax assessment & status", included: true, note: "Assessed values and installment status" },
-        { id: "t6", numeral: "VI", title: "Judgments & general liens", included: true, note: "Indexed judgments against the owner" },
-        { id: "t7", numeral: "VII", title: "Provenance & audit trail", included: false, note: "Internal shape only — not on client copies" },
-      ],
-      samples: [
-        { client_id: "cli_riverbend", client: "Riverbend Title", shape: "A", lines: 13 },
-        { client_id: "cli_hollowyn", client: "Hollowyn Abstract", shape: "B", lines: 16 },
-      ],
-      export_spec: '{\n  "version": "v4.2",\n  "blocks": 7,\n  "shapes": ["A", "B"]\n}',
-    };
-    return HttpResponse.json(body);
-  }),
+  // The templates resource moved to `templates.ts` when RULING-2026-08-29
+  // widened it from one shape to the drawn catalog + per-template detail.
 
   http.get("/api/blind/:order/schedule", ({ params }) => {
     const body: CaptureScheduleResponse = {

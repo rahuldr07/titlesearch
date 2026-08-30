@@ -1,12 +1,14 @@
 import type { CreateOrderRequest, IngestRejection, Order } from "@titlepipe/contract";
 
 /**
- * THE FOUR STAGES OF INTAKE, AND THE ONE FUNCTION THAT BUILDS THE UPLOAD.
+ * THE STAGES OF INTAKE, POST-RULING.
  *
- * The union makes the product rule unrepresentable-otherwise: there is no state
- * in which an order is uploaded AND queued in one step, because `accept` and
- * `accepted` are different members and only the server's acknowledgement moves
- * between them (INVARIANT 47, `docs/INVARIANTS.md:131`).
+ * ⚠ RULED 2026-08-29 (`docs/frontend/design-2026-08/RULING-2026-08-29.md`):
+ * the reference draws ONE act — "Sign for Package & Begin Dual-Engine
+ * Extraction →" — so the old `accept` stage is gone. Uploading and signing
+ * happen under one press (`useSignForPackage` chains the two calls), and the
+ * union moves straight from `form` to `accepted` on the server's
+ * acknowledgement, or to `refused` on its named rejection.
  */
 export type Stage =
   | { readonly kind: "form" }
@@ -15,15 +17,18 @@ export type Stage =
       readonly rejection: IngestRejection;
       readonly fileName: string;
     }
-  | { readonly kind: "accept"; readonly order: Order; readonly fileName: string }
   | { readonly kind: "accepted"; readonly order: Order };
 
+/**
+ * Jurisdiction, state and county are NOT here, and cannot be: they left
+ * `CreateOrderRequest` under RULING-2026-08-29 — the server resolves them
+ * from the recorded clerk stamp, so the state overlay can never be
+ * hand-picked wrong (CONFLICT-intake-hand-typed-jurisdiction.md, resolved).
+ */
 export const BLANK_ORDER: CreateOrderRequest = {
   client_id: "",
   external_ref: "",
-  jurisdiction: "",
-  state: "",
-  county: "",
+  product: "",
 };
 
 /**

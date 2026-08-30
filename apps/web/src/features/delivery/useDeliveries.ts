@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { DeliveriesResponse } from "@titlepipe/contract";
+import { DeliveriesResponse, ReissueReasonsResponse } from "@titlepipe/contract";
 import { get } from "../../shared/api";
 
 /**
@@ -21,5 +21,18 @@ export function useDeliveries() {
   return useQuery({
     queryKey: ["deliveries"],
     queryFn: () => get("/api/deliveries", DeliveriesResponse),
+  });
+}
+
+/**
+ * ⚠ RULED 2026-08-29 (RULING-2026-08-29.md) — the Reissue Gateway's canned
+ * reason radios are drawn, so the vocabulary is READ: `GET /api/reissue/
+ * reasons` serves the list, and the browser never puts its own words on the
+ * lender's record.
+ */
+export function useReissueReasons() {
+  return useQuery({
+    queryKey: ["reissue", "reasons"],
+    queryFn: () => get("/api/reissue/reasons", ReissueReasonsResponse),
   });
 }

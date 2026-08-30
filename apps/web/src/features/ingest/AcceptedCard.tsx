@@ -1,8 +1,15 @@
-import { Link } from "@tanstack/react-router";
 import type { Order } from "@titlepipe/contract";
-import { Badge, Button } from "../../components/ui";
+import { Button } from "../../components/ui";
+import { RouteButton } from "../../app/chrome/RouteButton";
 
-/** The record after the second act. The order is queued because the server said so. */
+/**
+ * THE SEALED CARD — the reference's "Package Ingested & Signature Sealed",
+ * drawn after the one signed act (RULING-2026-08-29). The order is queued
+ * because the SERVER acknowledged both halves of the act; nothing here is
+ * optimistic. The page figure is `Order.pages`, the server's own count off
+ * the optical pass — absent, the sentence simply omits it rather than
+ * asserting somebody counted.
+ */
 export function AcceptedCard(props: {
   readonly order: Order;
   readonly onAgain: () => void;
@@ -10,31 +17,35 @@ export function AcceptedCard(props: {
   return (
     <div
       data-testid="accepted-card"
-      className="flex flex-col gap-6 rounded-lg border border-line-strong bg-surface-panel p-12 shadow-card"
+      className="flex flex-col items-center gap-6 rounded-lg border border-line-strong bg-surface-panel p-16 text-center shadow-card"
     >
-      {/* Rule 6: a coloured capsule at a moment of record, and this is one. */}
-      <Badge tone="settled">✓ Signed for</Badge>
+      <span
+        aria-hidden
+        className="flex size-24 items-center justify-center rounded-pill bg-state-settled-surface font-sans text-title font-bold text-state-settled"
+      >
+        ✓
+      </span>
 
-      <p className="font-sans text-subject font-semibold leading-tight text-ink-primary">
-        Signed for. Order{" "}
-        <span className="font-mono">{props.order.external_ref}</span> is queued.
+      <h2 className="font-sans text-title font-bold leading-tight text-ink-primary">
+        Package Ingested &amp; Signature Sealed
+      </h2>
+
+      <p className="font-sans text-meta leading-body text-ink-muted">
+        Order <span className="font-mono">{props.order.external_ref}</span> is
+        signed for and queued.{" "}
+        {props.order.pages === null
+          ? "Dual-engine extraction begins from here."
+          : `Dual-engine extraction pipeline is actively processing ${String(props.order.pages)} scanned pages.`}
       </p>
 
-      <p className="font-sans text-meta leading-body text-ink-secondary">
-        {props.order.county} Co., {props.order.state} — accepted and headed for
-        the pipeline. The queue decides who sees it next; there is no way to
-        pick it out of the queue by hand.
-      </p>
-
-      <div className="flex flex-wrap items-center gap-8">
-        {/* /queue was deleted (CONFLICT-deleted-queue-and-rail-controls §1);
-            the browse table is where an accepted order can be seen. */}
-        <Link
-          to="/orders-list"
-          className="font-sans text-meta font-semibold leading-close text-action underline underline-offset-4"
+      <div className="flex flex-wrap items-center justify-center gap-8">
+        <RouteButton
+          variant="primary"
+          to="/orders/$orderId"
+          params={{ orderId: props.order.id }}
         >
-          See it in all orders →
-        </Link>
+          View Live Dual-Engine Extraction →
+        </RouteButton>
         <Button data-testid="ingest-again" onPress={props.onAgain}>
           Ingest another
         </Button>

@@ -12,7 +12,14 @@ export function useReissue(deliveryId: string) {
   return useMutation({
     mutationFn: (reason: string) =>
       post(`/api/deliveries/${deliveryId}/reissue`, ReissueResponse, { reason }),
-    onSuccess: () => client.invalidateQueries({ queryKey: ["deliveries"] }),
+    onSuccess: async () => {
+      // The reissue files an audit event server-side (RULED 2026-08-29), so
+      // the ledger pane's read is stale the moment this succeeds.
+      await Promise.all([
+        client.invalidateQueries({ queryKey: ["deliveries"] }),
+        client.invalidateQueries({ queryKey: ["audit"] }),
+      ]);
+    },
     // The server's sentence, verbatim (INVARIANT 14). Never composed here.
     onError: (error: Error) => notify.error(error.message),
   });

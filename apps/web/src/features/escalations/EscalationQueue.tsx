@@ -14,18 +14,17 @@ import { Empty, cx } from "../../components/ui";
  * triage field the `Escalation` shape refuses to carry (entities.ts:166-175).
  * The order is the SERVER's array order, printed.
  *
- * ══ WHAT THE PROTOTYPE'S TOP-RIGHT CAPSULE HOLDS HERE ══════════════════════
+ * ══ WHAT THE PROTOTYPE'S TOP-RIGHT CAPSULE HOLDS ═══════════════════════════
  *
- * It draws an AGE there ("3h ago"), flipping to "settled" in green when the
- * query closes. There is no timestamp on an `Escalation` and `INVARIANTS:23`
- * refuses elapsed time besides, so the slot carries the thing the prototype's
- * own capsule turns into: the open/settled signal. Rule 6 still holds — that
- * capsule is the row's ONE status signal, which is why the ◆ mark that used to
- * prefix the question is gone rather than kept alongside it.
+ * ⚠ RULED 2026-08-29 (RULING-2026-08-29.md): the drawn AGE chip ("3h ago",
+ * flipping to green "settled") is built — as the SERVER's finished label
+ * (`Escalation.age`), never a ticking clock computed here. A cluster the
+ * server serves no label for falls back to the open/settled signal, read off
+ * `rule_id` — the mandatory rule restated: a cluster with a ruling and no
+ * rule is NOT resolved (`INVARIANTS:36`).
  *
- * `resolved` is read off `rule_id`, the server's field, which is also the
- * mandatory rule restated: a cluster with a ruling and no rule is NOT resolved
- * (`INVARIANTS:36`). Nothing here derives it from `resolution` alone.
+ * The quiet line beneath the title is the drawn raiser attribution
+ * (`Escalation.raised_by`), with the cluster path beside it.
  */
 export function EscalationQueue({
   escalations,
@@ -76,6 +75,7 @@ export function EscalationQueue({
                 {ref}
               </span>
               <span
+                data-testid={`escalation-age-${escalation.id}`}
                 className={cx(
                   "rounded-lg px-4 py-1 font-mono text-label leading-flat font-bold",
                   resolved
@@ -83,7 +83,7 @@ export function EscalationQueue({
                     : "bg-surface-sunken text-ink-secondary",
                 )}
               >
-                {resolved ? "Settled" : "Open"}
+                {escalation.age ?? (resolved ? "settled" : "open")}
               </span>
             </span>
 
@@ -97,7 +97,11 @@ export function EscalationQueue({
             </span>
 
             <span className="font-sans text-label leading-close font-medium text-ink-muted">
-              {escalation.resolved_by !== null && `Ruled by ${escalation.resolved_by} · `}
+              {escalation.resolved_by !== null
+                ? `Ruled by ${escalation.resolved_by} · `
+                : escalation.raised_by !== null
+                  ? `${escalation.raised_by} · `
+                  : null}
               <span className="font-mono">{escalation.field_path_cluster}</span>
             </span>
           </button>

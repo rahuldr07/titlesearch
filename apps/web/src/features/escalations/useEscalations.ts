@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { ResolveEscalationRequest } from "@titlepipe/contract";
 import { useRead } from "../../app/useRead";
 import { escalations } from "../../shared/queries";
-import { rules } from "../../shared/accountQueries";
+import { audit, rules } from "../../shared/accountQueries";
 import { post } from "../../shared/api";
 import { notify } from "../../shared/notify";
 
@@ -64,6 +64,8 @@ export function useResolveEscalation(escalationId: string | null) {
       await Promise.all([
         client.invalidateQueries({ queryKey: escalations.key }),
         client.invalidateQueries({ queryKey: rules.key }),
+        // The ruling files an audit event server-side (RULED 2026-08-29).
+        client.invalidateQueries({ queryKey: audit.key }),
       ]);
     },
     onSettled: () => {
@@ -97,7 +99,13 @@ export function useConfirmRule() {
   const inFlight = useRef(false);
   const mutation = useMutation({
     mutationFn: (ruleId: string) => post(`/api/rules/${ruleId}/confirm`, OkResponse),
-    onSuccess: () => client.invalidateQueries({ queryKey: rules.key }),
+    onSuccess: async () => {
+      await Promise.all([
+        client.invalidateQueries({ queryKey: rules.key }),
+        // Confirming files an audit event server-side (RULED 2026-08-29).
+        client.invalidateQueries({ queryKey: audit.key }),
+      ]);
+    },
     onSettled: () => {
       inFlight.current = false;
     },

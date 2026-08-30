@@ -14,6 +14,14 @@ const BASE: Escalation = {
   resolution: null,
   rule_id: null,
   resolved_by: null,
+  // The RULING-2026-08-29 evidence members — null is the ordinary state for
+  // a cluster raised without attached evidence.
+  raised_by: null,
+  age: null,
+  context: null,
+  excerpt: null,
+  identity: null,
+  qc_owner: null,
 };
 
 const meta = {

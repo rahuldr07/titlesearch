@@ -14,16 +14,17 @@ import { RuleCandidates } from "./RuleCandidates";
  *
  * `reference-app.html` § `isEscalations`: a 320px column holding a segmented
  * pill over an 11px pane label, then the cards; the right pane scrolls alone
- * against an 840px measure, and the escalation's own title is the h1.
- * `INVARIANTS:39` is the sentence under the pane label — no category, no
- * priority, no assignee, because `Escalation` carries no such field.
+ * and the escalation's own title is the h1. `INVARIANTS:39` is the sentence
+ * under the pane label — no category, no priority, no assignee.
  *
- * Design §Screens 10 gates the determination buttons as "disabled + belongs to
- * QC". `INVARIANTS:42-43` says the opposite twice, and `/api/me/permissions`
- * returns THIS ROLE'S projection with the others unrepresented
- * (handlers.ts:1398-1405): no grant, no determination card, and no read-only
- * banner in its place. Resolve held for want of a RULE is resource state, not
- * role, so that one stays disabled-with-reason.
+ * ⚠ RULED 2026-08-29 (RULING-2026-08-29.md): the reference draws the
+ * determination for a non-QC seat as VISIBLE + DISABLED under the amber
+ * "belongs to QC — with …" hint, and the ruling makes that the built
+ * behaviour FOR THIS SURFACE, superseding `INVARIANTS:42-43`'s
+ * absent-not-dimmed. A seat without `escalation.resolve` gets
+ * `onResolve: null` and `EscalationDetail` renders the locked card. Resolve
+ * held for want of a RULE is resource state, not role, and stays
+ * disabled-with-reason for every seat.
  */
 export function EscalationsScreen() {
   const escalations = useEscalations();
@@ -120,7 +121,7 @@ export function EscalationsScreen() {
                     escalation={current}
                     rules={book}
                     resolving={resolve.pending}
-                    /* Rules 42/43: absent, not disabled. */
+                    /* Null → the locked, visible determination (RULED 2026-08-29). */
                     {...(mayResolve
                       ? { onResolve: (ruling, rule) => resolve.resolve({ ruling, rule }) }
                       : { onResolve: null })}

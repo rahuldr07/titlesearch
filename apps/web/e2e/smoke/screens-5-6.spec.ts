@@ -22,43 +22,47 @@ import { expect, test } from "@playwright/test";
  * "the extraction terminal log … they are drawn, so they are built") — the
  * panel now renders the pipeline's served `run_log`, and this file pins THAT.
  */
-test("intake renders quarantine and optical verdicts from the wire, and states the one real gap", async ({
+/**
+ * ⚠ REWRITTEN 2026-08-29 under RULING-2026-08-29: the gateway checklist and
+ * optical profile render INLINE the moment a file lands (the pre-order scan
+ * `POST /api/intake/quarantine` serves them — no upload act precedes the
+ * read any more), the Product gap card is retired (`CreateOrderRequest`
+ * carries `product`; the select is drawn), and the amber→green flip is the
+ * drawn rulebook note fed by the server's `resolved` block.
+ */
+test("intake runs the gateway inline on file drop and renders the server's verdicts", async ({
   page,
 }) => {
   await page.goto("/ingest");
 
-  // The one gap left on this screen: product, the second half of the
-  // checklist key. Quarantine and optical are no longer allowed to be gaps.
-  const gaps = page.getByTestId("backend-gap");
-  await expect(gaps).toHaveCount(1);
-  await expect(gaps.filter({ hasText: "Product" })).toBeVisible();
+  // No gap cards remain on this screen: product is a drawn select now.
+  await expect(page.getByTestId("backend-gap")).toHaveCount(0);
+  await expect(page.getByTestId("product-select")).toBeVisible();
 
-  // Before any upload there is no order to read quarantine against, and the
-  // banner's gate strip says so — amber with the TRUE reason, never a mock.
-  await page.getByTestId("choice-client-cli_riverbend").check();
-  await expect(page.getByTestId("rulebook-gate")).toHaveAttribute(
+  // Before a file lands nothing has scanned: the note is amber with the
+  // reference's verbatim sentence, and no checklist is drawn.
+  await expect(page.getByTestId("rulebook-note")).toHaveAttribute(
     "data-state",
-    "unrun",
+    "unbound",
   );
+  await expect(page.getByTestId("quarantine-step")).toHaveCount(0);
 
-  // Upload, so the order exists and the gateway is readable.
-  await page.getByTestId("order-external_ref").fill("DEMO-9002");
-  await page.getByTestId("order-jurisdiction").fill("clayton-ga");
-  await page.getByTestId("order-state").fill("GA");
-  await page.getByTestId("order-county").fill("Clayton");
+  // Drop the file — the scan runs at once, pre-order, and the checklist
+  // reveals the SERVER's per-step states on the drawn cadence.
   await page.getByTestId("package-input").setInputFiles({
     name: "pkg_smoke_upload.pdf",
     mimeType: "application/pdf",
     buffer: Buffer.from("%PDF-1.4 smoke package bytes"),
   });
-  await page.getByRole("button", { name: "upload the package" }).click();
-
-  // One row per step the SERVER sent, each carrying the server's state.
   const steps = page.getByTestId("quarantine-step");
   await expect(steps).toHaveCount(3);
   await expect(steps.first()).toHaveAttribute("data-state", "passed");
+  await expect(steps.last()).toHaveAttribute("data-state", "passed");
+  await expect(page.getByTestId("quarantine-pill")).toContainText(
+    "Quarantine Clear",
+  );
 
-  // The digest is DATA now (QuarantineResponse.sha256), rendered verbatim.
+  // The digest is DATA (QuarantineResponse.sha256), rendered verbatim.
   await expect(page.getByTestId("sha256")).toContainText("sha256");
   await expect(page.getByTestId("sha256")).toContainText("8e2f1d9a");
 
@@ -73,22 +77,34 @@ test("intake renders quarantine and optical verdicts from the wire, and states t
     "flagged under Law 3",
   );
 
-  // The amber→green flip: every gateway step reports passed, so the strip is
-  // green — a rendering of the server's states, not a client verdict.
-  await expect(page.getByTestId("rulebook-gate")).toHaveAttribute(
+  // The amber→green flip: quarantine passed, so the note prints the SERVER's
+  // bound-rulebook sentences and the paired row fills with its readout.
+  await expect(page.getByTestId("rulebook-note")).toHaveAttribute(
     "data-state",
-    "passed",
+    "bound",
+  );
+  await expect(page.getByTestId("order-pages-readonly")).toContainText(
+    "raster verified",
   );
 });
 
-test("the client is chosen from the server's roster, never typed", async ({
+test("client and product are chosen from served rosters, and resolve one checklist", async ({
   page,
 }) => {
   await page.goto("/ingest");
   // A free-text client_id is a mistype away from the wrong sign-off checklist.
   await expect(page.getByTestId("order-client_id")).toHaveCount(0);
   await expect(page.getByTestId("rulebook-banner-idle")).toBeVisible();
-  await page.getByTestId("choice-client-cli_riverbend").check();
+  await page.getByTestId("client-select").click();
+  // The reference's "(N sign-offs)" figure is the SERVER's, printed as sent.
+  await expect(
+    page.getByRole("option", { name: /Riverbend.*sign-offs/ }),
+  ).toBeVisible();
+  await page.getByRole("option", { name: /Riverbend/ }).click();
+  // Half a key resolves nothing: the banner waits for the product too.
+  await expect(page.getByTestId("rulebook-banner-idle")).toBeVisible();
+  await page.getByTestId("product-select").click();
+  await page.getByRole("option", { name: /40-Year Search/ }).click();
   // The rulebook layers are the SERVER's resolution, listed rather than tallied.
   await expect(page.getByTestId("rulebook-banner")).toBeVisible();
   await expect(page.getByTestId("rulebook-line").first()).toBeVisible();

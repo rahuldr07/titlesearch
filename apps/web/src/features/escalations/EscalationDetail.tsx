@@ -3,28 +3,23 @@ import { Card, CardBody, CardHeader } from "../../components/ui";
 import { OrderRef } from "../../entities/order/OrderRef";
 import { RulePill } from "../../entities/rule/RulePill";
 import { RuleEffect } from "../../entities/rule/RuleEffect";
-import { ContractGap } from "../../entities/contract/ContractGap";
 import { ResolveCard } from "./ResolveCard";
+import { DocketExcerpt, IdentityGrid, LockedDetermination } from "./EvidenceBlocks";
 
 /**
- * ONE CLUSTER, AND WHAT CAN HONESTLY BE SHOWN ABOUT IT.
+ * ONE CLUSTER, WITH THE EVIDENCE THE REFERENCE DRAWS.
  *
- * The prototype's right pane is a kicker capsule ("Order 4176034-1 · Judgments
- * & Liens"), the escalation's own title as the heading, a quiet attribution
- * line, then a context card and a determination card. That shape is kept, with
- * the cluster path where the prototype has a section name. Its attribution
- * ("Escalated by Examiner D. Okafor · 3 hours ago") is NOT transcribed:
- * `Escalation` has no raiser and no timestamp, and `INVARIANTS:23` refuses
- * elapsed time. `resolved_by` is real, so it prints.
- *
- * ══ THE EVIDENCE BOXES ARE A GAP, NOT A DRAWING ════════════════════════════
- *
- * Design §Screens 10 draws a docket excerpt on paper and a debtor-vs-owner
- * comparison grid. Both are drawn from evidence, and an `Escalation`
- * (entities.ts:166-175) carries none. Transcribing them would mean inventing a
- * debtor — the failure AGENTS.md names, and worse here than usual: a comparison
- * grid exists precisely to be READ AS EVIDENCE by whoever decides whether two
- * names are the same human.
+ * ⚠ RULED 2026-08-29 — `docs/frontend/design-2026-08/RULING-2026-08-29.md`.
+ * The docket excerpt on paper (boxed at the match), the debtor-vs-owner
+ * comparison grid, the extraction-context paragraph and the raiser line are
+ * all drawn now — every one READ off the widened `Escalation` (entities.ts):
+ * the server quotes the record, the grid's two names are the server's, and
+ * the age is a served label, never a tick. Nothing here composes evidence.
+ * The same ruling supersedes `INVARIANTS:42-43`'s absent-not-dimmed FOR THIS
+ * SURFACE: a seat without `escalation.resolve` sees the determination
+ * VISIBLE + DISABLED under the reference's amber hint (`EvidenceBlocks.tsx`);
+ * the refusal itself stays the server's (403), and resolve-without-a-rule
+ * stays refused for every seat (`ResolveCard`).
  */
 export function EscalationDetail({
   escalation,
@@ -35,11 +30,8 @@ export function EscalationDetail({
   readonly escalation: Escalation;
   readonly rules: readonly Rule[];
   readonly resolving: boolean;
-  /**
-   * `null` when the reader does not hold `escalation.resolve`. NOT a disabled
-   * flag: `INVARIANTS:42-43` make a role-locked affordance ABSENT, so the
-   * determination card is not rendered at all and there is nothing to dim.
-   */
+  /** `null` when the reader does not hold `escalation.resolve` — the card
+   * then renders disabled-with-hint (RULED 2026-08-29), never absent. */
   readonly onResolve:
     | ((ruling: string, rule: { rule_id: string } | { draft: { text: string } }) => void)
     | null;
@@ -73,20 +65,44 @@ export function EscalationDetail({
           {escalation.question}
         </h1>
 
-        {escalation.resolved_by !== null && (
+        {/* The drawn attribution line — raiser and served age, or the ruling
+            examiner once one exists. All server members, printed. */}
+        {escalation.resolved_by !== null ? (
           <p className="font-sans text-meta leading-body font-medium text-ink-muted">
             Ruled by {escalation.resolved_by}
           </p>
-        )}
+        ) : escalation.raised_by !== null ? (
+          <p className="font-sans text-meta leading-body font-medium text-ink-muted">
+            {`Escalated by ${escalation.raised_by}`}
+            {escalation.age !== null && ` · ${escalation.age}`}
+          </p>
+        ) : null}
       </header>
 
       <Card padding="none">
-        <CardHeader>The cluster, and what is missing from it</CardHeader>
+        <CardHeader>Extraction context &amp; legal evidence</CardHeader>
         <CardBody className="flex flex-col gap-8">
+          {escalation.context !== null && (
+            <p className="font-sans text-body leading-body text-ink-primary">
+              {escalation.context}
+            </p>
+          )}
+
           {escalation.resolution !== null && (
             <p className="font-sans text-body leading-body text-ink-primary">
               {escalation.resolution}
             </p>
+          )}
+
+          {escalation.excerpt !== null && (
+            <DocketExcerpt
+              escalation={escalation}
+              orderId={escalation.order_ids[0] ?? null}
+            />
+          )}
+
+          {escalation.identity !== null && (
+            <IdentityGrid identity={escalation.identity} />
           )}
 
           {/* `INVARIANTS:36`, §0.5 MANDATORY: an escalation with a `resolution`
@@ -101,25 +117,6 @@ export function EscalationDetail({
               cited or drafted.
             </p>
           )}
-          <ContractGap
-            drawn="Docket excerpt on paper with the boxed debtor name, and the debtor-vs-owner comparison grid"
-            has={
-              <>
-                `Escalation` (entities.ts:166-175) carries `field_path_cluster`,
-                `order_ids`, `question`, `resolution`, `rule_id`, `resolved_by` —
-                and no party, no docket text and no page citation. `PagesResponse`
-                (endpoints.ts:640) holds page text per ORDER, but nothing says
-                which page or which line the hit is on.
-              </>
-            }
-            needs={
-              <>
-                A citation on the escalation — an instrument or page-and-line
-                reference of the kind `Field.source_line_coords` already carries —
-                so the excerpt can be quoted rather than composed.
-              </>
-            }
-          />
         </CardBody>
       </Card>
 
@@ -143,7 +140,9 @@ export function EscalationDetail({
             <ResolveCard rules={rules} pending={resolving} onResolve={onResolve} />
           </CardBody>
         </Card>
-      ) : null}
+      ) : (
+        <LockedDetermination escalation={escalation} />
+      )}
     </article>
   );
 }

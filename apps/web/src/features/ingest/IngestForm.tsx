@@ -1,104 +1,101 @@
 import type { CreateOrderRequest } from "@titlepipe/contract";
-import { Button, Card } from "../../components/ui";
-import { BackendGap } from "../../entities/gap/BackendGap";
+import { Card, type BadgeProps } from "../../components/ui";
 import { Dropzone } from "./Dropzone";
-import { OrderFields } from "./OrderFields";
-import { RulebookBanner } from "./RulebookBanner";
+import { OrderConfig } from "./OrderConfig";
+import { QuarantineGateway } from "./QuarantineGateway";
+import { OpticalProfile } from "./OpticalProfile";
+import { SignFooter } from "./SignFooter";
+import type { useQuarantineScan } from "./useQuarantineScan";
 
 /**
- * THE INTAKE CARD — the package on the left, the order on the right, one act
- * across the bottom. `reference-app.html`'s `isUpload`, and act one of two.
- *
- * The design's Quarantine Gateway checklist and Optical Profile card are NOT
- * gaps any more: `GET /api/orders/{id}/quarantine` (design2.ts:35-42, mocks
- * design.ts:318) serves both since the 2026-08-28 ruling. They do not render on
- * THIS stage because the read is order-scoped and no order exists until the
- * upload returns one — `QuarantinePanel` draws them on the accept stage, and
- * the note under the dropzone says exactly that, on screen.
- *
- * ONE gap card remains, and its claim is still true: the PRODUCT select.
- * `CreateOrderRequest` (endpoints.ts:39-46) has five members and no product, so
- * a product chosen here would be sent nowhere, and `EffectiveChecklist`
- * (workspace.ts:121) is keyed on client AND product — with no product to narrow
- * by, `RulebookBanner` names every checklist the client has rather than the one
- * this order will use.
- *
- * RULE 1: THE ACCENT IS NOT SPENT HERE. "Upload the package" is a SECONDARY
- * button; the screen's one accent spend is "Accept — sign for it" on the next
- * stage, because acceptance is the act that matters (INVARIANT 47).
+ * THE INTAKE CARD — the package on the left, the order on the right, ONE act
+ * across the bottom: `reference-app.html`'s `isUpload`, built as drawn under
+ * RULING-2026-08-29. The Quarantine Gateway checklist and Optical Profile
+ * render INLINE under the file row — the pre-order scan
+ * (`POST /api/intake/quarantine`, `useQuarantineScan`) serves them the moment
+ * a file lands, which retired the "no order to read against" split. The old
+ * Product gap card is retired too: `CreateOrderRequest.product` exists and
+ * the select beside Client carries it.
  */
 export function IngestForm(props: {
   readonly values: CreateOrderRequest;
   readonly file: File | null;
-  readonly uploading: boolean;
+  readonly scan: ReturnType<typeof useQuarantineScan>;
+  readonly pending: boolean;
   readonly onValue: (key: keyof CreateOrderRequest, value: string) => void;
   readonly onFile: (file: File | null) => void;
-  readonly onSubmit: () => void;
+  readonly onSign: () => void;
 }) {
+  const { scan } = props;
+  const pill: { text: string; tone: BadgeProps["tone"] } = scan.ready
+    ? { text: "Quarantine Clear", tone: "settled" }
+    : scan.done
+      ? { text: "Quarantine Halted", tone: "halt" }
+      : { text: "Scanning…", tone: "attend" };
+
+  /* The reference's three helper sentences, drawn beside the act. The BUTTON
+     is gated only on the file — a press with client or product unpicked is
+     refused by the SERVER, which names what is missing (INVARIANTS 60-61). */
+  const note =
+    props.file === null
+      ? "Drop the package to begin"
+      : !scan.done
+        ? "Waiting on quarantine"
+        : scan.ready &&
+            (props.values.client_id === "" || props.values.product === "")
+          ? "Pick client and product"
+          : null;
+
   return (
-    /* One card, two columns, one footer: neither half is submittable without
-       the other, so two side-by-side cards would read as two unrelated forms. */
     <Card padding="none">
       <div className="grid grid-cols-2 items-start">
         <div className="flex flex-col gap-8 border-r border-line-subtle p-12">
-          <h2 className="text-label font-semibold leading-flat text-ink-faint">
-            Package document
+          <h2 className="text-label font-bold leading-flat text-ink-faint">
+            Package Document
           </h2>
-          <Dropzone file={props.file} onFile={props.onFile} />
+          <Dropzone file={props.file} pill={pill} onFile={props.onFile} />
 
-          {/* Where the design's checklist sits, the true sentence about when it
-              arrives — not a skeleton, which would claim it is loading now. */}
-          <p
-            data-testid="quarantine-note"
-            className="font-sans text-label leading-body text-ink-muted"
-          >
-            The quarantine gateway — antivirus, real-PDF, SHA-256 de-dup — runs
-            against the order the upload creates. Its checklist and the optical
-            profile render on the next stage, once the server has an order to
-            report against.
-          </p>
+          {props.file !== null && scan.data !== null && (
+            <QuarantineGateway
+              rows={scan.rows}
+              /* The digest is DATA (QuarantineResponse.sha256); the sentence
+                 beside it is the gateway's final step's own verdict — the
+                 de-dup step — quoted, never composed here. */
+              sha={
+                scan.done
+                  ? {
+                      digest: scan.data.sha256,
+                      note: scan.data.steps.at(-1)?.detail ?? null,
+                    }
+                  : null
+              }
+              duplicateOf={scan.done ? scan.data.duplicate_of : null}
+            />
+          )}
+
+          {props.file !== null && scan.ready && scan.data !== null && (
+            <OpticalProfile optical={scan.data.optical} />
+          )}
         </div>
 
         <div className="flex flex-col gap-8 p-12">
-          <h2 className="text-label font-semibold leading-flat text-ink-faint">
-            Order configuration
+          <h2 className="text-label font-bold leading-flat text-ink-faint">
+            Order Configuration
           </h2>
-          {/* The gap card sits where the reference seats its Product select —
-              directly under Client — so the absence reads in place. */}
-          <OrderFields
+          <OrderConfig
             values={props.values}
-            onChange={props.onValue}
-            productSlot={
-              <BackendGap
-                object="Product — the second half of the checklist key"
-                conversation="CONTRACT GAP: CreateOrderRequest, endpoints.ts:39-46"
-              >
-                The design picks a product here and resolves one checklist from
-                it. There is no product field on the create request, so nothing
-                carries the choice to the server. Until there is, the banner
-                below names every checklist this client has rather than
-                pretending to know which one applies.
-              </BackendGap>
-            }
+            onValue={props.onValue}
+            resolved={scan.ready ? (scan.data?.resolved ?? null) : null}
           />
-
-          <RulebookBanner clientId={props.values.client_id} quarantine={null} />
         </div>
       </div>
 
-      {/* The footer spans both columns, as the design's does. */}
-      <div className="flex flex-wrap items-center justify-between gap-6 border-t border-line-subtle px-12 py-8">
-        <span className="font-sans text-meta leading-close text-ink-muted">
-          Uploading does not queue it. Signing does.
-        </span>
-        <Button
-          data-testid="upload-btn"
-          onPress={props.onSubmit}
-          disabledBecause={props.uploading ? "Uploading the package…" : undefined}
-        >
-          Upload the package
-        </Button>
-      </div>
+      <SignFooter
+        note={note}
+        hasFile={props.file !== null}
+        pending={props.pending}
+        onSign={props.onSign}
+      />
     </Card>
   );
 }

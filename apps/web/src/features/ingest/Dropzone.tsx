@@ -1,15 +1,15 @@
 import { useRef, useState, type DragEvent } from "react";
-import { Button, cx } from "../../components/ui";
+import { Badge, cx, type BadgeProps } from "../../components/ui";
 
 /**
- * THE DROPZONE AND THE FILE ROW. It stops at the file — name, size, and nothing
- * it cannot cite. The design's Quarantine Gateway checklist sits under this in
- * the drawing; here it renders one stage later (`QuarantinePanel`), because
- * `GET /api/orders/{id}/quarantine` (design2.ts:35-42, added 2026-08-28) is
- * order-scoped and no order exists until the upload returns one.
+ * THE DROPZONE AND THE FILE ROW, AS DRAWN.
  *
- * The size is printed in BYTES rather than converted to MB — a converted figure
- * is arithmetic on a value the screen is showing.
+ * ⚠ RULED 2026-08-29 (`docs/frontend/design-2026-08/RULING-2026-08-29.md`):
+ * the reference's copy is built verbatim — the icon disc, "Drop scanned title
+ * package here", and the "single PDF bundle (20–150 pages) · 300 DPI
+ * recommended" sub-line the previous build refused for want of a citable
+ * source. The file row prints the size in MB as the reference draws it, and
+ * carries the quarantine pill the parent computes from the SERVER's scan.
  *
  * The input is `sr-only`, not `display:none`: a hidden input is not focusable
  * and a keyboard user could not reach the dropzone at all. The visible surface
@@ -18,6 +18,9 @@ import { Button, cx } from "../../components/ui";
  */
 export function Dropzone(props: {
   readonly file: File | null;
+  /** The quarantine pill — "Scanning…" / "Quarantine Clear" — parent-computed
+   * from the server's scan states, never decided here. */
+  readonly pill: { readonly text: string; readonly tone: BadgeProps["tone"] };
   readonly onFile: (file: File | null) => void;
 }) {
   const [over, setOver] = useState(false);
@@ -42,70 +45,80 @@ export function Dropzone(props: {
     if (dropped !== null) props.onFile(dropped);
   }
 
-  return (
-    <div className="flex flex-col gap-6">
-      <label
-        data-testid="dropzone"
-        data-over={over ? "true" : undefined}
-        onDragOver={(event) => {
-          event.preventDefault();
-          setOver(true);
-        }}
-        onDragLeave={() => setOver(false)}
-        onDrop={drop}
-        className={cx(
-          "tp-state flex cursor-pointer flex-col items-center gap-3 rounded-md",
-          "border border-dashed px-8 py-12 text-center",
-          over
-            ? "border-action-border bg-action-surface"
-            : "border-line-strong bg-control-fill hover:border-action-border hover:bg-action-surface",
-        )}
+  if (props.file !== null) {
+    return (
+      <div
+        data-testid="file-row"
+        className="flex items-center gap-7 rounded-lg border border-line-strong bg-control-fill p-7"
       >
-        <span className="font-sans text-meta font-semibold leading-close text-ink-primary">
-          Drop the county package here, or choose a file
+        <span className="flex h-22 w-18 shrink-0 items-center justify-center rounded-md border border-action-border bg-action-surface font-mono text-label font-bold leading-flat text-ink-secondary">
+          PDF
         </span>
-        <span className="font-sans text-label leading-close text-ink-muted">
-          A scanned PDF. It cannot come alone — the order beside it carries what
-          the PDF cannot say.
-        </span>
-        <input
-          ref={input}
-          type="file"
-          accept="application/pdf"
-          data-testid="package-input"
-          onChange={(event) => props.onFile(event.target.files?.item(0) ?? null)}
-          className="sr-only"
-        />
-      </label>
-
-      {props.file === null ? (
-        <p
-          data-testid="file-row-empty"
-          className="font-sans text-meta leading-close text-ink-faint"
-        >
-          No file chosen.
-        </p>
-      ) : (
-        <div
-          data-testid="file-row"
-          className="flex items-center gap-6 rounded-md border border-line-strong bg-surface-panel px-6 py-5"
-        >
-          <span className="min-w-0 flex-1 truncate font-mono text-meta leading-close text-ink-primary">
+        <span className="flex min-w-0 flex-1 flex-col gap-1">
+          <span className="truncate font-mono text-meta font-bold leading-close text-ink-primary">
             {props.file.name}
           </span>
-          <span className="shrink-0 font-mono text-label leading-flat tabular-nums text-ink-muted">
-            {props.file.size} bytes
+          {/* MB as the reference draws it (RULING-2026-08-29) — one decimal,
+              converted from the browser's own File.size. */}
+          <span className="font-sans text-label leading-flat text-ink-muted">
+            {(props.file.size / 1_000_000).toFixed(1)} MB
           </span>
-          <Button
-            data-testid="remove-file"
-            size="sm"
-            onPress={remove}
-            aria-label={`Remove ${props.file.name}`}
-          >
-            Remove
-          </Button>
-        </div>
+        </span>
+        <span data-testid="quarantine-pill" className="shrink-0">
+          <Badge tone={props.pill.tone}>{props.pill.text}</Badge>
+        </span>
+        <button
+          type="button"
+          data-testid="remove-file"
+          onClick={remove}
+          aria-label={`Remove ${props.file.name}`}
+          className="tp-state tp-ring flex size-12 shrink-0 cursor-pointer items-center justify-center rounded-pill border-none bg-surface-sunken font-sans text-label font-bold text-ink-muted"
+        >
+          ✕
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <label
+      data-testid="dropzone"
+      data-over={over ? "true" : undefined}
+      onDragOver={(event) => {
+        event.preventDefault();
+        setOver(true);
+      }}
+      onDragLeave={() => setOver(false)}
+      onDrop={drop}
+      className={cx(
+        "tp-state flex cursor-pointer flex-col items-center gap-3 rounded-lg",
+        "border-2 border-dashed px-16 py-20 text-center",
+        over
+          ? "border-action-border bg-action-surface"
+          : "border-line-strong bg-control-fill hover:border-action-border hover:bg-action-surface",
       )}
-    </div>
+    >
+      <span
+        aria-hidden
+        className="mb-3 flex size-20 items-center justify-center rounded-lg bg-action-surface font-sans text-subject font-bold text-ink-secondary"
+      >
+        ⤓
+      </span>
+      <span className="font-sans text-body font-bold leading-close text-ink-primary">
+        Drop scanned title package here
+      </span>
+      <span className="font-sans text-meta leading-close text-ink-muted">
+        or click to browse · single PDF bundle (20–150 pages) · 300 DPI
+        recommended
+      </span>
+      <input
+        ref={input}
+        type="file"
+        accept="application/pdf"
+        data-testid="package-input"
+        onChange={(event) => props.onFile(event.target.files?.item(0) ?? null)}
+        className="sr-only"
+      />
+    </label>
   );
 }

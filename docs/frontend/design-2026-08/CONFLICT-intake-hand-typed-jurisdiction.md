@@ -1,5 +1,7 @@
 # CONFLICT — intake draws three writable fields the reference reads from the package
 
+> **RESOLVED 2026-08-29 by RULING-2026-08-29.md: the reference is right — `jurisdiction`/`state`/`county` left `CreateOrderRequest`; the server resolves them from the clerk stamp and serves them on `QuarantineResponse.resolved`; intake draws the read-only paired row, and the smaller divergences below (one sign act, signature line, dropzone constants, client select, inline checklist) are built as drawn under the same ruling.**
+
 Status: **OPEN — owner's call.** Raised 2026-08-29, after a side-by-side of the
 built `/ingest` against the reference app's Intake screen showed the two
 disagreeing about who supplies jurisdiction.

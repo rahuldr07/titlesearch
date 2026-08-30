@@ -276,6 +276,41 @@ export const Escalation = z.object({
   resolution: z.string().nullable(),
   rule_id: z.string().nullable(),
   resolved_by: z.string().nullable(),
+  /**
+   * ⚠ RULED 2026-08-29 — `docs/frontend/design-2026-08/RULING-2026-08-29.md`.
+   * The reference app's QC & Escalations detail draws four evidence surfaces
+   * this schema refused to carry, so they are added — every one SERVER-
+   * AUTHORED, because each is a claim about the record that the browser has
+   * no standing to make (principle 6):
+   *
+   * - `raised_by` — who escalated ("D. Okafor · Judgments & Liens").
+   * - `age` — the FINISHED age label the queue chip draws ("3h ago",
+   *   "settled"). A label, never a timestamp: the client must not tick.
+   * - `context` — the "Extraction Context & Legal Evidence" paragraph.
+   * - `excerpt` — the docket excerpt on paper, split at the boxed match,
+   *   reusing `SourceExcerpt` so it is self-locating (doc + page).
+   * - `identity` — the debtor-vs-owner comparison grid, both columns quoted
+   *   from the record. Inventing either name is the failure this product
+   *   exists to prevent; serving them is how the grid can exist at all.
+   * - `qc_owner` — who the determination sits with ("R. Menon"), for the
+   *   read-only hint the reference draws on non-QC seats.
+   *
+   * All nullable: an escalation raised without evidence attached is an
+   * ordinary state, and null is its statement.
+   */
+  raised_by: z.string().nullable(),
+  age: z.string().nullable(),
+  context: z.string().nullable(),
+  excerpt: SourceExcerpt.nullable(),
+  identity: z
+    .object({
+      debtor_label: z.string(),
+      debtor: z.string(),
+      owner_label: z.string(),
+      owner: z.string(),
+    })
+    .nullable(),
+  qc_owner: z.string().nullable(),
 });
 export type Escalation = z.infer<typeof Escalation>;
 
@@ -324,8 +359,37 @@ export const Report = z.object({
   version: z.number().int(),
   shape: z.string(),
   rendered_at: z.string(),
+  /**
+   * ⚠ RULED 2026-08-29 — `docs/frontend/design-2026-08/RULING-2026-08-29.md`.
+   * The version ledger the reference draws states, ON THE ROW, which version
+   * a reissue superseded and the reason it stated ("Superseded · retained",
+   * "Reason: …"). `ReissueRequest.reason` was accepted and echoed once but
+   * never persisted, so a reloaded ledger could not say why v2 exists.
+   * `supersedes` is the version number this report replaced; `reason` is the
+   * reissue's stated reason. Both null on a v1 that supersedes nothing.
+   */
+  supersedes: z.number().int().nullable(),
+  reason: z.string().nullable(),
 });
 export type Report = z.infer<typeof Report>;
+
+/**
+ * ⚠ RULED 2026-08-29 — `docs/frontend/design-2026-08/RULING-2026-08-29.md`.
+ * One row of the Transmission Receipt the reference draws: a named step of
+ * the delivery act with the server's own instant and attribution line. The
+ * four canonical steps are signed → digest recorded → transmitted →
+ * acknowledged; a step that has not happened yet carries `done: false` and a
+ * null instant. The client renders the list verbatim — it never derives a
+ * step from `status`.
+ */
+export const ReceiptStep = z.object({
+  id: z.string(),
+  at: z.string().nullable(),
+  what: z.string(),
+  who: z.string(),
+  done: z.boolean(),
+});
+export type ReceiptStep = z.infer<typeof ReceiptStep>;
 
 /** A failed delivery is a transit state — retryable, never a quality state. */
 export const Delivery = z.object({
@@ -336,6 +400,8 @@ export const Delivery = z.object({
   attempted_at: z.string().nullable(),
   delivered_at: z.string().nullable(),
   evidence: z.string().nullable(),
+  /** The Transmission Receipt's rows, in the server's order (RULED 2026-08-29). */
+  receipt: z.array(ReceiptStep),
 });
 export type Delivery = z.infer<typeof Delivery>;
 

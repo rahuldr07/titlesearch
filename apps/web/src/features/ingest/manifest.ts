@@ -1,8 +1,8 @@
 import type { CreateOrderRequest } from "@titlepipe/contract";
 
 /**
- * THE FIVE ORDER FIELDS AND WHY EACH ONE MUST EXIST — the label and reason the
- * form prints beside every input, for the operator filling it in.
+ * THE ORDER FIELDS AND WHY EACH ONE MUST EXIST — the label and reason the
+ * refused card prints beside every key the server names.
  *
  * THIS IS NOT THE MISSING-FIELD LIST. INVARIANTS 60-61: the SERVER names what
  * is missing and the client does not author that list, so this table is never
@@ -10,8 +10,12 @@ import type { CreateOrderRequest } from "@titlepipe/contract";
  * still renders, as itself; a key this table knows and the server did not name
  * never appears at all.
  *
- * The keys are `CreateOrderRequest`'s (endpoints.ts:39), typed against it so a
- * contract rename is a compile error rather than a label that stops matching.
+ * ⚠ AMENDED 2026-08-29 (RULING-2026-08-29.md): jurisdiction, state and county
+ * LEFT this table with `CreateOrderRequest` — the server resolves them from
+ * the recorded clerk stamp, so there is no input for a refusal to point at —
+ * and `product` joined it. The keys are `CreateOrderRequest`'s (endpoints.ts),
+ * typed against it so a contract rename is a compile error rather than a
+ * label that stops matching.
  */
 export interface ManifestEntry {
   readonly key: keyof CreateOrderRequest;
@@ -20,42 +24,28 @@ export interface ManifestEntry {
   readonly why: string;
 }
 
-/* Row order follows the reference's Order Configuration column: client first,
-   then the client's own order number. The three the reference does not draw
-   writable (jurisdiction/state/county) follow — see
-   docs/frontend/design-2026-08/CONFLICT-intake-hand-typed-jurisdiction.md. */
 export const MANIFEST: readonly ManifestEntry[] = [
   {
     key: "client_id",
     label: "CLIENT",
-    why: "Decides delivery and which sign-off checklist resolves.",
+    why: "Decides delivery and the first half of the sign-off checklist key.",
+  },
+  {
+    key: "product",
+    label: "PRODUCT",
+    why: "The second half of the checklist key — what was ordered, over what span.",
   },
   {
     key: "external_ref",
     label: "CLIENT ORDER #",
     why: "Identity — nothing else ties this file to anything.",
   },
-  {
-    key: "jurisdiction",
-    label: "JURISDICTION",
-    why: "Decides which extraction setup reads this county's documents.",
-  },
-  {
-    key: "state",
-    label: "STATE",
-    why: "Some house rules apply only in certain states — the state picks them.",
-  },
-  {
-    key: "county",
-    label: "COUNTY",
-    why: "Follow the land — property and recording county, never the notary's.",
-  },
 ];
 
 /**
  * The gloss for one server-named key, or null when this screen has nothing to
  * add. `package` is not a `CreateOrderRequest` member — it is the multipart
- * file part (endpoints.ts:57) — so it is answered here rather than by widening
+ * file part (endpoints.ts) — so it is answered here rather than by widening
  * the table above to a union the contract does not have.
  */
 export function glossFor(

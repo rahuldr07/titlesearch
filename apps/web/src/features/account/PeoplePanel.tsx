@@ -1,20 +1,37 @@
+import type { Key } from "react-aria-components";
 import { useRead } from "../../app/useRead";
-import { people } from "../../shared/accountQueries";
-import { Badge, Card } from "../../components/ui";
+import { usePermissions, hasAction } from "../../app/session/permissions";
+import { useSignedIn } from "../../app/session/signedIn";
+import { people, rbacMatrix } from "../../shared/accountQueries";
+import { Badge, Card, Option, Select } from "../../components/ui";
 import { PanelFrame } from "./AccountPanel";
 import { QueryState } from "../../entities/state/QueryState";
+import { useAssignRole } from "./useSettings";
 
 /**
-
- * PEOPLE — the roster, read-only, and the role picker the prototype draws is the thing
-
- * that is refused. `reference-app.html`'s People pane, measured: a card at 24px
-
- * padding, a "Team Directory" 11px w600 cap, then rows on a `160px 1fr…
-
+ * PEOPLE — the roster, WITH the drawn role picker.
+ *
+ * ⚠ RULED 2026-08-29 — `docs/frontend/design-2026-08/RULING-2026-08-29.md`.
+ * The reference puts a role select on every row; the pre-ruling refusal ("no
+ * endpoint accepts a role change") is closed by `PATCH /api/people/{id}/role`.
+ * The picker's vocabulary is the RBAC matrix's `roles` — SERVED, so the pane
+ * offers only words the server will accept. A seat without
+ * `person.role.assign` sees the picker disabled with the reason (rule 9);
+ * the server still refuses with 403 either way.
  */
 export function PeoplePanel() {
   const roster = useRead(people);
+  const matrix = useRead(rbacMatrix);
+  const permissions = usePermissions(useSignedIn((s) => s.account !== null));
+  const { assign, pending } = useAssignRole();
+
+  const roles = matrix.data?.roles ?? [];
+  const mayAssign = hasAction(permissions.data?.rules, "person.role.assign");
+  const held = !mayAssign
+    ? "Read-only — this seat lacks person.role.assign."
+    : pending
+      ? "Sending — the server has not answered yet."
+      : null;
 
   return (
     <PanelFrame
@@ -24,14 +41,6 @@ export function PeoplePanel() {
       <QueryState query={roster} of="the roster">
         {(data) => (
           <div className="flex flex-col gap-8">
-            {/*
-             * ONE LINE, NOT A CARD. The design leads with the Team Directory
-             * and has no gate card at all; an earlier pass here put
-             * `privileged_without_mfa` in a card that took the first read off
-             * the roster. The figure stays — it is the server's, and it is why
-             * a compliance reader opens this pane — but it sits under the
-             * heading rather than above the thing it is about.
-             */}
             <p className="text-meta leading-body text-ink-secondary">
               <span
                 data-mfa-gap={data.privileged_without_mfa}
@@ -52,27 +61,44 @@ export function PeoplePanel() {
                 {data.people.map((person) => (
                   <li
                     key={person.id}
-                    className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_auto] items-center gap-8 border-b border-line-subtle px-12 py-8 last:border-b-0"
+                    className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,1fr)_auto] items-center gap-8 border-b border-line-subtle px-12 py-8 last:border-b-0"
                   >
                     <div className="flex min-w-0 flex-col gap-1">
                       <span className="truncate text-meta font-semibold leading-close text-ink-primary">
                         {person.name}
                       </span>
-                      <span className="text-label leading-flat text-ink-faint">
-                        {person.role}
+                      {/* Rule 3: an address is an identifier, so it is mono. */}
+                      <span className="truncate font-mono text-label leading-flat text-ink-muted">
+                        {person.email}
                       </span>
                     </div>
-                    {/* Rule 3: an address is an identifier, so it is mono. */}
-                    <span className="truncate font-mono text-meta leading-close text-ink-muted">
-                      {person.email}
+                    {/* The drawn picker — the served vocabulary, one PATCH per
+                        change, the roster repainting from its own re-read. */}
+                    <Select
+                      label={`Role for ${person.name}`}
+                      data-testid={`person-role-${person.id}`}
+                      selectedKey={person.role}
+                      disabledBecause={held}
+                      onSelectionChange={(key: Key | null) => {
+                        const next = key === null ? null : String(key);
+                        if (next !== null && next !== person.role) assign(person.id, next);
+                      }}
+                    >
+                      {(roles.includes(person.role) ? roles : [person.role, ...roles]).map(
+                        (role) => (
+                          <Option key={role} id={role}>
+                            {role}
+                          </Option>
+                        ),
+                      )}
+                    </Select>
+                    <span className="truncate text-label leading-flat text-ink-muted">
+                      {person.status}
                     </span>
                     <div className="flex shrink-0 items-center gap-4">
                       {person.privileged && person.mfa !== "enrolled" && (
                         <Badge tone="attend">Privileged, no MFA</Badge>
                       )}
-                      <span className="text-label leading-flat text-ink-muted">
-                        {person.status}
-                      </span>
                     </div>
                   </li>
                 ))}
@@ -80,12 +106,9 @@ export function PeoplePanel() {
             </Card>
 
             <p className="text-meta leading-body text-ink-secondary">
-              Read-only. The design puts a role picker on every row; no endpoint accepts
-              a role change, and{" "}
-              <code className="font-mono text-label">PERMISSIONS</code> closes with{" "}
-              <code className="font-mono text-label">as const satisfies</code>{" "}
-              (authz.ts:118), so the table is frozen at compile time rather than guarded
-              at runtime.
+              A role change posts to the server and repaints from its answer —
+              nothing here edits a row locally (RULED 2026-08-29; the picker is
+              drawn, so it is built).
             </p>
           </div>
         )}

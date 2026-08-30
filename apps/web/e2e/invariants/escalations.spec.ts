@@ -81,26 +81,21 @@ test("no priority, category, or assignee affordances exist", async ({ page }) =>
 });
 
 /**
- * THE CONTRACT WINS OVER THE DESIGN, AND THIS IS THE ASSERTION OF IT.
+ * ⚠ RULED 2026-08-29 — `docs/frontend/design-2026-08/RULING-2026-08-29.md`.
  *
- * Design §Screens 10 wants determination buttons "disabled + 'belongs to QC'"
- * for roles that lack them. `INVARIANTS:42-43` says a role-locked affordance is
- * ABSENT, not disabled, and the contract's permission projection makes it so:
- * a role without the grant never receives it, so there is nothing to dim.
- *
- * WHAT THIS TEST ASSERTS, AND WHY IT IS THE DOOR RATHER THAN THE BUTTON.
- * `screen.escalations.enter` (authz.ts:68) and `escalation.resolve`
- * (authz.ts:104) hold the SAME role set — `senior`/`admin`. So no role exists
- * that can stand on this screen and not hold the determination, and a test
- * driving one would be testing a state the permission table cannot produce.
- * The absence therefore asserts at the outer boundary, which is where the
- * contract actually puts it. The screen's inner guard stays regardless: the two
- * grants are separate rows and may diverge, and a screen that relied on them
- * coinciding would ship the design's dimmed button the day they did.
- *
- * NEW, not harvested — the collision is new, so nothing pre-rebuild covers it.
+ * THE DRAWN GATING, PINNED. The reference draws the determination for a
+ * non-QC seat as VISIBLE + DISABLED under the amber "belongs to QC — with …"
+ * hint, and the ruling makes that the built behaviour FOR THIS SURFACE —
+ * superseding the pre-ruling reading of `INVARIANTS:42-43` (absent, not
+ * dimmed) that this test used to assert. The rail door stays absent for a
+ * role without `screen.escalations.enter` (chrome behaviour the ruling does
+ * not touch), and the SERVER refusal (403 on resolve) is untouched — the
+ * dimmed button is a courtesy, never the enforcement (authz.spec covers the
+ * wire refusal).
  */
-test("the escalations door is ABSENT for a role that does not hold it", async ({ page }) => {
+test("the determination is visible + disabled for a non-QC seat (RULING-2026-08-29)", async ({
+  page,
+}) => {
   await page.goto("/escalations");
   await expect(page.getByTestId("resolve-card")).toBeVisible();
 
@@ -112,10 +107,38 @@ test("the escalations door is ABSENT for a role that does not hold it", async ({
    */
   await page.getByTestId("sign-out").click();
   await page.getByTestId("continue-as-reviewer").click();
+  // Continue-as lands on "/" — walk BACK to /escalations through SPA history
+  // (a page.goto would reload and re-boot the session store to admin).
+  await page.goBack();
 
-  // absent, not dimmed — the rail carries no escalations door at all
+  // the rail still carries no escalations door for a reviewer…
   await expect(page.getByTestId("side-rail")).toBeVisible();
   await expect(page.getByRole("link", { name: "Escalations" })).toHaveCount(0);
+
+  // …but the screen (still mounted) now draws the determination the way the
+  // reference draws it: visible, disabled, and saying whose it is.
+  await expect(page.getByTestId("determination-belongs-to-qc")).toContainText(
+    "belongs to QC",
+  );
+  const locked = page.getByTestId("resolve-btn-locked");
+  await expect(locked).toBeVisible();
+  await expect(locked).toBeDisabled();
+});
+
+/**
+ * ⚠ RULED 2026-08-29 — the drawn evidence surfaces. The docket excerpt (on
+ * paper, boxed at the match, with its View-on-page jump) and the
+ * debtor-vs-owner identity grid are served on the escalation and drawn.
+ */
+test("the docket excerpt and identity grid render as drawn", async ({ page }) => {
+  await page.goto("/escalations");
+  const excerpt = page.getByTestId("docket-excerpt");
+  await expect(excerpt).toBeVisible();
+  await expect(excerpt).toContainText("SMITH, JOHN A.");
+  await expect(page.getByTestId("excerpt-view-on-page")).toBeVisible();
+  const grid = page.getByTestId("identity-grid");
+  await expect(grid).toContainText("Judgment debtor of record");
+  await expect(grid).toContainText("Vested owner of subject parcel");
 });
 
 /** Choose a rule from the rulebook ComboBox by its code. */

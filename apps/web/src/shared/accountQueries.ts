@@ -1,5 +1,6 @@
 import {
   AuditResponse,
+  RbacMatrixResponse,
   RulesResponse,
   MeProfileResponse,
   PeopleResponse,
@@ -43,4 +44,16 @@ export const audit: ReadDescriptor<AuditResponse> = {
   path: "/api/audit",
   key: ["audit"],
   schema: AuditResponse,
+};
+
+/**
+ * ⚠ RULED 2026-08-29 (RULING-2026-08-29.md) — the Access pane's full RBAC
+ * matrix, and the role vocabulary the People pane's picker offers. A SETTINGS
+ * document about the shop; the enforceable projection stays
+ * `/api/me/permissions` and neither derives from the other in the browser.
+ */
+export const rbacMatrix: ReadDescriptor<RbacMatrixResponse> = {
+  path: "/api/rbac",
+  key: ["rbac"],
+  schema: RbacMatrixResponse,
 };

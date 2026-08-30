@@ -1,13 +1,18 @@
 import { http, HttpResponse } from "msw";
 import { workspaceHandlers } from "./workspace.js";
 import {
+  CLERK_STAMP,
   CLIENT_NAME,
   TEMPLATE_VERSION,
   assignedFor,
   designHandlers,
   openCountersignCount,
+  quarantineBody,
   slaFor,
 } from "./design.js";
+import { settingsHandlers } from "./settings.js";
+import { templateHandlers } from "./templates.js";
+import { appendAudit, auditActor, auditStore } from "./audit.js";
 import {
   BlindEntriesRequest,
   ConfirmFieldRequest,
@@ -521,24 +526,56 @@ const guard = (
 const seenPackages = new Map<string, string>();
 let createdOrders = 0;
 
-const REQUIRED_ORDER_FIELDS = [
-  "client_id",
-  "external_ref",
-  "jurisdiction",
-  "state",
-  "county",
-] as const;
+/**
+ * ⚠ AMENDED 2026-08-29 (RULING-2026-08-29.md): `jurisdiction`/`state`/`county`
+ * left this list with `CreateOrderRequest` — the server resolves them from the
+ * clerk-stamp fixture (`CLERK_STAMP`, design.ts) — and `product` joined it.
+ */
+const REQUIRED_ORDER_FIELDS = ["client_id", "external_ref", "product"] as const;
 
 export const handlers = [
   ...workspaceHandlers,
   ...designHandlers,
+  // RULING-2026-08-29 surfaces: the Templates Architect catalog and the
+  // Settings pane's RBAC matrix + role picker.
+  ...templateHandlers,
+  ...settingsHandlers,
   timelineHandler,
   pagesHandler,
   /**
+   * ⚠ RULED 2026-08-29 (RULING-2026-08-29.md) — THE PRE-ORDER GATEWAY SCAN.
+   * The reference runs quarantine the moment a file lands, before any order
+   * exists, so the scan is its own endpoint: multipart, the `package` file
+   * alone. It CHECKS the intake ledger but never writes it — only a signed
+   * create registers a digest, so a scan abandoned at the door leaves no
+   * order to collide with. A digest already on the books comes back with the
+   * de-dup step failed in the server's words and `resolved: null`.
+   */
+  http.post("/api/intake/quarantine", async ({ request }) => {
+    const denied = guard(request, "order.create");
+    if (denied) return denied;
+    const form = await request.formData().catch(() => new FormData());
+    const pkg = form.get("package");
+    if (!(pkg instanceof File)) {
+      return HttpResponse.json(
+        {
+          rejected: true,
+          missing_fields: ["package"],
+          reason: "nothing to scan — the quarantine gateway runs against a package",
+        },
+        { status: 400 },
+      );
+    }
+    const sha = `${pkg.name}:${pkg.size}`;
+    return HttpResponse.json(quarantineBody(null, seenPackages.get(sha) ?? null));
+  }),
+
+  /**
    * Ingest: order create + package upload (multipart). An incomplete package
    * is refused AT THE DOOR with the missing fields named — never silently.
-   * A byte-identical re-upload 409s (sha256 duplicate). Acceptance is a
-   * separate, explicit call — never automatic.
+   * A byte-identical re-upload 409s (sha256 duplicate). Since RULING-2026-08-29
+   * the drawn flow is ONE act — the client chains this create with the accept
+   * below under a single "Sign for Package" press.
    */
   http.post("/api/orders", async ({ request }) => {
     const denied = guard(request, "order.create");
@@ -577,15 +614,18 @@ export const handlers = [
       id: `ord_new_${createdOrders}`,
       client_id: String(form.get("client_id")),
       external_ref: String(form.get("external_ref")),
-      jurisdiction: String(form.get("jurisdiction")),
-      state: String(form.get("state")),
-      county: String(form.get("county")),
-      // A freshly ingested package has none of these resolved yet, and `null`
-      // is that statement — `0` pages would assert somebody counted. Required
-      // on `Order` since 2026-07-30; see the ratification note in the contract.
-      product: null,
+      // SERVER-RESOLVED from the recorded clerk stamp (RULING-2026-08-29):
+      // these three stopped being request members, so the caller cannot
+      // hand-pick the state overlay wrong. One fixture authors them AND the
+      // quarantine `resolved` block, so the two reads cannot disagree.
+      jurisdiction: CLERK_STAMP.jurisdiction,
+      state: CLERK_STAMP.state,
+      county: CLERK_STAMP.county,
+      product: String(form.get("product")),
+      // Still unresolved on a fresh package — `null` is that statement.
       period_label: null,
-      pages: null,
+      // Counted during the optical pass the gateway already ran on this file.
+      pages: CLERK_STAMP.pages,
       status: "ingested",
       arrived_at: new Date().toISOString(),
       accepted_at: null,
@@ -1145,7 +1185,7 @@ export const handlers = [
     if (denied) return denied;
     const d = deliveryStore.find((x) => x.id === params["id"]);
     if (!d) return err("no such delivery", 404);
-    d.status = "delivered";
+    d.status = "transmitted";
     d.delivered_at = new Date().toISOString();
     d.evidence = "delivered on retry — same file, same report version";
     return HttpResponse.json(ok);
@@ -1634,56 +1674,20 @@ export const handlers = [
     if (rule.status !== "pending") return err("rule is not pending", 409);
     rule.status = "live";
     rule.confirmed_by = "eng_demo";
+    // RULED 2026-08-29: a confirmed rule is a moment of record — the audit
+    // ledger appends live.
+    appendAudit(auditActor(request), "rule_confirmed", "rules", rule.id);
     return HttpResponse.json(ok);
   }),
 
-  /** Append-only audit view — read-only; no write endpoint exists. */
-  http.get("/api/audit", () =>
-    HttpResponse.json({
-      entries: [
-        {
-          id: "aud_5",
-          actor_id: "m.okafor",
-          action: "engine_seat_change",
-          entity: "engine_routing",
-          entity_id: "rt_B_hartford-ct_judgments_liens",
-          at: "2026-07-12T09:41:00Z",
-        },
-        {
-          id: "aud_4",
-          actor_id: "M. Estrada",
-          action: "golden_correction",
-          entity: "golden_fields",
-          entity_id: "gf_2",
-          at: "2026-07-09T14:02:00Z",
-        },
-        {
-          id: "aud_3",
-          actor_id: "M. Estrada",
-          action: "escalation_resolved",
-          entity: "escalations",
-          entity_id: "esc_tax_1",
-          at: "2026-07-09T11:20:00Z",
-        },
-        {
-          id: "aud_2",
-          actor_id: "eng_demo",
-          action: "rule_confirmed",
-          entity: "rules",
-          entity_id: "rule_tax_vintage",
-          at: "2026-07-09T10:05:00Z",
-        },
-        {
-          id: "aud_1",
-          actor_id: "L. Vance",
-          action: "field_confirmed",
-          entity: "fields",
-          entity_id: "fld_owner",
-          at: "2026-07-08T15:44:00Z",
-        },
-      ],
-    }),
-  ),
+  /**
+   * Append-only audit view — read-only over the wire; the WRITES come from
+   * the mutation handlers (release, reissue, countersign, escalation ruling,
+   * rule confirm, template save, RBAC cycle, role assign) appending to the
+   * shared ledger in `audit.ts`. RULED 2026-08-29: the reference's Audit Log
+   * appends live as the session acts, so the mock's does too.
+   */
+  http.get("/api/audit", () => HttpResponse.json({ entries: auditStore })),
 
   /**
    * Escalation resolution is REFUSED without a rule — the rule IS the
@@ -1726,6 +1730,11 @@ export const handlers = [
     // the demo session's name — "resolved by <someone else>" right after
     // YOU resolved it reads as a bug
     esc.resolved_by = "L. Vance";
+    // The queue chip's age label flips the way the reference's does when a
+    // query closes (RULED 2026-08-29) — the SERVER's word, not a client badge.
+    esc.age = "settled";
+    // …and the ruling is a moment of record: the audit ledger appends live.
+    appendAudit(auditActor(request), "escalation_resolved", "escalations", esc.id);
     return HttpResponse.json(ok);
   }),
 ];

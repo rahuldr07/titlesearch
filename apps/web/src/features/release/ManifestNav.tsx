@@ -50,10 +50,10 @@ export function ManifestNav(props: { readonly blocks: readonly ManifestBlock[] }
         drawn="A second document behind a 'Publication manifest / Telemetry log' tab pair, and a per-block Included / Omitted toggle"
         has={
           <>
-            One document. `CompositionResponse` (design.ts:91) returns a single
+            One document. `CompositionResponse` (design.ts) returns a single
             `blocks` array and names no second manifest, and `ManifestBlock`
-            (design.ts:71) is six fields — id, numeral, title, body,
-            field_count, cited — with no `optional` and no include flag.
+            is six fields — id, numeral, title, values, field_count, cited —
+            with no `optional` and no include flag.
           </>
         }
         needs={
