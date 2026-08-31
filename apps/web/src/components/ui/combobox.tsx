@@ -87,7 +87,7 @@ export function ComboBox({
             <ChevronDownIcon aria-hidden size={16} />
           </ButtonPrimitive>
         </div>
-        <Popover>
+        <Popover width="trigger">
           {/* renderEmptyState rather than a component the caller has to
               remember to place — a forgotten one is a zero-height panel. */}
           <ListBox

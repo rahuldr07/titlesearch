@@ -83,8 +83,14 @@ test("audit log: a ruling appends a live entry", async ({ page }) => {
   await page
     .getByTestId("ruling-input")
     .fill("A hit is ours when name + county match during our grantor's ownership.");
-  await page.getByTestId("cite-select").getByRole("combobox").fill("R13");
-  await page.getByRole("option", { name: /^R13 / }).click();
+  const cite = page.getByTestId("cite-select").getByRole("combobox");
+  await cite.fill("R13");
+  // Keyboard selection, not a click: the combobox sits near the fold, and a
+  // pre-click scroll makes the anchored popover reposition — which Playwright
+  // reads as "element is not stable", forever.
+  await expect(page.getByRole("option", { name: /^R13 / })).toBeVisible();
+  await cite.press("ArrowDown");
+  await cite.press("Enter");
   await page.getByTestId("resolve-btn").click();
   await expect(page.getByText("✓ Rule written — cluster cleared.")).toBeVisible();
   // NO page.goto — a reload restarts the mock worker and re-seeds its stores,

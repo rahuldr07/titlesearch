@@ -75,7 +75,7 @@ export function Select({
               control opens — rather than decoration. */}
           <ChevronDownIcon aria-hidden size={16} className="shrink-0 text-ink-muted" />
         </ButtonPrimitive>
-        <Popover>
+        <Popover width="trigger">
           <ListBox className="flex flex-col gap-1 p-2 outline-none">{children}</ListBox>
         </Popover>
       </SelectPrimitive>

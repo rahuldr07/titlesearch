@@ -21,16 +21,29 @@ import { chordOverlay, overlayCap, overlaySurface } from "./overlaySurface";
  * WCAG 2.4.11 Focus Not Obscured: `offset` keeps the panel clear of its own
  * trigger, so a keyboard reader who opened it can still see what they opened.
  */
-export type SurfacePopoverProps = Omit<PopoverProps, "className">;
+export type SurfacePopoverProps = Omit<PopoverProps, "className"> & {
+  /**
+   * "trigger" sizes the panel to react-aria's `--trigger-width` — the width
+   * of the control that opened it. Without a width rule an absolutely
+   * positioned panel stretches to its positioning container, which for a
+   * low-on-the-page combobox meant a viewport-wide listbox.
+   */
+  readonly width?: "natural" | "trigger";
+};
 
-export function Popover({ offset = 6, ...props }: SurfacePopoverProps) {
+export function Popover({ offset = 6, width = "natural", ...props }: SurfacePopoverProps) {
   return (
     <PopoverPrimitive
       {...props}
       {...chordOverlay}
       offset={offset}
       data-slot="popover"
-      className={cx(overlaySurface, overlayCap, "tp-z-popup")}
+      className={cx(
+        overlaySurface,
+        overlayCap,
+        "tp-z-popup",
+        width === "trigger" && "w-(--trigger-width)",
+      )}
     />
   );
 }
