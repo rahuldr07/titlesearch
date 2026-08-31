@@ -8,14 +8,14 @@ import type { CreateOrderRequest } from "@titlepipe/contract";
  * server did not name never appears at all. Keys are typed against
  * `CreateOrderRequest` so a contract rename is a compile error.
  */
-export interface ManifestEntry {
+interface ManifestEntry {
   readonly key: keyof CreateOrderRequest;
   /** Mono, because it names a data key. */
   readonly label: string;
   readonly why: string;
 }
 
-export const MANIFEST: readonly ManifestEntry[] = [
+const MANIFEST: readonly ManifestEntry[] = [
   {
     key: "client_id",
     label: "CLIENT",

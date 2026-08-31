@@ -11,7 +11,7 @@ import { BlockedHint } from "./blockedHint";
  * carries the `title` react-aria's filterDOMProps strips from composites.
  * No `data-chord-scope` here: a ToggleButton renders as a real <button>,
  * which the chord layer already catches on tagName; the group is what needs
- * the `widget` mark (toggle-group.tsx).
+ * the `widget` mark (segmented-control.tsx).
  */
 export type ToggleProps = Omit<
   ToggleButtonProps,
@@ -21,8 +21,7 @@ export type ToggleProps = Omit<
     readonly children: ReactNode;
   };
 
-/** Shared by Toggle and ToggleGroupItem, so the two cannot drift apart. */
-export const toggleClass = cx(
+const toggleClass = cx(
   "tp-state tp-press tp-target tp-ring flex cursor-pointer items-center justify-center gap-3",
   "h-19 px-6 font-sans text-meta leading-close font-medium text-ink-secondary outline-none",
   "hover:not-data-disabled:text-ink-primary",

@@ -125,12 +125,25 @@ const templateStore: TemplateRecord[] = [
   { id: "tpl_mc_lo_v2", name: "Lien & Judgment Only (v2.0)", client: "Mortgage Connect", product: "Lien Only", version: "v2.0", status: "active", mapped_fields: 64, total_fields: 64, sha256: "09ba478201de94328cbef1a08321094ba18047ce90847291bac0192847201bba", source_ref: "sample_mc_atlanta_co_2026.pdf", source_citation: "Page 5, §2 (Judgment Matrix)", sample_ids: ["mc_01"], wording: { ...CLIENT_WORDING }, draft_saved: false },
 ];
 
+/**
+ * The label a saved draft carries: the template's OWN version, minor-bumped —
+ * "v2.1" → "v2.2 draft". A version the rule cannot parse keeps its text with
+ * "draft" appended rather than inventing a number.
+ */
+function nextDraftLabel(version: string): string {
+  const m = /^v(\d+)\.(\d+)$/.exec(version);
+  const major = m?.[1];
+  const minor = m?.[2];
+  if (major === undefined || minor === undefined) return `${version} draft`;
+  return `v${major}.${String(Number(minor) + 1)} draft`;
+}
+
 const summary = (t: TemplateRecord): TemplateSummary => ({
   id: t.id,
   name: t.name,
   client: t.client,
   product: t.product,
-  version: t.draft_saved ? `${t.version} → v4.3 draft` : t.version,
+  version: t.draft_saved ? `${t.version} → ${nextDraftLabel(t.version)}` : t.version,
   status: t.status,
   mapped_fields: t.mapped_fields,
   total_fields: t.total_fields,
@@ -237,8 +250,19 @@ export const templateHandlers = [
     );
     return HttpResponse.json({
       id: t.id,
-      version: "v4.3 draft",
+      version: nextDraftLabel(t.version),
       saved_at: new Date().toISOString(),
     });
   }),
 ];
+
+/**
+ * Re-seed this module's mutable members — the wording drafts. Called only by
+ * `POST /api/demo/reset` (handlers.ts).
+ */
+export function resetTemplateStores(): void {
+  for (const t of templateStore) {
+    t.wording = { ...CLIENT_WORDING };
+    t.draft_saved = false;
+  }
+}

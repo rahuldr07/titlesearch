@@ -1,13 +1,12 @@
 import { cx } from "./cx";
 import { ALIGN_CLASS, type TableColumn } from "./tableColumns";
+import { ROW_HEIGHT } from "./rowHeight";
 
 /**
  * The header row and the data row; table.tsx is the mechanism, this is the
- * chrome. ROW_HEIGHT lives here because it is a fact about how a row is
- * drawn — 44px, comfortably above WCAG 2.5.8's 24px target minimum, which
- * matters because a row is clickable.
+ * chrome. ROW_HEIGHT is a fact about how a row is drawn and lives in its
+ * own module (rowHeight.ts).
  */
-export const ROW_HEIGHT = 44;
 
 /**
  * The header: sticky, on control-fill with a line-strong rule beneath, at

@@ -14,7 +14,17 @@ export default tseslint.config(
   // output like `dist`, and it is named separately because it deliberately sits
   // outside `dist/` — see e2e-live/buildBundles.mjs. Flat config does not read
   // .gitignore, so an ignored directory still has to be listed here.
-  { ignores: ["dist", "dist-harness", "storybook-static", "node_modules"] },
+  // `public/mockServiceWorker.js` is MSW's generated worker (`msw init`);
+  // linting it reports on code a regeneration will overwrite.
+  {
+    ignores: [
+      "dist",
+      "dist-harness",
+      "storybook-static",
+      "node_modules",
+      "public/mockServiceWorker.js",
+    ],
+  },
   {
     extends: [js.configs.recommended, ...tseslint.configs.strict],
     files: ["src/**/*.{ts,tsx}", ".storybook/**/*.{ts,tsx}"],

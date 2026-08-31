@@ -1,5 +1,5 @@
 import { http, HttpResponse } from "msw";
-import { workspaceHandlers } from "./workspace.js";
+import { resetWorkspaceStores, workspaceHandlers } from "./workspace.js";
 import {
   CLERK_STAMP,
   CLIENT_NAME,
@@ -8,11 +8,13 @@ import {
   designHandlers,
   openCountersignCount,
   quarantineBody,
+  resetDesignStores,
   slaFor,
 } from "./design.js";
-import { settingsHandlers } from "./settings.js";
-import { templateHandlers } from "./templates.js";
-import { appendAudit, auditActor, auditStore } from "./audit.js";
+import { guard, err } from "./guard.js";
+import { resetSettingsStores, settingsHandlers } from "./settings.js";
+import { resetTemplateStores, templateHandlers } from "./templates.js";
+import { appendAudit, auditActor, auditStore, resetAuditStore } from "./audit.js";
 import {
   BlindEntriesRequest,
   ConfirmFieldRequest,
@@ -29,10 +31,8 @@ import {
   ReconciliationRulingRequest,
   ResolveComplaintRequest,
   ResolveEscalationRequest,
-  canDo,
   isRole,
   rulesFor,
-  type Action,
   type Ack,
   type Engine,
   type Escalation,
@@ -51,7 +51,6 @@ import {
 } from "@titlepipe/contract";
 import {
   demoComplaints,
-  demoDeliveries,
   demoEscalations,
   demoFields,
   demoGolden,
@@ -313,10 +312,6 @@ const escalationStore: Escalation[] = demoEscalations.map((e) => ({
 }));
 const ruleStore: Rule[] = demoRules.map((r) => ({ ...r }));
 let draftCount = 0;
-const deliveryStore = demoDeliveries.map((d) => ({
-  ...d,
-  report: d.report ? { ...d.report } : null,
-}));
 const complaintStore = demoComplaints.map((c) => ({ ...c }));
 let complaintCount = 0;
 const goldenStore = demoGolden.map((g) => ({ ...g }));
@@ -389,7 +384,7 @@ const leaderboardCells = [
 ];
 
 /** Current seat assignments — every one carries who/when/evidence. */
-const routingStore = [
+const seedRouting = () => [
   ...["mortgages", "vesting_deed", "judgments_liens"].flatMap((section) =>
     ["clayton-ga", "hartford-ct"].flatMap((jurisdiction) => [
       {
@@ -416,8 +411,10 @@ const routingStore = [
   ),
 ];
 
+const routingStore = seedRouting();
+
 /** Blind-fifty divergences awaiting a senior's ruling. Symmetric A/B — the model is not a party. */
-const reconStore: Reconciliation[] = [
+const seedRecon = (): Reconciliation[] => [
   {
     id: "rec_1",
     order_id: "ord_demo_1",
@@ -456,26 +453,9 @@ const reconStore: Reconciliation[] = [
   },
 ];
 
-const ok: Ack = { ok: true };
-const err = (message: string, status: number) =>
-  HttpResponse.json({ error: message }, { status });
+const reconStore: Reconciliation[] = seedRecon();
 
-/**
- * Role gate on every mutation — the authz table enforced server-side,
- * standing in for core-api middleware. The x-mock-role header is the mock's
- * JWT role claim; a missing header means the dev-default admin session (a
- * real server would 401 instead). Runs before body validation:
- * authorization refuses ahead of schema errors, exactly as middleware will.
- */
-const guard = (
-  request: Request,
-  action: Action,
-): ReturnType<typeof err> | null => {
-  const raw = request.headers.get("x-mock-role");
-  const role = raw === null ? "admin" : isRole(raw) ? raw : null;
-  if (role !== null && canDo(role, action)) return null;
-  return err(`refused: role lacks ${action}`, 403);
-};
+const ok: Ack = { ok: true };
 
 /** sha256 stand-in for the mock: file name + byte size. */
 const seenPackages = new Map<string, string>();
@@ -1090,21 +1070,8 @@ export const handlers = [
     return HttpResponse.json({ signal, ...body });
   }),
 
-  http.get("/api/deliveries", () =>
-    HttpResponse.json({ deliveries: deliveryStore }),
-  ),
-
-  /** Retry re-sends the same file — the report is never re-rendered. */
-  http.post("/api/deliveries/:id/retry", ({ params, request }) => {
-    const denied = guard(request, "delivery.retry");
-    if (denied) return denied;
-    const d = deliveryStore.find((x) => x.id === params["id"]);
-    if (!d) return err("no such delivery", 404);
-    d.status = "transmitted";
-    d.delivered_at = new Date().toISOString();
-    d.evidence = "delivered on retry — same file, same report version";
-    return HttpResponse.json(ok);
-  }),
+  // Deliveries (list, retry, reissue) are design.ts's routes, served off its
+  // one store — a second pair here would be shadowed and drift.
 
   http.get("/api/complaints", () =>
     HttpResponse.json({ complaints: complaintStore }),
@@ -1522,10 +1489,12 @@ export const handlers = [
 
   /**
    * ── demo reset ──────────────────────────────────────────────────────────
-   * The rail's "↺ Reset" control. Re-seeds this file's mutable stores from
-   * the fixtures they were copied from; the signed-in seat is untouched.
-   * Dev-only by construction: this endpoint exists only in the mock package
-   * and is not part of the contract a real backend implements.
+   * The rail's "↺ Reset" control. Re-seeds EVERY mutable store in the
+   * package — this file's, and each sibling module's through its exported
+   * reset — so no mutation survives; the signed-in seat and the preferences
+   * store are untouched. Dev-only by construction: this endpoint exists only
+   * in the mock package and is not part of the contract a real backend
+   * implements.
    */
   http.post("/api/demo/reset", () => {
     fieldStore.splice(
@@ -1543,21 +1512,23 @@ export const handlers = [
       ...demoEscalations.map((e) => ({ ...e, order_ids: [...e.order_ids] })),
     );
     ruleStore.splice(0, ruleStore.length, ...demoRules.map((r) => ({ ...r })));
-    deliveryStore.splice(
-      0,
-      deliveryStore.length,
-      ...demoDeliveries.map((d) => ({
-        ...d,
-        report: d.report ? { ...d.report } : null,
-      })),
-    );
     complaintStore.splice(0, complaintStore.length, ...demoComplaints.map((c) => ({ ...c })));
     goldenStore.splice(0, goldenStore.length, ...demoGolden.map((g) => ({ ...g })));
+    reconStore.splice(0, reconStore.length, ...seedRecon());
+    routingStore.splice(0, routingStore.length, ...seedRouting());
     queueHead = 0;
     draftCount = 0;
     complaintCount = 0;
     createdOrders = 0;
     seenPackages.clear();
+    // The sibling modules' stores: deliveries + seals + countersigns +
+    // appended timeline events (design.ts), template wording drafts,
+    // the RBAC matrix, people roles, and the live audit rows.
+    resetDesignStores();
+    resetTemplateStores();
+    resetSettingsStores();
+    resetWorkspaceStores();
+    resetAuditStore();
     return HttpResponse.json(ok);
   }),
 

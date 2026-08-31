@@ -8,6 +8,7 @@ import {
 import { cx } from "./cx";
 import { disabledAttributes, type Disablement } from "./disabled";
 import { BlockedHint } from "./blockedHint";
+import { chordWidget } from "./overlaySurface";
 
 /**
  * A segmented control is a filter, not navigation — the whole distinction
@@ -15,7 +16,10 @@ import { BlockedHint } from "./blockedHint";
  * because these cells do not own panels: announcing them as tabs would
  * promise a reader a panel switch that never happens. Selection is a raised
  * white cell on a sunken track — weight and elevation, no accent.
- * `data-chord-scope="widget"`: arrow keys inside this widget belong to it.
+ *
+ * The chord mark is `widget`: a single ToggleButton needs no mark (a real
+ * <button>; see toggle.tsx), but a group has roving arrow-key focus, and
+ * `own` on a permanently-mounted strip would kill every chord in the app.
  */
 export type SegmentedControlProps = Omit<
   ToggleButtonGroupProps,
@@ -37,7 +41,7 @@ export function SegmentedControl({
       <ToggleButtonGroup
         {...props}
         {...disabledAttributes(disabledBecause)}
-        data-chord-scope="widget"
+        {...chordWidget}
         data-slot="segmented-control"
         selectionMode="single"
         disallowEmptySelection

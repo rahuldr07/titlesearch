@@ -1,6 +1,7 @@
 import type { FieldReading } from "@titlepipe/contract";
 import { Button } from "../../components/ui";
-import { ReadingText, segmentsFor } from "./readingDiff";
+import { ReadingText } from "./readingDiff";
+import { segmentsFor } from "./readingSegments";
 import { NoValueChip } from "./NoValueChip";
 
 /**

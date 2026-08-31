@@ -1327,6 +1327,26 @@ export const demoTimelines: Record<string, OrderTimelineEvent[]> = {
 };
 
 /**
+ * The timelines as seeded, deep-copied before any handler runs: the
+ * countersign handler (design.ts) appends live events to `demoTimelines`,
+ * and the demo reset has to be able to take them back off.
+ */
+const timelineSeed: Record<string, OrderTimelineEvent[]> = Object.fromEntries(
+  Object.entries(demoTimelines).map(([id, events]) => [id, events.map((e) => ({ ...e }))]),
+);
+
+/** Restore `demoTimelines` to its seed. Called by `POST /api/demo/reset`. */
+export function resetDemoTimelines(): void {
+  for (const id of Object.keys(demoTimelines)) {
+    // Live handlers may have added keys the seed never held.
+    delete demoTimelines[id];
+  }
+  for (const [id, events] of Object.entries(timelineSeed)) {
+    demoTimelines[id] = events.map((e) => ({ ...e }));
+  }
+}
+
+/**
  * Source page text for ord_demo_1. Clearly synthetic, and deliberately
  * consistent with `demoFields`: every cited page here is one a field cites.
  * The total is quoted from the order's own package size, and the one extra

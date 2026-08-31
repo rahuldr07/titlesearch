@@ -4,7 +4,6 @@ import {
   RulesResponse,
   MeProfileResponse,
   PeopleResponse,
-  PreferencesResponse,
   type Rule,
 } from "@titlepipe/contract";
 import type { ReadDescriptor } from "./queries";
@@ -23,13 +22,6 @@ export const people: ReadDescriptor<PeopleResponse> = {
   path: "/api/people",
   key: ["people"],
   schema: PeopleResponse,
-};
-
-/** Server-side — the reason nothing in this app touches browser storage. */
-export const preferences: ReadDescriptor<PreferencesResponse> = {
-  path: "/api/me/preferences",
-  key: ["me", "preferences"],
-  schema: PreferencesResponse,
 };
 
 /** The rulebook. */

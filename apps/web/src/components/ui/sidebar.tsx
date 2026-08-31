@@ -1,5 +1,10 @@
-import { createContext, useContext, useMemo, type ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import { cx } from "@/components/ui/cx";
+import {
+  SidebarContext,
+  useSidebar,
+  type SidebarContextValue,
+} from "./sidebar-context";
 
 /* Re-exported so the barrel names `./sidebar` once rather than three
    siblings. */
@@ -29,24 +34,6 @@ export {
  * blank, not merely wrong.
  */
 
-const SIDEBAR_KEY = "b";
-
-interface SidebarContextValue {
-  readonly collapsed: boolean;
-  readonly toggle: () => void;
-}
-
-const SidebarContext = createContext<SidebarContextValue | null>(null);
-
-/** Throws rather than defaulting: a menu outside its rail is a wiring bug. */
-export function useSidebar(): SidebarContextValue {
-  const value = useContext(SidebarContext);
-  if (value === null) {
-    throw new Error("useSidebar must be used within a SidebarProvider.");
-  }
-  return value;
-}
-
 /**
  * Context only — no wrapper div: rootRoute.tsx owns the frame. No keyboard
  * shortcut here either: app/keyboard/ owns every chord through `useChords`,
@@ -68,9 +55,6 @@ export function SidebarProvider(props: {
     <SidebarContext.Provider value={value}>{props.children}</SidebarContext.Provider>
   );
 }
-
-/** The chord the rail folds on, exported so `app/keyboard/` binds one name. */
-export { SIDEBAR_KEY };
 
 /**
  * The column: 240px, full height, on the rail surface — a flex child of the

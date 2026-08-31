@@ -16,7 +16,7 @@ import { NA_KIND } from "./fieldValue";
  * The vocabulary lives in `fieldValue.ts` and is re-exported here so this
  * module stays the single import for anything provenance-related.
  */
-export type { Citation, Cited, FieldValue } from "./fieldValue";
+export type { Citation, FieldValue } from "./fieldValue";
 export { assertNever, naFieldValue } from "./fieldValue";
 
 /**

@@ -95,7 +95,6 @@ describe("the two scope values are NOT interchangeable", () => {
     "src/components/ui/tabs.tsx",
     "src/components/ui/table.tsx",
     "src/components/ui/segmented-control.tsx",
-    "src/components/ui/toggle-group.tsx",
   ];
 
   test.each(ALWAYS_PRESENT)("%s marks itself widget, never own", async (file) => {

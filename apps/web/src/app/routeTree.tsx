@@ -3,7 +3,8 @@ import { rootRoute } from "./rootRoute";
 import { BLIND_SEAT_SCREEN } from "./chrome/orderScreens";
 import { accountSearch } from "./accountSearch";
 import { AccountScreen } from "../features/account/AccountScreen";
-import { staticRoutes, ACCOUNT_PATH, Placeholder } from "./staticRoutes";
+import { staticRoutes, ACCOUNT_PATH } from "./staticRoutes";
+import { Placeholder } from "./chrome/Placeholder";
 import { orderRoutes } from "./orderRoutes";
 
 /**

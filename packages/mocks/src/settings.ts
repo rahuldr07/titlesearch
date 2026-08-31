@@ -46,10 +46,23 @@ const SEED: readonly SeedRow[] = [
 
 /** Live levels, mutated by the cycle PATCH. Keyed `${row.id}:${role}`. */
 const levels = new Map<string, RbacLevel>();
-for (const row of SEED) {
-  ROLES4.forEach((role, i) => {
-    levels.set(`${row.id}:${role}`, LEVELS[row.d[i] ?? 0] ?? "none");
-  });
+
+function seedLevels(): void {
+  levels.clear();
+  for (const row of SEED) {
+    ROLES4.forEach((role, i) => {
+      levels.set(`${row.id}:${role}`, LEVELS[row.d[i] ?? 0] ?? "none");
+    });
+  }
+}
+seedLevels();
+
+/**
+ * Re-seed this module's mutable store — the RBAC matrix. Called only by
+ * `POST /api/demo/reset` (handlers.ts).
+ */
+export function resetSettingsStores(): void {
+  seedLevels();
 }
 
 function matrix(): RbacMatrixResponse {

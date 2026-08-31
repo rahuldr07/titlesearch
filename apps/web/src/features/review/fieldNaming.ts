@@ -25,12 +25,12 @@ export function fieldLabel(path: string): string {
 }
 
 /** The section a field belongs to — the path's first segment, only. */
-export function sectionOf(path: string): string {
+function sectionOf(path: string): string {
   return path.split(".")[0] ?? path;
 }
 
 /** The section's own heading. Sentence case — this one is prose. */
-export function sectionTitle(section: string): string {
+function sectionTitle(section: string): string {
   return section.charAt(0).toUpperCase() + section.slice(1).replace(/_/g, " ");
 }
 

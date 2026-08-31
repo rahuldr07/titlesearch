@@ -48,8 +48,3 @@ export const useSignedIn = create<SignedInState>((set) => ({
   signIn: (account) => set({ account }),
   signOut: () => set({ account: null }),
 }));
-
-/** Read outside React — the route guard runs before any component mounts. */
-export function isSignedIn(): boolean {
-  return useSignedIn.getState().account !== null;
-}

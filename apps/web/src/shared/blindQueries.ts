@@ -1,16 +1,8 @@
-import { CaptureScheduleResponse, ReconciliationResponse } from "@titlepipe/contract";
+import { CaptureScheduleResponse } from "@titlepipe/contract";
 import type { ReadDescriptor } from "./queries";
 
 /** The one order, named once. */
 export const CAPTURE_ORDER = "ord_demo_1";
-
-export function reconciliation(id: string): ReadDescriptor<ReconciliationResponse> {
-  return {
-    path: `/api/reconciliation/${id}`,
-    key: ["reconciliation", id],
-    schema: ReconciliationResponse,
-  };
-}
 
 /**
  * `GET /api/blind/{order}/schedule` — the sheet to key, in keying order.

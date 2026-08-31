@@ -2,28 +2,32 @@
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "entry": [
     ".storybook/{main,preview}.ts",
+    "src/workbench/main.tsx",
     "e2e/**/*.spec.ts",
     "e2e/helpers/*.ts",
     "e2e-live/**/*.spec.ts",
     "*.test.ts"
   ],
-  "project": ["src/**/*.{ts,tsx}", ".storybook/**/*.ts", "scripts/*.mjs"],
+  "project": [
+    "src/**/*.{ts,tsx,css}",
+    ".storybook/**/*.ts",
+    "scripts/*.mjs"
+  ],
   "ignoreDependencies": [
-    "@titlepipe/ui-tokens",
-    "tailwindcss",
     "@tanstack/react-table",
-    "@tanstack/react-virtual",
     "react-hook-form",
     "@hookform/resolvers",
-    "lucide-react",
-    "sonner",
     "msw",
     "@testing-library/react"
   ],
-  "ignoreBinaries": ["psql"],
+  "ignoreBinaries": [
+    "psql"
+  ],
   "rules": {
     "types": "warn",
     "enumMembers": "warn"
   },
-  "ignore": ["src/components/ui/**"]
+  "ignore": [
+    "src/components/ui/**"
+  ]
 }

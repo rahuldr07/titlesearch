@@ -10,8 +10,6 @@ import { orderFields, orderTimeline } from "../../shared/queries";
  * repaints as the server has it.
  */
 
-export type ReviewWrites = ReturnType<typeof useReviewWrites>;
-
 export function useReviewWrites(orderId: string) {
   const client = useQueryClient();
 

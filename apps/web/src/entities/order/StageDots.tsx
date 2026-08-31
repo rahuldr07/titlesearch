@@ -8,7 +8,7 @@ import { cx } from "../../components/ui";
  * arithmetic and failed in fact, and only the server knows which. `blocked`
  * is deliberately not a synonym for failed: it is a stage that cannot start.
  */
-export type StageStatus = "waiting" | "running" | "done" | "blocked";
+type StageStatus = "waiting" | "running" | "done" | "blocked";
 
 export type Stage = {
   readonly id: string;

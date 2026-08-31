@@ -1,7 +1,7 @@
 import { createRoute } from "@tanstack/react-router";
 import { rootRoute } from "./rootRoute";
-import { Unbuilt } from "./chrome/Unbuilt";
-import { UNBUILT_SCREENS, type ScreenDescriptor } from "./chrome/unbuiltScreens";
+import { Placeholder } from "./chrome/Placeholder";
+import { UNBUILT_SCREENS } from "./chrome/unbuiltScreens";
 import { BUILT_SCREENS } from "./chrome/builtScreens";
 
 /**
@@ -31,15 +31,3 @@ export const staticRoutes = UNBUILT_SCREENS.filter(
       Built === undefined ? () => <Placeholder descriptor={descriptor} /> : Built,
   });
 });
-
-/** The honest gap a door renders when its screen is not built. */
-export function Placeholder(props: { readonly descriptor: ScreenDescriptor }) {
-  return (
-    <Unbuilt
-      screen={props.descriptor.screen}
-      door={props.descriptor.path}
-      binds={props.descriptor.binds}
-      missing={props.descriptor.missing}
-    />
-  );
-}

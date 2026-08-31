@@ -3,7 +3,8 @@ import { useRouterState } from "@tanstack/react-router";
 import { OrderContextResponse } from "@titlepipe/contract";
 import { get } from "../../shared/api";
 import { cx } from "../../components/ui";
-import { StageLink, stageIsCurrent } from "./StageLink";
+import { StageLink } from "./StageLink";
+import { stageIsCurrent } from "./stageIsCurrent";
 import { StageBadge, StageCircle } from "./StageMark";
 
 /**

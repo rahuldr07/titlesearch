@@ -1,7 +1,8 @@
 import { useRouterState } from "@tanstack/react-router";
 import type { OrderStageTab } from "@titlepipe/contract";
 import { cx } from "../../components/ui";
-import { StageLink, stageIsCurrent } from "./StageLink";
+import { StageLink } from "./StageLink";
+import { stageIsCurrent } from "./stageIsCurrent";
 import { StageBadge, StageCircle } from "./StageMark";
 
 /**

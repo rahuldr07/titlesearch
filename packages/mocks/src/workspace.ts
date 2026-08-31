@@ -476,6 +476,22 @@ export const people: PeopleResponse = {
   ],
 };
 
+/** Seed roles, captured for the demo reset — the role picker PATCH is the one writer. */
+const seedRoles: readonly (readonly [string, string])[] = people.people.map((p) => [p.id, p.role]);
+
+/**
+ * Restore the people roles to their seed. Called only by `POST /api/demo/reset`
+ * (handlers.ts). Deliberately NOT `preferences`: a preference survives the
+ * demo reset for the same reason it survives a reload — it belongs to the
+ * person, not to the demo data.
+ */
+export function resetWorkspaceStores(): void {
+  for (const [id, role] of seedRoles) {
+    const person = people.people.find((p) => p.id === id);
+    if (person !== undefined) person.role = role;
+  }
+}
+
 const profile: MeProfileResponse = {
   name: "L. Vance",
   email: "l.vance@titlepipe.internal",

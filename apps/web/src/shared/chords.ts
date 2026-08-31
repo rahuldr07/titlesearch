@@ -14,13 +14,11 @@ import { useEffect } from "react";
 import { tinykeys } from "tinykeys";
 import { focusOwnsKeys } from "./focusOwnership";
 
-export { focusOwnsKeys };
-
 /**
  * Why a chord is standing down. Not a boolean, because the three reasons want
  * different handling and a boolean would let a caller conflate them.
  */
-export type SuspendReason = "text-entry" | "overlay" | "signed-out";
+type SuspendReason = "text-entry" | "overlay" | "signed-out";
 
 /**
  * Is a modal layer up? Asked of the DOM rather than of a store: the DOM is
@@ -29,7 +27,7 @@ export type SuspendReason = "text-entry" | "overlay" | "signed-out";
  * covers the one-frame gap between "open" and "focused" — one frame is
  * enough for a held key to repeat.
  */
-export function overlayIsUp(doc: Document): boolean {
+function overlayIsUp(doc: Document): boolean {
   return (
     doc.querySelector("[role='dialog'],[role='alertdialog']") !== null ||
     doc.querySelector("[data-chord-scope='own']") !== null
@@ -83,7 +81,7 @@ export function useChords(bindings: ChordBindings, options: UseChordsOptions): v
  * than thrown away so a caller can log it — a chord that silently does
  * nothing is indistinguishable from a broken one.
  */
-export function suspendedBecause(event: KeyboardEvent): SuspendReason | null {
+function suspendedBecause(event: KeyboardEvent): SuspendReason | null {
   const target = event.target;
   const active = target instanceof Element ? target : document.activeElement;
 

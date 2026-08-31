@@ -53,6 +53,19 @@ export const auditStore: AuditEntry[] = [
 
 let liveCount = 0;
 
+/** The ledger as seeded, captured before any live append — for the demo reset. */
+const seedEntries: readonly AuditEntry[] = auditStore.map((e) => ({ ...e }));
+
+/**
+ * Drop every live-appended row, restoring the seeded ledger. Called only by
+ * `POST /api/demo/reset` (handlers.ts) — the demo re-seed, not an edit of a
+ * filed row; handlers still never modify or remove entries.
+ */
+export function resetAuditStore(): void {
+  liveCount = 0;
+  auditStore.splice(0, auditStore.length, ...seedEntries.map((e) => ({ ...e })));
+}
+
 /** File one event at the head of the ledger. The instant is the server's. */
 export function appendAudit(
   actorId: string,

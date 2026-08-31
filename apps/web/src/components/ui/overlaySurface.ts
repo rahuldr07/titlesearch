@@ -7,7 +7,7 @@
  *            for transient overlays; fatal on anything permanently mounted.
  *   widget — this subtree owns its keys while focused. Read only against
  *            the active element's ancestors. Correct for Tabs, Table,
- *            ToggleGroup.
+ *            SegmentedControl.
  * A Tabs strip marked `own` would kill every chord in the app permanently.
  */
 

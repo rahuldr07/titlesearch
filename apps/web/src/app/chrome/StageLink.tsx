@@ -7,18 +7,9 @@ import { Link } from "@tanstack/react-router";
  * goes. The stage ids are the server's; the destinations are this app's
  * closest existing surfaces. A `switch` over literal `to` values rather
  * than a string table keeps every destination checked against the route
- * tree at compile time.
+ * tree at compile time. `stageIsCurrent` (its own module, for fast refresh)
+ * answers the other half: whether a stage's door is the one on screen.
  */
-export type StageTargetId = "upload" | "processing" | "review" | "composer" | "delivered";
-
-/** Is this stage the one the current route shows? Pathname is the only input. */
-export function stageIsCurrent(id: string, pathname: string): boolean {
-  if (id === "review") return /\/orders\/[^/]+\/review$/.test(pathname);
-  if (id === "composer") return /\/orders\/[^/]+\/release$/.test(pathname);
-  if (id === "delivered") return pathname.startsWith("/delivery");
-  return false;
-}
-
 export function StageLink(props: {
   readonly id: string;
   readonly orderId: string;

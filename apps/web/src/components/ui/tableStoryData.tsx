@@ -1,4 +1,5 @@
-import { DataCell, statusColumn, type TableColumn } from "./tableColumns";
+import { statusColumn, type TableColumn } from "./tableColumns";
+import { DataCell } from "./dataCell";
 
 /**
  * The story fixture, in real vocabulary rather than "Row 1 / Row 2" — a

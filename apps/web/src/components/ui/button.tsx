@@ -71,4 +71,3 @@ function LinkButton({
 }
 
 export { Button, LinkButton }
-export { buttonVariants } from "./button-chrome"

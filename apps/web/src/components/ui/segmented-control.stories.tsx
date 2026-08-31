@@ -98,8 +98,10 @@ export const WholeControlBlocked: Story = {
 };
 
 /**
- * The radius arithmetic, visible: a 10px track holding 6px cells with 4px of
- * padding between. 6 = 10 − 4, one number and a subtraction.
+ * The radius arithmetic, visible and asserted: a 10px track holding 6px
+ * cells with 4px of padding between. 6 = 10 − 4, one number and a
+ * subtraction — written as rounded-md / p-2 / rounded-sm so a redesign of
+ * any one of the three cannot silently break the relationship.
  */
 export const TheRadiusArithmetic: Story = {
   args: { defaultSelectedKeys: ["all"] },
@@ -111,4 +113,25 @@ export const TheRadiusArithmetic: Story = {
       </p>
     </div>
   ),
+  play: ({ canvasElement }) => {
+    const track = canvasElement.querySelector("[data-slot='segmented-control']");
+    const cell = canvasElement.querySelector("[data-slot='segment']");
+    expect(track?.getAttribute("class")).toContain("rounded-md");
+    expect(track?.getAttribute("class")).toContain("p-2");
+    expect(cell?.getAttribute("class")).toContain("rounded-sm");
+  },
+};
+
+/**
+ * The chord mark is `widget`: a group has roving arrow-key focus, which
+ * makes the arrows and Home/End its own; but it is mounted at all times, so
+ * `own` would kill every chord in the app for the life of the screen.
+ */
+export const OwnsKeysOnlyWhileFocused: Story = {
+  args: { defaultSelectedKeys: ["all"] },
+  render: (args) => <SegmentedControl {...args}>{cells}</SegmentedControl>,
+  play: ({ canvasElement }) => {
+    expect(canvasElement.querySelector("[data-chord-scope='widget']")).not.toBe(null);
+    expect(canvasElement.querySelector("[data-chord-scope='own']")).toBe(null);
+  },
 };

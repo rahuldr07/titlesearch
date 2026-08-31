@@ -232,7 +232,17 @@ function refuseStaleBundles(): void {
   }
 }
 
-refuseStaleBundles();
+/*
+ * The refusal fires only when Playwright itself is executing this config —
+ * every real invocation (`pnpm test:e2e:live` or a hand-typed `playwright
+ * test --config playwright.live.config.ts`) has the Playwright CLI on argv.
+ * Other tools load this file too (knip follows the `--config` flag in
+ * package.json scripts), and an import-time throw would fail THEIR run over
+ * a bundle they were never going to serve.
+ */
+if (process.argv.some((arg) => arg.includes("playwright"))) {
+  refuseStaleBundles();
+}
 
 /**
  * `vite preview` over a PREBUILT directory. Nothing is built here: Playwright

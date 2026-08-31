@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import type { Field } from "@titlepipe/contract";
 import { FieldRow } from "./FieldRow";
-import { isRuinous } from "./T1Pill";
+import { isRuinous } from "./ruinous";
 import type { Section } from "./fieldNaming";
 
 /** The field list — the workstation's left column. */

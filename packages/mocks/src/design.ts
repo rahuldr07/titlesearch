@@ -15,7 +15,7 @@ import type {
   ArtifactsResponse,
   CountersignsResponse,
 } from "@titlepipe/contract";
-import { demoOrders, demoDeliveries, demoFields, demoTimelines } from "./data.js";
+import { demoOrders, demoDeliveries, demoFields, demoTimelines, resetDemoTimelines } from "./data.js";
 import { guard } from "./guard.js";
 import { appendAudit, auditActor } from "./audit.js";
 import { TEMPLATE_VERSION } from "./templates.js";
@@ -117,8 +117,10 @@ function matches(row: OrderRow, q: string): boolean {
     .filter(Boolean)
     .every((term) => {
       const scoped = /^([a-z]+):(.+)$/.exec(term);
-      if (scoped && fields[scoped[1] ?? ""] !== undefined) {
-        const key = scoped[1] ?? "";
+      const key = scoped?.[1] ?? "";
+      // Own keys only — `constructor:x` must fall through to full-text search,
+      // not resolve `fields.constructor` up the prototype chain to a function.
+      if (scoped && Object.hasOwn(fields, key)) {
         const want = key === "ref" ? digits(scoped[2] ?? "") : (scoped[2] ?? "");
         return (fields[key] ?? "").includes(want);
       }
@@ -161,7 +163,7 @@ const CLEARED_SECOND_READER = "R. Menon (QC)";
  * filed it, or the row could be second-read twice. An order with no entry
  * has no T1-tagged rulings — the empty list is the true answer.
  */
-const countersignStore = new Map<string, CountersignRow[]>([
+const seedCountersigns = (): [string, CountersignRow[]][] => [
   [
     REVIEW_ORDER_ID,
     // The three ruinous-exposure rulings 4176034-1 still owes a second read —
@@ -182,7 +184,9 @@ const countersignStore = new Map<string, CountersignRow[]>([
       { field_id: "fld_14_lender", path: "mortgages.1.lender", value: "Ashfield Savings", ruled_by: "D. Okafor", countersigned_by: CLEARED_SECOND_READER },
     ],
   ],
-]);
+];
+
+const countersignStore = new Map<string, CountersignRow[]>(seedCountersigns());
 
 /**
  * How many T1 rulings still await their second read, quoted from the
@@ -211,17 +215,18 @@ function t1Gate(orderId: string): { passed: boolean; detail: string | null } {
 
 /**
  * The delivery ledger this file mutates — the rows `GET /api/deliveries`
- * serves and the version ledger reads. `handlers.ts` keeps its own copy of
- * `demoDeliveries`, but it imports this module, so its store cannot be
- * imported here. `designHandlers` are spread ahead of `handlers.ts`'s own
- * and MSW resolves the first matching handler, so the GET and retry
- * handlers below shadow the `handlers.ts` twins and every reader and writer
- * of a delivery touches the same rows. One store, one answer.
+ * serves and the version ledger reads. The one store: `handlers.ts` holds no
+ * delivery routes of its own, so every reader and writer of a delivery
+ * touches these rows. One store, one answer.
  */
-const deliveryStore: DeliveryWithReport[] = demoDeliveries.map((d) => ({
-  ...d,
-  report: d.report ? { ...d.report } : null,
-}));
+const seedDeliveries = (): DeliveryWithReport[] =>
+  demoDeliveries.map((d) => ({
+    ...d,
+    receipt: d.receipt.map((step) => ({ ...step })),
+    report: d.report ? { ...d.report } : null,
+  }));
+
+const deliveryStore: DeliveryWithReport[] = seedDeliveries();
 let reissueCount = 0;
 
 /**
@@ -232,6 +237,21 @@ let reissueCount = 0;
  * in this package.
  */
 const seals = new Map<string, { sha256: string; at: string; version: number }>();
+
+/**
+ * Re-seed every mutable store this module owns — plus the timeline events its
+ * countersign handler appended to `demoTimelines`. Called only by
+ * `POST /api/demo/reset` (handlers.ts), which resets every store in the
+ * package together.
+ */
+export function resetDesignStores(): void {
+  deliveryStore.splice(0, deliveryStore.length, ...seedDeliveries());
+  reissueCount = 0;
+  seals.clear();
+  countersignStore.clear();
+  for (const [orderId, rows] of seedCountersigns()) countersignStore.set(orderId, rows);
+  resetDemoTimelines();
+}
 
 const composition = (orderId: string): CompositionResponse =>
   orderId === CLEARED_ORDER_ID ? clearedComposition(orderId) : blockedComposition(orderId);
@@ -526,8 +546,7 @@ export const designHandlers = [
 
   /*
    * The delivery list and retry, served off the same store the reissue
-   * below appends to. These two shadow their `handlers.ts` twins (see
-   * `deliveryStore`): a reissue that mutated a store the list never reads
+   * below appends to: a reissue that mutated a store the list never reads
    * would file a version nobody can see.
    */
   http.get("/api/deliveries", () => HttpResponse.json({ deliveries: deliveryStore })),
@@ -538,13 +557,31 @@ export const designHandlers = [
     if (denied) return denied;
     const d = deliveryStore.find((x) => x.id === params["id"]);
     if (!d) return HttpResponse.json({ error: "no such delivery" }, { status: 404 });
+    /*
+     * Retry is the transit act on a bounced transmission and nothing else. A
+     * draft has never been signed, so retrying one would transmit around the
+     * signature act; every other status has already reached the wire and has
+     * nothing to retry.
+     */
+    if (d.status !== "failed_transit") {
+      return HttpResponse.json(
+        { error: `only a failed transmission can be retried — this delivery is ${d.status}` },
+        { status: 409 },
+      );
+    }
     const at = new Date().toISOString();
     d.status = "transmitted";
     d.delivered_at = at;
     d.evidence = "delivered on retry — same file, same report version";
-    // The receipt is the record of the act, so the retry writes its own rows.
+    /*
+     * The receipt is the record of the act, and the retry completes only the
+     * transmit step. The ack step has not happened — it keeps `done: false`,
+     * its null instant, and its own sentence (the ReceiptStep invariant).
+     */
     d.receipt = d.receipt.map((step) =>
-      step.done ? step : { ...step, at, who: "retry — same file, same version", done: step.id !== "ack" },
+      step.done || step.id === "ack"
+        ? step
+        : { ...step, at, who: "retry — same file, same version", done: true },
     );
     return HttpResponse.json({ ok: true });
   }),

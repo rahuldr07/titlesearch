@@ -7,7 +7,7 @@
  * query, page — the rulebook pane's filter stays in the component, because a
  * bookmarked rulebook filter is a second rulebook.
  */
-export const ACCOUNT_TAB_IDS = [
+const ACCOUNT_TAB_IDS = [
   "people",
   "access",
   "rules",

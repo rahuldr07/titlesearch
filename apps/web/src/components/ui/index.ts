@@ -10,7 +10,8 @@ export { disabledAttributes, type Disablement, type DisabledAttributes } from ".
 export { cx } from "./cx";
 
 /* ── controls ─────────────────────────────────────────────────────────────── */
-export { Button, LinkButton, buttonVariants } from "./button";
+export { Button, LinkButton } from "./button";
+export { buttonVariants } from "./button-chrome";
 export { Input } from "./input";
 export { Textarea } from "./textarea";
 export { Label } from "./label";
@@ -19,12 +20,6 @@ export { CheckboxGroup, type CheckboxGroupProps } from "./checkbox-group";
 export { RadioGroup, RadioGroupItem } from "./radio-group";
 export { Switch } from "./switch";
 export { Toggle, type ToggleProps } from "./toggle";
-export {
-  ToggleGroup,
-  ToggleGroupItem,
-  type ToggleGroupProps,
-  type ToggleGroupItemProps,
-} from "./toggle-group";
 
 /* ── fields: label + control + description + error, as one unit ───────────── */
 export {
@@ -65,7 +60,8 @@ export {
    own row rendering, and a caller-supplied <tr> is exactly what stops it
    virtualizing. A screen supplies columns. */
 export { Table, type TableProps } from "./table";
-export { DataCell, statusColumn, type ColumnAlign, type RowStatus, type TableColumn } from "./tableColumns";
+export { statusColumn, type ColumnAlign, type RowStatus, type TableColumn } from "./tableColumns";
+export { DataCell } from "./dataCell";
 
 /* ── overlays ─────────────────────────────────────────────────────────────── */
 export { Dialog, DialogBody, DialogFooter, DialogTrigger, type DialogProps } from "./dialog";
@@ -113,3 +109,4 @@ export { Split, SplitPanel, SplitHandle, type SplitProps, type SplitPanelProps }
 export { DECISION_MIN, DECISION_MAX } from "./splitBand";
 /* The rail column. */
 export * from "./sidebar";
+export { useSidebar, SIDEBAR_KEY } from "./sidebar-context";

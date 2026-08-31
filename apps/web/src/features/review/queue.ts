@@ -9,7 +9,7 @@ export function isQueued(field: Field): boolean {
 }
 
 /** The walkable set, in the server's own order. Never re-sorted. */
-export function queuedFields(fields: readonly Field[]): readonly Field[] {
+function queuedFields(fields: readonly Field[]): readonly Field[] {
   return fields.filter(isQueued);
 }
 

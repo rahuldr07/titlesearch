@@ -19,7 +19,7 @@ export type Citation = {
  * construction; the lint rules in `provenance.ts`'s header cover dropping it
  * at use.
  */
-export type Cited<T> = {
+type Cited<T> = {
   readonly value: T;
   readonly citation: Citation;
 };
