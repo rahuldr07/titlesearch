@@ -1,5 +1,6 @@
 import { useRead } from "../../app/useRead";
 import { clients as clientsRead } from "../../shared/clientsQueries";
+import { productsConfig } from "./configQueries";
 
 /**
  * THE RULEBOOK BANNER — which resolved checklist applies to THIS order.
@@ -24,6 +25,7 @@ export function RulebookBanner(props: {
   readonly productId: string;
 }) {
   const clients = useRead(clientsRead);
+  const config = useRead(productsConfig);
 
   if (props.clientId === "" || props.productId === "") {
     return (
@@ -60,8 +62,11 @@ export function RulebookBanner(props: {
       data-testid="rulebook-banner"
       className="flex flex-col gap-4 rounded-md border border-line-strong bg-surface-sunken px-6 py-5"
     >
-      <span className="font-mono text-label leading-flat text-ink-muted">
-        {checklist.product_id}
+      {/* The product's served name; the raw id only when the grid read has
+          not answered — never a composed fallback. */}
+      <span className="font-sans text-label font-bold leading-flat text-ink-secondary">
+        {config.data?.products.find((entry) => entry.id === checklist.product_id)
+          ?.full ?? checklist.product_id}
       </span>
       <ul className="flex flex-col gap-3">
         {checklist.lines.map((line) => (
