@@ -24,14 +24,10 @@ import {
 } from "../components/ui";
 
 /**
- * THE FORM HALF: the things a reader TYPES into.
- *
- * Split from `main.tsx` on the 150-line gate, and the seam is the same one the
- * kit itself draws — `field.tsx` and `input-group.tsx` exist because a control
- * is never alone on a screen, it is a label plus a control plus, sometimes, a
- * refusal. So the bands below always show the composition, never a naked
- * `Input`: an input drawn without its label is the one arrangement that never
- * ships, and eyeballing it proves nothing.
+ * The form half: the things a reader types into. The bands always show the
+ * composition, never a naked `Input` — a control is a label plus a control
+ * plus, sometimes, a refusal, and an input drawn without its label is the
+ * one arrangement that never ships.
  */
 export function FormsHalf() {
   return (
@@ -48,7 +44,7 @@ export function FormsHalf() {
           <TextField defaultValue="BK 0000 PG 00" className="flex flex-col gap-3" isInvalid>
             <Label>Refused</Label>
             <Input data />
-            {/* The SERVER's wording. The client never authors a refusal. */}
+            {/* The server's wording. The client never authors a refusal. */}
             <FieldError>The server refused this value.</FieldError>
           </TextField>
         </Field>

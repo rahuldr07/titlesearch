@@ -5,8 +5,8 @@ import { ToggleGroup, ToggleGroupItem } from "./toggle-group";
 import { onPanel } from "./kitGround";
 
 /**
- * A SEGMENTED CONTROL IS A FILTER, NOT NAVIGATION — the All Orders filter strip
- * is the case, so that is what the stories show.
+ * A segmented control is a filter, not navigation — the All Orders filter
+ * strip is the case, so that is what the stories show.
  */
 const meta = {
   title: "ui/ToggleGroup",
@@ -36,11 +36,9 @@ export const Selected: Story = {
 };
 
 /**
- * RULE 5'S ARITHMETIC, ASSERTED. The design note reads "10px/4px/6px": a track
- * at radius 10 holding cells at 6, with the 4px of padding being the gap.
- * `inner = outer − gap`. Written as `rounded-md` / `p-2` / `rounded-sm`, and
- * checked here so a redesign of any one of the three cannot silently break the
- * relationship between them.
+ * The radius arithmetic, asserted: a track at radius 10 holding cells at 6,
+ * with the 4px of padding being the gap (inner = outer − gap). Checked so a
+ * redesign of any one of the three cannot silently break the relationship.
  */
 export const RadiiFollowTheArithmetic: Story = {
   args: { defaultSelectedKeys: ["all"], children: filters },
@@ -53,7 +51,7 @@ export const RadiiFollowTheArithmetic: Story = {
   },
 };
 
-/** Rule 9 and rule 12: a filter the reader may not use says why. */
+/** A filter the reader may not use says why. */
 export const CellBlocked: Story = {
   args: {
     defaultSelectedKeys: ["all"],
@@ -78,10 +76,9 @@ export const CellBlocked: Story = {
 };
 
 /**
- * THE CHORD CONTRACT, AND THE VALUE IS `widget`. A group has roving arrow-key
- * focus, which makes the arrows and Home/End its own; but it is mounted at all
- * times, so `own` — read document-wide by `overlayIsUp()` — would kill every
- * chord in the app for the life of the screen.
+ * The chord mark is `widget`: a group has roving arrow-key focus, which
+ * makes the arrows and Home/End its own; but it is mounted at all times, so
+ * `own` would kill every chord in the app for the life of the screen.
  */
 export const OwnsKeysOnlyWhileFocused: Story = {
   args: { children: filters },

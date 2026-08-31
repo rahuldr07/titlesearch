@@ -20,15 +20,11 @@ import { guard } from "./guard.js";
 import { appendAudit, auditActor } from "./audit.js";
 import { TEMPLATE_VERSION } from "./templates.js";
 
-/** Handlers for the surface added under the 2026-08-28 ruling. */
-
-/** One template version, quoted everywhere a screen prints it — the pill on
- * the Templates Architect door (`GET /api/rail`) and the catalog's first card
- * both read the templates module's constant; re-exported here because
- * `handlers.ts` already imports it from this module. */
+/** One template version, quoted everywhere a screen prints it; re-exported
+ * here because `handlers.ts` already imports it from this module. */
 export { TEMPLATE_VERSION } from "./templates.js";
 
-/** The client the demo orders belong to — the one NAME `cli_riverbend` resolves to. */
+/** The client the demo orders belong to — the name `cli_riverbend` resolves to. */
 export const CLIENT_NAME = "Riverbend Title";
 
 const ASSIGNEES: Readonly<Record<string, string | null>> = {
@@ -47,11 +43,9 @@ export function assignedFor(o: (typeof demoOrders)[number]): string | null {
 }
 
 /**
- * ⚠ RULED 2026-08-29 (RULING-2026-08-29.md) — the finished due labels the
- * reference app draws ("Due today · 5h 20m left"). The reference computes them
- * client-side from a ticking clock; here they are SERVED, per order, demo-
- * stable, in the reference's own register. Never derived from a timestamp in
- * the browser — there is no timestamp; the label IS the fact.
+ * The finished due labels ("Due today · 5h 20m left"), served per order and
+ * demo-stable. Never derived from a timestamp in the browser — there is no
+ * timestamp; the label is the fact.
  */
 const SLA: Readonly<Record<string, string | null>> = {
   ord_demo_1: "Due today · 5h 20m left",
@@ -75,9 +69,9 @@ export function slaFor(o: (typeof demoOrders)[number]): string | null {
 }
 
 /**
- * The browse row's Due cell — the reference's own derivation, run SERVER-side
- * (`rowMap` in reference-app.html: delivered rows print the word "delivered",
- * live rows drop the "Due today · " / "Due " / " left" furniture).
+ * The browse row's Due cell, derived server-side: delivered rows print the
+ * word "delivered"; live rows drop the "Due today · " / "Due " / " left"
+ * furniture.
  */
 function dueCell(o: (typeof demoOrders)[number]): string | null {
   if (o.stage === "delivered") return "delivered";
@@ -139,18 +133,14 @@ function inFilter(row: OrderRow, f: OrderFilter): boolean {
   return row.stage !== "delivered";
 }
 
-/**
- * THE ORDER WHOSE GATES ARE GREEN. Quoted from the fixture table rather than
- * written as a literal, for the reason `FIELDS_ORDER_ID` is quoted in
- * `handlers.ts`: a second copy of an id is a second answer.
- */
+/** The order whose gates are green. */
 const CLEARED_ORDER_ID = "ord_demo_14";
 
 /**
- * THE ORDER THE FIELD FIXTURE DESCRIBES — quoted from `demoFields` for the
- * reason `CLEARED_ORDER_ID` is quoted from the order table: a second copy of
- * an id is a second answer. (`handlers.ts` quotes the same cell as
- * `FIELDS_ORDER_ID`; it imports this module, so it cannot be imported here.)
+ * The order the field fixture describes — quoted from `demoFields` because a
+ * second copy of an id is a second answer. (`handlers.ts` quotes the same
+ * cell as `FIELDS_ORDER_ID`; it imports this module, so it cannot be
+ * imported here.)
  */
 const REVIEW_ORDER_ID = demoFields[0]?.order_id ?? "";
 
@@ -164,20 +154,12 @@ type CountersignRow = CountersignsResponse["required"][number];
 const CLEARED_SECOND_READER = "R. Menon (QC)";
 
 /**
- * THE T1 SECOND-READ LEDGER, PER ORDER.
- *
- * One store answers both `GET /orders/:id/countersigns` and gate g4 on the
- * composition, so the two endpoints cannot tell different stories about one
- * order. Until 2026-08-29 every order was served the review order's three
- * outstanding rows while `clearedComposition` swore ord_demo_14's gate was
- * already "countersigned by R. Menon (QC)" — one order, two answers.
- *
- * Mutable for the reason `seals` is: a filed countersign has to survive the
- * request that filed it, or the row could be second-read twice. Reset on
- * reload, like every other mutation in this package.
- *
- * An order with no entry has no T1-tagged rulings — the empty list is the
- * true answer for it, not a placeholder.
+ * The T1 second-read ledger, per order. One store answers both
+ * `GET /orders/:id/countersigns` and gate g4 on the composition, so the two
+ * endpoints cannot tell different stories about one order. Mutable for the
+ * reason `seals` is: a filed countersign has to survive the request that
+ * filed it, or the row could be second-read twice. An order with no entry
+ * has no T1-tagged rulings — the empty list is the true answer.
  */
 const countersignStore = new Map<string, CountersignRow[]>([
   [
@@ -203,15 +185,9 @@ const countersignStore = new Map<string, CountersignRow[]>([
 ]);
 
 /**
- * Gate g4, QUOTED from the ledger rather than restated beside it: passed is
- * "no row still open", and the detail names either the open count or the
- * signers the rows actually carry.
- */
-/**
- * ⚠ RULED 2026-08-29 (RULING-2026-08-29.md) — how many T1 rulings still await
- * their second read, QUOTED from the ledger. Exported for the fields census's
- * `verdict_action`: the hub's CTA names the second read only while the ledger
- * actually holds one open, and this is the one place that answer lives.
+ * How many T1 rulings still await their second read, quoted from the
+ * ledger. Exported for the fields census's `verdict_action`: the hub's CTA
+ * names the second read only while the ledger actually holds one open.
  */
 export function openCountersignCount(orderId: string): number {
   return (countersignStore.get(orderId) ?? []).filter((r) => r.countersigned_by === null).length;
@@ -234,18 +210,13 @@ function t1Gate(orderId: string): { passed: boolean; detail: string | null } {
 }
 
 /**
- * THE DELIVERY LEDGER THIS FILE MUTATES — the rows `GET /api/deliveries`
- * serves and the version ledger reads.
- *
- * `handlers.ts` keeps its own copy of `demoDeliveries` for the list and for
- * retry, but a reissue has to APPEND a draft row that the same list then
- * shows, and `handlers.ts` imports this module — the cycle `guard.ts`
- * documents — so its store cannot be imported here. `designHandlers` are
- * spread AHEAD of `handlers.ts`'s own in the assembled array and MSW resolves
- * the first match, so this store is the one the wire serves: the GET and
- * retry handlers below shadow the ones in `handlers.ts` precisely so every
- * reader and every writer of a delivery touches the same rows. One store,
- * one answer.
+ * The delivery ledger this file mutates — the rows `GET /api/deliveries`
+ * serves and the version ledger reads. `handlers.ts` keeps its own copy of
+ * `demoDeliveries`, but it imports this module, so its store cannot be
+ * imported here. `designHandlers` are spread ahead of `handlers.ts`'s own
+ * and MSW resolves the first matching handler, so the GET and retry
+ * handlers below shadow the `handlers.ts` twins and every reader and writer
+ * of a delivery touches the same rows. One store, one answer.
  */
 const deliveryStore: DeliveryWithReport[] = demoDeliveries.map((d) => ({
   ...d,
@@ -254,13 +225,11 @@ const deliveryStore: DeliveryWithReport[] = demoDeliveries.map((d) => ({
 let reissueCount = 0;
 
 /**
- * SEALS FILED THIS PAGE SESSION, `order_id` → digest.
- *
- * The seal is what makes a release IRREVERSIBLE, so it has to survive the
- * request that made it — a handler that recomputed `seal_sha256: null` on the
- * next read would let the same order be released twice, and the second release
- * is the exact act `releaseHold` refuses on. Reset on reload, like every other
- * mutation in this package.
+ * Seals filed this page session, `order_id` → digest. The seal makes a
+ * release irreversible, so it has to survive the request that made it — a
+ * handler that recomputed `seal_sha256: null` on the next read would let the
+ * same order be released twice. Reset on reload, like every other mutation
+ * in this package.
  */
 const seals = new Map<string, { sha256: string; at: string; version: number }>();
 
@@ -276,12 +245,11 @@ const row = (label: string, value: string): ManifestValue => ({
 });
 
 /**
- * ⚠ RULED 2026-08-29 (RULING-2026-08-29.md) — a PENDING row, exactly as the
- * reference's composer draws one: the amber " — pending examiner confirmation"
- * sentence is SERVED, and `field_id` is the workstation field PATH the drawn
- * dashed underline jumps to. Every path below is quoted from `demoFields`'
- * needs_review rows for the review order, so the jump lands on a field that
- * genuinely awaits a ruling.
+ * A pending row: the amber " — pending examiner confirmation" sentence is
+ * served, and `field_id` is the workstation field path the dashed underline
+ * jumps to. Every path below is quoted from `demoFields`' needs_review rows
+ * for the review order, so the jump lands on a field that genuinely awaits
+ * a ruling.
  */
 const pendingRow = (label: string, value: string, fieldPath: string): ManifestValue => ({
   label,
@@ -355,11 +323,11 @@ function blockedComposition(orderId: string): CompositionResponse {
   order_id: orderId,
   template_version: TEMPLATE_VERSION,
   /*
-   * ⚠ RULED 2026-08-29 — the pending rows below carry the workstation paths
-   * of 4176034-1's six needs_review fields (`demoFields`), so every amber
-   * dashed value on the certificate jumps to a field that truly awaits its
-   * ruling. The blocked composition IS that order's sheet, reused as the
-   * fixture stand-in for every order that is not cleared.
+   * The pending rows below carry the workstation paths of 4176034-1's
+   * needs_review fields (`demoFields`), so every amber dashed value on the
+   * certificate jumps to a field that truly awaits its ruling. The blocked
+   * composition is that order's sheet, reused as the fixture stand-in for
+   * every order that is not cleared.
    */
   blocks: [
     { id: "b1", numeral: "I", title: "Header information", values: [row("Order", "4176034-1"), row("Jurisdiction", "Clayton County, GA"), row("Product", "40-year search")], field_count: 6, cited: 6 },
@@ -373,8 +341,8 @@ function blockedComposition(orderId: string): CompositionResponse {
   gates,
   releasable: false,
   blocked_reason: `${String(open)} gate${open === 1 ? " is" : "s are"} open. The report cannot compose until each is answered.`,
-  // The step blocking release, as a door (RULED 2026-08-29): open decisions
-  // and the second read both live on the workstation, so that is the door.
+  // The step blocking release, as a door: open decisions and the second
+  // read both live on the workstation, so that is the door.
   blocked_door: `/orders/${orderId}/review`,
   seal_sha256: null,
   released_at: null,
@@ -399,13 +367,12 @@ const fixtureDigest = (seed: string): string => {
 };
 
 /**
- * ⚠ RULED 2026-08-29 (RULING-2026-08-29.md) — THE CLERK-STAMP FIXTURE. The
- * server reads jurisdiction off the recorded clerk stamp during optical
- * quarantine; the create handler stamps THESE values on every order it files,
- * and `quarantineBody` serves the same values on `resolved`, so intake's
- * read-only row and the order it signs for can never disagree. Since the same
- * ruling removed `jurisdiction`/`state`/`county` from `CreateOrderRequest`,
- * this fixture is the ONLY author of those three members in the mock.
+ * The clerk-stamp fixture. The server reads jurisdiction off the recorded
+ * clerk stamp during optical quarantine; the create handler stamps these
+ * values on every order it files, and `quarantineBody` serves the same
+ * values on `resolved`, so intake's read-only row and the order it signs
+ * for can never disagree. This fixture is the only author of those three
+ * members in the mock.
  */
 export const CLERK_STAMP = {
   jurisdiction: "clayton-ga",
@@ -415,11 +382,11 @@ export const CLERK_STAMP = {
 } as const;
 
 /**
- * The gateway's verdicts, served both order-scoped (`GET /orders/:id/
- * quarantine`) and at the door (`POST /api/intake/quarantine`, the pre-order
- * scan RULING-2026-08-29's one-act intake runs the moment a file lands).
- * A digest already on the books fails the de-dup step in the SERVER'S words
- * and resolves nothing — an unread stamp binds no rulebook.
+ * The gateway's verdicts, served both order-scoped
+ * (`GET /orders/:id/quarantine`) and at the door
+ * (`POST /api/intake/quarantine`, the pre-order scan run the moment a file
+ * lands). A digest already on the books fails the de-dup step in the
+ * server's words and resolves nothing — an unread stamp binds no rulebook.
  */
 export function quarantineBody(
   orderId: string | null,
@@ -518,8 +485,7 @@ export const designHandlers = [
       version: 1,
     };
     seals.set(orderId, filed);
-    // RULED 2026-08-29: a release is a moment of record — the audit ledger
-    // appends live, and the Settings pane shows it on its next read.
+    // A release is a moment of record — the audit ledger appends live.
     appendAudit(auditActor(request), "release_executed", "orders", orderId);
     return HttpResponse.json({
       order_id: orderId,
@@ -530,13 +496,10 @@ export const designHandlers = [
   }),
 
   /*
-   * One artifact per report actually delivered for this order, so an order with
-   * a v1 and a v2 has two rows and each joins to its own report. Before this
-   * every order got a single `rep_1` row carrying one shared digest — a hash
-   * that hashed nothing and a join that landed on another order's report.
-   *
-   * Read from `demoDeliveries` — the immutable released record — and NOT from
-   * `deliveryStore`, deliberately: a reissue DRAFT lives only in the store,
+   * One artifact per report actually delivered for this order — an order
+   * with a v1 and a v2 has two rows, each joined to its own report. Read
+   * from `demoDeliveries` — the immutable released record — and not from
+   * `deliveryStore`, deliberately: a reissue draft lives only in the store,
    * and a draft has no certified artifact until it releases.
    */
   http.get("/api/orders/:id/artifacts", ({ params }) => {
@@ -562,14 +525,14 @@ export const designHandlers = [
   }),
 
   /*
-   * The delivery list and retry, served off the SAME store the reissue below
-   * appends to. These two shadow their `handlers.ts` twins (see the note on
+   * The delivery list and retry, served off the same store the reissue
+   * below appends to. These two shadow their `handlers.ts` twins (see
    * `deliveryStore`): a reissue that mutated a store the list never reads
    * would file a version nobody can see.
    */
   http.get("/api/deliveries", () => HttpResponse.json({ deliveries: deliveryStore })),
 
-  /** Retry re-SENDS the same file — the report is never re-rendered. */
+  /** Retry re-sends the same file — the report is never re-rendered. */
   http.post("/api/deliveries/:id/retry", ({ params, request }) => {
     const denied = guard(request, "delivery.retry");
     if (denied) return denied;
@@ -587,9 +550,9 @@ export const designHandlers = [
   }),
 
   /**
-   * ⚠ RULED 2026-08-29 — the Reissue Gateway's canned reasons, served. The
-   * reference's `reissueReasons` array, verbatim; the vocabulary is the
-   * server's so the browser never puts its own words on the lender's record.
+   * The Reissue Gateway's canned reasons, served. The vocabulary is the
+   * server's, so the browser never puts its own words on the lender's
+   * record.
    */
   http.get("/api/reissue/reasons", () => {
     const body: ReissueReasonsResponse = {
@@ -603,19 +566,15 @@ export const designHandlers = [
   }),
 
   /*
-   * REISSUE — Law 9's one licensed act on a released version. Until
-   * 2026-08-29 the reason check fell through to "no released version to
-   * supersede" for EVERY delivery, while the store above holds delivered
-   * v1s — the refusal contradicted the fixture it guards. The rule, made
-   * true:
-   *   - a delivery whose report exists names a released version; the reissue
-   *     opens the next version as a DRAFT row the version ledger reads, with
-   *     the stated reason and the superseded version ON THE REPORT
-   *     (`Report.reason` / `Report.supersedes`, RULED 2026-08-29);
-   *   - ONE-WAY: while that draft is open the gateway is closed — a draft is
-   *     not a released version, so there is nothing further to supersede;
-   *   - a delivery with no report keeps the refusal verbatim: there truly is
-   *     no released version behind it.
+   * Reissue — the one licensed act on a released version:
+   *   - a delivery whose report exists names a released version; the
+   *     reissue opens the next version as a draft row the version ledger
+   *     reads, with the stated reason and the superseded version on the
+   *     report (`Report.reason` / `Report.supersedes`);
+   *   - one-way: while that draft is open the gateway is closed — a draft
+   *     is not a released version, so there is nothing further to supersede;
+   *   - a delivery with no report is refused: there truly is no released
+   *     version behind it.
    */
   http.post("/api/deliveries/:id/reissue", async ({ params, request }) => {
     const denied = guard(request, "delivery.reissue");
@@ -646,8 +605,8 @@ export const designHandlers = [
       version: supersedes + 1,
       shape: released.shape,
       rendered_at: new Date().toISOString(),
-      // The ledger's "Reason:" line and the superseded numeral, persisted on
-      // the row rather than echoed once (RULED 2026-08-29).
+      // The ledger's "Reason:" line and the superseded numeral, persisted
+      // on the row rather than echoed once.
       supersedes,
       reason: body.reason,
     };
@@ -669,8 +628,7 @@ export const designHandlers = [
         { id: "ack", at: null, what: "Client acknowledged receipt", who: "not yet acknowledged", done: false },
       ],
     });
-    // RULED 2026-08-29: the reissue is a moment of record — the audit ledger
-    // appends live.
+    // The reissue is a moment of record — the audit ledger appends live.
     appendAudit(auditActor(request), "reissue_draft_opened", "deliveries", `${released.order_id} v${String(report.version)}`);
     const res: ReissueResponse = { report, supersedes, reason: body.reason };
     return HttpResponse.json(res);
@@ -688,13 +646,10 @@ export const designHandlers = [
   }),
 
   /*
-   * DESIGN RULE 13, ENFORCED RATHER THAN RECITED. Until 2026-08-29 this
-   * handler answered the same-examiner 409 unconditionally — the refusal
-   * existed and the act it guards did not, so "Switch user: R. Menon (QC)"
-   * led nowhere. The acting examiner is the authenticated identity:
-   * `x-mock-actor` stands in for the session/JWT claim, the same convention
-   * `handlers.ts` uses to sign golden corrections — never the typed
-   * signature, which is a client field.
+   * A second read must come from a different examiner. The acting examiner
+   * is the authenticated identity: `x-mock-actor` stands in for the
+   * session/JWT claim, the same convention `handlers.ts` uses to sign
+   * golden corrections — never the typed signature, which is a client field.
    */
   http.post("/api/fields/:id/countersign", async ({ params, request }) => {
     const denied = guard(request, "field.countersign");
@@ -740,12 +695,9 @@ export const designHandlers = [
       at: new Date().toISOString(),
     };
     /*
-     * ⚠ RULED 2026-08-29 (RULING-2026-08-29.md) — the drawn trail line. When
-     * the LAST open T1 ruling on this order's ledger gains its second read,
-     * the SERVER appends the event the reference draws ("R. Menon (QC)
-     * countersigned 3 T1 rulings — second read complete") to the order's
-     * timeline, and the trail re-reads it — never an optimistic append in the
-     * browser (`useCountersign.ts` already invalidates the timeline read).
+     * When the last open T1 ruling on this order's ledger gains its second
+     * read, the server appends the event to the order's timeline and the
+     * trail re-reads it — never an optimistic append in the browser.
      */
     if (ledgerOrderId !== null) {
       const ledger = countersignStore.get(ledgerOrderId) ?? [];
@@ -760,8 +712,7 @@ export const designHandlers = [
         });
       }
     }
-    // RULED 2026-08-29: a countersign is a moment of record — the audit
-    // ledger appends live.
+    // A countersign is a moment of record — the audit ledger appends live.
     appendAudit(actor, "field_countersigned", "fields", fieldId);
     return HttpResponse.json(filed);
   }),
@@ -769,9 +720,6 @@ export const designHandlers = [
   http.get("/api/orders/:id/quarantine", ({ params }) =>
     HttpResponse.json(quarantineBody(String(params["id"]), null)),
   ),
-
-  // The templates resource moved to `templates.ts` when RULING-2026-08-29
-  // widened it from one shape to the drawn catalog + per-template detail.
 
   http.get("/api/blind/:order/schedule", ({ params }) => {
     const body: CaptureScheduleResponse = {

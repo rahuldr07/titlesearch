@@ -3,21 +3,11 @@ import { clients as clientsRead } from "../../shared/clientsQueries";
 import { productsConfig } from "./configQueries";
 
 /**
- * THE RULEBOOK BANNER — which resolved checklist applies to THIS order.
- *
- * ⚠ AMENDED 2026-08-29 (RULING-2026-08-29.md): `CreateOrderRequest` carries
- * `product` now, so the banner resolves by client AND product — the full
- * `EffectiveChecklist` key (workspace.ts:121) — where it used to name every
- * checklist the client had for want of the second half. One key, one
- * checklist, or an honest sentence about the absence.
- *
- * THE THREE LAYERS ARE REAL; THE THREE COUNTS ARE NOT. `EffectiveLine
- * .application` (workspace.ts:110) carries the three ways a standard line can
- * land — applies / narrowed / excluded — so the lines are LISTED and nothing
- * is tallied. The resolution itself is never recomputed either —
- * workspace.ts:100-104 is explicit that two resolvers disagreeing is the
- * defect that ships a search missing a line somebody thought was covered.
- * `conflict` is a SERVER-DETECTED contradiction between two overrides,
+ * Which resolved checklist applies to this order — one client-and-product
+ * key, one checklist, or an honest sentence about the absence. The lines are
+ * listed and nothing is tallied; the resolution itself is never recomputed —
+ * two resolvers disagreeing is the defect that ships a search missing a line
+ * somebody thought was covered. `conflict` is a server-detected contradiction,
  * printed verbatim.
  */
 export function RulebookBanner(props: {

@@ -7,13 +7,13 @@ import { CoverageSpine } from "./CoverageSpine";
 import { CitedRegionNote } from "./CitedRegion";
 import { InstrumentIndex } from "./InstrumentIndex";
 
-/** A page another pane asked for. An OBJECT so two asks for one page differ. */
+/** A page another pane asked for. An object so two asks for one page differ. */
 export type PageRequest = { readonly page: number };
 
 /**
- * The viewer's state, and the three things it refuses to compute. Which page is on
- * screen is a VIEW position — it is not order state, it is not derived from a
- * threshold, and it is not written anywhere.
+ * The viewer's state. Which page is on screen is a view position — it is
+ * not order state, it is not derived from a threshold, and it is not
+ * written anywhere.
  */
 export function ScanViewer(props: {
   readonly total: number;
@@ -29,15 +29,15 @@ export function ScanViewer(props: {
   /** Magnification. Owned by `ScanPane` so the `Z` chord can reach it. */
   readonly zoom: ZoomLevel;
   readonly onZoom: (zoom: ZoomLevel) => void;
-  /** The drawn zoom-to-citation (RULING-2026-08-29). Owned by `ScanPane` for `Z`. */
+  /** Zoom-to-citation. Owned by `ScanPane` so the `Z` chord can reach it. */
   readonly citeZoom: boolean;
   readonly onCiteZoom: (on: boolean) => void;
-  /** The design's ◉ Following / ○ Free. When off, selection stops paging. */
+  /** ◉ Following / ○ Free. When off, selection stops paging. */
   readonly following: boolean;
   readonly onFollowing: (following: boolean) => void;
 }) {
-  /* An ask outstanding AT MOUNT is still an ask — the matrix's `?page=` deep
-     link arrives that way — so it outranks the open field's citation in the
+  /* An ask outstanding at mount is still an ask — the `?page=` deep link
+     arrives that way — so it outranks the open field's citation in the
      initial position exactly as a later ask would in the block below. */
   const [shown, setShown] = useState(
     props.request?.page ?? props.page ?? props.described[0]?.n ?? 1,
@@ -50,19 +50,18 @@ export function ScanViewer(props: {
     if (props.page !== null && props.following) setShown(props.page);
   }
 
-  /* AN ASK IS NOT A CITATION. `following` governs whether SELECTION drags the
-     page; a reader who pressed "View on page" asked for it outright. */
+  /* An ask is not a citation. `following` governs whether selection drags
+     the page; a reader who pressed "View on page" asked for it outright. */
   if (askedAt !== props.request) {
     setAskedAt(props.request);
     if (props.request !== null) setShown(props.request.page);
   }
 
   /*
-   * CONTRACT GAP, and it is the mocks' own note (`workspace.ts:668`):
-   * `total_pages` is a plain int, so a package that could not be read at all
-   * arrives as 0. Zero is not "a package of no pages" and it is not a failed
-   * request — `QueryState` already answered that one — so it is stated rather
-   * than drawn as an empty spine of zero cells.
+   * CONTRACT GAP: `total_pages` is a plain int, so a package that could not
+   * be read at all arrives as 0. Zero is not "a package of no pages" and it
+   * is not a failed request — `QueryState` already answered that one — so
+   * it is stated rather than drawn as an empty spine of zero cells.
    */
   if (props.total < 1) {
     return (
@@ -75,7 +74,7 @@ export function ScanViewer(props: {
   }
 
   const here = props.described.find((page) => page.n === shown) ?? null;
-  /* The pin belongs to the CITED page. Paging away from it takes it with you. */
+  /* The pin belongs to the cited page. Paging away from it takes it with you. */
   const pinned = props.page !== null && props.page === shown;
   /* And so does the box: a region drawn on another page cites another page. */
   const box = props.box !== null && props.box.page === shown ? props.box : null;

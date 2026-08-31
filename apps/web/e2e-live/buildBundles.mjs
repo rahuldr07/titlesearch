@@ -1,26 +1,19 @@
 /**
- * The bundles the live harness compares, built HERE, in this order, and BEFORE
+ * The bundles the live harness compares, built here, in this order, before
  * Playwright starts.
  *
- * Not a Playwright `globalSetup`: Playwright starts every `webServer` before
- * globalSetup runs, so a build placed there is a build that happens after
- * `vite preview` has already failed to find the directory. Measured, not
- * assumed — that is exactly what the first version of this file did.
+ * Not a Playwright `globalSetup`: Playwright starts every `webServer`
+ * before globalSetup runs, so a build placed there happens after
+ * `vite preview` has already failed to find the directory. Not a
+ * `webServer` command either: two of the servers serve the same
+ * `dist-harness/live` and start in parallel, so a build inside one would
+ * race the server already trying to serve it.
  *
- * Not a `webServer` command either. Two of the servers serve the same
- * `dist-harness/live` and Playwright starts them in parallel, so a build inside
- * one would race the server already trying to serve it.
- *
- * `VITE_API_MODE` is set on the BUILD because `import.meta.env` is inlined into
- * the output — setting it only when `vite preview` starts changes the proxy and
- * nothing else; the JavaScript the browser runs has already decided whether to
- * start MSW. The preview servers set it too, for the other half.
- *
- * NOT UNDER `dist/`, which is where these started. `playwright.config.ts`'s
- * `pnpm build` empties `dist/` wholesale on every mock e2e run — measured, it
- * deleted both harness directories — so the two suites could not actually run
- * alongside each other however carefully the ports were chosen. `dist-harness/`
- * is gitignored beside `dist`.
+ * `VITE_API_MODE` is set on the build because `import.meta.env` is inlined
+ * into the output — setting it only on preview changes the proxy and
+ * nothing else. Not under `dist/`: `playwright.config.ts`'s `pnpm build`
+ * empties `dist/` wholesale on every mock e2e run, so the two suites could
+ * not run alongside each other. `dist-harness/` is gitignored beside `dist`.
  *
  *   node e2e-live/buildBundles.mjs
  */

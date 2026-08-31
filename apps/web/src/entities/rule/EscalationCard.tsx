@@ -4,24 +4,15 @@ import { cx } from "../../components/ui";
 import { OrderRef } from "../order/OrderRef";
 
 /**
- * AN ESCALATION, AND THE FURNITURE THAT IS DELIBERATELY MISSING.
+ * An escalation, with the triage furniture deliberately missing — no
+ * category, no priority, no assignee; the contract agrees by omission.
  *
- * `INVARIANTS:39`: "The escalation inbox has NO TRIAGE FURNITURE — no category,
- * no priority, no assignee. Just the rule." The contract agrees by omission:
- * `Escalation` (`entities.ts:166-175`) carries a question, the orders it spans,
- * a resolution and a rule id, and nothing else. There is no priority to render
- * and there must not be one to sort by.
- *
- * `INVARIANTS:36` is `§0.5 MANDATORY` and is what the footer draws: "escalation
- * resolution is REFUSED without a rule. A ruling alone is not a resolution."
- * So an escalation with a `resolution` and a null `rule_id` is NOT rendered as
- * resolved. It is rendered as still open, with the ruling shown and the missing
- * rule named — because a UI that draws it as settled has, on screen, performed
- * the resolution the server refused.
- *
- * `INVARIANTS:37`: citing an existing rule is one of exactly TWO paths, the
- * other being drafting one (which lands PENDING and inert — `RulePill`). The
- * actions are handed in rather than built here, so this card cannot grow a
+ * Escalation resolution is refused without a rule: an escalation with a
+ * `resolution` and a null `rule_id` is not rendered as resolved but as
+ * still open, with the ruling shown and the missing rule named — a UI that
+ * draws it as settled has performed, on screen, the resolution the server
+ * refused. There are exactly two resolution paths (cite a rule, draft one);
+ * the actions are handed in rather than built, so this card cannot grow a
  * third.
  */
 export type EscalationCardProps = {
@@ -33,9 +24,9 @@ export type EscalationCardProps = {
 
 export function EscalationCard({ escalation, actions, className }: EscalationCardProps) {
   /*
-   * NOT a derivation of state — a restatement of the mandatory rule. `rule_id`
-   * is the server's own field; this reads it, and nothing about the card's
-   * appearance depends on `resolution` alone.
+   * Not a derivation of state — a restatement of the mandatory rule.
+   * `rule_id` is the server's own field; nothing about the card's appearance
+   * depends on `resolution` alone.
    */
   const resolvedByRule = escalation.rule_id !== null;
 

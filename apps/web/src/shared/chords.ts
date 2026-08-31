@@ -1,43 +1,13 @@
 /**
- * The chord layer.
- * Every global single-key shortcut in this app goes through here, and the
- * reason is a bug the reference prototype ships.
- * WHAT THE PROTOTYPE DOES (design_handoff_titlepipe/reference-app.html): one
- * `window.addEventListener("keydown")`, guarded by a tagName test —
- * INPUT / TEXTAREA / SELECT / isContentEditable. That guard is structurally
- * incapable of seeing a `react-aria-components` Menu, Select, ComboBox or
- * GridList, whose listboxes are `<div role="listbox">`. They are not INPUT,
- * they DO implement typeahead, and `c` `e` `q` `j` `k` `z` `/` are all
- * printable. So `q` would both escalate the open field AND jump a menu to
- * "Quarantine".
- * Worse: the prototype never guards on its own help overlay. Press `?` then
- * `c` and you CONFIRM A RULING from inside the cheat sheet — on a field
- * carrying T1 exposure. `apps/web-v2/e2e/invariants/chord-suppression.spec.ts`
- * pins both.
- * WHAT PINS WHAT, stated because REVIEW-01 found this header citing a test as
- * proof of a claim the code did not implement:
- *   - `src/shared/focusOwnership.test.ts` — DOM-free, runs in the `gates`
- *     Vitest project, pins every role in both tables including the nine the
- *     review proved missing. This is the check that runs on every `pnpm test`.
- *   - `e2e/invariants/chord-suppression.spec.ts` — the same rules against a
- *     real screen. It is a Playwright spec and it needs the review screen,
- *     which is still a Placeholder in `app/routeTree.tsx`, so it cannot pass
- *     yet. It is not skipped and it is not deleted: it fails honestly until
- *     the screen lands, which is what BRIEF §5 Phase 5 asks for.
- * THE CONTRACT THIS IMPLEMENTS, in one sentence: a global chord is SUSPENDED,
- * never cancelled, while a text surface or an overlay holds focus, and it
- * RESUMES on close without a click.
- * Three consequences worth stating, because each is a test:
- *   - Suspension is by SCOPE, not by tag. The innermost layer that can use a
- *     key wins. `activeElement` is asked what it is, not what element it is.
- *   - Resumption needs no click. Closing an overlay restores chords on the very
- *     next keystroke, because nothing was unbound — the handler stayed
- *     installed and simply declined to act.
- *   - Chords are DEAD until signed in (design README §Interactions). Not
- *     merely inert: not installed.
- * `tinykeys` rather than `react-hotkeys-hook`: HANDOFF-UI.md:167 records that
- * the latter "does not recognise `?` or `[` as hotkey names. Both were
- * registered and never fired."
+ * The chord layer. Every global single-key shortcut goes through here.
+ * A tagName guard (INPUT/TEXTAREA/SELECT) cannot see react-aria composites —
+ * a Menu or ComboBox listbox is a `<div role="listbox">` with typeahead, so a
+ * printable chord would both fire a screen action and jump the menu. The
+ * contract: a global chord is suspended, never cancelled, while a text
+ * surface or an overlay owns focus, and it resumes on close without a click.
+ * Suspension is by scope, not by tag. Chords are not installed at all until
+ * signed in. `tinykeys` rather than `react-hotkeys-hook` because the latter
+ * does not recognise `?` or `[` as hotkey names.
  */
 
 import { useEffect } from "react";
@@ -53,17 +23,11 @@ export { focusOwnsKeys };
 export type SuspendReason = "text-entry" | "overlay" | "signed-out";
 
 /**
- * Is a modal layer up?
- * Asked of the DOM rather than of a store, deliberately. React Aria portals
- * its overlays and marks the rest of the page `aria-hidden`; a store copy of
- * "is a dialog open" is a second source of truth that drifts from the first
- * exactly when it matters — during the transition. The DOM is the layer that
- * actually decides who receives the keystroke, so it is the layer that is
- * asked.
- * `[data-chord-scope='own']` appears here as well as above so an overlay that
- * is up but has not yet moved focus still stands the global layer down. The
- * gap between "open" and "focused" is one frame, and one frame is enough for a
- * held key to repeat.
+ * Is a modal layer up? Asked of the DOM rather than of a store: the DOM is
+ * the layer that actually decides who receives the keystroke, and a store
+ * copy drifts exactly during the transition. The `data-chord-scope` check
+ * covers the one-frame gap between "open" and "focused" — one frame is
+ * enough for a held key to repeat.
  */
 export function overlayIsUp(doc: Document): boolean {
   return (
@@ -75,11 +39,11 @@ export function overlayIsUp(doc: Document): boolean {
 export type ChordBindings = Readonly<Record<string, (event: KeyboardEvent) => void>>;
 
 export type UseChordsOptions = {
-  /** Chords are not installed at all while false. Design: "dead until signed in." */
+  /** Chords are not installed at all while false — dead until signed in. */
   readonly enabled: boolean;
   /**
    * Bindings that survive an open overlay — the palette's own dismiss, for
-   * instance. Default none: opting a key OUT of suppression should be a
+   * instance. Default none: opting a key out of suppression should be a
    * deliberate, visible act at the call site.
    */
   readonly alwaysOn?: ChordBindings;
@@ -87,11 +51,9 @@ export type UseChordsOptions = {
 
 /**
  * Install global chords for the lifetime of the calling component.
- * The suspension test runs INSIDE the handler, on every keystroke, rather than
- * by binding and unbinding as focus moves. That is the mechanism behind
- * "resumes without a click": there is nothing to re-bind, so there is no
- * window in which a chord is lost, and no ordering bug between a close
- * animation and a rebind.
+ * The suspension test runs inside the handler on every keystroke, not by
+ * binding and unbinding as focus moves — that is why chords resume without a
+ * click: nothing was unbound, the handler simply declined to act.
  */
 export function useChords(bindings: ChordBindings, options: UseChordsOptions): void {
   const { enabled, alwaysOn } = options;
@@ -117,10 +79,9 @@ export function useChords(bindings: ChordBindings, options: UseChordsOptions): v
 }
 
 /**
- * Why this keystroke is standing down, or null if it is not.
- * Returned rather than thrown away so a caller can log it. A chord that
- * silently does nothing is indistinguishable from a chord that is broken, and
- * this project has already shipped one of those.
+ * Why this keystroke is standing down, or null if it is not. Returned rather
+ * than thrown away so a caller can log it — a chord that silently does
+ * nothing is indistinguishable from a broken one.
  */
 export function suspendedBecause(event: KeyboardEvent): SuspendReason | null {
   const target = event.target;

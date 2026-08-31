@@ -6,9 +6,8 @@ import { FieldSet, FieldLegend } from "./field-set";
 import { onPanel } from "./kitGround";
 
 /**
- * The group exists so several boxes are ONE answer with ONE accessible name.
- * `Named` proves the name and the `role="group"`; `GroupBlocked` and
- * `OneOptionBlocked` prove the two independent levels of rule 9.
+ * The group exists so several boxes are one answer with one accessible name.
+ * The blocked stories prove the two independent levels of blocking.
  */
 const meta = {
   title: "ui/CheckboxGroup",
@@ -67,7 +66,7 @@ export const GroupBlocked: Story = {
   },
 };
 
-/** ONE box barred, for its own reason. Rendered rather than hidden (rule 12). */
+/** One box barred, for its own reason. Rendered rather than hidden. */
 export const OneOptionBlocked: Story = {
   render: (args) => (
     <CheckboxGroup {...args}>

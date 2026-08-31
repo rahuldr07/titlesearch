@@ -2,10 +2,8 @@ import type { TemplateDetailResponse, TemplateSheetBlock } from "@titlepipe/cont
 import { NA_MODES } from "./useTemplates";
 
 /**
- * The inspector's Null-states and Audit tabs, split from
- * `TemplateInspector.tsx` on the 150-line gate. Both print SERVED members —
- * the four declared absence strings and the template's provenance rows
- * (RULED 2026-08-29).
+ * The inspector's Null-states and Audit tabs. Both print served members —
+ * the four declared absence strings and the template's provenance rows.
  */
 export function NaMatrixPanel({ block }: { readonly block: TemplateSheetBlock }) {
   return (

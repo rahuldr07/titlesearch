@@ -1,17 +1,12 @@
 import { expect, test } from "@playwright/test";
 
 /**
- * HARVESTED INVARIANTS — migrated from apps/web @ ade49af (pre-rebuild).
- * Source: apps/web/e2e/review-conflict.spec.ts
- *
- * Every test here is SKIPPED until the feature it covers lands in web-v2.
- * Un-skip as each feature lands. Rewrite selectors freely.
- * NEVER weaken an assertion — if one cannot pass against the new design,
- * that is a CONFLICT in the design: stop and report (BRIEF §5 Phase 5).
+ * Never weaken an assertion — a test that cannot pass against the new
+ * design is a conflict in the design: stop and report.
  */
 
 import { interceptApi } from "../helpers/net";
-// TODO(rebuild) [INVARIANT] — rule: a 409 is an ANSWER, not a dead no-op: the server's message surfaces verbatim, selection never advances, and the field repaints as the server has it.
+// Rule: a 409 is an ANSWER, not a dead no-op: the server's message surfaces verbatim, selection never advances, and the field repaints as the server has it.
 test("confirm 409 (different value) surfaces the server's message and never advances", async ({
   page,
 }) => {
@@ -36,7 +31,7 @@ test("confirm 409 (different value) surfaces the server's message and never adva
   );
 });
 
-// TODO(rebuild) [INVARIANT] — rule: a terminal-state 409 is answered the same way — surfaced, not swallowed.
+// Rule: a terminal-state 409 is answered the same way — surfaced, not swallowed.
 test("confirm 409 (terminal state) is answered, not a dead no-op", async ({ page }) => {
   await interceptApi(page, {
     method: "POST",
@@ -54,7 +49,7 @@ test("confirm 409 (terminal state) is answered, not a dead no-op", async ({ page
   await expect(page.getByTestId("sel-label")).toHaveText("OWNER ZIP");
 });
 
-// TODO(rebuild) [INVARIANT] — rule: confirm is idempotent on an identical value (200/200) and conflicts on a different one (409).
+// Rule: confirm is idempotent on an identical value (200/200) and conflicts on a different one (409).
 test("bug-5 mock semantics hold: same value 200/200, different value 409", async ({
   page,
 }) => {

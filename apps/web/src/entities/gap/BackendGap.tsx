@@ -1,33 +1,16 @@
 import type { ReactNode } from "react";
 
 /**
- * WHAT THE DESIGN DRAWS AND THE CONTRACT CANNOT SERVE — SAID PLAINLY.
- *
- * Three of the objects in design §Screens 5 and §6 have NO contract shape, and
- * `ANALYSIS-screens.md` §7 conversation 3 is the record of asking for them:
- * the Quarantine Gateway checklist, the Optical Profile card, and the dark
- * streaming terminal. Transcribing any of them would put a four-step state
- * machine, three thresholds, or probe output in the browser — hard rule 3 for
- * the first two, `entities.ts:17-19` for the third ("probes are never visible
- * in any client").
- *
- * So each renders as this: the object's name, what it would bind to if the
- * shape existed, and the blocking question. It is deliberately NOT a skeleton
- * and NOT a spinner. A skeleton says "this is loading and will arrive"; the
- * honest statement is "nothing is coming until a backend conversation
- * settles", and a reader who cannot tell those apart will wait for the wrong
- * one.
- *
- * It is also NOT an `Empty`: an empty pane is a pane with nothing IN it, and
- * this is a pane with nothing BEHIND it. Different facts, `entities/` is where
- * the taxonomy lives (see `components/ui/empty.tsx`), and this is a member of
- * it.
- *
- * A Card is deliberately not used — nested cards are forbidden (RECIPES
- * §Card), and every site that needs this already sits inside one.
+ * What the design draws and the contract cannot serve, said plainly: the
+ * object's name, what it would bind to, and the blocking question.
+ * Deliberately not a skeleton or a spinner — those say "this will arrive",
+ * and the honest statement is "nothing is coming until a backend
+ * conversation settles". Not an Empty either: an empty pane has nothing in
+ * it, this one has nothing behind it. No Card — every site that needs this
+ * already sits inside one.
  */
 export function BackendGap(props: {
-  /** The design's own name for the object, so a reader can find it in §Screens. */
+  /** The design's own name for the object, so the two can be matched up. */
   readonly object: string;
   /** Where the blocking question is recorded, e.g. "ANALYSIS-screens.md §7". */
   readonly conversation: string;

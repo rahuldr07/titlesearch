@@ -12,37 +12,13 @@ import { cx } from "./cx";
 import { chordOverlay } from "./overlaySurface";
 
 /**
- * THE MODAL, AND THE TWO THINGS IT OWES THE CHORD LAYER.
- *
- * First: `role="dialog"`, which react-aria's Dialog supplies, is the FIRST
- * clause of `overlayIsUp()` in `shared/chords.ts`. Second: the explicit
- * `data-chord-scope="own"` is the SECOND clause, and it is on the OVERLAY
- * rather than on the dialog so it exists from the moment the scrim mounts —
- * before focus moves inside.
- *
- * That second one is not belt-and-braces. `chords.ts` pins the prototype bug
- * where "? then c CONFIRMS A RULING from inside the cheat sheet — on a field
- * carrying T1 exposure". A help overlay is a dialog; a dialog stands the
- * vocabulary down; the ruling cannot fire.
- *
- * ══ ADAPTED FROM THE REGISTRY ═══════════════════════════════════════════════
- *
- * The registry drew `bg-black/10` with `backdrop-blur-xs` and a `ring-1
- * ring-foreground/10` card at `rounded-xl`. RECIPES.md §Elevation asks for a
- * `rgba(20,18,30,.45)` BLURRED scrim and `--shadow-modal`, so: `tp-scrim`
- * (ui.css — the 3px blur is not on Tailwind's scale and check-rules bans the
- * arbitrary value), `shadow-modal`, `rounded-lg` (14, rule 5's surface rung),
- * and the ring is dropped — a shadow that heavy needs no hairline as well.
- *
- * MOTION: the scrim FADES (`tp-fade`) and the card RISES (`tp-enter`). The
- * design note's "220ms pop" is spent as the entry token, 260ms
- * cubic-bezier(.32,.72,0,1): rule 10 ships three timings and 220 is not one of
- * them, and that curve decelerates to rest rather than overshooting. Nothing
- * bounces. React Aria holds the unmount until the exit animation ends.
- *
- * `isDismissable` defaults TRUE, and Esc therefore closes. `chords.ts` calls
- * resumption-without-a-click a test: nothing was unbound while this was open,
- * so the very next keystroke after close is live again.
+ * The modal owes the chord layer two things: role="dialog" (supplied by
+ * react-aria's Dialog) and the explicit data-chord-scope="own", which sits
+ * on the overlay rather than the dialog so it exists from the moment the
+ * scrim mounts — before focus moves inside. React Aria holds the unmount
+ * until the exit animation ends. `isDismissable` defaults true, so Esc
+ * closes, and nothing was unbound while the dialog was open — the very next
+ * keystroke after close is live again.
  */
 export type DialogProps = Omit<ModalOverlayProps, "className" | "children"> & {
   /** The dialog's accessible name. Required: an unnamed dialog is unnavigable. */
@@ -72,10 +48,9 @@ export function Dialog({
           data-slot="dialog"
           data-testid={testId}
           /*
-           * `aria-modal` is set on the NODE because React Aria drops it as a
-           * prop — it marks everything outside the overlay `inert` instead,
-           * which is stronger. `key-map-modal.spec` asserts the attribute, and
-           * an assertion is not weakened to match an implementation.
+           * aria-modal is set on the node because React Aria drops it as a
+           * prop — it marks everything outside the overlay `inert` instead.
+           * key-map-modal.spec asserts the attribute.
            */
           ref={(node) => node?.setAttribute("aria-modal", "true")}
           className={cx(
@@ -91,13 +66,10 @@ export function Dialog({
 }
 
 /**
- * The header BAND, not a header card. RECIPES.md §Card: "11px w700 #8A8E98
- * sentence case on #FBFBFD with a #EDEFF3 rule" — and nested cards are
- * forbidden, so this has no border box, no radius and no shadow of its own.
- *
- * `slot="title"` is what gives the dialog its accessible name; react-aria
- * wires `aria-labelledby` from it, which is why the title is not merely a
- * styled span.
+ * The header band — no border box, radius or shadow of its own, since nested
+ * cards are forbidden. `slot="title"` is what gives the dialog its accessible
+ * name; react-aria wires `aria-labelledby` from it, which is why the title is
+ * not merely a styled span.
  */
 function DialogHeaderBand({ title }: { readonly title: string }) {
   return (
@@ -126,9 +98,8 @@ export function DialogBody({ children }: { readonly children: ReactNode }) {
 }
 
 /**
- * The action row. Sunken, hairline above, actions right — and rule 1 binds
- * here harder than anywhere: AT MOST ONE primary button in this row, because a
- * modal is usually the screen's decision and the accent is spent once.
+ * The action row. Sunken, hairline above, actions right. At most one primary
+ * button here — a modal is usually the screen's decision.
  */
 export function DialogFooter({ children }: { readonly children: ReactNode }) {
   return (

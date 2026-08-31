@@ -8,14 +8,10 @@ import { SignFooter } from "./SignFooter";
 import type { useQuarantineScan } from "./useQuarantineScan";
 
 /**
- * THE INTAKE CARD — the package on the left, the order on the right, ONE act
- * across the bottom: `reference-app.html`'s `isUpload`, built as drawn under
- * RULING-2026-08-29. The Quarantine Gateway checklist and Optical Profile
- * render INLINE under the file row — the pre-order scan
- * (`POST /api/intake/quarantine`, `useQuarantineScan`) serves them the moment
- * a file lands, which retired the "no order to read against" split. The old
- * Product gap card is retired too: `CreateOrderRequest.product` exists and
- * the select beside Client carries it.
+ * The intake card — the package on the left, the order on the right, one act
+ * across the bottom. The quarantine checklist and optical profile render
+ * inline under the file row; the pre-order scan serves them the moment a file
+ * lands.
  */
 export function IngestForm(props: {
   readonly values: CreateOrderRequest;
@@ -33,9 +29,8 @@ export function IngestForm(props: {
       ? { text: "Quarantine Halted", tone: "halt" }
       : { text: "Scanning…", tone: "attend" };
 
-  /* The reference's three helper sentences, drawn beside the act. The BUTTON
-     is gated only on the file — a press with client or product unpicked is
-     refused by the SERVER, which names what is missing (INVARIANTS 60-61). */
+  /* The button is gated only on the file — a press with client or product
+     unpicked is refused by the server, which names what is missing. */
   const note =
     props.file === null
       ? "Drop the package to begin"
@@ -58,9 +53,8 @@ export function IngestForm(props: {
           {props.file !== null && scan.data !== null && (
             <QuarantineGateway
               rows={scan.rows}
-              /* The digest is DATA (QuarantineResponse.sha256); the sentence
-                 beside it is the gateway's final step's own verdict — the
-                 de-dup step — quoted, never composed here. */
+              /* The digest is data; the sentence beside it is the de-dup
+                 step's own verdict — quoted, never composed here. */
               sha={
                 scan.done
                   ? {

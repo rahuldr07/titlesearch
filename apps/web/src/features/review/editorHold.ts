@@ -2,20 +2,12 @@ import type { NaReason } from "@titlepipe/contract";
 import type { EditorMode } from "./DecisionEditor";
 
 /**
- * WHY A SUBMIT IS HELD, AS A SENTENCE — the refusal rules of this screen in one
- * place, split out of `DecisionEditor` for §6's length gate.
- *
- * INVARIANT 9 — a correction is refused without its reason.
- * INVARIANT 10 — an escalation is refused without its question.
- * §11.1 — a correction must CHANGE something; filing the machine's own reading
- * back at it records a correction that corrected nothing.
- * A Law 3 declaration is a correction on the wire, so it is refused without
- * both the absence and the reason.
- *
- * These are the CLIENT's courtesy. The enforcement is the contract's
- * (`CorrectFieldRequest.reason` is `z.string().min(1)`) and the server's, and
- * when the server refuses anyway its sentence is rendered verbatim beside the
- * card (INVARIANT 14). Nothing here duplicates a server rule as a gate.
+ * Why a submit is held, as a sentence — the refusal rules of this screen in
+ * one place. A correction is refused without its reason and must change
+ * something; an escalation without its question; an absence declaration
+ * without both the absence and the reason. These are the client's courtesy:
+ * the enforcement is the contract's and the server's, and when the server
+ * refuses anyway its sentence renders verbatim beside the card.
  */
 export type HoldInput = {
   readonly mode: Exclude<EditorMode, null>;

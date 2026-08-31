@@ -38,11 +38,9 @@ const stages = (
 export const Default: Story = { args: { children: stages } };
 
 /**
- * SELECTION IS A STROKE, NOT A FILL — rule 1. The registry drew
- * `data-selected:bg-background` inside a `bg-muted` track, which is a filled
- * pill, and a filled tab spends the once-per-screen accent budget on
- * navigation. The assertion is that the selected tab carries a BORDER class and
- * no background fill.
+ * Selection is a stroke, not a fill — a filled tab spends the
+ * once-per-screen accent budget on navigation. The assertion is that the
+ * selected tab carries a border class and no background fill.
  */
 export const SelectedIsAnUnderline: Story = {
   args: { defaultSelectedKey: "review", children: stages },
@@ -55,9 +53,8 @@ export const SelectedIsAnUnderline: Story = {
 };
 
 /**
- * RULE 12: a stage the reader may not open yet renders DISABLED WITH THE RULE,
- * never hidden. Hiding it would also silently renumber the stages, which is
- * the second reason and the one a screenshot shows.
+ * A stage the reader may not open yet renders disabled with the rule, never
+ * hidden — hiding it would also silently renumber the stages.
  */
 export const StageBlocked: Story = {
   args: {
@@ -77,10 +74,9 @@ export const StageBlocked: Story = {
   play: async () => {
     const reason = "Blocked: assembly has an OPEN judgment.";
     /*
-     * BOTH tabs must still be in the strip. This is the assertion that caught
-     * a real defect: wrapping the Tab in `BlockedHint` to carry `title` made
-     * react-aria's CollectionBuilder stop seeing it, and the blocked stage
-     * VANISHED — rule 12 broken in the act of satisfying rule 9. See tabs.tsx.
+     * Both tabs must still be in the strip: wrapping a Tab in BlockedHint
+     * makes react-aria's CollectionBuilder stop seeing it, and the blocked
+     * stage vanishes. See tabs.tsx.
      */
     expect(document.querySelectorAll("[data-slot='tabs-trigger']")).toHaveLength(2);
     const tab = document.querySelector("[data-slot='tabs-trigger'][data-disabled-reason]");
@@ -91,11 +87,8 @@ export const StageBlocked: Story = {
 };
 
 /**
- * THE CHORD CONTRACT, AND THE VALUE IS `widget`.
- *
- * `focusRoles.ts` records this as the mistake nearly made while fixing B3: a
- * tab strip is mounted at ALL TIMES, and `own` is read document-wide by
- * `overlayIsUp()`, so marking it `own` would leave every chord in the app
+ * The chord mark is `widget`: a tab strip is mounted at all times, and `own`
+ * is read document-wide, so it would leave every chord in the app
  * permanently dead. Both halves are asserted.
  */
 export const OwnsKeysOnlyWhileFocused: Story = {

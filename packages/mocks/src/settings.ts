@@ -10,14 +10,10 @@ import { appendAudit, auditActor } from "./audit.js";
 import { people } from "./workspace.js";
 
 /**
- * SETTINGS & RBAC HANDLERS — the Access Control matrix and the People pane's
- * role picker, added under RULING-2026-08-29 ("complete the UI fully, as the
- * reference app draws it"): the reference CYCLES a matrix cell on click and
- * reassigns a person's role from a select, so both acts get endpoints.
- *
- * One mutable matrix, reset on reload like every other store here. The cycle
- * order (— → VIEW → EDIT → —) lives HERE, server-side: the client posts the
- * cell it clicked and repaints from the answer.
+ * Settings & RBAC handlers — the Access Control matrix and the People
+ * pane's role picker. One mutable matrix, reset on reload like every other
+ * store here. The cycle order (— → VIEW → EDIT → —) lives here, server-side:
+ * the client posts the cell it clicked and repaints from the answer.
  */
 
 /** Column order — also the People picker's role vocabulary. */
@@ -35,7 +31,6 @@ interface SeedRow {
   d: readonly [number, number, number, number];
 }
 
-/** The reference's `MODS` table, verbatim in structure and copy. */
 const SEED: readonly SeedRow[] = [
   { id: "orders.intake", module: "Orders", label: "Upload & intake", note: "sign for packages", live: false, d: [2, 2, 1, 0] },
   { id: "orders.extraction", module: "Orders", label: "Extraction", note: "pipeline, page quality", live: false, d: [2, 1, 1, 2] },
@@ -69,7 +64,7 @@ function matrix(): RbacMatrixResponse {
       cells: ROLES4.map((role) => ({
         role,
         level: levels.get(`${row.id}:${role}`) ?? "none",
-        // The Admin column never cycles — the reference locks it too.
+        // The Admin column never cycles.
         locked: role === "Admin",
       })),
     })),
@@ -79,7 +74,7 @@ function matrix(): RbacMatrixResponse {
 export const settingsHandlers = [
   http.get("/api/rbac", () => HttpResponse.json(matrix())),
 
-  /** One cell cycles — the SERVER owns the order, the client repaints. */
+  /** One cell cycles — the server owns the order, the client repaints. */
   http.patch("/api/rbac", async ({ request }) => {
     const denied = guard(request, "rbac.edit");
     if (denied) return denied;

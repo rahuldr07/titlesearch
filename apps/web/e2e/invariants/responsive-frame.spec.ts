@@ -1,23 +1,10 @@
 import { expect, test } from "@playwright/test";
 
 /**
- * [INVARIANT] — rule: THE FRAME HOLDS AT EVERY WIDTH THE APP IS USED AT.
- *
- * Every other spec in this directory runs at 1600x1000, which is the one width
- * at which the export is drawn and therefore the one width at which nothing was
- * ever tested. The responsive pass was verified by hand in a browser and by
- * nothing in CI; these are that verification, written down.
- *
- * THE NUMBERS BELOW ARE MEASURED, NOT DERIVED. Where an assertion names a
- * pixel value it was read off the running app first — `p-14` is 28px on the 2px
- * base, the masthead steps 38px → 26px at `sm`, and a centred card that
- * outgrows its window sits at +28px rather than the +2px alignment gave it.
- *
- * TWO OF THESE WOULD HAVE PASSED BEFORE THE CHANGE and are regression guards
- * rather than proofs of it: the app did not scroll sideways at 1280 before
- * either, and a measure already shrank correctly. They are here because the
- * fix that was proposed for this — flattening every measure to `max-w-full` —
- * would have broken the second one, and nothing would have caught it.
+ * Rule: the frame holds at every width the app is used at. The numbers
+ * below are measured, not derived — where an assertion names a pixel value
+ * it was read off the running app first (`p-14` is 28px on the 2px base,
+ * the masthead steps 38px → 26px at `sm`).
  */
 
 /** The narrow end of the range this app is actually used at. */
@@ -52,10 +39,9 @@ for (const width of [1440, 1280, 1024, 900]) {
 }
 
 /**
- * THE DRAWN PADDING IS THE `lg` PADDING. Below it every slot steps down, or a
- * shrinking column spends 72px on margin before any content is laid out. The
- * assertion is a comparison, not a magic number: the drawn values may move
- * again, but narrow must never be the wider of the two.
+ * The drawn padding is the `lg` padding; below it every slot steps down.
+ * The assertion is a comparison, not a magic number: the drawn values may
+ * move again, but narrow must never be the wider of the two.
  */
 test("a screen's padding steps down below lg and is restored above it", async ({
   page,
@@ -130,15 +116,12 @@ test("a measure shrinks into a narrow column instead of overflowing it", async (
 });
 
 /**
- * A CENTRED CARD TOO TALL FOR THE WINDOW KEEPS THE SLOT'S PADDING.
- *
- * `align-items:center` is clamped to the start edge by the browser when the
- * item overflows, so the top is NOT lost — measured at +2px, never negative.
- * What IS lost is the padding: the clamp lands the ITEM against the pane, and
- * the scroller's 28px is not part of the item. Auto margins resolve to 0 in the
- * same case and the padding survives. 240px is chosen because `/signin`'s card
- * is 236px — tall enough to overflow, which is the only state that separates
- * the two behaviours.
+ * A centred card too tall for the window keeps the slot's padding.
+ * `align-items:center` is clamped to the start edge when the item
+ * overflows, which lands the item against the pane and loses the
+ * scroller's padding; auto margins resolve to 0 in the same case and the
+ * padding survives. 240px is chosen because the card is 236px — tall
+ * enough to overflow, the only state that separates the two behaviours.
  */
 test("a centred card that outgrows the window keeps its padding and scrolls", async ({
   page,
@@ -181,28 +164,19 @@ test("a centred card that outgrows the window keeps its padding and scrolls", as
 });
 
 /**
- * DELETED, NOT ABSENT — `a centred card is still centred when the window has
- * room for it`.
- *
- * It asserted the other half of centring: that a card short enough to fit sits
- * in the middle of its pane, the way the export draws the six single-card
- * screens. It was written passing and it now fails, because `Screen.tsx` puts
- * `min-h-full` on the same wrapper that carries `m-auto` — the wrapper
- * stretches to the scroller's full height, the auto margins get no free space,
- * and the card lands at the top. Playwright measured `above: 44`, `below: 735`
- * on `/signin` at 1600x1000, against 382/382 for a centred one.
- *
- * The test was removed as a deliberate acceptance of that behaviour, not
- * because the behaviour was fixed. Restoring centring means removing
- * `min-h-full` from the `m-auto` wrapper and restoring this test with it.
- * Six screens are affected: signin, session, processing, ingest, delivered
- * (twice) and surface-failure.
+ * Deleted, not absent — "a centred card is still centred when the window
+ * has room for it". `Screen.tsx` puts `min-h-full` on the same wrapper that
+ * carries `m-auto`, so the auto margins get no free space and the card
+ * lands at the top; the test was removed as a deliberate acceptance of
+ * that behaviour, not because it was fixed. Restoring centring means
+ * removing `min-h-full` from the `m-auto` wrapper and restoring this test
+ * with it.
  */
 
 /**
- * THE MASTHEAD IS TYPE, AND TYPE THAT DOES NOT MOVE IS THE THING THAT BREAKS A
- * NARROW SCREEN FIRST. Queue draws the larger of the two display sizes, so it
- * is the one with the most to lose.
+ * The masthead is type, and type that does not move is what breaks a
+ * narrow screen first. Queue draws the larger of the two display sizes, so
+ * it has the most to lose.
  */
 test("the masthead steps down on a narrow window", async ({ page }) => {
   const sizeAt = async (width: number) => {

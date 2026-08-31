@@ -1,33 +1,19 @@
 import { REVIEW_CHORDS } from "./reviewChords";
 
 /**
- * THE KEY REGISTRY — one row per chord, and it is the row that gets INSTALLED.
- *
- * Before this file the vocabulary was written twice: `GlobalKeys.tsx` bound
- * `$mod+k` / `?` / `/` / `Escape`, and the `?` overlay printed its own literal
- * arrays next door. Rule 11 — one variable, never two literals — and the
- * failure mode is specific: the overlay advertised C/E/Q/J/K/Z as review keys
- * and nothing in the app bound them. A cheat sheet that names keys that do not
- * fire is worse than no cheat sheet.
- *
- * So `action` is the join. `GlobalKeys` maps every action to a handler and
- * installs the `chord`; the shortcuts overlay renders the `cap` and the `desc`
- * off the same rows.
- *
- * ══ TWO INSTALLERS, ONE LIST ═══════════════════════════════════════════════
- *
- * `install` says which layer binds the row. `global` rows are `GlobalKeys`',
- * joined by `action`. `review` rows are the workstation's (INVARIANT 50: keys
- * are pane-local) and carry no action — `reviewChords.ts` argues why, and
- * `keymap.test.ts` proves the six are really bound. Adding a row to either half
- * puts it in the overlay; nothing else has to be edited, and nothing may be
- * listed that no layer installs.
+ * The key registry — one row per chord, and it is the row that gets
+ * installed. A key may not be printed in the shortcuts overlay unless
+ * something binds it: `action` is the join for `global` rows (`GlobalKeys`
+ * maps every action to a handler and installs the `chord`), while `review`
+ * rows are the workstation's and carry no action — `keymap.test.ts` proves
+ * those are really bound. Adding a row to either half puts it in the
+ * overlay; nothing else has to be edited.
  */
 
 /** What a chord does. The overlay never names an action with no handler. */
 export type ChordAction = "open-palette" | "toggle-key-map" | "pop-layer";
 
-/** Sentence case (rule 4). Sections are the design's grouping, not new facts. */
+/** Sentence case. Sections are the design's grouping, not new facts. */
 export type ChordSection =
   | "In the review workstation"
   | "Moving around"
@@ -65,16 +51,9 @@ const GLOBAL_CHORDS: readonly ChordSpec[] = [
   },
   {
     /*
-     * The design binds `/` to the All Orders search box (`ref-orders.html`
-     * @3338). That screen and its search box now exist — the browse endpoint
-     * was authorised by `RULING-2026-08-28.md` option C — so the old note here
-     * ("there is no search surface") is no longer true and has been removed.
-     *
-     * The binding still opens the PALETTE, app-wide, and that is a deliberate
-     * divergence written up in `CONFLICT-slash-key.md`: a global `/` that
-     * focuses a box existing on one screen is dead on the other eleven, and
-     * `chord-suppression.spec` #5 rests on `/` being palette-owned. The cap and
-     * the description say what the handler does, which is rule 11's other half.
+     * `/` opens the palette app-wide — a deliberate divergence from focusing
+     * one screen's search box, which would leave the key dead on every other
+     * screen. The cap and the description say what the handler does.
      */
     id: "palette-slash",
     chord: "/",

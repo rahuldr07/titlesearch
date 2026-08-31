@@ -5,23 +5,14 @@ import { post } from "../../shared/api";
 import { RefusedError, uploadPackage } from "./uploadPackage";
 
 /**
- * THE ONE SIGNED ACT OF INTAKE.
+ * The one signed act of intake. The wire is still two server calls — the
+ * create and the explicit accept — chained inside one mutation so the flow is
+ * one press. `Ack` carries no state back; the server stays the only author of
+ * the order's state.
  *
- * ⚠ RULED 2026-08-29 (`docs/frontend/design-2026-08/RULING-2026-08-29.md`):
- * the reference draws ONE press — "Sign for Package & Begin Dual-Engine
- * Extraction →" — and the ruling supersedes the two-act split this hook used
- * to enforce under INVARIANT 47. The wire is unchanged: the create
- * (`POST /api/orders`) and the explicit accept (`POST /orders/{id}/accept`)
- * are still two server calls, chained INSIDE one mutation so the drawn flow
- * is one act. `Ack` carries no state back — the server stays the only author
- * of the order's state.
- *
- * ONE ACT FILES ONE RECORD, AND `isPending` CANNOT ENFORCE IT. Measured before
- * the `inFlight` latch existed: three synchronous clicks filed THREE requests,
- * because `isPending` is state read at render and three clicks in one tick all
- * see the same stale `false`. Here the extras 409 as duplicates of the order
- * they created themselves. The ref moves synchronously, so the rest are
- * dropped before they leave. Same shape as `useReviewWrites` and `ReleaseAct`.
+ * `isPending` is state read at render, so clicks in one tick all see the same
+ * stale `false` and the extras 409 as duplicates of the order they created
+ * themselves — the ref latch moves synchronously and drops them first.
  */
 export function useSignForPackage(options: {
   readonly onSigned: (order: Order) => void;

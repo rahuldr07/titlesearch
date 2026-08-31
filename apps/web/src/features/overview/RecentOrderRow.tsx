@@ -5,16 +5,11 @@ import { RouteButton } from "../../app/chrome/RouteButton";
 import { useOverlays } from "../../app/keyboard/overlays";
 
 /**
- * One browse row over the prototype's seven tracks. Its action cell holds two
- * destinations — the order's history and the workstation — so the history is an
- * anchor laid over the whole row, which keeps the row clickable without nesting
- * one interactive element inside another; the button follows it in the DOM and
- * takes its own clicks.
- *
- * NOT CARRIED: the prototype's tinted ink on a delivered row. The row already
- * prints the server's stage word in its own column, and a second colour-coded
- * encoding of the same fact would be a client-side taxonomy over `OrderStage` —
- * rule 7 keeps state colour closed.
+ * One browse row. Its action cell holds two destinations — the order's
+ * history and the workstation — so the hub link is an anchor laid over the
+ * whole row, which keeps the row clickable without nesting one interactive
+ * element inside another; the buttons follow it in the DOM and take their
+ * own clicks.
  */
 export function RecentOrderRow(props: { readonly row: OrderRow }) {
   const row = props.row;
@@ -56,9 +51,8 @@ export function RecentOrderRow(props: { readonly row: OrderRow }) {
       </span>
 
       {/* The server's own due label, never a countdown from it — the varied
-          strings ("5h 20m", "tomorrow 10:00 AM", "Waiting on QC") arrive
-          finished. A delivered row's cell dims, as the reference draws it
-          (RULING-2026-08-29) — keyed on the served stage, not on the text. */}
+          strings arrive finished. A delivered row's cell dims, keyed on the
+          served stage, not on the text. */}
       <span
         className={cx(
           "w-65 shrink-0 truncate px-6 text-right font-mono text-meta leading-close",
@@ -70,9 +64,9 @@ export function RecentOrderRow(props: { readonly row: OrderRow }) {
         {row.due ?? "No due date"}
       </span>
 
-      {/* The reference's two row actions: the audit-history modal, then Open →.
-          Both sit above the row's covering anchor and take their own clicks. */}
-      {/* w-85: the cell must hold the clock AND Open →, or it overflows the due column. */}
+      {/* The two row actions sit above the row's covering anchor and take
+          their own clicks. w-85: the cell must hold the clock and Open →,
+          or it overflows the due column. */}
       <span className="relative flex w-85 shrink-0 items-center justify-end gap-4 px-6">
         <HistoryButton id={row.id} orderRef={row.order_ref} />
         <RouteButton
@@ -89,13 +83,11 @@ export function RecentOrderRow(props: { readonly row: OrderRow }) {
 }
 
 /**
- * The row's clock button — `openOrderHistory(row.id)` names the order for the
- * ONE history overlay (`app/keyboard/overlays.ts`). A twin of the button in
+ * The row's clock button — `openOrderHistory(row.id)` names the order for
+ * the one history overlay. A twin of the button in
  * `features/ordersList/orderColumns.tsx` rather than one shared component:
- * `check-rules` forbids a cross-feature import, and the shared home would be a
- * kit primitive this 15-line affordance has not yet earned. A native
- * `<button>` in the kit's chrome, because react-aria's Button drops `title`
- * and the reference draws this affordance as a tooltip-bearing icon.
+ * cross-feature imports are forbidden, and a kit primitive is not yet
+ * earned. A native `<button>` because react-aria's Button drops `title`.
  */
 function HistoryButton(props: { readonly id: string; readonly orderRef: string }) {
   const openHistory = useOverlays((s) => s.openOrderHistory);
@@ -110,7 +102,7 @@ function HistoryButton(props: { readonly id: string; readonly orderRef: string }
         "text-ink-muted",
       )}
     >
-      {/* The reference's clock glyph, verbatim. */}
+      {/* The clock glyph. */}
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden>
         <path d="M12 8v4l3 3" />
         <circle cx="12" cy="12" r="9" />

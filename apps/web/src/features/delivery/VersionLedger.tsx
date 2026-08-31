@@ -2,19 +2,9 @@ import type { DeliveryWithReport } from "@titlepipe/contract";
 import { Badge, Card, CardBody, CardHeader, cx } from "../../components/ui";
 
 /**
- * THE VERSION LEDGER — v1 immutable, v2 the reissue, v1 "Superseded · retained".
- *
- * The prototype's card: header with "Law 9 · append-only" on the right, then
- * bordered rows, each carrying the version numeral in mono, a tinted status
- * capsule, a mono meta line, and — where there is one — a reason line beneath.
- *
- * ⚠ RULED 2026-08-29 — `docs/frontend/design-2026-08/RULING-2026-08-29.md`.
- * Supersession is now READ OFF THE SERVER'S ROWS, not decided here: a
- * reissued report states, on the wire, which version it superseded
- * (`Report.supersedes`) and the reason it filed (`Report.reason`). The
- * "Superseded · retained" capsule attaches to the row another row NAMES as
- * superseded; "Draft — unreleased" is the row whose `status` is `draft`.
- * Nothing takes a max() to decide which version is current any more.
+ * Supersession is read off the server's rows, not decided here: a reissued
+ * report names the version it superseded (`Report.supersedes`) and its reason
+ * (`Report.reason`). Nothing takes a max() to decide which version is current.
  */
 export function VersionLedger({
   versions,
@@ -59,10 +49,6 @@ export function VersionLedger({
                 <span className="font-mono text-body leading-close font-bold text-ink-primary">
                   {version === null ? "no report on this delivery" : `v${String(version)}`}
                 </span>
-                {/* The reference's three capsules, each read off a server
-                    member: draft off `status`, superseded off another row's
-                    `supersedes`, released otherwise. Rule 6 spends the tinted
-                    capsule on the moment of record — the released row. */}
                 {draft ? (
                   <span className="shrink-0 rounded-pill border border-state-attend-border bg-surface-panel px-5 py-1 font-sans text-label leading-flat font-semibold text-state-attend">
                     Draft — unreleased
@@ -83,8 +69,6 @@ export function VersionLedger({
                 </span>
               )}
               {row.report !== null && row.report.reason !== null && (
-                /* The prototype's "Reason:" line — the reissue's stated
-                   reason, persisted on the report row (RULED 2026-08-29). */
                 <span className="font-sans text-label leading-close text-ink-secondary">
                   {`Reason: ${row.report.reason}`}
                 </span>

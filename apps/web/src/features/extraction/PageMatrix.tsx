@@ -4,34 +4,18 @@ import { cx } from "../../components/ui";
 import { LEGEND, PAINT, cellLabel, stateOf } from "./pageCell";
 
 /**
- * THE PAGE MATRIX — the design's "high-density raster scan matrix": a wrapped
- * field of 12x18 blocks, a legend on the title row, a hint line under a
- * hairline.
+ * One cell per package page, not just read ones: the denominator is the
+ * server's `total_pages`, never `pages.length` — the array is a sample, and
+ * mapping it would tell a reviewer the whole package was covered while most of
+ * it was never read. A page with no entry gets a cell saying nobody read it.
  *
- * INVARIANT 34: ONE CELL PER PACKAGE PAGE, NOT JUST READ ONES. The denominator
- * is `OrderPagesResponse.total_pages` — the server's count — and NEVER
- * `pages.length`. The live fixture makes that failure loud: `total_pages` is 64
- * and the array holds 7. Mapping the array draws seven cells and tells a
- * reviewer the search covered the whole package while fifty-seven pages of it
- * were never read by anybody. A page with no entry gets a cell in the sunken
- * paint and a title saying nobody read it (`pageCell.ts`).
+ * The undersized targets are deliberate (WCAG 2.2 §2.5.8 essential-presentation
+ * exemption — 181 cells at 24px is not a matrix); every cell carries a `title`
+ * and `aria-label`, so colour is never the only carrier.
  *
- * WCAG 2.2 §2.5.8 exempts an undersized target where the presentation is
- * ESSENTIAL, and this is that case: PRODUCT.md puts a real package at 36-181
- * pages, and 181 cells at 24px is a 4,344px row, which is not a matrix. Every
- * cell carries a `title` and an `aria-label` naming its page and what happened
- * to it, so the colour is never the only carrier. Same finding as
- * `CoverageSpine`.
- *
- * INVARIANT 55: selection is URL-owned, so a cell navigates to the workstation
- * — `/orders/$orderId/review`, beneath the same frozen `/orders` door — with
- * `page` in the search string. The design (README §Screens 6) says a cell click
- * opens the workstation AT that page, and `orderSearch.ts` is the typed half of
- * that promise; the workstation route consumes the key and hands it to the
- * evidence pane as an outright page ask.
- *
- * REFUSED FROM THE DESIGN: its footer caption "Auto-scaling (10k+ pages)" — a
- * claim about system capacity that no response carries.
+ * Selection is URL-owned: a cell navigates to the workstation with `page` in
+ * the search string. The design's "Auto-scaling (10k+ pages)" caption is
+ * absent — a capacity claim no response carries.
  */
 export function PageMatrix(props: {
   readonly orderId: string;
@@ -98,7 +82,6 @@ export function PageMatrix(props: {
   );
 }
 
-/** The design's legend, on the matrix card's title row. */
 export function PageMatrixLegend() {
   return (
     <span className="flex flex-wrap items-center gap-6">

@@ -8,19 +8,16 @@ import { RowMark } from "./RowMark";
 import { T1Pill } from "./T1Pill";
 
 /**
-
- * ONE FIELD ROW — the design's `140px / 1fr / 70px / 24px` grid (§Screens 7). Label
-
- * 11px, value mono, cite mono grey, mark.
-
+ * One field row — the `140px / 1fr / 70px / 24px` grid. Label, value mono,
+ * cite mono grey, mark.
  */
 export type FieldRowProps = {
   readonly field: Field;
   readonly selected: boolean;
   readonly onSelect: () => void;
   /**
-   * Whether this field carries ruinous exposure. SERVER-SUPPLIED via `rule_refs` — see
-   * `T1Pill`, which refuses to decide it.
+   * Whether this field carries ruinous exposure. Server-supplied via
+   * `rule_refs` — see `T1Pill`, which refuses to decide it.
    */
   readonly ruinous: boolean;
 };
@@ -28,10 +25,9 @@ export type FieldRowProps = {
 export function FieldRow({ field, selected, onSelect, ruinous }: FieldRowProps) {
   const value = readCited(field);
   /*
-   * A≠B: the readings the server sent carry different values. A fact about the
-   * payload, not a ruling — INVARIANT 28 requires the disagreement to be
-   * surfaced ON THE ROW, and this is that surface. Decided in `readings.ts`,
-   * which is where touching a reading's `.value` belongs.
+   * A≠B: the readings the server sent carry different values — a fact about
+   * the payload, not a ruling, and it must surface on the row. Decided in
+   * `readings.ts`, which is where touching a reading's `.value` belongs.
    */
   const disagree = readingsDisagree(field.readings ?? []);
 
@@ -50,8 +46,7 @@ export function FieldRow({ field, selected, onSelect, ruinous }: FieldRowProps) 
         selected ? "bg-action-surface" : "hover:bg-row-hover",
       )}
     >
-      {/* 140px — the label, with the T1 chip BESIDE it, as the reference
-          composes the row (RULING-2026-08-29). 11px, mono, the rubric
+      {/* 140px — the label, with the T1 chip beside it. Mono, the rubric
           register (fieldNaming.ts). */}
       <span className="flex min-w-0 items-center gap-3">
         <span className="truncate font-mono text-label leading-flat text-ink-muted">
@@ -81,7 +76,7 @@ export function FieldRow({ field, selected, onSelect, ruinous }: FieldRowProps) 
         {field.source_page === null ? "" : `p.${field.source_page}`}
       </span>
 
-      {/* 24px — the mark. Rule 6: ONE status signal per row. */}
+      {/* 24px — the mark. One status signal per row. */}
       <RowMark field={field} />
     </button>
   );

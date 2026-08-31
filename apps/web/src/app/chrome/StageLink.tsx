@@ -2,22 +2,16 @@ import type { ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 
 /**
- * ⚠ RULED 2026-08-29 — `docs/frontend/design-2026-08/RULING-2026-08-29.md`:
- * the reference app's rail stage rows and order-bar stage tabs NAVIGATE, so
- * ours do. One table of destinations, used by both, so the rail row and the
- * bar tab for one stage can never disagree about where it goes.
- *
- * The stage ids are the server's (`OrderStageTab.id`); the DESTINATIONS are
- * this app's closest existing surfaces — upload and extraction land on the
- * order hub (which composes both), examination on the workstation, the
- * composer on the release compiler, and the seal on the delivery door. A
- * `switch` over literal `to` values rather than a string table, because that
- * is what keeps every destination checked against the route tree at compile
- * time.
+ * One table of stage destinations, used by both the rail stage rows and the
+ * order-bar stage tabs, so the two can never disagree about where a stage
+ * goes. The stage ids are the server's; the destinations are this app's
+ * closest existing surfaces. A `switch` over literal `to` values rather
+ * than a string table keeps every destination checked against the route
+ * tree at compile time.
  */
 export type StageTargetId = "upload" | "processing" | "review" | "composer" | "delivered";
 
-/** Is this stage the one the CURRENT route shows? Pathname is the only input. */
+/** Is this stage the one the current route shows? Pathname is the only input. */
 export function stageIsCurrent(id: string, pathname: string): boolean {
   if (id === "review") return /\/orders\/[^/]+\/review$/.test(pathname);
   if (id === "composer") return /\/orders\/[^/]+\/release$/.test(pathname);

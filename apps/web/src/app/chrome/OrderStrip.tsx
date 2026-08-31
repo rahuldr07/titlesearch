@@ -9,22 +9,11 @@ import { OrderStamp } from "./OrderStamp";
 import { RouteButton } from "./RouteButton";
 
 /**
-
- * THE ORDER BAR — white, hairline bottom, above `main` and inside the content column,
-
- * so it stays put while the screen scrolls under it (INVARIANT 62). Every value comes
-
- * from `GET /api/orders/{id}/context` (`intake.ts`), which exists…
-
- *
-
- * ⚠ RULED 2026-08-29 — `docs/frontend/design-2026-08/RULING-2026-08-29.md`:
- * the three refusals this header used to carry are superseded, because the
- * reference app DRAWS all three. The due chip prints the SERVED string whole
- * ("Due today · 5h 20m left" — no clock runs here); the place line arrives
- * finished on the context; and the Review (N) button prints the served
- * `outstanding` census figure and navigates to the workstation. The stage
- * tabs row below is the reference's, served per order (`stage_tabs`).
+ * The order bar — white, hairline bottom, above `main` and inside the
+ * content column, so it stays put while the screen scrolls under it. Every
+ * value comes from `GET /api/orders/{id}/context`: the due chip prints the
+ * served string whole (no clock runs here), the place line arrives finished,
+ * and Review (N) prints the served `outstanding` census figure.
  */
 const ORDER_PATH = /^\/orders\/([^/]+)/;
 
@@ -47,21 +36,18 @@ export function OrderStrip() {
       data-testid="order-strip"
       className="flex shrink-0 flex-col gap-5 border-b border-line-strong bg-surface-panel px-14 py-6"
     >
-      {/* WRAPS: the ref, the place line, three server facts, four census
-          figures, the due chip, the button and the stamp do not fit one 1360px
-          line, and the alternatives are all the browser shortening the
-          server's words. */}
+      {/* Wraps: everything here does not fit one 1360px line, and the
+          alternatives are all the browser shortening the server's words. */}
       <div className="flex min-h-14 flex-wrap items-center gap-10">
         {context.data === undefined ? (
-          /* INVARIANT 59 — a partial failure degrades this region only. The id
-             from the URL is the one thing that is true without the server. */
+          /* A partial failure degrades this region only. The id from the URL
+             is the one thing that is true without the server. */
           <span className="font-mono text-subject leading-flat text-ink-muted">
             {orderId}
           </span>
         ) : (
           <>
-            {/* The reference's opening pair: the mono ref, then the finished
-                place line ("1856 Defoor Ave NW, Atlanta · Fulton County, GA"). */}
+            {/* The mono ref, then the finished place line. */}
             <span className="flex min-w-0 items-baseline gap-6">
               <span
                 data-testid="order-ref"
@@ -76,7 +62,7 @@ export function OrderStrip() {
               )}
             </span>
             <Fact value={context.data.product} absent="No resolved product" pill />
-            {/* Client name · page count, mono, the reference's own pairing. */}
+            {/* Client name · page count, mono. */}
             {context.data.client !== null && (
               <span className="font-mono text-meta leading-flat text-ink-muted">
                 {context.data.client}
@@ -85,8 +71,8 @@ export function OrderStrip() {
             )}
             <OrderCounts orderId={orderId} />
             <span className="ml-auto flex flex-wrap items-center gap-6">
-              {/* The due chip — the SERVED label, whole. No countdown runs in
-                  this browser; the string is the server's statement. */}
+              {/* The due chip — the served label, whole. No countdown runs
+                  in this browser; the string is the server's statement. */}
               {context.data.due !== null && (
                 <span
                   data-testid="order-due"
@@ -112,7 +98,7 @@ export function OrderStrip() {
           </>
         )}
       </div>
-      {/* The reference's five stage tabs, off the same context read. */}
+      {/* The stage tabs row, off the same context read. */}
       {context.data !== undefined && (
         <OrderStripStages orderId={orderId} tabs={context.data.stage_tabs} />
       )}

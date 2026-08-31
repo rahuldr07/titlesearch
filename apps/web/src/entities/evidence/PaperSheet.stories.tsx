@@ -5,12 +5,9 @@ import { PaperSheet, CitationBox } from "./PaperSheet";
 import { ClerkStamp } from "./ClerkStamp";
 
 /**
- * RULE 8, ON THE ONLY GROUND IT MAKES SENSE ON.
- *
- * No panel decorator here, unlike every other entity story. Paper is its own
- * surface family — the one warm family left in the register — and a sheet
- * standing on a white panel is a sheet whose whole point (this is EVIDENCE, not
- * chrome) has been erased by its background.
+ * No panel decorator here, unlike every other entity story: paper is its own
+ * surface family, and a sheet standing on a white panel is a sheet whose
+ * whole point — this is evidence, not chrome — is erased by its background.
  */
 const BODY =
   "THIS INDENTURE, made this 14th day of March, 1974, between JOHN P. WHITFIELD and ELEANOR M. WHITFIELD, husband and wife, of the County of San Diego, State of California, parties of the first part, and MARIA L. ESTRADA, a married woman as her sole and separate property, party of the second part, WITNESSETH: That the said parties of the first part, for and in consideration of the sum of TEN DOLLARS ($10.00), lawful money of the United States, do by these presents grant, bargain and sell unto the said party of the second part.";
@@ -18,7 +15,7 @@ const BODY =
 const meta = {
   title: "entities/PaperSheet",
   component: PaperSheet,
-  /* Rule 8's own surface, not the app canvas — see `panelGround.tsx`. */
+  /* The paper surface, not the app canvas — see `panelGround.tsx`. */
   decorators: [onPaper],
 } satisfies Meta<typeof PaperSheet>;
 
@@ -28,8 +25,8 @@ type Story = StoryObj<typeof meta>;
 export const CleanScan: Story = { args: { children: BODY } };
 
 /**
- * The stock the product actually gets. CONTEXT §5: median text-layer coverage
- * well under 25%, so this is the normal case and the clean one is the exception.
+ * The stock the product actually gets — median text-layer coverage is well
+ * under 25%, so this is the normal case and the clean one is the exception.
  */
 export const DegradedScan: Story = { args: { children: BODY, degraded: true } };
 

@@ -2,12 +2,10 @@ import { beforeEach, expect, test } from "vitest";
 import { useOverlays } from "./overlays";
 
 /**
- * THE HISTORY OVERLAY'S SUBJECT — set by the caller, forgotten on close.
- *
- * `OrderHistoryOverlay` reads the route when nobody named an order, so the
- * dangerous case is a NAME that outlives its overlay: open it on a table row,
- * close it, walk to a different order and press it again, and the stale name
- * would win over the route. These pin that it cannot.
+ * The history overlay's subject — set by the caller, forgotten on close.
+ * The dangerous case is a name that outlives its overlay: opened on a table
+ * row, closed, reopened on a different order's route, the stale name would
+ * win over the route. These pin that it cannot.
  */
 beforeEach(() => {
   useOverlays.setState({ stack: [], historySubject: null });

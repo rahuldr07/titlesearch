@@ -3,21 +3,13 @@ import { useSignedIn } from "../../app/session/signedIn";
 import { ACCOUNT_LICENSES } from "../../app/session/demoAccounts";
 
 /**
- * THE FOOTER — one signature line, one helper, ONE act.
- *
- * ⚠ RULED 2026-08-29 (RULING-2026-08-29.md): the reference's footer is one
- * primary press — "Sign for Package & Begin Dual-Engine Extraction →" — and
- * the ruling supersedes the two-act staging INVARIANT 47 imposed, so this
- * button performs upload-and-accept as one act (`useSignForPackage`). The
- * "Examiner signature:" line is drawn here too, printing the demo session's
- * name and licence (`ACCOUNT_LICENSES`) — the refusal that kept it off the
- * upload footer is superseded by the same ruling. The signature of RECORD is
- * still the server's, derived from the session on the accept call.
- *
- * The button is disabled only until a file is chosen (and while in flight):
- * a press with client or product unpicked goes to the server, and the
- * SERVER's refusal names what is missing (INVARIANTS 60-61). The helper
- * notes are the reference's own three sentences, drawn beside the act.
+ * The footer's one press performs upload-and-accept as one act
+ * (`useSignForPackage`). The "Examiner signature:" line prints the demo
+ * session's name and licence, but the signature of record is still the
+ * server's, derived from the session on the accept call. The button is
+ * disabled only until a file is chosen (and while in flight): a press with
+ * client or product unpicked goes to the server, whose refusal names what is
+ * missing.
  */
 export function SignFooter(props: {
   readonly note: string | null;
@@ -47,7 +39,6 @@ export function SignFooter(props: {
             {props.note}
           </span>
         )}
-        {/* RULE 1: the screen's one accent spend — the act that matters. */}
         <Button
           variant="primary"
           data-testid="sign-btn"

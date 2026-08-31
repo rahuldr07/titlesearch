@@ -4,10 +4,8 @@ import { Badge, StatusMark } from "./badge";
 import { onPanel } from "./kitGround";
 
 /**
- * RULE 6 IS A BUDGET AND THESE STORIES ARE WHERE IT IS SPENT. `Badge` is the
- * expensive shape (a moment of record); `StatusMark` is the free one (every
- * row). The last two stories put them side by side, which is the only way the
- * distinction is legible to someone who has read neither file.
+ * Badge is the expensive shape (a moment of record); StatusMark is the free
+ * one (every row). The last stories put them side by side.
  */
 const meta = {
   title: "ui/Badge",
@@ -45,8 +43,8 @@ export const AllTones: Story = {
 };
 
 /**
- * THE MARKS — the shape a table row is allowed. Glyph plus weight, no fill.
- * The `play` pins rule 7's closed vocabulary: ✓ ◆ • T1 and nothing else.
+ * The marks — the shape a table row is allowed: glyph plus weight, no fill.
+ * The play pins the closed vocabulary: ✓ ◆ • T1 and nothing else.
  */
 export const Marks: Story = {
   args: { children: "" },
@@ -73,9 +71,8 @@ export const MarkResting: Story = {
 };
 
 /**
- * THE DISTINCTION, DRAWN. Four rows carrying marks and ONE capsule on the row
- * that is a moment of record. A capsule on every row is the rule 6 violation
- * this story exists to make look wrong.
+ * Rows carry marks; only the moment-of-record row carries a capsule. A
+ * capsule on every row is the violation this story makes look wrong.
  */
 export const RowBudget: Story = {
   args: { children: "" },

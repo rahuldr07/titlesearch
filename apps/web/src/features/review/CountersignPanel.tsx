@@ -10,20 +10,14 @@ import { CountersignSettled } from "./CountersignSettled";
 import { SwitchExaminer } from "./SwitchExaminer";
 
 /**
- * SECOND READ — T1 EXPOSURE. The ruinous-exposure rulings this order carries and
- * the countersign each one still needs, drawn from
- * `GET /api/orders/{id}/countersigns` and from nothing else.
- *
- * Design rule 13 is the SERVER's: a second read must come from a different
- * examiner than the one who ruled, and it arrives as a 409. So the action is
- * never dimmed by who is signed in — it is sent, and the refusal renders
- * verbatim. The one hold is the signature the request cannot be made without
- * (rule 9), which the server then refuses a second time with a 422.
- *
- * ONE ACT FILES ONE RECORD. The design draws a single "Countersign 3 T1
- * rulings" button; the endpoint is per field, and a button filing three second
- * reads on one press is approve-all wearing a different hat. Each ruling is
- * countersigned on its own row, against one signature.
+ * Second read — T1 exposure: the ruinous-exposure rulings this order
+ * carries and the countersign each one still needs, drawn from
+ * `GET /api/orders/{id}/countersigns` and from nothing else. The
+ * different-examiner rule is the server's 409, so the action is never
+ * dimmed by who is signed in; the one hold is the signature the request
+ * cannot be made without. One act files one record: a button filing three
+ * second reads on one press would be approve-all wearing a different hat,
+ * so each ruling is countersigned on its own row, against one signature.
  */
 export function CountersignPanel(props: { readonly orderId: string }) {
   const query = useRead(countersigns(props.orderId));
@@ -97,7 +91,7 @@ export function CountersignPanel(props: { readonly orderId: string }) {
               <SwitchExaminer />
             </div>
 
-            {/* Rule 9 in place, not only on hover. */}
+            {/* The hold speaks in place, not only on hover. */}
             {held !== null && (
               <p className="mt-4 text-meta leading-body text-state-attend">{held}</p>
             )}

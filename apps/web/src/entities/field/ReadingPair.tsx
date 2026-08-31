@@ -4,27 +4,19 @@ import { ReadingText, segmentsFor } from "./readingDiff";
 import { NoValueChip } from "./NoValueChip";
 
 /**
- * TWO ENGINES DISAGREED, AND BOTH ARE ATTRIBUTED.
- *
- * AGENTS.md: "Engines never see each other's output." The rendering honours the
- * same thing — neither seat is drawn as the default, the winner, or the
- * "primary" reading, because merging is the server's and preferring one here
- * would be the UI making a ruling.
- *
- * NOTHING IS SORTED BY CONFIDENCE. `confidence_raw` is "documented-miscalibrated
- * … never a gate" (`entities.ts:76`), and ordering two readings by it is a gate
- * wearing a layout's clothes: the top one gets adopted.
- *
- * Design §Screens 7: a reading can be "adopted" into the correction editor
- * "without retyping". `onAdopt` hands the reading's VALUE up; this component
- * never writes one.
+ * Two engines disagreed, and both are attributed. Neither seat is drawn as
+ * the default, the winner, or the primary reading — merging is the server's,
+ * and preferring one here would be the UI making a ruling. Nothing is sorted
+ * by confidence: ordering two readings by a miscalibrated signal is a gate
+ * wearing a layout's clothes — the top one gets adopted. `onAdopt` hands the
+ * reading up; this component never writes one.
  */
 export type ReadingPairProps = {
   readonly a: FieldReading;
   readonly b: FieldReading;
   /** Adopt this reading into the correction editor. Absent = read-only. */
   readonly onAdopt?: ((reading: FieldReading) => void) | undefined;
-  /** Rule 9: if adoption is blocked, it is blocked WITH the server's reason. */
+  /** If adoption is blocked, it is blocked with the server's reason. */
   readonly adoptBlockedBecause?: string | null | undefined;
 };
 
@@ -41,16 +33,11 @@ export function ReadingPair({ a, b, onAdopt, adoptBlockedBecause }: ReadingPairP
 }
 
 /**
- * THE RUBRIC, AND IT IS A HAND-OVER RATHER THAN A VERDICT.
- *
- * It says the seats differ and stops there — no winner, no dimmed side. The
- * second line names what the two readings ARE: drafts, with nothing settled
- * behind them. Without it a panel whose field carries no merged value reads as
- * an extraction that returned nothing, which is false while two engines are
- * sitting underneath it holding values.
- *
- * Drawn only where the values actually differ: a pair that agrees is not a
- * disagreement, and the sentence would be a lie about the payload.
+ * The rubric is a hand-over, not a verdict: it says the seats differ and
+ * stops there — no winner, no dimmed side. The second line names what the
+ * readings are (drafts, nothing settled), without which a field with no
+ * merged value reads as an extraction that returned nothing. Drawn only
+ * where the values actually differ.
  */
 function PairRubric() {
   return (
@@ -81,7 +68,7 @@ function ReadingSide({
       data-engine-id={reading.engine_id}
       className="flex flex-col gap-4 rounded-md border border-line-strong bg-surface-panel p-6"
     >
-      {/* Rule 3: an engine id is data. Rule 4: the rubric is the only caps. */}
+      {/* An engine id is data, so mono. */}
       <span className="font-mono text-label leading-flat text-ink-muted">
         {reading.engine_id}
       </span>
@@ -89,13 +76,10 @@ function ReadingSide({
       <ReadingValue reading={reading} other={other} />
 
       {/*
-        NOT a `CitationRef`. A `FieldReading` carries `page` and `snippet` but NO
-        `source_doc_id` (`entities.ts:70-81`), and `Citation` requires one —
-        "half a citation is not a weaker citation, it is none"
-        (`provenance.ts:106-110`). Fabricating a doc id from `engine_id` to
-        satisfy the type would be inventing provenance, which is the one thing
-        this layer must not do. Reported as a contract gap; the page renders as
-        a page and claims nothing more.
+        Not a CitationRef: a FieldReading carries `page` and `snippet` but no
+        `source_doc_id`, and Citation requires one. Fabricating a doc id to
+        satisfy the type would be inventing provenance, so the page renders
+        as a page and claims nothing more.
       */}
       {reading.page !== null && (
         <span className="font-mono text-label leading-flat text-ink-muted">
@@ -125,10 +109,10 @@ function ReadingSide({
 }
 
 /**
- * A reading with a null value is NOT the same absence as a field's. The engine
- * read the page and produced nothing; it did not classify the document. So it
- * borrows the pipeline sentence rather than an NA reason — an engine has no
- * standing to say the instrument is silent.
+ * A reading with a null value is not the same absence as a field's: the
+ * engine read the page and produced nothing; it did not classify the
+ * document. So it borrows the pipeline sentence rather than an NA reason —
+ * an engine has no standing to say the instrument is silent.
  */
 function ReadingValue({
   reading,

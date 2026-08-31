@@ -3,13 +3,9 @@ import { ErrorBoundary, type FallbackProps } from "react-error-boundary";
 import { reportCrash } from "../../shared/crash";
 
 /**
-
- * Invariant 59 — a partial failure degrades that region only. One boundary PER SCREEN,
-
- * wrapped by the root route around `<Outlet/>`, so a screen that throws takes the
-
- * screen and not the chrome: the rail keeps its doors and the order strip…
-
+ * A partial failure degrades that region only. One boundary per screen,
+ * wrapped by the root route around `<Outlet/>`, so a screen that throws
+ * takes the screen and not the chrome.
  */
 export function ScreenBoundary(props: {
   readonly resetKey: string;
@@ -20,11 +16,10 @@ export function ScreenBoundary(props: {
       FallbackComponent={ScreenFailed}
       resetKeys={[props.resetKey]}
       /*
-       * `info` is not forwarded. It carries `componentStack`, which React 19
-       * dev builds fill with source file paths and keyed-list `key` values —
-       * a row keyed by a party name would leak one. REVIEW-01 B4 took
-       * `component_stack` out of the crash payload entirely, so `reportCrash`
-       * no longer accepts it and this boundary has nothing to convert.
+       * `info` is not forwarded. It carries `componentStack`, which dev
+       * builds fill with source paths and keyed-list `key` values — a row
+       * keyed by a party name would leak one. `reportCrash` does not accept
+       * it.
        */
       onError={(error) => reportCrash("caught", error)}
     >

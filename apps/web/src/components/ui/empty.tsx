@@ -2,32 +2,12 @@ import type { ReactNode } from "react";
 import { cx } from "./cx";
 
 /**
- * ADAPTED FROM THE REGISTRY `empty`, AND THE COMPOUND API IS THE PART THAT
- * WENT.
- *
- * The registry ships `Empty` / `EmptyHeader` / `EmptyMedia` / `EmptyTitle` /
- * `EmptyDescription` / `EmptyContent` — six slots, every one of them optional.
- * That composes into `<Empty><EmptyTitle>No results</EmptyTitle></Empty>`, and
- * a screen that says only "No results" leaves the reader unable to tell a
- * filter that matched nothing from a queue that is genuinely clear from a fetch
- * that failed quietly. Three very different facts, one blank pane.
- *
- * So `reason` is a REQUIRED PROP and the slots are gone. This is rule 14's
- * typed absence ("absence is typed, never a blank") and rule 9's stated reason,
- * applied to a pane rather than to a value. The primitive does not KNOW the
- * taxonomy — that lives in `entities/`, and a primitive that knew it would not
- * be a primitive — it merely refuses to render without one.
- *
- * `EmptyMedia` is dropped outright rather than retokenised: rule 7 bans icon
- * soup and the glyph vocabulary is ✓ ◆ • T1. A grey circle with a magnifier in
- * it is not in it.
- *
- * The registry's dashed `rounded-xl` border is dropped too. An empty pane is
- * already inside a Card; a dashed box drawn inside a card is a nested card with
- * the fill removed, and nested cards are forbidden.
- *
- * `action` is the way out, and it is optional because some empties have none:
- * "no escalations" is good news and offers nothing to press.
+ * An empty pane with a required `reason`: "No results" alone cannot tell a
+ * filter that matched nothing from a queue that is genuinely clear from a
+ * fetch that failed quietly. The primitive does not know the taxonomy — that
+ * lives in entities/ — it merely refuses to render without a reason.
+ * `action` is optional because some empties have no way out: "no
+ * escalations" is good news and offers nothing to press.
  */
 function Empty({
   title,

@@ -18,13 +18,12 @@
  *     handler logic and is NEVER re-derived from this table.
  *
  * Rules of the table:
- *   - Every holder is listed EXPLICITLY — there is no wildcard role. (The
- *     old nav.ts WORLDS map made "/" a wildcard and it nearly leaked; admin
- *     is spelled out on every row instead.)
+ *   - Every holder is listed explicitly — no wildcard role; admin is spelled
+ *     out on every row.
  *   - Action names are resource.verb — greppable, and safe for logs/URLs
- *     (no NPI, no ids; GLBA).
+ *     (no NPI, no ids).
  *   - Clients receive only their own role's projection (`rulesFor`) — a
- *     typist's rule set does not MENTION other worlds. Doors absent, never
+ *     typist's rule set does not mention other worlds. Doors absent, never
  *     dimmed, extends to the data itself.
  */
 
@@ -58,7 +57,7 @@ const SIGHTED = ["reviewer", "senior", "ops", "engineer", "admin"] as const;
 
 export const PERMISSIONS = [
   /* ── doors ───────────────────────────────────────────────────────────── */
-  // typists never see the hub — straight to the capture seat (§0.7)
+  // typists never see the hub — straight to the capture seat
   { action: "screen.home.enter", path: "/", roles: SIGHTED },
   { action: "screen.queue.enter", path: "/queue", roles: ["reviewer", "admin"] },
   // order-scoped review: reviewer works it; senior/ops/engineer arrive via
@@ -79,7 +78,6 @@ export const PERMISSIONS = [
   // every role keeps the account door in the mock-auth phase (role switch
   // must not lock you out); Clerk narrows this at P1
   { action: "screen.account.enter", path: "/account", roles: EVERYONE },
-  // added under the 2026-08-28 ruling
   { action: "screen.orders-list.enter", path: "/orders-list", roles: ["ops", "senior", "admin"] },
   { action: "screen.templates.enter", path: "/templates", roles: ["engineer", "admin"] },
   { action: "screen.jurisdiction.enter", path: "/jurisdiction", roles: ["senior", "engineer", "admin"] },
@@ -122,12 +120,11 @@ export const PERMISSIONS = [
   { action: "reconciliation.rule", roles: ["senior", "admin"] },
   { action: "routing.flip", roles: ["engineer", "admin"] },
   { action: "complaint.record", roles: ["ops", "admin"] },
-  // ops lead resolves complaints (PRD §5); refused unless still open
+  // ops lead resolves complaints; refused unless still open
   { action: "complaint.resolve", roles: ["ops", "admin"], when: { resolution: [null] } },
   { action: "delivery.retry", roles: ["ops", "admin"] },
-  // ⚠ RULED 2026-08-29 (RULING-2026-08-29.md): the reference's Settings pane
-  // cycles RBAC cells and reassigns roles; both acts get real grants so the
-  // mock refuses them by the one table rather than by a hand-rolled check.
+  // The Settings pane cycles RBAC cells and reassigns roles; both acts get
+  // real grants so the mock refuses them by this one table.
   { action: "rbac.edit", roles: ["admin"] },
   { action: "person.role.assign", roles: ["admin"] },
 ] as const satisfies readonly Permission[];

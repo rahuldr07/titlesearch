@@ -3,17 +3,9 @@ import { CitationBox } from "../../entities/evidence/PaperSheet";
 import { CitedRegion } from "./CitedRegion";
 
 /**
-
- * Invariant 33, on a page that is text. The invariant says "provenance coordinates
-
- * render as a pin on the source page raster".
-
- *
- * THE THIRD SENTENCE IS NEW AND THE OTHER TWO ARE NOT. `source_line_coords` was
- * `z.unknown()` until 2026-08-28, so this pin could only ever say the page was
- * cited and no coordinate existed — for fields that had carried one all along.
- * With a real `LineCoords` the pin says which of the three actually happened,
- * and `CitedRegion` draws the box the third case describes.
+ * The provenance pin, on a page that is text. It states which of three
+ * things happened — a marked line, a boxed region, or a cited page with no
+ * recorded coordinate — and `CitedRegion` draws the box for the second.
  */
 function Pin(props: {
   readonly n: number;
@@ -38,13 +30,9 @@ function Pin(props: {
 }
 
 /**
-
- * `read_in_full: false` IS A STATEMENT, NOT AN ABSENCE. `endpoints.ts:664` is
-
- * unusually direct about it: "most pages of a county package carry no field the report
-
- * needs, and a page nobody typed is normal rather than an error." So this…
-
+ * `read_in_full: false` is a statement, not an absence: most pages of a
+ * county package carry no field the report needs, and a page nobody typed
+ * is normal rather than an error.
  */
 function NotInFull() {
   return (
@@ -59,13 +47,9 @@ function NotInFull() {
 }
 
 /**
-
- * A PAGE WITH NO ENTRY IN `pages[]` — the fifty-seven, in the live fixture. Rule 8's
-
- * prohibition does the work here: "never grey placeholder bars." A skeleton bar means
-
- * "not here yet", and this page is here — it is in the package, the…
-
+ * A page with no entry in `pages[]`. Never a grey placeholder bar: a
+ * skeleton means "not here yet", and this page is here — it is in the
+ * package and no reader typed it.
  */
 function Unread(props: { readonly n: number }) {
   return (
@@ -97,11 +81,10 @@ export function PageBody(props: {
     <div className="flex flex-col gap-6">
       {props.pinned && <Pin n={props.n} marked={marked} box={props.box} />}
       {/*
-        THE BOX IS MEASURED AGAINST THE LINES, NOT THE SHEET, and that is the
-        whole reason this div is positioned. Hung off `PaperSheet` the overlay
-        stretched over the stock's padding, the clerk stamp and the pin
-        paragraph too — about 168px of chrome that is not the page's text —
-        and every region landed a line and a half high.
+        The box is measured against the lines, not the sheet — that is the
+        whole reason this div is positioned. Hung off `PaperSheet` the
+        overlay would stretch over padding, stamp and pin, and every region
+        would land high.
       */}
       <div data-testid="scan-lines" className="relative flex flex-col">
         {props.box !== null && <CitedRegion box={props.box} />}

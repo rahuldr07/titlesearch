@@ -3,13 +3,7 @@ import { assertNever } from "../../shared/provenance";
 import { cx } from "../../components/ui";
 
 /**
-
- * A no-value field, as a row — and the five stay five. `NoValueChip` is the PANEL
-
- * render: a bordered chip carrying the taxonomy's full sentence ("On the page — could
-
- * not be read").
-
+ * A field value, as a row — and the five no-value renders stay five.
  */
 export type RowValueProps = {
   readonly value: FieldValue;
@@ -19,12 +13,12 @@ export type RowValueProps = {
 const QUALIFIER: Readonly<
   Record<Extract<FieldValue["kind"], `na-${string}`>, { text: string; chrome: string }>
 > = {
-  /** Structurally absent here. Correct, quiet, never surfaced (enums.ts:31-35). */
+  /** Structurally absent here. Correct, quiet, never surfaced. */
   "na-not-present": {
     text: "N/A — EXPECTED",
     chrome: "border-na-not-present-border text-na-not-present-ink bg-surface-sunken",
   },
-  /** Searched, and there is nothing of record. A real gap IS a finding. */
+  /** Searched, and there is nothing of record. A real gap is a finding. */
   "na-not-found": {
     text: "N/A — NONE OF RECORD",
     chrome: "border-dashed border-na-not-found-border text-na-not-found-ink",
@@ -47,7 +41,7 @@ const CHIP =
 
 export function RowValue({ value }: RowValueProps) {
   switch (value.kind) {
-    /** Rule 3: a field value is data, so it is mono. */
+    /** A field value is data, so it is mono. */
     case "cited":
       return (
         <span
@@ -75,12 +69,9 @@ export function RowValue({ value }: RowValueProps) {
         </span>
       );
 
-    /**
-
-     * Sentence case, no lead, no chip border — a pipeline statement, and it must never
-
-     * read as one of the four findings above.
-
+    /*
+     * Sentence case, no lead, no chip border — a pipeline statement, and it
+     * must never read as one of the four findings above.
      */
     case "not-extracted":
       return (

@@ -2,20 +2,12 @@ import type { NaReason } from "@titlepipe/contract";
 import { cx } from "../../components/ui";
 
 /**
- * LAW 3 — DECLARING WHICH ABSENCE THIS IS, AND THERE ARE FOUR OF THEM.
- *
- * ⚠ RULED 2026-08-29 (`docs/frontend/design-2026-08/RULING-2026-08-29.md`):
- * the reference draws this as a 2×2 GRID of the four absence options under the
- * heading "Law 3 Protocol: Declare Null Provenance" — a bold label over a
- * small body on each cell — not as a select. Rebuilt as the drawn grid, with
- * the drawn copy; the four still map one-to-one onto the contract's ratified
- * `NaReason` members (`enums.ts:20-52`) and still never collapse.
- *
- * NOT GATED ON `value === null`. The reference shows this grid INSTEAD of
- * confirm/edit for a field its fixture flags `NA_ONLY`. Nothing on the wire
- * carries that flag, and `enums.ts:44-48` forbids the obvious substitute:
- * "never key anything off `value === null`". So the declaration is a fourth
- * act available on every open decision, and the reviewer decides.
+ * Declaring which absence this is — a 2×2 grid of the four options, mapping
+ * one-to-one onto the contract's `NaReason` members; they never collapse.
+ * Not gated on `value === null` — nothing on the wire flags a field as
+ * absence-only and keying off a null value is forbidden — so the
+ * declaration is a fourth act available on every open decision, and the
+ * reviewer decides.
  */
 const ABSENCE_OPTIONS: readonly {
   readonly reason: NaReason;

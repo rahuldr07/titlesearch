@@ -3,16 +3,9 @@ import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 
 /**
- * THE OUTER FORM STRUCTURE — set, legend, group, separator.
- *
- * Split out of `field.tsx` to clear the 150-line gate, and the seam is a real
- * one rather than an arbitrary cut: these four are the CONTAINERS a form is
- * built from, while `field.tsx` holds the single field and its parts.
- *
- * Gaps read as `N x 2px` (ui.css sets --spacing to 2px), so the registry's
- * `gap-4` — 16px at the stock base — is restated as `gap-8`. Every spacing
- * token in the registry output halved silently when the base changed, which is
- * a failure that renders rather than errors.
+ * The outer form structure — set, legend, group, separator. field.tsx holds
+ * the single field and its parts. Gaps read as N × 2px: ui.css sets
+ * --spacing to 2px, so stock Tailwind spacing halves silently here.
  */
 function FieldSet({ className, ...props }: React.ComponentProps<"fieldset">) {
   return (
@@ -29,14 +22,10 @@ function FieldSet({ className, ...props }: React.ComponentProps<"fieldset">) {
 }
 
 /**
- * Rule 2 in one line: a legend is either the SUBJECT of a panel (20px) or a
- * field label (11px w700 grey). The registry's `text-base`/`text-sm` pair had
- * neither, and 16px is the body size — a heading at body size is not a heading.
- *
- * The `label` spelling uses `--color-ink-muted`, not the recipe's `#8A8E98`,
- * for the reason measured in `field-chrome.ts`: ink-faint is 3.27:1 at 11px on
- * white and fails WCAG 1.4.3. Both spellings of an 11px label have to agree,
- * or the one nobody checked is the one that ships.
+ * A legend is either the subject of a panel (20px) or a field label (11px
+ * w700 grey). The `label` spelling uses ink-muted, not ink-faint, for the
+ * contrast reason stated in field-chrome.ts — both spellings of an 11px
+ * label have to agree.
  */
 function FieldLegend({
   className,
@@ -75,10 +64,8 @@ function FieldGroup({ className, ...props }: React.ComponentProps<"div">) {
 }
 
 /**
- * The registry's label chip sat on `bg-background`. On this palette a form
- * separator stands on a panel, so it is `bg-surface-panel` — `background` has
- * no counterpart here and guessing `surface-app` would leave a grey notch
- * floating in a white card.
+ * The label chip is bg-surface-panel: a form separator stands on a panel,
+ * and surface-app would leave a grey notch floating in a white card.
  */
 function FieldSeparator({
   children,
@@ -106,10 +93,9 @@ function FieldSeparator({
 }
 
 /**
- * The label that WRAPS a control (a checkbox row), as opposed to the one that
- * sits above it. Selected state is drawn with the accent's tint pair rather
- * than `primary/5` — an alpha of the accent over an unknown ground is a colour
- * nobody chose, and `--color-action-surface` is the one somebody did.
+ * The label that wraps a control (a checkbox row), as opposed to the one
+ * that sits above it. Selected state uses the accent's tint pair — an alpha
+ * of the accent over an unknown ground is a colour nobody chose.
  */
 function FieldLabel({ className, ...props }: React.ComponentProps<typeof Label>) {
   return (

@@ -1,12 +1,10 @@
 import { expect, test } from "@playwright/test";
 
 /**
- * SMOKE — the surfaces built under RULING-2026-08-29 ("complete the UI fully,
- * as the reference app draws it") render their drawn elements from the wire.
- *
- * These are presence checks, not invariants: each asserts that a drawn
- * affordance exists and binds to served data. The rules behind them (server
- * refusals, no client derivation) live in `e2e/invariants`.
+ * Smoke — the drawn surfaces render their elements from the wire. These
+ * are presence checks, not invariants: each asserts that a drawn
+ * affordance exists and binds to served data. The rules behind them
+ * (server refusals, no client derivation) live in `e2e/invariants`.
  */
 
 test("release compiler: pending values are amber links that name their field", async ({

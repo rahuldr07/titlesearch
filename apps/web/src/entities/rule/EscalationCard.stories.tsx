@@ -14,8 +14,8 @@ const BASE: Escalation = {
   resolution: null,
   rule_id: null,
   resolved_by: null,
-  // The RULING-2026-08-29 evidence members — null is the ordinary state for
-  // a cluster raised without attached evidence.
+  // The evidence members — null is the ordinary state for a cluster raised
+  // without attached evidence.
   raised_by: null,
   age: null,
   context: null,
@@ -34,14 +34,13 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** Open. No category, no priority, no assignee — `INVARIANTS:39`. */
+/** Open. No category, no priority, no assignee. */
 export const Open: Story = { args: { escalation: BASE } };
 
 /**
- * THE REFUSAL, AND THE STORY THIS COMPONENT EXISTS FOR. A ruling was recorded
- * and NO rule was cited. `INVARIANTS:36` is `§0.5 MANDATORY`: "a ruling alone is
- * not a resolution." So it renders as still open — a card that drew this as
- * settled would have performed, on screen, the resolution the server refused.
+ * The refusal this component exists for: a ruling was recorded and no rule
+ * was cited, so it renders as still open — a card that drew this as settled
+ * would have performed, on screen, the resolution the server refused.
  */
 export const RuledButNoRule: Story = {
   args: {
@@ -71,7 +70,7 @@ export const ResolvedByRule: Story = {
   },
 };
 
-/** The two paths of `INVARIANTS:37`, and deliberately no third. */
+/** The two resolution paths, and deliberately no third. */
 export const WithBothResolutionPaths: Story = {
   args: {
     escalation: BASE,

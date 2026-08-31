@@ -2,22 +2,13 @@ import { expect, test } from "@playwright/test";
 import { interceptApi } from "../helpers/net";
 
 /**
- * [INVARIANT] — rule: a global chord is SUSPENDED, not cancelled, while a text
- * surface or an overlay holds focus, and it RESUMES on close with no click.
- *
- * The reference prototype guards exactly one way — a tagName test on
- * `e.target` (INPUT/TEXTAREA/SELECT/isContentEditable) — and that test is
- * structurally insufficient under react-aria-components, whose Menu, Select,
- * ComboBox and GridList listboxes are `<div role="listbox">`: they are NOT
- * INPUT, they DO implement typeahead, and C/E/Q/J/K/Z// are all printable.
- * A tagName guard lets `q` both escalate the open field AND jump the menu to
- * "Quarantine". The prototype also never guards on `shortcutsOpen`, so `?`
- * then `c` CONFIRMS A RULING FROM INSIDE THE CHEAT SHEET — the same trap
- * `queue-keys.spec` pins for the queue, on the field that carries T1 exposure.
- *
- * These bound the guard by SCOPE, not by tag: the innermost layer that can use
- * a key wins, and the global layer stands down whenever any composite or
- * overlay is the active element.
+ * Rule: a global chord is suspended, not cancelled, while a text surface or
+ * an overlay holds focus, and it resumes on close with no click. A tagName
+ * guard is insufficient — react-aria listboxes are `<div role="listbox">`,
+ * not INPUT, and they implement typeahead — so these bound the guard by
+ * scope, not by tag: the innermost layer that can use a key wins, and the
+ * global layer stands down whenever any composite or overlay is the active
+ * element.
  */
 
 const REVIEW = "/orders/ord_demo_1/review";
@@ -54,14 +45,11 @@ test("Escape leaves the editor and the chords resume WITHOUT a click", async ({
 });
 
 /*
- * UPDATED under RULING-2026-08-29 (docs/frontend/design-2026-08/
- * RULING-2026-08-29.md): the absence picker is the reference's drawn 2×2 GRID
- * of buttons now, not a react-aria Select, so there is no listbox on this
- * screen to own a typeahead — that suppression rule stays pinned DOM-free in
- * src/shared/focusOwnership.test.ts. What this pins instead is the drawn
- * behaviour that replaced it: the four absence options render as the grid,
- * and `z` performs the drawn zoom-to-citation (scale to the recorded box) and
- * `Escape` fits again.
+ * The absence picker is a 2×2 grid of buttons, not a Select, so no listbox
+ * on this screen owns a typeahead (that suppression rule stays pinned
+ * DOM-free in src/shared/focusOwnership.test.ts). This pins the drawn
+ * behaviour: the four absence options render as the grid, `z` zooms to the
+ * recorded citation box, and Escape fits again.
  */
 test("the drawn NA grid stands where the select was, and z zooms to the citation", async ({
   page,
@@ -132,11 +120,10 @@ test("every chord is DEAD until signed in", async ({ page }) => {
 });
 
 /*
- * UPDATED for the built surface (RULING-2026-08-29 completed this flow): the
- * act is per ruling at POST /api/fields/{id}/countersign — one act, one
- * record — and design rule 13 is the SERVER's 409, rendered verbatim in the
- * panel, never button state. The 409 is forced at the fetch layer so the pin
- * holds whichever examiner the session happens to hold.
+ * The act is per ruling at POST /api/fields/{id}/countersign — one act, one
+ * record — and the same-examiner rule is the server's 409, rendered verbatim
+ * in the panel, never button state. The 409 is forced at the fetch layer so
+ * the pin holds whichever examiner the session happens to hold.
  */
 test("countersign is refused by the SERVER with a 409, not by button state", async ({
   page,

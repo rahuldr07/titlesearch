@@ -11,62 +11,34 @@ import type {
 } from "@titlepipe/contract";
 
 /**
- * Synthetic demo data migrated from the design tool's Review Screen demo,
- * scrubbed of anything resembling real NPI (frontend-master-prompt §2):
- * clearly synthetic persons/companies, DEMO-* refs. The SHAPES and the weird
- * states are preserved exactly — A/B disagreement, both NA states, a
- * degraded-scan unreadable, a pending field, and an auto-confirmed value that
- * arrived with no provenance (principle 6's failure shape, rendered flagged).
- *
- * line_coords are the ratified `LineCoords` — {page,x,y,w,h}, origin top-left,
- * every member a fraction of the rendered page box. They were an unvalidated
- * {x0,y0,x1,y1} placeholder under `z.unknown()` until 2026-08-28; the contract
- * now checks the range, so a box here that runs off its page fails to parse.
- *
- * Excerpts are built with `excerpt()` below rather than written out, so a
- * field's flat `source_snippet` and its split `source_excerpt` cannot drift
- * into two different quotations of one line.
+ * Synthetic demo data, scrubbed of anything resembling real NPI: clearly
+ * synthetic persons/companies. The shapes and the weird states are preserved
+ * exactly — A/B disagreement, the NA states, a degraded-scan unreadable, a
+ * pending field, and an auto-confirmed value with no provenance (rendered
+ * flagged). line_coords are `LineCoords` fractions of the rendered page box;
+ * a box that runs off its page fails to parse. Excerpts are built with
+ * `excerpt()` below so a field's flat `source_snippet` and its split
+ * `source_excerpt` cannot drift into two different quotations of one line.
  */
 
 /**
- * ════════════════════════════════════════════════════════════════════════════
- * THE ONE DEMO ORDER SET
- * ════════════════════════════════════════════════════════════════════════════
- *
- * Every endpoint that lists, counts or names an order projects THIS table:
- * `/api/queue/next`, `/api/queue/bands`, `/api/lifecycle`,
- * `/api/orders/:id/{context,signoff,pipeline,completeness}`, the timelines and
- * the deliveries store. There were two hand-maintained copies until
- * 2026-07-30 and they had already drifted — the lifecycle board and
- * `/api/queue/next` disagreed about what state 4176034-1 was in, and the
- * package ran to 38 in one place and 64 in another. A second copy of a fact is
- * a second answer.
- *
- * HOW TO USE IT (for the projection layers, `workspace.ts` / `handlers.ts`):
- *   - `demoOrders`      — every order, in no meaningful order. Filter it.
- *   - `demoOrderRow(id)`— one row, or `undefined`. Never invent a placeholder.
- *   - `demoOrderEntity` — the row as the contract's `Order`. Adding a field to
- *                         the `Order` schema edits this function and nothing else.
- *   - `demoQueue`       — the served queue, in the SERVER's order.
+ * The one demo order set. Every endpoint that lists, counts, or names an
+ * order projects this table — a second copy of a fact is a second answer.
+ * For the projection layers (`workspace.ts` / `handlers.ts`):
+ *   - `demoOrders`       — every order, in no meaningful order. Filter it.
+ *   - `demoOrderRow(id)` — one row, or `undefined`. Never invent a placeholder.
+ *   - `demoOrderEntity`  — the row as the contract's `Order`. Adding a field
+ *                          to the `Order` schema edits that function only.
+ *   - `demoQueue`        — the served queue, in the server's order.
  *   - `PACKAGE_PAGES` / `PACKAGE_PAGES_RELEVANT` / `PRODUCT_NAME` /
  *     `PERIOD_LABEL` — the anchors. Quote them; never restate the numeral.
- *
- * WHAT IS THE EXPORT'S AND WHAT IS NOT. The refs, the package size, the
- * product, the period, the waited times, the waiting-on copy and the state
- * labels are the 2026-07-28 export's own (`TitlePipe.dc.html:3240-3258`). The
- * GEOGRAPHY is deliberately NOT: the export's addresses read like real Arizona
- * property, this file's scrubbing rule is synthetic persons and synthetic
- * places (frontend-master-prompt §2), and `demoFields` / `demoPages` below
- * describe a Clayton County GA package down to the page text. Adopting Mesa AZ
- * on the row while the pages still say CLAYTON CO. GA would be the same
- * contradiction this table exists to end.
  */
 export const PACKAGE_PAGES = 64;
 /**
  * Pages the classifier carried forward out of `PACKAGE_PAGES`. Quoted, never
  * restated as a numeral. Not derivable from `demoPages` below — that fixture
- * serves a SAMPLE of the package (the cited pages plus one deliberately
- * unread), so counting it would answer a different question.
+ * serves a sample of the package, so counting it would answer a different
+ * question.
  */
 export const PACKAGE_PAGES_RELEVANT = 11;
 export const PRODUCT_NAME = "40-Year Search";
@@ -75,8 +47,7 @@ export const PERIOD_LABEL = "40-year period · 07/18/1986 – 07/18/2026";
 /** Which queue band lists an order. `null` = listed by no band. */
 export type DemoBandId = "mine" | "held" | "in_flight" | "delivered";
 /**
- * The overview board's columns, the export's own ids and order
- * (`TitlePipe.dc.html:3269-3277`). There is NO `failed` member: a failed order
+ * The overview board's columns. There is no `failed` member: a failed order
  * is lifted into the banner, so a `failed` column could never hold a card.
  * `failed` is a flag on the row, orthogonal to where the row sits.
  */
@@ -103,10 +74,8 @@ export interface DemoOrderRow {
   readonly delivered_at: string | null;
   readonly product: string;
   /**
-   * The rendered period label. Named `period` on the row and `period_label` on
-   * the wire, the same way `order_ref` is `external_ref` on the wire — the row
-   * is a fixture table, not a wire shape, and `demoOrderEntity` is the one
-   * place the two names meet.
+   * The rendered period label. Named `period` on the row and `period_label`
+   * on the wire; `demoOrderEntity` is the one place the two names meet.
    */
   readonly period: string;
   /** Null when the package could not be read at all — never 0, which is a count. */
@@ -121,10 +90,9 @@ export interface DemoOrderRow {
   readonly waited: string | null;
   readonly waiting_on: string;
   /**
-   * The server's WORD for where this order stands, not a state-machine member.
-   * A free string on purpose: an enum invites `switch (order.state)` in the
-   * browser, which is the client-side state machine the hard rules put on the
-   * server.
+   * The server's word for where this order stands, not a state-machine
+   * member. A free string on purpose: an enum invites `switch (order.state)`
+   * in the browser.
    */
   readonly state_label: string | null;
   readonly mine: boolean;
@@ -143,9 +111,9 @@ const ACCEPTED = "2026-07-24T13:22:00Z";
 const DELIVERED = "2026-07-24T17:20:00Z";
 
 /**
- * Status and the three timestamps are DERIVED from the stage, not restated per
- * row: a fixture that lets an order be `delivered` with a null `delivered_at`
- * is the same class of self-contradiction this table exists to end.
+ * Status and the three timestamps are derived from the stage, not restated
+ * per row: a fixture that lets an order be `delivered` with a null
+ * `delivered_at` is the class of self-contradiction this table exists to end.
  */
 function row(spec: DemoOrderSpec): DemoOrderRow {
   const claimed = spec.stage !== "unassigned";
@@ -278,18 +246,10 @@ export const demoOrders: readonly DemoOrderRow[] = [
     stamp_label: "Finalized", stamp_tone: "settled",
   }),
   /*
-   * THE ONE ORDER WHOSE GATES ARE ALL GREEN — added 2026-08-28.
-   *
-   * Every other order in this table refuses release, and until now so did the
-   * handler: `POST /release` answered 409 for all thirteen and `composition()`
-   * returned `seal_sha256: null` unconditionally. So the sealed sheet, the
-   * clerk stamp, `IntegritySeal`'s present branch and "already released" were
-   * code nobody could reach from a browser — reviewable only by reading them.
-   *
-   * This order exists so BOTH paths are exercisable, not so the refusal goes
-   * away: 4176034-1 still refuses with its four open gates, and this one seals.
-   * A fixture that only has the happy path is the same defect as one that only
-   * has the refusal.
+   * The one order whose gates are all green. It exists so both release
+   * paths are exercisable: 4176034-1 still refuses with its open gates, and
+   * this one seals. A fixture with only the happy path is the same defect
+   * as one with only the refusal.
    */
   row({
     id: "ord_demo_14", order_ref: "4176028-5", queue_position: null,
@@ -308,8 +268,7 @@ export function demoOrderRow(id: string): DemoOrderRow | undefined {
 
 /**
  * The same lookup for this file's own derivations, where a missing row is a
- * FIXTURE BUG rather than a runtime condition — a timeline that silently loses
- * its timestamps is how a demo starts contradicting itself again.
+ * fixture bug rather than a runtime condition.
  */
 function rowOrThrow(id: string): DemoOrderRow {
   const found = demoOrderRow(id);
@@ -341,9 +300,9 @@ export function demoOrderEntity(row: DemoOrderRow): Order {
 }
 
 /**
- * SERVER-ORDERED, and that is the whole point of `queue_position` being data:
- * the queue is not a list to shop through, so the order of service is a fact
- * the fixture states rather than an accident of array order.
+ * Server-ordered — the point of `queue_position` being data: the queue is
+ * not a list to shop through, so the order of service is a fact the fixture
+ * states rather than an accident of array order.
  */
 export const demoQueue: readonly DemoOrderRow[] = demoOrders
   .filter((r) => r.queue_position !== null)
@@ -363,41 +322,23 @@ export const demoOrder2: Order = demoOrderEntity(rowOrThrow("ord_demo_2"));
 const oid = "ord_demo_1";
 
 /**
- * THE THREE T1 RULE REFS — RUINOUS EXPOSURE, TAGGED BY THE RULEBOOK.
- *
- * The design's review screen draws "T1 pills on ruinous fields" and its own
- * copy names the count: "the three ruinous-exposure (T1) rulings await a second
- * examiner's countersign — no single-examiner release"
- * (ANALYSIS-behavior §5, quoted from the reference prototype).
- *
- * WHICH fields carry the exposure is a RULEBOOK judgement, so it rides on
- * `rule_refs` where every other rulebook judgement rides, and the review screen
- * reads the tag rather than holding a path list (`features/review/T1Pill.tsx`
- * argues that at length). Tagging them HERE is what makes the pill server-said
- * rather than browser-decided.
- *
- * The three are the three the rulebook already has rules about, not a
- * selection made to fill the design's number:
- *   - the lender of record — a wrong lender is a wrong lien holder;
- *   - the secured principal — S5 words-over-numerals exists for this field;
- *   - the judgment party — R13's whole subject is whether a hit is OUR owner.
+ * The three T1 rule refs — ruinous exposure, tagged by the rulebook. Which
+ * fields carry the exposure is a rulebook judgement, so it rides on
+ * `rule_refs`; the review screen reads the tag rather than holding a path
+ * list, which is what makes the T1 pill server-said rather than
+ * browser-decided. The three are the three the rulebook already has rules
+ * about: the lender of record, the secured principal (S5
+ * words-over-numerals), and the judgment party (R13).
  */
 const T1_LENDER = "T1-lien-holder-identity";
 const T1_PRINCIPAL = "T1-secured-principal";
 const T1_JUDGMENT_PARTY = "T1-judgment-party-identity";
 
 /**
- * ONE EXCERPT, WRITTEN ONCE, EMITTED TWICE.
- *
- * `source_snippet` (the flat quotation) and `source_excerpt` (the same
- * quotation split at what the engine matched) are two statements about one line
- * of one page, and the contract requires `pre + hit + post` to BE the snippet.
- * Writing both by hand is how that stops being true, so the flat one is
- * concatenated here and neither can drift from the other.
- *
- * A field whose merged read adopted NO excerpt gets neither member — the two
- * A/B-disagreement fields below are exactly that case, and inventing a
- * highlight for them would be the fixture asserting a match nothing made.
+ * One excerpt, written once, emitted twice: the contract requires
+ * `pre + hit + post` to be the snippet, so the flat one is concatenated here
+ * and neither can drift. A field whose merged read adopted no excerpt gets
+ * neither member — inventing a highlight would assert a match nothing made.
  */
 function excerpt(
   docId: string,
@@ -467,9 +408,8 @@ export const demoFields: Field[] = [
     rule_refs: [],
     approved_by: null,
     approved_at: null,
-    // SERVER-AUTHORED question and reason, in the export's register
-    // (`TitlePipe.dc.html:2386-2392`). Present on the six queued decisions and
-    // ABSENT — not null — on every field that never went to review.
+    // Server-authored question and reason. Present on the queued decisions
+    // and absent — not null — on every field that never went to review.
     asking: "Confirm the ZIP on the tax card.",
     consequence:
       "A wrong ZIP on the tax card indexes the policy against a parcel this report does not describe.",
@@ -880,8 +820,8 @@ export const demoFields: Field[] = [
   },
   {
     // NOT_FOUND: the field exists in this jurisdiction and was searched for;
-    // nothing is of record. Distinct from NOT_PRESENT — this one IS surfaced,
-    // because a real gap in the record is a finding. (Ratified Q1, 2026-07-26.)
+    // nothing is of record. Distinct from NOT_PRESENT — this one is
+    // surfaced, because a real gap in the record is a finding.
     id: "fld_fedlien",
     order_id: oid,
     path: "judgments.1.federal_tax_lien",
@@ -1003,21 +943,17 @@ export const demoRules: Rule[] = [
 
 /**
  * Escalations — clustered by field path. Questions verbatim from reviewers.
- *
- * Every `order_ids` member is a row in `demoOrders`, and the second order is
- * `ord_demo_6` — the one whose stage IS `escalated`. It used to be
- * `ord_demo_2`, which nobody has claimed: an escalation against an unclaimed
- * order is a reviewer's question from a reviewer who does not exist.
+ * Every `order_ids` member is a row in `demoOrders`; an escalation must
+ * name a claimed order — an escalation against an unclaimed order is a
+ * question from a reviewer who does not exist.
  */
 export const demoEscalations: Escalation[] = [
   /*
-   * ⚠ RULED 2026-08-29 (RULING-2026-08-29.md) — the evidence members the
-   * reference's QC & Escalations detail draws are SERVED: the raiser line,
-   * the finished age label (a label, never a ticking clock), the extraction
-   * context paragraph, the docket excerpt split at the boxed match
-   * (`SourceExcerpt`, self-locating), the debtor-vs-owner identity grid, and
-   * the QC seat the determination sits with. Null where a cluster carries no
-   * such evidence — that is an ordinary state, not a placeholder.
+   * The evidence members the QC & Escalations detail draws are served: the
+   * raiser line, the finished age label (a label, never a ticking clock),
+   * the context paragraph, the docket excerpt split at the boxed match, the
+   * debtor-vs-owner identity grid, and the QC seat. Null where a cluster
+   * carries no such evidence — an ordinary state, not a placeholder.
    */
   {
     id: "esc_party_1",
@@ -1118,16 +1054,11 @@ const complainedOrder = rowOrThrow("ord_demo_13");
 const bouncedOrder = rowOrThrow("ord_demo_8");
 
 /**
- * Deliveries — a failed delivery is a TRANSIT state (attend), never a quality
- * state (act). v1 + v2 of the complained-about order are both retained: the
- * pair is the defect record.
- *
- * EVERY `report.order_id` NAMES A ROW THAT CAN HOLD ONE, and the terminal
- * `delivered_at` is quoted from that row rather than restated. Before
- * 2026-07-30 this store delivered `ord_demo_1` (which sits at a gate and has
- * never been delivered), bounced `ord_demo_2` (which nobody has claimed), and
- * split the v1/v2 defect pair across two different orders — three ways of
- * saying something the order table denies.
+ * Deliveries — a failed delivery is a transit state (attend), never a
+ * quality state. v1 + v2 of the complained-about order are both retained:
+ * the pair is the defect record. Every `report.order_id` names a row that
+ * can hold one, and the terminal `delivered_at` is quoted from that row
+ * rather than restated.
  */
 export const demoDeliveries: DeliveryWithReport[] = [
   {
@@ -1138,8 +1069,8 @@ export const demoDeliveries: DeliveryWithReport[] = [
     attempted_at: "2026-07-24T17:19:40Z",
     delivered_at: deliveredOrder.delivered_at,
     evidence: "smtp accepted · message-id 8812@demo",
-    // ⚠ RULED 2026-08-29: the Transmission Receipt's four drawn steps, per
-    // delivery, with the server's own instants and attributions.
+    // The Transmission Receipt's four steps, per delivery, with the
+    // server's own instants and attributions.
     receipt: [
       { id: "signed", at: "2026-07-24T17:19:38Z", what: "Release signed & sealed", who: "L. Vance · after QC countersign", done: true },
       { id: "digest", at: "2026-07-24T17:19:39Z", what: "SHA-256 digest recorded", who: "seal filed on the composition", done: true },
@@ -1225,8 +1156,8 @@ export const demoDeliveries: DeliveryWithReport[] = [
       version: 2,
       shape: "B",
       rendered_at: "2026-07-24T17:17:00Z",
-      // The v1/v2 pair IS the defect record: the v2 row states, on the wire,
-      // which version it superseded and why (RULED 2026-08-29).
+      // The v1/v2 pair is the defect record: the v2 row states, on the
+      // wire, which version it superseded and why.
       supersedes: 1,
       reason: "A value in the delivered report requires correction or updating",
     },
@@ -1235,12 +1166,10 @@ export const demoDeliveries: DeliveryWithReport[] = [
 
 /**
  * Complaints — grouped by how_it_got_through. An auto_confirmed complaint
- * means NO HUMAN SAW IT: the threshold is wrong, not a reviewer.
- *
- * Every `order_id` is an order that was actually DELIVERED, because a
- * complaint is a client's word about something they received. `cmp_2` and
- * `cmp_3` sit on the same order as the v1/v2 delivery pair above — the
- * complaint, the re-render and the rule are one record.
+ * means no human saw it: the threshold is wrong, not a reviewer. Every
+ * `order_id` is an order that was actually delivered; `cmp_2` and `cmp_3`
+ * sit on the same order as the v1/v2 delivery pair above — the complaint,
+ * the re-render, and the rule are one record.
  */
 export const demoComplaints: Complaint[] = [
   {
@@ -1340,28 +1269,21 @@ const liveOrder = rowOrThrow("ord_demo_1");
 const nextUpOrder = rowOrThrow("ord_demo_2");
 
 /*
- * QUOTE, DON'T RESTATE — the live order's review and escalation lines
- * summarize `demoFields` and `demoEscalations`, so their numbers and cluster
- * names are DERIVED from those stores rather than written beside them. The
- * "review 14/19 · 5 fields queued · escalations open — 1 · mortgages.1.amount"
- * this timeline used to assert was four restated figures, and every one of
- * them had drifted from the store it claimed to summarize (21 fields, 6
- * queued, 2 open escalations, all clustered on judgments.hit_identity).
- *
- * The decision census follows the definition the fields endpoint states
- * (`handlers.ts`, `GET /api/orders/:id/fields`): settled is confirmed +
- * corrected + escalated, queued is needs_review, and the denominator is
- * settled + queued — the 2 auto-confirmed nobody saw and the 1 pending
- * nothing has read were never anybody's decision.
+ * Quote, don't restate — the live order's review and escalation lines
+ * summarize `demoFields` and `demoEscalations`, so their numbers and
+ * cluster names are derived from those stores rather than written beside
+ * them. The decision census follows the definition the fields endpoint
+ * states: settled is confirmed + corrected + escalated, queued is
+ * needs_review, and the denominator is settled + queued — auto-confirmed
+ * and pending fields were never anybody's decision.
  */
 const liveFields = demoFields.filter((f) => f.order_id === liveOrder.id);
 const liveQueued = liveFields.filter((f) => f.state === "needs_review").length;
 const liveSettled = liveFields.filter(
   (f) => f.state === "confirmed" || f.state === "corrected" || f.state === "escalated",
 ).length;
-// Open = unresolved. The old line also claimed "rule pending", which no open
-// escalation on this order carries (`rule_id: null` on both) — a pending rule
-// would be quoted from the escalation's own `rule_id`, not asserted here.
+// Open = unresolved. A pending rule would be quoted from the escalation's
+// own `rule_id`, never asserted here.
 const liveOpenEscalations = demoEscalations.filter(
   (e) => e.resolution === null && e.order_ids.includes(liveOrder.id),
 );
@@ -1371,22 +1293,10 @@ const liveEscalationClusters = [
 
 /**
  * Order timelines — the spine each order draws through the pipeline
- * (StatusRail). Server-authored in production; kinds stay an open vocabulary
- * until the FastAPI port. `attend: true` = amber on the rail.
- *
- * EVERY TIMELINE AGREES WITH ITS ROW, and the three anchor timestamps are
- * quoted from it rather than restated. Three things this used to say that the
- * order table denies, all fixed here:
- *   - `ord_demo_1` ended "delivered v1" while sitting at a gate with a null
- *     `delivered_at`. A spine that says delivered is a delivery claim.
- *   - `ord_demo_2` was "accepted · signed R. Okafor" while unclaimed by
- *     anybody. The machine pre-read it; nobody has taken it, so there is no
- *     acceptance to draw.
- *   - `ord_demo_3` is not an order. It is now keyed to `ord_demo_13`, the
- *     delivered order the v1/v2 defect pair and the complaints belong to.
- *
- * Page counts are quoted, never restated: the 38 that used to sit on the first
- * line was the number this whole wave exists to kill.
+ * (StatusRail). Server-authored in production; kinds stay an open
+ * vocabulary until the FastAPI port. `attend: true` = amber on the rail.
+ * Every timeline agrees with its row: the anchor timestamps and page counts
+ * are quoted from it rather than restated.
  */
 export const demoTimelines: Record<string, OrderTimelineEvent[]> = {
   [liveOrder.id]: [
@@ -1418,20 +1328,13 @@ export const demoTimelines: Record<string, OrderTimelineEvent[]> = {
 
 /**
  * Source page text for ord_demo_1. Clearly synthetic, and deliberately
- * consistent with `demoFields`: every CITED page here is one a field cites, so
- * the provenance on the review screen resolves to real text rather than to a
- * page that says nothing about the value claiming it.
- *
- * The total is QUOTED from the order's own package size, and the ONE extra
- * entry (n:18, `read_in_full: false`) exists for the coverage spine
- * (`CoverageSpine.tsx`): a fixture that only ever contained cited, fully-read
- * pages could not exercise "present but not fully read" as distinct from
- * "absent from the array entirely" — the spine's whole reason for existing is
- * telling those two apart.
- *
- * This array is a SAMPLE of the package, not the package: the entries are the
- * cited pages plus the unread one. Nothing may count it to learn how much was
- * read — `PACKAGE_PAGES_RELEVANT` is that number.
+ * consistent with `demoFields`: every cited page here is one a field cites.
+ * The total is quoted from the order's own package size, and the one extra
+ * entry (n:18, `read_in_full: false`) exists so the coverage spine can
+ * exercise "present but not fully read" as distinct from "absent from the
+ * array". This array is a sample of the package, not the package — nothing
+ * may count it to learn how much was read; `PACKAGE_PAGES_RELEVANT` is that
+ * number.
  */
 export const demoPages: Record<
   string,
@@ -1439,12 +1342,10 @@ export const demoPages: Record<
     total: number;
     pages: { n: number; read_in_full: boolean; kind: string; lines: string[]; degraded: boolean }[];
     /**
-     * THE PARTITIONER'S OWN BOUNDARIES, not a grouping of `pages[].kind`.
-     * `PackageInstrument` (endpoints.ts) argues the distinction; this fixture
-     * has to honour it, so the ranges below COVER the package contiguously —
-     * 1 through `total`, ascending, no overlap and no hole — the way a
-     * partition of a stack of paper does. `pages[]` is a sample of the text;
-     * this is the whole package, described.
+     * The partitioner's own boundaries, not a grouping of `pages[].kind`
+     * (see `PackageInstrument`). The ranges cover the package contiguously —
+     * 1 through `total`, ascending, no overlap and no hole. `pages[]` is a
+     * sample of the text; this is the whole package, described.
      */
     instruments: PackageInstrument[];
   }
@@ -1525,9 +1426,9 @@ export const demoPages: Record<
       { id: "ins_plat", kind: "plat", label: "Plat reference — cover sheet only", first_page: 18, last_page: 21, recorded_ref: null },
       { id: "ins_tax", kind: "tax_card", label: "Clayton County tax commissioner card", first_page: 22, last_page: 27, recorded_ref: "PARCEL 13-0044-0018" },
       { id: "ins_fedlien", kind: "lien_search", label: "Federal tax lien search — nothing of record", first_page: 28, last_page: 28, recorded_ref: null },
-      // The docket reference is what `fld_j1case` is queued about: the frame is
-      // below the contrast floor, so the partitioner drew the boundary and
-      // recorded no reference. `null` is that, and not a lookup nobody ran.
+      // The docket reference is what `fld_j1case` is queued about: the
+      // frame is below the contrast floor, so the partitioner drew the
+      // boundary and recorded no reference. `null` is that.
       { id: "ins_fifa", kind: "judgment", label: "FiFa search — Superior Court of Clayton County", first_page: 29, last_page: 34, recorded_ref: null },
       { id: "ins_index", kind: "index", label: "Grantor / grantee chain index", first_page: 35, last_page: 64, recorded_ref: null },
     ],

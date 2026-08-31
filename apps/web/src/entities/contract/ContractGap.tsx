@@ -2,23 +2,11 @@ import type { ReactNode } from "react";
 import { cx } from "../../components/ui";
 
 /**
- * A THING THE DESIGN DRAWS AND THE CONTRACT CANNOT BACK, SAYING SO IN PLACE.
- *
- * `Unbuilt` (app/chrome) is the whole-screen version of this. It could not be
- * reused here because these screens are BUILT: most of the design's surface
- * binds to a real endpoint and a minority of it does not, and the minority has
- * to be visible inside the built screen rather than replacing it.
- *
- * The alternative — drawing the design's box with plausible contents — is what
- * root AGENTS.md forbids twice over: "never generate backend logic from the
- * UI/screens" and "never emit a value you can't cite". A docket excerpt with an
- * invented debtor name, or a SHA chip over a hash nothing returns, reads as
- * finished to everybody who opens it, and the person it misleads worst is the
- * backend owner deciding what still needs building.
- *
- * `needs` is the ASK, file:line into `packages/contract` where a neighbouring
- * shape exists. It is required: a gap that does not say what would close it is
- * a shrug.
+ * A thing the design draws and the contract cannot back, saying so in place.
+ * Never drawn with plausible invented contents — a box that reads as
+ * finished misleads exactly the person deciding what still needs building.
+ * `needs` is required: a gap that does not say what would close it is a
+ * shrug. `Unbuilt` (app/chrome) is the whole-screen version.
  */
 export function ContractGap(props: {
   /** What the design calls this, verbatim, so the two can be matched up. */

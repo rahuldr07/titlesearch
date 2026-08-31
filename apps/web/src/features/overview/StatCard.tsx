@@ -3,12 +3,9 @@ import { Card, cx } from "../../components/ui";
 import type { CensusNoteTone, CensusTone } from "../../entities/lifecycle/census";
 
 /**
- * One census card — label 11px, value 28px, note 13px, the prototype's own
- * geometry. The note line USED to be refused here, citing
- * CONFLICT-overview-stats §5; RULING-2026-08-28 resolved that conflict by
- * Option A, so `LifecycleFigure` now carries label, value AND note off the
- * wire, and all three are printed verbatim. Nothing on this card is authored
- * or computed in the browser.
+ * One census card. `LifecycleFigure` carries label, value and note off the
+ * wire, and all three are printed verbatim — nothing on this card is
+ * authored or computed in the browser.
  */
 const FIGURE_TONE = {
   primary: "text-ink-primary",
@@ -17,7 +14,7 @@ const FIGURE_TONE = {
   settled: "text-state-settled",
 } as const satisfies Record<CensusTone, string>;
 
-/* The reference draws the settled note at weight 600; the attend note plain. */
+/* The settled note is drawn at weight 600; the attend note plain. */
 const NOTE_TONE = {
   muted: "text-ink-muted",
   attend: "text-state-attend",
@@ -25,7 +22,7 @@ const NOTE_TONE = {
 } as const satisfies Record<CensusNoteTone, string>;
 
 export function StatCard(props: {
-  /** SERVER-AUTHORED, whole. Undefined means the server has not answered yet. */
+  /** Server-authored, whole. Undefined means the server has not answered yet. */
   readonly figure: LifecycleFigure | undefined;
   readonly tone: CensusTone;
   readonly noteTone: CensusNoteTone;
@@ -41,7 +38,7 @@ export function StatCard(props: {
           <span className="text-label font-semibold leading-flat text-ink-faint">
             {props.figure.label}
           </span>
-          {/* The unit noun is the prototype's, pluralised — all four count orders. */}
+          {/* The unit noun, pluralised — all four figures count orders. */}
           <span
             data-stat-value={props.figure.value}
             className={cx(

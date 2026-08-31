@@ -5,12 +5,9 @@ import { QueryState } from "../../entities/state/QueryState";
 import { artifacts } from "../../shared/artifactQueries";
 
 /**
- * CERTIFIED DELIVERABLES — the files that left, each with the digest OF ITSELF.
- *
- * `GET /api/orders/{id}/artifacts` is order-scoped and every artifact names its
- * `report_id`, so a row finds its version by that join rather than by position.
- * An artifact whose report is not among these deliveries still renders: hiding
- * a file the server returned is worse than showing it without a version.
+ * The delivered files, each with its own digest. A row finds its version via
+ * the artifact's `report_id`, never by position; an artifact whose report is
+ * not among these deliveries still renders.
  */
 export function CertifiedDeliverables({
   deliveries,
@@ -90,7 +87,6 @@ function ArtifactRow({
       data-testid={`artifact-${artifact.id}`}
       className="flex items-start gap-8 border-b border-line-subtle px-12 py-8 last:border-b-0"
     >
-      {/* Rule 8: the deliverable is paper stock, not a grey tile. */}
       <span className="flex h-24 w-20 shrink-0 items-center justify-center rounded-paper border border-page-line bg-surface-paper font-serif text-label leading-flat font-bold text-page-ink">
         {version === null ? "—" : `v${String(version)}`}
       </span>
@@ -107,8 +103,7 @@ function ArtifactRow({
         <span className="font-mono text-label leading-close text-ink-muted">
           {String(artifact.bytes)} bytes
         </span>
-        {/* The whole digest, never a prefix: a hash a reader cannot check in
-            full is a hash they trust on our word. */}
+        {/* The whole digest, never a prefix — a truncated hash cannot be verified. */}
         <span
           data-testid={`artifact-sha-${artifact.id}`}
           className="rounded-md bg-control-fill px-4 py-1 font-mono text-label leading-close break-all text-ink-secondary"

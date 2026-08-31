@@ -5,34 +5,13 @@ import { RuleEffect } from "../../entities/rule/RuleEffect";
 import { holdReason, type ResolutionMode } from "./holdReason";
 
 /**
- * THE RESOLUTION, AND IT IS REFUSED WITHOUT A RULE.
- *
- * `endpoints.ts:233-236` / `INVARIANTS:36-37`, `§0.5 MANDATORY`: "escalation
- * resolution is REFUSED without a rule. A ruling alone is not a resolution."
- * THE DESIGN NEVER SAYS THIS. Design §Screens 10 draws "determination buttons"
- * and a "settled banner" and mentions no rule at all, so a faithful
- * transcription of the drawing would ship a screen that settles clusters the
- * server refuses to settle. The contract wins.
- *
- * The refusal is carried in three places, on purpose:
- *   - the SERVER refuses (handlers.ts:1474, 422) — the only enforcement;
- *   - the request TYPE has no arm without a rule, so the wrong call does not
- *     compile (`useEscalations.ts`);
- *   - this button states the hold in words while the rule is missing, because
- *     a control that is merely dead teaches nobody why.
- *
- * ══ EXACTLY TWO PATHS, AND NO THIRD ════════════════════════════════════════
- *
- * `INVARIANTS:37`. The mode radio has two members because the contract union
- * has two arms; a "resolve without a rule" escape is not disabled here, it is
- * unrepresentable.
- *
- * ══ ONLY LIVE RULES ARE CITABLE ════════════════════════════════════════════
- *
- * A `pending` rule cannot affect the pipeline (`INVARIANTS:38`), so citing one
- * would be resolving a cluster with something that does nothing. `retired` is
- * out for the mirror reason. Filtered by the SERVER's `status` field — never
- * inferred from origin or confirmer.
+ * Resolution is refused without a rule — a ruling alone is not a resolution.
+ * The server enforces it (422), the request type has no arm without a rule so
+ * the wrong call does not compile, and this button states the hold in words.
+ * The mode radio has two members because the contract union has two arms; a
+ * third path is unrepresentable. Only `live` rules are citable — a pending
+ * rule cannot affect the pipeline, retired is out for the mirror reason —
+ * filtered by the server's `status`, never inferred.
  */
 export type ResolveCardProps = {
   readonly rules: readonly Rule[];
@@ -91,7 +70,7 @@ export function ResolveCard({ rules, pending, onResolve }: ResolveCardProps) {
               </Option>
             ))}
           </ComboBox>
-          {/* What citing it will DO. Read off the server's status, not hoped. */}
+          {/* What citing it will do — read off the server's status. */}
           {cited !== undefined && <RuleEffect code={cited.code} status={cited.status} />}
         </div>
       ) : (
@@ -104,12 +83,8 @@ export function ResolveCard({ rules, pending, onResolve }: ResolveCardProps) {
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
           />
-          {/*
-           * Said BEFORE the draft is written, not after. `INVARIANTS:38` is
-           * about what a drafted rule can do to the pipeline, and a senior who
-           * learns that only from the receipt has already believed otherwise
-           * for the length of the form.
-           */}
+          {/* Said before the draft is written, not after — a drafted rule does
+              nothing until confirmed, and the writer should know that now. */}
           <RuleEffect code="this draft" status="pending" />
         </div>
       )}

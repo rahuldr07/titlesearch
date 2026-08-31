@@ -9,10 +9,7 @@ import {
 } from "./breadcrumb";
 import { onPanel } from "./kitGround";
 
-/**
- * THE TOP-BAR CHIP. Every depth the app actually reaches, plus the two
- * assertions that keep the last crumb honest.
- */
+/** Every depth the app reaches, plus assertions that keep the last crumb honest. */
 const meta = {
   title: "ui/Breadcrumb",
   decorators: [onPanel],
@@ -68,9 +65,9 @@ export const ThreeLevels: Story = {
   ),
 };
 
-/** A LONG CRUMB TRUNCATES RATHER THAN WRAPPING THE BAR. The top chrome is a
-    fixed-height strip (INVARIANTS:62 — the order strip stays put), so a legal
-    description growing the trail would shove the strip's contents around. */
+/** A long crumb truncates rather than wrapping: the top chrome is a
+    fixed-height strip, and a legal description growing the trail would shove
+    its contents around. */
 export const LongCrumbTruncates: Story = {
   render: () => (
     <div className="w-140">
@@ -89,9 +86,8 @@ export const LongCrumbTruncates: Story = {
   ),
 };
 
-/** THE CURRENT CRUMB IS NOT A LINK, AND THIS ASSERTION KEEPS IT SO. The
-    registry drew `role="link" aria-disabled="true"` on the place you already
-    are — a control announced as activatable that activates nothing. */
+/** The current crumb is not a link — never role="link" aria-disabled="true",
+    which announces an activatable control that activates nothing. */
 export const CurrentIsNotALink: Story = {
   render: () => (
     <BreadcrumbTrail label="Order location">
@@ -110,12 +106,9 @@ export const CurrentIsNotALink: Story = {
     expect(current?.getAttribute("role")).toBeNull();
     expect(current?.getAttribute("aria-disabled")).toBeNull();
     /*
-     * EXACTLY ONE LANDMARK, AND THIS ASSERTION IS WHY THERE IS ONE AT ALL. The
-     * `<nav>` was deleted on the assumption that react-aria renders its own.
-     * It does not: 3.51 renders a bare `<ol>` carrying an `aria-label`, and an
-     * `<ol>` has no role — so the trail silently left the landmark list and a
-     * screen-reader user could no longer jump to it. This story failing is how
-     * that was found.
+     * react-aria renders a bare <ol> with an aria-label and no landmark role,
+     * so the <nav> wrapper is the only thing keeping the trail in the
+     * landmark list.
      */
     const nav = canvasElement.querySelectorAll("nav");
     expect(nav).toHaveLength(1);
@@ -123,11 +116,7 @@ export const CurrentIsNotALink: Story = {
   },
 };
 
-/**
- * THE SEPARATOR IS PUNCTUATION, NOT AN ICON. Rule 7 closes the glyph
- * vocabulary to ✓ ◆ • T1 and bans icon soup; the registry drew a lucide
- * `ChevronRightIcon`, which is a picture of a character every font ships.
- */
+/** The separator is punctuation, never an icon. */
 export const SeparatorIsAGlyph: Story = {
   render: () => (
     <BreadcrumbTrail label="Order location">

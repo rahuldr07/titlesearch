@@ -12,36 +12,13 @@ import {
 } from "@titlepipe/contract";
 
 /**
- * THE READ SURFACE, AS DATA: one path and one cache key per endpoint a screen
- * reads, paired with the contract schema that validates it.
- * WHY THIS FILE EXISTS AND WHY IT IS IN `shared/`. `check-rules.mjs` enforces
- * two things that pull in opposite directions:
- *   - `cross-feature-import` — `features/overview` may not import
- *     `features/queue`. Both screens read `/api/queue/next` (the queue serves
- *     the order; the overview spotlights the same one), so one of them would
- *     otherwise have to restate the path and the key.
- *   - `presentational-fetches` — `shared/` and `entities/` may not import
- *     `@tanstack/react-query` at all.
- * So this file carries the DESCRIPTION of a read and never performs one. No
- * `useQuery`, no `get`, no hook. Each feature calls Query itself with the
- * descriptor, which keeps fetching in `features/` where the rule wants it while
- * leaving exactly one spelling of every path and every key.
- * Rule 11 restated for cache keys: two features naming `["orders", id,
- * "census"]` slightly differently are two caches, and two caches of one census
- * are the "one variable, never two literals" defect wearing a different hat —
- * except it fails silently, as a refetch nobody asked for and a stale number
- * nobody can explain.
- * ══ WHAT IS DELIBERATELY ABSENT ════════════════════════════════════════════
- * THERE IS NO ORDER-LIST DESCRIPTOR, because there is no order-list endpoint.
- * `endpoints.ts:69`: "GET /api/queue/next — server-ordered; there is no
- * browse/pick endpoint." `INVARIANTS:82-83` says the same as a rule. A
- * `listOrders` entry here would be the first line of a browse feature, and the
- * conflict that would make it necessary is escalated in
- * `docs/frontend/design-2026-08/CONFLICT-all-orders.md`, not absorbed.
- * `/api/queue/bands` is likewise absent. It is READ SHAPES ONLY
- * (`endpoints.ts:77-82`) and whether the Mine band may be DRAWN AT ALL is open
- * ruling Q11 — it "sits against exactly one order, no list". AGENTS.md: do not
- * build past OPEN.
+ * The read surface, as data: one path and one cache key per endpoint a
+ * screen reads, paired with the contract schema that validates it. This file
+ * describes reads and never performs one — no `useQuery`, no `get`, no hook
+ * (`shared/` may not import react-query, and features may not import each
+ * other). Each feature calls Query itself with the descriptor, so every path
+ * and every cache key has exactly one spelling — two near-identical keys are
+ * two caches, failing silently as refetches and stale numbers.
  */
 export interface ReadDescriptor<T> {
   readonly path: string;
@@ -50,7 +27,7 @@ export interface ReadDescriptor<T> {
 }
 
 /**
- * The only hand-over. `QueueNextResponse.order` is NULLABLE and null is an
+ * The only hand-over. `QueueNextResponse.order` is nullable and null is an
  * answer — "the server has nothing for you" — never an empty list to browse.
  */
 export const queueNext: ReadDescriptor<QueueNextResponse> = {
@@ -59,7 +36,7 @@ export const queueNext: ReadDescriptor<QueueNextResponse> = {
   schema: QueueNextResponse,
 };
 
-/** The shop-wide census. Every figure on it is the SERVER'S, never a length. */
+/** The shop-wide census. Every figure on it is the server's, never a length. */
 export const lifecycle: ReadDescriptor<LifecycleResponse> = {
   path: "/api/lifecycle",
   key: ["lifecycle"],
@@ -75,9 +52,9 @@ export function orderContext(id: string): ReadDescriptor<OrderContextResponse> {
 }
 
 /**
- * Carries `census` (`OrderCensus`, endpoints.ts:160) — the four figures the
- * order strip and the hub print. OPTIONAL on the wire, and absent is NOT zero:
- * it is "the server did not say", and the screen prints the silence.
+ * Carries `census` — the four figures the order strip and the hub print.
+ * Optional on the wire, and absent is not zero: it is "the server did not
+ * say", and the screen prints the silence.
  */
 export function orderFields(id: string): ReadDescriptor<OrderFieldsResponse> {
   return {
@@ -119,8 +96,8 @@ export function orderTimeline(id: string): ReadDescriptor<OrderTimelineResponse>
   };
 }
 
-/** Pages as TEXT (endpoints.ts:654). `degraded` is the server's finding, never
- * inferred client-side (:648); `pages` is a SAMPLE, so its length is not a count. */
+/** Pages as text. `degraded` is the server's finding, never inferred
+ * client-side; `pages` is a sample, so its length is not a count. */
 export function orderPages(id: string): ReadDescriptor<OrderPagesResponse> {
   return {
     path: `/api/orders/${id}/pages`,
@@ -129,9 +106,9 @@ export function orderPages(id: string): ReadDescriptor<OrderPagesResponse> {
   };
 }
 
-/** The escalation list, SHOP-WIDE — no per-order endpoint exists; an order view
- * filters on `Escalation.order_ids` (entities.ts:169), the server's own join.
- * Type INFERRED: `endpoints.ts:650` ships no companion `type` to import. */
+/** The escalation list, shop-wide — no per-order endpoint exists; an order
+ * view filters on `Escalation.order_ids`, the server's own join. Type is
+ * inferred because the contract ships no companion type to import. */
 type EscalationsShape = ReturnType<typeof EscalationsResponse.parse>;
 
 export const escalations: ReadDescriptor<EscalationsShape> = {

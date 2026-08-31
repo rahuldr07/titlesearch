@@ -4,10 +4,9 @@ import { NA_MODES, interpolate } from "./useTemplates";
 import type { NaSimMode } from "./TemplatesScreen";
 
 /**
- * One live-sheet block, split from `TemplateSheet.tsx` on the 150-line gate.
- * Clickable (selects the block for the inspector); the NA simulation swaps
- * the interpolated wording for the SERVED declaration of the simulated
- * absence (RULED 2026-08-29).
+ * One live-sheet block. Clickable (selects the block for the inspector);
+ * the NA simulation swaps the interpolated wording for the served
+ * declaration of the simulated absence.
  */
 export function SheetBlock({
   block,

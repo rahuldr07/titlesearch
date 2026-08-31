@@ -5,13 +5,9 @@ import { post } from "../../shared/api";
 import { orderFields, orderTimeline } from "../../shared/queries";
 
 /**
-
- * The five review mutations, and the two rules that shape all of them. "The server's
-
- * message surfaces VERBATIM, selection NEVER advances, and the field repaints as the
-
- * server has it." All three halves are here: - VERBATIM — the refusal is…
-
+ * The five review mutations, shaped by one rule: the server's message
+ * surfaces verbatim, selection never advances on a refusal, and the field
+ * repaints as the server has it.
  */
 
 export type ReviewWrites = ReturnType<typeof useReviewWrites>;
@@ -20,49 +16,35 @@ export function useReviewWrites(orderId: string) {
   const client = useQueryClient();
 
   /**
-
-   * The server's last word, or null. Rendered verbatim by the decision panel
-
-   * (`confirm-note`) and held until the next act rather than shown as a toast that
-
-   * disappears — `notify.ts`: "the SCREEN, not the toast, carries the durable state of
-
-   * a…
-
+   * The server's last word, or null. Rendered verbatim by the decision
+   * panel and held until the next act rather than shown as a toast that
+   * disappears — the screen, not the toast, carries the durable state.
    */
   const [serverNote, setServerNote] = useState<string | null>(null);
 
-  /** The synchronous latch. See rule 2 above — this cannot be state. */
+  /** The synchronous duplicate-guard latch — this cannot be state. */
   const inFlight = useRef(false);
 
   const repaint = useCallback(() => {
     void client.invalidateQueries({ queryKey: orderFields(orderId).key });
-    /* The hub's event trail is LIVE (design README §Screens 4: rulings append
-       as they happen) — and every act here is an event the server records. A
-       RE-READ, never an optimistic append: `EventTrail` refuses to invent a
-       row, so the trail moves only when the server says it has. */
+    /* The hub's event trail is live, and every act here is an event the
+       server records. A re-read, never an optimistic append: the trail
+       moves only when the server says it has. */
     void client.invalidateQueries({ queryKey: orderTimeline(orderId).key });
   }, [client, orderId]);
 
   /**
-
-   * Whether an act is in flight, FOR RENDERING ONLY. The duplicate guard is the ref
-
-   * above and must stay the ref: this is state, it is read at render time, and
-
-   * `review-refusals.spec` dispatches three clicks in one tick precisely to prove a…
-
+   * Whether an act is in flight, for rendering only. The duplicate guard
+   * is the ref above and must stay the ref: state updates land after the
+   * tick, so three clicks in one tick would all pass a state check.
    */
   const [pending, setPending] = useState(false);
 
   /**
-
-   * Run one act. `after` is what SUCCESS does — advancing selection, closing an editor —
-
-   * and it is never reached on a refusal, which is how "selection never advances" holds
-
-   * without every call site remembering it.
-
+   * Run one act. `after` is what success does — advancing selection,
+   * closing an editor — and it is never reached on a refusal, which is how
+   * "selection never advances" holds without every call site remembering
+   * it.
    */
   const act = useCallback(
     (run: () => Promise<unknown>, after?: () => void) => {
@@ -72,7 +54,7 @@ export function useReviewWrites(orderId: string) {
       setServerNote(null);
       run()
         .then(() => after?.())
-        // VERBATIM. `api.ts` already put the server's sentence on `message`.
+        // Verbatim. `api.ts` already put the server's sentence on `message`.
         .catch((error: Error) => setServerNote(error.message))
         .finally(() => {
           inFlight.current = false;

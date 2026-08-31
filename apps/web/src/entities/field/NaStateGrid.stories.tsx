@@ -24,7 +24,7 @@ export const Unchosen: Story = { args: { value: null, onChange: () => {} } };
 
 export const NotFoundChosen: Story = { args: { value: "NOT_FOUND", onChange: () => {} } };
 
-/** Rule 9: blocked states its reason, and the server authored this sentence. */
+/** Blocked states its reason, and the server authored this sentence. */
 export const BlockedWithReason: Story = {
   args: {
     value: null,

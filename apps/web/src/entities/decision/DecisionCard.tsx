@@ -7,49 +7,34 @@ import { StatePill } from "../field/StatePill";
 import { DecisionQuestion } from "./DecisionQuestion";
 
 /**
- * THE OPEN DECISION (design §Screens 7).
- *
- * "3px accent left rail, field name 13px accent, value 28px, second reading
- * inline, amber consequence line, source-excerpt strip, actions."
- *
- * Rule 1: the accent is spent ONCE per screen — "the open decision or the single
- * primary action". This card is that spend, which is why the rail and the field
- * name are accent here and nowhere else, and why the actions are handed in
- * rather than built: a card that rendered its own primary button would spend the
- * accent a second time on the same screen.
- *
- * `asking` and `why` are SERVER-AUTHORED (`entities.ts:124-149`) and are passed
- * straight through — see `DecisionQuestion`, which refuses to compose them.
+ * The open decision. This card is the screen's one accent spend — the rail
+ * and the field name are accent here and nowhere else, and the actions are
+ * handed in rather than built: a card that rendered its own primary button
+ * would spend the accent twice. `asking` and `why` are server-authored and
+ * passed straight through — see DecisionQuestion, which refuses to compose
+ * them.
  */
 export type DecisionCardProps = {
   readonly field: Field;
   /**
-   * The two engine readings, when the server sent a pair. `Field.readings` is
-   * an arbitrary-length optional array; PICKING two out of it here would be the
-   * UI deciding which engines are in the comparison, so the caller passes the
-   * pair the server nominated.
+   * The two engine readings, when the server sent a pair. Picking two out of
+   * `Field.readings` here would be the UI deciding which engines are in the
+   * comparison, so the caller passes the pair the server nominated.
    */
   readonly readings?: { readonly a: FieldReading; readonly b: FieldReading } | undefined;
   /**
-   * THE FIELD'S DISPLAY NAME AND ITS STATE RUBRIC, both passed IN.
-   *
-   * `fieldLabel()` and `panelRubric()` live in `features/review`, and an entity
-   * may not import a feature — so the words arrive as props rather than this
-   * card reaching up for them. Without `label` the header falls back to the raw
-   * `field.path`, which is what it printed before and is still the right answer
-   * for a caller that has no naming table.
-   *
-   * They carry `sel-label` and `sel-state` because the harvested invariant
-   * specs address the open decision by those two ids in eighty places — the
-   * selection's name and the server's word for its state are what every one of
-   * those tests is really asserting about.
+   * The field's display name and state rubric, both passed in — an entity
+   * may not import a feature, so the words arrive as props. Without `label`
+   * the header falls back to the raw `field.path`. They carry the
+   * `sel-label` and `sel-state` test ids because the invariant specs address
+   * the open decision by those two ids.
    */
   readonly label?: string | undefined;
   readonly rubric?: string | undefined;
   /**
-   * What follows from getting this wrong, e.g. "A wrong vested owner voids the
-   * policy." SERVER-AUTHORED like `why`; the amber line is a claim about
-   * consequence and the browser has no standing to make one.
+   * What follows from getting this wrong. Server-authored like `why` — the
+   * amber line is a claim about consequence and the browser has no standing
+   * to make one.
    */
   readonly consequence?: string | null | undefined;
   readonly onOpenCitation?: ((citation: { docId: string; page: number }) => void) | undefined;
@@ -85,10 +70,9 @@ export function DecisionCard({
           {label ?? field.path}
         </span>
         {/*
-          * `sel-state` wraps the RUBRIC ALONE. One spec asserts it with
-          * `toHaveText("ENGINES DISAGREE — NOTHING SETTLED")`, which is exact,
-          * so the pill has to be a sibling rather than a child — otherwise the
-          * id carries two sentences and the assertion can never hold.
+          * `sel-state` wraps the rubric alone: a spec asserts its exact text,
+          * so the pill has to be a sibling rather than a child — otherwise
+          * the id carries two sentences and the assertion can never hold.
           */}
         <span className="flex items-center gap-4">
           {rubric !== undefined && (
@@ -105,7 +89,7 @@ export function DecisionCard({
 
       <DecisionQuestion asking={field.asking} why={field.why} />
 
-      {/* Value at 28px — the subject of the card, per §Screens 7. */}
+      {/* Value at 28px — the subject of the card. */}
       <FieldValueView
         value={readCited(field)}
         onOpenCitation={onOpenCitation}

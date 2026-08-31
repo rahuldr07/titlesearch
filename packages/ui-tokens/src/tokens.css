@@ -1,134 +1,72 @@
 /*
- * TitlePipe design tokens.
+ * TitlePipe design tokens. Register: cool graphite on paper-white, a single
+ * violet accent spent once per screen, Plus Jakarta Sans / JetBrains Mono /
+ * Source Serif 4, with warm paper reserved for evidence and deliverables.
  *
- * REVALUED 2026-08-27 to the 2026-08 design handoff (docs/frontend/design-2026-08/
- * tokens.css + tokens.json, gated by claude-design-rules.md's 14 rules). Register:
- * COOL GRAPHITE ON PAPER-WHITE, a single violet accent spent once per screen,
- * Plus Jakarta Sans / JetBrains Mono / Source Serif 4, with warm paper reserved
- * for evidence and deliverables. This supersedes the warm archival paper +
- * sealing-wax register (2026-08-01 hybrid mockup), the navy warm-archival
- * revision (2026-07-28) and the cool-grey + violet export (2026-07-26) before it.
- * FIVE registers are now in the record; this is the live one.
- *
- * Rules of this file — unchanged, and this revision is the fourth proof of them:
- *   - Names are SEMANTIC (what the colour means), never hue or hex. The names
- *     survived a FOURTH full revaluation intact: every concept in the new handoff
- *     landed on a name that was already here, and the migration forced ZERO
- *     renames. 8 names were added for concepts the old set never had; ~55 colour
- *     names (plus the off-scale type, radius, stroke and shadow entries) were
- *     deleted because the new register has no counterpart for them. That is the
- *     argument for semantic naming restated as evidence rather than as principle.
+ * Rules of this file:
+ *   - Names are semantic (what the colour means), never hue or hex.
  *   - Components reference tokens only. No raw hex in TSX — enforced by lint.
- *   - Scales (type, radius, space, shadow) are IMPOSED, and were re-imposed here
- *     against the handoff's own values rather than carried over.
+ *   - Scales (type, radius, space, shadow) are imposed.
  *
- * Meaning of the state families, now THREE not five:
- *   settled = done, no action   ·  attend = look at this
- *   halt    = stopped, actionable
- * `decide` collapsed into the ACCENT — an open decision is precisely where the
- * accent is spent (rule 1) — and `idle` collapsed into ordinary graphite. Both
- * families are deleted rather than left holding stale values.
+ * State families, three not five: settled = done, no action · attend = look
+ * at this · halt = stopped, actionable. `decide` is the accent — an open
+ * decision is precisely where the accent is spent — and `idle` is ordinary
+ * graphite.
  *
- * ══ TWO SCALES ARE DELIBERATELY ABSENT, AND THEIR ABSENCE IS LOAD-BEARING ════
+ * Two scales are deliberately absent and their absence is load-bearing: the
+ * numeric --text-* scale (six sizes only: 11 / 13 / 16 / 20 / 28 / 40) and
+ * the numeric --radius-* scale (six radii, inner = outer − gap). Tailwind
+ * failing to generate a class is silent, so the enforcement is three layers
+ * deep: the namespace resets at the head of the @theme block, check-rules.mjs
+ * naming both families, and tokens.test.ts pinning the arithmetic and
+ * cardinality.
  *
- *   - the numeric --text-* scale (xs…6xl, plus micro/tiny/census). Rule 2 allows
- *     SIX sizes: 11 / 13 / 16 / 20 / 28 / 40. Deleting the scale means Tailwind
- *     generates no `text-sm` utility at all.
- *   - the numeric --radius-* scale (1…10). Rule 5 allows SIX radii with fixed
- *     arithmetic between them (inner = outer − gap).
- * Tailwind failing to generate a class is SILENT — `text-sm` renders at the
- * inherited size and nothing errors — so the enforcement is THREE layers deep:
- * the `--text-*: initial` / `--radius-*: initial` namespace resets at the head
- * of the @theme block below (deleting our entries alone is NOT enough — see the
- * note there), apps/web-v2/scripts/check-rules.mjs naming both families, and
- * apps/web-v2/src/shared/tokens.test.ts pinning rule 5's arithmetic and rule
- * 2's cardinality.
+ * There is no dark theme in this register. The --color-rail-* family is a
+ * dark-chrome surface vocabulary (navigator, auth, code panels), not a theme;
+ * a dark theme, if wanted, is a new derivation against these values.
  *
- * ══ THERE IS NO DARK THEME IN THIS REGISTER ═════════════════════════════════
+ * The accent (#5b4b8a) is the only token in this palette drawn as a solid
+ * fill, and it is spent once per screen.
  *
- * The `[data-theme="mocha"]` block that lived here (Catppuccin Mocha, ~130
- * overrides) is REMOVED rather than left carrying values from a palette that no
- * longer exists. The new handoff ships one light register plus a DARK CHROME
- * family (--color-rail-*) for the navigator, auth screens and code panels; that
- * is a surface vocabulary, not a theme. A stale dark block would have kept
- * `data-theme="mocha"` typechecking and rendering the previous register's
- * oxblood and mauve underneath the new screens, which is worse than not
- * shipping a dark theme. If one is wanted, it is a new derivation against these
- * values, not a resurrection of that block.
- *
- * ══ THE ACCENT / HALT COLLISION IS GONE ══════════════════════════════════════
- *
- * The previous register's accent was sealing-wax red and its halt was oxblood,
- * a collision that took a three-part hue/lightness/stroke resolution to make
- * safe. The new accent is violet (#5b4b8a) and halt is red (#a4291f): different
- * hues, and 1.34:1 apart in greyscale luminance. The structural half of the old
- * rule still binds and is now rule 1 as well — the accent is the only token in
- * this palette drawn as a SOLID FILL, and it is spent once per screen.
- *
- * ══ THE FOUR NO-VALUE STATES ARE RETAINED DESPITE THE HANDOFF ════════════════
- *
- * --color-na-* and the --color-scan-* / --filter-scan pair have NO counterpart
- * in the new handoff. They are kept and revalued into this register, not
- * deleted. Rule 14's typed-absence taxonomy needs them and the handoff simply
- * does not cover NA states: that is a gap in the new set, not dead weight in the
- * old one. A mechanical "delete what the handoff omits" pass would collapse
- * NOT_PRESENT and PRESENT_UNREADABLE into a shared grey dash, which AGENTS.md
- * and CONTEXT §11 both name as a design defect.
+ * The --color-na-* set and the --color-scan-* / --filter-scan pair are kept
+ * even though the design handoff omits them: the typed-absence taxonomy needs
+ * them, and collapsing NOT_PRESENT and PRESENT_UNREADABLE into a shared grey
+ * dash is a design defect.
  */
 
 @theme {
   /*
-   * ══ THE NAMESPACE RESETS, AND THEY ARE THE ACTUAL ENFORCEMENT ═══════════
-   *
-   * DELETING our --text-* / --radius-* entries is NOT sufficient and this was
-   * verified, not assumed: with the numeric scales simply removed, Tailwind
-   * still emitted `.text-sm { font-size: var(--text-sm) }` from its OWN default
-   * theme, because `@theme` MERGES with the defaults rather than replacing
-   * them. Rule 2 would have been silently unenforced at the token layer,
-   * leaving only the lint.
-   *
-   * `--namespace-*: initial` is the documented v4 way to clear a namespace.
-   * These two lines are why `text-sm`, `text-2xl`, `rounded-xl` and
-   * `rounded-3xl` do not exist as utilities at all — only the six sizes and six
-   * radii declared below do. Order matters: the reset must precede the
-   * declarations it does not intend to remove.
-   *
-   * `rounded-full` and `rounded-none` are STATIC utilities, not namespace
-   * members, so they survive this and are banned by check-rules.mjs instead.
+   * The namespace resets are the actual enforcement. Deleting our --text-* /
+   * --radius-* entries alone is not sufficient: `@theme` merges with
+   * Tailwind's defaults, so `.text-sm` would still be emitted from its own
+   * theme. `--namespace-*: initial` is the documented v4 way to clear a
+   * namespace; the reset must precede the declarations it does not intend
+   * to remove. `rounded-full` and `rounded-none` are static utilities, not
+   * namespace members, so they survive this and are banned by
+   * check-rules.mjs instead.
    */
   --text-*: initial;
   --radius-*: initial;
 
   /* ── ink ──────────────────────────────────────────────────────────────── */
-  /* Five tiers where the old register had three. `faint` and `disabled` are new
-     names: the old palette had no tier below `muted`, so a disabled control and
-     a receding label were the same value. 15.42:1 / 8.28:1 / 4.63:1 on panel. */
+  /* Five tiers. 15.42:1 / 8.28:1 / 4.63:1 on panel. */
   --color-ink-primary: #14161c;
   --color-ink-secondary: #454a55;
   --color-ink-muted: #6e7480;
   /*
-   * ⚠ FAILS WCAG 2.2 AA FOR NORMAL TEXT ON EVERY SURFACE IN THIS PALETTE.
-   * Measured 2026-08-28: 3.28:1 on panel, 3.17:1 on sunken, 2.83:1 on the app
-   * canvas, 2.86:1 on action-surface, against a 4.5:1 floor. It is the ink on
-   * every 11px label, and 11px is normal text — WCAG's large-text exemption
-   * starts at 18.66px bold.
-   *
-   * The value is UNCHANGED because it is the design system's, and the fix is a
-   * token rather than a screen: there is no surface to move a label onto.
-   * `#686C76` is the same hue darkened enough to clear all four (worst 4.53).
-   * Ruling and options: docs/frontend/design-2026-08/CONFLICT-ink-faint-contrast.md
+   * Fails WCAG 2.2 AA for normal text on every surface in this palette
+   * (3.28:1 on panel, 2.83:1 on the app canvas, against a 4.5:1 floor), and
+   * it is the ink on every 11px label. The value is unchanged because it is
+   * the design system's; the fix is a token, not a screen — `#686C76` is the
+   * same hue darkened enough to clear all four surfaces.
    */
   --color-ink-faint: #8a8e98;
   --color-ink-disabled: #b9bec9;
 
-  /* ── action — spend once per screen (rule 1) ──────────────────────────── */
-  /* The ONLY colour in this palette drawn as a solid fill under light text, and
-     rule 1 says it appears at most once per screen: the open decision, or the
-     single primary action. Everything else is graphite. `--color-action-hover`
-     is NEW — hover used to be alpha-composited over the base; the handoff ships
-     an explicit pressed value. `--color-action-border-strong` is REPURPOSED
-     from the old wax-callout border to the handoff's `--accent-tint-border`,
-     the rule drawn around an accent tint. */
+  /* ── action — spend once per screen ───────────────────────────────────── */
+  /* The only colour in this palette drawn as a solid fill under light text,
+     appearing at most once per screen: the open decision, or the single
+     primary action. Everything else is graphite. */
   --color-action: #5b4b8a;
   --color-action-hover: #4c3e75;
   --color-action-border: #c6bae4;
@@ -137,10 +75,9 @@
   --color-ink-on-action: #ffffff; /* 8.23:1 on action, 9.94:1 on action-hover */
 
   /* ── surfaces ─────────────────────────────────────────────────────────── */
-  /* Three rungs, not five. The old ladder's `raised` and `document` rungs are
-     gone: the open decision card is now separated by the accent and by shadow
-     rather than by a fourth paper tone, and the document pane is the paper
-     family below. A hovered row lifts to `sunken`. */
+  /* Three rungs. The open decision card is separated by the accent and by
+     shadow, and the document pane is the paper family below. A hovered row
+     lifts to `sunken`. */
   --color-surface-app: #eceef3; /* the canvas behind everything */
   --color-surface-panel: #ffffff; /* cards, rows, primary panels */
   --color-surface-sunken: #fbfbfd; /* wells, table caps, inset tracks */
@@ -148,13 +85,9 @@
 
   /* ── lines and controls ───────────────────────────────────────────────── */
   /*
-   * `--color-line-faint` is NEW: the old set had strong / subtle / dashed and
-   * the handoff adds a third-lightest rule with no counterpart.
-   *
-   * `--color-control-border` / `--color-control-fill` are NEW and the split is
-   * worth keeping: the handoff separates CONTROL CHROME from STRUCTURAL RULES,
-   * where inputs previously borrowed --color-line-strong. It is why a disabled
-   * input can recede without the table it sits in receding with it.
+   * `--color-control-border` / `--color-control-fill` separate control
+   * chrome from structural rules — the reason a disabled input can recede
+   * without the table it sits in receding with it.
    */
   --color-line-strong: #e4e7ed;
   --color-line-subtle: #edeff3;
@@ -164,14 +97,11 @@
 
   /* ── status: settled / attend / halt ──────────────────────────────────── */
   /*
-   * Rule 6 governs how these are spent: ONE status signal per table row, a mark
-   * (✓ ◆ •) plus weight. The tinted `-surface` capsules are for moments of
-   * record only — released, quarantine clear, T1 — never for ordinary rows.
-   *
-   * The `-muted` tiers are NEW (settled and halt only; attend has no muted
-   * counterpart in the handoff and one is not invented here). They are the
-   * desaturated form used for RESTING marks — a ✓ on a row you are not being
-   * asked to act on.
+   * One status signal per table row: a mark (✓ ◆ •) plus weight. The tinted
+   * `-surface` capsules are for moments of record only — released,
+   * quarantine clear, T1 — never for ordinary rows. The `-muted` tiers
+   * (settled and halt only) are the desaturated form for resting marks — a ✓
+   * on a row you are not being asked to act on.
    */
   --color-state-settled: #2e6b4f;
   --color-state-settled-surface: #eaf2ed;
@@ -189,60 +119,46 @@
 
   /* ── dark chrome: rail, auth, code panels ─────────────────────────────── */
   /*
-   * THE NAVIGATOR'S OWN INK FAMILY, and the argument for it is unchanged from
-   * the previous register: on --color-rail-surface, --color-ink-primary is
-   * 1.03:1 — the same luminance, invisible, not merely low — and --color-action
-   * is 1.72:1. A component that reaches into the app palette while standing on
-   * this column is not slightly off, it is blank.
-   *
-   * `--color-rail-deep` is NEW: a second, deeper chrome tone BELOW the rail
-   * surface, for auth screens and code panels.
-   *
-   * The old rail extras (attention dots, halt surface, settled, track, active
-   * ink) are DELETED — the handoff declares text / muted / hairline / accent
-   * only, and the marks those tokens drew are now mark-plus-weight per rule 6.
+   * The navigator's own ink family: on --color-rail-surface,
+   * --color-ink-primary is 1.03:1 — invisible, not merely low — and
+   * --color-action is 1.72:1. A component that reaches into the app palette
+   * while standing on this column is not slightly off, it is blank.
+   * `--color-rail-deep` is the deeper chrome tone below the rail surface,
+   * for auth screens and code panels.
    */
   --color-rail-surface: #1e1b2e;
   --color-rail-deep: #171424;
   --color-rail-ink: #c9c5d8; /* 10.51:1 on rail */
   /*
-   * The 5.03:1 this used to claim is wrong twice over, measured 2026-08-28.
-   * On the bare rail (--color-rail-surface #1e1b2e) it is 4.56:1, not 5.03. And
-   * the app does not render it on the bare rail: the quick-jump button carries
-   * --color-rail-line over the surface, compositing to #2e2b3d, where it is
-   * 3.73:1 and fails. Same ruling as --color-ink-faint above.
+   * 4.56:1 on the bare rail; the quick-jump button composites
+   * --color-rail-line over the surface to #2e2b3d, where this is 3.73:1 and
+   * fails AA. Same ruling as --color-ink-faint above.
    */
   --color-rail-ink-muted: #8881a2; /* 4.56:1 on rail-surface; 3.73:1 where it is used */
   /*
-   * The prototype's third rail tone, for the tagline, the quick-jump label and
-   * its key cap. 6.71:1 on the rail and 5.49:1 on the lifted quick-jump fill,
-   * where --color-rail-ink-muted measures 3.73 and fails AA — so this closes
-   * the second half of CONFLICT-ink-faint-contrast.md §3 as well as matching
-   * the design. Not in the design system's own :root; it is an inline value in
-   * reference-app.html, measured off the rendered rail.
+   * The third rail tone, for the tagline, the quick-jump label and its key
+   * cap. 6.71:1 on the rail and 5.49:1 on the lifted quick-jump fill, where
+   * --color-rail-ink-muted fails AA.
    */
   --color-rail-ink-soft: #a6a0be;
-  /* The design's three rail alphas: .06 fill, .08 border, .10 key cap. */
+  /* The three rail alphas: .06 fill, .08 border, .10 key cap. */
   --color-rail-fill: rgb(255 255 255 / 0.06);
   --color-rail-edge: rgb(255 255 255 / 0.08);
   --color-rail-cap: rgb(255 255 255 / 0.1);
   --color-rail-line: rgb(255 255 255 / 0.07);
   --color-rail-accent: #b7a6ee; /* 8.16:1 — the accent AS SEEN ON THE COLUMN */
   /*
-   * The sign-in screen's radial accent glow, a COLOUR token carrying its own
-   * alpha the way --color-scrim does. Like --color-rail-ink-soft above it is
-   * not in the design system's own :root — it is an inline value in
-   * reference-app.html (`rgba(138,117,209,.14)`, sign-in backdrop). Decorative
-   * paint on the dark chrome, so no contrast claim attaches to it.
+   * The sign-in screen's radial accent glow — a colour token carrying its
+   * own alpha, like --color-scrim. Decorative paint on the dark chrome, so
+   * no contrast claim attaches to it.
    */
   --color-rail-glow: rgb(138 117 209 / 0.14);
 
-  /* ── paper: evidence scans and certificates (rule 8) ──────────────────── */
+  /* ── paper: evidence scans and certificates ───────────────────────────── */
   /*
-   * Warm stock, and it is the ONE warm family left in the register. Rule 8:
-   * evidence and deliverables render AS PAPER — serif, warm stock, clerk
-   * stamps, justified text — never grey placeholder bars. `--color-paper-stamp`
-   * is NEW: clerk-stamp brown, with no counterpart anywhere in the old set.
+   * Warm stock — the one warm family in the register. Evidence and
+   * deliverables render as paper: serif, warm stock, clerk stamps,
+   * justified text — never grey placeholder bars.
    */
   --color-surface-paper: #f7f5ef; /* the scanned page stock */
   --color-page: #fdfcfa; /* the clean rendered/printed page */
@@ -251,28 +167,15 @@
   --color-scan-ink: #5c5647; /* the page's meta/marginalia tier */
   --color-paper-stamp: #7c6a55;
 
-  /* ── the four no-value states (rule 14) ───────────────────────────────── */
+  /* ── the four no-value states ─────────────────────────────────────────── */
   /*
-   * RETAINED THROUGH THIS REVALUATION, not carried over by accident — the new
-   * handoff does not cover NA at all. See the file header. Revalued onto the
-   * graphite/attend register; the RELATIONSHIPS are what matter and they are
-   * preserved exactly.
-   *
-   * These MUST stay visually distinct (CONTEXT §11, AGENTS.md). Colour alone
-   * does not carry the distinction and is not asked to: each has a border STYLE
-   * and a FILL — solid+filled / dashed+empty / solid+dotted-hatch / tinted —
-   * and that is what survives greyscale and a red-green deficiency both. See
-   * entities/field/noValueStates.ts (the authority) and naReasonMapping.test.ts
-   * (the gate).
-   *
-   * WARNING: the four-member set is an UNRESOLVED RULING. packages/contract
-   * currently ships two members. These tokens are not ratification — see
-   * docs/frontend/open-rulings.md Q1 and ANALYSIS-tokens.md §6 item 2.
-   *
-   * The two `-ink` tiers reuse measured-AA values (--color-ink-muted and
-   * --color-ink-secondary) exactly as every prior palette did; they carry real
-   * sentences ("n/a — not used in this jurisdiction") and clear AA independently
-   * of the tier they borrow from.
+   * These must stay visually distinct, and colour alone is not asked to
+   * carry it: each has a border style and a fill — solid+filled /
+   * dashed+empty / solid+dotted-hatch / tinted — which survives greyscale
+   * and a red-green deficiency both. See entities/field/noValueStates.ts
+   * (the authority) and naReasonMapping.test.ts (the gate). The two `-ink`
+   * tiers reuse measured-AA values (--color-ink-muted and
+   * --color-ink-secondary) and clear AA independently.
    */
   --color-na-not-present-ink: #6e7480; /* structurally absent — = --color-ink-muted */
   --color-na-not-present-border: #d6d9e1; /* solid stroke + solid fill */
@@ -281,21 +184,19 @@
   --color-na-silent-ink: #454a55; /* document does not state it — = --color-ink-secondary */
   --color-na-silent-hatch: #b9bec9; /* the hatch/dot stripe — = ink-disabled, survives 1px */
   /*
-   * PRESENT_UNREADABLE stays in the ATTEND family, where it moved 2026-08-01,
-   * and the reasoning survives the revaluation intact: "it is on the page and I
-   * cannot read it" is look-at-this, not stopped. It is the only TINTED member
-   * of the set, which is what CONTEXT §11 relies on.
+   * PRESENT_UNREADABLE sits in the attend family: "it is on the page and I
+   * cannot read it" is look-at-this, not stopped. It is the only tinted
+   * member of the set.
    */
   --color-na-unreadable-ink: #8a5b12; /* 5.63:1 on its own surface */
   --color-na-unreadable-surface: #fbf3e4; /* = --color-state-attend-surface */
   --color-na-unreadable-border: #f3e7d3; /* = --color-state-attend-border */
 
-  /* ── the degraded scan, and the marks drawn ON a page ─────────────────── */
+  /* ── the degraded scan, and the marks drawn on a page ─────────────────── */
   /*
-   * RETAINED for the same reason as the NA set: the handoff has one clean paper
-   * stock and the product's whole problem is that most pages are the other kind
-   * (CONTEXT §5 — median text-layer coverage well under 25%). Revalued as a warm
-   * step below --color-surface-paper.
+   * The product's whole problem is that most pages are degraded scans, so
+   * the degraded stock gets its own family — a warm step below
+   * --color-surface-paper.
    */
   --color-scan: #f2efe6; /* the degraded-fax stock */
   --color-scan-line: #ddd9d0; /* = --color-page-line */
@@ -303,31 +204,25 @@
   --color-page-bar: #ddd9d0;
   --color-scan-ink-degraded: #736c5c; /* 4.55:1 on scan, under --filter-scan-degraded */
   /*
-   * The evidence marks. RETAINED (the handoff draws citations but names no
-   * token for the marker) and moved onto the ACCENT: the highlight is the
-   * strong mark, "this is the cited line"; the pin is the weak one, "this field
-   * points here". One grammar, two strengths, and no fourth hue on a screen
-   * that now spends colour deliberately. Not hex-testable (rgba), so a visual
-   * judgment rather than a gate-verified one.
+   * The evidence marks, on the accent: the highlight is the strong mark,
+   * "this is the cited line"; the pin is the weak one, "this field points
+   * here". One grammar, two strengths, no fourth hue.
    */
   --color-surface-evidence: rgb(91 75 138 / 0.16);
   --color-border-evidence: #5b4b8a; /* = --color-action */
   --color-surface-pin: rgb(91 75 138 / 0.07);
 
   /*
-   * Modal scrim. RETAINED and revalued to ink-900 alpha. A COLOUR token, not a
-   * shadow one — `--shadow-scrim` was deleted 2026-07-27 because it emitted
-   * `.shadow-scrim { box-shadow: rgb(...) }`, a bare colour with no offsets,
-   * which is not a valid box-shadow and rendered nothing. A `--shadow-*` name
-   * emits no `bg-*` utility, so the modal would silently lose its backdrop
-   * while the build stayed green.
+   * Modal scrim. A colour token, not a shadow one: a `--shadow-*` name
+   * emits no `bg-*` utility and a bare colour is not a valid box-shadow, so
+   * the modal would silently lose its backdrop while the build stayed green.
    */
   --color-scrim: rgb(20 22 28 / 0.4);
 
-  /* ── radii — inner = outer − gap (rule 5) ─────────────────────────────── */
-  /* Asserted in apps/web-v2/src/shared/tokens.test.ts: sm = md − 4, md = lg − 4.
-     `--radius-paper` is NEW: 2px, the "documents are not rounded" value.
-     THE NUMERIC SCALE (--radius-1 … --radius-10) IS DELETED — see header. */
+  /* ── radii — inner = outer − gap ──────────────────────────────────────── */
+  /* Asserted in apps/web-v2/src/shared/tokens.test.ts: sm = md − 4,
+     md = lg − 4. `--radius-paper` is the "documents are not rounded" value.
+     The numeric scale (--radius-1 … --radius-10) is deleted — see header. */
   --radius-xs: 4px; /* kbd */
   --radius-sm: 6px; /* inner, inside a 10px wrapper */
   --radius-md: 10px; /* inputs */
@@ -335,35 +230,27 @@
   --radius-pill: 999px;
   --radius-paper: 2px;
 
-  /* ── type: SIX sizes (rule 2), nothing between ────────────────────────── */
+  /* ── type: six sizes, nothing between ─────────────────────────────────── */
   /*
-   * Three faces, SELF-HOSTED via @fontsource-variable — never the Google Fonts
-   * CDN. This is an internal tool for title examiners and airgapped/proxied
-   * deployments are decisive on their own: the failure mode is a 30-second DNS
-   * timeout per face before first paint, not a graceful fallback. Self-hosting
-   * also keeps the policy at `font-src 'self'` rather than widening `style-src`
-   * to a third-party origin. See ANALYSIS-tokens.md §5.
-   *
-   * --font-serif was --font-document; --font-display and --font-quote are
-   * DELETED, collapsing into --font-sans and --font-serif. Rule 3: mono is for
-   * DATA ONLY — order refs, money, citations, hashes, timestamps, kbd. Never
-   * labels, buttons or prose.
+   * Three faces, self-hosted via @fontsource-variable — never the Google
+   * Fonts CDN: airgapped/proxied deployments would pay a DNS timeout per
+   * face before first paint, and self-hosting keeps the policy at
+   * `font-src 'self'`. Mono is for data only — order refs, money,
+   * citations, hashes, timestamps, kbd. Never labels, buttons or prose.
+   * The 'Variable' names are @fontsource-variable's registrations — the
+   * faces are bundled, never fetched; the plain names are the stack's
+   * second step for any context that registered them itself.
    */
-  /* The 'Variable' names are @fontsource-variable's registrations — the faces
-     are BUNDLED (apps/web/src/main.tsx imports them), never fetched from a
-     CDN; the plain names stay as the stack's second step for any context that
-     registered them itself. */
   --font-sans: 'Plus Jakarta Sans Variable', 'Plus Jakarta Sans', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace;
-  --font-serif: 'Source Serif 4 Variable', 'Source Serif 4', Georgia, serif; /* PAPER ONLY — rule 8 */
+  --font-serif: 'Source Serif 4 Variable', 'Source Serif 4', Georgia, serif; /* paper only */
 
   /*
-   * ⚠ THESE SET SIZE ONLY, AND TAILWIND STILL SUPPLIES THE LEADING. Tailwind v4
-   * pairs every `--text-*` with a `--text-*--line-height`; overriding the size
-   * alone leaves each utility carrying a stock ratio applied to our value. Use
-   * an explicit `leading-*` utility from the block below at each site. The
-   * previous register lost 4.6px per navigator row to exactly this, found by
-   * measuring a screenshot rather than by any test. ANY dense row is exposed.
+   * These set size only, and Tailwind still supplies the leading: v4 pairs
+   * every `--text-*` with a `--text-*--line-height`, so overriding the size
+   * alone leaves each utility carrying a stock ratio. Use an explicit
+   * `leading-*` utility from the block below at each site — any dense row
+   * is exposed otherwise.
    */
   --text-label: 11px; /* tracked rubrics, chips, key labels */
   --text-meta: 13px; /* meta, field labels, secondary detail */
@@ -372,30 +259,29 @@
   --text-title: 28px; /* screen h1, the decision question */
   --text-verdict: 40px; /* the featured verdict numeral */
 
-  /* Rule 4: sentence case everywhere. ALL-CAPS is legal in exactly two places —
-     sidebar rubrics (11px at this tracking) and serif certificate headings — so
-     the design needs exactly ONE tracking step, not the previous register's
-     five. check-rules.mjs bans `uppercase` outside rail/sidebar/certificate. */
+  /* Sentence case everywhere. All-caps is legal in exactly two places —
+     sidebar rubrics (11px at this tracking) and serif certificate headings —
+     so the design needs exactly one tracking step. check-rules.mjs bans
+     `uppercase` outside rail/sidebar/certificate. */
   --tracking-caps: 0.14em;
 
   /* ── elevation ────────────────────────────────────────────────────────── */
-  /* Three shadows ship, down from eight. Depth separates a card from the
-     canvas; hairlines stay for INTERIOR divisions (row separators). */
+  /* Depth separates a card from the canvas; hairlines stay for interior
+     divisions (row separators). */
   --shadow-card: 0 1px 2px rgb(20 22 28 / 0.04), 0 10px 28px rgb(20 22 28 / 0.06);
   /* The press. Inset, so a control looks pushed INTO the surface rather than
      lifted off it — the inverse of --shadow-card, and the reason it is a token
      rather than an inline value in ui.css's tp-press utility. */
   --shadow-press: inset 0 1px 2px rgb(20 22 28 / 0.12);
-  --shadow-modal: 0 24px 60px rgb(0 0 0 / 0.3); /* was --shadow-drawer */
+  --shadow-modal: 0 24px 60px rgb(0 0 0 / 0.3);
   --shadow-page: 0 1px 2px rgb(0 0 0 / 0.18), 0 10px 26px rgb(0 0 0 / 0.13);
 
-  /* ── motion (rule 10). Nothing bounces. ───────────────────────────────── */
+  /* ── motion. Nothing bounces. ─────────────────────────────────────────── */
   /*
    * Three timings and no fourth. Tailwind's default duration scale is
-   * deliberately not re-declared here, and check-rules.mjs bans `duration-N`,
-   * `duration-[…]`, `delay-N`, `transition-[…]` and `animate-[…]`, so there is
-   * no legal way to write one. "Nothing bounces" follows from there being no
-   * bouncy easing token to reach for.
+   * deliberately not re-declared here, and check-rules.mjs bans
+   * `duration-N`, `duration-[…]`, `delay-N`, `transition-[…]` and
+   * `animate-[…]`, so there is no legal way to write one.
    */
   --ease-state: 140ms ease; /* state change */
   --ease-enter: 260ms cubic-bezier(.32, .72, 0, 1); /* entry */
@@ -410,18 +296,16 @@
   --animate-tp-pulse: tp-pulse 1.4s infinite;
 
   /* ── document rendering ───────────────────────────────────────────────── */
-  /* RETAINED with the scan family. The scan is meant to look scanned, not like
-     a clean render. `--filter-scan-degraded` is DELETED; one filter ships, and
-     the degraded register is carried by --color-scan-ink-degraded instead. */
+  /* The scan is meant to look scanned, not like a clean render. One filter
+     ships; the degraded register is carried by --color-scan-ink-degraded. */
   --filter-scan: grayscale(0.35) contrast(0.96) brightness(1.01);
 
   /* ── space ────────────────────────────────────────────────────────────── */
   /*
-   * The app's spacing base is 2px (set in web-v2's index.css), so every value
-   * here is `N x 2px` and reads directly as a utility: --space-6 (12px) is
-   * `p-6`. Tailwind's decimal multipliers (`py-5.5`) express the half-steps
-   * without an arbitrary value, which is why the grid is 2px and not 4px.
-   * Structural, not palette — untouched by this revaluation.
+   * The app's spacing base is 2px (set in web-v2's index.css), so every
+   * value here is `N x 2px` and reads directly as a utility: --space-6
+   * (12px) is `p-6`. Tailwind's decimal multipliers (`py-5.5`) express the
+   * half-steps without an arbitrary value, which is why the grid is 2px.
    */
   --space-1: 2px;
   --space-2: 4px;
@@ -441,10 +325,10 @@
 
   /* ── leading ──────────────────────────────────────────────────────────── */
   /*
-   * NAMED DELIBERATELY OFF TAILWIND'S DEFAULTS. `--leading-*` is a Tailwind v4
-   * theme namespace, so `--leading-relaxed` would REDEFINE the `leading-relaxed`
-   * utility. `-close/-body/-open/-airy` collide with nothing. `--leading-tight`
-   * is kept because its value is Tailwind's anyway.
+   * Named deliberately off Tailwind's defaults: `--leading-*` is a v4 theme
+   * namespace, so `--leading-relaxed` would redefine the `leading-relaxed`
+   * utility. `-close/-body/-open/-airy` collide with nothing;
+   * `--leading-tight` is kept because its value is Tailwind's anyway.
    */
   --leading-flat: 1;
   --leading-tight: 1.25;
@@ -456,8 +340,6 @@
   --leading-scan: 2.1; /* typed / degraded scan body */
 
   /* ── weight ───────────────────────────────────────────────────────────── */
-  /* Four weights. The four fractional ones (420/430/480/520) were Fraunces
-     variable-axis positions and are DELETED with that face. */
   --font-weight-normal: 400;
   --font-weight-medium: 500;
   --font-weight-semibold: 600; /* the UI workhorse */

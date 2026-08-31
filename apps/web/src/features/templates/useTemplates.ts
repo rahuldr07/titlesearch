@@ -7,12 +7,10 @@ import { audit } from "../../shared/accountQueries";
 import { notify } from "../../shared/notify";
 
 /**
- * ⚠ RULED 2026-08-29 (RULING-2026-08-29.md) — THE DRAWN SAVE. The reference's
- * Save Template posts the edited wording; the server answers with the draft
- * version and appends the audit event. Guarded by `template.edit` server-side
- * (403); the button itself is drawn DISABLED with the "Read-only — RBAC
- * grants VIEW" hint for a seat without the grant, which the ruling keeps for
- * this surface.
+ * The template save. Posts the edited wording; the server answers with the
+ * draft version and appends the audit event. Guarded by `template.edit`
+ * server-side (403) — the disabled button with its hint is a courtesy,
+ * never the enforcement.
  */
 export function useSaveTemplate(templateId: string | null) {
   const client = useQueryClient();
@@ -34,7 +32,7 @@ export function useSaveTemplate(templateId: string | null) {
     onSettled: () => {
       inFlight.current = false;
     },
-    // The server's sentence, verbatim (INVARIANTS:58-59). Never composed here.
+    // The server's sentence, verbatim. Never composed here.
     onError: (error: Error) => notify.error(error.message),
   });
 
@@ -53,9 +51,9 @@ export function useSaveTemplate(templateId: string | null) {
 }
 
 /**
- * The live preview: the block's expression with each served token replaced by
- * its served sample. PRESENTATION of two server lists, not a value the report
- * emits — the compiled manifest stays the server's (`export_spec`).
+ * The live preview: the block's expression with each served token replaced
+ * by its served sample. Presentation of two server lists, not a value the
+ * report emits — the compiled manifest stays the server's (`export_spec`).
  */
 export function interpolate(wording: string, tokens: readonly TemplateToken[]): string {
   let out = wording;
@@ -65,7 +63,7 @@ export function interpolate(wording: string, tokens: readonly TemplateToken[]): 
   return out;
 }
 
-/** The four NA members in the reference's drawn order, with its labels. */
+/** The four NA members, in the drawn order with the drawn labels. */
 export const NA_MODES = [
   { id: "structurally_absent", label: "1. Structurally Absent" },
   { id: "not_found", label: "2. Not Found" },

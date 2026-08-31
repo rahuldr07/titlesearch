@@ -9,8 +9,7 @@ export interface OrdersBrowse {
 }
 
 /**
- * `GET /api/orders`. Kept out of `queries.ts`, whose header records that this
- * endpoint did not exist; all three inputs are part of the cache key, because a
+ * `GET /api/orders`. All three inputs are part of the cache key, because a
  * different page of a different filter is a different answer.
  */
 export function ordersPage(browse: OrdersBrowse): ReadDescriptor<OrdersPageResponse> {

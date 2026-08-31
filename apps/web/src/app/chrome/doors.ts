@@ -1,28 +1,25 @@
 /**
- * The doors, and why this list is not the design's list.
- * `packages/contract/src/authz.ts:62-81` is the frozen door table.
+ * The doors. The authz table in `packages/contract` is the frozen door
+ * list; nothing here invents a path.
  */
 
 export type RailSection = "pipeline" | "order" | "platform" | "more";
 
 export interface Door {
-  /** Verbatim from authz.ts:62-81. Never invented. */
+  /** Verbatim from the authz door table. Never invented. */
   readonly path: string;
   readonly label: string;
   readonly section: RailSection;
 }
 
-/* Casing is the reference app's own (RULING-2026-08-29 — match copy and
-   casing): "All Orders", "Overview Hub", "QC & Escalations", "Templates
-   Architect", exactly as its rail prints them. */
+/* Labels keep the design's own copy and casing. */
 export const DOORS: readonly Door[] = [
   { path: "/", label: "Overview", section: "pipeline" },
   { path: "/orders-list", label: "All Orders", section: "pipeline" },
 
   { path: "/orders", label: "Overview Hub", section: "order" },
-  /* Intake and Delivered ride the numbered stage rows (`ActiveOrderStages`),
-     as the reference draws them — a flat door beside the same row printed the
-     destination twice (RULING-2026-08-29). */
+  /* Intake and Delivered ride the numbered stage rows (`ActiveOrderStages`)
+     — a flat door beside the same row would print the destination twice. */
   { path: "/ingest", label: "Intake & Upload", section: "more" },
   { path: "/delivery", label: "Delivered", section: "more" },
 
@@ -35,7 +32,7 @@ export const DOORS: readonly Door[] = [
   { path: "/jurisdiction", label: "Jurisdiction", section: "more" },
 ];
 
-/** The rubric printed above each group. ALL-CAPS is legal here (rule 4). */
+/** The rubric printed above each group. */
 export const SECTION_RUBRIC: Readonly<Record<RailSection, string>> = {
   pipeline: "Pipeline",
   order: "Active order",

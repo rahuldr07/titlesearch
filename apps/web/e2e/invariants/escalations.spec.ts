@@ -1,28 +1,11 @@
 import { expect, test, type Page } from "@playwright/test";
 
 /**
- * HARVESTED INVARIANTS — migrated from apps/web @ ade49af (pre-rebuild).
- * Source: apps/web/e2e/escalations.spec.ts
- *
- * UN-SKIPPED 2026-08-27 as screen 10 landed. Every assertion below is the
- * pre-rebuild one; only selectors moved, which the migration rule permits and
- * the un-skip required:
- *
- *   - `cite-select` was a native `<select>` and `selectOption({index:1})`. The
- *     rule catalog is now a ComboBox (react-aria), because the rulebook is
- *     searched rather than scrolled — so the rule is CHOSEN BY ITS CODE
- *     instead of by list position. That strengthens test 2: the old index
- *     assertion would have passed against any rule, and the trailing
- *     `LIVE IN PIPELINE — R13` assertion is now genuinely about R13.
- *   - `cluster-liens.hoa_age` is `[data-cluster="liens.hoa_age"]` — the
- *     cluster path is a data attribute on the queue row rather than baked into
- *     a testid.
- *
- * NEVER weaken an assertion — if one cannot pass against the new design,
- * that is a CONFLICT in the design: stop and report (BRIEF §5 Phase 5).
+ * Escalation invariants. Never weaken an assertion — a test that cannot
+ * pass against the new design is a conflict in the design: stop and report.
  */
 
-// [INVARIANT] — rule: §0.5 MANDATORY — escalation resolution is REFUSED without a rule. A ruling alone is not a resolution.
+// Rule: escalation resolution is refused without a rule. A ruling alone is not a resolution.
 test("resolve stays held without a ruling AND a rule", async ({ page }) => {
   await page.goto("/escalations");
   const btn = page.getByTestId("resolve-btn");
@@ -38,7 +21,7 @@ test("resolve stays held without a ruling AND a rule", async ({ page }) => {
   await expect(btn).toBeDisabled();
 });
 
-// [INVARIANT] — rule: citing an existing rule is one of exactly two resolution paths.
+// Rule: citing an existing rule is one of exactly two resolution paths.
 test("citing an existing rule resolves the cluster", async ({ page }) => {
   await page.goto("/escalations");
   await page
@@ -52,7 +35,7 @@ test("citing an existing rule resolves the cluster", async ({ page }) => {
   await expect(page.getByText("LIVE IN PIPELINE — R13").first()).toBeVisible();
 });
 
-// [INVARIANT] — rule: a drafted rule lands PENDING and renders visibly inert — it cannot affect the pipeline until an engineer confirms.
+// Rule: a drafted rule lands PENDING and renders visibly inert — it cannot affect the pipeline until an engineer confirms.
 test("a drafted rule lands PENDING and renders visibly inert", async ({ page }) => {
   await page.goto("/escalations");
   await page.locator('[data-cluster="liens.hoa_age"]').first().click();
@@ -69,7 +52,7 @@ test("a drafted rule lands PENDING and renders visibly inert", async ({ page }) 
   ).toBeVisible();
 });
 
-// [ORPHAN RULE] — rule: the escalation inbox has no triage furniture — no category, no priority, no assignee. Just the rule.
+// Rule (recorded nowhere else): the escalation inbox has no triage furniture — no category, no priority, no assignee. Just the rule.
 test("no priority, category, or assignee affordances exist", async ({ page }) => {
   await page.goto("/escalations");
   // the only controls on the resolve card are the ruling, the rule choice,
@@ -81,17 +64,11 @@ test("no priority, category, or assignee affordances exist", async ({ page }) =>
 });
 
 /**
- * ⚠ RULED 2026-08-29 — `docs/frontend/design-2026-08/RULING-2026-08-29.md`.
- *
- * THE DRAWN GATING, PINNED. The reference draws the determination for a
- * non-QC seat as VISIBLE + DISABLED under the amber "belongs to QC — with …"
- * hint, and the ruling makes that the built behaviour FOR THIS SURFACE —
- * superseding the pre-ruling reading of `INVARIANTS:42-43` (absent, not
- * dimmed) that this test used to assert. The rail door stays absent for a
- * role without `screen.escalations.enter` (chrome behaviour the ruling does
- * not touch), and the SERVER refusal (403 on resolve) is untouched — the
- * dimmed button is a courtesy, never the enforcement (authz.spec covers the
- * wire refusal).
+ * The determination for a non-QC seat is visible + disabled under the amber
+ * "belongs to QC" hint. The rail door stays absent for a role without
+ * `screen.escalations.enter`, and the server refusal (403 on resolve) is
+ * untouched — the dimmed button is a courtesy, never the enforcement
+ * (authz.spec covers the wire refusal).
  */
 test("the determination is visible + disabled for a non-QC seat (RULING-2026-08-29)", async ({
   page,
@@ -100,10 +77,8 @@ test("the determination is visible + disabled for a non-QC seat (RULING-2026-08-
   await expect(page.getByTestId("resolve-card")).toBeVisible();
 
   /*
-   * NO `page.goto` AFTER THE SWITCH. The demo session is a zustand store that
-   * §9.11 forbids persisting, so a full page load re-boots it to the
-   * dev-default ADMIN (`signedIn.ts`). The first write of this test reloaded
-   * and asserted against an admin while believing it had a reviewer.
+   * No `page.goto` after the switch: the demo session is a non-persisted
+   * zustand store, so a full page load re-boots it to the dev-default admin.
    */
   await page.getByTestId("sign-out").click();
   await page.getByTestId("continue-as-reviewer").click();
@@ -126,9 +101,9 @@ test("the determination is visible + disabled for a non-QC seat (RULING-2026-08-
 });
 
 /**
- * ⚠ RULED 2026-08-29 — the drawn evidence surfaces. The docket excerpt (on
- * paper, boxed at the match, with its View-on-page jump) and the
- * debtor-vs-owner identity grid are served on the escalation and drawn.
+ * The evidence surfaces: the docket excerpt (on paper, boxed at the match,
+ * with its View-on-page jump) and the debtor-vs-owner identity grid are
+ * served on the escalation and drawn.
  */
 test("the docket excerpt and identity grid render as drawn", async ({ page }) => {
   await page.goto("/escalations");

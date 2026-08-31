@@ -5,12 +5,10 @@ import { Input, Option, Select, cx } from "../../components/ui";
 import { SampleInspector } from "./SampleInspector";
 
 /**
- * THE CATALOG RAIL — search, the two served filter vocabularies, one card per
- * template, and the scoped client samples beneath (RULED 2026-08-29, drawn).
- *
- * Search and filters narrow the SERVED list in the browser exactly as the
- * reference's do — presentation of one response, not a browse endpoint. Every
- * card fact (status, mapped count, version) is the server's member printed.
+ * The catalog rail — search, the two served filter vocabularies, one card
+ * per template, and the scoped client samples beneath. Search and filters
+ * narrow the served list in the browser — presentation of one response, not
+ * a browse endpoint. Every card fact is the server's member printed.
  */
 export function TemplateRail({
   catalog,

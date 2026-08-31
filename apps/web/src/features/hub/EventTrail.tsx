@@ -3,19 +3,10 @@ import { Card, Empty } from "../../components/ui";
 import { HubSectionLabel } from "./HubSectionLabel";
 
 /**
- * The order's thread through the pipeline — ⚠ RULED 2026-08-29
- * (`docs/frontend/design-2026-08/RULING-2026-08-29.md`): titled and composed
- * as the reference draws it. The drawn title is "Immutable SOC 2 Event Trail"
- * (the prior refusal of the SOC 2 / immutable wording is superseded — it is
- * drawn, so it is built), and each row is the drawn composition: the mono
- * timestamp column, then the event's sentence with the trailing arrow glyph.
- *
- * Two refusals stand, because the reference draws nothing against them:
- * optimistic append (`INVARIANTS:39` — the trail appends when the server says
- * it has; a filed countersign lands here by the mock appending it and the
- * screen re-reading) and durations (`INVARIANTS:84`). `kind` is `z.string()`
- * and deliberately OPEN, so nothing switches on it; the attend register comes
- * from `attend`, which the server owns.
+ * The order's thread through the pipeline. The trail appends only when the
+ * server says it has — nothing optimistic — and no durations are computed.
+ * `kind` is deliberately open, so nothing switches on it; the attend register
+ * comes from `attend`, which the server owns.
  */
 export function EventTrail(props: {
   readonly events: readonly OrderTimelineEvent[] | undefined;
@@ -44,8 +35,8 @@ export function EventTrail(props: {
               data-event-attend={event.attend}
               className="flex gap-6 rounded-lg p-4 hover:bg-surface-sunken"
             >
-              {/* Rule 3: a timestamp is data, printed as the server sent it —
-                  never parsed, never re-rendered in a locale (§8). */}
+              {/* A timestamp prints as the server sent it — never parsed,
+                  never re-rendered in a locale. */}
               <span className="w-70 shrink-0 font-mono text-label leading-body whitespace-nowrap tabular-nums text-ink-muted">
                 {event.at}
               </span>

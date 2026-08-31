@@ -1,14 +1,8 @@
 import { ContractGap } from "../../entities/contract/ContractGap";
 
 /**
- * THE THREE RULES SUB-TABS THAT HAVE NO READ BEHIND THEM.
- *
- * `reference-app.html` § `isSettings`, `rulesTabs`, draws five: Catalog,
- * Products, Resolved, Escalations, Coverage. Two of them are built — Catalog is
- * the list above, and Escalations is the PENDING rows inside it, which is where
- * a candidate belongs when the only thing that distinguishes it is
- * `Rule.status` (`INVARIANTS:38`). The other three read shapes `RulesResponse`
- * (endpoints.ts) does not carry, and every one of them is a NUMBER a reader
+ * The three rules sub-tabs that have no read behind them. Each reads a
+ * shape `RulesResponse` does not carry, and every one is a number a reader
  * would act on, so none may be assembled here from what happens to have
  * arrived. Said once, as three named asks, rather than three empty tabs.
  */

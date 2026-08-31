@@ -3,12 +3,10 @@ import { Button } from "../../components/ui";
 import { RouteButton } from "../../app/chrome/RouteButton";
 
 /**
- * THE SEALED CARD — the reference's "Package Ingested & Signature Sealed",
- * drawn after the one signed act (RULING-2026-08-29). The order is queued
- * because the SERVER acknowledged both halves of the act; nothing here is
- * optimistic. The page figure is `Order.pages`, the server's own count off
- * the optical pass — absent, the sentence simply omits it rather than
- * asserting somebody counted.
+ * Shown only after the server acknowledged both halves of the act; nothing
+ * here is optimistic. The page figure is `Order.pages`, the server's own
+ * count — absent, the sentence omits it rather than asserting somebody
+ * counted.
  */
 export function AcceptedCard(props: {
   readonly order: Order;

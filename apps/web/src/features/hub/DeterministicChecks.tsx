@@ -4,16 +4,10 @@ import { HubSectionLabel } from "./HubSectionLabel";
 import { GapRow } from "./GapRow";
 
 /**
- * The deterministic band — ⚠ RULED 2026-08-29
- * (`docs/frontend/design-2026-08/RULING-2026-08-29.md`): titled as the
- * reference titles it, "Deterministic Verification Checks", and drawing the
- * reference's VERIFIED rows — one per served `verified_checks` sentence
- * (`OrderPipelineResponse`, same ruling), each a claim only the pipeline can
- * make, with the drawn green VERIFIED capsule.
- *
- * The gate half is unchanged: `gate_open` is read, never derived
- * (`intake.ts`), and `GapKind` is the server's three-member taxonomy. An empty
- * gap array does not mean the gate is open — the caller may be scoped out.
+ * The deterministic band — one row per served `verified_checks` sentence, each
+ * a claim only the pipeline can make. `gate_open` is read, never derived, and
+ * an empty gap array does not mean the gate is open — the caller may be scoped
+ * out.
  */
 export function DeterministicChecks(props: {
   readonly gateOpen: boolean | undefined;

@@ -2,10 +2,8 @@ import type { RailBadgesResponse } from "@titlepipe/contract";
 import { RailBadge } from "./RailSignal";
 
 /**
- * The served ornament for one rail door, if the reference app draws one there
- * (RULING-2026-08-29). Split from `RailSection.tsx` for the 150-line gate; the
- * seam is clean — this file knows which door wears which badge, the section
- * only knows every door may wear one.
+ * The served ornament for one rail door. This file knows which door wears
+ * which badge; the section only knows every door may wear one.
  */
 export function DoorBadge(props: {
   readonly path: string;

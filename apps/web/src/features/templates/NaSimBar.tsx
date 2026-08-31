@@ -3,9 +3,9 @@ import { NA_MODES } from "./useTemplates";
 import type { NaSimMode } from "./TemplatesScreen";
 
 /**
- * The drawn NA simulation bar — Data present · the four numbered absence
- * modes (RULED 2026-08-29). Pure view state: it chooses WHICH served
- * declaration the sheet previews and computes nothing.
+ * The NA simulation bar — Data present · the four numbered absence modes.
+ * Pure view state: it chooses which served declaration the sheet previews
+ * and computes nothing.
  */
 export function NaSimBar({
   naMode,

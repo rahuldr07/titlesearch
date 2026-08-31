@@ -6,11 +6,9 @@ import { columns, orders, type Order } from "./tableStoryData";
 import type { Decorator } from "@storybook/react-vite";
 
 /**
- * A VIRTUALIZED TABLE NEEDS A BOUNDED SCROLL CONTAINER, and a story that omits
- * one is a story that renders every row — the exact defect these stories exist
- * to catch. The height is fixed here rather than inside `table.tsx` because it
- * is the SCREEN's job: a table fills the pane it is given (the app frame is one
- * viewport tall and scrolling happens inside panes, never on the page).
+ * A virtualized table needs a bounded scroll container — a story that omits
+ * one renders every row. The height is fixed here rather than in table.tsx
+ * because it is the screen's job: a table fills the pane it is given.
  */
 const inPane: Decorator = (Story) => (
   <div className="h-160 w-240 overflow-hidden rounded-lg border border-line-strong bg-surface-panel">
@@ -48,13 +46,10 @@ export const Empty: Story = {
 };
 
 /**
- * IT VIRTUALIZES, AND THIS IS THE ASSERTION THAT PROVES IT.
- *
- * 5,000 rows of data, and the DOM must hold far fewer than 5,000 `role="row"`
- * nodes. The bound is generous (200) on purpose: the exact count depends on the
- * container height and the overscan, and a story that pins it would fail on a
- * viewport change rather than on a regression. What it must NOT do is scale
- * with the data, and 200 « 5,000 says exactly that.
+ * It virtualizes: 5,000 rows of data, far fewer row nodes. The bound is a
+ * generous 200 on purpose — the exact count depends on container height and
+ * overscan, and pinning it would fail on a viewport change rather than a
+ * regression. What it must not do is scale with the data.
  */
 export const FiveThousandRows: Story = {
   args: { rows: orders(5000) },
@@ -66,10 +61,9 @@ export const FiveThousandRows: Story = {
 };
 
 /**
- * ONE STATUS SIGNAL PER ROW (rule 6). Asserted by counting the glyphs: a row
- * carries exactly one of ✓ ◆ •, and there is no second place in this table for
- * a tone or a capsule to appear, because `table.tsx` exposes no `rowTone`, no
- * `getRowClassName` and no striping.
+ * One status signal per row, asserted by counting the glyphs: a row carries
+ * exactly one of ✓ ◆ •, and table.tsx exposes no rowTone, getRowClassName or
+ * striping for a second signal to hide in.
  */
 export const OneSignalPerRow: Story = {
   args: { rows: orders(12) },
@@ -83,15 +77,10 @@ export const OneSignalPerRow: Story = {
 };
 
 /**
- * THE CHORD CONTRACT, AND THE VALUE IS `widget` — NOT `own`.
- *
- * This is the finding review made: a focused row in a 5,000-row table killed
- * every chord. `own` is read DOCUMENT-WIDE by `overlayIsUp()` and a table is
- * mounted permanently, so `own` here would suspend the vocabulary for the life
- * of the screen whether or not anyone focused a row. `widget` is read only
- * against the active element's ancestors.
- *
- * Both halves are asserted: the right mark present, the wrong one absent.
+ * The chord mark is `widget`, not `own`: `own` is read document-wide and a
+ * table is mounted permanently, so it would suspend the vocabulary for the
+ * life of the screen. Both halves are asserted — the right mark present, the
+ * wrong one absent.
  */
 export const OwnsKeysOnlyWhileFocused: Story = {
   args: { rows: orders(20) },

@@ -3,7 +3,7 @@ import { useMutation } from "@tanstack/react-query";
 import type { QuarantineResponse, QuarantineState } from "@titlepipe/contract";
 import { scanPackage } from "./uploadPackage";
 
-/** One checklist row as DRAWN right now — the server's state, or the two
+/** One checklist row as drawn right now — the server's state, or the two
  * reveal words (`pending`/`running`) for rows the cadence has not reached. */
 export interface GatewayRow {
   readonly id: string;
@@ -12,15 +12,10 @@ export interface GatewayRow {
 }
 
 /**
- * THE GATEWAY SCAN, AND ITS DRAWN CADENCE.
- *
- * ⚠ RULED 2026-08-29 (`docs/frontend/design-2026-08/RULING-2026-08-29.md`):
- * the reference runs the quarantine checklist INLINE the moment a file lands —
- * each row queued → checking… → clear on a 480ms beat (`dropFile` in
- * reference-app.html). So: the file goes to `POST /api/intake/quarantine` at
- * once, and the rows then REVEAL the server's own per-step states on the
- * reference's cadence. The stagger is presentation only — no state is decided
- * here, no step invented, and a step the server failed is revealed failed.
+ * The gateway scan. The file goes to `POST /api/intake/quarantine` at once,
+ * and the rows then reveal the server's own per-step states on a 480ms beat.
+ * The stagger is presentation only — no state is decided here, no step
+ * invented, and a step the server failed is revealed failed.
  */
 export function useQuarantineScan() {
   /* The reveal counter is KEYED to the response object it reveals, so a new

@@ -14,16 +14,9 @@ import { useReissueReasons } from "./useDeliveries";
 import { reissueHold, useReissue } from "./useReissue";
 
 /**
- * REISSUE GATEWAY (Law 9) — the act that supersedes a delivered version.
- *
- * ⚠ RULED 2026-08-29 — `docs/frontend/design-2026-08/RULING-2026-08-29.md`.
- * The reason is the reference's CANNED RADIO OPTIONS, exactly as drawn (the
- * reference draws no free-text box, so none is drawn here). The pre-ruling
- * free-text stance ("a fixed list would be this screen's vocabulary") is
- * answered by serving the list: `GET /api/reissue/reasons` owns the words,
- * so what goes on the audit record is still the pipeline's vocabulary — just
- * chosen by radio, as the reference draws it. The first option arrives
- * pre-selected, as the reference's does.
+ * The act that supersedes a delivered version. The reason is chosen from the
+ * server's canned list — the pipeline's vocabulary goes on the audit record,
+ * never free text. The first option arrives pre-selected.
  */
 export function ReissueGateway({
   deliveries,
@@ -39,11 +32,10 @@ function Gateway({ delivery }: { readonly delivery: DeliveryWithReport }) {
   const reasons = useReissueReasons();
   const [picked, setPicked] = useState<string | null>(null);
   const reissue = useReissue(delivery.id);
-  /* `isPending` is a render away, and three clicks in one tick beat it. The
-     latch closes on the click itself. */
+  /* `isPending` is a render away, and repeated clicks in one tick beat it —
+     the latch closes on the click itself. */
   const filing = useRef(false);
   const options = reasons.data?.reasons ?? [];
-  // The reference pre-checks its first radio; a served list keeps that.
   const reason = picked ?? options[0] ?? "";
   const held = reissueHold(reason, reissue.isPending);
   const version = delivery.report?.version ?? null;
@@ -118,7 +110,6 @@ function Gateway({ delivery }: { readonly delivery: DeliveryWithReport }) {
         </Button>
 
         {held !== null && (
-          /* Rule 9 on screen, not only on hover: the reason a control is dead. */
           <p
             data-testid="reissue-hold"
             className="font-sans text-meta leading-body text-ink-secondary"

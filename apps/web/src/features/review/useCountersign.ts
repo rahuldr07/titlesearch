@@ -6,11 +6,10 @@ import { countersigns } from "../../shared/countersignQueries";
 import { orderTimeline } from "../../shared/queries";
 
 /**
- * ONE COUNTERSIGN, FILED ONCE.
- *
- * Design rule 13 — a second read must come from a different examiner than the
- * one who ruled — is the SERVER's 409, never button state, so nothing here
- * inspects who is signed in before posting. The refusal is rendered verbatim.
+ * One countersign, filed once. "A second read must come from a different
+ * examiner than the one who ruled" is the server's 409, never button state,
+ * so nothing here inspects who is signed in before posting. The refusal
+ * renders verbatim.
  */
 export function useCountersign(orderId: string) {
   const client = useQueryClient();
@@ -20,9 +19,9 @@ export function useCountersign(orderId: string) {
   const [pending, setPending] = useState(false);
 
   /*
-   * THE SYNCHRONOUS LATCH, and it cannot be `pending`. State is read at render
-   * time, so three clicks dispatched in one tick all see `false` and file three
-   * records. A ref is written before the await and closes on the first click.
+   * The synchronous latch, and it cannot be `pending`: state is read at
+   * render time, so three clicks dispatched in one tick all see `false` and
+   * file three records. A ref closes on the first click.
    */
   const inFlight = useRef(false);
 
@@ -41,8 +40,8 @@ export function useCountersign(orderId: string) {
           setPending(false);
           // The list repaints from the server: `countersigned_by` is its word.
           void client.invalidateQueries({ queryKey: countersigns(orderId).key });
-          // A countersign is an event the trail appends LIVE (README §4) — by
-          // re-reading the server's timeline, never by an optimistic append.
+          // A countersign is an event the trail appends — by re-reading the
+          // server's timeline, never by an optimistic append.
           void client.invalidateQueries({ queryKey: orderTimeline(orderId).key });
         });
     },

@@ -2,23 +2,16 @@ import type { OpticalReading } from "@titlepipe/contract";
 import { cx } from "../../components/ui";
 
 /**
- * THE OPTICAL PROFILE CARD — README §22's "DPI, clerk stamp located, contrast
- * floor". One row per `OpticalReading` (design2.ts:26-32), as the server sent
- * them.
- *
- * THRESHOLDS STAY SERVER-OWNED, and the shape says so where it is defined
- * (design2.ts:22-25): each reading carries the server's `ok` VERDICT beside
- * its `value`, and this card compares nothing against a floor — it does not
- * know one. A reading the server flagged renders the server's `note` verbatim
- * under it (the mock's contrast row: "p7, p22, p29 — flagged under Law 3"),
- * never a sentence composed here.
+ * One row per `OpticalReading`, as the server sent them. Thresholds stay
+ * server-owned: each reading carries the server's `ok` verdict beside its
+ * `value`, and this card compares nothing against a floor — it does not know
+ * one. A flagged reading renders the server's `note` verbatim, never a
+ * sentence composed here.
  */
 export function OpticalProfile(props: {
   readonly optical: readonly OpticalReading[];
 }) {
   return (
-    /* Boxed like the gateway card above it — the drawn frame
-       (RULING-2026-08-29): header strip, one bordered row per reading. */
     <div className="overflow-hidden rounded-lg border border-line-strong bg-surface-panel">
       <h2 className="border-b border-line-subtle bg-surface-sunken px-7 py-5 text-label font-bold leading-flat text-ink-faint">
         Optical Profile — read from the file
@@ -32,9 +25,8 @@ export function OpticalProfile(props: {
             data-ok={reading.ok ? "true" : "false"}
             className="flex items-baseline gap-5 border-b border-line-subtle px-7 py-5"
           >
-            {/* ◆ in the ATTEND tone, as the reference inks its flagged row:
-                a reading below the floor is a warning the pipeline degrades
-                around (Law 3), not a halt. */}
+            {/* A reading below the floor is a warning the pipeline degrades
+                around, not a halt. */}
             <span
               aria-hidden
               className={cx(

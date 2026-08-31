@@ -1,16 +1,11 @@
 import { expect, test } from "@playwright/test";
 
 /**
- * HARVESTED INVARIANTS — migrated from apps/web @ ade49af (pre-rebuild).
- * Source: apps/web/e2e/navigation.spec.ts
- *
- * Every test here is SKIPPED until the feature it covers lands in web-v2.
- * Un-skip as each feature lands. Rewrite selectors freely.
- * NEVER weaken an assertion — if one cannot pass against the new design,
- * that is a CONFLICT in the design: stop and report (BRIEF §5 Phase 5).
+ * Never weaken an assertion — a test that cannot pass against the new
+ * design is a conflict in the design: stop and report.
  */
 
-// TODO(rebuild) [INVARIANT] — rule: ORPHAN — keyboard IS the navigation layer; ? renders the map. (Promoted to INVARIANT by open-rulings Q3.)
+// Rule (recorded nowhere else): keyboard IS the navigation layer; ? renders the map.
 test("g-sequences jump between screens; ? shows the map", async ({ page }) => {
   await page.goto("/orders/ord_demo_1");
   await expect(page.getByTestId("order-ref")).toBeVisible();
@@ -28,7 +23,7 @@ test("g-sequences jump between screens; ? shows the map", async ({ page }) => {
   await expect(map).toHaveCount(0);
 });
 
-// TODO(rebuild) [ORPHAN RULE] — rule: ORPHAN O15 — a chord's second key must never ALSO fire a screen action. This is what stops a stray keystroke destroying an in-progress correction. (Promoted by Q3.)
+// Rule (recorded nowhere else): a chord's second key must never ALSO fire a screen action. This is what stops a stray keystroke destroying an in-progress correction.
 test("a g-sequence's second key never leaks into screen hotkeys", async ({ page }) => {
   await page.goto("/orders/ord_demo_1/review");
   await expect(page.getByTestId("sel-label")).toHaveText("OWNER ZIP");
@@ -39,7 +34,7 @@ test("a g-sequence's second key never leaks into screen hotkeys", async ({ page 
   await expect(page).toHaveURL(/\/escalations/);
 });
 
-// TODO(rebuild) [ORPHAN RULE] — rule: ORPHAN — the key map is modal: it swallows screen keys while open and restores them on Escape. (Promoted by Q3.)
+// Rule (recorded nowhere else): the key map is modal: it swallows screen keys while open and restores them on Escape.
 test("the ? overlay swallows screen keys while open", async ({ page }) => {
   await page.goto("/orders/ord_demo_1/review");
   await expect(page.getByTestId("sel-label")).toHaveText("OWNER ZIP");
@@ -57,14 +52,14 @@ test("the ? overlay swallows screen keys while open", async ({ page }) => {
   await expect(page.getByTestId("sel-label")).toHaveText("MTG 1 — LENDER");
 });
 
-// TODO(rebuild) [INVARIANT] — rule: deep links are first-class — ?field= lands on the exact field in context. (BRIEF §7 makes this URL-owned selection.)
+// Rule: deep links are first-class — ?field= lands on the exact field in context (URL-owned selection).
 test("?field= deep links land on the exact field in context", async ({ page }) => {
   await page.goto("/orders/ord_demo_1/review?field=judgments.1.case_no");
   await expect(page.getByTestId("sel-label")).toHaveText("JGMT 1 — CASE NO");
   await expect(page.getByTestId("sel-state")).toContainText("PRESENT — UNREADABLE");
 });
 
-// TODO(rebuild) [INVARIANT] — rule: the order's states travel with it — the spine shows queue, escalation and delivery state together.
+// Rule: the order's states travel with it — the spine shows queue, escalation and delivery state together.
 test("the order spine travels with the order on Review", async ({ page }) => {
   await page.goto("/orders/ord_demo_1/review");
   const rail = page.getByTestId("order-rail");
@@ -73,12 +68,9 @@ test("the order spine travels with the order on Review", async ({ page }) => {
   await expect(rail).toContainText("escalations open"); // esc cluster spans this order
 });
 
-// The DELIVERY half of the same rule, moved onto an order that HAS a delivery.
-// Until 2026-07-30 this was asserted on ord_demo_1, whose fixture carried a
-// "delivered v1" event while the order sat at the completeness gate — an order
-// cannot be both, and the shared order set stopped saying it was. The rule is
-// unchanged and now fully covered: queue and escalation state above, delivery
-// state here, each on an order it is actually true of.
+// The delivery half of the same rule, asserted on an order that has a
+// delivery: queue and escalation state above, delivery state here, each on
+// an order it is actually true of.
 test("delivery state travels with the order too", async ({ page }) => {
   await page.goto("/orders/ord_demo_13/review");
   const rail = page.getByTestId("order-rail");

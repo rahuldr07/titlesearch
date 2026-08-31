@@ -11,25 +11,12 @@ import { disabledAttributes, type Disablement } from "./disabled";
 import { BlockedHint } from "./blockedHint";
 
 /**
- * ADAPTED FROM THE REGISTRY `switch`, AND THE SIZES WENT WITH THE `dark:`s.
+ * One size: 20×36 on the 2px base, 16px thumb, 2px inset — the travel of
+ * `translate-x-8` is track minus thumb minus both insets.
  *
- * The registry ships `h-[18.4px] w-[32px]` and `h-[14px] w-[24px]` — five
- * arbitrary values, one of them a fractional pixel, and the rules gate bans all
- * of them. There is now ONE size: 20x36 on the 2px base (`h-10 w-18`), with a
- * 16px thumb and 2px of inset. A control this small does not have a meaningful
- * second size; it has a second size because a registry has to guess.
- *
- * `translate-x-[calc(100%-2px)]` is likewise gone: the travel is
- * `translate-x-8` (16px), which is track minus thumb minus both insets, and
- * that arithmetic is stated here rather than deferred to a calc the reader
- * cannot check.
- *
- * ══ WHEN NOT TO USE THIS ═════════════════════════════════════════════════════
- *
- * A switch commits IMMEDIATELY and has no confirm step. Nothing that changes
- * the record — a disposition, a release, a countersign — may be a switch. Those
- * are decisions and decisions get a button and a sentence. This is for view
- * preferences: show retired rules, follow the cursor into the scan.
+ * A switch commits immediately and has no confirm step. Nothing that changes
+ * the record — a disposition, a release, a countersign — may be a switch;
+ * those get a button and a sentence. This is for view preferences only.
  */
 export type SwitchProps = Omit<SwitchPrimitiveProps, "isDisabled"> & Disablement;
 

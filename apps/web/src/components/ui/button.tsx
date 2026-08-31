@@ -12,11 +12,8 @@ import { buttonVariants } from "@/components/ui/button-chrome"
 import { disabledAttributes, type Disablement } from "@/components/ui/disabled"
 
 /**
- * THE BUTTON. Four variants, 38px tall, radius 14 — see `button-chrome.ts`,
- * which holds the variant table and the record of what the registry output
- * looked like before it was adapted. The split is Fast Refresh's requirement
- * (a module exporting both a component and a constant cannot be hot-swapped)
- * and this is the file most likely to be edited with the app running.
+ * The variant table lives in button-chrome.ts because Fast Refresh cannot
+ * hot-swap a module that exports both a component and a constant.
  */
 
 type Shared = VariantProps<typeof buttonVariants> &
@@ -27,8 +24,8 @@ export type ButtonProps = Omit<ButtonPrimitiveProps, "isDisabled" | "className">
   Shared
 
 /**
- * `isDisabled` is Omit-ed, so the only way to disable a button in this app is
- * to say why (disabled.ts). That omission IS the enforcement of rule 9.
+ * `isDisabled` is omitted, so the only way to disable a button in this app
+ * is to say why (disabled.ts).
  */
 function Button({
   className,

@@ -7,20 +7,12 @@ import { IntegritySeal } from "./IntegritySeal";
 import { DraftWatermark } from "./DraftWatermark";
 
 /**
- * THE COMPOSED REPORT, AS PAPER (rule 8).
- *
- * ⚠ RULED 2026-08-29 — `docs/frontend/design-2026-08/RULING-2026-08-29.md`.
- * Each block is the labelled value grid the reference draws (170px label
- * column against a serif value), and a PENDING value renders exactly as the
- * reference renders one: amber, dashed underline, clickable — the click lands
- * on that field in the examination workstation (`?field=`, INVARIANT 55).
- * Both the flag and the sentence are the SERVER's (`ManifestValue.pending`,
- * `.field_id`); nothing here derives pendingness from the gates.
- *
- * The stamp is pressed only when the server has returned a seal. A stamp on an
- * unreleased sheet is a recording that never happened, and the watermark is the
- * same test read the other way: composed but unsealed is a draft, and it says so
- * across the page rather than only in the footer.
+ * The composed report, as paper. A pending value renders amber with a dashed
+ * underline and clicks through to that field in the workstation (`?field=`);
+ * both the flag and the destination are the server's (`ManifestValue.pending`,
+ * `.field_id`) — nothing here derives pendingness from the gates. The stamp is
+ * pressed only when the server has returned a seal; composed but unsealed is a
+ * draft and says so across the page.
  */
 export function ManifestSheet(props: { readonly composed: CompositionResponse }) {
   const { composed } = props;
@@ -39,12 +31,10 @@ export function ManifestSheet(props: { readonly composed: CompositionResponse })
       {composed.seal_sha256 === null && <DraftWatermark />}
 
       <header className="flex flex-col items-center gap-5 border-b border-page-ink pb-8 text-center">
-        {/* Rule 4's second exception: a serif certificate heading may be caps. */}
         <h2 className="font-serif text-title leading-tight tracking-caps uppercase text-page-ink">
           Report of title
         </h2>
         <p className="font-sans text-label leading-close text-scan-ink">
-          {/* Rule 3: an order id and a template version are identifiers. */}
           <span className="font-mono">{composed.order_id}</span>
           {" · Template "}
           <span className="font-mono">{composed.template_version}</span>
@@ -58,8 +48,8 @@ export function ManifestSheet(props: { readonly composed: CompositionResponse })
               <span className="font-serif tracking-caps uppercase">
                 {`${block.numeral} · ${block.title}`}
               </span>
-              {/* Two server figures printed side by side. No mark: whether a
-                  block is short of citations is a gate's verdict, not ours. */}
+              {/* No mark: whether a block is short of citations is a gate's
+                  verdict, not ours. */}
               <span className="shrink-0 font-sans text-label leading-close text-scan-ink">
                 {`${String(block.cited)} of ${String(block.field_count)} cited`}
               </span>
@@ -95,10 +85,8 @@ export function ManifestSheet(props: { readonly composed: CompositionResponse })
 }
 
 /**
- * One value span. Pending draws the reference's affordance — amber, dashed
- * underline, clickable — and the destination is the workstation field the
- * SERVER named. A pending value with no field to land on (null `field_id`)
- * still reads amber, but there is nothing to click: a dead link would promise
+ * One value span. A pending value with no field to land on (null `field_id`)
+ * still reads amber, but there is nothing to click — a dead link would promise
  * a jump the record cannot make.
  */
 function ValueSpan({

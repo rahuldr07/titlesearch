@@ -11,17 +11,12 @@ import { PaperSheet } from "../entities/evidence/PaperSheet";
 import type { Citation, FieldValue } from "../shared/fieldValue";
 
 /**
- * The DOMAIN half of the workbench: the components that speak TitlePipe rather
- * than speaking Button.
- *
- * The first band is the one to look at hardest. Those are the five renders a
- * no-value field can take, and `enums.ts:20-52` says they must never collapse
- * into one grey dash — four are statements about the DOCUMENT, the fifth is a
- * statement about the PIPELINE. They are drawn here in a row precisely so a
- * person can confirm at a glance that they do not.
- *
- * Every value below is synthetic and obviously so. A convincing fixture is how
- * invented data escapes into a screen.
+ * The domain half of the workbench: the components that speak TitlePipe
+ * rather than speaking Button. The first band is the one to look at
+ * hardest — the five renders a no-value field can take, which must never
+ * collapse into one grey dash: four are statements about the document, the
+ * fifth about the pipeline. Drawn in a row so a person can confirm at a
+ * glance that they do not. Every value below is synthetic and obviously so.
  */
 
 const CITATION: Citation = { docId: "DOC-0000", page: 12, snippet: "…a specimen line…" };

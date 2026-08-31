@@ -6,26 +6,13 @@ import { CitationRef } from "./CitationRef";
 import { NoValueChip } from "./NoValueChip";
 
 /**
- * THE SIX RENDERS OF A FIELD VALUE, AND THE `never` GUARD THAT KEEPS THEM SIX.
- *
- * `provenance.ts` is the specification. Four NA reasons, plus a fifth
- * "not yet extracted" render that is a statement about the PIPELINE, plus
- * `uncited` — a value the server sent with no source, which `entities.ts:85-89`
- * calls "the exact failure shape the architecture exists to catch".
- *
- * The switch below has SEVEN cases because the union is flat: each NA reason
- * is its own `kind`. That is the B2 fix. Under the old shape a single
- * `case "na": return <span>—</span>` collapsed all four into one grey dash and
- * satisfied the `never` guard while doing it. It cannot now — dropping any one
- * of the four fails to compile here.
- *
- * Every render differs in TEXT, in MARK and in `data-field-render`. The last is
- * what a test and a Playwright assertion read: "they must never collapse into
- * one grey dash" is only a real rule if something can fail when they do.
- *
- * NOTHING HERE DERIVES. No confidence, no `value === null`, no thresholds. The
- * component is handed a classification the server's own fields produced and it
- * prints it.
+ * The renders of a field value, kept exhaustive by the `never` guard. The
+ * union is flat — each NA reason is its own `kind` — so a single
+ * `case "na"` cannot collapse the four into one grey dash: dropping any one
+ * fails to compile. Every render differs in text, mark and
+ * `data-field-render`. Nothing here derives — no confidence, no
+ * `value === null`, no thresholds; the component prints the classification
+ * the server's own fields produced.
  */
 export type FieldValueViewProps = {
   readonly value: FieldValue;
@@ -38,7 +25,7 @@ type CitationOpen = NonNullable<ComponentProps<typeof CitationRef>["onOpen"]>;
 
 export function FieldValueView({ value, onOpenCitation, className }: FieldValueViewProps) {
   switch (value.kind) {
-    /** Rule 3: a field value is data, so it is mono. */
+    /** A field value is data, so it is mono. */
     case "cited":
       return (
         <span data-field-render="cited" className={cx("flex flex-col gap-1", className)}>
@@ -50,11 +37,10 @@ export function FieldValueView({ value, onOpenCitation, className }: FieldValueV
       );
 
     /**
-     * THE DEFECT RENDER. Not a quieter cited value — a value with no source is
-     * the failure the provenance envelope exists to catch, so it is drawn in the
-     * halt family with the missing-source sentence stated, never silently.
-     * The server has already routed it to review; this says so, it does not
-     * decide it.
+     * The defect render. A value with no source is the failure the
+     * provenance envelope exists to catch, so it is drawn in the halt family
+     * with the missing-source sentence stated. The server has already routed
+     * it to review; this says so, it does not decide it.
      */
     case "uncited":
       return (
@@ -92,10 +78,9 @@ export function FieldValueView({ value, onOpenCitation, className }: FieldValueV
       return <NoValueChip render="NOT_STATED" className={className} />;
 
     /**
-     * PRESENT_UNREADABLE is the only member carrying a page reference
-     * (`enums.ts:41-43`) — and the citation is rendered when the server sent
-     * one rather than when the reason says it may. The type permits a citation
-     * on THIS branch only; the server decides whether there is one.
+     * PRESENT_UNREADABLE is the only member carrying a page reference. The
+     * type permits a citation on this branch only; the server decides
+     * whether there is one.
      */
     case "na-present-unreadable":
       return (

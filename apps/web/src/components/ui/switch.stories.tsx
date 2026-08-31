@@ -4,9 +4,9 @@ import { Switch } from "./switch";
 import { onPanel } from "./kitGround";
 
 /**
- * A switch commits immediately and has no confirm step, so every story here is
- * a VIEW PREFERENCE. The last story states the refusal: nothing that changes
- * the record may be a switch.
+ * A switch commits immediately and has no confirm step, so every story here
+ * is a view preference. The last story states the refusal: nothing that
+ * changes the record may be a switch.
  */
 const meta = {
   title: "ui/Switch",
@@ -64,9 +64,9 @@ export const APreferencesPane: Story = {
 };
 
 /**
- * WHAT MAY NOT BE A SWITCH. A disposition changes the record and has no confirm
- * step here — that is a button and a sentence, not a toggle. Kept visible so
- * the refusal is something a reviewer has seen.
+ * What may not be a switch: a disposition changes the record — that is a
+ * button and a sentence, not a toggle. Kept visible so the refusal is
+ * something a reviewer has seen.
  */
 export const NeverForTheRecord: Story = {
   render: () => (

@@ -1,26 +1,16 @@
 /**
- * The notification boundary.
- * `sonner` is named HERE and nowhere else in the application. Owner ruling,
- * 2026-08-27; the acceptance criterion is mechanical and lives in the
- * dependency spec:
- *     grep -rn "sonner" apps/web-v2/src   →   exactly one file
- * The reasoning, from the spec: the toast vendor is the single most
- * fashion-driven choice in the manifest. An adapter makes replacing it a
- * one-file change instead of a sweep. That is cheap insurance, not ceremony.
- * WHAT DOES NOT BELONG HERE. Refusal text. `INVARIANTS:58-59` — a refused
- * mutation surfaces the SERVER's message verbatim; the client never authors
- * the wording. So these functions take a string and show it; they never
- * compose one, never prefix "Error:", never add a period. If you find yourself
- * wanting to improve the server's sentence, the improvement belongs in the
- * server.
+ * The notification boundary. `sonner` is named here and nowhere else in the
+ * application — the adapter makes replacing the toast vendor a one-file
+ * change. Refusal text does not belong here: a refused mutation surfaces the
+ * server's message verbatim; the client never composes, prefixes, or edits
+ * the wording.
  */
 
 import { toast } from "sonner";
 
 /**
- * Show a message the server produced.
- * `message` is rendered verbatim in every case. The variant chooses colour and
- * icon; it never edits the words.
+ * Show a message the server produced. `message` renders verbatim; the
+ * variant chooses colour and icon, never the words.
  */
 export const notify = {
   /** A thing happened and the record now says so. */
@@ -29,11 +19,8 @@ export const notify = {
   },
 
   /**
-   * A refusal. The server's message, unedited.
-   * Not `duration: Infinity` — a refusal the reviewer cannot dismiss is a
-   * refusal that blocks the next attempt. The screen, not the toast, carries
-   * the durable state of a refused action (`INVARIANTS:65-66`: the field
-   * repaints as the server has it).
+   * A refusal — the server's message, unedited. Not `duration: Infinity`:
+   * the screen, not the toast, carries the durable state of a refused action.
    */
   error(message: string): void {
     toast.error(message);
@@ -49,11 +36,10 @@ export const notify = {
   },
 
   /**
-   * A pending mutation. The three strings are UI copy, not server output —
-   * this is the one place that is legitimate, because no server has answered
-   * yet at the moment "Saving…" is shown.
-   * `error` takes the server's message from the rejection, so the failure
-   * branch stays verbatim.
+   * A pending mutation. The three strings are UI copy — legitimate here,
+   * because no server has answered yet when "Saving…" shows. `error` takes
+   * the server's message from the rejection, so the failure branch stays
+   * verbatim.
    */
   promise<T>(
     work: Promise<T>,
@@ -68,14 +54,9 @@ export const notify = {
 };
 
 /**
- * The toast host. Mounted once, at the app root.
- * `hotkey` is set away from sonner's default (`altKey+T`) and away from every
- * chord in the single-key vocabulary — see `shared/chords.ts`. Sonner exposes
- * it as `hotkey?: string[]`, so this is a supported setting rather than a
- * workaround.
- * Accessibility is why sonner survived evaluation: it renders
- * `aria-live="polite"`, `aria-relevant="additions text"`, `aria-atomic="false"`
- * — correct for WCAG 2.2 §4.1.3 Status Messages, which is exactly the
- * criterion `@axe-core/playwright` cannot detect the absence of.
+ * The toast host, mounted once at the app root. `hotkey` is set away from
+ * sonner's default and from every chord in the single-key vocabulary — see
+ * `shared/chords.ts`. Sonner renders a correct polite live region, which is
+ * a criterion automated a11y checks cannot detect the absence of.
  */
 export { Toaster } from "sonner";

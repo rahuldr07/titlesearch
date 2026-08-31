@@ -1,19 +1,12 @@
 import { expect, test } from "@playwright/test";
 
 /**
- * THE REFUSAL HAS TO BE LEGIBLE, and until this spec existed it was not.
- *
- * `resolveApiMode` throws inside an async function invoked as `void boot()`, so
- * an unrecognised `VITE_API_MODE` was an unhandled rejection and a WHITE PAGE.
- * "Refuses rather than falling back" was true of the control flow and useless
- * to the person looking at the browser, who saw nothing at all and had no
- * reason to open a console.
- *
- * This project's bundle is built with `VITE_API_MODE=liv` — the typo the
+ * The refusal has to be legible: an unrecognised `VITE_API_MODE` must
+ * refuse on screen, not as an unhandled rejection and a white page. This
+ * project's bundle is built with `VITE_API_MODE=liv` — the typo the
  * refusal exists for. That the bundle can be built at all is deliberate:
- * vite.config.ts warns about the value rather than rejecting it, precisely so
- * this assertion can exist. A refusal nobody can build is a refusal nobody can
- * test, and an untestable check is the artefact class this plan keeps finding.
+ * vite.config.ts warns about the value rather than rejecting it, precisely
+ * so this assertion can exist.
  */
 test("an unrecognised VITE_API_MODE refuses on screen, not in the console", async ({
   page,

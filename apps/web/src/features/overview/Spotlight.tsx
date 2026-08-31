@@ -31,14 +31,9 @@ export function Spotlight(props: {
     );
   }
 
-  // Null is the server's answer, not a failed load, so the card stays.
-  //
-  // This branch used to send the reader to /queue — a screen deleted because
-  // the reference app draws none (CONFLICT-deleted-queue-and-rail-controls §1).
-  // What is true now: the hand-over is still one server-chosen order (the
-  // 2026-08-28 ruling NARROWED invariant 22, it did not delete it), it is
-  // served HERE, and the separate browse surface the same ruling authorised is
-  // All Orders.
+  // Null is the server's answer, not a failed load, so the card stays. The
+  // hand-over is one server-chosen order, served here; All Orders is the
+  // separate browse surface.
   if (props.order === null) {
     return (
       <Card>

@@ -14,44 +14,17 @@ import {
 } from "./enums.js";
 
 /**
- * NOTE ON OMISSIONS — deliberate, not gaps:
- * - No Probe schema. Probes are never visible in any client (CONTEXT §14).
- *   They must not exist in the contract a screen could consume.
- * - No per-reviewer throughput shape anywhere. That data does not exist in the
- *   system, so no schema may make room for it.
+ * Deliberate omissions, not gaps: no Probe schema (probes are never visible
+ * in any client) and no per-reviewer throughput shape anywhere.
  */
 
 /**
- * WHERE ON THE PAGE THE VALUE WAS READ — one box, in page-relative units.
- *
- * Was `z.unknown()` and marked OPEN until 2026-08-28. `unknown` is not a
- * deferral, it is a hole: every consumer had to cast before it could draw, so
- * the overlay drew nothing and the review screen's citation pin marked the PAGE
- * and said no coordinate was recorded — for fields that had one all along.
- *
- * ORIGIN TOP-LEFT, EVERY MEMBER NORMALIZED 0–1 against the rendered page box,
- * and the range is CHECKED rather than described. A pixel box is meaningless
- * without the raster's own dimensions, which no response carries; a fraction is
- * meaningful against whatever the client renders. `.min(0).max(1)` is not
- * validation theatre — a box outside the page is a box the overlay would draw
- * off the sheet, and a defect the boundary parser should name rather than
- * paint. `w`/`h` are extents, not a second corner, so a zero-height box is
- * impossible to confuse with a point.
- *
- * `page` rides ON THE BOX because a reading may cite a different page from the
- * field that adopted it (`FieldReading.page`), and a coordinate that had to be
- * paired with a page from elsewhere is a coordinate a caller can mis-pair.
- *
- * ONE BOX, NOT AN ARRAY. This is a LINE's box — the smallest thing an engine
- * reports a position for. A value spanning two lines has two readings behind
- * it, each with its own box; folding them into one array here would ask the
- * client to decide which of them the citation means.
- *
- * NULLABLE AT EVERY SITE THAT HOLDS ONE, and null is a real state, not a
- * placeholder: engines without coordinate output (pdftotext, a plain LLM read)
- * declare null. `null` = "this engine recorded no position". It never means
- * "position zero", which is why there is no companion `has_coords` boolean —
- * nullability already says it (`Preferences.nav_collapsed`, intake.ts).
+ * Where on the page the value was read: one line's box, origin top-left,
+ * every member normalized 0-1 against the rendered page box. `page` rides on
+ * the box because a reading may cite a different page from the field that
+ * adopted it. A value spanning two lines has two readings, each with its own
+ * box. Null at any holding site means "this engine recorded no position"
+ * (pdftotext, a plain LLM read) — never "position zero".
  */
 export const LineCoords = z.object({
   page: z.number().int(),
@@ -63,32 +36,12 @@ export const LineCoords = z.object({
 export type LineCoords = z.infer<typeof LineCoords>;
 
 /**
- * THE EXCERPT, SPLIT AT THE MATCH — and it carries its own citation.
- *
- * `source_snippet` is the excerpt as one string, and it stays: it is what the
- * page says, verbatim, and every consumer that only needs to quote reads that.
- * What it cannot do is say WHICH SUBSTRING the engine matched, so the review
- * screen could quote the line and not show the reader what in it was read. The
- * split is the engine's own — an extractor knows the offsets it matched at, and
- * nothing else does. Recomputing it in the browser with `indexOf` would be the
- * client deciding what the engine matched, and would land on the wrong
- * occurrence the first time a word appeared twice in one line.
- *
- * `pre + hit + post` IS `source_snippet`, character for character. Two members
- * stating one excerpt is a fixture invariant, not a suggestion: a server that
- * lets them drift has published two different quotations of one line.
- *
- * `doc_id` AND `page` RIDE ON THE EXCERPT. A quotation without its source is a
- * value with no citation (principle 6), and an excerpt that had to be paired
- * with a document from its container is one a caller can pair wrongly — the
- * failure being guarded against is a snippet rendered beside another page's
- * reference. They are stated here so the quotation is self-locating.
- *
- * `note` is the RULEBOOK'S remark about this excerpt — "the statement skips
- * from 2024 to nothing; the 2023 installment is absent from the package, not
- * paid". Server-authored like `asking`/`why`, for the same reason: it is a
- * claim about what the document means, and the browser has no standing to make
- * one. `null` = the rulebook had nothing to add, which is the ordinary case.
+ * The excerpt split at the engine's own match offsets — never recompute the
+ * split in the browser (indexOf lands on the wrong occurrence when a word
+ * repeats). `pre + hit + post` must equal `source_snippet` character for
+ * character. `doc_id` and `page` ride on the excerpt so the quotation is
+ * self-locating. `note` is the rulebook's server-authored remark; null means
+ * it had nothing to add.
  */
 export const SourceExcerpt = z.object({
   doc_id: z.string(),
@@ -108,23 +61,11 @@ export const Order = z.object({
   state: z.string(),
   county: z.string(),
   /**
-   * ⚠ UI-DRIVEN REQUEST — AWAITING RATIFICATION (2026-07-30, fidelity Wave 2).
-   * READ FIELDS ONLY: what was ordered, over what span, in how many pages.
-   * Nothing here lets a client choose a product, change a period or re-count a
-   * package — the server resolves all three from the client's product config.
-   *
-   * The delivered screen printed all three as private constants because no
-   * wire carried them, and the app's fixtures said "38 pages" where the design
-   * says 64 — a number nothing validated because nothing owned it.
-   *
-   * Nullable: an order that failed validation has no resolved product, and a
-   * package nobody could read has no page count. `null` is that statement. `0`
-   * would be a count, and a count asserts somebody looked.
-   *
-   * `period_label`, not `period`, matching `OrderSignoffResponse.period_label`
-   * and `OrderCompletenessResponse.period_label` — it is a rendered label the
-   * server composes from the product's derivation rule, never a machine-
-   * readable span the client could recompute a date from.
+   * Read fields only: the server resolves product, period, and page count
+   * from the client's product config. Nullable — an order that failed
+   * validation has no resolved product, an unreadable package has no page
+   * count; `0` would assert somebody counted. `period_label` is a rendered
+   * label the server composes, never a machine-readable span.
    */
   product: z.string().nullable(),
   period_label: z.string().nullable(),
@@ -153,10 +94,10 @@ export const FieldReading = z.object({
 export type FieldReading = z.infer<typeof FieldReading>;
 
 /**
- * The provenance envelope is the product (principle 6). A field whose value is
- * non-null but whose source_* members are null is the exact failure shape the
- * architecture exists to catch — the server routes it to review; the UI renders
- * what it is given and derives nothing.
+ * The provenance envelope is the product. A field whose value is non-null but
+ * whose source_* members are null is the exact failure shape the architecture
+ * exists to catch — the server routes it to review; the UI renders what it is
+ * given and derives nothing.
  */
 export const Field = z.object({
   id: z.string(),
@@ -177,72 +118,27 @@ export const Field = z.object({
   /** All engines' pre-merge values; review UI shows A and B side by side. */
   readings: z.array(FieldReading).optional(),
   /**
-   * Set when a reviewer suppressed this row with a reason — rulebook R13,
-   * "canceled/satisfied/vacated/released/duplicates suppress with reason".
-   *
-   * ORTHOGONAL TO `state`, not a member of it. A judgment hit that is not
-   * against our owner may already have been confirmed or corrected before
-   * anybody noticed the party was wrong; folding suppression into the state
-   * machine would lose that history and force every consumer to re-handle an
-   * enum it has already exhausted.
-   *
-   * The reason is required at the endpoint, and it is the whole point: an
-   * excluded row is GONE from the delivered sheet, so the record of why is the
-   * only thing anybody can audit afterwards. A silent suppression is
-   * indistinguishable from a miss.
+   * Set when a reviewer suppressed this row with a reason (rulebook R13).
+   * Orthogonal to `state`, not a member of it — a row may be confirmed or
+   * corrected before anyone notices it should be excluded. The reason is
+   * required: an excluded row is gone from the delivered sheet, so the record
+   * of why is the only thing auditable afterwards.
    */
   excluded_reason: z.string().nullable().optional(),
   /**
-   * ⚠ UI-DRIVEN REQUEST — AWAITING RATIFICATION (2026-07-30, fidelity Wave 2).
-   * READ FIELDS ONLY, and the only two on this schema written for a person
-   * rather than for a machine.
-   *
-   * `asking` is the QUESTION the decision card leads with — "Is the vested
-   * owner MARIA L. ESTRADA or MARIA I. ESTRADA?". `why` is why it is being
-   * asked — "Two independent readers disagreed on the middle initial". The
-   * design carries both on every decision (`TitlePipe.dc.html:2386-2392`,
-   * rendered at `:874`); the review screen shows a field path and two values
-   * and leaves the reviewer to reconstruct them, which is work the pipeline is
-   * supposed to have already done.
-   *
-   * SERVER-AUTHORED, and that is the constraint rather than a convenience.
-   * Composing either in the browser would be the UI narrating why the pipeline
-   * routed something — a claim only the router can make, and one that would
-   * drift from the router the moment either changed.
-   *
-   * Optional AND nullable, following `excluded_reason` above: ABSENT on a field
-   * that never went to review, `null` on one that did and has no authored
-   * question yet. Under `exactOptionalPropertyTypes` a reader gets
-   * `string | null | undefined` and must handle all three, because they are
-   * three different statements.
+   * `asking` is the question the decision card leads with; `why` is why it is
+   * being asked. Server-authored: composing either in the browser would be
+   * the UI narrating why the pipeline routed something. Optional and
+   * nullable — absent on a field that never went to review, null on one that
+   * did and has no authored question yet.
    */
   asking: z.string().nullable().optional(),
   why: z.string().nullable().optional(),
   /**
-   * WHAT FOLLOWS FROM GETTING THIS ONE WRONG — "an unpaid prior-year
-   * installment survives closing as a lien against the parcel."
-   *
-   * The third member written for a person, and it joins `asking`/`why` because
-   * it answers the third question a reviewer has: what is being asked, why it
-   * is being asked, and what it costs to answer it badly. The design prints it
-   * as the amber line under an open decision (`isReview`'s `openConsequence`).
-   *
-   * SERVER-AUTHORED, and that is the constraint rather than a convenience. A
-   * consequence is a claim about EXPOSURE — the rulebook's judgement about what
-   * a wrong answer does to the policy — and the browser composing one would be
-   * the UI inventing legal exposure from a field path. The design's own copy
-   * makes the point: the sentences differ per field in ways nothing on the wire
-   * predicts, because they come out of the rulebook, not out of the path.
-   *
-   * Optional AND nullable, exactly as `asking`/`why` above and for the same
-   * three-way reason. ABSENT on a field that never went to review — no decision
-   * was ever put, so there is nothing a wrong answer would cost. `null` on one
-   * that did and for which the rulebook has authored no consequence yet, which
-   * is the ordinary state of a newly routed field. A string is the claim.
-   *
-   * NOT DERIVED FROM `rule_refs`, and deliberately not. A T1 tag says the
-   * exposure is ruinous; it does not say what the exposure IS, and a client
-   * mapping tag → sentence would be a consequence table living in a component.
+   * What follows from getting this one wrong — the rulebook's claim about
+   * exposure, server-authored; the browser must not invent legal exposure
+   * from a field path, and it is never derived from `rule_refs`. Optional and
+   * nullable with the same three-way meaning as `asking`/`why`.
    */
   consequence: z.string().nullable().optional(),
   /**
@@ -277,26 +173,16 @@ export const Escalation = z.object({
   rule_id: z.string().nullable(),
   resolved_by: z.string().nullable(),
   /**
-   * ⚠ RULED 2026-08-29 — `docs/frontend/design-2026-08/RULING-2026-08-29.md`.
-   * The reference app's QC & Escalations detail draws four evidence surfaces
-   * this schema refused to carry, so they are added — every one SERVER-
-   * AUTHORED, because each is a claim about the record that the browser has
-   * no standing to make (principle 6):
-   *
-   * - `raised_by` — who escalated ("D. Okafor · Judgments & Liens").
-   * - `age` — the FINISHED age label the queue chip draws ("3h ago",
-   *   "settled"). A label, never a timestamp: the client must not tick.
-   * - `context` — the "Extraction Context & Legal Evidence" paragraph.
-   * - `excerpt` — the docket excerpt on paper, split at the boxed match,
-   *   reusing `SourceExcerpt` so it is self-locating (doc + page).
-   * - `identity` — the debtor-vs-owner comparison grid, both columns quoted
-   *   from the record. Inventing either name is the failure this product
-   *   exists to prevent; serving them is how the grid can exist at all.
-   * - `qc_owner` — who the determination sits with ("R. Menon"), for the
-   *   read-only hint the reference draws on non-QC seats.
-   *
-   * All nullable: an escalation raised without evidence attached is an
-   * ordinary state, and null is its statement.
+   * Evidence surfaces, every one server-authored:
+   * - `raised_by` — who escalated.
+   * - `age` — the finished age label ("3h ago", "settled"); a label, never a
+   *   timestamp — the client must not tick.
+   * - `context` — the extraction-context paragraph.
+   * - `excerpt` — the docket excerpt, split at the match (`SourceExcerpt`).
+   * - `identity` — the debtor-vs-owner grid, both columns quoted from the
+   *   record.
+   * - `qc_owner` — who the determination sits with.
+   * All nullable: an escalation raised without evidence is an ordinary state.
    */
   raised_by: z.string().nullable(),
   age: z.string().nullable(),
@@ -314,7 +200,7 @@ export const Escalation = z.object({
 });
 export type Escalation = z.infer<typeof Escalation>;
 
-/** Bugs are broken INPUTS routed to developers — not corrections (CONTEXT §6). */
+/** Bugs are broken inputs routed to developers — not corrections. */
 export const Bug = z.object({
   id: z.string(),
   order_id: z.string(),
@@ -360,11 +246,6 @@ export const Report = z.object({
   shape: z.string(),
   rendered_at: z.string(),
   /**
-   * ⚠ RULED 2026-08-29 — `docs/frontend/design-2026-08/RULING-2026-08-29.md`.
-   * The version ledger the reference draws states, ON THE ROW, which version
-   * a reissue superseded and the reason it stated ("Superseded · retained",
-   * "Reason: …"). `ReissueRequest.reason` was accepted and echoed once but
-   * never persisted, so a reloaded ledger could not say why v2 exists.
    * `supersedes` is the version number this report replaced; `reason` is the
    * reissue's stated reason. Both null on a v1 that supersedes nothing.
    */
@@ -374,13 +255,10 @@ export const Report = z.object({
 export type Report = z.infer<typeof Report>;
 
 /**
- * ⚠ RULED 2026-08-29 — `docs/frontend/design-2026-08/RULING-2026-08-29.md`.
- * One row of the Transmission Receipt the reference draws: a named step of
- * the delivery act with the server's own instant and attribution line. The
- * four canonical steps are signed → digest recorded → transmitted →
- * acknowledged; a step that has not happened yet carries `done: false` and a
- * null instant. The client renders the list verbatim — it never derives a
- * step from `status`.
+ * One row of the Transmission Receipt. The four canonical steps are signed →
+ * digest recorded → transmitted → acknowledged; a step that has not happened
+ * yet carries `done: false` and a null instant. The client renders the list
+ * verbatim — it never derives a step from `status`.
  */
 export const ReceiptStep = z.object({
   id: z.string(),
@@ -400,7 +278,7 @@ export const Delivery = z.object({
   attempted_at: z.string().nullable(),
   delivered_at: z.string().nullable(),
   evidence: z.string().nullable(),
-  /** The Transmission Receipt's rows, in the server's order (RULED 2026-08-29). */
+  /** The Transmission Receipt's rows, in the server's order. */
   receipt: z.array(ReceiptStep),
 });
 export type Delivery = z.infer<typeof Delivery>;

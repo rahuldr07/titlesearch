@@ -6,15 +6,12 @@ import { audit, people, rbacMatrix } from "../../shared/accountQueries";
 import { notify } from "../../shared/notify";
 
 /**
- * ⚠ RULED 2026-08-29 (RULING-2026-08-29.md) — the Settings pane's two writes.
- *
- * `PATCH /api/rbac` posts ONE clicked cell; the SERVER owns the cycle order
- * (— → VIEW → EDIT → —) and answers with the whole matrix, which replaces the
- * cache verbatim — the client never advances a level locally.
- *
- * `PATCH /api/people/{id}/role` posts the picked role; the roster repaints
- * from its own re-read. Both file audit events server-side, so the audit
- * pane's read is invalidated alongside.
+ * The Settings pane's two writes. `PATCH /api/rbac` posts one clicked cell;
+ * the server owns the cycle order (— → VIEW → EDIT → —) and answers with
+ * the whole matrix, which replaces the cache verbatim — the client never
+ * advances a level locally. `PATCH /api/people/{id}/role` posts the picked
+ * role; the roster repaints from its own re-read. Both file audit events
+ * server-side, so the audit pane's read is invalidated alongside.
  */
 export function useCycleRbac() {
   const client = useQueryClient();
@@ -30,7 +27,7 @@ export function useCycleRbac() {
     onSettled: () => {
       inFlight.current = false;
     },
-    // The server's sentence, verbatim (INVARIANTS:58-59). Never composed here.
+    // The server's sentence, verbatim. Never composed here.
     onError: (error: Error) => notify.error(error.message),
   });
 

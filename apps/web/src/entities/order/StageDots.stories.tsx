@@ -2,7 +2,7 @@ import { onPanel } from "../panelGround";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { StageDots, type Stage } from "./StageDots";
 
-/** The six-row sequential timeline of design §Screens 6. Statuses are the server's. */
+/** The six-row sequential timeline. Statuses are the server's. */
 const STAGES: readonly Stage[] = [
   { id: "quarantine", label: "Quarantine gateway", status: "done", note: "3 checks" },
   { id: "split", label: "Instrument split", status: "done", note: "41 instruments" },
@@ -29,8 +29,9 @@ export const NotStarted: Story = {
 };
 
 /**
- * A BLOCKED STAGE, WHICH IS NOT A FAILED ONE. It cannot start; something else
- * has to move first. The note carries what, since only the server knows.
+ * A blocked stage, which is not a failed one: it cannot start, something
+ * else has to move first. The note carries what, since only the server
+ * knows.
  */
 export const Blocked: Story = {
   args: {

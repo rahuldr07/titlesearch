@@ -1,37 +1,24 @@
 /**
- * THE FIVE NO-VALUE RENDERS, AS DATA.
+ * The five no-value renders, as data: the four NA reasons plus
+ * "not yet extracted" (a null value with a null na_reason — a statement
+ * about the pipeline, not a member of the enum). A table rather than a
+ * switch scattered across components, because what is enforced is that the
+ * five differ in every channel at once: sentence, mark, ink, border style,
+ * fill — which is what survives greyscale and a red-green deficiency.
  *
- * `enums.ts:20-52` names four NA reasons and then says the fifth render —
- * a null value with a null `na_reason` — is "NOT YET EXTRACTED", a statement
- * about the PIPELINE rather than about the document, and NOT a member of the
- * enum. `INVARIANTS:37` and `:45-46` forbid collapsing any of them.
- *
- * A table rather than a `switch` scattered across components, because the thing
- * being enforced is that the five differ IN EVERY CHANNEL at once: sentence,
- * mark, ink, border style, fill. The tokens file says so outright — "colour
- * alone does not carry the distinction and is not asked to: each has a border
- * STYLE and a FILL … that is what survives greyscale and a red-green deficiency
- * both."
- *
- * The sentences are the taxonomy's own words, not invented copy:
- *   NOT_PRESENT        — "structurally absent in this jurisdiction"
- *   NOT_FOUND          — "searched for, and there is nothing of record"
- *   NOT_STATED         — "the document is silent on it"
- *   PRESENT_UNREADABLE — "it is on the page and could not be read"
- *
- * `surfacedForReview` is COPIED from the rulebook, not decided here: NOT_PRESENT
- * is "correct, and NEVER surfaced for review" (enums.ts:32-35). It exists so a
- * screen can read the rulebook's answer instead of re-deriving one, and it never
- * changes what a component renders — an NA row renders identically whoever asks.
+ * `surfacedForReview` is copied from the rulebook, not decided here — it
+ * must stay in sync with the contract's enums. It exists so a screen can
+ * read the rulebook's answer instead of re-deriving one, and it never
+ * changes what a component renders.
  */
 import type { NaReason } from "@titlepipe/contract";
 
 export type NoValueRender = "not-extracted" | NaReason;
 
 export type NoValueDescriptor = {
-  /** The sentence. Rule 14: absence is typed, never a blank. */
+  /** The sentence. Absence is typed, never a blank. */
   readonly sentence: string;
-  /** Rule 6's glyph vocabulary — a mark, never an icon. */
+  /** From the glyph vocabulary — a mark, never an icon. */
   readonly mark: string;
   /** Token-backed classes. Distinct ink AND distinct border style AND fill. */
   readonly chrome: string;
@@ -51,7 +38,7 @@ export const NO_VALUE: Readonly<Record<NoValueRender, NoValueDescriptor>> = {
       "border-solid border-na-not-present-border bg-surface-sunken text-na-not-present-ink",
     surfacedForReview: false,
   },
-  /** Same stroke colour, DASHED, empty fill — searched, none of record. */
+  /** Same stroke colour, dashed, empty fill — searched, none of record. */
   NOT_FOUND: {
     sentence: "Searched — nothing of record",
     mark: "◆",
@@ -66,8 +53,8 @@ export const NO_VALUE: Readonly<Record<NoValueRender, NoValueDescriptor>> = {
     surfacedForReview: true,
   },
   /**
-   * The only TINTED member, and the only one carrying a page reference
-   * (enums.ts:41-43). Attend family: "look at this", not "stopped".
+   * The only tinted member, and the only one carrying a page reference.
+   * Attend family: "look at this", not "stopped".
    */
   PRESENT_UNREADABLE: {
     sentence: "On the page — could not be read",

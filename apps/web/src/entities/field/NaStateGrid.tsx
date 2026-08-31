@@ -10,34 +10,24 @@ import {
 import { NO_VALUE } from "./noValueStates";
 
 /**
- * THE 4-STATE NA PICKER (design §Screens 7, "NA 4-state grid for absence-only
- * fields").
+ * The 4-state NA picker for absence-only fields.
  *
- * ══ WHY ALL FOUR ARE ALWAYS OFFERED, INCLUDING NOT_PRESENT ══════════════════
+ * All four are always offered, including NOT_PRESENT: "never surfaced for
+ * review" is a statement about the queue, and this grid is the opposite
+ * direction — a reviewer ruling that the field is structurally absent.
+ * Removing the option would make the correct answer unsayable and push the
+ * reviewer onto NOT_FOUND, a different claim that routes differently.
  *
- * `enums.ts:31-35` says NOT_PRESENT is "correct, and NEVER surfaced for review",
- * and it is tempting to read that as "omit it from the picker". It is not. That
- * sentence is about the QUEUE — a NOT_PRESENT field is not routed to a reviewer
- * to chase. This grid is the opposite direction: a reviewer looking at a row
- * that IS in front of them, RULING that the field is structurally absent in this
- * jurisdiction. Removing the option would make the correct answer unsayable and
- * push the reviewer onto NOT_FOUND, which is a different claim and routes
- * differently. The distinction is surfaced instead, on the option itself.
- *
- * ══ WHY THE OPTIONS COME FROM THE ZOD ENUM ══════════════════════════════════
- *
- * `NaReasonEnum.options` rather than a hand-written array: a fifth member added
- * to the contract appears here without an edit, and `NO_VALUE` fails to compile
- * until it is described. A literal array would silently keep offering four.
- *
- * The grid SELECTS a reason. It never submits one, and it never decides which
- * fields are "absence-only" — the caller holds the server's answer to that.
+ * Options come from the Zod enum, not a hand-written array: a fifth member
+ * added to the contract appears here without an edit, and NO_VALUE fails to
+ * compile until it is described. The grid selects a reason; it never submits
+ * one, and it never decides which fields are absence-only.
  */
 export type NaStateGridProps = {
   /** The reason currently chosen, or null for none. Server state, echoed. */
   readonly value: NaReason | null;
   readonly onChange: (reason: NaReason) => void;
-  /** Rule 9: blocked states its reason, and the server authors that sentence. */
+  /** Blocked states its reason, and the server authors that sentence. */
   readonly disabledBecause?: string | null | undefined;
 };
 
@@ -69,10 +59,9 @@ export function NaStateGrid({ value, onChange, disabledBecause }: NaStateGridPro
 }
 
 /**
- * The rulebook's own distinctions, quoted rather than paraphrased — this is the
- * one place a reviewer decides between four things that look alike, and
- * NOT_FOUND vs NOT_STATED is the pair that gets confused (`enums.ts:36-39`:
- * "the search happened and returned a document; the document does not say").
+ * The rulebook's own distinctions, quoted rather than paraphrased — this is
+ * the one place a reviewer decides between four things that look alike, and
+ * NOT_FOUND vs NOT_STATED is the pair that gets confused.
  */
 function describe(reason: NaReason): string {
   switch (reason) {

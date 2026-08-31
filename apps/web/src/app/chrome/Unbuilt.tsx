@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-/** A SCREEN THAT DOES NOT EXIST YET, SAYING SO. Not a mock. */
+/** A screen that does not exist yet, saying so. Not a mock. */
 export function Unbuilt(props: {
   readonly screen: string;
   readonly door: string;
@@ -9,8 +9,8 @@ export function Unbuilt(props: {
 }) {
   return (
     // `tabIndex={0}`: a scrolling region must be keyboard-reachable, or a
-    // reader who cannot use a pointer cannot reach the bottom of it (WCAG
-    // 2.1.1). Named, because a bare tab stop announces nothing.
+    // reader who cannot use a pointer cannot reach the bottom of it. Named,
+    // because a bare tab stop announces nothing.
     <div
       data-testid="unbuilt"
       tabIndex={0}
@@ -49,13 +49,9 @@ function Row(props: { readonly term: string; readonly children: ReactNode }) {
 }
 
 /**
-
- * INVARIANT 57 — an unknown route renders a NAMED not-found state, never a blank page.
-
- * Named for the reader: it says which path failed, because "not found" without the
-
- * path is a screen refusing to tell you what it refused.
-
+ * An unknown route renders a named not-found state, never a blank page. It
+ * says which path failed — "not found" without the path is a screen
+ * refusing to tell you what it refused.
  */
 export function NotFound() {
   return (

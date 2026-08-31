@@ -1,10 +1,9 @@
 import { z } from "zod";
 
 /**
- * Five-state field lifecycle. The SERVER owns every transition and every
- * threshold (CONTEXT §7). The UI renders `state` verbatim — it must never
- * compute it from `engine_confidence_raw`, from `value === null`, or from
- * anything else.
+ * Field lifecycle. The server owns every transition and threshold; the UI
+ * renders `state` verbatim and never computes it from `engine_confidence_raw`,
+ * `value === null`, or anything else.
  */
 export const FieldState = z.enum([
   "pending",
@@ -17,38 +16,21 @@ export const FieldState = z.enum([
 export type FieldState = z.infer<typeof FieldState>;
 
 /**
- * The FOUR no-value states. Ratified by the owner 2026-07-26 (docs/frontend/
- * open-rulings.md Q1), widening this enum from the previous two.
+ * The four no-value states. They describe the document and route differently;
+ * never collapse them:
  *
- * Three independent sources converged on four: CONTEXT §11 + HANDOFF §2 (which
- * said outright that the taxonomy "needs a ruling"), the Python `models.py`
- * trio, and the design in design-mock/ — which draws all four distinctly and
- * carries a States Gallery card reading "They must never collapse into one
- * grey dash."
+ * - NOT_PRESENT — structurally absent in this jurisdiction. Correct, never
+ *   surfaced for review.
+ * - NOT_FOUND — the field exists here and was searched; nothing of record.
+ *   Always surfaced.
+ * - NOT_STATED — a document came back but is silent on the field.
+ * - PRESENT_UNREADABLE — on the page but unreadable (degraded scan). Always
+ *   surfaced; the only member that carries a page reference.
  *
- * They are statements about the DOCUMENT, and they route differently:
- *
- * - NOT_PRESENT — structurally absent in this jurisdiction (San Diego
- *   BOOK/PAGE, Houston INST#, Greene BUILDING). Correct, and NEVER surfaced
- *   for review. Surfacing it sends reviewers chasing ghosts on every
- *   California order.
- * - NOT_FOUND — the field exists in this jurisdiction and was searched for,
- *   and there is nothing of record (McIntosh CONS, Mecklenburg PLAINTIFF
- *   ATTORNEY). Always surfaced.
- * - NOT_STATED — the document is silent on it. Distinct from NOT_FOUND: the
- *   search happened and returned a document; the document does not say.
- * - PRESENT_UNREADABLE — it is on the page and could not be read (degraded
- *   scan, microfilm density loss). The honest answer. Always surfaced, and
- *   the only member that carries a page reference.
- *
- * A null `value` with a null `na_reason` is "NOT YET EXTRACTED" — a fifth,
- * distinct render, and NOT a member here. It is a statement about the
- * PIPELINE, not the document. Never collapse it into an NA state, and never
- * key anything off `value === null`.
- *
- * Backend mapping note: Python `models.py` calls NOT_PRESENT
- * `NOT_USED_IN_JURISDICTION`. Same concept; reconcile at the Gate 6 port
- * rather than renaming here, which would churn the surviving screens.
+ * A null `value` with a null `na_reason` means "not yet extracted" — a
+ * pipeline state, not a member here. Never key anything off `value === null`.
+ * Python models call NOT_PRESENT `NOT_USED_IN_JURISDICTION`; reconcile at the
+ * backend port, not by renaming here.
  */
 export const NaReason = z.enum([
   "NOT_PRESENT",
@@ -59,8 +41,8 @@ export const NaReason = z.enum([
 export type NaReason = z.infer<typeof NaReason>;
 
 /**
- * Typist three-part contract confidence (HANDOFF §4). "unclear with source" is
- * legitimate; a confident guess is the poison.
+ * Typist confidence. "Unclear with source" is legitimate; a confident guess
+ * is the poison.
  */
 export const BlindConfidence = z.enum(["certain", "probable", "unclear"]);
 export type BlindConfidence = z.infer<typeof BlindConfidence>;
@@ -81,7 +63,7 @@ export const RuleOrigin = z.enum([
 ]);
 export type RuleOrigin = z.infer<typeof RuleOrigin>;
 
-/** Rule provenance tags (CONTEXT §9). OPEN means do not build past it. */
+/** Rule provenance tags. OPEN means do not build past it. */
 export const RuleProvenance = z.enum(["RULED", "DERIVED", "OPEN", "CONFLICT"]);
 export type RuleProvenance = z.infer<typeof RuleProvenance>;
 
@@ -110,24 +92,17 @@ export const JudgmentStatus = z.enum([
 export type JudgmentStatus = z.infer<typeof JudgmentStatus>;
 
 /**
- * Order status vocabulary is OPEN until the Flask models are ported (P1) — it
- * is the source of truth. Do not invent a closed enum here.
+ * Order status vocabulary is OPEN until the Flask models (the source of
+ * truth) are ported. Do not invent a closed enum here.
  */
 export const OrderStatus = z.string();
 export type OrderStatus = z.infer<typeof OrderStatus>;
 
 /**
- * ⚠ RULED 2026-08-29 — `docs/frontend/design-2026-08/RULING-2026-08-29.md`.
- * Closed under the ruling: the reference app's Transmission Receipt draws a
- * delivery as a four-step act — signed, digest recorded, transmitted,
- * acknowledged — so the status vocabulary is the four terminal points of that
- * sequence plus the two states the fixtures already carried: a reissue DRAFT
- * that has been transmitted to nobody, and a transit failure (retryable,
- * never a quality state — see `Delivery`).
- *
- * The pre-ruling `z.string()` was marked OPEN pending the Flask port; the
- * ruling resolves it for the reference: the mocks serve these members and the
- * Gate 6 port reconciles against them rather than the other way round.
+ * Closed set: the four steps of the transmission sequence (signed, digest
+ * recorded, transmitted, acknowledged) plus a reissue draft transmitted to
+ * nobody and a transit failure (retryable, never a quality state — see
+ * `Delivery`). The backend port reconciles against these members.
  */
 export const DeliveryStatus = z.enum([
   "draft",

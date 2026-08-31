@@ -63,7 +63,7 @@ export const ORDER_COLUMNS: readonly TableColumn<OrderRow>[] = [
     id: "due",
     header: "Due",
     width: "130px",
-    /* The server's label, verbatim. INVARIANT 23: no countdown is derived from it. */
+    /* The server's label, verbatim. No countdown is derived from it. */
     cell: (row) =>
       row.due === null ? (
         <Absent>No due date</Absent>
@@ -76,17 +76,14 @@ export const ORDER_COLUMNS: readonly TableColumn<OrderRow>[] = [
   {
     id: "action",
     header: "Action",
-    /* Wide enough for BOTH actions — at 120px the clock clipped into Due. */
+    /* Wide enough for both actions — at 120px the clock clipped into Due. */
     width: "150px",
     /*
-     * The reference's two row actions: the audit-history modal, then Open →.
-     * The clock button is the call site `openOrderHistory` was built for —
-     * it names the order for the ONE history overlay (`app/keyboard/overlays.ts`
-     * argues why a second copy of that surface was refused). A native
-     * `<button>` in the kit's chrome, because react-aria's Button drops
-     * `title` and the reference draws a tooltip-bearing icon; `getState()`
+     * Two row actions: the audit-history modal, then Open →. The clock
+     * button names the order for the one history overlay. A native
+     * `<button>` because react-aria's Button drops `title`; `getState()`
      * rather than the hook because a cell is a render function, not a
-     * component (same imperative seam `shared/session.ts` uses).
+     * component.
      */
     cell: (row) => (
       <span className="flex items-center justify-end gap-4">
@@ -100,7 +97,7 @@ export const ORDER_COLUMNS: readonly TableColumn<OrderRow>[] = [
             "text-ink-muted",
           )}
         >
-          {/* The reference's clock glyph, verbatim. */}
+          {/* The clock glyph. */}
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden>
             <path d="M12 8v4l3 3" />
             <circle cx="12" cy="12" r="9" />

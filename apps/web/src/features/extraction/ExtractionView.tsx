@@ -11,20 +11,11 @@ import { TerminalLog } from "./TerminalLog";
 import { CardTitle } from "./cardTitle";
 
 /**
- * SCREEN 6 — EXTRACTION. A SUB-VIEW OF `/orders/$orderId`, NOT A ROUTE:
- * `authz.ts:66` grants `/orders` as a PREFIX and the frozen door list holds no
- * extraction path, so a `/extraction` route would be a door nobody opened.
+ * Extraction, a sub-view of `/orders/$orderId` rather than a route of its own
+ * — the frozen door list holds no extraction path.
  *
- * `gate_halted` is READ (intake.ts:97). The halt badge never scans `stages` for
- * a halted phase — the two can legitimately differ.
- *
- * ⚠ RULED 2026-08-29 (`docs/frontend/design-2026-08/RULING-2026-08-29.md`):
- * the four elements this screen previously REFUSED are now built as the
- * reference draws them — the "Time to examination" ETA chip and the "↺ Replay"
- * control (`ExtractionHeader`), the eyebrow pill, the dark run-log terminal
- * (`TerminalLog`, fed by the served `run_log`), and the stage card's CTA
- * footer, whose count is the SERVER'S `census.remaining` — never an
- * arithmetic here.
+ * `gate_halted` is read off the response. The halt badge never scans `stages`
+ * for a halted phase — the two can legitimately differ.
  */
 export function ExtractionView(props: { readonly orderId: string }) {
   const pipeline = useRead(orderPipeline(props.orderId));
@@ -50,7 +41,6 @@ export function ExtractionView(props: { readonly orderId: string }) {
     <div className="flex flex-col gap-12 bg-surface-app p-14" data-testid="extraction">
       <ExtractionHeader orderId={props.orderId} etaLabel={pipeline.data.eta_label} />
 
-      {/* Rule 6: a coloured capsule at a moment of record. A halt is one. */}
       {pipeline.data.gate_halted && (
         <Badge tone="halt">◆ The gate has halted this order</Badge>
       )}
@@ -65,17 +55,17 @@ export function ExtractionView(props: { readonly orderId: string }) {
           <Card>
             <CardTitle>Sequential extraction stages</CardTitle>
             <StageTimeline stages={pipeline.data.stages} />
-            {/* Standing copy, and a product rule rather than a reading of any
-                response: judgments never auto-confirm in v1 and engine
-                self-confidence never gates a confirm (AGENTS.md). */}
+            {/* Standing copy — a product rule, not a reading of any response:
+                judgments never auto-confirm and engine self-confidence never
+                gates a confirm. */}
             <p className="mt-12 rounded-r-lg border-l-4 border-action bg-action-surface p-8 font-sans text-meta font-medium leading-body text-ink-secondary">
               Engine confidence is recorded for telemetry and is never used to
               bypass a human read. Every conflict is confirmed by an examiner,
               and no escalation is resolved without a rule.
             </p>
-            {/* The drawn CTA footer (RULING-2026-08-29). `remaining` is the
-                server's census figure; absent = the server did not say, and
-                the footer stays down rather than inventing a count. */}
+            {/* `remaining` is the server's census figure; absent means the
+                server did not say, and the footer stays down rather than
+                inventing a count. */}
             {remaining !== undefined && remaining > 0 && (
               <div className="mt-12 flex items-center justify-between gap-8 rounded-lg border border-line-subtle bg-surface-sunken p-8">
                 <span className="font-sans text-meta font-bold leading-close text-ink-primary">

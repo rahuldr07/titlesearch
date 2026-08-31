@@ -19,13 +19,7 @@ import {
   SidebarMenuLabel,
 } from "../../components/ui";
 
-/**
-
- * ONE SECTION of the rail — a rubric and the doors under it. Split out of
-
- * `SideRail.tsx` for the 150-line gate; the seam is where the data stops.
-
- */
+/** One section of the rail — a rubric and the doors under it. */
 
 export function Section(props: {
   readonly section: RailSection;
@@ -36,7 +30,7 @@ export function Section(props: {
   const doors = DOORS.filter(
     (door) => door.section === props.section && hasDoor(props.rules, door.path),
   );
-  // A section whose every door is outside this world is ABSENT too — a rubric
+  // A section whose every door is outside this world is absent too — a rubric
   // over nothing still names a world the reader may not enter.
   if (doors.length === 0) return null;
 
@@ -47,9 +41,9 @@ export function Section(props: {
       </SidebarGroupLabel>
       <SidebarMenu>
         {doors.map((door) => {
-          // `/` matches exactly; every other door matches its prefix, which is
-          // what authz.ts:50 says the path means. Hoisted out of the JSX because
-          // the GLYPH needs the same answer — one derivation, not two.
+          // `/` matches exactly; every other door matches its prefix, which
+          // is what the authz path means. Hoisted out of the JSX because the
+          // glyph needs the same answer — one derivation, not two.
           const active =
             door.path === "/"
               ? props.pathname === "/"
@@ -63,20 +57,16 @@ export function Section(props: {
             >
               <RailGlyph path={door.path} active={active} />
               <SidebarMenuLabel>{door.label}</SidebarMenuLabel>
-              {/* ⚠ RULED 2026-08-29 (RULING-2026-08-29.md): the reference rail
-                  BADGES these doors, so ours does — every string below arrives
-                  finished off `GET /api/rail` (`RailSignal.tsx` carries the
-                  history of the dot this supersedes). */}
+              {/* Every badge string arrives finished off `GET /api/rail`. */}
               <DoorBadge path={door.path} badges={props.badges} />
             </SidebarMenuLink>
           );
         })}
       </SidebarMenu>
       {/*
-       * The design's numbered stages, BELOW the doors. It draws one list of six
-       * rows; a door is somewhere you may go and a stage is where the work has
-       * got to, so ours are two lists on one rhythm rather than one list that
-       * conflates them.
+       * The numbered stages, below the doors. A door is somewhere you may go
+       * and a stage is where the work has got to, so these are two lists on
+       * one rhythm rather than one list that conflates them.
        */}
       {props.section === "order" && <ActiveOrderStages />}
     </SidebarGroup>
@@ -93,8 +83,8 @@ function ActiveOrderStages() {
 }
 
 /**
- * THE ACTIVE ORDER'S REF, beside its rubric — mono and accent, as the design
- * draws it (`4176034-1`, not `ord_demo_1`). THE ID IN THE URL IS NOT THE REF.
+ * The active order's ref, beside its rubric — mono and accent (`4176034-1`,
+ * not `ord_demo_1`). The id in the URL is not the ref.
  */
 function ActiveOrderRef(props: { readonly section: RailSection }) {
   const orderId = useRouterState({
@@ -112,18 +102,11 @@ function ActiveOrderRef(props: { readonly section: RailSection }) {
       to="/orders"
       data-testid="rail-active-order"
       /*
-       * WCAG 2.2 §2.5.8 wants a 24px target; this is 11px mono text and was
-       * 63x11. Padded rather than given the `after:-inset` pseudo-element the
-       * kit uses on checkbox and switch: that mechanism is right for a control
-       * whose DRAWN box must stay 16px, and it was tried here first — axe still
-       * failed it, because `target-size` measures the element's own rect and
-       * the pseudo-element is not in it. A rail row has no drawn box to protect,
-       * so the honest fix is for the link to actually be that tall.
-       * AND THE RUBRIC ROW GREW WITH IT — 30px here against 17px for the other
-       * two, since a 24px flex child sets the line's cross size. The design
-       * draws all three rubrics on one rhythm, so `-my-4` takes that height OUT
-       * OF FLOW: a margin sits outside the border box, so the rect `target-size`
-       * measures is still 63x24 and only the row returns to 17px.
+       * Padded to the 24px WCAG target size rather than given a pseudo-
+       * element hit area: axe's `target-size` measures the element's own
+       * rect, and a pseudo-element is not in it. `-my-4` then takes the
+       * extra height out of flow so the rubric row stays on the shared
+       * 17px rhythm while the measured rect stays 24px tall.
        */
       className="tp-state -my-4 flex min-h-12 min-w-0 items-center truncate font-mono text-label font-bold leading-flat text-rail-accent"
     >

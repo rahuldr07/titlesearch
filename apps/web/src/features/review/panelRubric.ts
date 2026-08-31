@@ -4,11 +4,8 @@ import { assertNever } from "../../shared/provenance";
 import { readingsDisagree } from "./readings";
 
 /**
-
- * The panel's state line — what the server sent, said in one rubric. The row carries
-
- * `RowMark` (rule 6: one signal, a mark).
-
+ * The panel's state line — what the server sent, said in one rubric. The
+ * row carries `RowMark` (one signal, a mark).
  */
 export type PanelRubric = {
   readonly text: string;
@@ -27,11 +24,8 @@ const STATE_RUBRIC: Readonly<Record<FieldState, PanelRubric>> = {
 };
 
 /**
-
- * The absence words. The taxonomy's own distinctions (`enums.ts:20-52`) in the rubric
-
- * register — four sentences that must never collapse, so four rubrics.
-
+ * The absence words — four sentences that must never collapse, so four
+ * rubrics.
  */
 const ABSENCE_RUBRIC: Readonly<
   Record<Extract<FieldValue["kind"], `na-${string}`>, PanelRubric>
@@ -50,14 +44,9 @@ export function panelRubric(field: Field, value: FieldValue): PanelRubric {
     case "na-present-unreadable":
       return ABSENCE_RUBRIC[value.kind];
 
-    /**
-
-     * A value the server sent with no source. `entities.ts:85-89` calls this "the exact
-
-     * failure shape the architecture exists to catch", so it leads over the lifecycle
-
-     * state — an auto-confirmed value nobody can cite is a defect first and a…
-
+    /*
+     * A value the server sent with no source — the failure shape the
+     * architecture exists to catch, so it leads over the lifecycle state.
      */
     case "uncited":
       return { text: "NO PROVENANCE — CANNOT BE CITED", tone: "halt" };

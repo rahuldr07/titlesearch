@@ -2,18 +2,12 @@ import type { PackageInstrument } from "@titlepipe/contract";
 import { cx } from "../../components/ui";
 
 /**
- * THE PACKAGE INSTRUMENT INDEX — the design's list of what is actually in the
- * stack, and a door to each one's first page.
- *
- * EVERY BOUNDARY HERE IS THE PIPELINE'S. This was refused for a month because
- * the only way to build it from the old wire was to group runs of equal
- * `SourcePage.kind`, which would have drawn document boundaries nothing drew:
- * two consecutive deeds merge, and a deed whose continuation page the
- * classifier labelled differently splits in two. `OrderPagesResponse` now
- * carries the partitioner's own ranges, so this list reports rather than infers.
- *
- * WHICH ROW IS CURRENT IS A COMPARISON, NOT A DERIVATION: the shown page falls
- * inside a range the server drew. Nothing here decides where a range ends.
+ * The package instrument index — what is actually in the stack, and a door
+ * to each one's first page. Every boundary here is the pipeline's:
+ * `OrderPagesResponse` carries the partitioner's own ranges, so this list
+ * reports rather than infers — grouping runs of equal page kind would draw
+ * boundaries nothing drew. Which row is current is a comparison, not a
+ * derivation: the shown page falls inside a range the server drew.
  */
 export function InstrumentIndex(props: {
   readonly instruments: readonly PackageInstrument[];
@@ -31,8 +25,9 @@ export function InstrumentIndex(props: {
       </h3>
 
       {props.instruments.length === 0 ? (
-        /* NOT AN EMPTY LIST DRAWN AS NOTHING. The partitioner ran and found no
-           boundary — a real finding, and a different claim from "not asked". */
+        /* Not an empty list drawn as nothing. The partitioner ran and found
+           no boundary — a real finding, and a different claim from "not
+           asked". */
         <p className="text-label leading-body text-ink-secondary">
           The partitioner drew no instrument boundary in this package. That is its
           finding, not a missing read — the pages are still listed above.
@@ -83,8 +78,8 @@ function InstrumentRow(props: {
       )}
     >
       <span className="min-w-0 flex-1 truncate text-meta leading-close">{it.label}</span>
-      {/* Rule 3: a book/page reference is data. Null means the package holds no
-          index entry for it, and nothing is drawn in its place. */}
+      {/* A book/page reference is data, so it is mono. Null means the package
+          holds no index entry for it, and nothing is drawn in its place. */}
       {it.recorded_ref !== null && (
         <span className="shrink-0 font-mono text-label leading-flat text-ink-muted">
           {it.recorded_ref}

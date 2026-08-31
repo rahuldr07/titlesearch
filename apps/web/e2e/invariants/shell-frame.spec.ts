@@ -1,24 +1,16 @@
 import { expect, test, type Locator } from "@playwright/test";
 
 /**
- * [INVARIANT] — rule: THE APP IS ONE FRAME. The export roots at
- * `height:100vh;overflow:hidden` and scrolls only the screen body, so the rail,
- * the order strip and every docked bar stay where they are put. This app rooted
- * at `min-h-screen` and page-scrolled: Review captured at 3,276px against the
- * export's single 1,000px frame, the sidebar terminated over blank ground, and
- * the order ref, four counts and stamp scrolled off every long screen.
+ * Rule: the app is one frame — rooted at `height:100vh;overflow:hidden`,
+ * scrolling only the screen body, so the rail, the order strip and every
+ * docked bar stay where they are put.
  *
- * [INVARIANT] — rule: `main` FILLS THE CONTENT COLUMN. Auto inline margins on a
- * flex item cancel `align-self:stretch`, so `mx-auto` on a `flex-1` `main` sized
- * it shrink-to-fit: Queue drew 670px where it asked for 860px, and Profile —
- * which set no measure — collapsed to its content's 421px where the export
- * draws 720px. No viewport-width guard catches this, because the binding
- * constraint is the CONTAINER, not the window (HANDOFF-UI §6). The assertion is
- * therefore on the box, at a fixed viewport.
+ * Rule: `main` fills the content column. Auto inline margins on a flex
+ * item cancel `align-self:stretch`, so `mx-auto` on a `flex-1` `main`
+ * sizes it shrink-to-fit; the binding constraint is the container, not the
+ * window, so the assertion is on the box at a fixed viewport.
  *
- * [INVARIANT] — rule: NO CHROME FOR SOMEBODY WHO IS NOT SIGNED IN. `/signin`
- * rendered the full 232px rail with every ADMIN door and an identity chip
- * reading "L. Vance · ADMIN", because the chrome gated on `/blind` alone.
+ * Rule: no chrome for somebody who is not signed in.
  */
 
 async function boxOf(locator: Locator) {
@@ -74,23 +66,13 @@ test("the rail is a full-height column, not a page-sticky element", async ({
 });
 
 /**
- * DELETED, NOT ABSENT — `a screen renders at the width the export draws, not
- * the shell's`.
- *
- * It went to the heart of the [INVARIANT] above: Rulebook is the widest reading
- * column the export draws at 1160px, and the test proved the screen held that
- * column instead of running to the shell's edge, by asserting the heading was
- * indented past 300px at a 1600px viewport.
- *
- * `screenClasses` no longer emits a per-screen `max-width` — all sixteen
- * measures are `w-full max-w-full` — so Rulebook fills its column and the
- * heading starts at the padded left edge. Measured 294px against the 336px it
- * used to sit at. The invariant it guarded is not violated by accident; it was
- * given up on purpose, and the reasoning is in the commit that did it.
- *
- * This is the third test removed by that decision, with the two in
- * `Pane.test.ts`, plus the centring one in `responsive-frame.spec.ts`.
- * Restoring the measure table restores all four.
+ * Deleted, not absent — "a screen renders at the width the export draws,
+ * not the shell's". `screenClasses` no longer emits a per-screen
+ * `max-width` (all measures are `w-full max-w-full`), a deliberate
+ * decision, not an accident. This is the third test removed by it, with
+ * the two in `Pane.test.ts` and the centring one in
+ * `responsive-frame.spec.ts`; restoring the measure table restores all
+ * four.
  */
 
 test("nobody signed in is shown an ADMIN world", async ({ page }) => {
@@ -106,24 +88,14 @@ test("the session-ended screen is equally bare", async ({ page }) => {
 });
 
 /**
- * NOTHING IS CRUSHED TO A SLIVER. A whole class of defect, not one instance.
- *
- * A flex item is normally protected from shrinking below its own content by
- * `min-height: auto` — but ANY element with `overflow` other than `visible`
- * gives that up, and `Card` sets `overflow-hidden` on every instance. So a card
- * in a column whose siblings want more room than exists gets compressed toward
- * nothing while its content stays in the DOM, fully readable to a test.
- *
- * THAT IS WHY THIS MEASURES INSTEAD OF READING. Found on Review by measuring:
- * the signature record rendered 2px tall wanting 817, and the order rail
- * rendered at ZERO wanting 268 — with three harvested invariants asserting
- * against that rail the whole time, every one of them green, because
- * `toContainText` does not care how tall a box is. The same session had already
- * lost seventeen queue rows to 10px blank rules for the identical reason.
- *
- * The rule is a comparison, not a magic number: a box may not render shorter
- * than the content inside it. A container that cannot fit its children is what
- * scrolling is for.
+ * Nothing is crushed to a sliver — a whole class of defect, not one
+ * instance. Any element with `overflow` other than `visible` gives up
+ * `min-height: auto`'s protection, and `Card` sets `overflow-hidden` on
+ * every instance, so a crowded column can compress a card toward nothing
+ * while its content stays readable to `toContainText`. That is why this
+ * measures instead of reading. The rule is a comparison, not a magic
+ * number: a box may not render shorter than the content inside it — a
+ * container that cannot fit its children is what scrolling is for.
  */
 const CROWDED = [
   { url: "/orders/ord_demo_1/review", what: "the review report column" },
@@ -164,18 +136,11 @@ for (const { url, what } of CROWDED) {
 }
 
 /**
- * THE PROFILE CARD — a command closes it, a toggle does not.
- *
- * Not a style preference: it is the difference between a panel that gets out of
- * your way and one that sits over the screen it just sent you to. When the
- * card's navigation entries were rewritten as plain buttons they stopped
- * closing, and the panel's own backdrop then swallowed every subsequent click —
- * the app looked frozen. `DropdownMenuItem` for anything that leaves, plain
- * buttons for the theme and role toggles, which must survive being used.
- *
- * The toggle half matters just as much: `authz.spec` and `sidebar.spec` both
- * click a role and then press Escape, which only means anything if the panel is
- * still open to be dismissed.
+ * The profile card — a command closes it, a toggle does not.
+ * `DropdownMenuItem` for anything that leaves; plain buttons for the theme
+ * and role toggles, which must survive being used. The toggle half matters
+ * too: `authz.spec` and `sidebar.spec` both click a role and then press
+ * Escape, which only means anything if the panel is still open.
  */
 test("navigating from the profile card closes it; toggling inside it does not", async ({
   page,
@@ -184,7 +149,7 @@ test("navigating from the profile card closes it; toggling inside it does not", 
   await page.getByTestId("account-menu").click();
   await expect(page.getByTestId("profile-card")).toBeVisible();
 
-  // A TOGGLE KEEPS IT OPEN — you flip a theme to look at it.
+  // A toggle keeps it open — you flip a theme to look at it.
   await page.getByTestId("theme-toggle").click();
   await expect(page.getByTestId("profile-card")).toBeVisible();
   // …and the toggle actually did something, so this is not passing on a no-op.
@@ -194,7 +159,7 @@ test("navigating from the profile card closes it; toggling inside it does not", 
   await page.keyboard.press("Escape");
   await expect(page.getByTestId("profile-card")).toHaveCount(0);
 
-  // A COMMAND CLOSES IT, and lands where it said it would.
+  // A command closes it, and lands where it said it would.
   await page.getByTestId("account-menu").click();
   await page.getByRole("menuitem", { name: "Audit" }).click();
   await expect(page).toHaveURL(/\/audit$/);
@@ -202,11 +167,9 @@ test("navigating from the profile card closes it; toggling inside it does not", 
 });
 
 /**
- * THE PANEL SAYS WHOSE SESSION IT IS. The list it replaced opened on the word
- * "Account" with no person on it — the name sat on the trigger you had just
- * clicked and covered up, so the one surface whose subject is identity never
- * named it. The role rides along because "acting as" is directly below, and a
- * role switcher with no current role stated is a control with no origin.
+ * The panel says whose session it is. The role rides along because
+ * "acting as" is directly below, and a role switcher with no current role
+ * stated is a control with no origin.
  */
 test("the profile card names the person and their role", async ({ page }) => {
   await page.goto("/orders/ord_demo_1");

@@ -1,28 +1,17 @@
 import { expect, test } from "@playwright/test";
 
 /**
- * HARVESTED INVARIANTS — migrated from apps/web @ ade49af (pre-rebuild).
- * Source: apps/web/e2e/hard.spec.ts
- *
- * Every test here is SKIPPED until the feature it covers lands in web-v2.
- * Un-skip as each feature lands. Rewrite selectors freely.
- * NEVER weaken an assertion — if one cannot pass against the new design,
- * that is a CONFLICT in the design: stop and report (BRIEF §5 Phase 5).
+ * Never weaken an assertion — a test that cannot pass against the new
+ * design is a conflict in the design: stop and report.
  */
 
-/*
- * SELECTOR REWRITE 2026-08-30: the ready() beacon addressed /rulebook, a
- * screen that no longer exists — both wire tests below waited on a dead
- * route. The beacon moves to /escalations (the screen these two refusals
- * guard, rebuilt under RULING-2026-08-29); every assertion is untouched.
- */
 const ready = async (page: import("@playwright/test").Page) => {
   await page.goto("/escalations");
   // an MSW-served element proves the worker controls the page before we fetch
   await expect(page.getByTestId("escalation-esc_party_1")).toBeVisible();
 };
 
-// [INVARIANT] — rule: a forged or case-variant role is refused — roles are exact, and garbage never yields the admin world.
+// Rule: a forged or case-variant role is refused — roles are exact, and garbage never yields the admin world.
 test("a forged role header is refused — mutations 403, the projection 400", async ({
   page,
 }) => {
@@ -47,7 +36,7 @@ test("a forged role header is refused — mutations 403, the projection 400", as
   expect(statuses.caseVariant).toBe(400);
 });
 
-// [INVARIANT] — rule: a replayed resolution is refused (409) — resolution is not idempotent-repeatable.
+// Rule: a replayed resolution is refused (409) — resolution is not idempotent-repeatable.
 test("resolving the same escalation twice is refused the second time", async ({
   page,
 }) => {
@@ -68,7 +57,7 @@ test("resolving the same escalation twice is refused the second time", async ({
   expect(statuses.replay).toBe(409);
 });
 
-// TODO(rebuild) [INVARIANT] — rule: keys typed inside an input are TEXT, never chords. Typing a correction must never trigger navigation.
+// Rule: keys typed inside an input are TEXT, never chords. Typing a correction must never trigger navigation.
 test("chord keys typed inside an input never navigate", async ({ page }) => {
   await page.goto("/orders/ord_demo_1/review");
   await expect(page.getByTestId("sel-label")).toHaveText("OWNER ZIP");

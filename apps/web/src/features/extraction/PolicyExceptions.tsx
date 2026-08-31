@@ -4,26 +4,13 @@ import { useRead } from "../../app/useRead";
 import { escalations as escalationsRead } from "../../shared/queries";
 
 /**
- * POLICY EXCEPTIONS (design §Screens 6's last card). An exception here is an
- * `Escalation` (entities.ts:166) naming this order: a question the pipeline
- * could not answer from the rulebook. `Escalation.order_ids` is the server's
- * own join, so the membership test below is not a judgement about relevance.
+ * An exception here is an `Escalation` naming this order; `order_ids` is the
+ * server's own join, so the membership test is not a judgement about relevance.
  *
- * THERE IS NO RESOLVE CONTROL, and its absence is a product requirement:
- *   - Resolution is REFUSED WITHOUT A RULE (endpoints.ts:233-236,
- *     `INVARIANTS:109-110`), and drafting a rule is not something this can do.
- *   - `escalation.resolve` is senior/admin only (authz.ts:104); this screen is
- *     reached by anyone holding the order door.
- *   - `/escalations` (authz.ts:68) is where that mutation is authored, once.
- *
- * `resolution` non-null with `rule_id` null is drawn as the server has it — a
- * resolution the client re-judged is a client rulebook.
- *
- * THE "N items" CAPSULE — ⚠ RULED 2026-08-29
- * (`docs/frontend/design-2026-08/RULING-2026-08-29.md`): the reference draws
- * it on this header, so it is built as drawn. It counts the rows THIS card
- * renders — the server's join, filtered by the server's own `order_ids` —
- * which is the one length the card can honestly caption.
+ * No resolve control, deliberately: resolution is refused without a rule, this
+ * screen is reached by anyone holding the order door, and `/escalations` is
+ * where that mutation is authored, once. The "N items" capsule counts the rows
+ * this card renders — the one length it can honestly caption.
  */
 export function PolicyExceptions(props: { readonly orderId: string }) {
   const escalations = useRead(escalationsRead);
@@ -94,8 +81,6 @@ function ExceptionRows(props: {
           data-testid={`policy-exception-${exception.id}`}
           className="flex flex-col gap-3 border-b border-line-subtle pb-8 last:border-b-0 last:pb-0"
         >
-          {/* The question is the title, because the question is what the
-              exception is. */}
           <span className="font-sans text-meta font-bold leading-close text-ink-primary">
             {exception.question}
           </span>

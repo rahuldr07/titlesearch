@@ -1,24 +1,12 @@
 import type { Decorator } from "@storybook/react-vite";
 
 /**
- * THE GROUND A DOMAIN COMPONENT ACTUALLY STANDS ON.
- *
- * Storybook renders a story on the app canvas by default, and the a11y gate
- * grades contrast against whatever is behind the text. That produced a real
- * failure and a real lesson: `--color-ink-muted` is documented AA "on panel"
- * (tokens.css measures the ink tiers at 15.42:1 / 8.28:1 / 4.63:1 ON PANEL) and
- * it measures 4.04:1 on `--color-surface-app`. Both numbers are correct; the
- * canvas is simply not where these components live.
- *
- * Every component in `entities/` is a PANEL component — it sits inside a card,
- * a row, a well or a decision card, never directly on the canvas. So the
- * decorator puts it there, and the gate then grades it against the surface it
- * will actually ship on. This is not silencing axe; it is giving axe the right
- * question. A component that needs the canvas gets `--color-surface-app` and
- * has to earn its contrast there.
- *
- * `evidence/` deliberately does NOT use this. Paper is its own surface family
- * (rule 8) and a sheet on a white panel has had its point erased.
+ * The ground a domain component actually stands on: the a11y gate grades
+ * contrast against whatever is behind the text, and ink-muted is AA on
+ * panel but only 4.04:1 on the app canvas. Every entities/ component is a
+ * panel component, so the decorator grades it against the surface it ships
+ * on. evidence/ deliberately does not use this — paper is its own surface
+ * family.
  */
 export const onPanel: Decorator = (Story) => (
   <div className="bg-surface-panel p-12">
@@ -27,13 +15,9 @@ export const onPanel: Decorator = (Story) => (
 );
 
 /**
- * THE PAPER GROUND. Rule 8's surface, and the one `entities/` component family
- * that must NOT stand on a panel: a scanned sheet on a white card has had the
- * thing it is saying ("this is evidence") erased by its background.
- *
- * Same argument as `onPanel`, opposite surface. The a11y gate then grades the
- * stamp brown against the warm stock it is actually pressed onto rather than
- * against the app canvas, where it measures 3.13:1 and correctly fails.
+ * The paper ground — same argument as onPanel, opposite surface. The a11y
+ * gate then grades the stamp brown against the warm stock it is actually
+ * pressed onto, not the canvas where it correctly fails.
  */
 export const onPaper: Decorator = (Story) => (
   <div className="bg-surface-paper p-12">

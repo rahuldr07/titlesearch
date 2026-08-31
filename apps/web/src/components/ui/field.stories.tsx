@@ -44,12 +44,9 @@ export const Vertical: Story = {
 };
 
 /**
- * Horizontal: the name sits beside the value, so it is a 13px `FieldTitle`.
- *
- * `FieldTitle` renders a `div`, which gives NO accessible name — axe caught
- * exactly that here. So it carries an `id` and the control points at it with
- * `aria-labelledby`. A `Label` is simpler, but a horizontal row's name is
- * often shared by several controls, which is what `FieldTitle` is for.
+ * Horizontal: the name sits beside the value, so it is a 13px FieldTitle.
+ * FieldTitle renders a div, which gives no accessible name — so it carries
+ * an `id` and the control points at it with `aria-labelledby`.
  */
 export const Horizontal: Story = {
   render: () => (
@@ -63,7 +60,7 @@ export const Horizontal: Story = {
   ),
 };
 
-/** Rule 9 inline: the reason a control is refused, in the description slot. */
+/** The reason a control is refused, inline in the description slot. */
 export const BlockedWithReason: Story = {
   render: () => (
     <Field className="w-90">

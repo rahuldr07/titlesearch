@@ -3,13 +3,9 @@ import type { GrantedPermissionSchema } from "@titlepipe/contract";
 import { RouteButton } from "../../app/chrome/RouteButton";
 
 /**
- * The header band.
- *
- * ⚠ RULED 2026-08-29 — `docs/frontend/design-2026-08/RULING-2026-08-29.md`:
- * the two refusals this header used to carry (the kicker pill and the fixed
- * lede) are superseded — the reference draws both, so both are built, with
- * our product's name in the kicker. They are SCREEN COPY, like the h1: fixed
- * product prose, not a server figure, which is why neither rides the wire.
+ * The header band. The kicker pill and the lede are screen copy, like the
+ * h1: fixed product prose, not a server figure, which is why neither rides
+ * the wire.
  */
 export function OverviewHeader(props: {
   readonly role: string | undefined;
@@ -18,7 +14,7 @@ export function OverviewHeader(props: {
   return (
     <header className="flex flex-wrap items-start justify-between gap-8">
       <div className="flex min-w-0 flex-col gap-3">
-        {/* The reference's kicker pill, with our product name. */}
+        {/* The kicker pill. */}
         <span className="flex w-fit items-center gap-4 rounded-pill border border-action-border bg-action-surface px-5 py-2 text-label font-semibold leading-flat text-ink-secondary">
           <KickerGlyph />
           TitlePipe Engine · Production Pipeline
@@ -26,7 +22,7 @@ export function OverviewHeader(props: {
         <h1 className="text-title font-bold leading-tight tracking-tight text-ink-primary">
           Orders Overview
         </h1>
-        {/* The reference's lede, verbatim. */}
+        {/* The lede — fixed screen copy. */}
         <p className="max-w-320 text-body leading-body text-ink-secondary">
           Real-time abstract tracking across incoming packages, dual-engine
           extraction, human verification, and SOC 2 delivery certification.
@@ -42,7 +38,7 @@ export function OverviewHeader(props: {
         {props.role !== undefined && (
           <span className="flex items-center gap-4 rounded-lg border border-line-strong bg-surface-panel px-7 py-4 text-meta leading-close text-ink-muted">
             <span className="size-4 rounded-pill bg-state-settled" />
-            Examiner: {/* Rule 3: a role is an identifier the server gates on. */}
+            Examiner: {/* A role is an identifier the server gates on. */}
             <span className="font-mono font-semibold text-ink-primary">
               {props.role}
             </span>
@@ -53,7 +49,7 @@ export function OverviewHeader(props: {
   );
 }
 
-/** The reference kicker's four-square glyph, verbatim. */
+/** The kicker's four-square glyph. */
 function KickerGlyph() {
   return (
     <svg

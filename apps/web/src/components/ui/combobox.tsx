@@ -14,36 +14,12 @@ import { BlockedHint } from "./blockedHint";
 import { Popover } from "./popover";
 
 /**
- * A COMBOBOX IS A SELECT THAT TYPES, AND THE TYPING IS WHY THE CHORD MARK
- * MATTERS TWICE OVER.
- *
- * `focusOwnsKeys` catches this component through TWO different clauses and
- * both are needed:
- *
- *   - the input has `role="combobox"`, which is in `FOCUSED_ITEM_ROLES`, so
- *     every printable key belongs to it while the caret is in it;
- *   - the open panel carries `data-chord-scope="own"` from `Popover`, so
- *     `overlayIsUp()` suspends the vocabulary DOCUMENT-WIDE for the frames
- *     between the panel mounting and focus landing on an option.
- *
- * Neither alone is sufficient. The role clause does nothing while focus is on
- * an `option`; the overlay clause does nothing before the panel opens, and a
- * ComboBox's input is live and swallowing letters the whole time.
- *
- * ══ ADAPTED FROM THE REGISTRY ═══════════════════════════════════════════════
- *
- * The registry shipped FIFTEEN exports, including a multi-select tag layer
- * (ComboboxChips / ChipList / Chip / ChipsInput) and its own anchoring hook.
- * All dropped: this app has no multi-select field in the PRD's data model, and
- * a component kept "in case" is a component nobody has checked against the
- * rules. It can come back with a screen that needs it.
- *
- * Geometry is RECIPES.md §Inputs — 38px, radius 10, `--color-control-fill` on
- * `--color-control-border`, 13px. `bg-popover`/`text-popover-foreground` →
- * `bg-surface-panel`/`text-ink-primary`; every `dark:` variant deleted.
- *
- * Options come from `select.tsx`'s `Option`: one option component, one ✓ mark,
- * one place rule 6's glyph vocabulary is spent.
+ * The chord layer catches this component through two clauses, and both are
+ * needed: role="combobox" owns printable keys while the caret is in the
+ * input (but does nothing once focus is on an option), and the open panel's
+ * data-chord-scope="own" suspends the vocabulary document-wide (but does
+ * nothing before the panel opens). Options come from select.tsx's Option —
+ * one option component, one ✓ mark.
  */
 export type ComboBoxProps = Omit<
   ComboBoxPrimitiveProps<object>,
@@ -73,14 +49,9 @@ export function ComboBox({
         {...disabledAttributes(disabledBecause)}
         aria-label={label}
         /*
-         * VERIFIED against the installed react-aria-components 1.20 source, not
-         * assumed: `ComboBoxProps` declares `allowsEmptyCollection` — "whether
-         * the combo box allows the menu to be open when the collection is
-         * empty" — and it defaults FALSE. So `renderEmptyState` below is dead
-         * code without this: the panel that would say "No matches." never
-         * mounts, and a reader who mistypes a county gets a silently vanished
-         * list instead of an answer. The story asserts the sentence, which is
-         * how the omission was found.
+         * allowsEmptyCollection defaults false, and without it the
+         * renderEmptyState below is dead code — the panel that would say
+         * "No matches." never mounts.
          */
         allowsEmptyCollection
         data-slot="combobox"
@@ -96,11 +67,10 @@ export function ComboBox({
           <InputPrimitive
             data-slot="combobox-input"
             /*
-             * Spread rather than `placeholder={placeholder}`. Under
-             * `exactOptionalPropertyTypes`, react-aria's InputProps declares
-             * `placeholder?: string` — NOT `string | undefined` — so passing an
-             * explicitly-undefined value is a type error rather than an omission.
-             * The spread omits the key entirely when there is nothing to say.
+             * Spread rather than `placeholder={placeholder}`: under
+             * exactOptionalPropertyTypes, react-aria declares
+             * `placeholder?: string`, so an explicitly-undefined value is a
+             * type error. The spread omits the key entirely.
              */
             {...(placeholder === undefined ? {} : { placeholder })}
             className={cx(
@@ -111,24 +81,15 @@ export function ComboBox({
           />
           <ButtonPrimitive
             data-slot="combobox-trigger"
-            /*
-             * Rule 7 allows the disclosure arrow as structural affordance. The
-             * registry's `ComboboxClear` (an X that wiped the field) is dropped:
-             * a destructive-ish control with no label and no reason is exactly
-             * what rule 9 exists to prevent, and Esc already reverts the input.
-             */
+            // No clear button: Esc already reverts the input.
             className="tp-target tp-ring flex cursor-pointer items-center justify-center rounded-xs text-ink-muted outline-none"
           >
             <ChevronDownIcon aria-hidden size={16} />
           </ButtonPrimitive>
         </div>
         <Popover>
-          {/*
-           * `renderEmptyState` rather than a `ComboboxEmpty` component the caller
-           * has to remember to place. An empty filtered list that renders as a
-           * zero-height panel is the failure this closes, and react-aria offers
-           * the hook precisely so it cannot be forgotten.
-           */}
+          {/* renderEmptyState rather than a component the caller has to
+              remember to place — a forgotten one is a zero-height panel. */}
           <ListBox
             className="flex flex-col gap-1 p-2 outline-none"
             renderEmptyState={() => (

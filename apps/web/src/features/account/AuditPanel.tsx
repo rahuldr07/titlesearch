@@ -5,13 +5,8 @@ import { PanelFrame } from "./AccountPanel";
 import { QueryState } from "../../entities/state/QueryState";
 
 /**
-
- * AUDIT LOG — append-only, and read-only BY CONSTRUCTION. `endpoints.ts:575-576`
-
- * states it as a property of the contract rather than a permission: "the append-only
-
- * view (CONTEXT §6 audit_log).
-
+ * Audit log — append-only, and read-only by construction: a property of
+ * the contract, not a permission.
  */
 export function AuditPanel() {
   const log = useRead(audit);

@@ -6,27 +6,18 @@ import { disabledNativeAttributes, type Disablement } from "@/components/ui/disa
 import { controlClass } from "@/components/ui/field-chrome"
 
 /**
- * THE MULTI-LINE CONTROL, on the same box as `Input` (field-chrome.ts).
- *
- * `min-h-16` in the registry meant 64px at Tailwind's stock 4px base; at this
- * app's 2px base (ui.css) the same token is 32px, which is under one line. So
- * the floor is restated as `min-h-36` — 72px, three lines of 13px at
- * leading-close plus padding — rather than left to a token whose meaning
- * changed underneath it. That silent halving is exactly the failure the token
- * file warns about for line-height.
- *
- * `field-sizing-content` is KEPT: an examiner's note grows with the note, and
- * a fixed box that scrolls internally hides the end of a sentence someone is
- * about to sign.
- *
- * Both `dark:` pairs deleted; `disabled` is a reason, not a boolean.
+ * The multi-line control, on the same box as Input (field-chrome.ts).
+ * `min-h-36` is 72px at the app's 2px base — three lines of 13px plus
+ * padding. `field-sizing-content` makes the box grow with the note: a fixed
+ * box that scrolls internally hides the end of a sentence someone is about
+ * to sign.
  */
 export type TextareaProps = Omit<
   React.ComponentProps<typeof TextareaPrimitive>,
   "isDisabled" | "disabled"
 > &
   Disablement & {
-    /** Rule 3: mono is for data only. Opt in; nothing infers it. */
+    /** Mono is for data only. Opt in; nothing infers it. */
     readonly data?: boolean | undefined
   }
 

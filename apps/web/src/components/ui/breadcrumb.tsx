@@ -10,42 +10,9 @@ import {
 import { cx } from "./cx";
 
 /**
- * ADAPTED FROM THE REGISTRY `breadcrumb`. THE DESIGN'S TOP-BAR CHIP.
- *
- * Already on react-aria: `Breadcrumbs` handles the list semantics and
- * `Breadcrumb` exposes `isCurrent`, so the last crumb needs no `aria-current`
- * from a caller who might forget it.
- *
- * ══ SIX THINGS THE REGISTRY SHIPPED, AND WHY THREE ARE GONE ═════════════════
- *
- *   - `Breadcrumb` (the `<nav>`) — KEPT, after being deleted and put back. The
- *     deletion assumed `Breadcrumbs` renders its own landmark. IT DOES NOT,
- *     and a story caught it: react-aria 3.51 renders a bare `<ol>` and merely
- *     puts `aria-label` on it (`private/Breadcrumbs.mjs` → `dom.ol`;
- *     `useBreadcrumbs.mjs` returns `navProps` carrying nothing else). An `<ol>`
- *     has no landmark role, so removing the wrapper removed the trail from the
- *     landmark list entirely. The `<nav>` is the landmark, the `<ol>` the list.
- *   - `BreadcrumbPage` — DELETED. It drew `role="link" aria-disabled="true"`
- *     for the current crumb, a lie twice over: it is not a link, and
- *     `aria-disabled` on a non-interactive element means nothing.
- *   - `BreadcrumbEllipsis` — DELETED with its `MoreHorizontalIcon`. Rule 7
- *     closes the vocabulary to ✓ ◆ • T1 and bans icon soup, and this app's
- *     trail is at most three deep, so the collapse affordance solves a problem
- *     the design does not have.
- *   - The `ChevronRightIcon` separator — REPLACED by a `/` in mono. A path
- *     separator is punctuation rather than a picture of punctuation, and it
- *     costs no icon import.
- *
- * The registry's `text-sm`, `text-muted-foreground`, `hover:text-foreground`
- * and `size-3.5` are re-pointed: rule 2 has no `sm` and this palette no
- * `foreground`. `text-meta` (13px), `text-ink-muted`, `text-ink-primary`.
- *
- * ══ THE `render` PROP AND THE TYPECHECK ERROR IT CAUSED ═════════════════════
- *
- * The raw file destructured `render` off `LinkProps` and passed it back
- * explicitly, which under `exactOptionalPropertyTypes` is a type error: pulling
- * an optional prop out of a spread widens it to `T | undefined`, which
- * `render?: T` refuses. It was pointless too — `{...props}` already carries it.
+ * The top-bar breadcrumb chip. react-aria's Breadcrumbs renders a bare <ol>
+ * with an aria-label and no landmark role, so the <nav> wrapper here is the
+ * only thing that puts the trail in the landmark list — keep it.
  */
 
 export type BreadcrumbTrailProps<T extends object> = Omit<
@@ -57,13 +24,9 @@ export type BreadcrumbTrailProps<T extends object> = Omit<
 };
 
 /**
- * The trail: a `<nav>` landmark wrapping react-aria's `<ol>`.
- *
- * The label is on the NAV, not on the list. A landmark's name is what a reader
- * jumps to it by, and putting it on the inner `<ol>` — which carries no role —
- * names nothing they can navigate to. React-aria still defaults the list's own
- * `aria-label` to "Breadcrumbs", which is inert on a plain list and is left
- * alone rather than fought.
+ * The trail: a <nav> landmark wrapping react-aria's <ol>. The label goes on
+ * the nav — the inner <ol> carries no role, so a label there names nothing a
+ * reader can navigate to.
  */
 export function BreadcrumbTrail<T extends object>({
   label,
@@ -80,9 +43,8 @@ export function BreadcrumbTrail<T extends object>({
   );
 }
 
-/** One crumb. The separator lives INSIDE the item rather than as a sibling, so
-    a caller interleaving them by hand cannot leave a trailing one on a
-    single-crumb trail. */
+/** One crumb. The separator lives inside the item rather than as a sibling,
+    so a caller cannot leave a trailing one on a single-crumb trail. */
 export function BreadcrumbItem({
   children,
   className,
@@ -100,7 +62,7 @@ export function BreadcrumbItem({
   );
 }
 
-/** The divider. Rule 3: a path separator is punctuation in a path, so mono. */
+/** The divider. A path separator is punctuation in a path, so mono. */
 export function BreadcrumbSeparator() {
   return (
     <span
@@ -130,10 +92,8 @@ export function BreadcrumbLink(props: Omit<LinkProps, "className">) {
 }
 
 /**
- * Where you are. Text, not a disabled link. `aria-current="page"` is the whole
- * contract for a trail's last crumb and it belongs on a `<span>` — the registry
- * put it on something claiming `role="link"`, which tells a reader they can
- * activate the place they already are.
+ * Where you are. Text, not a disabled link: `aria-current="page"` on a span
+ * is the whole contract for a trail's last crumb.
  */
 export function BreadcrumbCurrent({ children }: { readonly children: ReactNode }) {
   return (

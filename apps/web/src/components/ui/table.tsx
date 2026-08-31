@@ -6,37 +6,16 @@ import type { TableColumn } from "./tableColumns";
 import { ROW_HEIGHT, TableHeaderRow, TableRow } from "./tableRow";
 
 /**
- * A TABLE THAT VIRTUALIZES, BECAUSE THE PREVIOUS ONE DID NOT.
+ * A grid of divs wearing ARIA, not a <table>: virtualization positions rows
+ * absolutely inside a spacer of the full scroll height, and a <tbody> cannot
+ * hold absolutely-positioned <tr>s — the table layout algorithm overrides
+ * `position`. role="grid" / row / columnheader / gridcell is what assistive
+ * tech actually reads.
  *
- * Review found the old DataTable rendering all 5,000 rows of an order list:
- * 5,000 × 7 cells is 35,000 DOM nodes, and the browser spends the first two
- * seconds of the screen laying them out. `@tanstack/react-virtual` renders the
- * window plus an overscan and nothing else.
- *
- * ══ WHY THIS IS A GRID OF DIVS AND NOT `<table>` ════════════════════════════
- *
- * Virtualization positions rows ABSOLUTELY inside a spacer of the full scroll
- * height. A `<tbody>` cannot hold absolutely-positioned `<tr>`s — the table
- * layout algorithm overrides `position` — so a virtualized `<table>` needs
- * either fixed row heights faked with padding rows or `display: grid` on the
- * table itself, at which point it is a grid of divs wearing table tags. So it
- * is a grid of divs wearing ARIA: `role="grid"` / `row` / `columnheader` /
- * `gridcell`, which is what assistive tech actually reads, and which is
- * exactly the role set `focusRoles.ts` tables.
- *
- * ══ THE CHORD MARK, AND WHY IT IS `widget` AND NOT `own` ════════════════════
- *
- * A focused row in a 5,000-row table killing every chord in the app is the
- * defect review found. `focusRoles.ts` is explicit: `own` is read
- * DOCUMENT-WIDE by `overlayIsUp()`, so it suspends every chord for as long as
- * the marked node EXISTS — and a table exists permanently. Marking this `own`
- * would kill the vocabulary for the lifetime of the screen, whether or not
- * anyone had focused a row.
- *
- * `widget` is read only against the ACTIVE ELEMENT's ancestors, so it stands
- * the vocabulary down while a row holds focus and not one keystroke longer.
- * `focusOwnsKeys` also matches `role="row"` and the `[role='grid']` ancestor
- * directly; this mark is the defence in depth behind both.
+ * The chord mark is `widget`, never `own`: `own` is read document-wide and
+ * suspends every chord for as long as the marked node exists — and a table
+ * exists permanently. `widget` stands the vocabulary down only while a row
+ * holds focus.
  */
 export type TableProps<TRow> = {
   /** The table's accessible name. Required: an unnamed grid is unnavigable. */
@@ -69,11 +48,8 @@ export function Table<TRow>({
     count: rows.length,
     getScrollElement: () => scrollRef.current,
     estimateSize: () => ROW_HEIGHT,
-    /*
-     * Eight rows above and below the window. Enough that a held PageDown or a
-     * flung scroll never shows a blank band, small enough that the node count
-     * stays flat. Not tuned further without a measurement to tune against.
-     */
+    // Eight rows above and below the window: enough that a flung scroll never
+    // shows a blank band, small enough that the node count stays flat.
     overscan: 8,
   });
 
@@ -85,13 +61,10 @@ export function Table<TRow>({
     <div
       ref={scrollRef}
       /*
-       * WCAG 2.1.1 via axe's `scrollable-region-focusable`, and the story
-       * caught it: a scrollable region with no focusable content is a region a
-       * keyboard reader cannot scroll at all. Virtualization is exactly what
-       * creates the case — the rows carry `tabIndex={-1}` (programmatically
-       * focusable, not tab-reachable, because tabbing through 5,000 rows is
-       * not navigation), so the container itself has to take the tab stop and
-       * answer to the arrow keys.
+       * A scrollable region with no focusable content cannot be scrolled from
+       * the keyboard (WCAG 2.1.1). The rows carry tabIndex={-1} — tabbing
+       * through 5,000 rows is not navigation — so the container itself takes
+       * the tab stop and answers to the arrow keys.
        */
       tabIndex={0}
       data-slot="table-container"

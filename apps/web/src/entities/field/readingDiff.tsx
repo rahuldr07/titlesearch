@@ -2,20 +2,11 @@ import { diffChars } from "diff";
 import { cx } from "../../components/ui";
 
 /**
- * THE DIFFERING CHARACTERS, AND ONLY THOSE.
- *
- * The canonical disagreement in this product is a MIDDLE INITIAL — "Is the
- * vested owner MARIA L. ESTRADA or MARIA I. ESTRADA?" (`entities.ts:130`). Two
- * strings 15 characters long differing in one is a difference a reviewer will
- * miss at a glance, every time, and the miss ships.
- *
- * So the diff is per CHARACTER, not per word: `diffWords` marks the whole token
- * "L." against "I." and hands back a highlight that is 100% wider than the
- * disagreement. Character granularity puts the mark exactly on the evidence.
- *
- * `diffChars` is a pure string function, not a derivation of state — it decides
- * nothing about which reading is right and produces no ruling. Which reading
- * wins is the reviewer's, recorded by the server.
+ * The differing characters, and only those. The canonical disagreement is a
+ * middle initial, and a word-level diff marks the whole token — a highlight
+ * twice the width of the evidence — so the diff is per character. diffChars
+ * is a pure string function, not a derivation of state: it decides nothing
+ * about which reading is right.
  */
 export type ReadingSegment = {
   readonly text: string;

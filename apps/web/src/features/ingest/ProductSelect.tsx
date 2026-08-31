@@ -4,17 +4,10 @@ import { useRead } from "../../app/useRead";
 import { productsConfig } from "./configQueries";
 
 /**
- * THE PRODUCT SELECT — the second half of the checklist key, drawn at last.
- *
- * ⚠ RULED 2026-08-29 (RULING-2026-08-29.md): `CreateOrderRequest` carries
- * `product` now, so the gap card that stood here is retired. The options are
- * `GET /api/config/products`' own grid — "Current Owner Search · Current owner
- * — vesting deed + open matters", the reference's "name · scope" register with
- * the server's strings — and a retired product is NOT offered: nothing may be
- * ordered under a shape the config has withdrawn.
- *
- * NO PRODUCT IS PRE-SELECTED, for the client select's reason: the absence
- * reaches the server as an absence, and the server names it (INVARIANTS 60-61).
+ * The product select — the second half of the checklist key. A retired
+ * product is not offered: nothing may be ordered under a shape the config has
+ * withdrawn. No product is pre-selected, for the client select's reason: the
+ * absence reaches the server as an absence, and the server names it.
  */
 export function ProductSelect(props: {
   readonly value: string;

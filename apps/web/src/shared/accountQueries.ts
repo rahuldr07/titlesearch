@@ -9,9 +9,9 @@ import {
 } from "@titlepipe/contract";
 import type { ReadDescriptor } from "./queries";
 
-/** THE ACCOUNT LAYER'S READS, split out of `queries.ts` on the 150-line gate. */
+/** The account layer's read descriptors. */
 
-/** WHO you are, which `/api/me/permissions` deliberately does not answer — that one says what you may DO. */
+/** Who you are — `/api/me/permissions` deliberately answers only what you may do. */
 export const meProfile: ReadDescriptor<MeProfileResponse> = {
   path: "/api/me/profile",
   key: ["me", "profile"],
@@ -25,7 +25,7 @@ export const people: ReadDescriptor<PeopleResponse> = {
   schema: PeopleResponse,
 };
 
-/** Server-side, decision C16 — the reason nothing in this app touches storage. */
+/** Server-side — the reason nothing in this app touches browser storage. */
 export const preferences: ReadDescriptor<PreferencesResponse> = {
   path: "/api/me/preferences",
   key: ["me", "preferences"],
@@ -39,7 +39,7 @@ export const rules: ReadDescriptor<{ rules: Rule[] }> = {
   schema: RulesResponse,
 };
 
-/** Append-only, and READ-ONLY BY CONSTRUCTION (`endpoints.ts:575`). */
+/** Append-only, and read-only by construction. */
 export const audit: ReadDescriptor<AuditResponse> = {
   path: "/api/audit",
   key: ["audit"],
@@ -47,10 +47,10 @@ export const audit: ReadDescriptor<AuditResponse> = {
 };
 
 /**
- * ⚠ RULED 2026-08-29 (RULING-2026-08-29.md) — the Access pane's full RBAC
- * matrix, and the role vocabulary the People pane's picker offers. A SETTINGS
- * document about the shop; the enforceable projection stays
- * `/api/me/permissions` and neither derives from the other in the browser.
+ * The Access pane's full RBAC matrix, and the role vocabulary the People
+ * pane's picker offers. A settings document about the shop; the enforceable
+ * projection stays `/api/me/permissions` and neither derives from the other
+ * in the browser.
  */
 export const rbacMatrix: ReadDescriptor<RbacMatrixResponse> = {
   path: "/api/rbac",

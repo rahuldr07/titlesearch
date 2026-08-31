@@ -2,29 +2,11 @@ import type { Escalation } from "@titlepipe/contract";
 import { Empty, cx } from "../../components/ui";
 
 /**
- * THE INBOX, DRAWN AS THE PROTOTYPE DRAWS IT.
- *
- * `reference-app.html` § `isEscalations`, `escList`: a 14px card on a 14px
- * radius, holding a mono order ref top-left and a status capsule top-right on
- * one baseline; the title in w600 underneath; then a quiet line naming the
- * actor and the section. Selected is the violet-bordered, violet-tinted card.
- *
- * `INVARIANTS:39` — no triage furniture: no category, no priority, no assignee,
- * and no sort control either, because every sort key a queue could offer is a
- * triage field the `Escalation` shape refuses to carry (entities.ts:166-175).
- * The order is the SERVER's array order, printed.
- *
- * ══ WHAT THE PROTOTYPE'S TOP-RIGHT CAPSULE HOLDS ═══════════════════════════
- *
- * ⚠ RULED 2026-08-29 (RULING-2026-08-29.md): the drawn AGE chip ("3h ago",
- * flipping to green "settled") is built — as the SERVER's finished label
- * (`Escalation.age`), never a ticking clock computed here. A cluster the
- * server serves no label for falls back to the open/settled signal, read off
- * `rule_id` — the mandatory rule restated: a cluster with a ruling and no
- * rule is NOT resolved (`INVARIANTS:36`).
- *
- * The quiet line beneath the title is the drawn raiser attribution
- * (`Escalation.raised_by`), with the cluster path beside it.
+ * The escalation inbox. No triage furniture — no category, priority, assignee,
+ * or sort control; the order is the server's array order, printed. The age chip
+ * is the server's finished label (`Escalation.age`), never a ticking clock
+ * computed here; without a label it falls back to open/settled read off
+ * `rule_id` — a cluster with a ruling and no rule is not resolved.
  */
 export function EscalationQueue({
   escalations,

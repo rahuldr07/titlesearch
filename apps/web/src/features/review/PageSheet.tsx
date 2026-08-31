@@ -6,13 +6,9 @@ import { PageBody } from "./PageBody";
 import type { ZoomLevel } from "./PageBar";
 
 /**
-
- * MAGNIFICATION IS `zoom`, NOT `scale`, AND THAT IS A SCROLLING DECISION. `scale-200`
-
- * sets the `scale` property, which paints the sheet at twice the size while its LAYOUT
-
- * BOX stays 396px — so the overflow it creates is invisible to the…
-
+ * Magnification is `zoom`, not `scale` — `scale` paints the sheet larger
+ * while its layout box stays the same, so the overflow it creates is
+ * invisible to the scroller.
  */
 const ZOOM: Record<ZoomLevel, string> = {
   fit: "[zoom:1]",
@@ -21,18 +17,15 @@ const ZOOM: Record<ZoomLevel, string> = {
 };
 
 /**
- * ONE SHEET OF THE PACKAGE, AS PAPER (rule 8). `PaperSheet` is the surface —
- * warm stock, serif, justified, the grain, the −.35° tilt, and the degraded
- * register — imported rather than re-drawn.
+ * One sheet of the package, as paper. `PaperSheet` is the surface — warm
+ * stock, serif, the grain, the tilt, the degraded register — imported
+ * rather than re-drawn.
  *
- * ZOOM-TO-CITATION — ⚠ RULED 2026-08-29 (RULING-2026-08-29.md): when the open
- * field's recorded box is on THIS sheet and the citation zoom is on, the
- * wrapper scales to the reference's 1.85 over its 300ms curve with the
- * transform-origin at the box's centre. The origin is data (two percentages
- * off `LineCoords`), and §6 bans inline styles — so, exactly like
- * `CitedRegion`'s SVG geometry, it bypasses the class system: a ref callback
- * writes the two custom properties `entities.css`'s `tp-zoom-cite` reads.
- * Double-click toggles it and the drawn "Fit ✕" chip exits, both as drawn.
+ * Zoom-to-citation: when the open field's recorded box is on this sheet and
+ * the citation zoom is on, the wrapper scales with the transform-origin at
+ * the box's centre. The origin is data and inline styles are banned, so a
+ * ref callback writes the two custom properties `entities.css`'s
+ * `tp-zoom-cite` reads. Double-click toggles it; the "Fit ✕" chip exits.
  */
 export function PageSheet(props: {
   readonly n: number;
@@ -62,7 +55,7 @@ export function PageSheet(props: {
         onDoubleClick={() => props.onCiteZoom(!props.citeZoom)}
         ref={(el) => {
           if (el === null) return;
-          /* The drawn origin: the box centre, as percentages of the sheet.
+          /* The origin: the box centre, as percentages of the sheet.
              Written through the DOM API — see the header note. */
           const cx100 = box === null ? 50 : (box.x + box.w / 2) * 100;
           const cy100 = box === null ? 50 : (box.y + box.h / 2) * 100;

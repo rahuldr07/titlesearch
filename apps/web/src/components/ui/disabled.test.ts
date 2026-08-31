@@ -2,15 +2,11 @@ import { expect, test } from "vitest";
 import { disabledAttributes, disabledNativeAttributes } from "./disabled";
 
 /**
- * REVIEW-03 B1. A blocked `Input` was fully editable for one reason: it was
- * given `isDisabled`, and react-aria's `Input` is a thin `<input>` wrapper that
- * reads `disabled`. The unknown key went to the DOM, React warned, and nothing
- * else did — the control still rendered `title` and `data-disabled-reason`,
- * which is exactly what the invariant specs assert against.
- *
- * So these assert the PROP NAME, because the prop name was the bug. The
- * rendered-behaviour half lives in `input.blocked.stories.tsx`, whose play
- * functions type into the real elements and assert nothing lands.
+ * react-aria's Input is a thin <input> wrapper that reads `disabled`, not
+ * `isDisabled` — handed the composite spelling, a control renders its reason
+ * faithfully while staying fully editable. These assert the prop name,
+ * because the prop name was the bug; the rendered-behaviour half lives in
+ * input.blocked.stories.tsx.
  */
 test("a composite gets isDisabled and never the native prop", () => {
   const a = disabledAttributes("Blocked: T1 second read not countersigned.");

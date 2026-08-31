@@ -2,13 +2,8 @@ import { useOverlays } from "../keyboard/overlays";
 import { Kbd } from "../../components/ui";
 
 /**
-
- * THE BRAND BLOCK and THE SEARCH BOX — the top of the design's rail. Rule 7: a FLAT
-
- * brand mark, no gradient, and the design's own note says it is "typed 'TF' in a flat
-
- * square" — never an asset.
-
+ * The brand block and the search box — the top of the rail. The brand mark
+ * is flat, typed text in a square — never an asset.
  */
 export function RailBrand(props: { readonly connected: boolean }) {
   return (
@@ -46,13 +41,8 @@ export function RailBrand(props: { readonly connected: boolean }) {
 }
 
 /**
-
- * THE SEARCH BOX — a BUTTON, not an input, and the design agrees: the reference markup
-
- * is `<button on-click="openPalette">` with placeholder text and a ⌘K cap. It looks
-
- * like a field because what it opens IS a search surface.
-
+ * The search box — a button, not an input. It looks like a field because
+ * what it opens is a search surface.
  */
 export function RailSearch() {
   const toggle = useOverlays((s) => s.toggle);
@@ -66,10 +56,8 @@ export function RailSearch() {
       >
         <SearchGlyph />
         <span className="min-w-0 flex-1 truncate text-left">Quick jump…</span>
-        {/* `rounded-lg` overrides `Kbd`'s own `--radius-xs`: a key cap is normally
-            the innermost object in rule 5's ladder, but this one sits INSIDE a
-            14px field and the design draws it at the field's radius, not a
-            step below it. Still a token, still on the six-radius scale. */}
+        {/* `rounded-lg` overrides `Kbd`'s own radius: this cap sits inside a
+            field and is drawn at the field's radius. Still a token. */}
         <Kbd className="shrink-0 rounded-lg border-transparent bg-rail-cap text-surface-panel">
           ⌘K
         </Kbd>
@@ -78,15 +66,7 @@ export function RailSearch() {
   );
 }
 
-/**
-
- * The one glyph in the rail. Rule 7 bans "icon soup", and the design's rail draws
-
- * per-door icons that are deleted with the door rows — a word plus a picture of the
-
- * same word is the soup.
-
- */
+/** The search glyph. */
 function SearchGlyph() {
   return (
     <svg

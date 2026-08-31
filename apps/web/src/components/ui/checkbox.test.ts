@@ -2,18 +2,10 @@ import { expect, test } from "vitest";
 import { readFileSync } from "node:fs";
 
 /**
- * THE LABEL IS A ROW, NOT A BOX.
- *
- * `react-aria`'s `Checkbox` renders as a `<label>` wrapping BOTH the drawn
- * square and its text. Box styling put on that element therefore lands on the
- * whole row, and it did: `size-8` clamped the label to 16px wide and
- * `font-mono text-label` set the words in 11px mono, which rule 3 reserves for
- * data. The label wrapped one letter per line inside the square.
- *
- * A screenshot caught it; nothing else could have. `tsc` was clean, the gate
- * was clean, every story "rendered". So this asserts the SHAPE of the fix
- * rather than its pixels: the drawn square lives on the indicator span, and
- * the label owns typography.
+ * react-aria's Checkbox renders as a <label> wrapping both the drawn square
+ * and its text, so box styling on that element lands on the whole row. These
+ * assert the shape of the fix rather than its pixels: the drawn square lives
+ * on the indicator span, and the label owns typography.
  */
 const source = readFileSync(new URL("./checkbox.tsx", import.meta.url), "utf8");
 

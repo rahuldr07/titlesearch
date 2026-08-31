@@ -1,13 +1,9 @@
 import { Button, SegmentedControl, Segment, Toggle } from "../../components/ui";
 
 /**
-
- * Local magnification. Three steps, exactly the reference's ("Fit", "150%", "200%"),
-
- * and the labels are the only numbers on this pane that are not the server's — which
-
- * is precisely why they are labelled as a VIEW control.
-
+ * Local magnification. The three step labels are the only numbers on this
+ * pane that are not the server's — which is why the control is labelled as
+ * a view control.
  */
 export type ZoomLevel = "fit" | "half" | "double";
 
@@ -22,11 +18,8 @@ function isZoom(key: unknown): key is ZoomLevel {
 }
 
 /**
-
- * PREV / PAGE / NEXT, and the magnifier. The label is `p6 / 64` — the position and
-
- * `total_pages`, both printed.
-
+ * Prev / page / next, and the magnifier. The label is `p6 / 64` — the
+ * position and `total_pages`, both printed.
  */
 export function PageBar(props: {
   readonly shown: number;
@@ -35,9 +28,9 @@ export function PageBar(props: {
   readonly onGo: (n: number) => void;
   readonly onZoom: (z: ZoomLevel) => void;
   /**
-   * The design's "◉ Following / ○ Free" — "when on, the page follows the field
-   * you focus on the left". A VIEW preference and nothing else: it changes
-   * which sheet is on screen, never what any field says.
+   * "◉ Following / ○ Free" — when on, the page follows the field focused
+   * on the left. A view preference and nothing else: it changes which sheet
+   * is on screen, never what any field says.
    */
   readonly following: boolean;
   readonly onFollowing: (following: boolean) => void;

@@ -1,10 +1,10 @@
 import type { OrderRow } from "@titlepipe/contract";
 
 /**
- * Rule 6, spent once: the row's single status signal is the weight of the
- * address — live orders in primary ink at semibold, delivered ones dropped to
- * secondary. No capsule, no tinted ref, no coloured due date. The stage is
- * stated in words beside it, so the weight is never the only carrier.
+ * The row's single status signal is the weight of the address — live orders
+ * in primary ink at semibold, delivered ones dropped to secondary. No
+ * capsule, no tinted ref, no coloured due date. The stage is stated in
+ * words beside it, so the weight is never the only carrier.
  */
 export function Address({ row }: { readonly row: OrderRow }) {
   const live = row.stage !== "delivered";
@@ -19,14 +19,14 @@ export function Address({ row }: { readonly row: OrderRow }) {
       >
         {row.addr}
       </span>
-      {/* The county and state sit UNDER the address, as the design draws them:
-          beside it they read as one run of one sentence. */}
+      {/* The county and state sit under the address: beside it they read as
+          one run of one sentence. */}
       <span className="truncate text-label leading-flat text-ink-faint">{row.place}</span>
     </span>
   );
 }
 
-/** Rule 14: absence is typed, never a blank cell. */
+/** Absence is typed, never a blank cell. */
 export function Absent({ children }: { readonly children: string }) {
   return <span className="text-meta leading-close text-ink-faint">{children}</span>;
 }

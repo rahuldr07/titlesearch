@@ -2,13 +2,8 @@ import { Link, type LinkComponentProps } from "@tanstack/react-router";
 import { buttonVariants, cx } from "../../components/ui";
 
 /**
-
- * Navigation that looks like a button and is checked against the route tree.
-
- * `LinkButton` (`components/ui/button.tsx`) takes react-aria's `href`, which is a
-
- * plain `string`.
-
+ * Navigation that looks like a button and is checked against the route
+ * tree — unlike `LinkButton`, whose `href` is a plain string.
  */
 export type RouteButtonProps = LinkComponentProps<"a"> & {
   readonly variant?: "primary" | "secondary" | "ghost" | "halt" | undefined;

@@ -1,20 +1,10 @@
 /**
- * THE DRAFT WATERMARK, AND THE SERVER FIELD THAT DECIDES IT.
- *
- * `CompositionResponse.seal_sha256` is null until a release is filed and
- * carries the digest afterwards, so it — not a local `isDraft` flag, and not
- * `releasable`, which says a release WOULD be accepted rather than that one
- * HAPPENED — is what says whether this sheet is a deliverable. It is the same
- * field the clerk stamp and `IntegritySeal` read, so the three cannot disagree:
- * a sheet is either watermarked or stamped, never both and never neither.
- *
- * The design's other two legends ("REISSUE DRAFT — v2", "INTERNAL — NOT FOR
- * CLIENT") are absent. They are driven by a reissue flag and an audience the
- * composition read does not carry, and a page that calls itself internal on a
- * guess is worse than a page that says nothing.
- *
- * Drawn in the paper register (rule 8) at 10% page ink: a watermark is on the
- * stock, under the words, and must never win against the text it sits behind.
+ * `seal_sha256` decides the watermark — not a local `isDraft` flag, and not
+ * `releasable`, which says a release would be accepted rather than that one
+ * happened. It is the same field the clerk stamp and `IntegritySeal` read, so
+ * the three cannot disagree: a sheet is either watermarked or stamped, never
+ * both and never neither. The design's other legends are absent — they need a
+ * reissue flag and an audience the composition read does not carry.
  */
 export function DraftWatermark() {
   return (

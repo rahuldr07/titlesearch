@@ -2,21 +2,16 @@ import { cx } from "./cx";
 import { ALIGN_CLASS, type TableColumn } from "./tableColumns";
 
 /**
- * THE HEADER ROW AND THE DATA ROW, SPLIT OUT SO `table.tsx` IS THE MECHANISM
- * AND THIS IS THE CHROME.
- *
- * `ROW_HEIGHT` lives here rather than in `table.tsx` because it is a fact
- * about how a row is DRAWN, and the virtualizer is merely the thing that has
- * to be told. 44px is `--size-control-2xl` and is comfortably above WCAG
- * 2.5.8's 24px target minimum, which matters because a row is clickable.
+ * The header row and the data row; table.tsx is the mechanism, this is the
+ * chrome. ROW_HEIGHT lives here because it is a fact about how a row is
+ * drawn — 44px, comfortably above WCAG 2.5.8's 24px target minimum, which
+ * matters because a row is clickable.
  */
 export const ROW_HEIGHT = 44;
 
 /**
- * The header. Sticky, on `--color-control-fill` with a `--color-line-strong`
- * rule beneath — RECIPES.md §Card's header row, at the 11px w700 label rung in
- * sentence case (rule 4: ALL-CAPS is legal only on rail rubrics and serif
- * certificate headings, and this is neither).
+ * The header: sticky, on control-fill with a line-strong rule beneath, at
+ * the 11px w700 label rung in sentence case.
  */
 export function TableHeaderRow<TRow>({
   columns,
@@ -53,23 +48,12 @@ export function TableHeaderRow<TRow>({
 const OWN_TARGET = "a,button,input,select,textarea,[role='button'],[role='link']";
 
 /**
- * One row. Hover lifts to `--color-row-hover` and NOTHING else moves.
- *
- * ══ `onActivate` IS A WIDER MOUSE TARGET, NOT A NEW FOCUS STOP ═════════════
- *
- * The row stays `role="row"` with `tabIndex={-1}`. It does NOT become a link or
- * a button, which is the whole point: the design puts an `Open →` control
- * inside the row, and an interactive element nested in a link is the defect the
- * Overview's recent-orders table had to work around with a positioned overlay.
- * A div carrying a click handler wraps nothing interactive, so the inner
- * control stays a first-class target.
- *
- * It also stays out of the tab sequence deliberately — `table.tsx` explains why
- * 5,000 rows are not a tab ring, and the container holds the stop. So the
- * KEYBOARD path to this action is the inner control, which is tab-reachable on
- * its own; the row is the redundant, wider target a mouse gets. A row with no
- * such control inside it should not be given `onActivate`, because then the
- * action would exist for a mouse and for nobody else.
+ * One row. `onActivate` is a wider mouse target, not a new focus stop: the
+ * row stays role="row" with tabIndex={-1} and never becomes a link or a
+ * button, so the `Open →` control inside stays a first-class target and the
+ * keyboard path is that control, which is tab-reachable on its own. A row
+ * with no such control inside should not be given `onActivate` — the action
+ * would exist for a mouse and for nobody else.
  */
 export function TableRow<TRow>({
   row,

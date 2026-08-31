@@ -4,9 +4,9 @@ import { ScrollArea } from "./scroll-area";
 import { onPanel } from "./kitGround";
 
 /**
- * THE PANE. Every story here is a FIXED-HEIGHT box, because that is the only
- * arrangement in which this component means anything — the frame is one
- * viewport tall (styles.css) and a pane is what scrolls inside it.
+ * Every story here is a fixed-height box, the only arrangement in which this
+ * component means anything — the frame is one viewport tall and a pane is
+ * what scrolls inside it.
  */
 const meta = {
   title: "ui/ScrollArea",
@@ -60,9 +60,9 @@ export const NoOverflow: Story = {
 };
 
 /**
- * BOTH AXES — the evidence sheet at 200%, which is wider than its column. The
- * only place `axis="both"` is legal: `INVARIANTS:65` says the PAGE never
- * scrolls sideways, and this is a pane, not the page.
+ * Both axes — the evidence sheet at 200%, wider than its column. The only
+ * place `axis="both"` is legal: the page never scrolls sideways, and this is
+ * a pane, not the page.
  */
 export const BothAxes: Story = {
   render: () => (
@@ -81,11 +81,10 @@ export const BothAxes: Story = {
 };
 
 /**
- * THE `min-h-0` PAIR, MEASURED. This is the whole component and it is invisible
- * on screen: a flex child's default `min-height:auto` means "at least my
- * content", so without it the pane GROWS past its parent instead of scrolling,
- * the frame overflows a body with `overflow:hidden`, and everything below the
- * fold becomes unreachable. Asserted by measurement, not by class name.
+ * The `min-h-0` pair, measured. A flex child's default `min-height: auto`
+ * means "at least my content", so without it the pane grows past its parent
+ * instead of scrolling and everything below the fold becomes unreachable.
+ * Asserted by measurement, not by class name.
  */
 export const StaysInsideItsFlexParent: Story = {
   render: () => (
@@ -106,11 +105,9 @@ export const StaysInsideItsFlexParent: Story = {
     if (box === null) throw new Error("pane has no parent");
 
     /*
-     * MEASURED AGAINST THE PARENT'S CONTENT BOX, NOT AGAINST 240. The first
-     * version asserted `clientHeight === 240` and got 238: the wrapper is
-     * `h-120` with a 1px border and preflight sets `box-sizing: border-box`, so
-     * 2px of that height is border. The literal would have pinned the story's
-     * own decoration rather than the component.
+     * Measured against the parent's content box, not against a literal 240:
+     * the wrapper has a 1px border under border-box sizing, so 2px of its
+     * height is border.
      */
     expect(pane.clientHeight).toBe(box.clientHeight);
     // …and the content is genuinely taller, so this is a real scroll rather
@@ -120,9 +117,9 @@ export const StaysInsideItsFlexParent: Story = {
 };
 
 /**
- * A SCROLLABLE REGION IS A NAMED, KEYBOARD-REACHABLE LANDMARK (WCAG 2.1
- * §2.1.1). The registry shipped an unnamed `<div>` with `outline-none` and no
- * `tabIndex` — in Safari and Firefox, unscrollable from the keyboard at all.
+ * A scrollable region is a named, keyboard-reachable landmark (WCAG 2.1
+ * §2.1.1) — a div with overflow:auto and no tabIndex is unscrollable from
+ * the keyboard in Safari and Firefox.
  */
 export const IsAKeyboardReachableRegion: Story = {
   render: () => (

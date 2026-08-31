@@ -1,13 +1,8 @@
 import type { Field } from "@titlepipe/contract";
 
 /**
-
- * Which fields a reviewer may walk — and the answer is the server's. INVARIANT 27
-
- * (ORPHAN O20, promoted by open-rulings Q3): "field navigation visits ONLY
-
- * server-queued fields — a reviewer cannot walk into auto-confirmed fields." That is…
-
+ * Which fields a reviewer may walk — the answer is the server's: navigation
+ * visits only server-queued fields, never auto-confirmed ones.
  */
 export function isQueued(field: Field): boolean {
   return field.state === "needs_review";
@@ -19,13 +14,8 @@ export function queuedFields(fields: readonly Field[]): readonly Field[] {
 }
 
 /**
-
- * Where selection lands, and the url owns it. INVARIANT 55: "deep links are
-
- * first-class — `?field=` lands on the exact field in context (URL-owned selection)."
-
- * So the resolution order is: 1.
-
+ * Where selection lands, and the URL owns it: `?field=` lands on the exact
+ * field, then the first queued field, then the first field at all.
  */
 export function resolveSelection(
   fields: readonly Field[],
@@ -38,15 +28,7 @@ export function resolveSelection(
   return queuedFields(fields)[0] ?? fields[0] ?? null;
 }
 
-/**
-
- * J / k — the next and previous queued field, and it wraps. ANALYSIS-behavior §1
-
- * records it plainly: "`j`/`k` move `hover`, but `c`/`e`/`q` act on `open` (the first
-
- * unanswered field), not on `hover`.
-
- */
+/** J / K — the next and previous queued field, and it wraps. */
 export function stepSelection(
   fields: readonly Field[],
   current: Field | null,
@@ -58,7 +40,7 @@ export function stepSelection(
   const at = current === null ? -1 : queue.findIndex((f) => f.id === current.id);
   if (at < 0) return queue[0] ?? null;
 
-  // Wraps modulo the queue length — j and k never dead-end (ANALYSIS §1).
+  // Wraps modulo the queue length — j and k never dead-end.
   const next = (at + direction + queue.length) % queue.length;
   return queue[next] ?? null;
 }

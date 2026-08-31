@@ -9,18 +9,12 @@ import { Textarea } from "@/components/ui/textarea"
 import { controlClass, controlHeight } from "@/components/ui/field-chrome"
 
 /**
- * A CONTROL WITH THINGS ATTACHED — a search box with a magnifier, a money field
- * with a currency, a filter with a clear button.
- *
- * The wrapper now carries the control box (field-chrome.ts) and the inner
- * control drops its own, so the two cannot disagree about a border. Focus and
- * invalid are drawn on the WRAPPER, since the visible box is the wrapper: the
- * registry's `ring-3 ring-ring/50` became the same 2px outline every other
- * control in the kit uses, so a focused input group and a focused input look
- * like the same product.
- *
- * `has-disabled:opacity-50` became the explicit disabled fill. Rule 9's reason
- * lives on the CONTROL inside, which is what the user tabs to.
+ * A control with things attached — a search box with a magnifier, a money
+ * field with a currency, a filter with a clear button. The wrapper carries
+ * the control box (field-chrome.ts) and the inner control drops its own, so
+ * the two cannot disagree about a border; focus and invalid are drawn on the
+ * wrapper, since the visible box is the wrapper. The disabled reason lives
+ * on the control inside, which is what the user tabs to.
  */
 function InputGroup({ className, ...props }: GroupProps) {
   return (
@@ -49,10 +43,8 @@ function InputGroup({ className, ...props }: GroupProps) {
 
 /**
  * The wrapper owns the box, so the control gives its own up entirely. The
- * radius steps in to 6px (rule 5: inner = outer − gap) rather than to
- * `rounded-none`, which is a static utility outside the six-radius vocabulary.
- * On a borderless transparent control it is invisible either way; the point is
- * that no class in this kit names a radius the design does not have.
+ * radius steps in to 6px (inner = outer − gap) rather than to rounded-none —
+ * no class in this kit names a radius the design does not have.
  */
 const strippedControl = [
   "flex-1 rounded-sm border-0 bg-transparent px-0 outline-none",

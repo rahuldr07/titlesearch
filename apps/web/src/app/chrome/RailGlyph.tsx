@@ -1,10 +1,8 @@
-/** ONE LINE GLYPH PER DOOR. The design's rail draws them and ours drew none. */
+/** One line glyph per door. */
 
 /** 24x24 grid, stroke only. Subpaths are concatenated into one `d`. */
 const GLYPHS: Readonly<Record<string, string>> = {
-  // Overview — the reference's own grid mark on its first door.
   "/": "M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z",
-  // Queue — the reference's list mark on its second door: rules and bullets.
   "/queue": "M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01",
   "/ingest": "M12 3v11m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2",
   "/dashboard": "M4 4v16h16M8 15l3.5-4.5 3 2.5L19 7",
@@ -30,11 +28,8 @@ const GLYPHS: Readonly<Record<string, string>> = {
 };
 
 /**
-
- * `aria-hidden` without exception: the door's LABEL names the door, and a screen
-
- * reader that also announced the picture would say it twice.
-
+ * `aria-hidden` without exception: the door's label names the door, and a
+ * screen reader that also announced the picture would say it twice.
  */
 export function RailGlyph(props: { readonly path: string; readonly active: boolean }) {
   const d = GLYPHS[props.path];

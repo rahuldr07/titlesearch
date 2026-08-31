@@ -2,17 +2,11 @@ import { Button } from "../../components/ui";
 import type { EditorMode } from "./DecisionEditor";
 
 /**
- * FOUR ACTS ON THE OPEN DECISION, and the fourth is the one that was missing.
- *
- * Confirm · Correct · Declare an absence · Escalate. The design draws the
- * absence branch as a separate "Law 3 Protocol" grid shown INSTEAD of confirm
- * and edit; nothing on the wire says which fields are absence-only, and
- * `enums.ts:44-48` forbids deriving it from `value === null`, so it is a peer
- * act rather than a mode this screen decides for the reviewer.
- *
- * `disabledBecause`, not `isDisabled` — the kit has no boolean disable,
- * because rule 9 says every blocked control states its reason. The type
- * refuses the shortcut, which is the point.
+ * Four acts on the open decision: Confirm · Correct · Declare an absence ·
+ * Escalate. The absence branch is a peer act rather than a mode this screen
+ * decides for the reviewer — nothing on the wire says which fields are
+ * absence-only. `disabledBecause`, not `isDisabled`: every blocked control
+ * states its reason, and the type refuses the shortcut.
  */
 export function DecisionActions(props: {
   readonly pending: boolean;

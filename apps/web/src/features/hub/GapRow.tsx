@@ -1,9 +1,9 @@
 import type { CompletenessGap } from "@titlepipe/contract";
 
 /**
- * One gap the gate raised. `GapCloseOption` is a READ SHAPE ONLY — no write
- * exists for any of them (`intake.ts:118-120`), so each option is stated with
- * the server's own consequence sentence and there is no button.
+ * One gap the gate raised. `GapCloseOption` is a read shape only — no write
+ * exists for any of them, so each option is stated with the server's own
+ * consequence sentence and there is no button.
  */
 export function GapRow(props: { readonly gap: CompletenessGap }) {
   const gap = props.gap;
@@ -18,8 +18,8 @@ export function GapRow(props: { readonly gap: CompletenessGap }) {
         <span aria-hidden className="font-mono text-meta leading-flat text-state-attend">
           ◆
         </span>
-        {/* `line_number` is a read field so the reader can get back to the line
-            they answered — matching on prose would be a join (`intake.ts:151`). */}
+        {/* `line_number` lets the reader get back to the line they answered —
+            matching on prose would be a join. */}
         <span className="font-mono text-label leading-flat tabular-nums text-ink-muted">
           Line {gap.line_number}
         </span>

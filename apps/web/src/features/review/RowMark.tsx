@@ -1,25 +1,15 @@
 import type { Field } from "@titlepipe/contract";
 import { cx } from "../../components/ui";
 
-/**
-
- * THE ROW'S ONE STATUS SIGNAL (rule 6: "a mark ✓ ◆ • + weight … colored capsules only
-
- * at moments of record"). This is NOT `StatePill`.
-
- */
+/** The row's one status signal — a mark, not a capsule. Not `StatePill`. */
 export type RowMarkProps = {
   readonly field: Field;
 };
 
 /**
-
- * The four settled renders. A record over `FieldState` minus the two unsettled
-
- * members, so a seventh state fails to compile here rather than silently rendering
-
- * nothing.
-
+ * The four settled renders. A record over `FieldState` minus the two
+ * unsettled members, so a seventh state fails to compile here rather than
+ * silently rendering nothing.
  */
 const MARK: Readonly<
   Record<
@@ -35,7 +25,7 @@ const MARK: Readonly<
   auto_confirmed: { mark: "✓", word: "auto", chrome: "text-state-settled-muted" },
   confirmed: { mark: "✓", word: "confirmed", chrome: "text-state-settled" },
   corrected: { mark: "✎", word: "corrected", chrome: "text-state-settled" },
-  /** Stopped until a RULE resolves it (INVARIANT 36). Halt, not settled. */
+  /** Stopped until a rule resolves it. Halt, not settled. */
   escalated: { mark: "↗", word: "escalated", chrome: "text-state-halt" },
 };
 

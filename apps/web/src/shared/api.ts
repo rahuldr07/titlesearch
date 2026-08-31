@@ -1,11 +1,10 @@
 import { currentActor, currentRole } from "./session";
 
 /**
- * A validator, described STRUCTURALLY rather than by importing Zod's types.
- * Every schema in `@titlepipe/contract` satisfies this, so nothing changes at
- * runtime — but web-v2 never takes a direct dependency on zod, which keeps
- * §4's "no zod in the browser bundle" true of this package's own imports and
- * leaves the contract free to change validators without touching this file.
+ * A validator, described structurally rather than by importing Zod's types.
+ * Every schema in `@titlepipe/contract` satisfies this, and the app takes no
+ * direct dependency on zod — the contract stays free to change validators
+ * without touching this file.
  */
 export interface Validator<T> {
   safeParse(
@@ -14,18 +13,12 @@ export interface Validator<T> {
 }
 
 /**
- * The wire boundary. EVERY response is parsed through `@titlepipe/contract`
- * before it reaches a component — BRIEF §7 makes the contract authoritative on
- * shapes, and a response that does not match it is a bug we want to see loudly
- * rather than a `undefined` three components deep.
- * Zod lives here rather than Valibot on purpose, and the reasoning is recorded
- * in BRIEF-DELTAS.md D-6: `packages/contract` is the shared REST contract that
- * `packages/mocks` is built on, and §7/§13 both say reuse the mocks unforked.
- * Valibot's role (§9.14) is form feedback, which is a different job.
- * NO RETRY ON MUTATIONS, and no optimistic anything. Constraint 10 and
- * `review-conflict.spec`: the server's returned state is the truth, and a 409
- * is an ANSWER that must render — so `ApiError` carries the server's message
- * verbatim rather than a generic string.
+ * The wire boundary. Every response is parsed through `@titlepipe/contract`
+ * before it reaches a component — a response that does not match the
+ * contract should fail loudly, not surface as `undefined` three components
+ * deep. No retry on mutations, and no optimistic anything: the server's
+ * returned state is the truth, and a 409 is an answer that must render, so
+ * `ApiError` carries the server's message verbatim.
  */
 
 export class ApiError extends Error {
@@ -66,13 +59,13 @@ async function request<T>(
     ...init,
     headers: {
       "content-type": "application/json",
-      // DEV-ONLY (conflict C12). packages/mocks reads this in place of the
-      // Clerk JWT claim so the harvested authz specs can prove the SERVER
-      // refuses. It goes when the real API lands — see shared/session.ts.
+      // Dev-only: packages/mocks reads this in place of the session claim so
+      // the authz specs can prove the server refuses. It goes when the real
+      // API lands — see shared/session.ts.
       "x-mock-role": currentRole(),
-      // DEV-ONLY, same cutover as the role. The mock signs the append-only
-      // golden log with this rather than letting the client post a name in the
-      // body — a signature the client can type is not a signature.
+      // Dev-only, same cutover. The mock signs the golden log with this
+      // rather than letting the client post a name in the body — a signature
+      // the client can type is not a signature.
       "x-mock-actor": currentActor(),
       ...init?.headers,
     },

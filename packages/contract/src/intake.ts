@@ -3,11 +3,8 @@ import { z } from "zod";
 /**
  * The per-order intake resources: sign-off, pipeline progress, the
  * completeness gate — plus the lifecycle census and the people roster.
- *
- * Same rule as `workspace.ts`: READ SHAPES ONLY. What an order's gate says is
- * data; closing the gate is a transition the server owns, and rulings Q4–Q10
- * have not settled what it means. The screens render these and refuse to
- * pretend they can write them.
+ * Same rule as `workspace.ts`: read shapes only. Closing the gate is a
+ * transition the server owns.
  */
 
 // ---- abstractor sign-off ---------------------------------------------------
@@ -34,24 +31,12 @@ export const OrderSignoffLine = z.object({
   comment: z.string().nullable(),
   comment_required: z.boolean(),
   /**
-   * ⚠ UI-DRIVEN REQUEST — AWAITING RATIFICATION (2026-07-30, fidelity Wave 2).
-   * READ FIELDS ONLY. Neither adds a transition; the sign-off still has no
-   * submit (ruling Q13) and nothing here lets a client decide an answer.
-   *
-   * `answers` is what THIS line may be answered. Six of the product's thirteen
-   * admit N/A and seven do not, so a screen that offered all three everywhere
-   * would be inviting an answer the sign-off cannot record. It is served per
-   * line rather than derived from a group or a number, because the set is a
-   * product rule and a rule reconstructed in a browser is a second rulebook.
-   *
-   * `policy_suggestion` names WHICH answer policy proposed. It was expressible
-   * only as the boolean `prefilled_from_policy`, so the screen knew a
-   * suggestion existed and genuinely could not say what it was. Both stay:
-   * `prefilled_from_policy` says THAT policy suggested, `policy_suggestion`
-   * says WHAT — and both stay separate from `answer`, because ruling Q13 turns
-   * on exactly that distinction. Policy may suggest; the line is not SIGNED
-   * until a person answers it, and a suggestion written into `answer` erases
-   * the difference between a claim and a default.
+   * `answers` is what this line may be answered — served per line because the
+   * set is a product rule, and a rule reconstructed in a browser is a second
+   * rulebook. `policy_suggestion` names which answer policy proposed;
+   * `prefilled_from_policy` says that it did. Both stay separate from
+   * `answer`: policy may suggest, but the line is not signed until a person
+   * answers it.
    */
   answers: z.array(SignoffAnswer),
   policy_suggestion: SignoffAnswer.nullable(),
@@ -87,23 +72,18 @@ export const PipelineStage = z.object({
   owner: StageOwner,
   phase: StagePhase,
   /**
-   * ⚠ RULED 2026-08-29 — `docs/frontend/design-2026-08/RULING-2026-08-29.md`:
-   * the reference draws a mono count chip on every stage row ("38 pages → 6
-   * recorded instruments"), so the string rides the wire, SERVER-COMPOSED —
-   * never a numeral the client parses back out of `detail`. Null = the server
-   * has no figure for this stage, printed as silence.
+   * The stage row's count chip ("38 pages → 6 recorded instruments"),
+   * server-composed — never a numeral the client parses back out of
+   * `detail`. Null = the server has no figure for this stage.
    */
   count: z.string().nullable(),
 });
 export type PipelineStage = z.infer<typeof PipelineStage>;
 
 /**
- * ⚠ RULED 2026-08-29 — `docs/frontend/design-2026-08/RULING-2026-08-29.md`
- * item 4: "the extraction terminal log … and the other previously refused
- * elements are all in scope: they are drawn, so they are built." One line of
- * the run's log, as the reference's dark terminal draws it: a mono timestamp,
- * the server's sentence, and the two emphases the drawing carries (a WARN
- * register and a bold line). READ SHAPE ONLY — nothing writes a log line.
+ * One line of the run's log, as the dark terminal draws it: a mono
+ * timestamp, the server's sentence, and two emphases (a warn register and a
+ * bold line). Read shape only — nothing writes a log line.
  */
 export const PipelineLogLine = z.object({
   time: z.string(),
@@ -122,22 +102,12 @@ export const OrderPipelineResponse = z.object({
   gate_halted: z.boolean(),
   stages: z.array(PipelineStage),
   /**
-   * ⚠ RULED 2026-08-29 (RULING-2026-08-29.md) — the drawn members of the
-   * extraction screen, all SERVER-AUTHORED STRINGS so the client composes
-   * nothing:
-   *
-   * `package_name` / `volume_label` — the meta strip's second and third cells
-   * ("4176034-1_fulton_package.pdf" · "64 Scanned Raster Pages"). Null = the
-   * server has no package to name, printed as its own sentence.
-   *
-   * `eta_label` — the "Time to examination" chip. The ruling supersedes
-   * INVARIANT 23's reading for this drawn element; the string is still the
-   * server's, never a subtraction of timestamps in the browser.
-   *
-   * `run_log` — the dark terminal's lines, in the server's order.
-   *
-   * `verified_checks` — the hub's "Deterministic Verification Checks"
-   * sentences, each one a claim only the pipeline can make.
+   * All server-authored strings so the client composes nothing:
+   * `package_name`/`volume_label` — the meta strip's cells; null = the server
+   * has no package to name. `eta_label` — the "Time to examination" chip,
+   * never a subtraction of timestamps in the browser. `run_log` — the
+   * terminal's lines, in the server's order. `verified_checks` — sentences
+   * only the pipeline can claim.
    */
   package_name: z.string().nullable(),
   volume_label: z.string().nullable(),
@@ -153,18 +123,10 @@ export const GapKind = z.enum(["na_provisional", "disagreement", "period_short"]
 export type GapKind = z.infer<typeof GapKind>;
 
 /**
- * ⚠ UI-DRIVEN REQUEST — AWAITING RATIFICATION (2026-07-30, fidelity Wave 2).
- * A READ SHAPE ONLY: the server still decides which options it offers, the
- * order it offers them in, and whether any of them may be taken. No write
- * exists for a single one of them, and none is added here.
- *
- * They were opaque strings. A screen handed `"Change the product ordered"` and
- * `"Upload the missing pages"` cannot tell an option that ADDS EVIDENCE from
- * one that REWRITES A SIGNED ASSERTION from one that MOVES MONEY — so it
- * compensated by demanding a reason for all of them and ranking none.
- * `kind`, `requires_comment` and `min_role` are the three facts that ranking
- * needs, and inferring any of them from the copy would have put a second,
- * silently drifting rulebook in the browser.
+ * The server decides which close options it offers, their order, and whether
+ * any may be taken; no write exists for them. `kind`, `requires_comment`,
+ * and `min_role` are the facts ranking needs — inferring them from the label
+ * copy would put a second, silently drifting rulebook in the browser.
  */
 export const GapCloseKind = z.enum(["upload", "amend", "root_of_title", "change_product"]);
 export type GapCloseKind = z.infer<typeof GapCloseKind>;
@@ -182,35 +144,23 @@ export type GapCloseOption = z.infer<typeof GapCloseOption>;
 
 /**
  * A gap between what the sign-off claimed and what the package supports.
- *
- * THE GATE BLOCKS EXTRACTION. That is the whole point of it: a package that
- * cannot support the search that was ordered produces a report nobody can
- * stand behind, and finding that out after extraction costs the extraction.
+ * The gate blocks extraction: finding out after extraction that a package
+ * cannot support the ordered search costs the extraction.
  */
 export const CompletenessGap = z.object({
   id: z.string(),
   kind: GapKind,
   /**
-   * ⚠ UI-DRIVEN REQUEST — AWAITING RATIFICATION (2026-07-30, fidelity Wave 2).
-   * A READ FIELD. The sign-off line this gap was raised against. The card's own
-   * heading is "Sign-off line N · label" and N was not on the wire, so the
-   * screen printed the label alone and the reader could not get back to the
-   * line they answered. Server-supplied rather than looked up from the label:
-   * two lines may share wording across product versions, and matching on prose
-   * is a join the browser has no business making.
+   * The sign-off line this gap was raised against. Server-supplied rather
+   * than looked up from the label: two lines may share wording across
+   * product versions, and matching on prose is a join the browser has no
+   * business making.
    */
   line_number: z.number().int(),
   line_label: z.string(),
   claim: z.string(),
   evidence: z.string(),
-  /**
-   * Server-offered ways to close it. The screen never invents one.
-   *
-   * ⚠ UI-DRIVEN REQUEST — AWAITING RATIFICATION (2026-07-30, fidelity Wave 2).
-   * WIDENED FROM `z.array(z.string())` — see `GapCloseOption` above for why an
-   * opaque string could not be ranked, and why guessing the ranking from the
-   * copy would have been a client-side rulebook.
-   */
+  /** Server-offered ways to close it. The screen never invents one. */
   close_options: z.array(GapCloseOption),
   closed_by: z.string().nullable(),
   closed_note: z.string().nullable(),
@@ -234,20 +184,11 @@ export type StageKind = z.infer<typeof StageKind>;
 
 export const LifecycleOrder = z.object({
   /**
-   * ⚠ UI-DRIVEN REQUEST — AWAITING RATIFICATION (2026-07-30, fidelity Wave 2).
-   * READ FIELDS ONLY.
-   *
-   * `id` is the join the census never had. A board card names an order and
-   * cannot open it, because `order_ref` is a human reference and no endpoint
-   * takes one; `OrderStrip.tsx` records the same gap from the other side. A
-   * card that names work nobody can reach is a dead end.
-   *
-   * `mine` and `state_label` are the two facts the board draws that could
-   * otherwise only be guessed: whose work it is, and the SERVER'S WORD for why
-   * it stopped. `state_label` is a label and nothing else — deliberately not
-   * named `state`, and deliberately not an enum, so that no client can switch
-   * on it and re-implement a state machine hard rule 3 puts on the server.
-   * Null when the order has not stopped and there is nothing to say.
+   * `id` is the join key — `order_ref` is a human reference no endpoint
+   * takes. `mine` is whose work it is; `state_label` is the server's word
+   * for why it stopped — deliberately not named `state` and not an enum, so
+   * no client can switch on it and re-implement a server state machine.
+   * Null when the order has not stopped.
    */
   id: z.string(),
   order_ref: z.string(),
@@ -262,25 +203,17 @@ export const LifecycleOrder = z.object({
 export type LifecycleOrder = z.infer<typeof LifecycleOrder>;
 
 /**
- * `count` is SERVER-SUPPLIED and is not `orders.length`. The order list is
- * scoped to what the caller may see; the census is not. A stage count that
- * shrank with your permissions would read as work disappearing rather than as
- * work you cannot look at.
+ * `count` is server-supplied and is not `orders.length`: the order list is
+ * scoped to what the caller may see, the census is not.
  */
 export const LifecycleStage = z.object({
   id: z.string(),
   label: z.string(),
   /**
-   * ⚠ UI-DRIVEN REQUEST — AWAITING RATIFICATION (2026-07-30, fidelity Wave 2).
-   * READ FIELDS ONLY. `sub` is what the stage IS ("answering the lines");
-   * `waiting_on` is who it waits on ("abstractor"). The board drew a column
-   * header with neither, so an empty stage said nothing at all about itself —
-   * and an empty column is exactly when a reader most needs to be told what
-   * would be sitting there.
-   *
-   * Authored per stage on the server, not derived from `kind`: "who is holding
-   * this" is an operational fact about the shop, and four `kind` values cannot
-   * carry it.
+   * `sub` is what the stage is ("answering the lines"); `waiting_on` is who
+   * it waits on ("abstractor"). Authored per stage on the server, not
+   * derived from `kind` — four `kind` values cannot carry "who is holding
+   * this".
    */
   sub: z.string(),
   waiting_on: z.string(),
@@ -291,19 +224,10 @@ export const LifecycleStage = z.object({
 export type LifecycleStage = z.infer<typeof LifecycleStage>;
 
 /**
- * ⚠ RULED 2026-08-28 — `docs/frontend/design-2026-08/RULING-2026-08-28.md`,
- * resolving `CONFLICT-overview-stats.md` by its Option A: "`LifecycleResponse`
- * gains the members the four named cards need." READ FIELDS ONLY.
- *
- * One Overview stat card, WHOLE: the figure, the note under it, and the label
- * over it are one server-authored statement. The note exists on the wire for
- * the reason `QueueBand.note` and `LifecycleStage.sub` do — "a client-side
- * `Record<…, string>` is a second copy of product copy that drifts silently
- * from the first" (endpoints.ts:96-98) — and the label rides with it because
- * `delivered_recent`'s label NAMES ITS WINDOW ("Delivered This Week" is a
- * period only the server can define; printing a window the client chose would
- * be the caption defect one layer down). A CENSUS, NEVER A RATE (§4.5): each
- * is a count of what sits or was delivered, and no per-hour, per-person or
+ * One Overview stat card, whole: the figure, the note under it, and the
+ * label over it are one server-authored statement. The label rides with the
+ * figure because `delivered_recent`'s label names its window — a period only
+ * the server can define. A census, never a rate: no per-hour, per-person, or
  * per-period figure may ever join it.
  */
 export const LifecycleFigure = z.object({
@@ -322,17 +246,13 @@ export const LifecycleResponse = z.object({
   moving: z.number().int(),
   failed: z.number().int(),
   /**
-   * The four Option-A figures, in the design's card order.
-   *
-   * `active` is one server-side definition of "not delivered" instead of a
-   * browser subtraction. `in_review` is a MEMBER rather than a
-   * `stages[id="review"]` lookup because `LifecycleStage.id` is an incidental
-   * string, not a stable contract value (CONFLICT-overview-stats §4) — a
-   * headline that vanishes when the shop renames a stage is the fragility the
-   * census exists to prevent. `queries_and_gaps` is the shop's own bucket
-   * (gate + escalated — the same bucket `OrderFilter` "waiting" names).
-   * `delivered_recent` is a windowed COUNT of what was delivered, never a
-   * pace; its label carries the window.
+   * The four stat-card figures, in the design's card order. `active` is one
+   * server-side definition of "not delivered" instead of a browser
+   * subtraction. `in_review` is a member rather than a `stages[id="review"]`
+   * lookup because `LifecycleStage.id` is an incidental string, not a stable
+   * contract value. `queries_and_gaps` is the shop's own bucket (gate +
+   * escalated). `delivered_recent` is a windowed count, never a pace; its
+   * label carries the window.
    */
   active: LifecycleFigure,
   in_review: LifecycleFigure,
@@ -345,21 +265,11 @@ export type LifecycleResponse = z.infer<typeof LifecycleResponse>;
 // ---- order context ---------------------------------------------------------
 
 /**
- * ⚠ UI-DRIVEN REQUEST — AWAITING RATIFICATION (2026-07-30, fidelity Wave 2).
- * A READ SHAPE ONLY, and the whole point of it is that it is SERVER-DECIDED.
- *
- * `label` is the exact word the strip prints — `SIGN-OFF OPEN`,
- * `DECISIONS OPEN`, `PACKAGE INCOMPLETE`, `FINALIZED`. The 2026-07-28 export
- * computes that word from a five-branch `if/else` in the browser over
- * `allSignoff` / `compOpen` / `allAnswered` / the current screen
- * (`TitlePipe.dc.html:2888-2893`). That is a client-side lifecycle state
- * machine and hard rule 3 forbids it, so the word arrives already chosen.
- *
- * `label` is a FREE STRING, not an enum, and that is deliberate. An enum is an
- * invitation to `switch` on it, and a `switch` on a lifecycle word is the same
- * state machine moved one line down. `tone` is the only machine-readable axis
- * — it drives `Stamp`'s five variants and nothing else. A client that wants to
- * know whether the order is finished asks a field that says so, not the stamp.
+ * `label` is the exact word the strip prints ("SIGN-OFF OPEN", "FINALIZED"),
+ * server-chosen — deriving it in the browser would be a client-side
+ * lifecycle state machine. A free string, deliberately not an enum: an enum
+ * invites a `switch`, which is the same machine one line down. `tone` is the
+ * only machine-readable axis and drives paint alone.
  */
 export const LifecycleStamp = z.object({
   label: z.string(),
@@ -368,35 +278,11 @@ export const LifecycleStamp = z.object({
 export type LifecycleStamp = z.infer<typeof LifecycleStamp>;
 
 /**
- * ⚠ UI-DRIVEN REQUEST — AWAITING RATIFICATION (2026-07-30, fidelity Wave 2).
- * GET /api/orders/{id}/context — READ ONLY.
- *
- * The order-scoped lookup the top strip needs and that no endpoint offered.
- * Every screen below `/orders/{id}` has the URL id and nothing else:
- * `LifecycleOrder.order_ref` lives in the census list and (until this wave)
- * carried no id to join back on, and `Order.external_ref` arrives only from
- * `/api/queue/next`, which is a hand-over and not a lookup. `OrderStrip.tsx`
- * records the consequence in its own CONTRACT GAP note — it printed the opaque
- * `ord_demo_1` where the design says `ORDER 4176034-1`.
- *
- * `product` / `period_label` / `pages` ride here as well as on `Order` because
- * this is the endpoint an order-scoped screen can actually reach; the delivered
- * screen carried all three as private constants for want of it, and a delivery
- * confirmation that cannot name what was delivered is confirming an unnamed
- * thing. Nullable throughout: an order that failed validation has no resolved
- * product and an unreadable package has no page count. `null` is that
- * statement — `0` would be a count, and a count is a claim.
- */
-/**
- * ⚠ RULED 2026-08-29 — `docs/frontend/design-2026-08/RULING-2026-08-29.md`:
- * the reference app's rail stage rows and order-bar stage tabs are drawn, so
- * they are built, and their state arrives DECIDED. One item of either list.
- *
- * `done`/`badge` are the server's word — the browser never derives a check
- * from a count reaching a total, and `badge` is the finished string the pill
- * prints ("6", "ready"), never a number the client formats. `badge_tone` is
- * the only machine-readable axis and drives paint alone, exactly as
- * `LifecycleStamp.tone` does.
+ * One item of the rail stage rows or order-bar stage tabs; its state arrives
+ * decided. `done`/`badge` are the server's word — the browser never derives
+ * a check from a count reaching a total, and `badge` is the finished string
+ * the pill prints ("6", "ready"), never a number the client formats.
+ * `badge_tone` drives paint alone, exactly as `LifecycleStamp.tone` does.
  */
 export const OrderStageTab = z.object({
   /** Stable stage id ("upload" | "processing" | "review" | "composer" | "delivered"). */
@@ -416,9 +302,8 @@ export const OrderContextResponse = z.object({
   pages: z.number().int().nullable(),
   stamp: LifecycleStamp,
   /*
-   * ⚠ RULED 2026-08-29 (RULING-2026-08-29.md) — the members the reference
-   * app's order bar, rail and spotlight draw and the wire lacked. All
-   * server-authored, all nullable where an order can honestly not have one.
+   * The members the order bar, rail, and spotlight draw. All server-
+   * authored, all nullable where an order can honestly not have one.
    */
   /** The finished place line the bar prints — "1856 Defoor Ave NW, Atlanta · Fulton County, GA". */
   place: z.string().nullable(),
@@ -427,9 +312,8 @@ export const OrderContextResponse = z.object({
   /** Who holds the order. Null while nobody has taken it. */
   assigned: z.string().nullable(),
   /**
-   * The finished due label — "Due today · 5h 20m left". SERVED, never computed:
-   * the reference app ticks this down in the browser; here the string arrives
-   * whole so the demo is stable and the client never runs a clock.
+   * The finished due label — "Due today · 5h 20m left". Served, never
+   * computed: the string arrives whole and the client never runs a clock.
    */
   due: z.string().nullable(),
   /** Outstanding examination decisions — the census figure the Review (N) button prints. */
@@ -461,10 +345,9 @@ export const Person = z.object({
 export type Person = z.infer<typeof Person>;
 
 /**
- * `privileged_without_mfa` is the SERVER'S figure, never a client filter over
- * `people`. The roster is role-scoped; the gate is not. A compliance count that
- * falls as your permissions narrow is a gate that looks satisfied when it is
- * not. Whether it BLOCKS is ruling Q16 and is not settled here.
+ * `privileged_without_mfa` is the server's figure, never a client filter
+ * over `people`: the roster is role-scoped, the gate is not. A compliance
+ * count that falls as permissions narrow looks satisfied when it is not.
  */
 export const PeopleResponse = z.object({
   people: z.array(Person),
@@ -484,10 +367,9 @@ export const SessionRecord = z.object({
 export type SessionRecord = z.infer<typeof SessionRecord>;
 
 /**
- * WHO you are, which `/api/me/permissions` deliberately does not answer — that
- * endpoint says what you may do. Identity and authorisation are different
- * questions and conflating them is how a screen ends up trusting a name it got
- * from a permissions payload.
+ * Who you are — which `/api/me/permissions` deliberately does not answer;
+ * that endpoint says what you may do. Identity and authorization are
+ * different questions.
  */
 export const MeProfileResponse = z.object({
   name: z.string(),
@@ -500,31 +382,17 @@ export const MeProfileResponse = z.object({
 export type MeProfileResponse = z.infer<typeof MeProfileResponse>;
 
 /**
- * User preferences, SERVER-SIDE — decision C16, and the reason nothing in this
- * app touches localStorage. A preference that lives in one browser is a
- * preference that silently resets on the machine somebody actually uses, and
- * §9.11 forbids browser storage outright.
+ * User preferences, server-side — the reason nothing in this app touches
+ * localStorage. A preference that lives in one browser silently resets on
+ * the machine somebody actually uses.
  */
 export const Preferences = z.object({
   /**
-   * Whether the screen menu is folded to its compact form — or NULL, meaning
-   * the user has never chosen and the route's own default governs.
-   *
-   * ⚠ UI-DRIVEN REQUEST — AWAITING RATIFICATION (2026-07-30, fidelity Wave 2).
-   * A READ SHAPE WIDENING; no new behaviour and no new endpoint. A plain
-   * boolean cannot say "untouched": a stored `false` resolved and immediately
-   * beat the route default, so "Review starts collapsed, and an explicit toggle
-   * wins from then on" (the export's own comment,
-   * `TitlePipe.dc.html:2897-2900`) was unreachable however the sidebar was
-   * written. Two rules need three states — folded, unfolded, never asked.
-   *
-   * NULLABLE RATHER THAN A COMPANION `nav_collapsed_set: boolean`. A second
-   * field can disagree with the first — `{ nav_collapsed: true,
-   * nav_collapsed_set: false }` is representable and means nothing — and every
-   * reader would then have to check two fields in the right order to learn one
-   * thing. Nullability makes the unrepresentable state unrepresentable, and
-   * `PATCH` already distinguishes an absent key from a sent one, so "never
-   * chosen" cannot be written back by accident.
+   * Whether the screen menu is folded — or null, meaning the user has never
+   * chosen and the route's own default governs. Three states are required:
+   * folded, unfolded, never asked. Nullable rather than a companion boolean,
+   * which could disagree with it; PATCH already distinguishes an absent key
+   * from a sent one, so "never chosen" cannot be written back by accident.
    */
   nav_collapsed: z.boolean().nullable(),
   reduced_motion: z.boolean(),

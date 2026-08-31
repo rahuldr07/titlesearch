@@ -2,13 +2,8 @@ import type { ReactNode } from "react";
 import { Card } from "../../components/ui";
 
 /**
-
- * THE THREE ANSWERS A READ CAN GIVE BEFORE IT HAS DATA, in one place, because it was
-
- * in six. `account/PanelState`, `dashboard/BoardState`, `complaints/ReadState`,
-
- * `reconciliation/ReadState`, `bench/BenchReadState` and…
-
+ * The three answers a read can give — failed, pending, ready — in one place
+ * instead of a hand-rolled copy per screen.
  */
 export type ReadLike<T> = {
   readonly isPending: boolean;

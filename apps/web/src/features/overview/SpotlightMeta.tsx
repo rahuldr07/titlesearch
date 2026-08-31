@@ -1,10 +1,10 @@
 import type { Order } from "@titlepipe/contract";
 
 /**
- * What was ordered, over what span, in how many pages. The prototype's middle
- * item is "Client: …", but `Order` carries `client_id` and no client name
- * (`entities.ts:32-37`) and printing the id would put an opaque join key where
- * a reader expects a firm. The period holds the slot instead.
+ * What was ordered, over what span, in how many pages. `Order` carries
+ * `client_id` and no client name, and printing the id would put an opaque
+ * join key where a reader expects a firm — the period holds the slot
+ * instead.
  */
 export function SpotlightMeta(props: { readonly order: Order }) {
   const order = props.order;

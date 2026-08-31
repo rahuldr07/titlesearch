@@ -4,9 +4,8 @@ import { SegmentedControl, Segment } from "./segmented-control";
 import { onPanel } from "./kitGround";
 
 /**
- * The All Orders filter tabs. Selection is weight and elevation, never accent
- * (rule 1) — a filter is not the screen's decision, and the stories are how you
- * see that a selected cell reads as chosen without spending the violet.
+ * The filter tabs. Selection is weight and elevation, never the accent — a
+ * filter is not the screen's decision.
  */
 const meta = {
   title: "ui/SegmentedControl",
@@ -57,13 +56,9 @@ export const TwoCells: Story = {
 };
 
 /**
- * ONE cell blocked, with its rule. Rule 12: rendered disabled, not hidden —
- * the COUNT is the assertion, as in `combobox.blocked.stories.tsx`.
- *
- * No `[title]` assertion any more: the item-level `BlockedHint` wrapper is
- * deleted (see `Segment`'s comment — a group item carries
- * `data-disabled-reason` only, per `tabs.tsx`), so the reason's carrier on a
- * single blocked cell is the data attribute, asserted verbatim below.
+ * One cell blocked, with its rule: rendered disabled, not hidden — the count
+ * is the assertion. A group item carries `data-disabled-reason` only (see
+ * Segment's comment), so that attribute is asserted verbatim.
  */
 export const OneSegmentBlocked: Story = {
   args: { defaultSelectedKeys: ["all"] },
@@ -104,7 +99,7 @@ export const WholeControlBlocked: Story = {
 
 /**
  * The radius arithmetic, visible: a 10px track holding 6px cells with 4px of
- * padding between. 6 = 10 − 4, which is rule 5 rather than three numbers.
+ * padding between. 6 = 10 − 4, one number and a subtraction.
  */
 export const TheRadiusArithmetic: Story = {
   args: { defaultSelectedKeys: ["all"] },

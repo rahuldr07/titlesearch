@@ -7,12 +7,8 @@ import { cx } from "@/components/ui/cx"
 import { Button } from "@/components/ui/button"
 
 /**
- * THE CHROME THAT ATTACHES TO A CONTROL — addon, inner button, inner text.
- *
- * Split from `input-group.tsx` to clear the 150-line gate, and the seam is a
- * real one: that file owns the BOX and the controls inside it, this one owns
- * the ornaments hung on the box. Both are re-exported from `input-group.tsx`,
- * so a screen still imports one module.
+ * The chrome that attaches to a control — addon, inner button, inner text.
+ * Re-exported from input-group.tsx, so a screen still imports one module.
  */
 const inputGroupAddonVariants = cva(
   [
@@ -35,9 +31,9 @@ const inputGroupAddonVariants = cva(
 )
 
 /**
- * Clicking the chrome focuses the control, because the chrome LOOKS like part
- * of the control — `cursor-text` promises that and this delivers it. A click
- * that landed on a button inside the addon is that button's, not the input's.
+ * Clicking the chrome focuses the control, because the chrome looks like part
+ * of the control — `cursor-text` promises that. A click that landed on a
+ * button inside the addon is that button's, not the input's.
  */
 function InputGroupAddon({
   className,
@@ -60,10 +56,8 @@ function InputGroupAddon({
 }
 
 /**
- * A button living INSIDE a control. Ghost and small by default, one step down
- * in radius — rule 5: inner = outer − gap, so 6px inside the 10px wrapper.
- * The registry's four bespoke sizes (`xs`, `icon-xs`, `icon-sm`) collapse into
- * the kit's own `size` + `icon` pair; a control does not get a private scale.
+ * A button living inside a control. Ghost and small by default, one step
+ * down in radius (inner = outer − gap: 6px inside the 10px wrapper).
  */
 function InputGroupButton({
   className,

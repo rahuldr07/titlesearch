@@ -2,11 +2,10 @@ import type { TemplateDetailResponse } from "@titlepipe/contract";
 import { Card } from "../../components/ui";
 
 /**
- * SPLIT DIFF — the drawn comparison of the client's phrasing against the
- * product baseline, per block (RULED 2026-08-29). Both columns are SERVED:
- * `TemplateSheetBlock.baseline` is the product default and the custom side is
- * the client's wording (or the unsaved draft being edited, so the diff shows
- * what a save would publish).
+ * Split diff — the client's phrasing against the product baseline, per
+ * block. Both columns are served: `baseline` is the product default and the
+ * custom side is the client's wording (or the unsaved draft being edited,
+ * so the diff shows what a save would publish).
  */
 export function TemplateDiff({
   template,

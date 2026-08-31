@@ -7,26 +7,12 @@ import { useOverlays } from "./overlays";
 import { useSignedIn } from "../session/signedIn";
 
 /**
- * WHAT THE PALETTE CAN DO — the screens this reader may open, and the acts.
- *
- * The screen list comes from the SERVER's permission projection, so the palette
- * cannot open a world the rail refuses to draw — INVARIANTS 42/43 reach the
- * keyboard too, and they reach it through the same payload rather than through
- * a second copy of the rule.
- *
- * ══ ORDERS ARE NOT HERE, AND THAT IS NOT A REFUSAL ANY MORE ════════════════
- *
- * This file used to argue that an order switcher was impossible — "there is no
- * browse/pick endpoint" (`endpoints.ts:69`) — and the palette printed that
- * refusal on screen. `RULING-2026-08-28.md` option C authorised the browse
- * surface; `GET /api/orders?q=&filter=&page=` exists and `OrdersPageResponse`
- * parses it. So the orders half of the design's palette is real, and it lives
- * in `PaletteBody.tsx` where the read belongs. INVARIANT 22 is unharmed: it
- * governs the QUEUE's hand-over, which is still one server-chosen order, and
- * the ruling says so in as many words.
- *
- * `hint` is the design's second line on every row. It is UI prose about a
- * screen, never a fact about an order — those come off the wire.
+ * What the palette can do — the screens this reader may open, and the acts.
+ * The screen list comes from the server's permission projection, so the
+ * palette cannot open a world the rail refuses to draw. The orders half of
+ * the palette lives in `PaletteBody.tsx`, where the read belongs. `hint` is
+ * UI prose about a screen, never a fact about an order — those come off the
+ * wire.
  */
 export interface PaletteEntry {
   readonly id: string;
@@ -78,14 +64,11 @@ export function useCommands(
     }));
 
     /*
-     * The three cross-cutting overlays are reachable from here and nowhere
-     * else in the keyboard layer, because only `?` has a key the design gives
-     * it. Inventing chords for the other two would put keys in the shortcut
-     * list that the design never asked for.
-     *
-     * "Order history" is offered ONLY when an order is in the URL. It is not
-     * disabled-but-visible: a command that cannot run is rule 9's boolean
-     * disabled wearing a palette row, and there is no order to name.
+     * The three cross-cutting overlays are reachable from here; only `?` has
+     * a key of its own, and inventing chords for the other two would put
+     * keys in the shortcut list nobody asked for. "Order history" is offered
+     * only when an order is in the URL — not disabled-but-visible, because
+     * there is no order to name.
      */
     const actions: PaletteEntry[] = [
       {
@@ -123,10 +106,8 @@ export function useCommands(
           ]
         : []),
       /*
-       * "Switch user" and "Sign out" are the same client-side act — there is no
-       * auth surface in the contract (see `app/session/signedIn.ts`) — so only
-       * one is offered here rather than two entries that do one thing. The
-       * rail's profile block draws both because the design draws both there.
+       * "Switch user" and "Sign out" are the same client-side act — there is
+       * no auth surface in the contract — so only one is offered here.
        */
       {
         id: "action:sign-out",

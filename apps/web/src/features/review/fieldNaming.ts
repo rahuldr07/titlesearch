@@ -1,11 +1,8 @@
 import type { Field } from "@titlepipe/contract";
 
 /**
-
- * The path, made readable — and nothing else. A field path (`mortgages.1.lender`) is
-
- * the server's identifier.
-
+ * The path, made readable — and nothing else. A field path
+ * (`mortgages.1.lender`) is the server's identifier.
  */
 
 /** The sections that get a short form, because 140px is 140px. */
@@ -27,18 +24,12 @@ export function fieldLabel(path: string): string {
   return index === null ? `${section} ${leaf}` : `${section} ${index} — ${leaf}`;
 }
 
-/**
-
- * THE SECTION A FIELD BELONGS TO — the path's first segment, and only that. ONE
-
- * FUNCTION, TWO CONSUMERS.
-
- */
+/** The section a field belongs to — the path's first segment, only. */
 export function sectionOf(path: string): string {
   return path.split(".")[0] ?? path;
 }
 
-/** The section's own heading. Sentence case (rule 4) — this one IS prose. */
+/** The section's own heading. Sentence case — this one is prose. */
 export function sectionTitle(section: string): string {
   return section.charAt(0).toUpperCase() + section.slice(1).replace(/_/g, " ");
 }
@@ -47,16 +38,13 @@ export type Section = {
   readonly id: string;
   readonly title: string;
   readonly fields: readonly Field[];
-  /** Whether the SERVER has anything queued here. Read, never computed. */
+  /** Whether the server has anything queued here. Read, never computed. */
   readonly flagged: boolean;
 };
 
 /**
-
- * Group the server's fields into sections, in the order the server sent them. NOT
-
- * SORTED BY ANYTHING.
-
+ * Group the server's fields into sections, in the order the server sent
+ * them. Not sorted by anything.
  */
 export function sectionsOf(
   fields: readonly Field[],

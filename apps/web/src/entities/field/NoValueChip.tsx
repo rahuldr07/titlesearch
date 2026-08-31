@@ -3,22 +3,16 @@ import { cx } from "../../components/ui";
 import { NO_VALUE, type NoValueRender } from "./noValueStates";
 
 /**
- * ONE TYPED ABSENCE, DRAWN.
- *
- * Rule 14: absence is typed, never a blank. Rule 6: a mark plus weight, not a
- * coloured capsule — an NA row is an ordinary row, not a "moment of record".
- *
- * Extracted rather than inlined in `FieldValueView` because `ReadingPair` needs
- * the same chip for an engine that returned nothing, and two hand-copied
- * versions is exactly how the five renders drift back into one grey dash.
- *
- * `data-field-render` and `data-surfaced-for-review` are the machine-readable
- * half: `entities/field/noValue.test.ts` asserts all five differ in both text
- * AND attribute, so a collapse fails a test rather than a code review.
+ * One typed absence, drawn — a mark plus weight, never a blank or a coloured
+ * capsule. Extracted rather than inlined in FieldValueView because
+ * ReadingPair needs the same chip, and two hand-copied versions is how the
+ * five renders drift back into one grey dash. `data-field-render` and
+ * `data-surfaced-for-review` are the machine-readable half the tests assert
+ * against.
  */
 export type NoValueChipProps = {
   readonly render: NoValueRender;
-  /** Overrides the taxonomy sentence. Only for a NON-field absence. */
+  /** Overrides the taxonomy sentence. Only for a non-field absence. */
   readonly sentence?: string | undefined;
   readonly className?: string | undefined;
   readonly children?: ReactNode;

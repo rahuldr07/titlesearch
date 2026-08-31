@@ -1,12 +1,5 @@
 /**
- * THE SEAL AT THE FOOT OF THE SHEET, AS THE REFERENCE DRAWS IT.
- *
- * ⚠ RULED 2026-08-29 — `docs/frontend/design-2026-08/RULING-2026-08-29.md`.
- * The reference's certificate foot is two columns: the digest under a
- * "Cryptographic integrity seal" cap on the left, and on the right the
- * "SOC 2 Type II Certified" cap, a timestamp line and a quiet barcode. The
- * pre-ruling refusal ("a certification claim drawn from a hash field") is
- * superseded for this drawn surface; the timestamp is the SERVER's
+ * The seal at the foot of the sheet. The timestamp is the server's
  * `released_at`, printed untouched, and absent until a release filed one.
  */
 export function IntegritySeal(props: {
@@ -37,7 +30,6 @@ export function IntegritySeal(props: {
         <span className="font-serif text-label leading-flat tracking-caps uppercase text-page-ink">
           Cryptographic integrity seal
         </span>
-        {/* Rule 3: a digest is data. */}
         <code className="max-w-260 rounded-paper border border-page-line bg-surface-paper p-4 font-mono text-label leading-body break-all text-scan-ink">
           {props.seal}
         </code>
@@ -51,7 +43,7 @@ export function IntegritySeal(props: {
             {`Timestamp: ${props.releasedAt}`}
           </span>
         )}
-        {/* The drawn barcode — quiet ornament on the stock, aria-hidden. */}
+        {/* A quiet ornament on the stock, aria-hidden. */}
         <div aria-hidden className="flex items-start gap-1 pt-3 opacity-40">
           {BARS.map((tall, index) => (
             <span
@@ -66,5 +58,5 @@ export function IntegritySeal(props: {
   );
 }
 
-/** The reference's 12 bars, every third one tall. */
+/** Twelve bars, every third one tall. */
 const BARS = Array.from({ length: 12 }, (_, i) => i % 3 === 0);

@@ -9,13 +9,9 @@ import {
 } from "../../components/ui";
 
 /**
- * TEMPLATE EXPORT & CRYPTOGRAPHIC MANIFEST — the drawn export modal.
- *
- * ⚠ RULED 2026-08-29 (RULING-2026-08-29.md): the version, the mapped-field
- * figure and the SHA-256 seal are all SERVED on `TemplateDetailResponse` now,
- * so each row prints a wire member where the pre-ruling modal named an absent
- * shape. The digest is the server's seal over the spec it emits — nothing is
- * hashed in the browser.
+ * The export modal. The version, the mapped-field figure and the SHA-256
+ * seal are all served on `TemplateDetailResponse`; the digest is the
+ * server's seal over the spec it emits — nothing is hashed in the browser.
  */
 export function ExportSpecDialog({ template }: { readonly template: TemplateDetailResponse }) {
   return (

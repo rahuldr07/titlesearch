@@ -6,18 +6,16 @@ import { blindEntriesPath } from "../../shared/blindQueries";
 import { notify } from "../../shared/notify";
 
 /**
- * The seat's one mutation, and its only write. Nothing is invalidated: no read
- * of blind entries exists by design, so the accepted `entry_ids` are the whole
- * record the seat is shown. The refusal is the server's sentence, uncomposed
- * (INVARIANT 14/16).
+ * The seat's one mutation, and its only write. Nothing is invalidated: no
+ * read of blind entries exists by design, so the accepted `entry_ids` are
+ * the whole record the seat is shown. The refusal is the server's sentence,
+ * uncomposed.
  *
- * ONE ACT FILES ONE RECORD (INVARIANT 20/21), and a disabled control does not
- * enforce it. `isPending` is React state read at render, so three clicks
- * arriving in one tick all read `false` and all three post — measured on
- * `/blind`, three synchronous clicks filed three capture records against one
- * sheet. The latch is a ref, set before the request leaves and cleared only
- * once the server has answered, so it is already closed when the second click
- * of the same tick reads it.
+ * One act files one record, and a disabled control does not enforce it:
+ * `isPending` is state read at render, so three clicks in one tick all read
+ * `false` and all three post. The latch is a ref, set before the request
+ * leaves and cleared once the server has answered, so it is already closed
+ * when the second click of the same tick reads it.
  */
 export function useCapture(order: string, onAccepted: () => void) {
   const filing = useRef(false);

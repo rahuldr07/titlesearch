@@ -5,7 +5,7 @@ import { Dialog, DialogBody, DialogFooter, DialogTrigger } from "./dialog";
 import { Button } from "./button";
 import { onCanvas } from "./kitGround";
 
-/* The overlay carries `data-chord-scope="own"` AND `role="dialog"` — the two
+/* The overlay carries `data-chord-scope="own"` and `role="dialog"` — the two
    clauses of `overlayIsUp()` — and the chord story below asserts both. */
 const meta = {
   title: "ui/Dialog",
@@ -30,8 +30,8 @@ export const Open: Story = {
 };
 
 /**
- * With an action row. RULE 1 IS AT ITS TIGHTEST HERE: a modal is usually the
- * screen's decision, so AT MOST ONE primary button and the rest are ghosts.
+ * With an action row: at most one primary button, the rest ghosts — a modal
+ * is usually the screen's decision.
  */
 export const WithActions: Story = {
   args: {
@@ -49,10 +49,9 @@ export const WithActions: Story = {
   },
   play: async () => {
     /*
-     * Counted as "footer buttons that are NOT ghosts" rather than by matching
-     * one variant name: `button.tsx` belongs to another agent and its variant
-     * vocabulary is theirs to rename. What rule 1 actually asserts is a COUNT,
-     * and this spelling survives the rename.
+     * Counted as "footer buttons that are not ghosts" rather than by matching
+     * one variant name: the assertion is a count, and this spelling survives
+     * a variant rename.
      */
     const footer = document.querySelectorAll(
       "[data-slot='dialog-footer'] [data-slot='button']",
@@ -64,7 +63,7 @@ export const WithActions: Story = {
   },
 };
 
-/** RULE 9/12: a blocked action renders DISABLED WITH THE RULE, never hidden. */
+/** A blocked action renders disabled with the rule, never hidden. */
 export const BlockedAction: Story = {
   args: {
     title: "Release the search package",
@@ -92,10 +91,8 @@ export const BlockedAction: Story = {
 };
 
 /**
- * THE CHORD CONTRACT, and this component is the reason it exists: `chords.ts`
- * pins the bug where "? then c CONFIRMS A RULING from inside the cheat sheet —
- * on a field carrying T1 exposure". A help overlay is a dialog; a dialog stands
- * the vocabulary down; the ruling cannot fire.
+ * A help overlay is a dialog; a dialog stands the chord vocabulary down, so
+ * a single-letter ruling cannot fire from inside the cheat sheet.
  */
 export const StandsTheChordsDown: Story = {
   args: {
@@ -109,7 +106,7 @@ export const StandsTheChordsDown: Story = {
   },
 };
 
-/** CLOSED: nothing marked, so the vocabulary is live behind it. */
+/** Closed: nothing marked, so the vocabulary is live behind it. */
 export const ClosedLeavesChordsLive: Story = {
   args: {
     title: "Keyboard map",

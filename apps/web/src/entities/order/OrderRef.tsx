@@ -1,28 +1,19 @@
 import { cx } from "../../components/ui";
 
 /**
- * AN ORDER REFERENCE. Rule 3's first named example: "Mono (--font-data) is for
- * data only: order refs, money, citations, hashes, timestamps, kbd."
- *
- * It exists as a component rather than as a class string because the ref appears
- * on nine of the twelve screens — overview spotlight, orders table, order bar,
- * workstation, certificate, delivery — and rule 11 ("numbers reconcile across
- * screens — one variable, never two literals") is only true if there is one
- * place that decides how a ref is drawn.
- *
- * `emphasis` is a SIZE, not a semantic. The spotlight draws the ref at 28px in
- * the accent (design §Screens 2); a table row draws it at 11px in grey. Both are
- * the same datum, so both are this component.
+ * An order reference, always mono. A component rather than a class string
+ * because the ref appears on most screens, and one place has to decide how
+ * it is drawn. `emphasis` is a size, not a semantic — the spotlight and a
+ * table row are the same datum.
  */
 export type OrderRefProps = {
   /**
-   * NOT named `ref`. React 19 passes `ref` as an ordinary prop to function
-   * components, so the obvious name would typecheck and then be intercepted by
-   * anything wrapping this in a `forwardRef` — a ref string landing on a DOM
-   * node. The datum is spelled out instead.
+   * Not named `ref`: React 19 passes `ref` as an ordinary prop to function
+   * components, so the obvious name would typecheck and then be intercepted
+   * — a ref string landing on a DOM node.
    */
   readonly orderRef: string;
-  /** `spotlight` is the accent spend of rule 1. At most once per screen. */
+  /** `spotlight` is the accent spend. At most once per screen. */
   readonly emphasis?: "row" | "subject" | "spotlight" | undefined;
   readonly className?: string | undefined;
 };

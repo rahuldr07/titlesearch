@@ -9,13 +9,10 @@ import {
 } from "../../components/ui";
 
 /**
- * A SCOPED SAMPLE CARD AND ITS INSPECTOR.
- *
- * ⚠ RULED 2026-08-29 (RULING-2026-08-29.md): the reference's inspector panels
- * — source id and bounding box, raw extraction snippet, reviewer annotations —
- * are all served on `TemplateSampleDoc` now, so each prints the wire member
- * where the pre-ruling modal named an absent shape. Scoped is still the
- * point: a sample belongs to the client it was drawn for.
+ * A scoped sample card and its inspector. The panels — source id and
+ * bounding box, raw extraction snippet, reviewer annotations — each print a
+ * wire member of `TemplateSampleDoc`. Scoped is the point: a sample belongs
+ * to the client it was drawn for.
  */
 export function SampleInspector({
   sample,
@@ -58,7 +55,7 @@ export function SampleInspector({
           <InnerPanel padding="tight">
             <div className="flex flex-col gap-6">
               <SampleFact label="Source id & bounding box">
-                {/* Rule 3: a doc id and a box are citations — mono. */}
+                {/* A doc id and a box are citations — mono. */}
                 <span className="font-mono">{`${sample.doc_id} · ${sample.box}`}</span>
               </SampleFact>
               <SampleFact label="Raw extraction snippet">

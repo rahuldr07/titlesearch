@@ -66,42 +66,29 @@ import {
 } from "./data.js";
 
 /**
- * MSW handlers serving the contract with demo data. These are deleted
- * route-by-route as the FastAPI core-api lands (frontend-first strategy,
- * HANDOFF §5). Handlers validate REQUESTS against the contract schemas so the
- * UI cannot drift from the refusal rules even while mocked — a correction
- * without a reason must fail here exactly as it will against the real server.
- *
- * Handlers are STATEFUL within a page session: mutations write the store and
+ * MSW handlers serving the contract with demo data, deleted route-by-route
+ * as the FastAPI core-api lands. Handlers validate requests against the
+ * contract schemas so the UI cannot drift from the refusal rules even while
+ * mocked. Stateful within a page session: mutations write the store and
  * reads return it, so the UI proves it renders server state verbatim rather
  * than optimistic local state.
  */
 
 /**
- * The queue is SERVER-ordered (no cherry-pick). A recorded pass advances the
- * head, exactly like the real queue serving the next order. Pass counts and
- * 4th-pass auto-escalation stay server-side — nothing about them is exposed.
- *
- * PROJECTED FROM THE ONE SHARED ORDER SET, never restated. The order of service
- * is `demoQueue`'s (`queue_position` ascending), which is data on the row rather
- * than an accident of this array's literal order — this file used to name two
- * singletons and the lifecycle board named its own, and the two disagreed about
- * what state 4176034-1 was in.
+ * The queue is server-ordered (no cherry-pick). A recorded pass advances
+ * the head, exactly like the real queue serving the next order. Pass counts
+ * and 4th-pass auto-escalation stay server-side — nothing about them is
+ * exposed. Projected from the one shared order set, never restated.
  */
 const queue = demoQueue.map(demoOrderEntity);
 let queueHead = 0;
 
 /**
- * The band headings and their sub-lines, the 2026-07-28 export's own
- * (`TitlePipe.dc.html:219-220`, `:268-269`, `:298-299`, `:319-320`). Served
- * rather than held in the browser for the same reason `LifecycleStamp.label`
- * is: a client-side `Record<QueueBandId, string>` is a second copy of product
- * copy, and a second copy drifts silently from the first.
- *
- * The export's sub-line interpolates the count into the sentence
- * (`{{ queueHeldCount }} stopped · needs someone`). It does not here: `count`
- * is its own served field, and a number baked into a string is a number no
- * consumer can read without parsing prose.
+ * The band headings and their sub-lines, served rather than held in the
+ * browser — a client-side `Record<QueueBandId, string>` is a second copy of
+ * product copy that drifts silently. `count` is its own served field, never
+ * interpolated into the sentence: a number baked into a string is a number
+ * no consumer can read without parsing prose.
  */
 const BAND_COPY: Record<QueueBandId, { title: string; note: string }> = {
   mine: { title: "Mine", note: "in progress" },
@@ -111,10 +98,10 @@ const BAND_COPY: Record<QueueBandId, { title: string; note: string }> = {
 };
 
 /**
- * A row as the band lists it. Deliberately NARROWER than the order: no claim
- * token, no assignment, no priority, no ordering the caller can influence.
- * `/api/queue/next` stays the only hand-over, so §4.4's "no queue
- * cherry-picking" holds by construction rather than by the screen's restraint.
+ * A row as the band lists it. Deliberately narrower than the order: no
+ * claim token, no assignment, no priority, no ordering the caller can
+ * influence. `/api/queue/next` stays the only hand-over, so "no queue
+ * cherry-picking" holds by construction.
  */
 function bandRow(row: DemoOrderRow): QueueBandOrder {
   return {
@@ -130,17 +117,12 @@ function bandRow(row: DemoOrderRow): QueueBandOrder {
 }
 
 /**
- * The role gate is the SHOP'S, not the screen's: a reviewer's Held list is
+ * The role gate is the shop's, not the screen's: a reviewer's Held list is
  * narrowed to their own orders and the In flight band is absent entirely —
- * absent, not dimmed, because an absent band and an empty band are different
- * statements and only the server can tell them apart.
- *
- * `count` is the census of the whole band and stays what it is when the row
- * list narrows. That is the whole reason it is served rather than derived: a
- * count that shrank with your permissions would read as work disappearing
- * rather than as work you are not allowed to look at. It is a count of what is
- * left and never a rate — there is no per-hour, per-person or per-period figure
- * in this shape and §4.5 means there never may be.
+ * absent, not dimmed. `count` is the census of the whole band and stays
+ * what it is when the row list narrows: a count that shrank with your
+ * permissions would read as work disappearing. A count of what is left,
+ * never a rate.
  */
 export function queueBandsFor(role: string): QueueBandsResponse {
   const senior = role !== "reviewer";
@@ -162,19 +144,12 @@ export function queueBandsFor(role: string): QueueBandsResponse {
 }
 
 /**
- * The order-scoped lookup every screen below `/orders/{id}` needed and no
- * endpoint offered: the human reference for an order you hold only the URL id
- * of, plus what was ordered, over what span, in how many pages, and the
- * SERVER'S WORD for where it stands.
- *
- * The stamp arrives already decided. The export computes that word from a
- * five-branch `if/else` in the browser (`TitlePipe.dc.html:2888-2893`); that is
- * a client-side lifecycle state machine and hard rule 3 puts state machines on
- * the server.
- *
- * An unknown order THROWS rather than returning a placeholder — a context
- * response that quietly names nothing is how a screen ends up printing a ref
- * that belongs to no order. The route turns that into a 404.
+ * The order-scoped lookup for a screen holding only the URL id: the human
+ * reference, what was ordered, over what span, in how many pages, and the
+ * server's word for where it stands. The stamp arrives already decided —
+ * deriving it in the browser would be a client-side lifecycle state
+ * machine. An unknown order throws rather than returning a placeholder;
+ * the route turns that into a 404.
  */
 export function orderContextFor(orderId: string): OrderContextResponse {
   const row = demoOrderRow(orderId);
@@ -187,10 +162,10 @@ export function orderContextFor(orderId: string): OrderContextResponse {
     pages: row.pages,
     stamp: { label: row.stamp_label, tone: row.stamp_tone },
     /*
-     * ⚠ RULED 2026-08-29 (RULING-2026-08-29.md) — the members the reference
-     * app's order bar, rail rows and spotlight draw. All decided HERE, never
-     * in the browser: the place line is finished, the due label is the whole
-     * string, and the stage marks/badges arrive as booleans and finished pills.
+     * The members the order bar, rail rows, and spotlight draw. All decided
+     * here, never in the browser: the place line is finished, the due label
+     * is the whole string, and the stage marks/badges arrive as booleans
+     * and finished pills.
      */
     place: `${row.addr} · ${row.county} County, ${row.state}`,
     client: CLIENT_NAME,
@@ -203,13 +178,12 @@ export function orderContextFor(orderId: string): OrderContextResponse {
 }
 
 /*
- * ── the five stages, as the reference app's rail and order bar draw them ────
+ * ── the five stages, as the rail and order bar draw them ────────────────────
  *
- * Two label sets over ONE state derivation: the rail's short names and the
- * bar's long ones are the reference's own two spellings of the same list
- * (`stageNav` / `stageTabs` in reference-app.html). The STATE is computed once,
- * server-side, off the same order row every other projection reads — a done
- * check is never a count reaching a total in the browser.
+ * Two label sets over one state derivation: the rail's short names and the
+ * bar's long ones. The state is computed once, server-side, off the same
+ * order row every other projection reads — a done check is never a count
+ * reaching a total in the browser.
  */
 const STAGE_NAV_LABELS: Readonly<Record<DemoContextStageId, string>> = {
   upload: "Intake / Upload",
@@ -237,10 +211,10 @@ const STAGE_IDS: readonly DemoContextStageId[] = [
 ];
 
 /**
- * Outstanding examination decisions for one order — the LIVE census figure
- * (`needs_review` over the field store, so it falls as a reviewer rules,
- * exactly as the reference's Examination badge does). Null for an order this
- * server holds no extracted values for: absent is not zero.
+ * Outstanding examination decisions for one order — the live census figure
+ * (`needs_review` over the field store, so it falls as a reviewer rules).
+ * Null for an order this server holds no extracted values for: absent is
+ * not zero.
  */
 function outstandingFor(orderId: string): number | null {
   if (orderId !== FIELDS_ORDER_ID) return null;
@@ -318,37 +292,19 @@ const fieldStore: Field[] = demoFields.map((f) => ({
 }));
 
 /**
- * THE ONE ORDER THIS FIXTURE DESCRIBES. `data.ts` states it plainly — "the live
- * review order — the package `demoFields` and `demoPages` describe" — and every
- * row in `fieldStore` carries it as `order_id`. Read from the data rather than
+ * The one order this fixture describes. Read from the data rather than
  * repeated as a literal, so the two cannot part company.
  */
 const FIELDS_ORDER_ID = demoFields[0]?.order_id ?? "";
 
 /*
- * FIXTURE CONFLICT, UNRESOLVED — FOR THE OWNER, NOT FOR THIS FILE TO GUESS.
- *
- * `pipelineFor` states the pipeline's own rule in words: the `extract` stage is
- * "Held — an incomplete package never reaches extraction", and it is `waiting`
- * for any order that has not passed the gate (`GATE_PASSED_STAGES` in
- * workspace.ts is machine/review/escalated/delivered).
- *
- * ord_demo_1 — the order this whole field fixture describes, and the one Review
- * opens on — sits at `stage: "gate"` with the stamp "Package incomplete". By the
- * rule above it has NOT reached extraction, yet this endpoint serves 21
- * extracted values with page-line provenance for it. Two server answers about
- * one order contradict each other, which is precisely the class of bug
- * `apps/web-v2/src/app/mockOrderFixtures.test.ts` was written to catch.
- *
- * There are two ways out and they are not equivalent:
- *   (a) ord_demo_1's stage is wrong — it is the order under review, so `review`,
- *       and the "Package incomplete" hero belongs to a different queue row; or
- *   (b) extraction can precede the gate, and `pipelineFor`'s wording is wrong.
- *
- * (a) looks right and would ripple through the queue bands, the gate banner and
- * the completeness screen, so it is a fixture decision rather than a fix. NOT
- * TAKEN HERE: choosing between them is a pipeline ruling, and inventing one to
- * make a screen consistent is the exact move hard rule 1 forbids.
+ * FIXTURE CONFLICT, unresolved — for the owner, not for this file to guess.
+ * `pipelineFor` says an incomplete package never reaches extraction, yet
+ * ord_demo_1 sits at `stage: "gate"` ("Package incomplete") while this
+ * endpoint serves extracted values with page-line provenance for it. Either
+ * (a) ord_demo_1's stage should be `review`, or (b) extraction can precede
+ * the gate and `pipelineFor`'s wording is wrong. Choosing is a pipeline
+ * ruling; inventing one to make a screen consistent is forbidden.
  */
 
 const escalationStore: Escalation[] = demoEscalations.map((e) => ({
@@ -505,12 +461,11 @@ const err = (message: string, status: number) =>
   HttpResponse.json({ error: message }, { status });
 
 /**
- * Role gate on every mutation — the authz table (contract authz.ts) enforced
- * server-side, standing in for core-api middleware. The x-mock-role header is
- * the mock's JWT role claim; a missing header means the dev-default admin
- * session (a real server would 401 instead — the mock has no anonymous
- * callers). Runs BEFORE body validation: authorization refuses ahead of
- * schema errors, exactly as middleware will.
+ * Role gate on every mutation — the authz table enforced server-side,
+ * standing in for core-api middleware. The x-mock-role header is the mock's
+ * JWT role claim; a missing header means the dev-default admin session (a
+ * real server would 401 instead). Runs before body validation:
+ * authorization refuses ahead of schema errors, exactly as middleware will.
  */
 const guard = (
   request: Request,
@@ -527,29 +482,25 @@ const seenPackages = new Map<string, string>();
 let createdOrders = 0;
 
 /**
- * ⚠ AMENDED 2026-08-29 (RULING-2026-08-29.md): `jurisdiction`/`state`/`county`
- * left this list with `CreateOrderRequest` — the server resolves them from the
- * clerk-stamp fixture (`CLERK_STAMP`, design.ts) — and `product` joined it.
+ * No jurisdiction/state/county here — the server resolves them from the
+ * clerk-stamp fixture (`CLERK_STAMP`, design.ts).
  */
 const REQUIRED_ORDER_FIELDS = ["client_id", "external_ref", "product"] as const;
 
 export const handlers = [
   ...workspaceHandlers,
   ...designHandlers,
-  // RULING-2026-08-29 surfaces: the Templates Architect catalog and the
-  // Settings pane's RBAC matrix + role picker.
   ...templateHandlers,
   ...settingsHandlers,
   timelineHandler,
   pagesHandler,
   /**
-   * ⚠ RULED 2026-08-29 (RULING-2026-08-29.md) — THE PRE-ORDER GATEWAY SCAN.
-   * The reference runs quarantine the moment a file lands, before any order
-   * exists, so the scan is its own endpoint: multipart, the `package` file
-   * alone. It CHECKS the intake ledger but never writes it — only a signed
-   * create registers a digest, so a scan abandoned at the door leaves no
-   * order to collide with. A digest already on the books comes back with the
-   * de-dup step failed in the server's words and `resolved: null`.
+   * The pre-order gateway scan — quarantine runs the moment a file lands,
+   * before any order exists: multipart, the `package` file alone. It checks
+   * the intake ledger but never writes it — only a signed create registers
+   * a digest, so a scan abandoned at the door leaves no order to collide
+   * with. A digest already on the books comes back with the de-dup step
+   * failed and `resolved: null`.
    */
   http.post("/api/intake/quarantine", async ({ request }) => {
     const denied = guard(request, "order.create");
@@ -571,11 +522,11 @@ export const handlers = [
   }),
 
   /**
-   * Ingest: order create + package upload (multipart). An incomplete package
-   * is refused AT THE DOOR with the missing fields named — never silently.
-   * A byte-identical re-upload 409s (sha256 duplicate). Since RULING-2026-08-29
-   * the drawn flow is ONE act — the client chains this create with the accept
-   * below under a single "Sign for Package" press.
+   * Ingest: order create + package upload (multipart). An incomplete
+   * package is refused at the door with the missing fields named — never
+   * silently. A byte-identical re-upload 409s (sha256 duplicate). The
+   * client chains this create with the accept below under a single "Sign
+   * for Package" press.
    */
   http.post("/api/orders", async ({ request }) => {
     const denied = guard(request, "order.create");
@@ -614,10 +565,9 @@ export const handlers = [
       id: `ord_new_${createdOrders}`,
       client_id: String(form.get("client_id")),
       external_ref: String(form.get("external_ref")),
-      // SERVER-RESOLVED from the recorded clerk stamp (RULING-2026-08-29):
-      // these three stopped being request members, so the caller cannot
-      // hand-pick the state overlay wrong. One fixture authors them AND the
-      // quarantine `resolved` block, so the two reads cannot disagree.
+      // Server-resolved from the recorded clerk stamp: the caller cannot
+      // hand-pick the state overlay wrong. One fixture authors these and
+      // the quarantine `resolved` block, so the two reads cannot disagree.
       jurisdiction: CLERK_STAMP.jurisdiction,
       state: CLERK_STAMP.state,
       county: CLERK_STAMP.county,
@@ -681,43 +631,22 @@ export const handlers = [
   }),
 
   /*
-   * THIS USED TO ANSWER FOR ANY ORDER WITH ONE ORDER'S FIELDS. It echoed the
-   * requested id into `order_id` and then returned `fieldStore` — ord_demo_1's
-   * 21 values, its 2 auto-confirmed and its 6 needing review — whoever asked.
-   * The rail made it visible: `/questions` resolves to ord_demo_4, an order at
-   * INTAKE, and its Review stage drew a badge of "6" counting another order's
-   * unanswered decisions.
-   *
-   * An order with no field fixture now gets an EMPTY set and a zero census, and
-   * the distinction between those two answers is the point. Empty says "this
-   * server holds no extracted values for that order" — which is true, and which
-   * the rail renders as no badge at all, the same thing it draws off an order
-   * screen. The old behaviour said something false about a real order.
-   *
-   * WHAT IS *NOT* DECIDED HERE, deliberately: which orders SHOULD have fields.
-   * That is a pipeline rule, and this file does not get to invent one from what
-   * a screen wants to show (hard rule 1). It is also not currently self-
-   * consistent — see the FIXTURE CONFLICT note below.
+   * An order with no field fixture gets an empty set and a zero census —
+   * "this server holds no extracted values for that order", which the rail
+   * renders as no badge at all. Deliberately not decided here: which orders
+   * SHOULD have fields is a pipeline rule this file may not invent from
+   * what a screen wants to show. See the FIXTURE CONFLICT note above.
    */
   http.get("/api/orders/:id/fields", ({ params }) => {
     const id = String(params["id"]);
     const fields = id === FIELDS_ORDER_ID ? fieldStore : [];
     /*
-     * THE DECISION FIGURES, DECIDED HERE.
-     *
-     * `decisions` is every field this order ever put in front of a person —
-     * the ones a reviewer settled plus the ones still queued. It is NOT
-     * `fields.length`: the 2 auto-confirmed nobody saw and the 1 pending
-     * nothing has read yet were never anybody's decision, and counting them
-     * would silently inflate the denominator the dock prints.
-     *
-     * `queue_rest` is everything this order still holds BEHIND the open
-     * decision — the whole of what the reviewer has left to walk, not just the
-     * unsettled part of it, because a reviewer moving back through a settled
-     * ruling is still walking this order's queue. Written as its own figure
-     * rather than left to the client as `decisions - 1`, because that
-     * subtraction is precisely the `answered = base + a` arithmetic the
-     * contract comment above this endpoint exists to forbid.
+     * The decision figures, decided here. `decisions` is every field this
+     * order ever put in front of a person — settled plus queued, not
+     * `fields.length`: auto-confirmed and pending fields were never
+     * anybody's decision. `queue_rest` is everything still behind the open
+     * decision, written as its own figure rather than left to the client
+     * as `decisions - 1`.
      */
     const queued = fields.filter((f) => f.state === "needs_review");
     const settled = fields.filter(
@@ -726,11 +655,9 @@ export const handlers = [
     const body: OrderFieldsResponse = {
       order_id: id,
       fields,
-      // The census is the SERVER'S, and this is where it is decided. It used to
-      // be computed in `OrderCounts.tsx` — including `no_source`, which is a
-      // ruling on provenance the browser has no standing to make (hard rule 3).
-      // It is written out here rather than tallied so that this file states the
-      // definition the real backend will have to match.
+      // The census is the server's, decided here — `no_source` is a ruling
+      // on provenance the browser has no standing to make. Written out so
+      // this file states the definition the real backend must match.
       census: {
         fields: fields.length,
         auto_confirmed: fields.filter((f) => f.state === "auto_confirmed").length,
@@ -746,21 +673,17 @@ export const handlers = [
         settled: settled.length,
         queue_rest: Math.max(settled.length + queued.length - 1, 0),
         /*
-         * WHAT THE SERVER IS STILL WAITING ON — the queued fields, counted
+         * What the server is still waiting on — the queued fields, counted
          * here rather than left to the client as `decisions - settled`.
-         *
-         * The two happen to agree in this fixture and they are not the same
-         * question: `queue_rest` is how much queue is left to WALK, and this
-         * is how many still want an answer. Written off `queued` directly so
-         * the definition sits with the filter that makes it.
+         * Distinct from `queue_rest`, which is how much queue is left to
+         * walk.
          */
         remaining: queued.length,
         /*
-         * ⚠ RULED 2026-08-29 (RULING-2026-08-29.md) — the hub's drawn CTA
-         * copy, CHOSEN HERE. The reference's five-branch verdict machine is a
-         * lifecycle state machine and hard rule 3 puts it on the server; this
-         * is the server, standing in. The second-read branch quotes the
-         * countersign ledger (`openCountersignCount`), never a second copy.
+         * The hub's CTA copy, chosen here — the verdict machine is a
+         * lifecycle state machine and lives on the server. The second-read
+         * branch quotes the countersign ledger (`openCountersignCount`),
+         * never a second copy.
          */
         verdict_action:
           queued.length > 0
@@ -774,8 +697,8 @@ export const handlers = [
   }),
 
   /**
-   * Idempotent confirm — bug-5 semantics (CONTEXT §19): same value on a
-   * confirmed field = 200; different value = 409; terminal state = 409.
+   * Idempotent confirm: same value on a confirmed field = 200; different
+   * value = 409; terminal state = 409.
    */
   http.post("/api/fields/:id/confirm", async ({ params, request }) => {
     const denied = guard(request, "field.confirm");
@@ -812,11 +735,8 @@ export const handlers = [
     if (!field) return err("no such field", 404);
     field.state = "corrected";
     field.value = parsed.data.value;
-    // Validate against the contract enum rather than an inline list. The list
-    // was the old two members, so widening NaReason to four (ratified Q1)
-    // silently dropped NOT_FOUND and NOT_STATED to null here — a reviewer's
-    // correction to "document silent" would have been recorded as no NA reason
-    // at all. Reading the enum means the next widening cannot repeat it.
+    // Validate against the contract enum rather than an inline list, so a
+    // future widening of NaReason cannot silently drop members to null here.
     const na = NaReason.safeParse(parsed.data.na_reason);
     field.na_reason = na.success ? na.data : null;
     field.approved_by = "L. Vance";
@@ -825,16 +745,11 @@ export const handlers = [
   }),
 
   /**
-   * Suppress with reason — R13. Terminal, like correct and escalate.
-   *
-   * R13 IS ENFORCED HERE, NOT ONLY WHERE THE BUTTON IS DRAWN. Suppression is
-   * offered where party identity IS the question — `judgments.*` — and the UI
-   * gated only the control: the `x` chord posted an exclude on `owner.zip` and
-   * this handler returned 200. A rule the client alone enforces is not
-   * enforced, and an excluded row is GONE (`conflicts.md` C18), so the one
-   * write that cannot be argued with afterwards was the one with no server
-   * check at all. The message is written to be read by a person, because it
-   * renders verbatim in the review screen's server note.
+   * Suppress with reason — R13. Terminal, like correct and escalate. R13 is
+   * enforced here, not only where the button is drawn: suppression applies
+   * only where party identity is the question (`judgments.*`), and an
+   * excluded row is gone from the delivered sheet, so the server must
+   * check. The message renders verbatim in the review screen's server note.
    */
   http.post("/api/fields/:id/exclude", async ({ params, request }) => {
     const denied = guard(request, "field.correct");
@@ -1179,7 +1094,7 @@ export const handlers = [
     HttpResponse.json({ deliveries: deliveryStore }),
   ),
 
-  /** Retry re-SENDS the same file — the report is never re-rendered. */
+  /** Retry re-sends the same file — the report is never re-rendered. */
   http.post("/api/deliveries/:id/retry", ({ params, request }) => {
     const denied = guard(request, "delivery.retry");
     if (denied) return denied;
@@ -1589,12 +1504,11 @@ export const handlers = [
 
   /*
    * ── rail badges ─────────────────────────────────────────────────────────
-   * ⚠ RULED 2026-08-29 (RULING-2026-08-29.md) — "counts on rail doors, stage
-   * badges … are drawn, so they are built." The three door ornaments the
-   * reference rail draws, each quoted from the store it summarises rather
-   * than restated: the All Orders total is the browse table's, the QC pill
-   * counts the unresolved escalations this same file serves, and the
-   * template version is the templates resource's own constant.
+   * The three door ornaments the rail draws, each quoted from the store it
+   * summarizes rather than restated: the All Orders total is the browse
+   * table's, the QC pill counts the unresolved escalations this same file
+   * serves, and the template version is the templates resource's own
+   * constant.
    */
   http.get("/api/rail", () => {
     const open = escalationStore.filter((e) => e.resolution === null).length;
@@ -1608,11 +1522,9 @@ export const handlers = [
 
   /**
    * ── demo reset ──────────────────────────────────────────────────────────
-   * The rail's "↺ Reset" control (RULING-2026-08-29 — the reference's
-   * `resetWalkthrough`, "Restore the demo to fresh intake"). Re-seeds this
-   * file's mutable stores from the fixtures they were copied from; the
-   * signed-in seat is untouched, exactly as the reference preserves `user`.
-   * DEV-ONLY BY CONSTRUCTION: this endpoint exists only in the mock package
+   * The rail's "↺ Reset" control. Re-seeds this file's mutable stores from
+   * the fixtures they were copied from; the signed-in seat is untouched.
+   * Dev-only by construction: this endpoint exists only in the mock package
    * and is not part of the contract a real backend implements.
    */
   http.post("/api/demo/reset", () => {
@@ -1674,18 +1586,14 @@ export const handlers = [
     if (rule.status !== "pending") return err("rule is not pending", 409);
     rule.status = "live";
     rule.confirmed_by = "eng_demo";
-    // RULED 2026-08-29: a confirmed rule is a moment of record — the audit
-    // ledger appends live.
+    // A confirmed rule is a moment of record — the audit ledger appends live.
     appendAudit(auditActor(request), "rule_confirmed", "rules", rule.id);
     return HttpResponse.json(ok);
   }),
 
   /**
-   * Append-only audit view — read-only over the wire; the WRITES come from
-   * the mutation handlers (release, reissue, countersign, escalation ruling,
-   * rule confirm, template save, RBAC cycle, role assign) appending to the
-   * shared ledger in `audit.ts`. RULED 2026-08-29: the reference's Audit Log
-   * appends live as the session acts, so the mock's does too.
+   * Append-only audit view — read-only over the wire; the writes come from
+   * the mutation handlers appending to the shared ledger in `audit.ts`.
    */
   http.get("/api/audit", () => HttpResponse.json({ entries: auditStore })),
 
@@ -1730,8 +1638,8 @@ export const handlers = [
     // the demo session's name — "resolved by <someone else>" right after
     // YOU resolved it reads as a bug
     esc.resolved_by = "L. Vance";
-    // The queue chip's age label flips the way the reference's does when a
-    // query closes (RULED 2026-08-29) — the SERVER's word, not a client badge.
+    // The queue chip's age label flips when a query closes — the server's
+    // word, not a client badge.
     esc.age = "settled";
     // …and the ruling is a moment of record: the audit ledger appends live.
     appendAudit(auditActor(request), "escalation_resolved", "escalations", esc.id);

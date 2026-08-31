@@ -18,9 +18,8 @@ type Story = StoryObj<typeof meta>;
 export const Off: Story = {};
 
 /**
- * ON — and it is a raised WHITE cell, not a fill. Rule 1 keeps solid fills for
- * the accent alone, and a toggle is not the screen's decision. The registry
- * drew `data-selected:bg-muted`, a filled cell, which this asserts against.
+ * On — a raised white cell, not a fill: solid fills are the accent's alone,
+ * and a toggle is not the screen's decision.
  */
 export const On: Story = {
   args: { defaultSelected: true },
@@ -33,9 +32,9 @@ export const On: Story = {
 };
 
 /**
- * RULE 9. There is no `isDisabled` prop, so an unexplained disabled toggle
- * cannot be written; the reason lands on `title` and on
- * `data-disabled-reason` both, because a tooltip alone fails WCAG 2.2 on touch.
+ * There is no `isDisabled` prop, so an unexplained disabled toggle cannot be
+ * written; the reason lands on `title` and `data-disabled-reason` both,
+ * because a tooltip alone fails WCAG 2.2 on touch.
  */
 export const Blocked: Story = {
   args: { disabledBecause: "Blocked: retired rules are hidden on released orders." },
@@ -44,10 +43,9 @@ export const Blocked: Story = {
     const control = document.querySelector("[data-disabled-reason]");
     expect(control?.getAttribute("data-disabled-reason")).toBe(reason);
     /*
-     * `title` sits on the `BlockedHint` WRAPPER, not on the control: react-aria
-     * strips `title` in `filterDOMProps`, so the hint is a `display:contents`
-     * span around it. Asserted where it actually lives — the point of rule 9 is
-     * that the sentence is REACHABLE by pointer, not which node holds it.
+     * `title` sits on the BlockedHint wrapper, not on the control: react-aria
+     * strips `title` in filterDOMProps. Asserted where it actually lives —
+     * the point is that the sentence is reachable by pointer.
      */
     expect(control?.closest("[title]")?.getAttribute("title")).toBe(reason);
   },
@@ -62,12 +60,10 @@ export const BlockedWhileOn: Story = {
 };
 
 /**
- * NO CHORD SCOPE, deliberately. `focusRoles.ts` lists `checkbox` and `switch`
- * as single controls whose keys are their own, and react-aria renders a
- * ToggleButton as a real `<button>` — which `focusOwnsKeys` already catches on
- * tagName. Marking a permanently-mounted control `own` would kill every chord
- * in the app; the GROUP is the thing that needs a `widget` mark, because
- * roving arrow-key focus makes it a composite.
+ * No chord scope, deliberately: react-aria renders a ToggleButton as a real
+ * <button>, which focusOwnsKeys already catches on tagName. The group is the
+ * thing that needs a `widget` mark — roving arrow-key focus makes it a
+ * composite.
  */
 export const TakesNoChordScope: Story = {
   play: async () => {

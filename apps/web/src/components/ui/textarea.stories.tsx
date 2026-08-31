@@ -39,7 +39,7 @@ export const GrowsWithContent: Story = {
   },
 };
 
-/** Rule 3: a note is prose, but a pasted legal description is data. */
+/** A note is prose, but a pasted legal description is data. */
 export const DataValue: Story = {
   args: {
     data: true,
@@ -48,7 +48,7 @@ export const DataValue: Story = {
   },
 };
 
-/** Rule 9: no boolean disabled exists, so the reason cannot be dropped. */
+/** No boolean disabled exists, so the reason cannot be dropped. */
 export const BlockedWithReason: Story = {
   args: {
     defaultValue: "Ruled: release is effective as to the 2016 deed of trust.",

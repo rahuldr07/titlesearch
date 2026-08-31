@@ -1,16 +1,10 @@
 /**
- * BRIEF §6 code-quality bar, as a build gate.
- *
- * Only the mechanically checkable rules live here. The judgment ones — prop
- * count, decomposition, naming, prop-drilling depth — are review, not CI, and
- * are deliberately absent rather than approximated badly.
- *
- * HARDENED 2026-07-27 after an audit defeated 9 of 11 rules with the FIRST
- * evasion a tired developer would reach for — not clever ones, the obvious
- * ones: `rgb()` instead of hex, `p-[1.5rem]` instead of `p-[24px]`,
- * `Date.parse()` instead of `new Date()`. A rule that only catches the naive
- * spelling is a rule that catches nothing, because nobody writes the naive
- * spelling twice.
+ * Code-quality bar, as a build gate. Only the mechanically checkable rules
+ * live here; the judgment ones (prop count, decomposition, naming) are
+ * review, not CI. Rules are written to catch the obvious evasions too —
+ * `rgb()` instead of hex, `p-[1.5rem]` instead of `p-[24px]`, `Date.parse()`
+ * instead of `new Date()` — because a rule that only catches the naive
+ * spelling catches nothing.
  *
  * Known remaining holes, stated rather than hidden:
  *   - A cross-feature import laundered through a re-export barrel is not
@@ -19,8 +13,8 @@
  *   - Deliberate obfuscation ("local" + "Storage") is not the threat model.
  *     This gate is for accidents and habits, not for an adversary.
  *
- * Escape hatch: a line containing `rules-allow:` is skipped, and MUST be
- * followed by a reason — a bare marker is now itself an error.
+ * Escape hatch: a line containing `rules-allow:` is skipped, and must be
+ * followed by a reason — a bare marker is itself an error.
  *
  *   node scripts/check-rules.mjs
  */
@@ -72,24 +66,17 @@ const BANNED = [
   },
   {
     /*
-     * RULE 2, THE OTHER FOUR DOORS. Six type sizes only — 11/13/16/20/28/40.
-     *
-     * `tokens.css`'s `--text-*: initial` reset genuinely works: built against
-     * real Tailwind 4.3.3, `text-sm` and `text-2xl` emit NOTHING. But a
-     * namespace reset only removes NAMED scale members. It cannot touch
-     * arbitrary-value syntax, and the rule above cannot either — it requires
-     * the bracket to open on a digit.
-     *
-     * REVIEW-02 built all six evasions and ran them through the compiler. Two
-     * were caught. These four were not, and each emits a seventh font-size:
+     * Six type sizes only — 11/13/16/20/28/40. The `--text-*: initial`
+     * namespace reset in tokens.css removes named scale members but cannot
+     * touch arbitrary-value syntax, and the rule above requires the bracket
+     * to open on a digit. These four evasions each emit a seventh
+     * font-size and are matched by shape rather than by unit (calc() and a
+     * custom property have no unit to match on):
      *
      *     text-[length:13px]     → font-size: 13px
      *     [font-size:13px]       → font-size: 13px
      *     text-[calc(13px)]      → font-size: calc(13px)
      *     text-(length:--x)      → font-size: var(--x)
-     *
-     * Matched here by SHAPE rather than by unit, because `calc()` and a custom
-     * property have no unit to match on.
      */
     name: "seventh-type-size",
     re: /\btext-\[(length:|calc\()|\[font-size:|\btext-\(length:/i,
@@ -129,34 +116,19 @@ const BANNED = [
   },
   {
     /*
-     * RULE 4, AND THE COMMENT THAT CLAIMED THIS GATE ALREADY EXISTED.
-     *
-     * `sidebar-menu.tsx:54` read: "check-rules.mjs bans `uppercase` outside
-     * rail/sidebar/certificate, so this is the one place it is legal." It did
-     * not. There was no rule 4 check of any kind, and eighteen elements across
-     * nine screens were ALL-CAPS on the strength of a sentence asserting a
-     * mechanism that was never written — the same failure REVIEW-03 names as
-     * the theme of this kit, one layer down.
-     *
-     * Rule 4 has exactly two exceptions and both are identifiable from the
-     * class list itself, which is why this can be mechanical rather than a
-     * judgement call:
-     *
+     * Sentence case everywhere, with exactly two exceptions, both
+     * identifiable from the class list itself:
      *   - sidebar rubrics            -> drawn in the rail register, `text-rail-*`
      *   - serif certificate headings -> `font-serif`
+     * Anything else reaching for `uppercase` is either a label that should
+     * be sentence case or a server-supplied identifier recased for
+     * decoration — and a recased identifier stops matching the string in
+     * the rulebook a reviewer would search for.
      *
-     * Anything else reaching for `uppercase` is either a label that should be
-     * sentence case, or — worse, and this is what the rule actually caught — a
-     * SERVER-SUPPLIED IDENTIFIER recased for decoration. Four components
-     * rendered `judgments.hit_identity` as `JUDGMENTS.HIT_IDENTITY`. That is
-     * not a style choice: the string a reviewer sees stops matching the string
-     * in the rulebook they would search for.
-     *
-     * KNOWN HOLE, stated rather than hidden: this is a line scanner, so a
-     * `className={cx(...)}` split across lines with `uppercase` on one and
-     * `font-serif` on another reads as a violation. Every legal use in the tree
-     * is on one line and should stay that way; if that stops being true, this
-     * needs the class list assembled, not a wider regex.
+     * Known hole: this is a line scanner, so a `className={cx(...)}` split
+     * across lines with `uppercase` on one and `font-serif` on another
+     * reads as a violation. Every legal use is on one line; if that stops
+     * being true, this needs the class list assembled, not a wider regex.
      */
     name: "caps-outside-rubric",
     re: /^(?!.*(?:text-rail-|font-serif)).*\buppercase\b/,
@@ -164,22 +136,14 @@ const BANNED = [
   },
   {
     /*
-     * THE ANTI-PATTERNS, AS A GATE. AGENTS.md lists six things whose
-     * reintroduction is "a defect, not a feature request", and until now
-     * nothing checked for any of them — they were prose in a rulebook, which
-     * is exactly the shape of enforcement REVIEW-03 warns about.
-     *
-     * These three are gated because they are IDENTIFIERS and a path literal,
-     * so a match is a real read rather than a mention. Note that comment lines
-     * are skipped before the ban list runs, which is why the many doc comments
-     * saying "`/api/metrics` is deliberately NOT read here" do not trip it.
-     *
-     * DELIBERATELY NOT GATED: the pace VOCABULARY ("throughput", "elapsed",
-     * "per hour", "SLA"). Those words appear legitimately in JSX prose that
-     * explains what a future endpoint may not carry — `blindStatus/RosterGaps`
-     * asks for coverage and says INVARIANT 23 "refuses rates, elapsed time,
-     * estimates" — and a rule that fires on its own refusal being written down
-     * is a rule people switch off. That one stays a review question.
+     * The anti-patterns, as a gate. These are gated because they are
+     * identifiers and a path literal, so a match is a real read rather than
+     * a mention; comment lines are skipped before the ban list runs.
+     * Deliberately not gated: the pace vocabulary ("throughput", "per
+     * hour", "SLA") — those words appear legitimately in JSX prose that
+     * explains what an endpoint may not carry, and a rule that fires on its
+     * own refusal being written down is a rule people switch off. That one
+     * stays a review question.
      */
     name: "probe-visibility",
     re: /\bprobes_planted\b|\bprobes_caught\b|\bcatch_rate\b/,
@@ -216,26 +180,11 @@ const DATE_RE =
 const BANNED_NAMES = /^(utils?|helpers?|common|misc|shared|stuff)\.(ts|tsx)$/i;
 
 /*
- * THERE IS NO VENDORED DIRECTORY, AND THE EXEMPTION THAT CLAIMED OTHERWISE IS
- * GONE.
- *
- * This file used to skip `src/components/ui/` entirely, on the grounds that it
- * held shadcn registry output — third-party code with "the same status as
- * node_modules". That premise was false. `shadcn init --base aria` was never
- * run (`components.json` has no `base` key, and points `tailwind.css` and the
- * `utils` alias at two paths that do not exist), and every file in that
- * directory is hand-written against `react-aria-components`, this repo's own
- * `cva`/`cx`/`disabled.ts`, and the fourteen design rules.
- *
- * So the exemption was excusing 49 files and ~2,965 lines of THE MOST REUSED
- * CODE IN THE APP from the raw-hex, arbitrary-value and file-length gates,
- * while reporting green. A gate that skips the kit is a gate that checks the
- * screens for a discipline the kit is free to break.
- *
- * If a registry `add` ever does land here, re-add an exemption THEN, scoped to
- * the files it actually wrote, and say so in the commit. Do not restore this
- * one on the strength of a `components.json` that describes a setup nobody
- * performed.
+ * There is no vendored-directory exemption: `src/components/ui/` is
+ * hand-written code, not registry output, and it is the most reused code in
+ * the app — a gate that skips the kit checks the screens for a discipline
+ * the kit is free to break. If a registry `add` ever does land here, add an
+ * exemption then, scoped to the files it actually wrote.
  */
 
 function walk(dir) {
@@ -267,23 +216,14 @@ for (const file of files) {
   const lines = text.split("\n");
 
   /*
-   * PROVENANCE (AGENTS.md: "Never emit a value you can't cite").
-   *
-   * REVIEW-01 B1 proved that `Cited<T>` does not make this a compile error:
-   * `<span>{field.value}</span>` typechecks clean, bypassing `readCited`
-   * entirely, and that is the exact rule "caught 6 times in prototyping".
-   *
-   * ESLint's `no-restricted-syntax` companion to this keys off the NAME
-   * (`field.value`), which misses a Field bound to another identifier. This
-   * rule carries the other half: it keys off the IMPORT. If a file pulls
-   * `Field` out of the frozen contract, it is in the business of handling
-   * server field records, and it may not touch `.value` at all — it goes
-   * through `readCited`. Coarse on purpose. The two rules overlap
-   * deliberately, because the review's finding was that a single opt-in
-   * mechanism is the mechanism that failed six times.
-   *
-   * Stories are NOT exempt: a story that prints `field.value` is the template
-   * the next screen is copied from.
+   * Provenance ("never emit a value you can't cite"). `Cited<T>` does not
+   * make this a compile error — `<span>{field.value}</span>` typechecks
+   * clean, bypassing `readCited`. ESLint's `no-restricted-syntax` companion
+   * keys off the name (`field.value`), which misses a Field bound to
+   * another identifier; this rule keys off the import. Coarse on purpose,
+   * and the two rules overlap deliberately — a single opt-in mechanism is
+   * the mechanism that failed. Stories are not exempt: a story that prints
+   * `field.value` is the template the next screen is copied from.
    */
   if (rel !== PROVENANCE_MODULE && IMPORTS_FIELD.test(text)) {
     lines.forEach((raw, i) => {

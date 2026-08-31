@@ -9,18 +9,12 @@ import { useCycleRbac } from "./useSettings";
 import { ModuleRows } from "./MatrixCells";
 
 /**
- * ACCESS (RBAC) — THE FULL MATRIX, AND ITS CELLS CYCLE.
- *
- * ⚠ RULED 2026-08-29 — `docs/frontend/design-2026-08/RULING-2026-08-29.md`.
- * The reference draws every module row against every role, cells reading
- * — / VIEW / EDIT, and a click CYCLES the cell. The pre-ruling refusal ("one
- * column, not four, and no cell cycles") is superseded: `GET /api/rbac`
- * serves the matrix and `PATCH /api/rbac` cycles one cell SERVER-SIDE — the
+ * Access (RBAC) — the full matrix, and its cells cycle. `GET /api/rbac`
+ * serves the matrix and `PATCH /api/rbac` cycles one cell server-side: the
  * click posts the cell and the pane repaints from the server's answer. The
- * Admin column arrives `locked` and refuses in the server's words.
- *
- * A seat without `rbac.edit` sees the matrix read-only under the reference's
- * amber banner — visible, not absent, per the same ruling.
+ * Admin column arrives `locked` and refuses in the server's words. A seat
+ * without `rbac.edit` sees the matrix read-only under the amber banner —
+ * visible, not absent.
  */
 export function AccessPanel() {
   const account = useSignedIn((s) => s.account);

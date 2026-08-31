@@ -31,7 +31,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** A prefix glyph. Rule 7: no icon soup — the vocabulary is ✓ ◆ • T1. */
+/** A prefix glyph from the closed vocabulary — no icon soup. */
 export const WithPrefix: Story = {
   render: () => (
     <InputGroup className="w-140">
@@ -43,7 +43,7 @@ export const WithPrefix: Story = {
   ),
 };
 
-/** A suffix unit. Mono, because a unit sits against a data value (rule 3). */
+/** A suffix unit. Mono, because a unit sits against a data value. */
 export const WithSuffix: Story = {
   render: () => (
     <InputGroup defaultValue="184,500.00" className="w-90">
@@ -55,7 +55,7 @@ export const WithSuffix: Story = {
   ),
 };
 
-/** A button inside the box: ghost, and one radius step in (rule 5). */
+/** A button inside the box: ghost, and one radius step in. */
 export const WithButton: Story = {
   render: () => (
     <InputGroup className="w-140">

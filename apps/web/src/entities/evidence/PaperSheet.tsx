@@ -2,23 +2,11 @@ import type { ReactNode } from "react";
 import { cx } from "../../components/ui";
 
 /**
- * RULE 8, AS A COMPONENT.
- *
- * "Evidence and deliverables render as paper (--paper-*): serif, warm stock,
- * clerk stamps, justified text. Never grey placeholder bars."
- *
- * The prohibition is the interesting half. A grey placeholder bar is what a
- * loading skeleton looks like, and a reviewer who has learned to read grey bars
- * as "not here yet" will read a rendered page as "not here yet" too. This
- * product's whole problem is that the page IS here and is hard to read
- * (CONTEXT §5 — median text-layer coverage well under 25%), so the page has to
- * look like a page even while it is degrading.
- *
- * Warm stock is the only warm family left in the register (`tokens.css`
- * §paper), and it is reserved for exactly this. A panel that borrows it is
- * claiming to be evidence.
- *
- * The −.35° tilt and the grain are CSS art — no assets, per design §Assets.
+ * Evidence renders as paper: serif, warm stock, clerk stamps, justified
+ * text — never grey placeholder bars, because a reviewer who has learned to
+ * read grey bars as "not here yet" will read a rendered page that way too.
+ * Warm stock is reserved for exactly this; a panel that borrows it is
+ * claiming to be evidence. The tilt and grain are CSS art — no assets.
  */
 export type PaperSheetProps = {
   /** The page's own body. Serif and justified; the caller supplies the words. */
@@ -26,8 +14,7 @@ export type PaperSheetProps = {
   /** The clerk stamp, if this page carries one. */
   readonly stamp?: ReactNode | undefined;
   /**
-   * A degraded scan — microfilm density loss, a bad fax. The stock steps warm
-   * and the ink weakens, per the `--color-scan-*` family. A SERVER-REPORTED
+   * A degraded scan — microfilm density loss, a bad fax. A server-reported
    * property of the page, never inferred from how extraction went.
    */
   readonly degraded?: boolean | undefined;
@@ -50,11 +37,8 @@ export function PaperSheet({ children, stamp, degraded, className }: PaperSheetP
       {stamp !== undefined && (
         <div className="mb-8 flex justify-end">{stamp}</div>
       )}
-      {/*
-        Justified, serif, and on the SCAN leading (2.1) rather than the app's —
-        typed instruments are set loose and a tight leading makes a scan read as
-        a web page. `--color-scan-ink-degraded` clears 4.55:1 under the filter.
-      */}
+      {/* Justified, serif, on the scan leading (2.1) — typed instruments are
+          set loose, and a tight leading makes a scan read as a web page. */}
       <div
         className={cx(
           "font-serif text-body leading-scan text-justify",
@@ -68,13 +52,9 @@ export function PaperSheet({ children, stamp, degraded, className }: PaperSheetP
 }
 
 /**
- * THE CITED LINE ON THE PAGE.
- *
- * Design §Screens 7: "citation box (1.5px accent + 13% fill)". 1.5px rather
- * than 1 or 2 because it must be visibly heavier than the page's own rules
- * without becoming a UI chrome border sitting on top of a document — this is a
- * mark made ON the paper, in the evidence vocabulary
- * (`--color-surface-evidence` / `--color-border-evidence`).
+ * The cited line on the page. 1.5px rather than 1 or 2: visibly heavier than
+ * the page's own rules without becoming UI chrome sitting on top of a
+ * document — a mark made on the paper, in the evidence vocabulary.
  */
 export function CitationBox({
   children,

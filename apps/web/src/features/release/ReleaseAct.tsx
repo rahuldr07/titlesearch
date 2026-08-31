@@ -8,36 +8,24 @@ import { CompositionJson } from "./CompositionJson";
 import { releaseHold, useRelease } from "./useRelease";
 
 /**
- * SIGN AND RELEASE — the foot of the compiler.
+ * Sign and release. `releasable` and `blocked_reason` print exactly as they
+ * arrive; this screen never counts open gates to decide either one.
  *
- * ══ THE SERVER'S VERDICT IS DRAWN, NOT RECOMPUTED ══════════════════════════
+ * The button stays live while a gate is open, deliberately: the gate refusal
+ * belongs to the server (409), and holding the submit on
+ * `releasable === false` would swap that sentence for ours. What is held is
+ * what the client can know about itself: an unsigned act, an act in flight,
+ * and a sheet already sealed.
  *
- * `releasable` and `blocked_reason` are printed exactly as they arrive. This
- * screen never counts open gates to decide either one.
- *
- * ══ AND THE BUTTON STAYS LIVE WHILE A GATE IS OPEN ═════════════════════════
- *
- * Deliberate. The gate refusal belongs to the server, and it answers with its
- * own sentence (409). Holding the submit on `releasable === false` would swap
- * that sentence for ours before it was ever spoken. What IS held is what the
- * client can know about itself: an unsigned act, an act in flight, and a sheet
- * already sealed.
- *
- * ══ THE GATE LINE IS A DOOR, AND THE SERVER NAMES IT ═══════════════════════
- *
- * ⚠ RULED 2026-08-29 (RULING-2026-08-29.md): the reference's gate footer line
- * is CLICKABLE and "opens the step that is blocking release". The reference
- * chose the destination by counting open fields client-side; here the SERVER
- * names it (`CompositionResponse.blocked_door`), so the drawn affordance
- * exists without this screen re-deriving release resolution. The link is
- * drawn verbatim off the wire and only while a door is named.
+ * The blocking-step link is the server-named `blocked_door`, drawn verbatim
+ * off the wire and only while a door is named — never re-derived here.
  */
 export function ReleaseAct(props: { readonly composed: CompositionResponse }) {
   const [signature, setSignature] = useState("");
   const release = useRelease(props.composed.order_id);
   const router = useRouter();
-  /* `isPending` is a render away, and three clicks inside one tick beat it —
-     measured: three requests. The latch closes on the click itself. */
+  /* `isPending` is a render away, and repeated clicks inside one tick beat
+     it — the latch closes on the click itself. */
   const filing = useRef(false);
   const held = releaseHold(props.composed, signature, release.isPending);
   const door = props.composed.blocked_door;
@@ -122,7 +110,6 @@ export function ReleaseAct(props: { readonly composed: CompositionResponse }) {
       </div>
 
       {held !== null && (
-        /* Rule 9 on screen, not only on hover: the reason a control is dead. */
         <p data-testid="release-hold" className="font-sans text-meta leading-body text-ink-secondary">
           {held}
         </p>

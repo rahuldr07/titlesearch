@@ -1,14 +1,10 @@
 import type { LifecycleResponse } from "@titlepipe/contract";
 
 /**
- * THE OVERVIEW'S FOUR STAT CARDS, NAMED ONCE — the Option-A figures of
- * `LifecycleResponse` (RULING-2026-08-28, resolving CONFLICT-overview-stats).
- * The label, value and note all arrive ON the figure, server-authored; what
- * this table holds is the only part that is legitimately presentation — which
- * member each card binds to, in the design's order, and the two tones the
- * reference draws it in (`reference-app.html` `queueStats`: values ink /
- * graphite / amber / green, notes muted except the last two, which take the
- * figure's own state colour).
+ * The overview's four stat cards, named once. The label, value and note all
+ * arrive on the figure, server-authored; this table holds the only part
+ * that is legitimately presentation — which member each card binds to, in
+ * the design's order, and the tones it draws them in.
  */
 export type CensusTone = "primary" | "secondary" | "attend" | "settled";
 export type CensusNoteTone = "muted" | "attend" | "settled";

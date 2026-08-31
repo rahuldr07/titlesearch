@@ -2,12 +2,10 @@ import type { JurisdictionRule } from "@titlepipe/contract";
 import { Badge, Card, cx } from "../../components/ui";
 
 /**
- * WHICH RULES BIND HERE, AND WHICH DO NOT.
- *
- * `applies` is read, never computed. A rule scoped to New York arrives with
- * `applies: false` and is drawn as such — it is not filtered out, because a
- * reviewer asking "why is this not reported?" needs to see the rule that is
- * sitting this one out.
+ * Which rules bind here, and which do not. `applies` is read, never
+ * computed — a rule that does not apply is drawn as such, not filtered out,
+ * because a reviewer asking "why is this not reported?" needs to see the
+ * rule that is sitting this one out.
  */
 export function RuleList(props: {
   readonly rules: readonly JurisdictionRule[];
@@ -34,7 +32,7 @@ export function RuleList(props: {
             className="flex flex-col gap-4 border-b border-line-subtle px-12 py-8 last:border-b-0"
           >
             <div className="flex flex-wrap items-baseline gap-6">
-              {/* Rule 3: a rule code is an identifier the reviewer will search for. */}
+              {/* A rule code is an identifier the reviewer will search for. */}
               <span
                 className={cx(
                   "font-mono text-meta font-semibold leading-close",

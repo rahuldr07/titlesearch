@@ -7,13 +7,9 @@ import { SecurityPanel } from "./SecurityPanel";
 import { AuditPanel } from "./AuditPanel";
 
 /**
-
- * Which pane. A switch over the closed `AccountTabId` union, so adding a tab to
-
- * `accountTabs.ts` without a pane here is a compile error rather than a blank region —
-
- * the exhaustiveness is the point of the union.
-
+ * Which pane. A switch over the closed `AccountTabId` union, so adding a
+ * tab to `accountTabs.ts` without a pane here is a compile error rather
+ * than a blank region.
  */
 export function AccountPanel(props: { readonly tab: AccountTabId }) {
   switch (props.tab) {
@@ -61,13 +57,8 @@ export function AccountPanel(props: { readonly tab: AccountTabId }) {
 }
 
 /**
-
- * THE PANE HEADER, shared by all six. The prototype draws an h2 at 28px with a 13px
-
- * grey line under it and a 24px gap to the content; that pairing is the only thing
-
- * every pane has in common, so it lives here rather than six times.
-
+ * The pane header, shared by all six — the one thing every pane has in
+ * common, so it lives here rather than six times.
  */
 export function PanelFrame(props: {
   readonly title: string;

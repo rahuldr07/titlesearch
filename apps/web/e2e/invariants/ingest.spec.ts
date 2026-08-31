@@ -1,18 +1,11 @@
 import { expect, test, type Page } from "@playwright/test";
 
 /**
- * INTAKE'S PRODUCT RULES, pinned against the DRAWN flow.
- *
- * ⚠ REWRITTEN 2026-08-29 under RULING-2026-08-29
- * (`docs/frontend/design-2026-08/RULING-2026-08-29.md`): the ruling supersedes
- * the two-act upload/accept staging these tests used to pin under INVARIANT 47
- * — the reference draws ONE press ("Sign for Package & Begin Dual-Engine
- * Extraction →") and the ruling is the authority this header's old "never
- * weaken an assertion" note asks for. What is PIN-KEPT, restated for one act:
- *   - the server's refusal renders its missing-field list verbatim (§4.3);
+ * Intake's product rules, pinned against the drawn one-act flow:
+ *   - the server's refusal renders its missing-field list verbatim;
  *   - a byte-identical re-upload surfaces the server's sha256-match notice;
- *   - jurisdiction/state/county are never typed — they left the request
- *     (CONFLICT-intake-hand-typed-jurisdiction.md, resolved by the ruling).
+ *   - jurisdiction/state/county are never typed — they are not request
+ *     members.
  */
 
 const PKG = {
@@ -34,16 +27,16 @@ async function fillOrder(page: Page) {
 
 const SIGN = /sign for package/i;
 
-// [INVARIANT] — rule: §4.3 — the server's refusal renders its missing fields
-// verbatim; the client does not author the list.
+// Rule: the server's refusal renders its missing fields verbatim; the
+// client does not author the list.
 test("an incomplete sign is refused with the server's missing fields, verbatim", async ({
   page,
 }) => {
   await page.goto("/ingest");
-  // The one act is gated only on the file (RULING-2026-08-29): with a file
-  // attached and nothing else, the press reaches the server, which names the
-  // three request members — client_id, product, external_ref — and no more.
-  // Jurisdiction/state/county CANNOT appear: they are not request members.
+  // The one act is gated only on the file: with a file attached and nothing
+  // else, the press reaches the server, which names the three request
+  // members — client_id, product, external_ref — and no more.
+  // Jurisdiction/state/county cannot appear: they are not request members.
   await page.getByTestId("package-input").setInputFiles(PKG);
   await page.getByRole("button", { name: SIGN }).click();
   await expect(page.getByTestId("refused-card")).toBeVisible();
@@ -56,8 +49,8 @@ test("an incomplete sign is refused with the server's missing fields, verbatim",
   );
 });
 
-// [DRAWN, RULING-2026-08-29] — one signed act: the press uploads AND signs;
-// the sealed card renders only on the server's acknowledgement of both.
+// Rule: one signed act — the press uploads and signs; the sealed card
+// renders only on the server's acknowledgement of both.
 test("one press signs for the package — no second accept stage exists", async ({
   page,
 }) => {
@@ -74,8 +67,8 @@ test("one press signs for the package — no second accept stage exists", async 
   await expect(page.getByTestId("accept-btn")).toHaveCount(0);
 });
 
-// [INVARIANT] — rule: a duplicate package surfaces the server's sha256-match
-// notice (INVARIANT 48). The create still 409s; the banner prints it verbatim.
+// Rule: a duplicate package surfaces the server's sha256-match notice. The
+// create still 409s; the banner prints it verbatim.
 test("a byte-identical re-upload surfaces the server's duplicate notice", async ({
   page,
 }) => {
@@ -91,7 +84,7 @@ test("a byte-identical re-upload surfaces the server's duplicate notice", async 
   );
 });
 
-// [DRAWN, RULING-2026-08-29] — jurisdiction is read, never typed: no writable
+// Rule: jurisdiction is read, never typed — no writable
 // jurisdiction/state/county input exists anywhere on the screen, and the
 // paired row states the absence until the server's clerk-stamp readout lands.
 test("jurisdiction is read from the clerk stamp — no input to hand-pick it wrong", async ({

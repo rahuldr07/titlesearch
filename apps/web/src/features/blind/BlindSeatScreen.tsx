@@ -10,14 +10,12 @@ import { SeatGaps } from "./SeatGaps";
 import { useCapture } from "./useCapture";
 
 /**
- * SCREEN — THE CAPTURE SEAT, at `/blind`.
- *
- * INVARIANT 46: the seat shows no machine value, no confidence, no engine, no
- * other seat's entry and no order state. `GET /api/blind/{order}/schedule` is
- * the only read, and it is blind-side by construction — a list of what to key,
- * with nothing keyed into it. `/api/orders/{id}/fields` is the answer sheet and
- * is never touched here. The rail and the command palette are withheld by the
- * shell (`app/chrome/captureSeat.ts`); nothing is repeated in this file.
+ * The capture seat, at `/blind`. The seat shows no machine value, no
+ * confidence, no engine, no other seat's entry and no order state.
+ * `GET /api/blind/{order}/schedule` is the only read — blind-side by
+ * construction, a list of what to key with nothing keyed into it.
+ * `/api/orders/{id}/fields` is the answer sheet and is never touched here.
+ * The rail and the command palette are withheld by the shell.
  */
 export function BlindSeatScreen() {
   const schedule = useRead(captureSchedule(CAPTURE_ORDER));

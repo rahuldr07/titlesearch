@@ -7,8 +7,8 @@ import { RouteButton } from "../../app/chrome/RouteButton";
 import { RecentOrderRow } from "./RecentOrderRow";
 
 /**
- * The prototype's recent-orders table, built on the browse endpoint's first
- * page. The window is the server's — no slice, no length, no re-count.
+ * The recent-orders table, built on the browse endpoint's first page. The
+ * window is the server's — no slice, no length, no re-count.
  */
 export function RecentOrders() {
   const recent = useRead(ordersPage({ query: "", filter: "all", page: 1 }));
@@ -18,11 +18,9 @@ export function RecentOrders() {
       <div className="flex flex-wrap items-baseline justify-between gap-6">
         <div className="flex items-baseline gap-5">
           <h2 className="text-body font-bold leading-tight text-ink-primary">Recent orders</h2>
-          {/* The reference's windowed form ("Latest 10 of 35"), from the
-              server's own two numbers. `page_size` clamped to `total` rather
-              than `orders.length` counted — the rows are never re-counted
-              here, and a first page shorter than the window means the shop
-              holds fewer orders than the window, which `total` already says. */}
+          {/* "Latest 10 of 35", from the server's own two numbers.
+              `page_size` clamped to `total` rather than `orders.length`
+              counted — the rows are never re-counted here. */}
           {recent.data !== undefined && (
             <span className="font-mono text-meta leading-close tabular-nums text-ink-faint">
               Latest {Math.min(recent.data.page_size, recent.data.total)} of{" "}
@@ -30,8 +28,8 @@ export function RecentOrders() {
             </span>
           )}
         </div>
-        {/* `/orders-list` is the browse door (doors.ts:17). `/orders` is the
-            ORDER-SCOPED hub door and renders the unbuilt card with no id. */}
+        {/* `/orders-list` is the browse door; `/orders` is the order-scoped
+            hub door and renders the unbuilt card with no id. */}
         <RouteButton to="/orders-list" size="sm">
           View all orders →
         </RouteButton>

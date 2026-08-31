@@ -12,12 +12,10 @@ import { Button } from "./button";
 import { onCanvas } from "./kitGround";
 
 /**
- * A POPOVER IS ONLY ITSELF WHEN IT IS OPEN, so every story here opens one —
- * a story showing a closed trigger is a story about a button.
- *
- * `defaultOpen` on the trigger rather than a click in `play`: the a11y addon
- * grades what is on the canvas when the story settles, and a panel that has to
- * be clicked open is a panel axe never sees.
+ * Every story opens the popover. `defaultOpen` on the trigger rather than a
+ * click in `play`: the a11y addon grades what is on the canvas when the
+ * story settles, and a panel that has to be clicked open is one axe never
+ * sees.
  */
 const meta = {
   title: "ui/Popover",
@@ -43,12 +41,9 @@ export const Open: Story = {
 };
 
 /**
- * With the card recipe's header band — 11px w700 ink-muted (see overlaySurface.ts on why not ink-faint), on
- * control-fill with a hairline rule.
- *
- * NESTED CARDS ARE FORBIDDEN, and the assertion is on that: the header must
- * carry no border box, no radius and no shadow of its own. It is a band inside
- * the popover's surface, not a card sitting on one.
+ * With the header band. Nested cards are forbidden, and the assertion is on
+ * that: the header carries no border box, radius or shadow of its own — a
+ * band inside the popover's surface, not a card sitting on one.
  */
 export const WithHeader: Story = {
   render: () => (
@@ -73,13 +68,11 @@ export const WithHeader: Story = {
 };
 
 /**
- * THE CHORD CONTRACT. The panel must carry `data-chord-scope="own"` so
- * `overlayIsUp()` in `shared/chords.ts` stands the global single-key vocabulary
- * down while it is up — otherwise `q` typed at an open panel both escalates the
- * field behind it and typeahead-jumps the list inside it.
- *
- * Asserted on the DOM rather than trusted from the source, because the mark is
- * an attribute that a refactor can drop without breaking a type.
+ * The panel must carry `data-chord-scope="own"` so the global single-key
+ * vocabulary stands down while it is up — otherwise `q` typed at an open
+ * panel both escalates the field behind it and typeahead-jumps the list
+ * inside it. Asserted on the DOM because a refactor can drop the attribute
+ * without breaking a type.
  */
 export const StandsTheChordsDown: Story = {
   render: () => (
@@ -96,9 +89,9 @@ export const StandsTheChordsDown: Story = {
 };
 
 /**
- * CLOSED, and the same assertion inverted: with nothing open there must be NO
- * `own` mark anywhere, or the vocabulary is dead for the life of the screen.
- * This is the half that catches a mark left on a permanently-mounted node.
+ * The same assertion inverted: with nothing open there must be no `own` mark
+ * anywhere, or the vocabulary is dead for the life of the screen. This half
+ * catches a mark left on a permanently-mounted node.
  */
 export const ClosedLeavesChordsLive: Story = {
   render: () => (

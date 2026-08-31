@@ -19,18 +19,12 @@ import {
 import { tokenColour } from "./tokenColour";
 
 /**
- * THE RAIL COLUMN, pinned against the measurements taken off the design's own
- * prototype rather than off its prose. Every number below was READ from
- * `reference-app.html` in a browser, not transcribed from the README:
- *
- *   column 240 · door 38 high, radius 14 · rubric 11px/700 at .14em tracking ·
- *   door label 13px · active door filled with the action colour under white.
- *
- * These are the values a future edit is most likely to lose silently: every one
- * still LOOKS like a sidebar when wrong. A 32px door with `text-sm` renders
- * perfectly and matches nothing.
- *
- * `SidebarMenuLink` is a router `Link`, so these mount a memory router.
+ * The rail column's measurements, pinned: column 240 · door 38 high, radius
+ * 14 · rubric 11px/700 at .14em tracking · door label 13px · active door
+ * filled with the action colour under white. These are the values a future
+ * edit is most likely to lose silently — every one still looks like a
+ * sidebar when wrong. SidebarMenuLink is a router Link, so these mount a
+ * memory router.
  */
 function Rail() {
   return (
@@ -79,34 +73,29 @@ export const Column: Story = {
   },
 };
 
-/**
- * A door is 38px tall at radius 14 — the button recipe, and NOT the registry's
- * `h-8`/`rounded-lg` (32px/8px), which RECIPES.md lists as the first two rows
- * of "where the registry disagrees, and ours wins".
- */
+/** A door is 38px tall at radius 14 — the button recipe. */
 export const DoorGeometry: Story = {
   play: async ({ canvas }) => {
     const door = await canvas.findByTestId("door-queue");
     expect(door.getBoundingClientRect().height).toBe(38);
     expect(getComputedStyle(door).borderRadius).toBe("14px");
-    // Rule 2: the label is 13px (--text-meta). `text-sm` would be 14 and would
-    // not exist as a utility at all — it would inherit and still look fine.
+    // The label is 13px (--text-meta). `text-sm` would emit no utility at
+    // all — it would inherit and still look fine.
     expect(getComputedStyle(door).fontSize).toBe("13px");
   },
 };
 
 /**
- * ALL-CAPS AT .14em IS LEGAL HERE AND ALMOST NOWHERE ELSE. Rule 4 permits it in
- * exactly two places, a sidebar rubric being one, and `check-rules.mjs` enforces
- * that by banning `uppercase` outside rail/sidebar/certificate. 11px x .14em is
- * 1.54px of tracking.
+ * All-caps at .14em is legal here and almost nowhere else — check-rules bans
+ * `uppercase` outside rail rubrics and serif certificate headings. 11px at
+ * .14em is 1.54px of tracking.
  */
 export const RubricIsTrackedCaps: Story = {
   play: async ({ canvas }) => {
     const rubric = await canvas.findByRole("heading", { name: "Pipeline" });
     const style = getComputedStyle(rubric);
-    // A rail rubric IS ALL-CAPS — this asserts rule 4's legal case, and the
-    // line scanner cannot tell an assertion about a class from the class.
+    // A rail rubric is all-caps — this asserts the legal case, and the line
+    // scanner cannot tell an assertion about a class from the class.
     expect(style.textTransform).toBe("uppercase"); // rules-allow: asserts rule 4's legal rail-rubric case
     expect(style.fontSize).toBe("11px");
     expect(style.letterSpacing).toBe("1.54px");
@@ -115,16 +104,11 @@ export const RubricIsTrackedCaps: Story = {
 };
 
 /**
- * The active door is a SOLID accent fill under white — the design's own
- * treatment, 8.23:1. The resting door is transparent, so "you are here" is
- * carried by fill and weight together rather than by a colour shift alone.
- *
- * THE EXPECTED COLOURS ARE READ FROM THE TOKENS, not written as hex, and
- * `check-rules.mjs` rejected the hex spelling of this test — correctly. Hard
- * hex here is a SECOND copy of `--color-action`: it passes when the component
- * is wrong the same way, and fails when the palette is legitimately revalued
- * (five registers are already in the record). Resolving both sides through the
- * one custom property asserts the RELATIONSHIP, which is the rule.
+ * The active door is a solid accent fill under white; the resting door is
+ * transparent, so "you are here" is fill and weight together. Expected
+ * colours are read from the tokens, not written as hex — a hard hex is a
+ * second copy of `--color-action` that passes when the component is wrong
+ * the same way and fails when the palette is legitimately revalued.
  */
 export const ActiveDoorIsFilled: Story = {
   play: async ({ canvas }) => {

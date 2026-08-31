@@ -7,19 +7,12 @@ import { ResolveCard } from "./ResolveCard";
 import { DocketExcerpt, IdentityGrid, LockedDetermination } from "./EvidenceBlocks";
 
 /**
- * ONE CLUSTER, WITH THE EVIDENCE THE REFERENCE DRAWS.
- *
- * ⚠ RULED 2026-08-29 — `docs/frontend/design-2026-08/RULING-2026-08-29.md`.
- * The docket excerpt on paper (boxed at the match), the debtor-vs-owner
- * comparison grid, the extraction-context paragraph and the raiser line are
- * all drawn now — every one READ off the widened `Escalation` (entities.ts):
- * the server quotes the record, the grid's two names are the server's, and
- * the age is a served label, never a tick. Nothing here composes evidence.
- * The same ruling supersedes `INVARIANTS:42-43`'s absent-not-dimmed FOR THIS
- * SURFACE: a seat without `escalation.resolve` sees the determination
- * VISIBLE + DISABLED under the reference's amber hint (`EvidenceBlocks.tsx`);
- * the refusal itself stays the server's (403), and resolve-without-a-rule
- * stays refused for every seat (`ResolveCard`).
+ * One cluster with its evidence, every block read off the server's
+ * `Escalation` — the server quotes the record, and the age is a served label,
+ * never a tick. Nothing here composes evidence. A seat without
+ * `escalation.resolve` sees the determination visible but disabled; the
+ * refusal itself stays the server's (403), and resolve-without-a-rule stays
+ * refused for every seat.
  */
 export function EscalationDetail({
   escalation,
@@ -31,7 +24,7 @@ export function EscalationDetail({
   readonly rules: readonly Rule[];
   readonly resolving: boolean;
   /** `null` when the reader does not hold `escalation.resolve` — the card
-   * then renders disabled-with-hint (RULED 2026-08-29), never absent. */
+   * then renders disabled-with-hint, never absent. */
   readonly onResolve:
     | ((ruling: string, rule: { rule_id: string } | { draft: { text: string } }) => void)
     | null;
@@ -65,8 +58,6 @@ export function EscalationDetail({
           {escalation.question}
         </h1>
 
-        {/* The drawn attribution line — raiser and served age, or the ruling
-            examiner once one exists. All server members, printed. */}
         {escalation.resolved_by !== null ? (
           <p className="font-sans text-meta leading-body font-medium text-ink-muted">
             Ruled by {escalation.resolved_by}
@@ -105,9 +96,9 @@ export function EscalationDetail({
             <IdentityGrid identity={escalation.identity} />
           )}
 
-          {/* `INVARIANTS:36`, §0.5 MANDATORY: an escalation with a `resolution`
-              and a null `rule_id` is NOT rendered as resolved — a UI that draws
-              it settled has performed the resolution the server refused. */}
+          {/* An escalation with a `resolution` and a null `rule_id` is not
+              rendered as resolved — a UI that draws it settled has performed
+              the resolution the server refused. */}
           {!resolvedByRule && (
             <p
               data-refusal="no-rule"
@@ -128,8 +119,7 @@ export function EscalationDetail({
             <p className="font-sans text-meta leading-close text-ink-secondary">
               Rests on <RulePill code={settledBy.code} status={settledBy.status} />
             </p>
-            {/* The stamp says what the rule is DOING: settled on paper is not
-                the same as binding in the pipeline. */}
+            {/* Settled on paper is not the same as binding in the pipeline. */}
             <RuleEffect code={settledBy.code} status={settledBy.status} />
           </CardBody>
         </Card>

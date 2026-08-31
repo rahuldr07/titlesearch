@@ -14,18 +14,9 @@ export type TemplateView = "sheet" | "diff" | "json";
 export type NaSimMode = "normal" | NaModeId;
 
 /**
- * TEMPLATES ARCHITECT — the drawn editor chrome, whole.
- *
- * ⚠ RULED 2026-08-29 — `docs/frontend/design-2026-08/RULING-2026-08-29.md`.
- * The pre-ruling screen refused the catalog, the editor, the diff and the
- * save for want of wire surface; the ruling added the surface
- * (`TemplateCatalogResponse`, `TemplateDetailResponse`, `PATCH
- * /api/templates/{id}`), so the reference's three-column architect is built
- * as drawn: catalog rail left, live sheet / split diff / JSON schema centre
- * under the NA simulation bar, inspector right (Syntax · Null states ·
- * Overrides · Audit).
- *
- * Wording edits live here as DRAFTS until the drawn Save posts them — the
+ * Templates Architect — three columns: catalog rail left, live sheet /
+ * split diff / JSON schema centre under the NA simulation bar, inspector
+ * right. Wording edits live here as drafts until Save posts them — the
  * server owns the accepted copy, and switching templates drops unsaved
  * drafts, exactly as an editor that never told the server anything must.
  */

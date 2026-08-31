@@ -2,21 +2,9 @@ import type { DeliveryWithReport } from "@titlepipe/contract";
 import { cx } from "../../components/ui";
 
 /**
- * THE ONE THING ON THIS SCREEN THE PROTOTYPE DOES NOT DRAW.
- *
- * The design's delivered screen is scoped to a single order. `GET
- * /api/deliveries` is not, and there is no per-order delivery endpoint, so
- * something has to choose which order the grid is showing.
- *
- * It takes the shape the prototype uses for its own single-select strips — a
- * sunken 10px track, 4px of padding, 6px cells, the selected cell raised in
- * white with no accent (rule 1: a selector is not the screen's decision, and
- * rule 5: 6 = 10 − 4, the padding IS the gap). Laid out horizontally under the
- * header rather than as a left rail, so the two-column grid below keeps the
- * full width the prototype gives it.
- *
- * `aria-current` rather than `aria-selected`: these are not tabs and own no
- * panel each — they re-scope the whole grid.
+ * Chooses which delivered order the grid shows — `GET /api/deliveries` is not
+ * order-scoped and there is no per-order endpoint. `aria-current` rather than
+ * `aria-selected`: these are not tabs and own no panels — they re-scope the grid.
  */
 export function OrderPicker({
   orders,

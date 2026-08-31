@@ -1,23 +1,12 @@
 import { expect, test } from "@playwright/test";
 
 /**
- * [ORPHAN RULE] — rule: the `?` key map is MODAL, and "modal" is a structural
- * claim, not a paint job. `KeyMap`'s own doc comment has always said it — "it is
- * MODAL: while it is up the screen underneath stands its own keys down" — and
- * `navigation.spec` #3 pins the key half of it on Review. Nothing pinned the
- * FOCUS half, and the overlay was a bare `<div class="fixed inset-0 …">`: no
- * `role="dialog"`, no `aria-modal`, no accessible name, no focus move, no trap,
- * and a page behind that was neither `inert` nor hidden. Tab walked straight
- * onto controls the scrim was covering.
- *
- * That is not a cosmetic gap. Combined with the queue's unscoped keys, `?` then
- * Enter HANDED THE READER AN ORDER from inside the cheat sheet, and `?` then `p`
- * opened the pass field behind the overlay. A cheat sheet that fires the
- * commands it describes is the exact trap the component says it is not.
- *
- * `navigation.spec` #3 asserts the same standing-down rule on Review with the
- * review keys; these assert it on Queue with the queue keys, and add the focus
- * clauses no spec covered.
+ * Rule (recorded nowhere else): the `?` key map is modal, and "modal" is a
+ * structural claim, not a paint job — real dialog role, focus moved and
+ * trapped, the page behind inert, and the screen's own keys stood down. A
+ * cheat sheet that fires the commands it describes is the exact trap.
+ * `navigation.spec` #3 asserts the standing-down rule on Review; these
+ * assert it on Queue and add the focus clauses.
  */
 
 test("the ? map is a real dialog: named, and focus moves into it", async ({ page }) => {

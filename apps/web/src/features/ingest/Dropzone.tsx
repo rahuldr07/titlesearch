@@ -2,19 +2,10 @@ import { useRef, useState, type DragEvent } from "react";
 import { Badge, cx, type BadgeProps } from "../../components/ui";
 
 /**
- * THE DROPZONE AND THE FILE ROW, AS DRAWN.
- *
- * ⚠ RULED 2026-08-29 (`docs/frontend/design-2026-08/RULING-2026-08-29.md`):
- * the reference's copy is built verbatim — the icon disc, "Drop scanned title
- * package here", and the "single PDF bundle (20–150 pages) · 300 DPI
- * recommended" sub-line the previous build refused for want of a citable
- * source. The file row prints the size in MB as the reference draws it, and
- * carries the quarantine pill the parent computes from the SERVER's scan.
- *
- * The input is `sr-only`, not `display:none`: a hidden input is not focusable
- * and a keyboard user could not reach the dropzone at all. The visible surface
- * is a `<label>`, which is what makes Enter/Space open the picker with no key
- * handler of our own.
+ * The dropzone and the file row. The input is `sr-only`, not `display:none`: a
+ * hidden input is not focusable and a keyboard user could not reach the
+ * dropzone at all. The visible surface is a `<label>`, which is what makes
+ * Enter/Space open the picker with no key handler of our own.
  */
 export function Dropzone(props: {
   readonly file: File | null;
@@ -58,8 +49,6 @@ export function Dropzone(props: {
           <span className="truncate font-mono text-meta font-bold leading-close text-ink-primary">
             {props.file.name}
           </span>
-          {/* MB as the reference draws it (RULING-2026-08-29) — one decimal,
-              converted from the browser's own File.size. */}
           <span className="font-sans text-label leading-flat text-ink-muted">
             {(props.file.size / 1_000_000).toFixed(1)} MB
           </span>

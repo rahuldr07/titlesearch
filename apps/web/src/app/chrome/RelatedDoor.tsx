@@ -1,14 +1,6 @@
 import { Link, type LinkComponentProps } from "@tanstack/react-router";
 
-/**
-
- * THE DOOR THIS SCREEN LEADS TO NEXT — one component, because fourteen of the nineteen
-
- * features had no outbound link at all. Measured 2026-08-28 by walking every `<Link
-
- * to=>` and `<LinkButton href=>` in the tree: only `overview`,…
-
- */
+/** The door this screen leads to next — one spelling of an outbound link. */
 export function RelatedDoor(props: {
   readonly to: LinkComponentProps<"a">["to"];
   readonly children: React.ReactNode;

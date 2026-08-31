@@ -6,15 +6,14 @@ import { fieldLabel } from "./fieldNaming";
 export type RequiredCountersign = CountersignsResponse["required"][number];
 
 /**
- * ONE T1 RULING AWAITING ITS SECOND READ.
- *
- * The row draws what arrived and nothing else: the server's value, the examiner
- * the server says ruled it, and `countersigned_by` — which is the ONLY thing
- * that may say a second read exists.
+ * One T1 ruling awaiting its second read. The row draws what arrived and
+ * nothing else: the server's value, the examiner the server says ruled it,
+ * and `countersigned_by` — the only thing that may say a second read
+ * exists.
  */
 export function CountersignRow(props: {
   readonly entry: RequiredCountersign;
-  /** Why the act is held, or null. Rule 9: a blocked control states its reason. */
+  /** Why the act is held, or null. A blocked control states its reason. */
   readonly heldBecause: string | null;
   readonly onCountersign: () => void;
 }) {

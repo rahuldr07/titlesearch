@@ -3,19 +3,12 @@ import { DeliveriesResponse, ReissueReasonsResponse } from "@titlepipe/contract"
 import { get } from "../../shared/api";
 
 /**
- * `GET /api/deliveries` (handlers.ts:981) — the ONLY read this screen has.
+ * The only read this screen has; the response embeds each delivery's report so
+ * a row can name its order and version without a second round-trip.
  *
- * `DeliveriesResponse` embeds the report (`DeliveryWithReport`,
- * endpoints.ts:617) so a row can name its order and version without a second
- * round-trip, and endpoints.ts:615-616 records why both v1 and v2 appear: "the
- * pair is the defect record."
- *
- * There is no `useRetryDelivery` here, and its absence is deliberate rather
- * than pending. `delivery.retry` (authz.ts:118) is `ops`/`admin` and belongs to
- * the transit-failure path — a retry re-SENDS the same file and never
- * re-renders the report (handlers.ts:987). This screen is the DELIVERED record;
- * building a retry into it would put a mutation on a screen whose whole subject
- * is what has already happened.
+ * No retry hook here, deliberately: a retry re-sends the same file and never
+ * re-renders the report, and this screen is the delivered record — no place
+ * for a mutation.
  */
 export function useDeliveries() {
   return useQuery({
@@ -25,10 +18,8 @@ export function useDeliveries() {
 }
 
 /**
- * ⚠ RULED 2026-08-29 (RULING-2026-08-29.md) — the Reissue Gateway's canned
- * reason radios are drawn, so the vocabulary is READ: `GET /api/reissue/
- * reasons` serves the list, and the browser never puts its own words on the
- * lender's record.
+ * The reissue reason vocabulary is served — the browser never puts its own
+ * words on the lender's record.
  */
 export function useReissueReasons() {
   return useQuery({

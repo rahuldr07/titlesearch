@@ -1,15 +1,7 @@
 import type { OrderCensus } from "@titlepipe/contract";
 import { RouteButton } from "../../app/chrome/RouteButton";
 
-/**
-
- * THE WORKSTATION'S FOOTER BAR, measured off `reference-app.html`'s `isReview`:
-
- * flex-shrink:0 · white · border-top 1px #EDEFF3 · padding 16px space-between, wraps
-
- * left "✓ 128 cited fields verified · 6 fields pending confirmation" right…
-
- */
+/** The workstation's footer bar — the census line and the release door. */
 export function WorkstationFooter(props: {
   readonly orderId: string;
   readonly census: OrderCensus | undefined;
@@ -42,14 +34,11 @@ export function WorkstationFooter(props: {
       </p>
 
       {/*
-       * The design's right half is "Advance to publication", and it is REAL
-       * now: the compiler lives at `/orders/{id}/release` (`ReleaseScreen`),
-       * with `release.compile`/`release.execute` in PERMISSIONS. The same link
-       * the hub's `VerdictCard` draws, so the two doors cannot drift. Not
-       * gated here: the release gates (0 open fields, T1 countersign, no
-       * uncovered gaps) are the SERVER's, enforced at compile/execute and
-       * surfaced verbatim on that screen — a client-side pre-check would be
-       * the browser re-deriving a state machine it does not own.
+       * The same link the hub's `VerdictCard` draws, so the two doors cannot
+       * drift. Not gated here: the release gates are the server's, enforced
+       * at compile/execute and surfaced verbatim on that screen — a
+       * client-side pre-check would be the browser re-deriving a state
+       * machine it does not own.
        */}
       <RouteButton
         variant="secondary"

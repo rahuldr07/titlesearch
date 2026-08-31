@@ -4,35 +4,15 @@ import { Field, Label, Input } from "../../components/ui";
 import { Button } from "../../components/ui";
 
 /**
- * EMAIL + PASSWORD, DRAWN AS THE DESIGN DRAWS IT, AND HONEST ABOUT ITSELF.
- *
- * THE CONTRACT HAS NO AUTHENTICATION SURFACE. Not "not yet wired" — absent:
- * there is no login endpoint, no session endpoint and no logout anywhere in
- * `packages/contract`, and `packages/mocks` ships no handler for one.
- * `ANALYSIS-screens.md` §1 records the resolution: the four-account switcher is
- * "mock-auth only; Clerk at P1."
- *
- * Three ways this could have been built, and why this is the one:
- *
- *   - POST to an invented `/api/auth/login`. That is the UI inventing backend
- *     surface, which root AGENTS.md forbids outright ("Never generate backend
- *     logic from the UI/screens"), and MSW would 404 it in a way that reads as
- *     a broken backend rather than a missing feature.
- *   - Accept any credentials and sign the reader in. A password field that
- *     accepts anything is a lie told in the one place a reader is entitled to
- *     assume otherwise, and it would put a fake authentication step into the
- *     record of a product whose entire subject is provenance.
- *   - Draw it, and refuse with the reason. This.
- *
- * The refusal is client-authored, and that is the ONE case where it is
- * legitimate: `shared/notify.ts` forbids the client composing refusal wording
- * because the SERVER's message must survive verbatim — and here there is no
- * server to have said anything. The sentence names the absence rather than
- * blaming the reader's credentials.
- *
- * Rule 9 is not applicable to the button: it is not disabled. A disabled
- * control with a reason would still be a control that looks like it could work
- * once some condition is met, and none can.
+ * Email + password, drawn as designed and honest about itself. The contract
+ * has no authentication surface — no login, session, or logout endpoint —
+ * so the form refuses with the reason rather than posting to an invented
+ * endpoint or accepting any credentials. The refusal is client-authored,
+ * and this is the one case where that is legitimate: there is no server to
+ * have said anything, and the sentence names the absence rather than
+ * blaming the reader's credentials. The button is not disabled — a disabled
+ * control with a reason would look like it could work once some condition
+ * is met, and none can.
  */
 export function CredentialsForm() {
   const [refused, setRefused] = useState(false);
@@ -45,8 +25,7 @@ export function CredentialsForm() {
         setRefused(true);
       }}
     >
-      {/* Rule 3: an email address is an identifier, so mono is legal here —
-          and the design's own field is mono. */}
+      {/* An email address is an identifier, so the field is mono. */}
       <Field>
         <TextField name="email" type="email" className="flex flex-col gap-3">
           <Label>Work email</Label>

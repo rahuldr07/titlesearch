@@ -5,15 +5,10 @@ import { StageLink, stageIsCurrent } from "./StageLink";
 import { StageBadge, StageCircle } from "./StageMark";
 
 /**
- * The strip's second row — the reference app's five stage tabs.
- *
- * ⚠ RULED 2026-08-29 — `docs/frontend/design-2026-08/RULING-2026-08-29.md`:
- * the reference's tabs NAVIGATE (each to its stage's surface), draw a green ✓
- * on done stages, highlight the current one, and hang the served badge on
- * Examination — so ours do all four. The list is
+ * The strip's second row — the five stage tabs. The list is
  * `OrderContextResponse.stage_tabs`, served whole: `done` and every badge
  * string arrive decided; the only thing computed here is which tab the
- * CURRENT URL shows, which is the router's fact, not the server's.
+ * current URL shows, which is the router's fact, not the server's.
  */
 export function OrderStripStages(props: {
   readonly orderId: string;

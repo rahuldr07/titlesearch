@@ -8,12 +8,10 @@ import { interpolate } from "./useTemplates";
 type InspectorTab = "syntax" | "na" | "overrides" | "audit";
 
 /**
- * THE INSPECTOR COLUMN — Syntax · Null states · Overrides · Audit, the four
- * drawn tabs (RULED 2026-08-29).
- *
- * Syntax edits the active block's sentence-format expression as a DRAFT the
- * screen holds until the drawn Save posts it; the token palette and the live
- * preview interpolate the SERVER's token samples. Null states prints the four
+ * The inspector column — Syntax · Null states · Overrides · Audit. Syntax
+ * edits the active block's sentence-format expression as a draft the screen
+ * holds until Save posts it; the token palette and the live preview
+ * interpolate the server's token samples. Null states prints the four
  * declared absence strings — never collapsed, each under its numbered name.
  */
 export function TemplateInspector({

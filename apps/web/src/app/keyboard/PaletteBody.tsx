@@ -10,20 +10,13 @@ import { QueryState } from "../../entities/state/QueryState";
 import { Kbd } from "../../components/ui";
 
 /**
- * THE PALETTE'S CONTENTS — mounted ONLY while the palette is open, which is the
- * whole reason it is a separate component from the shell.
- *
- * `CommandPalette` sits at the root for the app's lifetime. A `useRead` in that
- * component would fire `GET /api/orders` at boot, on every screen, for a panel
- * nobody had opened. React Aria unmounts the modal's children when it closes,
- * so putting the read here makes "the palette asks for orders" mean exactly
- * what it says.
- *
- * `q` goes to the browse endpoint, so the SERVER matches orders and nothing
- * here re-states its filter; screens and actions are local strings matched
- * locally, every typed token against label, hint or group. The query is
- * DEBOUNCED into the descriptor, not into the input: the box stays live at
- * every keystroke and the network settles behind it.
+ * The palette's contents — mounted only while the palette is open, which is
+ * why it is separate from the shell: a `useRead` in `CommandPalette` would
+ * fire `GET /api/orders` at boot for a panel nobody had opened. `q` goes to
+ * the browse endpoint, so the server matches orders and nothing here
+ * re-states its filter; screens and actions are local strings matched
+ * locally. The query is debounced into the descriptor, not into the input:
+ * the box stays live at every keystroke and the network settles behind it.
  */
 export function PaletteBody(props: {
   readonly rules: readonly GrantedPermissionSchema[] | undefined;

@@ -1,12 +1,7 @@
 /**
- * @titlepipe/contract — the shared source of truth for the REST contract.
- *
- * Zod schemas consumed by apps/web (forms, TanStack Query), packages/mocks
- * (MSW handlers), and eventually core-api directly (no codegen).
- *
- * The authoritative prose contract is docs/CONTEXT.md §7 + docs/PRD.md §9.
- * Server-side owns all state machines, needs_review logic, queue ordering,
- * derived values, and blindness enforcement. Screens are thin.
+ * @titlepipe/contract — shared Zod schemas for the REST contract, consumed by
+ * apps/web and packages/mocks. The server owns all state machines,
+ * needs_review logic, queue ordering, and derived values; screens are thin.
  */
 export * from "./enums.js";
 export * from "./entities.js";

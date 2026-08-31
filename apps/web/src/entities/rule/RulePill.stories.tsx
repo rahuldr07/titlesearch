@@ -4,8 +4,8 @@ import { expect } from "storybook/test";
 import { RulePill } from "./RulePill";
 
 /**
- * `INVARIANTS:38` — a PENDING rule "renders VISIBLY INERT". These three stories
- * are the proof of "visibly": inert is struck and dashed, not merely paler.
+ * A pending rule renders visibly inert. These three stories are the proof of
+ * "visibly": inert is struck and dashed, not merely paler.
  */
 const meta = {
   title: "entities/RulePill",

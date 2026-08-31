@@ -1,13 +1,8 @@
 import { expect, test } from "@playwright/test";
 
 /**
- * HARVESTED INVARIANTS — migrated from apps/web @ ade49af (pre-rebuild).
- * Source: apps/web/e2e/server-owns-state.spec.ts
- *
- * Every test here is SKIPPED until the feature it covers lands in web-v2.
- * Un-skip as each feature lands. Rewrite selectors freely.
- * NEVER weaken an assertion — if one cannot pass against the new design,
- * that is a CONFLICT in the design: stop and report (BRIEF §5 Phase 5).
+ * Never weaken an assertion — a test that cannot pass against the new
+ * design is a conflict in the design: stop and report.
  */
 
 import { interceptApi } from "../helpers/net";
@@ -62,7 +57,7 @@ const crafted = {
     }),
   ],
 };
-// TODO(rebuild) [INVARIANT] — rule: pending+null is 'not yet extracted' — never 'Not Available', never queued. needs_review is NEVER derived from value === null.
+// Rule: pending+null is 'not yet extracted' — never 'Not Available', never queued. needs_review is NEVER derived from value === null.
 test("a null pending field renders 'not yet extracted' — never Not Available, never queued", async ({
   page,
 }) => {
@@ -81,7 +76,7 @@ test("a null pending field renders 'not yet extracted' — never Not Available, 
   await expect(page.getByTestId("sel-label")).toHaveText("OWNER ZIP");
 });
 
-// TODO(rebuild) [INVARIANT] — rule: the server owns `state`. engine confidence never promotes or demotes a field (0.99 stays queued, 0.01 stays confirmed).
+// Rule: the server owns `state`. engine confidence never promotes or demotes a field (0.99 stays queued, 0.01 stays confirmed).
 test("the state pill renders server state verbatim — confidence never promotes or demotes", async ({
   page,
 }) => {

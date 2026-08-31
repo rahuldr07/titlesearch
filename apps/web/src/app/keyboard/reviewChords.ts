@@ -1,26 +1,14 @@
 import type { ChordSpec } from "./keymap";
 
 /**
- * THE WORKSTATION'S SIX KEYS, IN THE REGISTRY BUT NOT ON THE WINDOW.
- *
- * INVARIANT 50 makes keys pane-local — "the innermost layer that can use a key
- * wins" — so `features/review/useReviewKeys.ts` installs these, not
- * `GlobalKeys`. That is why every row here carries `install: "review"` and a
- * null `action`: there is no global handler to join, and `GlobalKeys` skips
- * them by construction rather than by remembering to.
- *
- * They are listed anyway, because the alternative was worse. The shortcut
- * overlay printed only the four global chords while the workstation bound six
- * more and `WorkstationBar` printed all six as chips — a cheat sheet that omits
- * the keys a reader is most likely to press is lying by omission, which is the
- * same rule-11 failure as advertising a key nothing binds, run backwards.
- *
- * `keymap.test.ts` is what keeps the claim true: it reads `useReviewKeys.ts`
- * and fails if these six and the keys that file binds are not the same set.
- *
- * DOUBLE-CLICK IS NOT HERE. The design's list ends with "Double-Click · enter
- * rapid inline editing" and nothing in the app binds `dblclick` to the
- * correction editor. Rule 11 refuses it: this registry lists installed keys.
+ * The workstation's six keys — in the registry but not on the window. Keys
+ * are pane-local, so `features/review/useReviewKeys.ts` installs these, not
+ * `GlobalKeys`; every row carries `install: "review"` and a null `action`,
+ * so `GlobalKeys` skips them by construction. They are listed anyway: a
+ * cheat sheet that omits the keys a reader is most likely to press lies by
+ * omission. `keymap.test.ts` reads `useReviewKeys.ts` and fails if these and
+ * the keys that file binds are not the same set. Double-click is not here —
+ * this registry lists installed keys, and nothing binds it.
  */
 export const REVIEW_CHORDS: readonly ChordSpec[] = [
   {
@@ -28,9 +16,8 @@ export const REVIEW_CHORDS: readonly ChordSpec[] = [
     chord: "c",
     cap: "C",
     /*
-     * "machine read" rather than "value": ORPHAN O9 — the chord never accepts a
-     * blank, so a field the server sent no value for is not confirmable by key
-     * (`DecisionPanel.tsx`). Described by what it does.
+     * "Machine read" rather than "value": the chord never accepts a blank,
+     * so a field the server sent no value for is not confirmable by key.
      */
     desc: "Confirm the open field's machine read",
     action: null,
@@ -83,12 +70,8 @@ export const REVIEW_CHORDS: readonly ChordSpec[] = [
     chord: "z",
     cap: "Z",
     /*
-     * What the handler DOES — which, since ⚠ RULING-2026-08-29
-     * (docs/frontend/design-2026-08/RULING-2026-08-29.md), is the reference's
-     * drawn behaviour: `ScanPane.tsx` scales the sheet to the focused
-     * citation (1.85, 300ms, origin at the recorded box). The cap keeps
-     * rule 11 true by describing that behaviour, in the reference's own
-     * shortcut-sheet wording.
+     * Describes what the handler does: `ScanPane.tsx` scales the sheet to
+     * the focused citation.
      */
     desc: "Zoom the evidence page to the focused citation",
     action: null,

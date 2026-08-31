@@ -29,7 +29,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** 36px, radius 10, control fill on control border, 13px (RECIPES §Inputs). */
+/** 36px, radius 10, control fill on control border, 13px. */
 export const Rest: Story = {};
 
 export const WithValue: Story = {
@@ -40,7 +40,7 @@ export const WithValue: Story = {
   ),
 };
 
-/** Rule 3: mono is for DATA — refs, money, citations, hashes, timestamps. */
+/** Mono is for data — refs, money, citations, hashes, timestamps. */
 export const DataValue: Story = {
   render: () => (
     <TextField aria-label="Instrument number" defaultValue="2019-0043117">
@@ -49,7 +49,7 @@ export const DataValue: Story = {
   ),
 };
 
-/** Rule 9: there is no way to disable this without saying why. */
+/** There is no way to disable this without saying why. */
 export const BlockedWithReason: Story = {
   render: () => (
     <TextField aria-label="Instrument number" defaultValue="2019-0043117">

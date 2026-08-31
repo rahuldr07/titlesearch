@@ -3,9 +3,9 @@ import { Progress, ProgressLabel, ProgressValue } from "./progress";
 import { onPanel } from "./kitGround";
 
 /**
- * THE BAR, WHICH IS NOT THE ONE THE SCREENS USE. Every story here is a
- * CONTINUOUS quantity — bytes, pages — because that is the only case where a
- * bar tells the truth. For countable decisions see `progress-meter.stories`.
+ * The bar, which is not the one the screens use. Every story here is a
+ * continuous quantity — bytes, pages — the only case where a bar tells the
+ * truth. For countable decisions see progress-meter.stories.
  */
 const meta = {
   title: "ui/Progress",
@@ -36,7 +36,7 @@ export const Zero: Story = {
   ),
 };
 
-/** Finished. Settled green, not accent — rule 1. */
+/** Finished. Settled green, not the accent. */
 export const Complete: Story = {
   args: { value: 100 },
   render: (args) => (
@@ -73,9 +73,8 @@ export const Labelled: Story = {
 };
 
 /**
- * WHEN NOT TO REACH FOR THIS. Left: 18 decisions, which are countable, and the
- * bar throws away which ones. Right: the meter. The bar is correct for bytes
- * and wrong here.
+ * When not to reach for this: 18 decisions are countable, and the bar throws
+ * away which ones. Correct for bytes, wrong here.
  */
 export const WrongToolForACount: Story = {
   args: { value: 78, "aria-label": "Decisions settled" },

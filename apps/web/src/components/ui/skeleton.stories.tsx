@@ -4,7 +4,7 @@ import { onPanel } from "./kitGround";
 
 /**
  * Three heights matching three of the six type sizes, three widths, and one
- * story that states the refusal: a scan does not get a grey bar (rule 8).
+ * story that states the refusal: a scan does not get a grey bar.
  */
 const meta = {
   title: "ui/Skeleton",
@@ -43,9 +43,8 @@ export const LoadingRow: Story = {
 };
 
 /**
- * WHAT THIS COMPONENT MAY NOT DO. Rule 8: evidence renders as paper, never as
- * grey placeholder bars. The right-hand side is the defect, kept visible so the
- * refusal is a thing a reviewer has seen rather than a line in a comment.
+ * What this component may not do: evidence renders as paper, never as grey
+ * placeholder bars. The right-hand side is the defect, kept visible.
  */
 export const NeverOnPaper: Story = {
   render: () => (

@@ -3,19 +3,12 @@ import { cx } from "../../components/ui";
 import type { GatewayRow } from "./useQuarantineScan";
 
 /**
- * THE QUARANTINE GATEWAY CHECKLIST, INLINE UNDER THE FILE ROW AS DRAWN.
- *
- * ⚠ RULED 2026-08-29 (`docs/frontend/design-2026-08/RULING-2026-08-29.md`):
- * the reference runs this on the intake form the moment a file lands, so it
- * renders HERE, fed by `useQuarantineScan` — the rows arrive with the SERVER's
- * per-step states and only the reveal cadence is local. The words are keyed
- * 1:1 to `QuarantineState` (design2.ts): nothing here advances a step, infers
- * "running" from the row above, or re-orders the list, and the typed Record
- * fails the build if the contract grows a fifth state.
- *
- * `sha` renders VERBATIM once the reveal completes — the digest is DATA
- * (`QuarantineResponse.sha256`), and the sentence beside it is the de-dup
- * step's own `detail`, quoted rather than composed.
+ * The quarantine checklist. The rows arrive with the server's per-step states;
+ * only the reveal cadence is local. The words are keyed 1:1 to
+ * `QuarantineState` — nothing here advances a step, infers "running" from the
+ * row above, or re-orders the list, and the typed Record fails the build if
+ * the contract grows a fifth state. The sentence beside the digest is the
+ * de-dup step's own `detail`, quoted rather than composed.
  */
 const STATE: Readonly<
   Record<QuarantineState, { mark: string; word: string; ink: string }>
@@ -65,7 +58,6 @@ export function QuarantineGateway(props: {
             >
               {row.label}
             </span>
-            {/* The state word, mono, as the reference sets it. */}
             <span
               className={cx(
                 "shrink-0 font-mono text-label leading-flat",

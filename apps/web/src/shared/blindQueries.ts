@@ -1,7 +1,7 @@
 import { CaptureScheduleResponse, ReconciliationResponse } from "@titlepipe/contract";
 import type { ReadDescriptor } from "./queries";
 
-/** THE ONE ORDER, NAMED ONCE (rule 11: one variable, never two literals). */
+/** The one order, named once. */
 export const CAPTURE_ORDER = "ord_demo_1";
 
 export function reconciliation(id: string): ReadDescriptor<ReconciliationResponse> {

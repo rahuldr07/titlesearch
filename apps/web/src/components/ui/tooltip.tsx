@@ -14,33 +14,11 @@ import { cx } from "./cx";
 type FocusableChild = React.ComponentProps<typeof Focusable>["children"];
 
 /**
- * A TOOLTIP IS NOT AN OVERLAY, AND THAT IS THE DECISION IN THIS FILE.
- *
- * It carries NO `data-chord-scope`. Everything else anchored in this kit sets
- * `own`, and the difference is that a tooltip TAKES NO FOCUS: react-aria opens
- * it on hover or on focus of the TRIGGER, never moves the caret into it, and
- * contains nothing tabbable. Nothing inside it can consume a keystroke, so
- * there is nothing for the global vocabulary to stand down for — and marking
- * it `own` would suspend every chord in the app for as long as a pointer
- * happened to rest on a button. The previous kit made this the assertion in
- * its own story: `Tooltip.stories.tsx` checks
- * `querySelector("[data-chord-scope='own']")` is NULL while one is open.
- *
- * ══ ADAPTED FROM THE REGISTRY ═══════════════════════════════════════════════
- *
- * The registry drew `bg-foreground` / `text-background` — an inverted-ink chip,
- * which this register has no token pair for. The dark surface we DO have is
- * CHROME: `--color-rail-deep` with `--color-rail-ink`, measured for exactly
- * this contrast (10.51:1). `rounded-md`(8) → `rounded-md` at OUR value (10, the
- * input rung; a tooltip is control chrome, not a surface). `text-xs` → the
- * 13px meta rung, `z-50` → `tp-z-popup`, and the eight-class
- * `animate-in/zoom-in-95/slide-in-from-*` stack → `tp-enter`, rule 10's single
- * entry curve. Nothing bounces.
- *
- * THE ARROW IS DROPPED. The registry positioned it with an inline `style`
- * callback and a `rotate(45deg)` per placement; `check-rules.mjs` bans inline
- * styles, and an arrow is decoration on a chip that is already anchored and
- * offset — rule 7, "no icon soup", is the same argument one level down.
+ * A tooltip is not an overlay: it carries no `data-chord-scope`, unlike
+ * everything else anchored in this kit. It takes no focus and contains
+ * nothing tabbable, so nothing inside it can consume a keystroke — and
+ * marking it `own` would suspend every chord in the app for as long as a
+ * pointer happened to rest on a button.
  */
 export type ChipTooltipProps = Omit<TooltipProps, "className" | "children"> & {
   readonly children: ReactNode;
@@ -64,15 +42,10 @@ export function Tooltip({ offset = 6, children, ...props }: ChipTooltipProps) {
 }
 
 /**
- * `Focusable` wraps the trigger because a tooltip must open on KEYBOARD focus
- * as well as hover — WCAG 1.4.13. A trigger that is not focusable gets a
- * tooltip no keyboard reader can ever see, which is the failure mode this
- * wrapper exists to make impossible rather than to document.
- *
- * `delay` defaults to 0 rather than react-aria's 1.5s. This kit's tooltips
- * carry REASONS (rule 9, and `disabled.ts` puts the same sentence on `title`),
- * and a reason a reader has to hover-and-wait for is a reason they will not
- * read.
+ * `Focusable` wraps the trigger because a tooltip must open on keyboard
+ * focus as well as hover (WCAG 1.4.13). `delay` defaults to 0 rather than
+ * react-aria's 1.5s: this kit's tooltips carry reasons, and a reason a
+ * reader has to hover-and-wait for is a reason they will not read.
  */
 export type TooltipTriggerProps = Omit<TooltipTriggerComponentProps, "children"> & {
   /**

@@ -6,9 +6,8 @@ import { Button } from "../../components/ui";
 import { DecisionCard } from "./DecisionCard";
 
 /**
- * THE ONE ACCENT SPEND (rule 1). Every story here draws exactly one accent
- * rail and hands in ONE primary action, because the card is the screen's spend
- * and a second primary inside it would be the second.
+ * The one accent spend: every story draws exactly one accent rail and hands
+ * in one primary action, because the card is the screen's spend.
  */
 const FIELD: Field = {
   id: "f-1",
@@ -91,9 +90,9 @@ export const WithReadingsAndConsequence: Story = {
 };
 
 /**
- * ROUTED, BUT NO QUESTION AUTHORED YET. `asking` is null and the card says so
- * plainly rather than composing one — see `DecisionQuestion`. A plausible
- * invented question is worse than a missing one.
+ * Routed, but no question authored yet: `asking` is null and the card says
+ * so plainly rather than composing one — a plausible invented question is
+ * worse than a missing one.
  */
 export const QuestionNotAuthored: Story = {
   args: { field: { ...FIELD, asking: null, why: null } },
@@ -104,12 +103,12 @@ export const QuestionNotAuthored: Story = {
 };
 
 /**
- * NEVER ROUTED TO REVIEW. `asking` is absent — a third statement, not a second
- * spelling of null — and no question is drawn at all.
+ * Never routed to review: `asking` is absent — a third statement, not a
+ * second spelling of null — and no question is drawn at all.
  */
 export const NeverRouted: Story = {
   args: {
-    /* Deleted, not destructured-around: no unused bindings for §6 to reject. */
+    /* Deleted, not destructured-around: no unused bindings. */
     field: ((): typeof FIELD => {
       const rest = { ...FIELD };
       delete rest.asking;
@@ -136,7 +135,7 @@ export const DecidingAnAbsence: Story = {
   },
 };
 
-/** THE DEFECT, UNDER DECISION. A value the server sent with no source at all. */
+/** The defect, under decision: a value the server sent with no source at all. */
 export const UncitedValue: Story = {
   args: {
     field: { ...FIELD, source_doc_id: null, source_page: null, source_snippet: null },

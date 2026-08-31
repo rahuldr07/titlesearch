@@ -8,14 +8,10 @@ import { ManifestSheet } from "./ManifestSheet";
 import { ReleaseAct } from "./ReleaseAct";
 
 /**
- * SCREEN — THE RELEASE COMPILER.
- *
- * A 320px index rail (manifest blocks above, the server's gate verdicts below),
- * the composed report as paper in the middle, and the signed act at the foot.
- *
- * Every number, verdict and sentence on it comes off one read. Nothing is
- * counted, compared or inferred here: `releasable` is the server's, each gate's
- * `passed` is the server's, and `blocked_reason` is the server's sentence.
+ * The release compiler: an index rail, the composed report as paper, and the
+ * signed act at the foot. Every number, verdict and sentence comes off one
+ * read — nothing is counted, compared or inferred here; `releasable`, each
+ * gate's `passed`, and `blocked_reason` are the server's.
  */
 export function ReleaseScreen(props: { readonly orderId: string }) {
   const composed = useRead(composition(props.orderId));

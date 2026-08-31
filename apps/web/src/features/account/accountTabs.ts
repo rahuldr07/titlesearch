@@ -1,17 +1,12 @@
 import type { AccountTabId } from "../../app/accountSearch";
 
 /**
-
- * The six panes, and what each one can actually read. The labels and the order are the
-
- * prototype's `setTabs` array, verbatim — People / Access (RBAC) / Rules & Routing /
-
- * Organization / Retention & security / Audit log.
-
+ * The six panes, and what each one can actually read. The labels and the
+ * order are the design's.
  */
 export interface AccountTab {
   readonly id: AccountTabId;
-  /** The prototype's own word for the pane. */
+  /** The design's own word for the pane. */
   readonly label: string;
   /** The endpoint the pane reads, or null where none exists. */
   readonly backing: string | null;

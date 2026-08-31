@@ -3,10 +3,7 @@ import { expect } from "storybook/test";
 import { Spinner } from "./spinner";
 import { onPanel } from "./kitGround";
 
-/**
- * TWO SIZES, TWO GROUNDS, AND ONE STORY THAT PINS THE REDUCED-MOTION
- * BEHAVIOUR — the defect the registry's `animate-spin` shipped.
- */
+/** Two sizes, two grounds, and one story that pins the reduced-motion behaviour. */
 const meta = {
   title: "ui/Spinner",
   decorators: [onPanel],
@@ -34,7 +31,7 @@ export const InContext: Story = {
 };
 
 /**
- * ON THE DARK CHROME. The ring is `currentColor` at two opacities, so the whole
+ * On the dark chrome. The ring is `currentColor` at two opacities, so the
  * component takes the surrounding ink and needs no rail-specific prop.
  */
 export const OnRail: Story = {
@@ -50,15 +47,10 @@ export const OnRail: Story = {
 };
 
 /**
- * RULE 10, MEASURED. The registry drew `animate-spin`, and the global
- * `prefers-reduced-motion` block clamps `animation-duration` to 0.01ms rather
- * than setting `animation: none` — deliberately, so a `transitionend` listener
- * still fires. A ROTATION under that clamp is not stopped, it is a strobe.
- *
- * This asserts the animation is the token file's own `tp-pulse`, an OPACITY
- * cycle, which under the same clamp settles at full opacity and simply sits
- * there. The check reads the computed animation name, so replacing the class
- * with a spin fails here.
+ * The global prefers-reduced-motion block clamps animation-duration to
+ * 0.01ms rather than setting `animation: none`, so a rotation under that
+ * clamp is a strobe, not a stop. This asserts the animation is `tp-pulse`,
+ * an opacity cycle that settles at full opacity under the same clamp.
  */
 export const ReducedMotionSettlesRatherThanStrobes: Story = {
   play: ({ canvasElement }) => {
@@ -71,9 +63,9 @@ export const ReducedMotionSettlesRatherThanStrobes: Story = {
 };
 
 /**
- * THE LABEL IS ANNOUNCED, ONCE. `role="status"` is a polite live region on the
- * wrapper; the SVG inside is `aria-hidden`, so the ring is not read as a second
- * graphic beside the words.
+ * The label is announced once: `role="status"` is a polite live region on
+ * the wrapper, and the SVG inside is aria-hidden so the ring is not read as
+ * a second graphic beside the words.
  */
 export const AnnouncesItsWait: Story = {
   play: ({ canvasElement }) => {

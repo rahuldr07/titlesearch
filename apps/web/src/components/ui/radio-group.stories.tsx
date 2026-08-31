@@ -4,10 +4,9 @@ import { RadioGroup, RadioGroupItem } from "./radio-group";
 import { onPanel } from "./kitGround";
 
 /**
- * Two levels of blocking, and they carry DIFFERENT sentences: the whole group
- * can be frozen ("this order is released") while a single option can be barred
- * for its own reason ("you ruled this field, a T1 countersign must be someone
- * else" — rule 13). Neither is derived from the other.
+ * Two levels of blocking, and they carry different sentences: the whole
+ * group can be frozen while a single option is barred for its own reason.
+ * Neither is derived from the other.
  */
 const meta = {
   title: "ui/RadioGroup",
@@ -55,7 +54,7 @@ export const GroupBlocked: Story = {
   },
 };
 
-/** ONE option barred, for its own reason. Rule 13, rendered rather than hidden. */
+/** One option barred, for its own reason. Rendered rather than hidden. */
 export const OneOptionBlocked: Story = {
   render: (args) => (
     <RadioGroup {...args}>
@@ -77,7 +76,7 @@ export const OneOptionBlocked: Story = {
   },
 };
 
-/** Rule 12: the blocked option renders, disabled, with its rule. Never hidden. */
+/** The blocked option renders, disabled, with its rule. Never hidden. */
 export const BlockedIsVisibleNotHidden: Story = {
   args: { defaultValue: "accept" },
   render: (args) => (

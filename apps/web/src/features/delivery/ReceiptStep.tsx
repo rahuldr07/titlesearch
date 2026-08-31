@@ -1,8 +1,7 @@
 import { cx } from "../../components/ui";
 
 /**
- * One receipt row, in the prototype's `76px 18px minmax(0,1fr)` grid. The time
- * column is wider here because the server sends a full instant and nothing
+ * One receipt row. The time column fits the server's full instant — nothing
  * reformats it.
  */
 export function ReceiptStep({
@@ -18,9 +17,7 @@ export function ReceiptStep({
 }) {
   return (
     <li className="grid grid-cols-[152px_20px_minmax(0,1fr)] items-baseline gap-4 border-b border-line-subtle py-5 last:border-b-0">
-      {/* Rule 3: an instant is data and stays mono; "not recorded" is a
-          sentence about the absence of one, and rule 14 says it is a
-          STATEMENT rather than a blank. */}
+      {/* An instant is data (mono); "not recorded" is a sentence about its absence (sans). */}
       <span
         className={cx(
           "text-label leading-close text-ink-muted",

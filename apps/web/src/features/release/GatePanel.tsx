@@ -2,11 +2,9 @@ import type { GateCheck } from "@titlepipe/contract";
 import { StatusMark } from "../../components/ui";
 
 /**
- * RELEASE GATE VERIFICATION — the server's verdicts, drawn.
- *
- * `GateCheck.passed` is read and rendered. Nothing here evaluates a gate,
- * counts the open ones, or infers a pass from the absence of a `detail`: a
- * client that decided a gate had cleared would be showing a check nobody ran.
+ * The server's gate verdicts. `GateCheck.passed` is read and rendered —
+ * nothing here evaluates a gate, counts the open ones, or infers a pass from
+ * the absence of a `detail`.
  */
 export function GatePanel(props: { readonly gates: readonly GateCheck[] }) {
   return (

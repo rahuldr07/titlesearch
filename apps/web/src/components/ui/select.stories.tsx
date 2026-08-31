@@ -36,11 +36,7 @@ export const Selected: Story = {
   args: { defaultSelectedKey: "escalate", children: options },
 };
 
-/**
- * OPEN, and the ✓ is the assertion. Rule 6's glyph vocabulary is ✓ ◆ • T1 — the
- * registry drew a lucide `CheckIcon`, which is not in it and which a greyscale
- * or high-contrast read loses.
- */
+/** Open, and the ✓ is the assertion — the mark, never an icon. */
 export const Open: Story = {
   args: { defaultOpen: true, defaultSelectedKey: "confirm", children: options },
   play: async () => {
@@ -50,12 +46,9 @@ export const Open: Story = {
 };
 
 /**
- * THE CHORD CONTRACT, and this is the component the bug was found in: `q` in an
- * open Select typeahead-jumps to "Quarantine the county" AND, without the mark,
- * fires the global escalate chord on the field behind it. Both layers act on
- * one keystroke.
- *
- * The mark rides on `Popover`, not on the listbox — `overlayIsUp()` must see it
+ * Without the chord mark, `q` in an open Select both typeahead-jumps to
+ * "Quarantine the county" and fires the global chord on the field behind it.
+ * The mark rides on Popover, not the listbox — overlayIsUp() must see it
  * from the frame the panel mounts, before focus reaches the first option.
  */
 export const StandsTheChordsDown: Story = {
@@ -75,9 +68,9 @@ export const ClosedLeavesChordsLive: Story = {
 };
 
 /**
- * RULE 9. There is no `isDisabled` prop on this component at all — the only way
- * to turn it off is a SENTENCE — so a story showing "disabled without a reason"
- * cannot be written. That absence is the enforcement.
+ * There is no `isDisabled` prop on this component — the only way to turn it
+ * off is a sentence, so a "disabled without a reason" story cannot be
+ * written.
  */
 export const Blocked: Story = {
   args: {
@@ -109,17 +102,10 @@ export const OptionBlocked: Story = {
     ),
   },
   /*
-   * THE COUNT IS THE ASSERTION, and its absence is why this shipped broken.
-   *
-   * This story had no `play` at all, so it proved only that the list renders —
-   * and the list DID render, with the blocked option silently dropped from the
-   * DOM by `ListBox`'s collection builder. One live option where there should
-   * be two, and a green story.
-   *
-   * Rule 12: a blocked action renders disabled WITH THE RULE, never hidden. A
-   * reviewer choosing an absence state has to be able to see that a state
-   * exists and is barred; an option that is simply gone is indistinguishable
-   * from one that was never offered.
+   * The count is the assertion: ListBox's collection builder can silently
+   * drop a wrapped option from the DOM, and a story without a count stays
+   * green on one option where there should be two. A blocked option renders
+   * disabled with the rule, never hidden.
    */
   play: async () => {
     const options = document.querySelectorAll("[role='option']");

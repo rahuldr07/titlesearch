@@ -1,38 +1,16 @@
 import { cx } from "./cx";
 
 /**
- * ADAPTED FROM THE REGISTRY `spinner`, WHICH WAS TEN LINES AND TWO DEFECTS.
+ * Pulses rather than spins: the global prefers-reduced-motion block clamps
+ * animation-duration to 0.01ms rather than setting `animation: none` (a
+ * transitionend listener still has to fire), and a rotation under that clamp
+ * is a strobe. `animate-tp-pulse` is an opacity cycle that settles at full
+ * opacity and simply sits there.
  *
- * The registry shipped `<Loader2Icon className="size-4 animate-spin" />`. Both
- * halves are replaced:
- *
- *   - `animate-spin` IS TAILWIND'S OWN KEYFRAME, at a stock 1s linear, and the
- *     design ships three timings and no fourth (rule 10). More seriously, the
- *     global `prefers-reduced-motion` block at the foot of `tokens.css` clamps
- *     `animation-duration` to 0.01ms — so under reduced motion a spin does not
- *     STOP, it becomes a strobe at ~100,000 rpm. Verified by reading the rule:
- *     it sets duration, not `animation: none`, and it does so deliberately (a
- *     `transitionend` listener still has to fire). A rotation is the one shape
- *     where that clamp is actively worse than the animation.
- *
- *     So this uses `animate-tp-pulse`, the token file's OWN keyframe, which is
- *     an OPACITY cycle. Clamped to 0.01ms it settles at full opacity and the
- *     glyph simply sits there — a legible resting state rather than a flicker.
- *     Rule 10's "nothing bounces" is satisfied by there being no motion at all.
- *
- *   - `Loader2Icon` is a lucide glyph, and rule 7 closes the vocabulary to
- *     ✓ ◆ • T1. A spinner is not a status mark, so it draws none of them: it is
- *     a ring stroked in `currentColor`, an SVG rather than an icon import, and
- *     it adds nothing to the bundle.
- *
- * ══ THE LABEL IS REQUIRED, AND THAT IS RULE 9 IN ITS OTHER DIRECTION ════════
- *
- * The registry hard-coded `aria-label="Loading"` — which is what a screen
- * reader hears no matter WHICH of the fourteen concurrent fetches this is. Rule
- * 9 makes a control state its reason; a wait is the same obligation seen from
- * the other side, so `label` is required and says what is being waited for.
- * `role="status"` stays: it is a polite live region, so the label is announced
- * when it appears and again when it goes.
+ * `label` is required and says what is being waited for — a hard-coded
+ * "Loading" is what a reader would hear no matter which of fourteen
+ * concurrent fetches this is. `role="status"` is a polite live region, so
+ * the label is announced when it appears and again when it goes.
  */
 export type SpinnerProps = {
   /** What is being waited for, e.g. "Uploading the package". Required. */

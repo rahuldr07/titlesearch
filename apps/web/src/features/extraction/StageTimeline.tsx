@@ -2,27 +2,13 @@ import type { PipelineStage } from "@titlepipe/contract";
 import { cx } from "../../components/ui";
 
 /**
- * THE SEQUENTIAL STAGES TIMELINE — one row per `PipelineStage` (intake.ts:83)
- * in the order the server sent them. Nothing here sorts, filters, renumbers, or
- * decides a stage is running because the one before it is done: `phase` arrives
- * already decided and `StagePhase` (intake.ts:77) has exactly four members.
- * `label`, `detail` and `owner` are printed verbatim — a client-side
- * `Record<StageId, string>` would be a second copy of product copy drifting
- * silently from the first.
- *
- * THE RIGHT-HAND CHIP — ⚠ RULED 2026-08-29
- * (`docs/frontend/design-2026-08/RULING-2026-08-29.md`): the reference draws a
- * mono COUNT chip on every stage row, so `PipelineStage.count` now rides the
- * wire as a SERVER-COMPOSED string and the chip prints it verbatim — still
- * never a numeral parsed back out of `detail`. Where the server sends no
- * count (null), the chip falls back to `owner` (`StageOwner`, intake.ts:80),
- * in sans because rule 3 reserves mono for data and "LLM agent" is a word.
- *
- * REPLAY lives beside the header in `ExtractionHeader` — the same ruling
- * built the drawn "↺ Replay" against `POST /pipeline/replay`.
- *
- * Rule 7's glyph vocabulary carries the phase: ✓ done, • running/waiting,
- * ◆ halted. No icons, no fifth mark.
+ * One row per `PipelineStage`, in the order the server sent them. Nothing here
+ * sorts, renumbers, or decides a stage is running because the one before it is
+ * done — `phase` arrives already decided. `label`, `detail` and `owner` print
+ * verbatim: a client-side copy of product copy would drift silently. The count
+ * chip prints the server's composed string — never a numeral parsed back out
+ * of `detail`; a null count falls back to `owner`, in sans because it is a
+ * word, not data.
  */
 const PHASE: Readonly<
   Record<PipelineStage["phase"], { mark: string; ink: string; ring: string }>
@@ -65,7 +51,6 @@ export function StageTimeline(props: { readonly stages: readonly PipelineStage[]
             <span className="font-sans text-body font-bold leading-close text-ink-primary">
               {stage.label}
             </span>
-            {/* The server's sentence, counts and all. Never re-composed. */}
             <span className="font-sans text-meta leading-body text-ink-muted">
               {stage.detail}
             </span>
@@ -82,7 +67,6 @@ export function StageTimeline(props: { readonly stages: readonly PipelineStage[]
               {stage.owner}
             </span>
           ) : (
-            /* The drawn count chip — the server's string, in the data register. */
             <span
               data-testid="stage-count"
               className={cx(

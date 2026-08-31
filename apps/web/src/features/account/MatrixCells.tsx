@@ -2,9 +2,8 @@ import type { RbacCell, RbacRow } from "@titlepipe/contract";
 import { cx } from "../../components/ui";
 
 /**
- * The matrix's row groups and cells, split from `AccessPanel.tsx` on the
- * 150-line gate. Every level shown is the SERVER's; a click posts the cell
- * and the pane repaints from the server's answer (RULED 2026-08-29).
+ * The matrix's row groups and cells. Every level shown is the server's; a
+ * click posts the cell and the pane repaints from the server's answer.
  */
 export function ModuleRows({
   module,
@@ -53,8 +52,8 @@ export function ModuleRows({
   );
 }
 
-/** One cell — the server's level, cycled by the server on click (rule 9 hint
- * when the click is refused before it is sent). */
+/** One cell — the server's level, cycled by the server on click, with the
+ * hold stated when the click is refused before it is sent. */
 function MatrixCell({
   rowId,
   cell,

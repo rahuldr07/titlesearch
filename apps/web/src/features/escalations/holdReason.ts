@@ -1,19 +1,8 @@
 /**
- * WHY A RESOLUTION IS HELD, IN ONE SENTENCE PER CAUSE.
- *
- * Split out of `ResolveCard` because it is the only part of that screen that is
- * a RULE rather than a rendering, and because the rule is testable on its own:
- * `§0.5 MANDATORY` (`INVARIANTS:36`, endpoints.ts:233-236) says a resolution is
- * refused without a rule, and this function is that sentence in code.
- *
- * A sentence per cause rather than one "complete the form": a senior who has
- * typed a ruling and sees a dead button needs to be told the MISSING THING IS A
- * RULE, which is precisely the requirement the design omits. A generic prompt
- * would leave the whole point of the screen unsaid.
- *
- * `null` means live. That inverted convention is `disabled.ts`'s: the kit has
- * no boolean disabled prop, so a reason IS the disablement, and the absence of
- * a reason is the only way to enable a control.
+ * Why a resolution is held, one sentence per cause — the missing thing is a
+ * rule, and a generic "complete the form" would leave that unsaid. `null`
+ * means live: the kit has no boolean disabled prop, so a reason is the
+ * disablement.
  */
 export type ResolutionMode = "cite" | "draft";
 

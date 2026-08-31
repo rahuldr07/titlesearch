@@ -4,15 +4,12 @@ import { useSignedIn } from "../../app/session/signedIn";
 import { useSession } from "../../shared/session";
 
 /**
- * THE DESIGN'S "Switch user: R. Menon (QC)" AFFORDANCE — and it is a preview
- * control, not a gate. The countersign action stays live whoever is signed in;
- * rule 13 is the server's 409. This only saves a trip through the sign-in
- * screen when the ruling examiner is the one holding the keyboard.
- *
- * DEV-ONLY, same cutover as `shared/session.ts`'s `x-mock-role`: it sets the
- * role the fetch layer sends. It does NOT set the signer — `session.actor` has
- * no setter on purpose (a signature the client can type is not a signature),
- * so the second reader's name is the one typed into the signature field.
+ * The "Switch user" affordance — a preview control, not a gate: the
+ * countersign action stays live whoever is signed in, since the
+ * different-examiner rule is the server's 409. Dev-only, same cutover as
+ * `x-mock-role`. It does not set the signer — `session.actor` has no setter
+ * on purpose, so the second reader's name is the one typed into the
+ * signature field.
  */
 export function SwitchExaminer() {
   const signIn = useSignedIn((state) => state.signIn);

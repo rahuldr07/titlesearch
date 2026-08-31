@@ -6,16 +6,10 @@ import { post } from "../../shared/api";
 import { orderPipeline } from "../../shared/queries";
 
 /**
- * THE EXTRACTION SCREEN'S HEADER ROW, as the reference draws it — ⚠ RULED
- * 2026-08-29 (`docs/frontend/design-2026-08/RULING-2026-08-29.md`): eyebrow
- * pill with the pulse dot, the title, and on the right the "Time to
- * examination" caption over the "↺ Replay" control and the ETA chip.
- *
- * `eta_label` is the SERVER'S string (intake.ts, same ruling) — the chip
- * prints it verbatim and subtracts no timestamps. Replay POSTs the ruling's
- * `/pipeline/replay` endpoint and writes the RESPONSE into the pipeline's one
- * cache entry, so the timeline repaints from what the server re-served —
- * never from anything composed here.
+ * The extraction header. `eta_label` is the server's string — the chip prints
+ * it verbatim and subtracts no timestamps. Replay writes the response into the
+ * pipeline's one cache entry, so the timeline repaints from what the server
+ * re-served, never from anything composed here.
  */
 export function ExtractionHeader(props: {
   readonly orderId: string;
@@ -23,8 +17,8 @@ export function ExtractionHeader(props: {
 }) {
   const client = useQueryClient();
   const [replayNote, setReplayNote] = useState<string | null>(null);
-  /* The synchronous latch, same shape as `useCountersign`: state is read at
-     render time, so two clicks in one tick would file two replays. */
+  /* State is read at render time, so two clicks in one tick would file two
+     replays — the ref latch closes synchronously. */
   const inFlight = useRef(false);
 
   const replay = () => {

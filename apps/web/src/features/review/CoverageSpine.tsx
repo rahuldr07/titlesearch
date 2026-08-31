@@ -2,13 +2,10 @@ import type { SourcePage } from "@titlepipe/contract";
 import { cx } from "../../components/ui";
 
 /**
-
- * INVARIANT 34: "The coverage spine renders ONE CELL PER PACKAGE PAGE, not just read
-
- * ones." axe reports one `target-size` violation per cell — 64 of them, measured at
-
- * 6.7 x 20px each. That is not sloppiness and it is not fixable by…
-
+ * The coverage spine renders one cell per package page, not just read ones.
+ * The cells are necessarily narrower than the a11y target size — one cell
+ * per page is the requirement, and the page bar is the accessible route to
+ * every page.
  */
 function describe(n: number, page: SourcePage | undefined): string {
   if (page === undefined) return `Page ${n} — no reader read this page`;

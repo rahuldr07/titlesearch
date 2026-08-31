@@ -6,15 +6,12 @@ import { jurisdiction } from "../../shared/jurisdictionQueries";
 import { QueryState } from "../../entities/state/QueryState";
 
 /**
- * THE JURISDICTION SIMULATOR — the inspector's Overrides tab (RULED
- * 2026-08-29, drawn). The picker changes the code in the SAME read the
- * Jurisdiction screen makes (`GET /api/jurisdictions/{code}`); everything
- * shown is the server's answer for that code, never a re-derivation.
- *
- * The option list restates the order book's five codes. It cannot import
- * `features/jurisdiction`'s list (cross-feature imports are banned), and the
- * codes are fixture identity rather than a numeric constant, so the restated
- * list is accepted and said out loud here.
+ * The jurisdiction simulator — the inspector's Overrides tab. The picker
+ * changes the code in the same read the Jurisdiction screen makes;
+ * everything shown is the server's answer for that code, never a
+ * re-derivation. The option list restates the order book's five codes — it
+ * cannot import `features/jurisdiction`'s list (cross-feature imports are
+ * banned), so the restated list is accepted and said out loud here.
  */
 const OPTIONS = [
   { code: "clayton-ga", name: "Clayton, GA (Live overlay)" },

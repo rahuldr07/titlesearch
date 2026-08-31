@@ -7,17 +7,12 @@ import { RulebookNote } from "./RulebookNote";
 import { RulebookBanner } from "./RulebookBanner";
 
 /**
- * THE RIGHT COLUMN — Order Configuration, exactly as the reference draws it
- * (RULING-2026-08-29): Client select, Product select, Client Order # input,
- * then the paired READ-ONLY row — Page Count and Jurisdiction — and the
- * amber rulebook note. Jurisdiction, state and county are not typable
- * anywhere: they left `CreateOrderRequest` under the same ruling, and the
- * paired row prints the SERVER's clerk-stamp readout
- * (`QuarantineResolved.*_label`) or its stated absence.
- *
- * NOTHING HERE VALIDATES. No `required`, no client-side "please fill this
- * in". INVARIANTS 60-61: the SERVER names what is missing, so an empty form
- * is SENT and the refusal that comes back is the one the reader sees.
+ * Order configuration. Jurisdiction, state and county are not typable
+ * anywhere — the paired read-only row prints the server's clerk-stamp readout
+ * or its stated absence. Nothing here validates: no `required`, no
+ * client-side "please fill this in" — the server names what is missing, so an
+ * empty form is sent and the refusal that comes back is the one the reader
+ * sees.
  */
 export function OrderConfig(props: {
   readonly values: CreateOrderRequest;
@@ -59,8 +54,6 @@ export function OrderConfig(props: {
         <Input data-testid="order-external_ref" className="font-mono" />
       </TextField>
 
-      {/* The paired read-only row. Values are the server's clerk-stamp
-          readout, finished — or the reference's stated absences. */}
       <div className="grid grid-cols-2 gap-8">
         <div className="flex flex-col gap-3">
           <span className="font-sans text-label font-bold leading-flat text-ink-muted">

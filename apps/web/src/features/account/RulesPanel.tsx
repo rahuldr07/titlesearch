@@ -7,13 +7,8 @@ import { QueryState } from "../../entities/state/QueryState";
 import { RulesGaps } from "./RulesGaps";
 
 /**
-
- * RULES & ROUTING — the rulebook, filtered in the browser, and PENDING drawn as inert.
-
- * This looks like the affordance `CONFLICT-all-orders.md` spends four pages refusing,
-
- * and it is not.
-
+ * Rules & routing — the rulebook, filtered in the browser, with pending
+ * rules drawn as visibly inert.
  */
 export function RulesPanel() {
   const book = useRead(rules);
@@ -44,12 +39,10 @@ export function RulesPanel() {
                 <div className="flex min-w-140 flex-col gap-2">
                   <Label htmlFor="rule-filter">Filter</Label>
                   {/*
-                   * UNCONTROLLED, and that is forced rather than chosen.
-                   * `InputProps` omits `value` and `defaultValue` (REVIEW-03
-                   * B2): the value belongs to react-aria's `TextField`, which
-                   * this kit does not export. `onChange` still passes through,
-                   * and nothing but the reader ever sets this box — a filter
-                   * has no second writer to stay in sync with.
+                   * Uncontrolled, forced rather than chosen: `InputProps`
+                   * omits `value` and `defaultValue` — the value belongs to
+                   * react-aria's `TextField`, which the kit does not export.
+                   * A filter has no second writer to stay in sync with.
                    */}
                   <Input
                     id="rule-filter"
@@ -57,21 +50,18 @@ export function RulesPanel() {
                     placeholder="Rule code, text, origin or scope"
                   />
                 </div>
-                {/* Both numbers describe THIS LIST, not the shop.
-                    `RulesResponse` carries no server count, so any total here
-                    is the length of what arrived — legal for a list the caller
-                    filters itself, and not INVARIANT 5's census pattern,
-                    because "shown" scopes the claim to the rows on screen. */}
+                {/* Both numbers describe this list, not the shop — a total
+                    here is the length of what arrived, and "shown" scopes
+                    the claim to the rows on screen. */}
                 <span className="font-mono text-meta leading-close text-ink-muted">
                   {shown.length} of {data.rules.length} shown
                 </span>
               </div>
 
-              {/* The design's STATUS chips, on the server's own `Rule.status`
-                  enum. Its SCOPE chips are not here: "Global / Product /
-                  Jurisdiction" needs a layer no rule carries, and the ask for
-                  one is stated below rather than approximated with the
-                  nullable `jurisdiction_scope`. */}
+              {/* Status chips, on the server's own `Rule.status` enum. Scope
+                  chips are not here: "Global / Product / Jurisdiction" needs
+                  a layer no rule carries, and the ask for one is stated
+                  below rather than approximated. */}
               <SegmentedControl
                 label="Filter by status"
                 selectedKeys={new Set([status])}
@@ -102,7 +92,7 @@ export function RulesPanel() {
                         className="flex flex-col gap-4 border-b border-line-subtle px-12 py-8 last:border-b-0"
                       >
                         <div className="flex flex-wrap items-baseline gap-6">
-                          {/* Rule 3: a rule code is an identifier. */}
+                          {/* A rule code is an identifier, so it is mono. */}
                           <span className="font-mono text-meta font-semibold leading-close text-ink-secondary">
                             {rule.code}
                           </span>

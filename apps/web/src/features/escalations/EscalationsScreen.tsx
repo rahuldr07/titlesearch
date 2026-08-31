@@ -10,20 +10,11 @@ import { CandidateList } from "./CandidateList";
 import { RuleCandidates } from "./RuleCandidates";
 
 /**
- * SCREEN 10 — QC & ESCALATIONS, at `/escalations` (authz.ts:68, `senior`/`admin`).
+ * QC & escalations screen at `/escalations` (`senior`/`admin`).
  *
- * `reference-app.html` § `isEscalations`: a 320px column holding a segmented
- * pill over an 11px pane label, then the cards; the right pane scrolls alone
- * and the escalation's own title is the h1. `INVARIANTS:39` is the sentence
- * under the pane label — no category, no priority, no assignee.
- *
- * ⚠ RULED 2026-08-29 (RULING-2026-08-29.md): the reference draws the
- * determination for a non-QC seat as VISIBLE + DISABLED under the amber
- * "belongs to QC — with …" hint, and the ruling makes that the built
- * behaviour FOR THIS SURFACE, superseding `INVARIANTS:42-43`'s
- * absent-not-dimmed. A seat without `escalation.resolve` gets
- * `onResolve: null` and `EscalationDetail` renders the locked card. Resolve
- * held for want of a RULE is resource state, not role, and stays
+ * A seat without `escalation.resolve` gets `onResolve: null` and
+ * `EscalationDetail` renders the determination visible but locked. Resolve
+ * held for want of a rule is resource state, not role, and stays
  * disabled-with-reason for every seat.
  */
 export function EscalationsScreen() {
@@ -74,9 +65,8 @@ export function EscalationsScreen() {
           </div>
         </div>
 
-        {/* Loading and failure are QueryState's: an empty queue and an
-            unreachable one are different sentences, and the `loading` flag this
-            replaced drew "Nothing escalated" over a failed read. */}
+        {/* An empty queue and an unreachable one are different sentences —
+            never draw "Nothing escalated" over a failed read. */}
         <div className="min-h-0 flex-1 overflow-y-auto p-6">
           {queries ? (
             <QueryState query={escalations} of="the escalation queue" failedTitle="Inbox unavailable">
@@ -121,7 +111,7 @@ export function EscalationsScreen() {
                     escalation={current}
                     rules={book}
                     resolving={resolve.pending}
-                    /* Null → the locked, visible determination (RULED 2026-08-29). */
+                    /* Null → the locked, visible determination. */
                     {...(mayResolve
                       ? { onResolve: (ruling, rule) => resolve.resolve({ ruling, rule }) }
                       : { onResolve: null })}

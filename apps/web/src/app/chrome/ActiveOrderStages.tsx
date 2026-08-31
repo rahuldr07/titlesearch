@@ -7,16 +7,10 @@ import { StageLink, stageIsCurrent } from "./StageLink";
 import { StageBadge, StageCircle } from "./StageMark";
 
 /**
- * The active order's stages, under the Active Order rubric.
- *
- * ⚠ RULED 2026-08-29 — `docs/frontend/design-2026-08/RULING-2026-08-29.md`:
- * the reference app draws FIVE numbered rows with a green check on done
- * stages, an amber count badge on Examination, and navigation on every row —
- * so that is what is built. The list is `OrderContextResponse.stage_nav`,
- * SERVED WHOLE: `done` and every badge string arrive decided, and nothing
- * here infers a check from a count reaching a total (the nine-stage pipeline
- * this replaced lives on at `/orders/{id}` where the extraction view draws it
- * in full).
+ * The active order's stages, under the Active Order rubric. The list is
+ * `OrderContextResponse.stage_nav`, served whole: `done` and every badge
+ * string arrive decided, and nothing here infers a check from a count
+ * reaching a total.
  */
 export function ActiveOrderStages(props: { readonly orderId: string }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });

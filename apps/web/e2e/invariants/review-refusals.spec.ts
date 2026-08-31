@@ -2,23 +2,12 @@ import { expect, test, type Page } from "@playwright/test";
 import { apiLog, interceptApi, trackApi } from "../helpers/net";
 
 /**
- * THE THREE BLOCKERS, DRIVEN.
- *
- * 1. Four of the five review mutations swallowed the server's refusal.
- *    `ReviewScreen` read `confirm.error` and nothing else, so a forced 409 on
- *    `/correct` left `confirm-note` null, zero alerts, the editor open holding
- *    the typed value and the submit still enabled. HANDOFF §4 rule 9: a 409 is
- *    an ANSWER and must render with the server's message VERBATIM.
- *
- * 2. Nothing guarded a second submit. Three clicks on `edit-submit` under
- *    latency filed THREE correction records — three reason rows for one
- *    reviewer act, in the table that feeds the rule channel.
- *
- * 3. The `x` chord reached past rulebook R13. The `✕ Not our party` BUTTON is
- *    offered only on `judgments.*`; the chord was bound unconditionally, so on
- *    `?field=owner.zip` the button was correctly absent and `x` opened the
- *    editor anyway — and the exclude posted 200. An excluded row is GONE
- *    (`conflicts.md` C18), and the mock is the backend today: a rule the
+ * Refusal rules on the review workstation:
+ * 1. A 409 is an answer — every review mutation surfaces the server's
+ *    message verbatim.
+ * 2. One reviewer act files one record, whatever the latency.
+ * 3. The `x` suppression chord obeys the same rulebook gate as the button
+ *    (R13: judgments.* only), and the server refuses it too — a rule the
  *    client alone enforces is not enforced.
  */
 
@@ -63,7 +52,7 @@ const openCorrection = async (page: Page) => {
 const postsMatching = async (page: Page, match: string) =>
   (await apiLog(page)).filter((c) => c.method === "POST" && c.url.includes(match));
 
-// BLOCKER 1 — rule: a 409 on a CORRECTION is an answer, surfaced verbatim.
+// Rule: a 409 on a CORRECTION is an answer, surfaced verbatim.
 test("a refused correction surfaces the server's message verbatim", async ({
   page,
 }) => {
@@ -84,7 +73,7 @@ test("a refused correction surfaces the server's message verbatim", async ({
   await expect(page.getByTestId("edit-value")).toHaveValue("SOUTHSTONE MORTGAGE LLC");
 });
 
-// BLOCKER 1 — rule: a 409 on an ESCALATION is an answer, surfaced verbatim.
+// Rule: a 409 on an ESCALATION is an answer, surfaced verbatim.
 test("a refused escalation surfaces the server's message verbatim", async ({
   page,
 }) => {
@@ -105,7 +94,7 @@ test("a refused escalation surfaces the server's message verbatim", async ({
   await expect(page.getByTestId("sel-label")).toHaveText("OWNER ZIP");
 });
 
-// BLOCKER 1 — rule: a 409 on a SUPPRESSION is an answer, surfaced verbatim.
+// Rule: a 409 on a SUPPRESSION is an answer, surfaced verbatim.
 test("a refused exclude surfaces the server's message verbatim", async ({ page }) => {
   await interceptApi(page, {
     method: "POST",
@@ -123,7 +112,7 @@ test("a refused exclude surfaces the server's message verbatim", async ({ page }
   );
 });
 
-// BLOCKER 1 — rule: a refused PASS is an answer too; the order did not move.
+// Rule: a refused PASS is an answer too; the order did not move.
 test("a refused pass surfaces the server's message verbatim", async ({ page }) => {
   await interceptApi(page, {
     method: "POST",
@@ -141,7 +130,7 @@ test("a refused pass surfaces the server's message verbatim", async ({ page }) =
   );
 });
 
-// BLOCKER 2 — rule: one reviewer act files ONE record, whatever the latency.
+// Rule: one reviewer act files ONE record, whatever the latency.
 test("three clicks on the correction submit file exactly one correction", async ({
   page,
 }) => {
@@ -159,7 +148,7 @@ test("three clicks on the correction submit file exactly one correction", async 
   await expect.poll(async () => (await postsMatching(page, "/correct")).length).toBe(1);
 });
 
-// BLOCKER 2 — rule: the same holds for the Enter-only editors, which have no
+// Rule: the same holds for the Enter-only editors, which have no
 // button to disable. Held Enter is the cheapest way to file three of anything.
 test("repeated Enter on an exclude files exactly one suppression", async ({ page }) => {
   await trackApi(page);
@@ -175,7 +164,7 @@ test("repeated Enter on an exclude files exactly one suppression", async ({ page
   await expect.poll(async () => (await postsMatching(page, "/exclude")).length).toBe(1);
 });
 
-// BLOCKER 3 — rule: the chord obeys the rulebook gate the button obeys.
+// Rule: the chord obeys the rulebook gate the button obeys.
 test("x on a non-judgments field opens nothing and posts nothing", async ({ page }) => {
   await trackApi(page);
   await page.goto("/orders/ord_demo_1/review?field=owner.zip");
@@ -187,7 +176,7 @@ test("x on a non-judgments field opens nothing and posts nothing", async ({ page
   expect(await postsMatching(page, "/exclude")).toHaveLength(0);
 });
 
-// BLOCKER 3 — the positive control: gating everything off is not a fix.
+// The positive control: gating everything off is not a fix.
 test("x on a judgments field still opens the suppression editor", async ({ page }) => {
   await page.goto("/orders/ord_demo_1/review?field=judgments.1.plaintiff_attorney");
   await expect(page.getByTestId("act-exclude")).toBeVisible();
@@ -195,7 +184,7 @@ test("x on a judgments field still opens the suppression editor", async ({ page 
   await expect(page.getByTestId("exclude-reason")).toBeFocused();
 });
 
-// BLOCKER 3 — rule: the mock IS the backend today. A rule only the client
+// Rule: the mock IS the backend today. A rule only the client
 // enforces is not enforced, so the server refuses the same request.
 test("the server refuses an exclude on a non-judgments path", async ({ page }) => {
   await page.goto("/orders/ord_demo_1/review");
@@ -216,22 +205,12 @@ test("the server refuses an exclude on a non-judgments path", async ({ page }) =
 });
 
 /**
- * THE SAME RULE, MADE DETERMINISTIC — three clicks inside ONE JavaScript tick.
- *
- * The test above dispatches its three clicks through Playwright, which yields
- * between them, so React usually gets a render in and the stale-closure race
- * never opens. "Usually" is the problem: it recorded TWO corrections under load
- * and passed on every idle run, which is a test that reports the machine's speed
- * rather than the code's correctness.
- *
- * Dispatching all three synchronously removes the timing entirely. No render can
- * happen between them, so a guard that reads a render-time `isPending` sees the
- * same stale `false` three times — deterministically, on any machine. Only a
- * synchronous latch survives this (`useReviewWrites`).
- *
- * IT IS AN ADDITION, NOT A REPLACEMENT. The Playwright-driven test above still
- * covers what a person actually does; this one covers what the rule actually
- * says: ONE record per act, whatever the latency.
+ * The same rule, made deterministic — three clicks inside one JavaScript
+ * tick. No render can happen between them, so a guard that reads a
+ * render-time `isPending` sees the same stale `false` three times; only a
+ * synchronous latch survives this (`useReviewWrites`). An addition, not a
+ * replacement: the Playwright-driven test above covers what a person
+ * actually does; this one covers what the rule says — one record per act.
  */
 test("three clicks in a single tick still file exactly one correction", async ({
   page,

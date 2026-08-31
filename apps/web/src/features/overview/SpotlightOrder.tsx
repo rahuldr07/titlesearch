@@ -8,14 +8,10 @@ import { RouteButton } from "../../app/chrome/RouteButton";
 import { useOverlays } from "../../app/keyboard/overlays";
 
 /**
- * The served order in the prototype's spotlight card.
- *
- * ⚠ RULED 2026-08-29 — `docs/frontend/design-2026-08/RULING-2026-08-29.md`:
- * the reference's spotlight draws the due chip and the "Assigned:" line, so
- * ours does. Neither rides on `Order`; both are members of the order-scoped
- * context (`GET /api/orders/{id}/context`), read here for the served order —
- * the due label arrives WHOLE (no clock runs in this browser) and `assigned`
- * is the server's word for who holds the work.
+ * The served order in the spotlight card. The due chip and the "Assigned:"
+ * line ride the order-scoped context, not `Order` — the due label arrives
+ * whole (no clock runs in this browser) and `assigned` is the server's word
+ * for who holds the work.
  */
 export function SpotlightOrder(props: { readonly order: Order }) {
   const order = props.order;
@@ -61,11 +57,10 @@ export function SpotlightOrder(props: { readonly order: Order }) {
           <SpotlightMeta order={order} />
         </div>
 
-        {/* "Audit history" is the MODAL, not a navigation — the reference's
-            history affordance opens the overlay everywhere it appears, and
+        {/* "Audit history" is the modal, not a navigation —
             `openOrderHistory` names the order so it works off any route.
-            `RouteButton` for the navigation, not `LinkButton`: `to`/`params`
-            are checked against the route tree; react-aria's `href` is an
+            `RouteButton` for the navigation: `to`/`params` are checked
+            against the route tree, while `LinkButton`'s `href` is an
             unchecked string. */}
         <div className="flex shrink-0 items-center gap-6">
           <Button

@@ -6,13 +6,9 @@ import { PanelFrame } from "./AccountPanel";
 import { QueryState } from "../../entities/state/QueryState";
 
 /**
-
- * RETENTION & SECURITY — half of this pane is real and half of it does not exist, and
-
- * the split is worth naming rather than blending. SECURITY is `MeProfileResponse`
-
- * (`intake.ts:359`): who you are, whether a second factor is enrolled, and…
-
+ * Retention & security — half of this pane is real and half does not
+ * exist, and the split is worth naming rather than blending. Security reads
+ * `MeProfileResponse`; the retention half has never been specified.
  */
 export function SecurityPanel() {
   const profile = useRead(meProfile);
@@ -31,7 +27,7 @@ export function SecurityPanel() {
                   <span className="text-meta font-semibold leading-close text-ink-primary">
                     {data.name}
                   </span>
-                  {/* Rule 3: an address is an identifier. */}
+                  {/* An address is an identifier, so it is mono. */}
                   <span className="font-mono text-label leading-flat text-ink-muted">
                     {data.email}
                   </span>
@@ -73,7 +69,7 @@ export function SecurityPanel() {
                     <div className="flex items-center gap-6">
                       {session.current && <Badge tone="accent">This session</Badge>}
                       {/*
-                       * The server's string, passed through untouched. §8: a
+                       * The server's string, passed through untouched — a
                        * date the server sent is not parsed, normalised or
                        * re-rendered in a locale.
                        */}

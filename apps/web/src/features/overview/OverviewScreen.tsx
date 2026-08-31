@@ -11,8 +11,8 @@ import { Spotlight } from "./Spotlight";
 import { CENSUS_FIGURES } from "../../entities/lifecycle/census";
 
 /**
- * SCREEN 2 — OVERVIEW, at `/` (`authz.ts:62`, `screen.home.enter`, SIGHTED).
- * Typists never see it: they go straight to the capture seat (§0.7).
+ * The Overview screen, at `/`. Typists never see it: they go straight to
+ * the capture seat.
  */
 export function OverviewScreen() {
   const account = useSignedIn((s) => s.account);
@@ -23,8 +23,6 @@ export function OverviewScreen() {
 
   return (
     <div className="tp-screen-enter flex h-full min-h-0 flex-col gap-12 overflow-y-auto px-16 pt-14 pb-32">
-      {/* The scope note moved off this header when RULING-2026-08-29 restored
-          the reference's fixed lede; the served sentence still gates nothing. */}
       <OverviewHeader role={account?.role} rules={permissions.data?.rules} />
 
       {board.isError && (
@@ -35,8 +33,8 @@ export function OverviewScreen() {
         </Card>
       )}
 
-      {/* The card order and tones come from `entities/lifecycle/census` — one
-          variable, never two literals. Label, value and note are the server's. */}
+      {/* The card order and tones come from `entities/lifecycle/census`.
+          Label, value and note are the server's. */}
       <div className="grid grid-cols-4 gap-8">
         {CENSUS_FIGURES.map((figure) => (
           <StatCard
@@ -56,10 +54,8 @@ export function OverviewScreen() {
 
       <RecentOrders />
 
-      {/* This screen used to link "the lifecycle board" at /dashboard — a route
-          this app has never had (doors.ts carries no such door). The surface
-          that actually holds every order is the browse table the 2026-08-28
-          ruling authorised, so the join points there. */}
+      {/* The surface that actually holds every order is the browse table,
+          so the join points there. */}
       {board.data !== undefined && board.data.stages.length > 0 && (
         <p className="text-meta leading-close text-ink-secondary">
           The pipeline&apos;s stages hold these orders.{" "}

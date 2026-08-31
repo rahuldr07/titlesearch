@@ -40,9 +40,9 @@ export const TheVocabulary: Story = {
 };
 
 /**
- * MUTED — the button recipe's inline hint: "Confirm C" at .5–.6 opacity. No
- * box, because a bordered chip inside a control is a second object where the
- * design wants a hint.
+ * Muted — the inline hint inside a button ("Confirm C"). No box, because a
+ * bordered chip inside a control is a second object where the design wants a
+ * hint.
  */
 export const MutedInsideAButton: Story = {
   args: { children: "C", muted: true },

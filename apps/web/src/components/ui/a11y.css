@@ -1,34 +1,14 @@
 /*
- * THE TWO UTILITIES THAT EXIST FOR WCAG RATHER THAN FOR THE DESIGN.
- *
- * Split out of `ui.css` on the 150-line gate, and the seam is real: everything
- * left there is the design system's motion and press language, while these two
- * are conformance -- §2.5.8 Target Size and §2.4.7 Focus Visible. A reader
- * looking for "why is this control 24px" should not have to read the easing
- * curves to find out.
+ * Conformance utilities — WCAG §2.5.8 target size and §2.4.7 focus visible.
+ * The design's motion and press language stays in ui.css.
  */
 
 @utility tp-target {
   /*
-   * NOT SET WHEN THE COMPONENT ASKED FOR ITS OWN FLOOR.
-   *
-   * `@utility` output is emitted AFTER the numeric utilities, so at equal
-   * specificity this used to win every race against a `min-h-*` on the same
-   * element. Proven by byte offset in the production CSS:
-   *
-   *     .min-h-36{   at 11440
-   *     .tp-target{  at 28660      ← later, same specificity, wins
-   *
-   * `Textarea` set `min-h-36` and documented it as "72px, three lines of
-   * 13px". Measured: 24px. The floor did not exist, and was masked only by
-   * `field-sizing-content` growing the box to one line, so it looked plausible
-   * and was wrong. Every future `min-h-*` alongside this utility would have
-   * been swallowed the same silent way.
-   *
-   * The guard is deliberately narrow: WCAG 2.2 §2.5.8 wants 24px MINIMUM, and
-   * a component asking for MORE already satisfies it. A component asking for
-   * less is the case worth catching, and `input.blocked.stories.tsx` catches
-   * it by measuring the computed min-height rather than by reading the class.
+   * @utility output is emitted after the numeric utilities, so an
+   * unconditional floor here silently overrides any min-h-* / min-w-* on the
+   * same element. WCAG 2.5.8 is a 24px minimum, so the floor applies only
+   * when the component declares none of its own.
    */
   &:not([class*="min-h-"]) {
     min-block-size: var(--size-control-md);
@@ -61,10 +41,3 @@
     transform: translateY(0) scale(1);
   }
 }
-
-/*
- * The overlay/layering utilities live in `overlays.css`, imported by
- * `styles.css` beside this file. Split because they are the scrim, the two
- * z-levels and the fade — one subject, and this file was over the 150-line
- * limit with them in it.
- */

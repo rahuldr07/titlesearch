@@ -1,18 +1,11 @@
 import { expect, test } from "@playwright/test";
 
 /**
- * HARVESTED INVARIANTS — migrated from apps/web @ ade49af (pre-rebuild).
- * Source: apps/web/e2e/authz.spec.ts
- *
- * REWRITTEN 2026-08-30 against the built app: the original tests navigated
- * /rulebook, a screen that no longer exists (the rule catalog lives on
- * /escalations' candidates pane and /account?tab=rules). Selectors and
- * navigation moved, which the migration rule permits; the two WIRE invariants
- * are asserted unchanged. The third test's UI half is updated to pin the
- * DRAWN role-gating under RULING-2026-08-29 — see its header.
+ * Authorization invariants. Never weaken an assertion — a test that cannot
+ * pass against the new design is a conflict in the design: stop and report.
  */
 
-// [INVARIANT] — rule: the role gate runs BEFORE validation — a role that lacks the action gets 403 even with an invalid body.
+// Rule: the role gate runs BEFORE validation — a role that lacks the action gets 403 even with an invalid body.
 test("the mock server refuses a mutation the role doesn't hold — before validation", async ({
   page,
 }) => {
@@ -37,7 +30,7 @@ test("the mock server refuses a mutation the role doesn't hold — before valida
   expect(statuses.engineer).toBe(422);
 });
 
-// [INVARIANT] — rule: one permission table gates UI affordances and server mutations alike — they cannot drift.
+// Rule: one permission table gates UI affordances and server mutations alike — they cannot drift.
 test("a senior may resolve; an ops role may not — same endpoint, same table", async ({
   page,
 }) => {
@@ -54,16 +47,11 @@ test("a senior may resolve; an ops role may not — same endpoint, same table", 
 });
 
 /**
- * ⚠ RULED 2026-08-29 — `docs/frontend/design-2026-08/RULING-2026-08-29.md`.
- *
- * ROLE-GATING FOR THE QC DETERMINATION, AS DRAWN. The pre-rebuild test here
- * asserted "a role-locked affordance is ABSENT, not disabled" against the
- * rulebook's confirm button. The ruling supersedes that reading FOR THE
- * ESCALATIONS SURFACE: the reference draws the determination on a non-QC
- * seat as VISIBLE + DISABLED with the "belongs to QC" hint, so that is what
- * is pinned. THE REFUSAL COVERAGE IS NOT WEAKENED: the wire half below
- * asserts the server still 403s a reviewer's resolve — the dimmed button is
- * a courtesy, the table is the enforcement.
+ * Role-gating for the QC determination: on the escalations surface a non-QC
+ * seat sees the determination visible + disabled with the "belongs to QC"
+ * hint. The refusal coverage is not weakened — the wire half asserts the
+ * server still 403s a reviewer's resolve; the dimmed button is a courtesy,
+ * the table is the enforcement.
  */
 test("the QC determination: enabled for a holder, dimmed-with-reason for a non-holder, 403 on the wire", async ({
   page,
@@ -90,7 +78,7 @@ test("the QC determination: enabled for a holder, dimmed-with-reason for a non-h
   // (a page.goto would reload and re-boot the session store to admin).
   await page.goBack();
 
-  // drawn: visible + disabled, carrying its reason (rule 9 / RULING-2026-08-29)
+  // drawn: visible + disabled, carrying its reason
   const locked = page.getByTestId("resolve-btn-locked");
   await expect(locked).toBeVisible();
   await expect(locked).toBeDisabled();

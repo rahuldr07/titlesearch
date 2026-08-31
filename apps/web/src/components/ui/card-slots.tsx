@@ -3,11 +3,7 @@ import { cx } from "./cx";
 
 type SlotProps = { readonly children: ReactNode; readonly className?: string | undefined };
 
-/*
- * The two named regions of a Card, split from `card.tsx` on the 150-line gate.
- * The seam is the nesting guard: `card.tsx` holds the two contexts and the
- * surfaces they police, and these are the layout inside one.
- */
+/* The named layout regions of a Card; the nesting contexts stay in card.tsx. */
 
 export function CardHeader({ children, className }: SlotProps) {
   return (
@@ -32,9 +28,3 @@ export function CardBody({ children, className }: SlotProps) {
     </div>
   );
 }
-
-/**
- * The 10px rung: a panel nested inside a Card. Named for its position in the
- * arithmetic rather than for what a screen happens to put in it. Clears the
- * nesting flag, so panels may contain panels.
- */

@@ -2,9 +2,9 @@ import type { BlindEntriesResponse } from "@titlepipe/contract";
 import { Alert, Card } from "../../components/ui";
 
 /**
- * What came back: a refusal in the server's words (INVARIANT 14 — verbatim,
- * kept on the page rather than in a toast), or the ids the server issued. The
- * ack carries nothing else, because the response shape carries nothing else.
+ * What came back: a refusal in the server's words — verbatim, kept on the
+ * page rather than in a toast — or the ids the server issued. The ack
+ * carries nothing else, because the response shape carries nothing else.
  */
 export function CaptureReceipt(props: {
   readonly error: Error | null;

@@ -3,10 +3,7 @@ import { expect } from "storybook/test";
 import { Avatar, AvatarLabel } from "./avatar";
 import { onPanel } from "./kitGround";
 
-/**
- * INITIALS ONLY, AND ONE STORY THAT PROVES IT: no `<img>` is rendered under any
- * arrangement, so no screen can acquire a network request per row.
- */
+/** Initials only — one story asserts no <img> is ever rendered. */
 const meta = {
   title: "ui/Avatar",
   decorators: [onPanel],
@@ -27,9 +24,8 @@ export const Small: Story = { args: { size: "sm" } };
 export const SingleInitial: Story = { args: { name: "Delgado", initials: "D" } };
 
 /**
- * ON THE DARK CHROME. `tokens.css`: on `--color-rail-surface`,
- * `--color-ink-primary` measures 1.03:1 — the same luminance, invisible rather
- * than faint. This is the one register where the app palette is not merely off.
+ * On the dark chrome the app palette is unusable, not merely off:
+ * --color-ink-primary on --color-rail-surface measures 1.03:1.
  */
 export const OnRail: Story = {
   args: { onRail: true },
@@ -67,10 +63,8 @@ export const LabelledOnRail: Story = {
 };
 
 /**
- * A LIST OF EXAMINERS IS A LIST. The registry's `AvatarGroup` overlapped
- * circles at `-space-x-2` and followed them with an `AvatarGroupCount` reading
- * "+3" — a number the browser derived, which rule 11 forbids. Three names read
- * as three people; three overlapping discs read as decoration.
+ * A roster is a list of names, never overlapping discs with a browser-derived
+ * "+3" count.
  */
 export const ARosterIsAList: Story = {
   render: () => (
@@ -82,10 +76,7 @@ export const ARosterIsAList: Story = {
   ),
 };
 
-/**
- * THE REFUSAL, AS AN ASSERTION. No `<img>`, anywhere, ever. If an
- * `AvatarImage` is ever reintroduced this fails before it reaches a screen.
- */
+/** No <img>, ever — fails if an AvatarImage is reintroduced. */
 export const NoImageIsEverRendered: Story = {
   render: () => (
     <div className="flex flex-col gap-5">
@@ -98,10 +89,7 @@ export const NoImageIsEverRendered: Story = {
   },
 };
 
-/**
- * THE NAME IS THE ACCESSIBLE NAME, and the initials are decoration for it. A
- * reader hears "R. Menon", not "R M".
- */
+/** The name is the accessible name; a reader hears "R. Menon", not "R M". */
 export const AnnouncesTheName: Story = {
   play: ({ canvasElement }) => {
     const node = canvasElement.querySelector('[data-slot="avatar"]');

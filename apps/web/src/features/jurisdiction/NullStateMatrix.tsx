@@ -4,16 +4,12 @@ import { Card } from "../../components/ui";
 import { NoValueChip } from "../../entities/field/NoValueChip";
 
 /**
- * THE NULL STATE MATRIX — the screen that teaches the four apart.
- *
- * Driven by `NaReasonEnum.options`, not by the rows that happen to arrive: a
- * reason the server declared nothing for still gets its section, and says so.
- * Filtering the empty ones away would collapse four facts into "the ones we
- * have today", which is the exact failure the taxonomy exists to prevent.
- *
+ * The null state matrix — the screen that teaches the four apart. Driven by
+ * `NaReasonEnum.options`, not by the rows that happen to arrive: a reason
+ * the server declared nothing for still gets its section, and says so.
  * `NoValueChip` carries the render — mark, ink, border style and fill all
- * differ per reason (`entities/field/noValueStates.ts`), so the four survive
- * greyscale and a red-green deficiency both.
+ * differ per reason, so the four survive greyscale and a red-green
+ * deficiency both.
  */
 export function NullStateMatrix(props: { readonly rows: readonly NullStateRow[] }) {
   return (
@@ -29,7 +25,7 @@ export function NullStateMatrix(props: { readonly rows: readonly NullStateRow[] 
             >
               <div className="flex flex-wrap items-center justify-between gap-6">
                 <NoValueChip render={reason} />
-                {/* Rule 3: the enum member is the identifier the rulebook uses. */}
+                {/* The enum member is the identifier the rulebook uses. */}
                 <span className="font-mono text-label leading-flat text-ink-faint">
                   {reason}
                 </span>

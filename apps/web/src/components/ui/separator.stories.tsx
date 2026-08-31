@@ -3,7 +3,7 @@ import { Separator } from "./separator";
 import { onPanel } from "./kitGround";
 
 /**
- * A hairline divides an INTERIOR. Both orientations, and the one thing worth
+ * A hairline divides an interior. Both orientations, and the one thing worth
  * seeing: it is quieter than the border of the thing containing it.
  */
 const meta = {

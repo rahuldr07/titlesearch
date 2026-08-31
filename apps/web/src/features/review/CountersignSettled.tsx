@@ -1,10 +1,11 @@
 import type { RequiredCountersign } from "./CountersignRow";
 
 /**
- * THE SETTLED SECOND READ — the design's green block. Both shapes it can take
- * are the server's answer, not a conclusion drawn here: an empty `required`
+ * The settled second read — the green block. Both shapes it can take are
+ * the server's answer, not a conclusion drawn here: an empty `required`
  * means the server classifies nothing on this order as ruinous, and a full
- * `countersigned_by` column means it recorded a second reader for every one.
+ * `countersigned_by` column means it recorded a second reader for every
+ * one.
  */
 export function CountersignSettled(props: {
   readonly required: readonly RequiredCountersign[];

@@ -4,18 +4,12 @@ import { expect, test } from "vitest";
 import { KEYMAP } from "./keymap";
 
 /**
- * THE JOIN, PROVEN — a key may not be printed unless something installs it.
- *
- * `GlobalKeys` proves its own half by construction: it maps `action` to a
- * handler, and TypeScript refuses a row whose action has none. The review half
- * has no such compiler edge — `features/review/useReviewKeys.ts` is a different
- * layer this file may not import from (§7 cross-feature), and the shortcut
- * overlay would happily print six caps that nothing binds.
- *
- * So the registry is checked against that file's SOURCE. It is the same genre
- * of gate as `vocabulary.test.ts`: static, node-env, and it fails the moment
- * the two lists stop being one list — a key removed from the workstation but
- * left in the overlay, or the reverse.
+ * A key may not be printed unless something installs it. `GlobalKeys` proves
+ * its own half by construction — TypeScript refuses a row whose action has
+ * no handler — but the review half has no compiler edge: this layer may not
+ * import `features/review/useReviewKeys.ts`, so the registry is checked
+ * against that file's source and fails the moment the two lists stop being
+ * one list.
  */
 
 const REVIEW_HOOKS = join(process.cwd(), "src/features/review/useReviewKeys.ts");

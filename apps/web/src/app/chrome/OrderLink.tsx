@@ -2,11 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { cx } from "../../components/ui";
 
 /**
-
- * An order id, as a door. One spelling of "link to this order", because six screens
-
- * hold an order id and every one of them was printing it as inert text.
-
+ * An order id, as a door — the one spelling of "link to this order".
  */
 export function OrderLink(props: {
   readonly orderId: string;

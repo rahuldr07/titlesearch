@@ -1,11 +1,8 @@
 import type { ReactNode } from "react";
 
 /**
- * A section rubric inside the hub card: the prototype's 11px w700 label.
- *
- * The design's ink is #8a8e98 (`ink-faint`), which clears 4.5:1 on no surface in
- * this palette — `CONFLICT-ink-faint-contrast.md`. One tier up, as `CardHeader`
- * already does for the same reason.
+ * A section rubric inside the hub card. `ink-muted`, not the design's
+ * `ink-faint`, which clears 4.5:1 on no surface in this palette.
  */
 export function HubSectionLabel(props: { readonly children: ReactNode }) {
   return (

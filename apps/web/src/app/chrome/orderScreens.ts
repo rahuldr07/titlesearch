@@ -1,27 +1,10 @@
 import type { ScreenDescriptor } from "./unbuiltScreens";
 
 /**
-
- * The order-scoped screens still awaiting a build. Separate from `unbuiltScreens.ts`
-
- * because they are wired by hand rather than looped: each takes a path param, and it
-
- * is the hand-written `createRoute` that makes a misspelled param a compile error.
-
- *
-
- * REVIEW_SCREEN is GONE from this file, deliberately: the Examination Workstation is
-
- * built (`WorkstationScreen` at `/orders/{id}/review`), and its once-missing contract
-
- * surface landed under RULING-2026-08-28 — `Countersign`/`CountersignsResponse` and
-
- * `POST /api/fields/{id}/countersign` in `packages/contract/src/design.ts`, plus
-
- * `field.countersign` in PERMISSIONS (`authz.ts`). A descriptor claiming otherwise
-
- * was a false comment rendered on screen.
-
+ * The order-scoped screens still awaiting a build. Separate from
+ * `unbuiltScreens.ts` because they are wired by hand rather than looped:
+ * each takes a path param, and the hand-written `createRoute` makes a
+ * misspelled param a compile error.
  */
 export const BLIND_SEAT_SCREEN: ScreenDescriptor = {
   path: "/blind/{id}",

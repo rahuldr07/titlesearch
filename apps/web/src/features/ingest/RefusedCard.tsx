@@ -3,22 +3,14 @@ import { Button } from "../../components/ui";
 import { glossFor } from "./manifest";
 
 /**
- * THE SERVER'S REFUSAL, PRINTED AS THE SERVER SENT IT.
- *
- * INVARIANTS 60-61 (`docs/INVARIANTS.md`, §4.3): "an incomplete upload renders
- * the server's missing-field list verbatim; the client does not author the
- * list." Every structural decision here follows from that one sentence:
- *
- *   - The rows are `rejection.missing_fields.map(...)` — not `MANIFEST` filtered
- *     by what looks empty, not the union of both. A key this screen has never
- *     heard of still renders, spelled the way the server spelled it.
- *   - `rejection.reason` is a whole sentence, unedited: no prefix, no "Error:",
- *     no appended period. Improving the server's sentence belongs in the server.
- *   - `glossFor` may add an explanation BESIDE a key. It can never remove one,
- *     reorder the list, or supply one the server omitted.
- *
- * The way out is back to the form with everything still typed. A refusal that
- * clears the form costs the operator the work twice.
+ * The server's refusal, printed as the server sent it: the rows map
+ * `rejection.missing_fields` — never `MANIFEST` filtered by what looks empty —
+ * so a key this screen has never heard of still renders, spelled the way the
+ * server spelled it. `rejection.reason` is a whole sentence, unedited.
+ * `glossFor` may add an explanation beside a key but never removes one,
+ * reorders the list, or supplies one the server omitted. The way out is back
+ * to the form with everything still typed — a refusal that clears the form
+ * costs the operator the work twice.
  */
 export function RefusedCard(props: {
   readonly rejection: IngestRejection;
@@ -39,7 +31,6 @@ export function RefusedCard(props: {
         </span>
       </div>
 
-      {/* The server's words. Verbatim, and the whole sentence. */}
       <p
         data-testid="refusal-reason"
         className="font-sans text-body leading-body text-ink-primary"
@@ -56,7 +47,7 @@ export function RefusedCard(props: {
               data-testid="missing-field"
               className="grid grid-cols-[170px_minmax(0,1fr)] items-baseline gap-6 border-b border-line-subtle py-5"
             >
-              {/* The server's key, or this screen's label for it. Never a
+              {/* The server's key, or this screen's label for it — never a
                   substitute for one the server did not send. */}
               <span className="font-mono text-label font-semibold leading-airy text-state-halt">
                 {gloss?.label ?? key}

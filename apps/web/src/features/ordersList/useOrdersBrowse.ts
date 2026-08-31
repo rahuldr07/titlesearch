@@ -18,19 +18,14 @@ export interface OrdersBrowseState {
 const SETTLE_MS = 200;
 
 /**
- * The three browse inputs. Each of the two that change the result set resets the
- * page, because page 4 of a search matching two rows is not a page.
- *
- * The term is debounced because `useRead` keys its cache on the descriptor: a
- * keystroke is a new key, and a new key is a pending query that replaces the
- * table. Clearing works by remounting the box under a new `key` — `InputProps`
- * omits `value` and `defaultValue`, and the React compiler rejects reading a ref
- * across a component boundary.
- *
- * The settle timer is armed only when `typed` and `query` actually differ. It
- * used to arm on mount and on every round trip back to the settled term, and
- * each of those firings called `setPage(1)` — so a page chosen inside the settle
- * window was silently undone by a term that had not changed.
+ * The three browse inputs. Each of the two that change the result set
+ * resets the page, because page 4 of a search matching two rows is not a
+ * page. The term is debounced because `useRead` keys its cache on the
+ * descriptor — a keystroke is a new key, and a new key is a pending query
+ * that replaces the table. Clearing remounts the box under a new `key`.
+ * The settle timer arms only when `typed` and `query` actually differ:
+ * arming on every round trip would call `setPage(1)` and silently undo a
+ * page chosen inside the settle window.
  */
 export function useOrdersBrowse(): OrdersBrowseState {
   const [typed, setTyped] = useState("");

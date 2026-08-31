@@ -1,43 +1,14 @@
 /*
- * THE SURFACES THE DESIGN DID NOT DRAW, AND THE BROWSER DID.
- *
- * Selection, the caret and the scrollbar ship with defaults that belong to no
- * design system. Nothing here was themed: measured on `/queue`, the document
- * carried ZERO authored `::selection` rules and `scrollbar-color: auto`, so the
- * app painted a stock blue highlight and an OS scrollbar over a warm-paper
- * palette. That is the cheapest tell that a screen was assembled rather than
- * built, and on this product it is not only cosmetic — see the paper block.
- *
- * The caret is deliberately absent from this file. It computes to
- * `rgb(20, 22, 28)` already, which is `--color-ink-primary`, because it
- * inherits `currentColor`. It is correct by construction and a rule restating
- * it would be a second literal for one fact (rule 11).
- *
- * `ScrollArea` (`scroll-area.tsx:96`) already reasoned this out for its own
- * region and landed on `scrollbar-width: thin` over `--color-line-strong`,
- * "structural furniture, not control chrome". That judgement is right and is
- * simply not reachable from a screen: every screen scrolls a plain
- * `overflow-y-auto` div, not a `ScrollArea`, so the app's PRIMARY scroller —
- * the one INVARIANT 60 makes the only scrolling thing in the frame — was the
- * one surface its own kit had already styled and never applied. Inherited from
- * `html` here so it reaches every scroll container, including that one, and
- * `ScrollArea`'s own declaration still wins on its own element.
+ * Themes the surfaces the browser draws by default: selection and the
+ * scrollbar. The caret is deliberately absent — it inherits currentColor and
+ * already computes to --color-ink-primary.
  */
 
 /*
- * SELECTION IS AN EVIDENCE GESTURE ON THIS PRODUCT, NOT A TEXT-EDITING ONE.
- *
- * INVARIANT 31: "A reading can be adopted into the correction editor without
- * retyping — transcription is a defect source." The reviewer's selection is how
- * a value gets off the scan and into the field, so the highlight is drawn in
- * the same ink the app already uses to say "this text is the evidence":
- * `--color-surface-evidence`, the translucent accent behind a provenance pin.
- *
- * Translucent rather than solid so it composes over the row tints it lands on —
- * `--color-row-hover`, `--color-action-surface` on a selected row — instead of
- * flattening them. The ink is stated rather than inherited because a
- * translucent background does not guarantee the foreground it was contrasted
- * against.
+ * Selection is how a reading gets off the scan and into a field, so the
+ * highlight uses the evidence tint. Translucent so it composes over row
+ * tints instead of flattening them; the ink is stated because a translucent
+ * background does not guarantee the foreground it was contrasted against.
  */
 ::selection {
   background-color: var(--color-surface-evidence);
@@ -45,17 +16,10 @@
 }
 
 /*
- * PAPER SELECTS IN ITS OWN REGISTER.
- *
- * A cool accent wash over warm stock is the one place the shared highlight
- * reads as damage rather than as emphasis, and it is also the place selection
- * is used most: the scan is what a reviewer drags across to adopt a reading.
- * `--color-paper-stamp` is the clerk's ink, which is the warm mark already on
- * that surface, at the same 0.16 alpha the evidence tint carries.
- *
- * Keyed to `tp-paper-grain` because that utility is what makes a surface the
- * paper register — `PaperSheet.tsx:43` and `Card tone="paper"` both carry it,
- * and a surface that is merely beige does not qualify.
+ * Paper selects in its own register: a cool accent wash over warm stock reads
+ * as damage, so the clerk's stamp ink is used instead. Keyed to
+ * tp-paper-grain because that utility is what makes a surface the paper
+ * register — merely beige does not qualify.
  */
 .tp-paper-grain ::selection,
 .tp-paper-grain::selection {
@@ -64,10 +28,8 @@
 }
 
 /*
- * THE SCROLLBAR. Structural furniture, in the hairline that divides interiors,
- * over a track that does not draw a second line beside the one the layout
- * already has. `scrollbar-color` inherits, so declaring it here reaches every
- * scroll container in the frame.
+ * The scrollbar, as structural furniture. scrollbar-color inherits, so
+ * declaring it on html reaches every scroll container in the frame.
  */
 html {
   scrollbar-width: thin;

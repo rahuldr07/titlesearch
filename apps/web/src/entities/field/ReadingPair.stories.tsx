@@ -5,9 +5,8 @@ import type { FieldReading } from "@titlepipe/contract";
 import { ReadingPair } from "./ReadingPair";
 
 /**
- * THE MIDDLE INITIAL. `entities.ts:130` names this exact disagreement as the
- * canonical decision — "Is the vested owner MARIA L. ESTRADA or MARIA I.
- * ESTRADA?" — so it is the fixture, not an invented one.
+ * The middle initial — the contract's canonical disagreement ("Is the vested
+ * owner MARIA L. ESTRADA or MARIA I. ESTRADA?") — is the fixture.
  */
 function reading(engine: string, value: string | null): FieldReading {
   return {
@@ -49,7 +48,7 @@ export const OneCharacterApart: Story = {
   },
 };
 
-/** Adoption, per design §Screens 7 — a reading enters the editor without retyping. */
+/** Adoption — a reading enters the editor without retyping. */
 export const Adoptable: Story = {
   args: {
     a: reading("llmwhisperer", "MARIA L. ESTRADA"),
@@ -58,7 +57,7 @@ export const Adoptable: Story = {
   },
 };
 
-/** Rule 9 again: adoption blocked states the server's reason, never hidden. */
+/** Adoption blocked states the server's reason, never hidden. */
 export const AdoptionBlocked: Story = {
   args: {
     a: reading("llmwhisperer", "MARIA L. ESTRADA"),
@@ -69,8 +68,9 @@ export const AdoptionBlocked: Story = {
 };
 
 /**
- * An engine that returned nothing. NOT an NA state — an engine has no standing
- * to say the instrument is silent, so it borrows the pipeline sentence.
+ * An engine that returned nothing. Not an NA state — an engine has no
+ * standing to say the instrument is silent, so it borrows the pipeline
+ * sentence.
  */
 export const OneEngineReturnedNothing: Story = {
   args: {

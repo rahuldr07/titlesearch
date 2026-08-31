@@ -8,14 +8,11 @@ import { NaSimBar } from "./NaSimBar";
 import type { NaSimMode, TemplateView } from "./TemplatesScreen";
 
 /**
- * THE CENTRE COLUMN — toolbar, NA simulation bar, and the three drawn views
- * (Live Sheet · Split Diff · JSON Schema). RULED 2026-08-29, built as drawn.
- *
- * The Save is the reference's: live for a seat holding `template.edit`,
- * DISABLED WITH THE HINT for one that does not ("Read-only — RBAC grants
- * VIEW access to templates"), which the ruling keeps for this surface in
- * place of absent-not-dimmed. The server still refuses with 403 — the button
- * state is a courtesy, never the enforcement.
+ * The centre column — toolbar, NA simulation bar, and the three views
+ * (Live Sheet · Split Diff · JSON Schema). Save is live for a seat holding
+ * `template.edit` and disabled with the hint for one that does not; the
+ * server still refuses with 403 — the button state is a courtesy, never the
+ * enforcement.
  */
 export function TemplateCanvas({
   template,
@@ -90,8 +87,8 @@ export function TemplateCanvas({
       </div>
 
       {!maySave && (
-        /* The reference's read-only banner, drawn for a seat without the
-           grant (RULED 2026-08-29 — visible + disabled, not absent). */
+        /* The read-only banner, drawn for a seat without the grant —
+           visible and disabled, not absent. */
         <p
           data-testid="template-readonly-banner"
           className="shrink-0 border-b border-state-attend-border bg-state-attend-surface px-8 py-3 font-sans text-label leading-close text-state-attend"

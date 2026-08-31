@@ -1,22 +1,9 @@
 /**
- * The stylesheet root.
- *
- * ONE TOKEN VOCABULARY, AND IT IS OURS. `shadcn init` wrote its own `@theme
- * inline` here -- Geist, a `dark` custom-variant, and ~60 `--color-*` aliases
- * pointing at shadcn's `--primary` / `--muted` / `--sidebar` names. All of it
- * is replaced rather than merged, for three reasons:
- *
- *   - This app has no dark register. The design system draws one light
- *     surface family and a dark CHROME family (rail, login, code panels),
- *     which is a different thing from a theme.
- *   - Two token vocabularies is the defect the previous kit shipped -- a
- *     50-line bridge aliasing one onto the other, plus a lint exemption to
- *     permit it.
- *   - The design system says of its own tokens: "copy verbatim".
- *
- * The registry components reference shadcn's names (`bg-primary`,
- * `text-muted-foreground`). Those are re-pointed at ours in the adaptation
- * commit, in the component files, where a reader can see it.
+ * The stylesheet root. One token vocabulary, and it is ours: shadcn's own
+ * theme block is replaced rather than merged. This app has no dark register
+ * — one light surface family plus a dark chrome family is not a theme — and
+ * two token vocabularies would need a bridge and a lint exemption. Registry
+ * components' shadcn names are re-pointed at ours in the component files.
  */
 @import "tailwindcss";
 @import "@titlepipe/ui-tokens/tokens.css";
@@ -25,28 +12,16 @@
 @import "./components/ui/browser-surfaces.css";
 @import "./components/ui/overlays.css";
 /*
- * THE DOMAIN LAYER'S OWN CSS, and its absence was silent for a whole rebuild.
- *
- * REVIEW-03 B5: this line did not exist, so `tp-paper-grain`, `tp-paper-tilt`
- * and `tp-na-hatch` were never emitted. Confirmed absent from a production
- * build; `PaperSheet` rendered with the classes on the element and
- * `backgroundImage: none, transform: none`.
- *
- * Three rules died with it. Rule 8 — evidence renders as paper, never a grey
- * placeholder bar — became a flat beige rectangle. Rule 14 and INVARIANT 7 lost
- * the hatch that is NOT_STATED's distinguishing channel, which is the one
- * pattern separating it from NOT_FOUND at a glance.
- *
- * A missing @import is invisible to tsc, to eslint, to check-rules and to
- * Storybook, because every one of those sees the class NAME and none of them
- * sees whether a rule was emitted. `paper.test.ts` now reads the built CSS.
+ * The domain layer's own CSS. A missing @import here is invisible to tsc,
+ * eslint, check-rules and Storybook — each sees the class name, none sees
+ * whether a rule was emitted — so `paper.test.ts` reads the built CSS and
+ * pins this line.
  */
 @import "./entities/entities.css";
 
 /*
- * A REVIEW TOOL IS NOT A DOCUMENT. Design README §App shell: min width 1360px,
- * the rail is a full-height column, and the frame is one viewport tall.
- * Scrolling happens INSIDE panes, never on the page.
+ * A review tool is not a document: min width 1360px, the frame is one
+ * viewport tall, and scrolling happens inside panes, never on the page.
  */
 html,
 body,
@@ -68,10 +43,10 @@ body {
 }
 
 /*
- * WCAG 2.2 §2.4.7 Focus Visible and §2.4.11 Focus Not Obscured. Tailwind's
- * preflight resets outlines, so a ring has to be put back deliberately; this
- * app is keyboard-first, so it is load-bearing rather than decorative.
- * `scroll-margin` keeps a focused row from landing under the sticky order bar.
+ * Tailwind's preflight resets outlines, so the focus ring has to be put
+ * back deliberately; this app is keyboard-first, so it is load-bearing.
+ * `scroll-margin` keeps a focused row from landing under the sticky order
+ * bar.
  */
 :where(a, button, input, textarea, select, [tabindex]):focus-visible {
   outline: 2px solid var(--color-action);
@@ -84,14 +59,10 @@ body {
 }
 
 /*
- * THE SIGN-IN SCREEN'S RADIAL ACCENT GLOW. Design README §Screens 1: "dark
- * canvas, radial accent glow". The gradient's geometry is the reference app's
- * own (`radial-gradient(80% 60% at 50% 0%, …, transparent 70%)`); the colour
- * is a token because check-rules bans literal colours everywhere, CSS
- * included. An app-level utility, not a kit one — exactly one screen is this
- * register — and an @utility rather than a class so `SigninScreen`'s
- * `bg-radial-accent-glow` composes with Tailwind instead of silently emitting
- * nothing, which is what it did before this rule existed.
+ * The sign-in screen's radial accent glow. The colour is a token because
+ * check-rules bans literal colours, CSS included; an @utility rather than a
+ * class so `bg-radial-accent-glow` composes with Tailwind instead of
+ * silently emitting nothing.
  */
 @utility bg-radial-accent-glow {
   background-image: radial-gradient(
@@ -101,8 +72,8 @@ body {
   );
 }
 
-/* Design rule 10: nothing bounces -- and nothing moves at all for a reader who
-   asked it not to (WCAG §2.3.3). */
+/* Nothing bounces — and nothing moves at all for a reader who asked it not
+   to. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

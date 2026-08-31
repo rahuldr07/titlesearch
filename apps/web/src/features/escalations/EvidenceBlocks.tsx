@@ -3,9 +3,8 @@ import type { Escalation } from "@titlepipe/contract";
 import { Button, Card, CardBody, CardHeader } from "../../components/ui";
 
 /**
- * The docket excerpt on paper, split at the boxed match — the reference's
- * "Source excerpt · p31 · line 9 · magnified" block, with its "View on page →"
- * jumping to the cited page on the workstation (`?page=`, INVARIANT 55).
+ * The docket excerpt on paper, split at the boxed match; "View on page →"
+ * jumps to the cited page on the workstation (`?page=`).
  */
 export function DocketExcerpt({
   escalation,
@@ -37,7 +36,6 @@ export function DocketExcerpt({
           </Link>
         )}
       </div>
-      {/* Rule 8: a quotation from the record reads in the paper register. */}
       <p className="bg-surface-paper px-8 py-7 font-serif text-body leading-document text-page-ink">
         {excerpt.pre}
         <mark className="border border-action-border-strong bg-action-surface px-2 text-page-ink">
@@ -50,10 +48,8 @@ export function DocketExcerpt({
 }
 
 /**
- * The determination for a seat that does not hold it — VISIBLE + DISABLED
- * under the reference's amber hint (RULED 2026-08-29; supersedes
- * absent-not-dimmed for this surface). The button's disablement carries the
- * same sentence, rule 9.
+ * The determination for a seat that does not hold it — visible and disabled
+ * under the hint; the button's disablement carries the same sentence.
  */
 export function LockedDetermination({ escalation }: { readonly escalation: Escalation }) {
   const hint =
@@ -80,8 +76,8 @@ export function LockedDetermination({ escalation }: { readonly escalation: Escal
   );
 }
 
-/** The drawn debtor-vs-owner comparison grid — both columns quoted from the
- * record by the server (RULED 2026-08-29). */
+/** The debtor-vs-owner comparison grid — both columns quoted from the record
+ * by the server. */
 export function IdentityGrid({
   identity,
 }: {

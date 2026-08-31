@@ -2,7 +2,7 @@ import { onPanel } from "../panelGround";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { OrderRef } from "./OrderRef";
 
-/** Rule 3's first named example, and rule 11's "one variable, never two literals". */
+/** An order ref is data — mono, drawn in one place. */
 const meta = {
   title: "entities/OrderRef",
   /* The ground these components actually stand on — see `panelGround.tsx`. */
@@ -19,5 +19,5 @@ export const Row: Story = { args: { emphasis: "row" } };
 
 export const Subject: Story = { args: { emphasis: "subject" } };
 
-/** The overview spotlight — 28px accent. Rule 1: at most once per screen. */
+/** The overview spotlight — 28px accent. At most once per screen. */
 export const Spotlight: Story = { args: { emphasis: "spotlight" } };

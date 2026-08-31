@@ -5,12 +5,10 @@ export const err = (message: string, status: number) =>
   HttpResponse.json({ error: message }, { status });
 
 /**
- * Role gate on every mutation, standing in for core-api middleware. Runs BEFORE
- * body validation: INVARIANT 40 — a role lacking the action gets 403 even with
- * an invalid body.
- *
- * Its own module because `handlers.ts` imports `design.ts`, so the two handler
- * files cannot import the gate from each other.
+ * Role gate on every mutation, standing in for core-api middleware. Runs
+ * before body validation: a role lacking the action gets 403 even with an
+ * invalid body. Its own module because `handlers.ts` imports `design.ts`,
+ * so the two handler files cannot import the gate from each other.
  */
 export const guard = (request: Request, action: Action) => {
   const raw = request.headers.get("x-mock-role");

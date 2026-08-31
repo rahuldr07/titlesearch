@@ -2,25 +2,13 @@ import { useEffect, useMemo, useRef } from "react";
 import { useChords } from "../../shared/chords";
 
 /**
- * THE WORKSTATION'S CHORDS — C / E / Q / J / K / Z, AND THEY ARE PANE-LOCAL.
- *
- * `app/keyboard/GlobalKeys.tsx` says outright why they are not in the global
- * registry: "C/E/Q/J/K/Z belong to the review screen and are installed by that
- * screen, not here — INVARIANT 50 makes keys pane-local." Until now no screen
- * installed them, while `WorkstationBar` printed a legend advertising five of
- * them. Rule 11 says a screen may not advertise a key it does not install; the
- * bar was lying, and this is the half that makes it true.
- *
- * SUSPENSION IS `useChords`', NOT OURS. A chord typed into the correction
- * editor is text, and an open listbox owns its own typeahead — both are
- * decided by scope inside `shared/chords.ts`, so nothing here inspects a tag.
- *
- * THE HANDLERS RIDE A REF. `useChords` re-installs its listener whenever the
- * bindings object changes identity, and a review handler closes over the
- * selection, so it changes every render. Binding through a ref keeps ONE
- * listener for the screen's lifetime — the alternative is a tear-down and
- * rebuild on every keystroke, which is the exact window `chords.ts` says must
- * not exist ("there is no window in which a chord is lost").
+ * The workstation's chords — C / E / Q / J / K / Z, pane-local: this screen
+ * installs them, not `GlobalKeys`. Suspension is `useChords`', not ours — a
+ * chord typed into the correction editor is text, and an open listbox owns
+ * its own typeahead; nothing here inspects a tag. The handlers ride a ref:
+ * a review handler closes over the selection and changes every render, and
+ * binding through a ref keeps one listener for the screen's lifetime
+ * instead of a tear-down and rebuild on every keystroke.
  */
 function useLatest<T>(value: T) {
   const ref = useRef(value);
@@ -89,11 +77,9 @@ export function useDecisionKeys(props: {
 
 /**
  * Z — zoom the evidence page to the focused citation, Escape — back to fit
- * (`ScanPane`). ⚠ RULED 2026-08-29 (RULING-2026-08-29.md): the drawn
- * behaviour, replacing the fit↔200% simplification. A VIEW toggle; it files
- * nothing. `Escape` is not a review chord in the registry — it is the drawn
- * exit for this one view state, and it stands down behind overlays and text
- * entry exactly as `z` does (`shared/chords.ts` guards both).
+ * (`ScanPane`). A view toggle; it files nothing. `Escape` is not a review
+ * chord in the registry — it is the exit for this one view state, and it
+ * stands down behind overlays and text entry exactly as `z` does.
  */
 export function useZoomKey(props: {
   readonly enabled: boolean;

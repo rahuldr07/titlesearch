@@ -4,9 +4,8 @@ import { Checkbox } from "./checkbox";
 import { onPanel } from "./kitGround";
 
 /**
- * Every state, and the one that matters most is `Blocked`: rule 9 says a
- * disabled control states its reason, and the `play` asserts the SENTENCE is on
- * the DOM rather than merely that the box is inert.
+ * A disabled control states its reason: the Blocked play asserts the sentence
+ * is on the DOM rather than merely that the box is inert.
  */
 const meta = {
   title: "ui/Checkbox",
@@ -21,7 +20,7 @@ type Story = StoryObj<typeof meta>;
 /** Resting and unchecked. */
 export const Unchecked: Story = { args: { "aria-label": "Include retired rules" } };
 
-/** Checked — the ✓ of rule 7's vocabulary, on the accent fill. */
+/** Checked — the ✓ of the glyph vocabulary, on the accent fill. */
 export const Checked: Story = {
   args: { defaultSelected: true, "aria-label": "Include retired rules" },
 };
@@ -43,9 +42,8 @@ export const WithLabel: Story = {
 };
 
 /**
- * BLOCKED, WITH THE RULE. Not `disabled` — there is no such prop. The reason
- * lands on `title` and on `data-disabled-reason`, and `e2e/invariants` reads
- * the latter.
+ * Blocked, with the rule. The reason lands on `title` and on
+ * `data-disabled-reason`, and e2e/invariants reads the latter.
  */
 export const Blocked: Story = {
   args: {

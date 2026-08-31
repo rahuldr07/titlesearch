@@ -3,11 +3,8 @@ import { Card, CardBody, CardHeader, InnerPanel } from "./card";
 import { onCanvas } from "./kitGround";
 
 /**
- * A card lives on the CANVAS, not on a panel — so these stories use `onCanvas`,
- * which is the surface that makes its shadow and its border mean anything.
- *
- * The last story is the important one: nested cards throw, and the throw is
- * caught and displayed rather than crashing the frame.
+ * A card lives on the canvas, not on a panel — onCanvas is the surface that
+ * makes its shadow and border mean anything.
  */
 const meta = {
   title: "ui/Card",
@@ -55,7 +52,7 @@ export const Sunken: Story = {
   },
 };
 
-/** Rule 8: evidence and deliverables are paper, not a UI surface. */
+/** Evidence and deliverables are paper, not a UI surface. */
 export const Paper: Story = {
   args: {
     tone: "paper",
@@ -69,7 +66,7 @@ export const Paper: Story = {
   },
 };
 
-/** Tight padding — 16px, the low end of the recipe's 16–24. */
+/** Tight padding — 16px, the low end of the 16–24 range. */
 export const TightPadding: Story = {
   args: {
     padding: "tight",
@@ -79,7 +76,7 @@ export const TightPadding: Story = {
   },
 };
 
-/** The header-plus-rows shape, verbatim from RECIPES §Card. */
+/** The header-plus-rows shape. */
 export const WithHeader: Story = {
   args: {
     padding: "none",

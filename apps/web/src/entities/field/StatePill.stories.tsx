@@ -5,13 +5,9 @@ import { FieldState } from "@titlepipe/contract";
 import { StatePill } from "./StatePill";
 
 /**
- * SIX MEMBERS, SIX APPEARANCES, AND NO CONFIDENCE ANYWHERE.
- *
- * There is deliberately NO story showing "confirmed but low confidence" or
- * "needs review, promoted". Not because they were left out — because the
- * component takes the enum member and nothing else, so there is no way to write
- * the args for one. The absence of that story IS the enforcement, the same way
- * `Button` has no disabled-without-a-reason story.
+ * Six members, six appearances, and no confidence anywhere. There is
+ * deliberately no "confirmed but low confidence" story: the component takes
+ * the enum member and nothing else, so the args for one cannot be written.
  */
 const meta = {
   title: "entities/StatePill",
@@ -34,7 +30,7 @@ export const Confirmed: Story = { args: { state: "confirmed" } };
 
 export const Corrected: Story = { args: { state: "corrected" } };
 
-/** Stopped until a RULE resolves it (`INVARIANTS:36`). */
+/** Stopped until a rule resolves it. */
 export const Escalated: Story = { args: { state: "escalated" } };
 
 /**

@@ -2,12 +2,9 @@ import { z } from "zod";
 import { Report } from "./entities.js";
 
 /**
- * Surface added under the 2026-08-28 owner ruling
- * (docs/frontend/design-2026-08/RULING-2026-08-28.md), so every screen the
- * reference app draws runs on real wire data.
- *
- * Nothing here changes the meaning of an existing shape. The anti-patterns the
- * ruling explicitly kept are kept: no rate, no per-person figure, no probe.
+ * Wire shapes for the reference app's screens. Nothing here changes the
+ * meaning of an existing shape, and the anti-patterns hold: no rate, no
+ * per-person figure, no probe.
  */
 
 // ---- All Orders -------------------------------------------------------------
@@ -24,9 +21,8 @@ export const OrderStage = z.enum([
 export type OrderStage = z.infer<typeof OrderStage>;
 
 /**
- * A row of the browse table. `due` is a SERVER-OWNED date, never a countdown:
- * the ruling permits the column because the server owns the value, and still
- * forbids a client computing "5h 20m left" from it.
+ * A row of the browse table. `due` is a server-owned label, never a
+ * countdown — a client must not compute "5h 20m left" from it.
  */
 export const OrderRow = z.object({
   id: z.string(),
@@ -48,11 +44,9 @@ export const OrderFilter = z.enum(["all", "active", "waiting", "delivered"]);
 export type OrderFilter = z.infer<typeof OrderFilter>;
 
 /**
- * `GET /api/orders?q=&filter=&page=` — the browse surface.
- *
- * `total` and `page_count` are the SERVER'S. The caller never divides a length
- * by a page size to get either; that is the arithmetic every census member in
- * this contract exists to remove.
+ * `GET /api/orders?q=&filter=&page=` — the browse surface. `total` and
+ * `page_count` are the server's; the caller never divides a length by a
+ * page size to get either.
  */
 export const OrdersPageResponse = z.object({
   orders: z.array(OrderRow),
@@ -69,14 +63,11 @@ export type OrdersPageResponse = z.infer<typeof OrdersPageResponse>;
 // ---- Release compiler -------------------------------------------------------
 
 /**
- * ⚠ RULED 2026-08-29 — `docs/frontend/design-2026-08/RULING-2026-08-29.md`.
- * One labelled row of a manifest block, as the reference app's certificate
- * draws it: a small-caps label against a serif value. A PENDING value — one
- * still awaiting an examiner ruling — is drawn amber with a dashed underline
- * and is CLICKABLE, jumping to that field on the examination workstation;
- * `field_id` is the workstation field PATH the jump lands on (`?field=`),
- * null on a settled row. The pending flag and the sentence are the SERVER's:
- * the client never derives "pending" from the composition's gates.
+ * One labelled row of a manifest block. A pending value — still awaiting an
+ * examiner ruling — is clickable, jumping to that field on the examination
+ * workstation; `field_id` is the field path the jump lands on (`?field=`),
+ * null on a settled row. The pending flag is the server's: the client never
+ * derives "pending" from the composition's gates.
  */
 export const ManifestValue = z.object({
   label: z.string(),
@@ -90,11 +81,7 @@ export const ManifestBlock = z.object({
   id: z.string(),
   numeral: z.string(),
   title: z.string(),
-  /**
-   * The block's rows, already assembled server-side (RULED 2026-08-29 — was
-   * a single prose `body`; the reference draws labelled value rows and marks
-   * the pending ones, so the wire carries the structure it draws).
-   */
+  /** The block's rows, already assembled server-side. */
   values: z.array(ManifestValue),
   field_count: z.number().int(),
   cited: z.number().int(),
@@ -119,17 +106,15 @@ export const CompositionResponse = z.object({
   releasable: z.boolean(),
   blocked_reason: z.string().nullable(),
   /**
-   * ⚠ RULED 2026-08-29 — the reference's gate footer line is CLICKABLE and
-   * "opens the step that is blocking release". WHICH step is release
-   * resolution, so the SERVER names the door: a route path the blocked line
-   * links to, null when nothing blocks. The client draws the link verbatim
-   * and never chooses a destination by counting gates.
+   * Which step blocks release is release resolution, so the server names
+   * the door: a route path the blocked line links to, null when nothing
+   * blocks. The client draws the link verbatim and never chooses a
+   * destination by counting gates.
    */
   blocked_door: z.string().nullable(),
   /** Present once a release has been executed. */
   seal_sha256: z.string().nullable(),
-  /** The instant the seal was filed (RULED 2026-08-29 — the certificate's
-   * timestamp line). Null until a release files one. */
+  /** The instant the seal was filed. Null until a release files one. */
   released_at: z.string().nullable(),
 });
 export type CompositionResponse = z.infer<typeof CompositionResponse>;
@@ -166,11 +151,10 @@ export const ArtifactsResponse = z.object({ artifacts: z.array(Artifact) });
 export type ArtifactsResponse = z.infer<typeof ArtifactsResponse>;
 
 /**
- * ⚠ RULED 2026-08-29 — `docs/frontend/design-2026-08/RULING-2026-08-29.md`.
- * `GET /api/reissue/reasons` — the canned reasons the reference's Reissue
- * Gateway offers as radio options. SERVER-OWNED VOCABULARY: the pipeline
- * defines what may go on the lender's record, so the list is served rather
- * than spelled in a component.
+ * `GET /api/reissue/reasons` — the canned reasons the Reissue Gateway offers
+ * as radio options. Server-owned vocabulary: the pipeline defines what may
+ * go on the lender's record, so the list is served, not spelled in a
+ * component.
  */
 export const ReissueReasonsResponse = z.object({
   reasons: z.array(z.string()),
@@ -217,9 +201,9 @@ export const CountersignsResponse = z.object({
 export type CountersignsResponse = z.infer<typeof CountersignsResponse>;
 
 /**
- * `POST /api/fields/{id}/countersign` — design rule 13: a second read must come
- * from a different user than the ruling examiner, enforced as a 409 rather than
- * as button state.
+ * `POST /api/fields/{id}/countersign` — a second read must come from a
+ * different user than the ruling examiner, enforced as a 409 rather than as
+ * button state.
  */
 export const CountersignRequest = z.object({
   signature: z.string().min(1),
@@ -229,19 +213,13 @@ export type CountersignRequest = z.infer<typeof CountersignRequest>;
 // ---- Settings & RBAC --------------------------------------------------------
 
 /**
- * ⚠ RULED 2026-08-29 — `docs/frontend/design-2026-08/RULING-2026-08-29.md`.
- * The reference's Access Control (RBAC) pane draws the FULL matrix — every
- * module row against every role, cells reading — / VIEW / EDIT — and a click
- * on a cell CYCLES it. That supersedes the pre-ruling refusal ("one column,
- * not four, and no cell cycles"), so the matrix gets its own read and write:
- *
- * - `GET /api/rbac` serves the whole matrix. It is a SETTINGS document about
- *   the shop, distinct from `/api/me/permissions` (this seat's enforceable
- *   projection) — the two answer different questions and neither derives
- *   from the other in the browser.
- * - `PATCH /api/rbac` posts one cell; the SERVER owns the cycle order
- *   (— → VIEW → EDIT → —) and answers with the whole matrix re-read.
- *
+ * The Access Control pane's full matrix — every module row against every
+ * role, cells reading — / VIEW / EDIT, a click cycling the cell:
+ * - `GET /api/rbac` serves the whole matrix — a settings document about the
+ *   shop, distinct from `/api/me/permissions` (this seat's enforceable
+ *   projection); neither derives from the other in the browser.
+ * - `PATCH /api/rbac` posts one cell; the server owns the cycle order and
+ *   answers with the whole matrix re-read.
  * `locked` marks a cell the server refuses to cycle (the Admin column).
  */
 export const RbacLevel = z.enum(["none", "view", "edit"]);
@@ -280,10 +258,9 @@ export const RbacCycleRequest = z.object({
 export type RbacCycleRequest = z.infer<typeof RbacCycleRequest>;
 
 /**
- * `PATCH /api/people/{id}/role` — the People pane's role picker (RULED
- * 2026-08-29; the pre-ruling pane refused the picker as endpoint-less).
- * The role must be one of `RbacMatrixResponse.roles`; the server refuses
- * anything else.
+ * `PATCH /api/people/{id}/role` — the People pane's role picker. The role
+ * must be one of `RbacMatrixResponse.roles`; the server refuses anything
+ * else.
  */
 export const PersonRoleRequest = z.object({
   role: z.string().min(1),

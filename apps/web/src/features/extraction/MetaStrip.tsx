@@ -1,18 +1,11 @@
 import type { OrderPipelineResponse } from "@titlepipe/contract";
 
 /**
- * THE META STRIP — the reference's three cells, as drawn: Order ref · Source
- * package · Volume. ⚠ RULED 2026-08-29
- * (`docs/frontend/design-2026-08/RULING-2026-08-29.md`): the strip was held to
- * two cells so the order ref would print once; the ruling builds the drawn
- * three, and the ref cell quotes the SAME `order_ref` the strip above reads
- * (`GET /api/orders/{id}/context`) — one variable, passed down, never a second
- * literal.
- *
- * `package_name` and `volume_label` are SERVER-COMPOSED strings on the
- * pipeline response (intake.ts, same ruling). Null is the server having no
- * package to name, printed as that. `classifier_note` stays the full-width
- * row: it is the server's own sentence about what the other pages were.
+ * The meta strip. The ref cell quotes the same `order_ref` the context read
+ * serves — one variable, passed down, never a second literal. `package_name`
+ * and `volume_label` are server-composed strings; null is the server having no
+ * package to name, printed as that. `classifier_note` is the server's own
+ * sentence about what the other pages were.
  */
 export function MetaStrip(props: {
   readonly pipeline: OrderPipelineResponse;
@@ -45,8 +38,7 @@ export function MetaStrip(props: {
   );
 }
 
-/** `ink-muted`, not the design's `ink-faint`: the faint tier measures 3.17:1 at
-    11px and fails AA (tokens.css:106-119). Rule 3 puts the value in mono. */
+/** `ink-muted`, not `ink-faint`: the faint tier fails AA at this size. */
 function Cell(props: { readonly label: string; readonly value: string }) {
   return (
     <div className="flex flex-col gap-2 border-r border-line-strong p-8 last:border-r-0">

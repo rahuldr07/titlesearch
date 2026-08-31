@@ -85,11 +85,11 @@ export function SheetRow(props: {
             />
           ) : (
             /*
-             * The shared chip, not a coloured line of text. `noValueStates`
-             * carries the reason the four differ in EVERY channel at once —
-             * mark, ink, border style and fill — because colour alone does not
-             * survive greyscale or a red-green deficiency. The picker below
-             * keeps the typist's own phrasing; the echo speaks the taxonomy's.
+             * The shared chip, not a coloured line of text: the four differ
+             * in every channel at once — mark, ink, border style and fill —
+             * because colour alone does not survive greyscale or a red-green
+             * deficiency. The picker below keeps the typist's own phrasing;
+             * the echo speaks the taxonomy's.
              */
             <NoValueChip render={draft.absence} />
           )}

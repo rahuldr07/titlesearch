@@ -5,13 +5,8 @@ import { cx } from "../../components/ui";
 import { AccountPanel } from "./AccountPanel";
 
 /**
-
- * SCREEN 12 — SETTINGS & RBAC, at `/account` (`authz.ts:81`, `screen.account.enter`,
-
- * EVERY role). Every role keeps this door in the mock-auth phase, and `authz.ts:79-80`
-
- * says why in the table itself: "role switch must not lock you out".
-
+ * Settings & RBAC, at `/account`. Every role keeps this door — a role
+ * switch must not lock you out.
  */
 export function AccountScreen(props: { readonly tab: AccountTabId | undefined }) {
   const active = props.tab ?? DEFAULT_ACCOUNT_TAB;
@@ -19,10 +14,9 @@ export function AccountScreen(props: { readonly tab: AccountTabId | undefined })
   return (
     <div className="tp-screen-enter flex h-full min-h-0">
       {/*
-       * The h1 sits OUTSIDE the nav landmark. The prototype draws the title in
-       * the sidebar column and so does this, but a page title inside <nav> is a
-       * page whose name a screen-reader user finds by browsing navigation. The
-       * column is the layout; the nav is only the list inside it.
+       * The h1 sits outside the nav landmark: a page title inside <nav> is a
+       * page whose name a screen-reader user finds by browsing navigation.
+       * The column is the layout; the nav is only the list inside it.
        */}
       <div className="flex w-120 shrink-0 flex-col border-r border-line-subtle bg-surface-panel">
         <div className="px-12 pt-12 pb-8">
@@ -45,13 +39,8 @@ export function AccountScreen(props: { readonly tab: AccountTabId | undefined })
                       : "font-medium text-ink-muted hover:bg-row-hover",
                   )}
                 >
-                  {/*
-                   * PLAIN TEXT, as the design draws it. An earlier pass put the
-                   * backing endpoint under every label in mono — useful, and not
-                   * what `reference-app.html` has: its tabs are one 13px w500
-                   * line each. Which panes have no contract surface is said on
-                   * the pane itself, where the gap actually is.
-                   */}
+                  {/* Plain text. Which panes have no contract surface is said
+                      on the pane itself, where the gap actually is. */}
                   {tab.label}
                 </Link>
               </li>
@@ -61,10 +50,10 @@ export function AccountScreen(props: { readonly tab: AccountTabId | undefined })
       </div>
 
       {/*
-       * `tabIndex={0}`: a region that scrolls must be reachable by keyboard, or
-       * a reader who cannot use a pointer cannot reach the bottom of the pane
-       * (WCAG 2.1.1, and axe's `scrollable-region-focusable`). It takes an
-       * accessible name with it, because a bare tab stop announces nothing.
+       * `tabIndex={0}`: a region that scrolls must be reachable by keyboard,
+       * or a reader who cannot use a pointer cannot reach the bottom of the
+       * pane. It takes an accessible name with it, because a bare tab stop
+       * announces nothing.
        */}
       <div
         tabIndex={0}

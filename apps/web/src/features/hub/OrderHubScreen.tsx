@@ -15,16 +15,13 @@ import { SpecificationsGrid } from "./SpecificationsGrid";
 import { EventTrail } from "./EventTrail";
 
 /**
- * SCREEN 4 — THE ORDER HUB, at `/orders/$orderId` (`authz.ts:66`, SIGHTED).
- *
- * Six reads, not one blob: each is a cache entry that invalidates on its own
- * terms, and a partial failure degrades one band rather than the screen
- * (INVARIANT 59). There is no arithmetic here — every count is the server's, and
- * `fields` is read for its `census` without the array beside it ever being
- * counted, because the array is permission-scoped and the census is not.
- *
- * It owns no scroller: `app/chrome/OrderRoute.tsx` composes this above the
- * extraction view inside one, and a nested scroller would strand what follows.
+ * The order hub at `/orders/$orderId`. Six reads, not one blob: each is a
+ * cache entry that invalidates on its own terms, and a partial failure
+ * degrades one band rather than the screen. No arithmetic here — every count
+ * is the server's, and `fields` is read for its `census` without the array
+ * beside it ever being counted (the array is permission-scoped; the census is
+ * not). It owns no scroller: `OrderRoute` composes this above the extraction
+ * view inside one, and a nested scroller would strand what follows.
  */
 export function OrderHubScreen(props: { readonly orderId: string }) {
   const id = props.orderId;
@@ -66,7 +63,6 @@ export function OrderHubScreen(props: { readonly orderId: string }) {
       aria-label="Order hub"
       className="tp-screen-enter flex shrink-0 flex-col gap-12 px-16 py-16"
     >
-      {/* One surface, three bands, as the prototype draws it. */}
       <Card padding="none" className="overflow-hidden">
         {context.data !== undefined && (
           <VerdictCard

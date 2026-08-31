@@ -4,9 +4,9 @@ import { ProgressMeter } from "./progress-meter";
 import { onPanel } from "./kitGround";
 
 /**
- * THE 18-DOT METER the design specifies, at every state a decision pane can be
- * in, plus the two boundary behaviours: zero total, and a total past MAX_DOTS
- * where the graphic is deliberately dropped.
+ * The 18-dot meter at every state a decision pane can be in, plus the two
+ * boundary behaviours: zero total, and a total past MAX_DOTS where the
+ * graphic is deliberately dropped.
  */
 const meta = {
   title: "ui/ProgressMeter",
@@ -30,7 +30,7 @@ export const Partial: Story = {
       '[data-slot="progress-meter-dots"] > span',
     );
     expect(dots).toHaveLength(18);
-    // Rule 11: the graphic and the caption are one variable, never two literals.
+    // The graphic and the caption are one variable, never two literals.
     expect(canvasElement.textContent).toContain("14 of 18");
   },
 };
@@ -61,9 +61,9 @@ export const EmptyTotal: Story = {
 };
 
 /**
- * PAST THE COUNTABLE LIMIT. Above 24 the dots stop being countable, so the
- * graphic is dropped and the mono count stands alone. A rounded bar here would
- * be a number the screen then disagrees with (rule 11).
+ * Above 24 the dots stop being countable, so the graphic is dropped and the
+ * mono count stands alone — a rounded bar here would be a number the screen
+ * then disagrees with.
  */
 export const TooManyToCount: Story = {
   args: { settled: 118, total: 240, caption: "118 of 240 decisions settled" },

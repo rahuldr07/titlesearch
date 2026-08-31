@@ -32,41 +32,24 @@ import {
 import type { DemoOrderRow, DemoStageId } from "./data.js";
 
 /**
- * The workspace, intake and admin resources.
+ * The workspace, intake, and admin resources. Reads only, except
+ * preferences — the writes are state transitions the server owns.
  *
- * These were private constants inside individual screens for one build. They
- * live here now for the same reason every other fixture does: `packages/mocks`
- * IS the backend until the FastAPI core lands, and data a screen carries
- * privately is data no contract validates and no real API can replace.
+ * Every order-shaped answer here is a projection of `demoOrders` (data.ts):
+ * the board, the sign-off, the pipeline, and the gate all read the same row,
+ * so they cannot disagree about an order's state or page count.
  *
- * READS ONLY, except preferences. Publishing a grid, retiring a line, closing a
- * completeness gate and starting the pipeline are all state transitions the
- * server owns, and rulings Q4–Q10 have not settled what they mean. The screens
- * render these and say plainly that the write does not exist yet.
- *
- * EVERY ORDER-SHAPED ANSWER HERE IS A PROJECTION OF `demoOrders` (data.ts).
- * The board, the sign-off, the pipeline and the gate all read the SAME row, so
- * they cannot disagree about what state an order is in or how many pages its
- * package runs to. Where two answers were derived from two facts, they had
- * already drifted — `stages[signoff].phase: "done"` sat beside `signed_by:
- * null` and the sign-off row rendered "✓ Questions … open".
- *
- * Persons and places stay obviously synthetic (`Sample Client — Riverbend
- * Title`): a fixture that reads like a real file is a fixture somebody
+ * Persons and places stay obviously synthetic ("Sample Client — Riverbend
+ * Title"): a fixture that reads like a real file is a fixture somebody
  * eventually treats as one.
  */
 
 // ---- products ---------------------------------------------------------------
 
 /**
- * The six products, transcribed from the 2026-07-28 export
- * (`TitlePipe.dc.html:2276-2282`). The list carried a "30 Year Search" and a
- * "Two Owner Search" until 2026-07-30 while every order in `demoOrders` was a
- * 40-Year Search — a products grid that does not contain the product the live
- * order was placed under cannot explain a single thing on the sign-off screen.
- *
- * `full` for the year-40 row QUOTES `PRODUCT_NAME` rather than restating it:
- * the order table and this grid must name the same product with one string.
+ * The six products. `full` for the year-40 row quotes `PRODUCT_NAME` rather
+ * than restating it: the order table and this grid must name the same
+ * product with one string.
  */
 const products: ConfigResponse["products"] = [
   { id: "p_cos", code: "COS", full: "Current Owner Search", sub: "Current owner — vesting deed + open matters", period: "current owner", derivation: "cos", retired: false },
@@ -87,10 +70,9 @@ const NARROWED: LineApplication = "narrowed";
 const EXCLUDED: LineApplication = "excluded";
 
 /**
- * How a line applies to each PRODUCT FAMILY, not to each product id: the three
- * year products differ only in how far back they reach, and a line that
- * applies to a 20-year search applies to a 60-year search. `cellsOf` expands
- * the family to the ids, so adding an 80-Year Search is one line of edit.
+ * How a line applies to each product family, not each product id: the year
+ * products differ only in reach. `cellsOf` expands the family to the ids,
+ * so adding an 80-Year Search is one line of edit.
  */
 interface LineApplications {
   readonly cos: LineApplication;
@@ -124,16 +106,16 @@ export interface SignoffLineSpec {
   readonly n: number;
   readonly label: string;
   readonly group: string;
-  /** Exactly what THIS line may be answered. Six of the thirteen admit N/A. */
+  /** Exactly what this line may be answered. Six of the thirteen admit N/A. */
   readonly answers: readonly SignoffAnswer[];
   readonly comment_on_no: "req" | "opt";
   readonly machine_check: string | null;
   readonly standard_text: string | null;
   readonly period_scoped: boolean;
   /**
-   * What the package must show for an N/A on this line to be checkable — the
-   * export's `precondLabel` / `precondCount`. `null` where the product states
-   * no precondition, which is the honest case: the gate cannot test the N/A.
+   * What the package must show for an N/A on this line to be checkable.
+   * `null` where the product states no precondition — the gate cannot test
+   * the N/A.
    */
   readonly na_precondition: string | null;
   readonly ap: LineApplications;
@@ -141,23 +123,12 @@ export interface SignoffLineSpec {
 }
 
 /**
- * THE PRODUCT'S THIRTEEN, transcribed from the 2026-07-28 export
- * (`TitlePipe.dc.html:2286-2298`) rather than paraphrased. They were thirteen
- * INVENTED lines until 2026-07-30, which made the questions screen, the
- * products grid and the rulebook each describe a different sign-off. One list,
- * three screens.
- *
- * `answers` and `comment_on_no` are per line and deliberately NOT uniform: N/A
- * is legal on six of them (L01, L04, L06, L08, L10, L11) and illegal on the
- * other seven, and a NO needs its comment on ten. The previous fixture
- * flattened `comment_on_no` to `true` on all thirteen and offered all three
- * answers everywhere, which turns two product rules into one screen-wide
- * habit — and invites an answer the sign-off cannot record.
- *
- * `machine_check` names what the pipeline can check the answer against. Where
- * it is `null` the line rests entirely on the abstractor's word, and the
- * completeness gate can raise no gap against it at all — which is exactly why
- * the fixture's one NO disclosure sits on a line the machine cannot contradict.
+ * The product's thirteen sign-off lines — one list, three screens.
+ * `answers` and `comment_on_no` are per line and deliberately not uniform:
+ * N/A is legal on six (L01, L04, L06, L08, L10, L11) and illegal on the
+ * other seven, and a NO needs its comment on ten. `machine_check` names what
+ * the pipeline can check the answer against; where null, the line rests
+ * entirely on the abstractor's word and the gate can raise no gap against it.
  */
 export const SIGNOFF_LINES: readonly SignoffLineSpec[] = [
   {
@@ -294,10 +265,9 @@ const clients: ClientsResponse["clients"] = [
     product_ids: ["p_cos", "p_tos", "p_y40"],
     /**
      * The two lines this client's policy has an opinion about. `signoffFor`
-     * READS THIS TABLE rather than restating it, so a suggestion the sign-off
-     * screen shows is the same fact the client record states. N/A is legal on
-     * both (L08 and L10 admit it); a default naming an answer a line does not
-     * accept would be a policy the sign-off could never record.
+     * reads this table rather than restating it. N/A is legal on both — a
+     * default naming an answer a line does not accept would be a policy the
+     * sign-off could never record.
      */
     signoff_defaults: { L08: "N/A", L10: "N/A" },
     overrides: [
@@ -354,10 +324,9 @@ const effective: ClientsResponse["effective"] = [
 ];
 
 /**
- * ⚠ RULED 2026-08-29 (RULING-2026-08-29.md): the intake client select draws a
- * per-client "(N sign-offs)". The census is the SERVER'S — counted here off
- * the same effective checklists this endpoint serves, so the option and the
- * checklist it summarises cannot drift, and no browser ever tallies it.
+ * The intake client select's "(N sign-offs)" census — counted here off the
+ * same effective checklists this endpoint serves, so the option and the
+ * checklist it summarizes cannot drift, and no browser ever tallies it.
  */
 for (const checklist of effective) {
   const client = clients.find((c) => c.id === checklist.client_id);
@@ -370,19 +339,11 @@ for (const checklist of effective) {
 // ---- the lifecycle board -----------------------------------------------------
 
 /**
- * The board's seven columns, the export's own ids, order, sub-lines and
- * waiting-on lines (`TitlePipe.dc.html:3269-3277`).
- *
- * THERE IS NO `failed` COLUMN, and that is a decision rather than an omission.
- * `OverviewScreen.tsx` lifts every order carrying `failed` into its banner, so
- * a `failed` column could not hold a card at any point in the product's life —
- * it would render permanently empty however many orders had failed. A failed
- * order sits in the stage it actually stopped in, flagged, and the banner
- * takes it from there.
- *
- * Intake is `halt`, not `idle`: an order sitting in intake is STOPPED, waiting
- * on a person to answer thirteen lines. `idle` belongs to Unassigned alone,
- * where nobody has taken the work yet and nothing is being held up.
+ * The board's seven columns. There is deliberately no `failed` column: the
+ * overview lifts every failed order into its banner, so the column would
+ * render permanently empty — a failed order sits in the stage it stopped in,
+ * flagged. Intake is `halt`, not `idle`: an order in intake is stopped,
+ * waiting on a person; `idle` belongs to Unassigned alone.
  */
 const OV_DEF: readonly {
   id: DemoStageId;
@@ -397,25 +358,15 @@ const OV_DEF: readonly {
   { id: "gate", label: "Gates", sub: "the run has stopped", on: "a person", kind: "halt" },
   { id: "review", label: "Review", sub: "decisions open", on: "reviewer", kind: "halt" },
   { id: "escalated", label: "Escalated", sub: "sent up", on: "senior", kind: "halt" },
-  /**
-   * The export prints "—" on this column's waiting-on line. A dash reads as a
-   * value the fixture failed to supply; "nobody" is the fact — a delivered
-   * order is out of the shop and is holding nothing up.
-   */
+  // "nobody", not "—": a delivered order is out of the shop and holds nothing up.
   { id: "delivered", label: "Delivered", sub: "signed and sent", on: "nobody", kind: "done" },
 ];
 
 /**
- * ONE ORDER IN THE SHOP'S BOOK THAT THIS FIXTURE DOES NOT CARRY, sitting in
- * Gates. The census counts every order in a stage; the card list is scoped to
- * what the caller may open, and `LifecycleStage.count` exists precisely so the
- * two can differ without the difference reading as work disappearing.
- *
- * Without it the two facts only ever differ for a reviewer, and the app's
- * default session is an admin — so the "+N you cannot open" case would have no
- * data to render in the demo at all. The census is therefore one larger than
- * the table, at every role, and `total` counts the same way: a board whose
- * columns sum to more than its own total would be the next contradiction.
+ * One order in the shop's book that this fixture does not carry, sitting in
+ * Gates — it keeps the census larger than the card list at every role so the
+ * "+N you cannot open" case has data to render. `total` counts the same way:
+ * columns must never sum past their own headline.
  */
 const CENSUS_ONLY_IN_GATE = 1;
 
@@ -424,7 +375,7 @@ function lifecycleCard(row: DemoOrderRow): LifecycleOrder {
     id: row.id,
     order_ref: row.order_ref,
     addr: row.addr,
-    /** The board prints a place under the address; the row's `place` IS that line. */
+    /** The board prints a place under the address; the row's `place` is that line. */
     county: row.place,
     waiting_on: row.waiting_on,
     waited: row.waited,
@@ -435,13 +386,9 @@ function lifecycleCard(row: DemoOrderRow): LifecycleOrder {
 }
 
 /**
- * The board, projected from `demoOrders`. It was a second, unrelated order list
- * until 2026-07-30 — the same orders under different refs, in different states,
- * with `addr: "—"` where the fixture had nothing to say.
- *
- * The role gate is the SHOP'S: a reviewer sees their own orders plus anything
- * unclaimed, which is the same gate `/api/queue/next` applies. The census is
- * not gated, and the scope note says so in the export's own words.
+ * The board, projected from `demoOrders`. The role gate: a reviewer sees
+ * their own orders plus anything unclaimed — the same gate `/api/queue/next`
+ * applies. The census is not gated, and the scope note says so.
  */
 export function lifecycleFor(role: string): LifecycleResponse {
   const senior = role !== "reviewer";
@@ -461,24 +408,17 @@ export function lifecycleFor(role: string): LifecycleResponse {
     moving: demoOrders.filter((row) => row.stage === "machine").length,
     failed: demoOrders.filter((row) => row.failed).length,
     /*
-     * THE FOUR OPTION-A CARDS (RULING-2026-08-28; CONFLICT-overview-stats §6).
-     * Labels and notes are the prototype's own copy (`reference-app.html`,
-     * `queueStats`), authored HERE because the server owns product copy; the
-     * values come off the same table as every census above, UN-scoped like
-     * `total` is — a card that shrank with your permissions would read as work
-     * disappearing (intake.ts, LifecycleStage.count).
-     *
-     *   - `active` counts the census, so the invisible Gate order is in it —
-     *     the columns must never sum past their own headline.
-     *   - `in_review` equals `stages[id="review"].count` by construction; the
-     *     member exists so no client hardcodes the stage id (§4).
-     *   - `queries_and_gaps` is gate + escalated — the same bucket the browse
-     *     endpoint's `waiting` filter names (design.ts `inFilter`).
-     *   - `delivered_recent` counts DELIVERIES THAT ARRIVED (`delivered_at`
-     *     set), not the delivered stage: 4176003-4 sits at that stage flagged
-     *     failed-in-transit, and "Delivered This Week" over a bounced delivery
-     *     would be the caption defect this figure was added to end. A count,
-     *     never a pace — the window is named, the rate is not stated.
+     * The four stat cards. Labels and notes are authored here because the
+     * server owns product copy; values come off the same table as every
+     * census above, un-scoped like `total`.
+     *   - `active` counts the census, so the invisible Gate order is in it.
+     *   - `in_review` equals `stages[id="review"].count` by construction;
+     *     the member exists so no client hardcodes the stage id.
+     *   - `queries_and_gaps` is gate + escalated — the same bucket the
+     *     browse endpoint's `waiting` filter names.
+     *   - `delivered_recent` counts deliveries that arrived (`delivered_at`
+     *     set), not the delivered stage — one order there is flagged
+     *     failed-in-transit. A count, never a pace.
      */
     active: {
       label: "Total Active Queue",
@@ -518,15 +458,14 @@ export function lifecycleFor(role: string): LifecycleResponse {
 // ---- people and profile ------------------------------------------------------
 
 /**
- * Exported for the settings handlers (`settings.ts`): the role picker's PATCH
- * mutates THIS store, so `GET /api/people` reflects the change on re-read —
- * one store, one answer. (RULED 2026-08-29: the People pane's picker is drawn,
- * so it is built.)
+ * Exported for the settings handlers: the role picker's PATCH mutates this
+ * store, so `GET /api/people` reflects the change on re-read — one store,
+ * one answer.
  */
 export const people: PeopleResponse = {
   privileged_without_mfa: 1,
-  // Roles are the RBAC matrix's column vocabulary (settings.ts ROLES4) — the
-  // picker PATCHes against that list, so the seed rows speak it too.
+  // Roles are the RBAC matrix's column vocabulary (settings.ts ROLES4) —
+  // the picker PATCHes against that list, so the seed rows speak it too.
   people: [
     { id: "u1", name: "L. Vance", email: "l.vance@titlepipe.internal", role: "QC Reviewer", privileged: true, status: "Active", mfa: "enrolled" },
     { id: "u2", name: "M. Okonkwo", email: "m.okonkwo@titlepipe.internal", role: "Typist (Reviewer)", privileged: false, status: "Active", mfa: "enrolled" },
@@ -549,26 +488,17 @@ const profile: MeProfileResponse = {
 };
 
 /**
- * Preferences is the one resource here that accepts a write, and the only mock
- * store that must SURVIVE A PAGE LOAD — a preference that resets on reload is
- * not a preference. Every other store in this package is deliberately
- * per-session, because no rule depends on them outliving the page.
- *
- * ⚠ THIS IS THE MOCK'S DATABASE, NOT THE APP'S STORAGE. `packages/mocks` stands
- * in for the server until the FastAPI core lands, and a server has somewhere to
- * put a row. The APP never touches browser storage — §9.11 forbids it and
- * `check-rules` rejects it — it does a real GET and PATCH over the wire, which
- * is exactly what this store exists to let the invariant prove. When the real
- * API arrives this goes with the rest of the handlers and the client is
- * unchanged.
+ * Preferences is the one resource here that accepts a write, and the only
+ * mock store that must survive a page load — a preference that resets on
+ * reload is not a preference. This is the mock's database, not the app's
+ * storage: the app never touches browser storage (`check-rules` rejects it);
+ * it does a real GET and PATCH over the wire.
  */
 const PREFS_KEY = "titlepipe.mock.preferences";
 const DEFAULT_PREFS: Preferences = {
   /**
-   * NULL, NOT FALSE — a person who has never touched the fold (2026-07-30,
-   * Wave 2). `false` was an answer nobody gave, and it beat every route default
-   * it was compared against, which made "Review starts collapsed" unreachable.
-   * A new account has no preference; it acquires one by pressing the toggle.
+   * Null, not false — a person who has never touched the fold. A new
+   * account has no preference; it acquires one by pressing the toggle.
    */
   nav_collapsed: null,
   reduced_motion: false,
@@ -603,33 +533,22 @@ const SIGNER = "R. Delacroix";
 const SIGNED_AT = "2026-07-24T13:52:00Z";
 
 /**
- * The answers the abstractor actually gave on a SIGNED order. Every other line
- * is YES; these two are the interesting ones, and both are load-bearing
- * elsewhere:
- *
- *   L11 "N/A" is what the completeness gate's first gap is raised against —
- *   the abstractor read page 7 ("no plat of survey is of record") and answered
- *   N/A, while the classifier segmented a plat reference cover sheet at page
- *   18. Both are defensible, which is the whole point of the gate.
- *
- *   L13 "NO" is the one disclosure the review screen's abstractor-said-NO cards
- *   read. It sits on a line whose `machine_check` the package cannot satisfy
- *   and which the gate therefore cannot contradict — a NO the gate would ALSO
- *   have raised as a gap would be the fixture arguing with itself.
- *
- * A NO on a `comment_on_no: "req"` line without its comment is a refusal the
- * contract states; `NO_COMMENT` is why this table and that comment stay
- * together.
+ * The answers the abstractor gave on a signed order. Every other line is
+ * YES; these two are load-bearing elsewhere: L11 "N/A" is what the
+ * completeness gate's first gap is raised against, and L13 "NO" is the one
+ * disclosure the review screen's abstractor-said-NO cards read — it sits on
+ * a line the gate cannot contradict, so the fixture never argues with
+ * itself. A NO on a required-comment line must carry `NO_COMMENT`.
  */
 const SIGNED_ANSWERS: Readonly<Record<string, SignoffAnswer>> = { L11: "N/A", L13: "NO" };
 const NO_COMMENT =
   "No name-search, judgment or UCC index images were in the package — none could be attached to the report.";
 
 /**
- * An order is SIGNED when it has moved past intake with a readable package.
+ * An order is signed when it has moved past intake with a readable package.
  * One fact, derived once: the pipeline's sign-off row reads this function
- * rather than deciding for itself, which is what stops a done stage carrying
- * an open badge.
+ * rather than deciding for itself, which is what stops a done stage
+ * carrying an open badge.
  */
 function isSigned(row: DemoOrderRow | undefined): boolean {
   if (row === undefined || row.pages === null) return false;
@@ -637,17 +556,11 @@ function isSigned(row: DemoOrderRow | undefined): boolean {
 }
 
 /**
- * The sign-off for one order.
- *
- * The live order is signed and the intake order is not, because they are at
- * different stages and one endpoint cannot honestly say both. `answers` is the
- * line's own set, never the union of all three, and `policy_suggestion` names
- * WHICH answer the client's policy proposed — it is read from that client's
- * `signoff_defaults` above, so the suggestion the screen shows and the policy
- * the client record states are one fact.
- *
- * A SUGGESTION IS NEVER A GIVEN ANSWER (ruling Q13): the suggestion is served
- * only while the order is unsigned, and never written into `answer`.
+ * The sign-off for one order. `answers` is the line's own set, never the
+ * union of all three; `policy_suggestion` is read from the client's
+ * `signoff_defaults`, so the suggestion shown and the policy stated are one
+ * fact. A suggestion is never a given answer: it is served only while the
+ * order is unsigned, and never written into `answer`.
  */
 export function signoffFor(orderId: string): OrderSignoffResponse {
   const row = demoOrderRow(orderId);
@@ -688,9 +601,8 @@ export function signoffFor(orderId: string): OrderSignoffResponse {
 // ---- the pipeline, per order -------------------------------------------------
 
 /**
- * The stage whose row carries a BADGE beyond its phase. Named rather than
- * assumed, because the rule below is about this pairing and a future badged
- * stage must opt into it rather than inherit it silently.
+ * The stage whose row carries a badge beyond its phase. Named rather than
+ * assumed: a future badged stage must opt in rather than inherit silently.
  */
 export const BADGED_STAGE_ID = "signoff";
 
@@ -698,23 +610,11 @@ export const BADGED_STAGE_ID = "signoff";
 const GATE_PASSED_STAGES: readonly DemoStageId[] = ["machine", "review", "escalated", "delivered"];
 
 /**
- * A DONE STAGE MAY NEVER CARRY AN OPEN BADGE (ruled 2026-07-30).
- *
- * The sign-off row draws its checkmark from `phase` and its open/signed badge
- * from `signed_by` (`apps/web-v2/src/app/orderLifecycle.ts`). Both halves are
- * correctly server-cited, so a fixture that set one without the other rendered
- * "✓ Questions … open" and gave the reader no way to know which governed. The
- * two now come from ONE fact — `isSigned(row)` — and the fixture test fails if
- * they ever part company again.
- *
- * The stages are the export's eight (`TitlePipe.dc.html:2964-2973`), plus the
- * abstractor sign-off row the app's processing screen draws between classify
- * and the gate. "Validate & flag" and "Finalize & deliver" were missing
- * entirely, so nothing on that screen represented either validation or
- * delivery — the two steps a reader most wants to see before a report goes out.
- *
- * Every `waiting` row says WHY it has not run. "waits on the gate" told a
- * reader the order of the list, which they could already see.
+ * A done stage may never carry an open badge. The sign-off row draws its
+ * checkmark from `phase` and its open/signed badge from `signed_by`; both
+ * come from one fact — `isSigned(row)` — and the fixture test fails if they
+ * ever part company. Every `waiting` row says why it has not run, not just
+ * where it sits in the list.
  */
 export function pipelineFor(orderId: string): OrderPipelineResponse {
   const row = demoOrderRow(orderId);
@@ -730,10 +630,10 @@ export function pipelineFor(orderId: string): OrderPipelineResponse {
   const signoffPhase: StagePhase = signed ? "done" : readable && stage !== "unassigned" ? "halted" : "waiting";
 
   /*
-   * ⚠ RULED 2026-08-29 (RULING-2026-08-29.md) — the drawn figures, QUOTED from
-   * the same fixtures every other endpoint quotes. Only the live review order
-   * has a described package and field census; any other order gets the honest
-   * silence (nulls, an empty log) rather than a borrowed number.
+   * The drawn figures, quoted from the same fixtures every other endpoint
+   * quotes. Only the live review order has a described package and field
+   * census; any other order gets the honest silence (nulls, an empty log)
+   * rather than a borrowed number.
    */
   const doc = demoPages[orderId];
   const orderFields = demoFields.filter((f) => f.order_id === orderId);
@@ -742,15 +642,14 @@ export function pipelineFor(orderId: string): OrderPipelineResponse {
   const clearedCount = orderFields.filter((f) => f.state === "auto_confirmed").length;
   const instrumentCount = doc?.instruments.length ?? null;
   const degradedPages = (doc?.pages ?? []).filter((p) => p.degraded).map((p) => `p${String(p.n)}`);
-  /* Whether extraction has served values for this order. Read off the SAME
-     fixture `/fields` serves — for ord_demo_1 that endpoint serves 21 cited
-     values while the row sits at the gate (the FIXTURE CONFLICT handlers.ts
-     records); the log and the checks follow the fields, not the stage, so the
-     two endpoints tell one story about what extraction produced. */
+  /* Whether extraction has served values for this order. Read off the same
+     fixture `/fields` serves — for ord_demo_1 that endpoint serves cited
+     values while the row sits at the gate; the log and the checks follow
+     the fields, not the stage, so the two endpoints tell one story. */
   const extracted = doc !== undefined && fieldCount > 0;
 
-  /* The dark terminal's lines — static demo telemetry in the reference's own
-     register, served only once extraction has actually run for this order. */
+  /* The dark terminal's lines — static demo telemetry, served only once
+     extraction has actually run for this order. */
   const runLog =
     extracted
       ? [
@@ -783,24 +682,23 @@ export function pipelineFor(orderId: string): OrderPipelineResponse {
   return {
     order_id: orderId,
     /**
-     * CONTRACT GAP: `total_pages` is a plain int, so it cannot say "the package
-     * could not be read". `demoOrders` says that with `pages: null`, and 0 is
-     * the nearest expressible value — the ingest row beside it states the fact
-     * in words. Widening this to `number | null` is a contract request Wave 2
-     * did not make.
+     * CONTRACT GAP: `total_pages` is a plain int, so it cannot say "the
+     * package could not be read". `demoOrders` says that with `pages: null`,
+     * and 0 is the nearest expressible value — the ingest row beside it
+     * states the fact in words.
      */
     total_pages: pages ?? 0,
     /**
-     * ONE classifier result, quoted from `PACKAGE_PAGES_RELEVANT`. Only the
+     * One classifier result, quoted from `PACKAGE_PAGES_RELEVANT`. Only the
      * live order's package is described page by page (`demoPages`), so a
      * per-order relevant count would be a number nobody could cite.
      */
     pages_relevant: PACKAGE_PAGES_RELEVANT,
     classifier_note: `The classifier found nothing the report needs on the other pages. You review ${PACKAGE_PAGES_RELEVANT}.`,
-    /** Server state. `stage === "gate"` IS the halt; the screen never infers it. */
+    /** Server state. `stage === "gate"` is the halt; the screen never infers it. */
     gate_halted: stage === "gate" && signed,
-    /* ⚠ RULED 2026-08-29 — the meta strip's drawn cells, the ETA chip, the
-       terminal, and the hub's verified checks. All server-authored strings. */
+    /* The meta strip's cells, the ETA chip, the terminal, and the hub's
+       verified checks. All server-authored strings. */
     package_name: readable && row !== undefined ? `${row.order_ref}_package.pdf` : null,
     volume_label: readable ? `${String(pages)} Scanned Raster Pages` : null,
     eta_label: running
@@ -988,23 +886,16 @@ const CLOSED_NOTES: Readonly<Record<string, string>> = {
 };
 
 /**
- * The gate, and the gaps it raised against THIS order's sign-off.
+ * The gate, and the gaps it raised against this order's sign-off. Every gap
+ * names its line number and quotes the machine check that disagreed; the
+ * evidence cites the package, because a gap that only says "the package
+ * disagrees" cannot be argued with. Only the period gap gets a third way
+ * out: root of title is a fresh claim and a product change moves money.
  *
- * The gate reads the same thirteen lines the abstractor answered, which is why
- * every gap names its line number and quotes the machine check that disagreed.
- * The evidence cites the package — a page, a date, the page count — because a
- * gap that says only "the package disagrees" cannot be argued with, and being
- * argued with is exactly what a gap is for.
- *
- * Only the period gap gets a third way out: root of title is a fresh CLAIM and
- * a product change MOVES MONEY, and neither is available where an answer can
- * simply be amended. The three-across row on the card exists because this gap
- * has three.
- *
- * CONTRACT GAP: `OrderCompletenessResponse` cannot distinguish "the gate ran
- * and nothing is open" from "the gate has not run yet" — an empty `gaps` list
- * says both. Before sign-off this fixture serves the empty list with
- * `gate_open: false`, and the pipeline's gate row (`waiting`) is where the
+ * CONTRACT GAP: `OrderCompletenessResponse` cannot distinguish "the gate
+ * ran and nothing is open" from "the gate has not run yet" — an empty
+ * `gaps` list says both. Before sign-off this fixture serves the empty list
+ * with `gate_open: false`; the pipeline's gate row (`waiting`) is where the
  * difference is currently readable.
  */
 export function completenessFor(orderId: string): OrderCompletenessResponse {
@@ -1078,9 +969,8 @@ export const workspaceHandlers = [
 
   http.get("/api/me/preferences", () => HttpResponse.json({ preferences })),
   /**
-   * The one write here. Preferences are server-side by decision C16 — a
-   * preference in localStorage silently resets on the machine somebody
-   * actually works on, and §9.11 forbids browser storage outright.
+   * The one write here. Preferences are server-side — a preference in
+   * localStorage silently resets on the machine somebody actually works on.
    */
   http.patch("/api/me/preferences", async ({ request }) => {
     const parsed = UpdatePreferencesRequest.safeParse(await request.json());
@@ -1095,10 +985,9 @@ export const workspaceHandlers = [
   http.get("/api/orders/:id/signoff", ({ params }) => HttpResponse.json(signoffFor(String(params["id"])))),
   http.get("/api/orders/:id/pipeline", ({ params }) => HttpResponse.json(pipelineFor(String(params["id"])))),
   /**
-   * ⚠ RULED 2026-08-29 (RULING-2026-08-29.md) — the drawn "↺ Replay" control.
-   * Re-serves the stage timeline for the order; a demo replay, not a re-run —
-   * nothing recomputes, no state transitions, and the response is the same
-   * projection the GET serves. POST because the reference draws it as an act.
+   * The "↺ Replay" control. Re-serves the stage timeline for the order; a
+   * demo replay, not a re-run — nothing recomputes, no state transitions,
+   * and the response is the same projection the GET serves.
    */
   http.post("/api/orders/:id/pipeline/replay", ({ params }) =>
     HttpResponse.json(pipelineFor(String(params["id"]))),

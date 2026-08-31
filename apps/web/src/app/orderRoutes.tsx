@@ -6,27 +6,20 @@ import { WorkstationScreen } from "../features/review/WorkstationScreen";
 import { ReleaseScreen } from "../features/release/ReleaseScreen";
 
 /**
- * THE TWO ORDER-SCOPED ROUTES, split out of `routeTree.tsx` on the 150-line
- * gate — and the seam is the one that file already argues: these are the routes
- * hand-written because their PARAMS buy a compile-time guarantee, while the
- * flat doors are looped because they have none.
- *
- * Neither invents a path. `authz.ts:65` grants `/orders` as a route PREFIX, so
- * both live beneath one frozen door.
+ * The order-scoped routes — hand-written because their params buy a
+ * compile-time guarantee, while the flat doors in `routeTree.tsx` are looped
+ * because they have none. Neither invents a path: authz grants `/orders` as
+ * a route prefix, so all live beneath one door.
  */
 
 const parent = () => rootRoute;
 
 /**
- * THE ORDER-SCOPED DOOR, and `?field=` is first-class on it.
- *
- * INVARIANT 55: deep links land on the exact field in context — URL-owned
- * selection. `validateSearch` is what makes that a TYPED part of the route
- * rather than a query string somebody remembers to read: navigating here with
- * a misspelled search key does not compile.
- *
- * The shape is deliberately narrow and lives in `orderSearch.ts`, which
- * carries the argument for each of its two keys and for everything absent.
+ * The order-scoped door, and `?field=` is first-class on it: deep links land
+ * on the exact field in context — URL-owned selection. `validateSearch`
+ * makes that a typed part of the route, so navigating here with a misspelled
+ * search key does not compile. The shape is deliberately narrow and lives in
+ * `orderSearch.ts`.
  */
 const reviewRoute = createRoute({
   getParentRoute: parent,
@@ -42,22 +35,9 @@ function ReviewRoute() {
 }
 
 /**
- * `/orders/{id}/review` — THE WORKSTATION, one level below the hub, and still
- * beneath the SAME frozen door (`authz.ts:66` grants `/orders` as a route
- * PREFIX, so this invents no path).
- *
- * It is declared HERE rather than left to 404 because it is the address the
- * product already uses: the harvested specs address it in nine places
- * (`chord-suppression`, `errors`, `server-owns-state`, `shell-frame`,
- * `responsive-frame`, the smoke list) and `queue.spec` #5 pins it as where
- * Enter on the served order lands. A door the whole test suite names and the
- * router does not know is a not-found card standing where a screen is expected.
- *
- * It renders `WorkstationScreen` — the Examination Workstation, built under
- * RULING-2026-08-28, which gave the T1 second read its contract surface:
- * `Countersign`/`CountersignsResponse` (design.ts), `POST
- * /api/fields/{id}/countersign`, and `field.countersign` in PERMISSIONS
- * (authz.ts). Nothing here is past OPEN any more.
+ * `/orders/{id}/review` — the workstation, one level below the hub, beneath
+ * the same `/orders` door. It is the address the product already uses:
+ * Enter on the served order lands here.
  */
 const reviewWorkstationRoute = createRoute({
   getParentRoute: parent,
@@ -67,24 +47,14 @@ const reviewWorkstationRoute = createRoute({
 });
 
 /**
- * `?field=` IS THE SELECTION, on this route as on the hub's.
- *
- * INVARIANT 55 — deep links land on the exact field in context, URL-owned. The
- * workstation is where that matters most: "the vested owner on 4176034-1 is
- * wrong" is a link somebody pastes into a message, and a cursor held in
- * component state is a cursor nobody can send.
- *
- * `replace` on selection, deliberately. Stepping J/K through a queue of
- * nineteen fields would otherwise push nineteen history entries and make the
- * back button walk the reviewer backwards through their own cursor instead of
- * out of the screen.
- *
- * `?page=` is the OTHER key `orderSearch.ts` validates: the extraction matrix
- * (design §Screens 6) links here with it, and the screen hands it to the
- * evidence pane as an outright page ask. It rides through selection changes
- * untouched — `navigate({ search })` below replaces the whole search string,
- * which is correct: once the reviewer moves their cursor, the deep-linked page
- * has served its purpose.
+ * `?field=` is the selection — a cursor held in component state is a cursor
+ * nobody can send. `replace` on selection, deliberately: stepping J/K
+ * through a queue would otherwise push an entry per field and make the back
+ * button walk the reviewer through their own cursor instead of out of the
+ * screen. `?page=` is an outright page ask for the evidence pane; the
+ * `navigate({ search })` below replaces the whole search string, which is
+ * correct — once the cursor moves, the deep-linked page has served its
+ * purpose.
  */
 function ReviewWorkstationRoute() {
   const { orderId } = reviewWorkstationRoute.useParams();
@@ -102,13 +72,7 @@ function ReviewWorkstationRoute() {
   );
 }
 
-/**
- * SCREEN 12 — Settings & RBAC, the one FLAT door off the static loop, because
- * it is the only one carrying a search key: `validateSearch` buys it the order
- * routes' guarantee. See `accountSearch.ts`.
- */
-
-/** `/orders/{id}/release` — the compiler, beneath the same frozen `/orders` door. */
+/** `/orders/{id}/release` — the compiler, beneath the same `/orders` door. */
 const releaseRoute = createRoute({
   getParentRoute: parent,
   path: "/orders/$orderId/release",

@@ -7,15 +7,10 @@ import type { Citation } from "../../shared/provenance";
 import { naFieldValue } from "../../shared/provenance";
 
 /**
- * THE STATES GALLERY, AND THE ASSERTION UNDER IT.
- *
- * The design carries a card reading "They must never collapse into one grey
- * dash" (`enums.ts:24-27`). `AllFiveRenders` is that card, made real: five
- * absences on one canvas so a reviewer can SEE they are five things.
- *
- * `noValueStates.test.ts` proves the descriptor table is distinct without a DOM.
- * The play function below proves the RENDERED OUTPUT is — different text and
- * different `data-field-render` — which is the half a table cannot promise.
+ * The states gallery: five absences on one canvas so a reviewer can see they
+ * are five things. noValueStates.test.ts proves the descriptor table is
+ * distinct without a DOM; the play here proves the rendered output is —
+ * different text and different `data-field-render`.
  */
 const CITATION: Citation = {
   docId: "DOC-8841",
@@ -45,10 +40,7 @@ export const CitedClickable: Story = {
   },
 };
 
-/**
- * THE DEFECT. A value with no source — `entities.ts:85-89`, "the exact failure
- * shape the architecture exists to catch". Drawn as the defect it is.
- */
+/** The defect: a value with no source, drawn as the defect it is. */
 export const Uncited: Story = {
   args: { value: { kind: "uncited", value: "MARIA L. ESTRADA" } },
 };
@@ -65,20 +57,18 @@ export const NotStated: Story = {
   args: { value: { kind: "na-not-stated" } },
 };
 
-/** The only member carrying a page reference (`enums.ts:41-43`). */
+/** The only member carrying a page reference. */
 export const PresentUnreadable: Story = {
   args: { value: { kind: "na-present-unreadable", citation: CITATION } },
 };
 
-/** A statement about the PIPELINE, not the document. */
+/** A statement about the pipeline, not the document. */
 export const NotExtracted: Story = { args: { value: { kind: "not-extracted" } } };
 
 /**
- * ALL FIVE, SIDE BY SIDE, WITH THE COLLAPSE ASSERTED AGAINST.
- *
- * `render` rather than `args` because the point is the COMPARISON: five
- * separate stories can each be correct while two of them look identical, and
- * only one canvas holding all five can fail on that.
+ * All five, side by side, with the collapse asserted against. `render`
+ * rather than `args` because the point is the comparison: five separate
+ * stories can each be correct while two of them look identical.
  */
 export const AllFiveRenders: Story = {
   args: { value: { kind: "not-extracted" } },
@@ -94,13 +84,13 @@ export const AllFiveRenders: Story = {
     const nodes = canvasElement.querySelectorAll("[data-field-render]");
     expect(nodes).toHaveLength(5);
 
-    // DIFFERENT DATA ATTRIBUTES — the machine-readable distinction, and what
-    // `e2e/invariants` can assert against on a real screen.
+    // Different data attributes — the machine-readable distinction, and what
+    // e2e/invariants can assert against on a real screen.
     const kinds = Array.from(nodes, (n) => n.getAttribute("data-field-render"));
     expect(new Set(kinds).size).toBe(5);
 
-    // DIFFERENT TEXT CONTENT — the human-readable one. A grey dash in place of
-    // any of these collapses the set and fails right here.
+    // Different text content — the human-readable one. A grey dash in place
+    // of any of these collapses the set and fails right here.
     const sentences = Array.from(nodes, (n) => n.textContent?.trim() ?? "");
     expect(new Set(sentences).size).toBe(5);
     for (const sentence of sentences) {

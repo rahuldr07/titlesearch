@@ -11,21 +11,11 @@ import {
 import { cx } from "./cx";
 
 /**
- * THE BAR, RETOKENISED — AND IT IS NOT THE ONE THE SCREENS USE.
- *
- * `progress-meter.tsx` draws the 18-dot meter the design specifies for decision
- * settlement. This file is the bar, for the case a bar genuinely fits: a
- * CONTINUOUS, UNCOUNTABLE quantity where "about three quarters" is the true
- * statement — an upload's bytes, an OCR pass over 900 pages. Reach for it only
- * when you could not say what one dot would mean.
- *
- * Adaptation: `bg-muted` → `bg-line-strong`; `bg-primary` → `bg-state-settled`
- * (rule 1 — the accent is spent on the screen's open decision, never on a
- * progress fill); `h-1` → `h-2` (4px on the 2px base); the size and value
- * readouts onto the six-size scale, the readout in mono since a count is data
- * (rule 3); `transition-all` → `tp-move`, because a fill that travels is
- * movement (300ms). The indicator's width is the one inline style in this kit
- * and is not avoidable: no class set can encode a continuous value.
+ * The bar, for the case a bar genuinely fits: a continuous, uncountable
+ * quantity — an upload's bytes, an OCR pass over 900 pages. For countable
+ * decisions use progress-meter.tsx. The indicator's width is the one inline
+ * style in this kit and is not avoidable: no class set can encode a
+ * continuous value.
  */
 type ProgressContextValue = {
   percentage?: number | undefined;

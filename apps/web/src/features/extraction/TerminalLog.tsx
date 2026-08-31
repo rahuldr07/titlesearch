@@ -2,19 +2,9 @@ import type { PipelineLogLine } from "@titlepipe/contract";
 import { cx } from "../../components/ui";
 
 /**
- * THE DARK RUN-LOG TERMINAL — ⚠ RULED 2026-08-29
- * (`docs/frontend/design-2026-08/RULING-2026-08-29.md` item 4: "the extraction
- * terminal log … they are drawn, so they are built"). This replaces the
- * `BackendGap` refusal that stood here: the ruling outranks the probe-visibility
- * reading for everything the reference draws, and the reference draws this
- * panel — header "Live telemetry" with a pulse dot, a `tail -f` prompt line,
- * one row per served `PipelineLogLine`, and a blinking cursor at the foot.
- *
- * EVERY LINE IS THE SERVER'S. `run_log` arrives on the pipeline response
- * (intake.ts, same ruling); nothing here streams, counts, or composes — the
- * WARN register and the bold line are the wire's own `warn` / `strong` flags.
- * The dark chrome is the rail family, which tokens.css assigns to "the
- * navigator, auth screens and code panels" — this is a code panel.
+ * The dark run-log terminal. Every line is the server's: `run_log` arrives on
+ * the pipeline response; nothing here streams, counts, or composes — the warn
+ * register and the bold line are the wire's own `warn`/`strong` flags.
  */
 export function TerminalLog(props: { readonly lines: readonly PipelineLogLine[] }) {
   return (

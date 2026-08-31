@@ -11,9 +11,9 @@ import { CommandPalette } from "./commandPalette";
 import { onCanvas } from "./kitGround";
 
 /**
- * THE OVERLAY THE CHORD LAYER WAS WRITTEN FOR. `chords.ts` pins the prototype
- * bug in this component's exact shape: "? then c CONFIRMS A RULING from inside
- * the cheat sheet — on a field carrying T1 exposure".
+ * The overlay the chord layer was written for: a palette is opened by a
+ * chord, is full of single letters, and sits over a screen whose fields the
+ * same letters act on.
  */
 const meta = {
   title: "ui/CommandPalette",
@@ -44,7 +44,7 @@ const commands = (
   </>
 );
 
-/** Open, unfiltered. Chords render in MONO — rule 3 names kbd as data. */
+/** Open, unfiltered. Chords render in mono. */
 export const Open: Story = {
   args: { title: "Commands", isOpen: true, onOpenChange: () => {}, children: commands },
 };
@@ -63,9 +63,9 @@ export const Closed: Story = {
 };
 
 /**
- * FILTERED. `useFilter({ sensitivity: "base" })` is Intl-backed, so "recu"
- * matches "Reçu" — county names and grantor strings are exactly the data where
- * a `toLowerCase().includes()` quietly returns nothing.
+ * useFilter({ sensitivity: "base" }) is Intl-backed, so "recu" matches
+ * "Reçu" — county names and grantor strings are exactly the data where a
+ * toLowerCase().includes() quietly returns nothing.
  */
 export const Filtered: Story = {
   args: { title: "Commands", isOpen: true, onOpenChange: () => {}, children: commands },
@@ -93,10 +93,9 @@ export const NoMatches: Story = {
 };
 
 /**
- * THE CHORD CONTRACT, THREE WAYS, and none is redundant: the dialog role, the
- * `own` mark on the scrim (live one frame before focus moves inside), and the
- * `role="menu"` list whose items are `role="menuitem"` — so even a palette
- * rendered inline, outside a dialog, still owns its keys.
+ * The chord contract, three ways, none redundant: the dialog role, the `own`
+ * mark on the scrim (live one frame before focus moves inside), and the
+ * menu/menuitem roles — so even a palette rendered inline still owns its keys.
  */
 export const StandsTheChordsDown: Story = {
   args: { title: "Commands", isOpen: true, onOpenChange: () => {}, children: commands },
@@ -108,9 +107,8 @@ export const StandsTheChordsDown: Story = {
 };
 
 /**
- * INLINE, with no dialog around it — a palette embedded in a panel. The
- * `own` mark is correctly ABSENT (nothing is overlaying the screen), and the
- * menu roles are what stand the vocabulary down while focus is inside.
+ * Inline, with no dialog around it. The `own` mark is correctly absent, and
+ * the menu roles are what stand the vocabulary down while focus is inside.
  */
 export const Inline: Story = {
   args: {

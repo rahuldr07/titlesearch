@@ -5,24 +5,10 @@ import { ComboBox, Option } from "./combobox";
 import { onPanel } from "./kitGround";
 
 /**
- * ONE OPTION BLOCKED, AND THE COUNT IS THE ASSERTION.
- *
- * Its own file because `combobox.stories.tsx` crossed the 150-line gate, and
- * the seam is honest: everything there is the widget working, and this is the
- * one case where it did not.
- *
- * `select.stories`' equivalent shipped with NO `play` function at all, so it
- * proved only that a list renders — and the list did render, with the blocked
- * option silently DROPPED by `ListBox`'s collection builder. One node where
- * there should have been two, and a green story.
- *
- * Rule 12: a blocked action renders disabled WITH THE RULE, never hidden. An
- * option that is simply gone is indistinguishable from one never offered, and
- * a reviewer picking an absence state has to be able to see that a state
- * exists and is barred.
- *
- * The check was verified the only way a check can be: the wrapper that caused
- * it was put back, and this failed with "expected 1 to have a length of 2".
+ * One option blocked, and the count is the assertion: ListBox's collection
+ * builder silently drops an option wrapped in a non-item element, so a green
+ * story can render one node where there should be two. A blocked option must
+ * render disabled with the rule, never vanish.
  */
 const meta = {
   title: "ui/ComboBox/blocked",
@@ -51,7 +37,7 @@ export const OptionBlocked: Story = {
     await userEvent.click(trigger);
     await new Promise((resolve) => setTimeout(resolve, 150));
 
-    // THE COUNT. Both options exist; one of them is barred.
+    // Both options exist; one of them is barred.
     const options = document.querySelectorAll("[role='option']");
     expect(options).toHaveLength(2);
 

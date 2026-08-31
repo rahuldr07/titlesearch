@@ -5,27 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>TitlePipe</title>
     <!--
-      THREE FACES, ONE HOST. The 2026-08 design's §Assets is explicit: "Fonts
-      via Google Fonts: Plus Jakarta Sans (400–800), JetBrains Mono (400–700),
-      Source Serif 4 (400/600)." No binary assets; the brand mark is typed "TF"
-      in a flat square and all paper/scan artwork is CSS.
-
-      Each face is SEMANTIC in this design, which is why there are three and
-      not one:
-        - Plus Jakarta Sans is the interface.
-        - JetBrains Mono is DATA ONLY (design rule 3) — order refs, money,
-          citations, hashes, timestamps, kbd. Never labels, buttons or prose.
-        - Source Serif 4 is PAPER — evidence scans and certificates render as
-          stock, never as grey placeholder bars (rule 8).
-
-      SELF-HOSTED, 2026-08-29 — the TODO below this comment used to load them
-      from the Google Fonts CDN, and behind a restrictive proxy that request
-      failed SILENTLY: measured zero FontFace records, the whole app in system
-      fallbacks — worst on the mono face, whose citations align bounding boxes
-      against the evidence pane. The faces now ship as bundled variable woff2
-      (@fontsource-variable, imported in src/main.tsx), so they load from our
-      origin or not at all, and an airgapped county office gets the same
-      pixels as everyone else. No <link> here on purpose.
+      The three typefaces are semantic: Plus Jakarta Sans is the interface,
+      JetBrains Mono is data only (refs, money, citations, hashes, kbd), and
+      Source Serif 4 is paper — evidence scans render as stock. They ship as
+      bundled variable woff2 (imported in src/main.tsx): a Google Fonts link
+      here failed silently behind restrictive proxies, leaving the app in
+      system fallbacks. No <link> here on purpose.
     -->
   </head>
   <body>

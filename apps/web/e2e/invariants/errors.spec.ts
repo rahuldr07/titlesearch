@@ -1,17 +1,12 @@
 import { expect, test } from "@playwright/test";
 
 /**
- * HARVESTED INVARIANTS — migrated from apps/web @ ade49af (pre-rebuild).
- * Source: apps/web/e2e/errors.spec.ts
- *
- * Every test here is SKIPPED until the feature it covers lands in web-v2.
- * Un-skip as each feature lands. Rewrite selectors freely.
- * NEVER weaken an assertion — if one cannot pass against the new design,
- * that is a CONFLICT in the design: stop and report (BRIEF §5 Phase 5).
+ * Never weaken an assertion — a test that cannot pass against the new
+ * design is a conflict in the design: stop and report.
  */
 
 import { interceptApi } from "../helpers/net";
-// TODO(rebuild) [ORPHAN RULE] — rule: an unknown route renders a named not-found state, never a blank page.
+// Rule (recorded nowhere else): an unknown route renders a named not-found state, never a blank page.
 test("an unknown route renders the not-found card, never a blank page", async ({
   page,
 }) => {
@@ -21,7 +16,7 @@ test("an unknown route renders the not-found card, never a blank page", async ({
   await expect(card).toContainText("Nothing lives at this address.");
 });
 
-// TODO(rebuild) [ORPHAN RULE] — rule: a failed list query renders a named unavailable state.
+// Rule (recorded nowhere else): a failed list query renders a named unavailable state.
 test("the escalation inbox says unavailable when the list 500s", async ({ page }) => {
   await interceptApi(page, {
     method: "GET",
@@ -37,7 +32,7 @@ test("the escalation inbox says unavailable when the list 500s", async ({ page }
   });
 });
 
-// TODO(rebuild) [ORPHAN RULE] — rule: a partial failure degrades that region only — the order spine still renders its identity.
+// Rule (recorded nowhere else): a partial failure degrades that region only — the order spine still renders its identity.
 test("the order spine survives a timeline failure", async ({ page }) => {
   await interceptApi(page, {
     method: "GET",

@@ -2,17 +2,11 @@ import type { DemoAccount } from "../../app/session/signedIn";
 import { ACCOUNT_LICENSES } from "../../app/session/demoAccounts";
 
 /**
- * One "demo — continue as" row: avatar initials, name, role, →.
- *
- * The design's row prints ONE role string. The contract has two facts here and
- * they are not interchangeable — the seat ("QC") is what the shop calls the
- * job, and the role (`senior`) is what `x-mock-role` carries and what the
- * server's permission projection keys off. Both are printed, seat first, so
- * the reader picking a row can see which world they are about to enter and the
- * screen never implies the design's job title is an authorization fact.
- *
- * `→` rather than an icon: rule 7's glyph vocabulary, and the design's own
- * character.
+ * One "demo — continue as" row: avatar initials, name, role, →. The seat
+ * ("QC") is what the shop calls the job; the role (`senior`) is what
+ * `x-mock-role` carries and what the permission projection keys off. Both
+ * are printed, seat first, so the screen never implies the job title is an
+ * authorization fact.
  */
 export function AccountRow(props: {
   readonly account: DemoAccount;
@@ -33,10 +27,8 @@ export function AccountRow(props: {
         <span className="truncate text-meta font-semibold leading-close text-ink-primary">
           {account.name}
         </span>
-        {/* The design sets this line at 10.5px; rule 2 allows six sizes and
-            10.5 is not one. 11px, flagged — see `ProfileBlock`.
-            RULING-2026-08-29: the reference roster's licence strings ride the
-            description for the two people it licenses ("· #GA-8841"). */}
+        {/* Licence strings ride the description for the two people that
+            hold one ("· #GA-8841"). */}
         <span className="truncate text-label leading-close text-ink-faint">
           {account.seat} · {account.role}
           {ACCOUNT_LICENSES[account.id] !== undefined &&

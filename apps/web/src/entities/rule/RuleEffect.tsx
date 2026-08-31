@@ -2,30 +2,13 @@ import type { Rule } from "@titlepipe/contract";
 import { cx } from "../../components/ui";
 
 /**
- * WHAT A RULE IS CURRENTLY DOING TO THE PIPELINE, STATED IN WORDS.
- *
- * `RulePill` is the reference — a code, dashed and struck when inert. This is
- * the other half of `INVARIANTS:38`, and the two are deliberately separate
- * objects: a pill appears in catalogs and inline in prose, where a full
- * sentence would be noise, while this appears at the MOMENT OF RECORD — the
- * instant a resolution is written and the reader has to know whether anything
- * changed.
- *
- * ══ WHY THIS SHOUTS, WHEN RULE 4 SAYS SENTENCE CASE ════════════════════════
- *
- * The wording and the capitals are QUOTED from the harvested invariant
- * (`e2e/invariants/escalations.spec.ts`), which pins
- * `/PENDING — CANNOT AFFECT THE PIPELINE UNTIL AN ENGINEER CONFIRMS/`. That
- * spec is a product requirement (CONTEXT §14), the migration rule forbids
- * weakening it, and softening the sentence to satisfy a typographic rule would
- * do exactly that. RECIPES rule 6 also permits a coloured capsule "at moments
- * of record", which is precisely what this is. Flagged rather than absorbed.
- *
- * ══ NOT A DERIVATION ═══════════════════════════════════════════════════════
- *
- * `status` is the server's own field (`entities.ts:153-162`). Nothing here
- * infers liveness from an origin, a confirmer, or from how the rule was
- * created. `INVARIANTS:4` — the server's returned state is what renders.
+ * What a rule is currently doing to the pipeline, stated in words at the
+ * moment of record; RulePill is the inline reference form. The capitals are
+ * deliberate despite the sentence-case rule: the wording is pinned verbatim
+ * by e2e/invariants/escalations.spec.ts
+ * (/PENDING — CANNOT AFFECT THE PIPELINE UNTIL AN ENGINEER CONFIRMS/), and
+ * softening it would weaken a product-requirement spec. `status` is the
+ * server's own field — nothing here infers liveness from anything else.
  */
 const EFFECT = {
   live: {

@@ -3,14 +3,11 @@ import type { NaSimMode } from "./TemplatesScreen";
 import { SheetBlock } from "./SheetBlock";
 
 /**
- * THE LIVE SHEET — the report rendered with the sample order, as the
- * reference draws it (RULED 2026-08-29). Blocks are clickable and the
- * selected one carries the violet border; each wears its product-lock chip.
- *
- * The NA simulation swaps a block's interpolated wording for the DECLARED
- * string of the simulated absence — all four strings are the server's
- * (`TemplateSheetBlock.na_matrix`), so the simulator previews served
- * declarations and invents nothing.
+ * The live sheet — the report rendered with the sample order. Blocks are
+ * clickable and the selected one carries the violet border; each wears its
+ * product-lock chip. The NA simulation swaps a block's interpolated wording
+ * for the declared string of the simulated absence — all four strings are
+ * the server's (`na_matrix`), so the simulator invents nothing.
  */
 export function TemplateSheet({
   template,

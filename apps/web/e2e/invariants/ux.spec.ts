@@ -1,20 +1,15 @@
 import { expect, test } from "@playwright/test";
 
 /**
- * HARVESTED INVARIANTS — migrated from apps/web @ ade49af (pre-rebuild).
- * Source: apps/web/e2e/ux.spec.ts
- *
- * Every test here is SKIPPED until the feature it covers lands in web-v2.
- * Un-skip as each feature lands. Rewrite selectors freely.
- * NEVER weaken an assertion — if one cannot pass against the new design,
- * that is a CONFLICT in the design: stop and report (BRIEF §5 Phase 5).
+ * Never weaken an assertion — a test that cannot pass against the new
+ * design is a conflict in the design: stop and report.
  */
 
 const go = async (page: import("@playwright/test").Page) => {
   await page.goto("/orders/ord_demo_1/review");
   await expect(page.getByTestId("sel-label")).toBeVisible();
 };
-// TODO(rebuild) [ORPHAN RULE] — rule: ORPHAN — when both engines found a value and disagree, the UI must never claim extraction returned nothing. The draft leads, labelled as a draft.
+// Rule (recorded nowhere else): when both engines found a value and disagree, the UI must never claim extraction returned nothing. The draft leads, labelled as a draft.
 test("a both-found disagreement never claims emptiness — draft leads, labeled", async ({
   page,
 }) => {
@@ -30,7 +25,7 @@ test("a both-found disagreement never claims emptiness — draft leads, labeled"
   await expect(page.getByText("extraction returned nothing at all")).toHaveCount(0);
 });
 
-// TODO(rebuild) [ORPHAN RULE] — rule: ORPHAN — the differing characters between two readings are highlighted, so the reviewer sees WHERE they diverge.
+// Rule (recorded nowhere else): the differing characters between two readings are highlighted, so the reviewer sees WHERE they diverge.
 test("differing characters between readings are highlighted", async ({ page }) => {
   await go(page);
   await page.getByTestId("row-mortgages.1.lender").click();
@@ -39,7 +34,7 @@ test("differing characters between readings are highlighted", async ({ page }) =
   expect(await marks.count()).toBeGreaterThan(0);
 });
 
-// TODO(rebuild) [ORPHAN RULE] — rule: ORPHAN — a reading can be adopted into the correction editor without retyping. Transcription is a defect source.
+// Rule (recorded nowhere else): a reading can be adopted into the correction editor without retyping. Transcription is a defect source.
 test("a reading can be adopted into the correction editor without retyping", async ({
   page,
 }) => {
@@ -101,7 +96,7 @@ test("a correction is inert until it differs from the machine read", async ({
   await expect(page.getByTestId("edit-submit")).toBeEnabled();
 });
 
-// TODO(rebuild) [ORPHAN RULE] — rule: ORPHAN — every refusal speaks: escalate, correct and pass each nudge with what is missing. A silent no-op is the defect.
+// Rule (recorded nowhere else): every refusal speaks: escalate, correct and pass each nudge with what is missing. A silent no-op is the defect.
 test("refused submits SAY so — escalate, correct, pass all nudge", async ({ page }) => {
   await go(page);
   // empty escalation — escalate is a BUTTON now (no hotkey); its editor still
@@ -124,7 +119,7 @@ test("refused submits SAY so — escalate, correct, pass all nudge", async ({ pa
   await expect(page.getByTestId("nudge")).toContainText("a pass needs its why");
 });
 
-// TODO(rebuild) [ORPHAN RULE] — rule: ORPHAN — the queue's pass refusal nudges too.
+// Rule (recorded nowhere else): the queue's pass refusal nudges too.
 test("the queue's pass refusal nudges too", async ({ page }) => {
   await page.goto("/orders/ord_demo_1");
   await expect(page.getByTestId("order-ref")).toBeVisible();

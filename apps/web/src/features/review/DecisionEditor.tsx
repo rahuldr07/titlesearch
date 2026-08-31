@@ -7,25 +7,21 @@ import { REASON_LABEL, SUBMIT_LABEL, holdFor } from "./editorHold";
 export type EditorMode = "correct" | "escalate" | "absence" | null;
 
 /**
- * THE THREE EDITORS, ONE REFUSAL SHAPE. INVARIANT 9: "A correction is refused
- * without its reason." INVARIANT 10: "An escalation is refused without its
- * question." A Law 3 declaration is a correction on the wire
- * (`CorrectFieldRequest.na_reason`), so it is refused without BOTH the absence
- * and the reason.
+ * The three editors, one refusal shape: a correction is refused without its
+ * reason, an escalation without its question, and an absence declaration —
+ * a correction on the wire — without both the absence and the reason.
  *
- * THE VALUE IS THE PARENT'S, THE REASON IS OURS, AND THAT SPLIT IS INVARIANT
- * 31. Adopting a reading has to land in an ALREADY-OPEN editor without
- * retyping — and the previous shape remounted this component on a `key` built
- * from the adopted value, which seeded the value and DESTROYED the reason the
- * reviewer had already typed. Measured: type a reason, adopt, reason is empty.
- * A controlled value has no remount, so the reason survives.
+ * The value is the parent's, the reason is ours: adopting a reading has to
+ * land in an already-open editor without retyping, and a remount keyed on
+ * the adopted value would destroy the reason the reviewer had typed. A
+ * controlled value has no remount, so the reason survives.
  */
 export function DecisionEditor(props: {
   readonly mode: Exclude<EditorMode, null>;
   /** The value being filed. Owned above so an adopt can write it mid-edit. */
   readonly value: string;
   readonly onValueChange: (value: string) => void;
-  /** What the machine read. §11.1: a correction must CHANGE something. */
+  /** What the machine read — a correction must change something. */
   readonly machineRead: string;
   readonly pending: boolean;
   readonly onCancel: () => void;
@@ -47,10 +43,10 @@ export function DecisionEditor(props: {
 
   return (
     <InnerPanel>
-      {/* ESCAPE LEAVES THE EDITOR, and the chords resume on the very next
-          keystroke because nothing was unbound (`shared/chords.ts`). Handled
-          locally rather than through the overlay stack: this panel is inline,
-          not a layer, so `useOverlays` has nothing to pop. */}
+      {/* Escape leaves the editor, and the chords resume on the very next
+          keystroke because nothing was unbound. Handled locally rather than
+          through the overlay stack: this panel is inline, not a layer, so
+          `useOverlays` has nothing to pop. */}
       <div
         className="flex flex-col gap-6"
         onKeyDown={(event) => {
@@ -90,7 +86,7 @@ export function DecisionEditor(props: {
           />
         </div>
 
-        {/* INVARIANT 12 — the refusal speaks, in place, not only on hover. */}
+        {/* The refusal speaks, in place, not only on hover. */}
         {hold !== null && (
           <p className="text-meta leading-body text-state-attend">{hold}</p>
         )}

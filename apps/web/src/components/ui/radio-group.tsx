@@ -11,34 +11,15 @@ import { disabledAttributes, type Disablement } from "./disabled";
 import { BlockedHint } from "./blockedHint";
 
 /**
- * ADAPTED FROM THE REGISTRY `radio-group`. Same treatment as `checkbox`: the
- * `dark:` register, `border-input`, `ring-ring/50` and the boolean disabled all
- * go, and `disabledBecause` replaces `isDisabled` on both the group and the
- * item (a group-level block — "this order is released, the disposition is
- * fixed" — carries a different sentence from an item-level one, so both slots
- * exist and neither is derived from the other).
+ * `disabledBecause` exists on both the group and the item — a group-level
+ * block carries a different sentence from an item-level one, and neither is
+ * derived from the other.
  *
- * `rounded-full` → `rounded-pill`. Same 999px, but `rounded-full` is a STATIC
- * Tailwind utility that survives the token file's `--radius-*: initial` reset
- * and is banned for exactly that reason: it is the one radius that could be
- * written without consulting the scale.
- *
- * THE HIT TARGET IS 24px AND SO IS THE ROW, WHICH IS WHY BOTH LINES CHANGED.
- * `after:-inset` is absolute, and the indicator carried no `position`, so it
- * resolved against the ITEM's `relative` instead: a 738x26 rectangle bleeding
- * 6px into the group gap, not the 28x24 around the square the checkbox comment
- * describes. `relative` on the indicator anchors it where it was meant to go.
- * That alone leaves the row short — a 24px target cannot sit inside a 17.55px
- * box (13px at `leading-close`), which is what `scrollHeight 22 > clientHeight
- * 18` was reporting. `tp-target` supplies the floor `checkbox` reasons about
- * but never applied here, so the box and its target are both 24 and coincide.
- *
- * The dot is `bg-ink-on-action` on an accent fill, matching the checkbox, so a
- * selected radio and a checked box read as the same act. Rule 1 is not violated
- * by this: a form's selected control is the same single accent spend as the
- * primary action it sits above, and a screen showing both an accent radio and
- * an accent Confirm has one spend too many — which is a screen-level review
- * question, not something a primitive can enforce.
+ * The indicator's `relative` is load-bearing: `after:-inset` is absolute,
+ * and without a position on the indicator it resolves against the item's
+ * `relative` instead — a full-row rectangle bleeding into the group gap
+ * rather than the 24px hit area around the circle. `tp-target` on the item
+ * supplies the 24px row floor the 13px text alone cannot.
  */
 export type RadioGroupProps = Omit<RadioGroupPrimitiveProps, "isDisabled"> &
   Disablement;

@@ -19,11 +19,10 @@ import {
 } from "./entities.js";
 
 /**
- * Request/response schemas for the REST contract (CONTEXT §7). The refusals
- * encoded here are product requirements, not validation niceties — each one is
- * also a release gate (CONTEXT §18) and becomes a Playwright test. The server
- * re-enforces every one of them; these schemas exist so the UI and MSW mocks
- * cannot drift from them.
+ * Request/response schemas for the REST contract. The refusals encoded here
+ * are product requirements, each backed by a Playwright test. The server
+ * re-enforces every one; these schemas keep the UI and MSW mocks from
+ * drifting.
  */
 
 /**
@@ -37,14 +36,11 @@ export type Ack = z.infer<typeof Ack>;
 // ---- ingest ----------------------------------------------------------------
 
 /**
- * ⚠ AMENDED 2026-08-29 — `docs/frontend/design-2026-08/RULING-2026-08-29.md`.
- * `jurisdiction`/`state`/`county` LEFT this request: the server resolves all
- * three from the recorded clerk stamp once the package passes optical
- * quarantine (`QuarantineResponse.resolved`, design2.ts), so the state overlay
- * can never be hand-picked wrong — the resolution recorded in
- * CONFLICT-intake-hand-typed-jurisdiction.md. `product` ARRIVED with the same
- * ruling: intake picks it, and the effective checklist resolves by
- * client + product (`EffectiveChecklist`, workspace.ts).
+ * No jurisdiction/state/county here: the server resolves all three from the
+ * recorded clerk stamp once the package passes optical quarantine
+ * (`QuarantineResponse.resolved`), so the state overlay can never be
+ * hand-picked wrong. Intake picks `product`; the effective checklist resolves
+ * by client + product (`EffectiveChecklist`).
  */
 export const CreateOrderRequest = z.object({
   client_id: z.string(),
@@ -82,32 +78,15 @@ export const QueueNextResponse = z.object({
 export type QueueNextResponse = z.infer<typeof QueueNextResponse>;
 
 /**
- * ⚠ UI-DRIVEN REQUEST — AWAITING RATIFICATION (2026-07-30, fidelity Wave 2).
- * GET /api/queue/bands — READ SHAPES ONLY, and deliberately NOT a browse
- * endpoint. None of these rows carries a way to TAKE the work: there is no
- * claim token, no assignment field, no ordering the caller can influence.
- * `/api/queue/next` remains the only hand-over, so §4.4's "no queue
- * cherry-picking" holds by construction rather than by the screen's restraint.
- *
- * Mine is work already assigned to the caller; Held is work that stopped; In
- * flight is a senior/ops read; Recently delivered is history.
- *
- * `count` is the SERVER'S census and is NOT `orders.length`. The row list is
- * scoped to what the caller may open; the census is not. A count that shrank
- * with your permissions would read as work disappearing rather than as work
- * you are not allowed to look at — the same rule `LifecycleStage.count`
- * already states, and the reason neither may be re-derived in a browser
- * (hard rule 3). It is a count of what is left, never a rate: there is no
- * per-hour, per-person or per-period figure anywhere in this shape and §4.5
- * means there never may be.
- *
- * `title` and `note` are the server's words for the same reason
- * `LifecycleStamp.label` is: a client-side `Record<QueueBandId, string>` is a
- * second copy of product copy that drifts silently from the first.
- *
- * Whether the Mine band may be DRAWN at all is open ruling Q11 — it sits
- * against "exactly one order, no list". This shape does not decide that; it
- * makes the data expressible so the ruling can be about the screen.
+ * GET /api/queue/bands — read shapes only, deliberately not a browse
+ * endpoint: no row carries a claim token, assignment field, or orderable
+ * cursor, so `/api/queue/next` stays the only hand-over and "no queue
+ * cherry-picking" holds by construction. Mine = assigned to the caller,
+ * Held = stopped, In flight = senior/ops read, Delivered = history.
+ * `count` is the server's census, not `orders.length` — the row list is
+ * scoped to what the caller may open, the census is not — and it is a count
+ * of what is left, never a rate. `title`/`note` are the server's words so
+ * product copy has one home.
  */
 export const QueueBandId = z.enum(["mine", "held", "in_flight", "delivered"]);
 export type QueueBandId = z.infer<typeof QueueBandId>;
@@ -130,41 +109,26 @@ export const QueueBand = z.object({
   id: QueueBandId,
   title: z.string(),
   note: z.string(),
-  /** SERVER-SUPPLIED. Never `orders.length` — see the block comment above. */
+  /** Server-supplied. Never `orders.length` — see the block comment above. */
   count: z.number().int(),
   orders: z.array(QueueBandOrder),
 });
 export type QueueBand = z.infer<typeof QueueBand>;
 
 /**
- * Which bands appear, and in what order, is the SERVER'S answer to "what may
+ * Which bands appear, and in what order, is the server's answer to "what may
  * this caller see" — a reviewer is served no `in_flight` band at all rather
- * than an empty or dimmed one. An absent band and an empty band are different
- * statements, and only the server can tell them apart.
+ * than an empty or dimmed one. An absent band and an empty band are
+ * different statements.
  */
 export const QueueBandsResponse = z.object({ bands: z.array(QueueBand) });
 export type QueueBandsResponse = z.infer<typeof QueueBandsResponse>;
 
 /**
- * ⚠ UI-DRIVEN REQUEST — AWAITING RATIFICATION (2026-07-31, fidelity Wave 2).
- * READ SHAPE ONLY: no endpoint accepts these, and none may be written.
- *
- * The four figures the order strip prints, DECIDED ON THE SERVER. They were
- * being computed in the browser from the `fields` array, and `no_source` was
- * the reason this shape had to exist: the strip filtered for
- * `value !== null && source_doc_id === null && source_page === null &&
- * readings.length === 0` and printed the result as a headline number. That is
- * the browser ruling on provenance — a server judgement (hard rule 3) and one
- * the screen could not cite (principle 6). A count whose definition lives in a
- * component is a count nobody can audit against the pipeline.
- *
- * NONE of these is `fields.length` or a tally of `fields[].state`, for the same
- * reason `QueueBand.count` and `LifecycleStage.count` are not `orders.length`:
- * the array is scoped to what the caller may see, the census is not. A total
- * that shrank with your permissions reads as work vanishing.
- *
- * A CENSUS, NEVER A RATE (§4.5) — how many sit here now. There is no per-hour,
- * per-person or per-period figure in this shape and there never may be.
+ * The figures the order strip prints, decided on the server. None of these is
+ * `fields.length` or a tally of `fields[].state` — the array is scoped to
+ * what the caller may see, the census is not. A census, never a rate: no
+ * per-hour, per-person, or per-period figure may ever appear here.
  */
 export const OrderCensus = z.object({
   fields: z.number().int(),
@@ -173,68 +137,28 @@ export const OrderCensus = z.object({
   /** Values the pipeline produced with no document, page or reading behind them. */
   no_source: z.number().int(),
   /**
-   * ⚠ UI-DRIVEN REQUEST — AWAITING RATIFICATION (2026-08-27, review workstation).
-   * READ FIELDS ONLY, and they exist because the alternative was arithmetic.
-   *
-   * The review dock prints "12 of 18 answered · rest of the queue 17". Every
-   * one of those three numbers was being computed in the browser — `settled`
-   * as a filter over `fields[].state`, `decisions` as `settled + queued`, and
-   * `queue_rest` as `decisions - 1` for the open one. That is the browser
-   * deciding what counts as a decision, which is the same class of judgement
-   * `no_source` above was moved off the client for, and it is the exact shape
-   * of the `answered = base + a` bug the reference prototype shipped
-   * (`derived()` in ANALYSIS-behavior §5, which AGENTS.md forbids surviving
-   * into this build as authority).
-   *
    * `decisions` is how many fields this order ever put in front of a person —
-   * NOT `fields`, which includes the auto-confirmed nobody saw and the pending
-   * nothing has read yet. `settled` is how many of those carry a ruling.
-   * `queue_rest` is what remains behind the open one, and it is the server's
-   * because only the server knows what else it would hand over.
-   *
-   * OPTIONAL for the same reason `census` itself is: absent is not zero, it is
-   * "the server did not say", and the dock prints that silence rather than
-   * filling it in.
-   *
-   * A CENSUS, NEVER A RATE (§4.5). Nothing here is per-hour or per-person, and
-   * §4.5 means nothing here ever may be.
+   * not `fields`, which includes the auto-confirmed nobody saw. `settled` is
+   * how many of those carry a ruling. `queue_rest` is what remains behind the
+   * open one; only the server knows what else it would hand over. Optional:
+   * absent is "the server did not say", not zero.
    */
   decisions: z.number().int().optional(),
   settled: z.number().int().optional(),
   queue_rest: z.number().int().optional(),
   /**
-   * HOW MANY OF THIS ORDER'S DECISIONS THE SERVER IS STILL WAITING ON, and it
-   * is the server's figure for the same reason every other member here is.
-   *
-   * The design's top bar prints it as a pill ("6 fields"). It was not printed,
-   * because the only way to get it was `decisions - settled` — a subtraction in
-   * the browser, and the identical arithmetic `queue_rest` exists to remove one
-   * line above. The two are NOT the same number and the distinction is the
-   * reason both exist: `queue_rest` is how much of the queue is left to WALK
-   * (settled rulings included — a reviewer moving back through one is still
-   * walking the queue), `remaining` is how many still want an ANSWER.
-   *
-   * Nor is the subtraction reliably right. `decisions - settled` assumes every
-   * decision is either settled or awaiting this reviewer, and a field parked on
-   * a countersign or held behind an escalation is neither. Only the server
-   * knows which of its own decisions it is still waiting on.
-   *
-   * OPTIONAL, like its three neighbours: absent is "the server did not say",
-   * and the bar prints that silence rather than filling it in with a zero. Zero
-   * is a real and different answer — nothing outstanding, the order is done.
-   *
-   * A CENSUS, NEVER A RATE (§4.5). How many sit here now, and nothing per-hour.
+   * How many of this order's decisions still want an answer. Not
+   * `decisions - settled`: a field parked on a countersign or held behind an
+   * escalation is neither, so only the server knows. Distinct from
+   * `queue_rest`, which is how much queue is left to walk. Optional: absent
+   * is "the server did not say"; zero is a different answer (order done).
    */
   remaining: z.number().int().optional(),
   /**
-   * ⚠ RULED 2026-08-29 — `docs/frontend/design-2026-08/RULING-2026-08-29.md`.
-   * THE VERDICT CARD'S CTA COPY, SERVER-CHOSEN. The reference derives "Verify
-   * 6 Fields" / "Open Second Read" / "Open Publication Studio" from a
-   * five-branch state read in the browser; hard rule 3 puts that machine on
-   * the server, so the WORD arrives here beside the census it summarises.
-   * A free string, deliberately not an enum — nothing may switch on it.
-   * Optional: absent is "the server did not say", and the hub falls back to
-   * naming the door rather than inventing a verdict.
+   * The verdict card's CTA copy, server-chosen — the state machine behind it
+   * lives on the server. A free string, deliberately not an enum: nothing may
+   * switch on it. Optional: absent is "the server did not say", and the hub
+   * names the door rather than inventing a verdict.
    */
   verdict_action: z.string().optional(),
 });
@@ -244,9 +168,8 @@ export const OrderFieldsResponse = z.object({
   order_id: z.string(),
   fields: z.array(Field),
   /**
-   * OPTIONAL, and absent is not zero — it is "the server did not say". The
-   * strip must print the silence rather than fill it in, which is the whole
-   * point of moving these numbers off the client.
+   * Optional, and absent is not zero — it is "the server did not say". The
+   * strip prints the silence rather than filling it in.
    */
   census: OrderCensus.optional(),
 });
@@ -277,10 +200,10 @@ export const EscalateFieldRequest = z.object({
 export type EscalateFieldRequest = z.infer<typeof EscalateFieldRequest>;
 
 /**
- * POST /api/orders/{id}/pass — CONTEXT §7: pass is recorded against the order;
- * the 4th pass auto-escalates SERVER-side (the UI just calls and moves on).
- * A pass without a one-line reason is refused. Response is a minimal ack —
- * pass counts and escalation triggers never come back to the client.
+ * POST /api/orders/{id}/pass — pass is recorded against the order; the 4th
+ * pass auto-escalates server-side. A pass without a one-line reason is
+ * refused. Response is a minimal ack — pass counts and escalation triggers
+ * never come back to the client.
  */
 export const PassOrderRequest = z.object({
   reason: z.string().min(1),
@@ -341,17 +264,12 @@ export const GoldenCorrectionRequest = z.object({
 export type GoldenCorrectionRequest = z.infer<typeof GoldenCorrectionRequest>;
 
 /**
- * The other two seed actions (SeedCorrection §4.9 — "three actions, nothing
- * else"). Both leave the VALUE untouched and both are permanent, signed, and
- * reasoned — this is the one screen where ground truth changes:
- *   POST /api/golden/{id}/confirm — the seed is right; the model failure is
- *     real. Tag upgrades to `ruled` (now human-verified, not merely typed).
- *   POST /api/golden/{id}/demote  — the document is ambiguous; neither value
- *     can be confirmed. Tag → `suspect` (a diagnosis, PRD §12).
- * The field id travels in the URL, not the body. Refused without a reason;
- * the action is still signed, but by the server-derived session identity (an
- * unsigned change to ground truth is the failure the corpus exists to prevent,
- * and a client-declared signer would be forgeable).
+ * The other two seed actions. Both leave the value untouched; both are
+ * permanent, signed, and reasoned:
+ *   POST /api/golden/{id}/confirm — the seed is right; tag upgrades to `ruled`.
+ *   POST /api/golden/{id}/demote — the document is ambiguous; tag → `suspect`.
+ * Refused without a reason; signed by the server-derived session identity —
+ * a client-declared signer would be forgeable.
  */
 export const GoldenAffirmRequest = z.object({
   reason: z.string().min(1),
@@ -407,10 +325,9 @@ export type ReconciliationRulingRequest = z.infer<typeof ReconciliationRulingReq
 // ---- bench -----------------------------------------------------------------
 
 /**
- * GET /api/bench/results — section × tag matrix vs the golden set
- * (CONTEXT §7). The two axes are the finding; there is deliberately NO
- * aggregate number in this shape. ORDER_SUPPLIED fields are absent from
- * every denominator server-side.
+ * GET /api/bench/results — section × tag matrix vs the golden set. The two
+ * axes are the finding; there is deliberately no aggregate number in this
+ * shape. ORDER_SUPPLIED fields are absent from every denominator server-side.
  */
 export const BenchCell = z.object({
   section: z.string(),
@@ -516,10 +433,9 @@ export const MetricsResponse = z
     correction_by_source: z.array(MetricsSourceRate).optional(),
     field_backlog: z.array(MetricsBacklogRow).optional(),
     /**
-     * Blind-fifty funnel (read-only status; CONTEXT §4 names this screen as
-     * its measurement surface). Order-level ONLY — no typist speed or pace
-     * data exists anywhere. Provisional home until the FastAPI port fixes
-     * the shape.
+     * Blind-fifty funnel, read-only status. Order-level only — no typist
+     * speed or pace data exists anywhere. Provisional home until the FastAPI
+     * port fixes the shape.
      */
     blind_fifty: z
       .object({
@@ -558,10 +474,9 @@ export const MetricsResponse = z
 export type MetricsResponse = z.infer<typeof MetricsResponse>;
 
 /**
- * GET /api/derived/{signal} — drill-down behind a dashboard number
- * (CONTEXT §7). The server authors the rows — "every number opens its
- * underlying fields"; the client renders them verbatim. Probe details are
- * NEVER a signal.
+ * GET /api/derived/{signal} — drill-down behind a dashboard number. The
+ * server authors the rows; the client renders them verbatim. Probe details
+ * are never a signal.
  */
 export const DerivedSignalResponse = z.object({
   signal: z.string(),
@@ -589,14 +504,10 @@ export const CreateComplaintRequest = z.object({
 export type CreateComplaintRequest = z.infer<typeof CreateComplaintRequest>;
 
 /**
- * POST /api/complaints/{id}/resolve — the complaint loop terminates in a rule
- * (principle 3: escalations, reconciliation, AND complaints all produce a
- * rulebook entry; PRD §12: resolution = fix + rule + free golden-case offer).
- * REFUSED without a rule, exactly like escalation resolution — cite an
- * existing rule or draft one, which lands PENDING (origin: complaint) and
- * cannot affect the pipeline until an engineer confirms it. The golden-case
- * offer is optional: a complaint that becomes a permanent test case is the
- * strongest fix, but not every one earns it.
+ * POST /api/complaints/{id}/resolve — the complaint loop terminates in a
+ * rule. Refused without one, exactly like escalation resolution: cite an
+ * existing rule or draft one, which lands PENDING and cannot affect the
+ * pipeline until an engineer confirms it. The golden-case offer is optional.
  */
 export const ResolveComplaintRequest = z.object({
   resolution: z.string().min(1),
@@ -616,8 +527,8 @@ export type ResolveComplaintRequest = z.infer<typeof ResolveComplaintRequest>;
 // ---- audit -----------------------------------------------------------------
 
 /**
- * GET /api/audit — the append-only view (CONTEXT §6 audit_log). Read-only by
- * construction: there is no write endpoint in this contract, ever.
+ * GET /api/audit — the append-only audit view. Read-only by construction:
+ * there is no write endpoint in this contract, ever.
  */
 export const AuditEntry = z.object({
   id: z.string(),
@@ -726,29 +637,13 @@ export const SourcePage = z.object({
 export type SourcePage = z.infer<typeof SourcePage>;
 
 /**
- * ONE RECORDED INSTRUMENT INSIDE THE PACKAGE — a boundary THE PIPELINE DREW.
- *
- * A county package is a stack of scans; the instruments in it are found by the
- * partitioning stage, which the pipeline already runs and already names
- * ("Quarantine & Document Boundary Partitioning"). This shape is that stage's
- * output reaching a screen for the first time.
- *
- * IT IS ON THE WIRE BECAUSE THE ALTERNATIVE WAS INVENTING IT. The design's
- * "Package Instrument Index" could have been built by grouping runs of equal
- * `SourcePage.kind` — and that would have drawn document boundaries the
- * pipeline never drew. Two consecutive deeds would have merged into one
- * instrument; a deed continued on a page the classifier labelled differently
- * would have split into two. A boundary is a finding, not a `groupBy`.
- *
- * `first_page`/`last_page` are INCLUSIVE and both are the server's. The design
- * derives its own highlight from a `next` cursor; a half-open range would have
- * the client subtract one to render the label, which is arithmetic about a
- * document's extent that the partitioner already did.
- *
- * `recorded_ref` is the instrument's reference OF RECORD — a book/page or an
- * instrument number. `null` where the package holds no index entry for it (a
- * plat cover sheet, an unrecorded affidavit), which is a real and ordinary
- * state, not a missing lookup.
+ * One recorded instrument inside the package — a boundary the partitioning
+ * stage drew. On the wire because grouping runs of equal `SourcePage.kind`
+ * client-side would draw boundaries the pipeline never drew (two consecutive
+ * deeds merge; a deed spanning a differently classified page splits).
+ * `first_page`/`last_page` are inclusive. `recorded_ref` is the reference of
+ * record (book/page or instrument number); null where the package holds no
+ * index entry for it — an ordinary state, not a missing lookup.
  */
 export const PackageInstrument = z.object({
   id: z.string(),
@@ -763,12 +658,9 @@ export const PackageInstrument = z.object({
 export type PackageInstrument = z.infer<typeof PackageInstrument>;
 
 /**
- * `instruments` is REQUIRED, unlike the optional censuses elsewhere in this
- * file, because a package that reached this endpoint has been through
- * partitioning by definition — the stage runs before extraction, so there is
- * always an answer. An EMPTY array is that answer for a package the partitioner
- * found no boundary in (a single-instrument bringdown, a package it could not
- * segment), and the screen says so rather than drawing an empty list.
+ * `instruments` is required: a package that reached this endpoint has been
+ * through partitioning by definition, so there is always an answer. An empty
+ * array is that answer for a package the partitioner found no boundary in.
  */
 export const OrderPagesResponse = z.object({
   order_id: z.string(),
@@ -779,12 +671,9 @@ export const OrderPagesResponse = z.object({
 export type OrderPagesResponse = z.infer<typeof OrderPagesResponse>;
 
 /**
- * POST /api/fields/{id}/exclude — suppress a row WITH its reason (R13).
- *
- * The reason is required for the same argument as a correction's: a suppressed
- * row is invisible on the delivered sheet, so the record of why it went is the
- * only thing anybody can audit later. A silent suppression is indistinguishable
- * from a miss.
+ * POST /api/fields/{id}/exclude — suppress a row with its reason (R13). The
+ * reason is required: a suppressed row is invisible on the delivered sheet,
+ * so the record of why is the only thing auditable later.
  */
 export const ExcludeFieldRequest = z.object({
   reason: z.string().min(1),

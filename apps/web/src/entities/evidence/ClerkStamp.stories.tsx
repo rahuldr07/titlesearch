@@ -3,14 +3,13 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { ClerkStamp } from "./ClerkStamp";
 
 /**
- * CSS art, per design §Assets ("No binary assets … All paper/scan artwork is
- * CSS"). Rotated −3.5°, ten times the sheet's own tilt: a page is laid down
- * crooked, a stamp is pressed by a hand.
+ * CSS art — no binary assets. Rotated −3.5°, ten times the sheet's own tilt:
+ * a page is laid down crooked, a stamp is pressed by a hand.
  */
 const meta = {
   title: "entities/ClerkStamp",
   component: ClerkStamp,
-  /* Rule 8's own surface, not the app canvas — see `panelGround.tsx`. */
+  /* The paper surface, not the app canvas — see `panelGround.tsx`. */
   decorators: [onPaper],
 } satisfies Meta<typeof ClerkStamp>;
 

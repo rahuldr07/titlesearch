@@ -1,34 +1,18 @@
 import { expect, test } from "@playwright/test";
 
 /**
- * SMOKE — screens 5 and 6, what they draw from the wire, and what they still
- * REFUSE to draw.
- *
- * Not a harvested invariant: `e2e/invariants/ingest.spec.ts` carries the
- * product rules for intake and its assertions are untouched. This file pins
- * the rest: what is served renders as SERVER data, and what is not served
- * renders an honest statement — because an absence nobody asserts is an
- * absence somebody will helpfully fill in with a convincing mock six months
- * from now.
- *
- * HISTORY, so nobody restores the old pins: this file used to assert that the
- * quarantine gateway checklist and the optical profile card were gap cards and
- * that no sha256 rendered as data. The 2026-08-28 ruling added
- * `QuarantineResponse` (design2.ts:35-42) and `GET /api/orders/{id}/quarantine`
- * (mocks design.ts:318), so those assertions pinned a false premise and are
- * replaced — with pins on the WIRE rendering, which is the same discipline
- * pointed at the surface that now exists. The dark terminal's refusal was
- * superseded on 2026-08-29 (docs/frontend/design-2026-08/RULING-2026-08-29.md:
- * "the extraction terminal log … they are drawn, so they are built") — the
- * panel now renders the pipeline's served `run_log`, and this file pins THAT.
+ * Smoke — the intake and extraction screens: what they draw from the wire,
+ * and what they refuse to draw. `e2e/invariants/ingest.spec.ts` carries the
+ * product rules; this file pins the rest — what is served renders as server
+ * data, and what is not served renders an honest statement, because an
+ * absence nobody asserts is an absence somebody will fill in with a
+ * convincing mock.
  */
 /**
- * ⚠ REWRITTEN 2026-08-29 under RULING-2026-08-29: the gateway checklist and
- * optical profile render INLINE the moment a file lands (the pre-order scan
- * `POST /api/intake/quarantine` serves them — no upload act precedes the
- * read any more), the Product gap card is retired (`CreateOrderRequest`
- * carries `product`; the select is drawn), and the amber→green flip is the
- * drawn rulebook note fed by the server's `resolved` block.
+ * The gateway checklist and optical profile render inline the moment a
+ * file lands (the pre-order scan `POST /api/intake/quarantine` serves
+ * them), and the amber→green flip is the drawn rulebook note fed by the
+ * server's `resolved` block.
  */
 test("intake runs the gateway inline on file drop and renders the server's verdicts", async ({
   page,
@@ -125,8 +109,8 @@ test("extraction draws the server's stages, matrix and exceptions", async ({
   await expect(page.getByTestId("classifier-note")).not.toBeEmpty();
   await expect(page.getByTestId("page-matrix").locator("li").first()).toBeVisible();
 
-  // The run-log terminal, built as drawn (RULING-2026-08-29): one row per
-  // served `run_log` line, rendered verbatim — nothing streamed or composed.
+  // The run-log terminal: one row per served `run_log` line, rendered
+  // verbatim — nothing streamed or composed.
   await expect(page.getByTestId("run-log-terminal")).toBeVisible();
   await expect(
     page.getByTestId("run-log-terminal").locator("li[data-warn]").first(),
@@ -145,7 +129,7 @@ test("a page cell opens the workstation at that page — URL-owned selection", a
   await page.goto("/orders/ord_demo_1");
   await expect(page.getByTestId("page-matrix")).toBeVisible();
   await page.getByTestId("page-matrix").locator("button").first().click();
-  // INVARIANT 55: selection lives in the URL, so it survives a reload and a
-  // paste. Component state would survive neither.
+  // Selection lives in the URL, so it survives a reload and a paste.
+  // Component state would survive neither.
   await expect(page).toHaveURL(/[?&]page=\d+/);
 });

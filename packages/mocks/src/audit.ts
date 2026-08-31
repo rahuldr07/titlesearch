@@ -1,22 +1,12 @@
 import type { AuditEntry } from "@titlepipe/contract";
 
 /**
- * THE AUDIT LEDGER — one store, append-only, shared by every handler that
- * files a moment of record.
- *
- * ⚠ RULED 2026-08-29 — `docs/frontend/design-2026-08/RULING-2026-08-29.md`.
- * The reference's Audit Log pane APPENDS LIVE as the session acts: a release,
- * a reissue, a countersign, an escalation ruling and a template save each add
- * a row. Until this module the mock served a frozen five-row array, so the
- * screen could never show the property the pane exists to demonstrate.
- *
- * Its own module because `handlers.ts` imports `design.ts` (and the settings
- * and templates handler modules), so the writers cannot import the store from
- * each other — the same seam `guard.ts` documents.
- *
- * NEWEST FIRST, because `GET /api/audit` serves the array verbatim and the
- * reference draws the log downward from "today". Append-only remains true in
- * the sense that matters: nothing here edits or removes a filed row.
+ * The audit ledger — one store, append-only, shared by every handler that
+ * files a moment of record; this module must be the only writer. Its own
+ * module because `handlers.ts` imports `design.ts`, so the writers cannot
+ * import the store from each other (the same seam `guard.ts` documents).
+ * Newest first: `GET /api/audit` serves the array verbatim. Nothing here
+ * edits or removes a filed row.
  */
 export const auditStore: AuditEntry[] = [
   {

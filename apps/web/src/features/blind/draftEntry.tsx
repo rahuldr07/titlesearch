@@ -6,11 +6,11 @@ import type {
 } from "@titlepipe/contract";
 
 /**
- * One row of the sheet. `absence` stays separate from `value` because a null
- * value with a null `na_reason` means "not yet extracted" — a statement about
- * the pipeline, never an NA state (enums.ts:44-47). `confidence` starts null,
- * not "certain": a control defaulted to certain answers the question the
- * three-part contract exists to ask.
+ * One row of the sheet. `absence` stays separate from `value` because a
+ * null value with a null `na_reason` means "not yet extracted" — a pipeline
+ * statement, never an NA state. `confidence` starts null, not "certain": a
+ * control defaulted to certain answers the question the three-part contract
+ * exists to ask.
  */
 export interface DraftEntry {
   readonly path: string;
@@ -44,9 +44,9 @@ export function isAnswered(draft: DraftEntry): boolean {
 }
 
 /**
- * The four no-value states, in the typist's words (rule 14, enums.ts:30-42).
- * They are statements about the document and route differently downstream, so
- * they never collapse into one grey dash.
+ * The four no-value states, in the typist's words. They are statements
+ * about the document and route differently downstream, so they never
+ * collapse into one grey dash.
  */
 export const ABSENCES: readonly { readonly id: NaReason; readonly gloss: string }[] = [
   { id: "NOT_PRESENT", gloss: "Not present — this county does not use this field at all" },

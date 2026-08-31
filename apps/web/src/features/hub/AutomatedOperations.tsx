@@ -2,15 +2,9 @@ import type { PipelineStage } from "@titlepipe/contract";
 import { HubSectionLabel } from "./HubSectionLabel";
 
 /**
- * The pipeline's own stages, drawn as the reference's operation rows.
- *
- * ⚠ RULED 2026-08-29 (`docs/frontend/design-2026-08/RULING-2026-08-29.md`):
- * two prior refusals are superseded because the reference draws both. The
- * block is titled "Automated Operations (Zero Manual Touch)" — the drawn
- * title, kept verbatim — and each row carries the drawn mono COUNT chip and
- * trailing arrow. The count is `PipelineStage.count`, a SERVER-COMPOSED
- * string added under the same ruling; where the server sends none the row
- * falls back to `owner`, so a halted human stage still never reads as a
+ * The pipeline's own stages as operation rows. The count chip is
+ * `PipelineStage.count`, a server-composed string; where the server sends none
+ * the row falls back to `owner`, so a halted human stage never reads as a
  * machine that failed.
  */
 export function AutomatedOperations(props: {
@@ -23,7 +17,7 @@ export function AutomatedOperations(props: {
       <HubSectionLabel>
         Automated Operations (Zero Manual Touch)
         {props.gateHalted === true && (
-          // Server state (`intake.ts:99`) — never inferred from the stage list.
+          // Server state — never inferred from the stage list.
           <span
             data-testid="gate-halted"
             className="rounded-pill border border-state-halt-border bg-state-halt-surface px-5 py-1 text-label font-semibold leading-flat text-state-halt"
@@ -82,7 +76,7 @@ export function AutomatedOperations(props: {
   );
 }
 
-/** Rule 7's closed glyph vocabulary — ✓ ◆ • and nothing else. No icons. */
+/** The closed glyph vocabulary — ✓ ◆ • and nothing else. No icons. */
 const MARK = {
   done: { glyph: "✓", skin: "bg-state-settled-surface text-state-settled" },
   running: { glyph: "•", skin: "bg-action-surface text-action animate-tp-pulse" },

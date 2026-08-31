@@ -4,9 +4,8 @@ import { RulePill } from "../../entities/rule/RulePill";
 import { RuleEffect } from "../../entities/rule/RuleEffect";
 
 /**
- * Continuous rule learning — the design's Rule Candidates tab. The design's
- * "approve" has already happened: resolving a cluster with a draft lands the
- * rule PENDING. What is left is the engineer gate, POST /api/rules/{id}/confirm.
+ * Rule candidate review. Resolving a cluster with a draft lands the rule
+ * pending; what is left is the engineer gate, POST /api/rules/{id}/confirm.
  */
 export function RuleCandidates({
   rules,
@@ -32,7 +31,6 @@ export function RuleCandidates({
         <h1 className="font-sans text-title leading-tight font-bold text-ink-primary">
           Rule candidate review
         </h1>
-        {/* The prototype says "an Administrator"; authz.ts:105 says engineer/admin. */}
         <p className="font-sans text-meta leading-body font-medium text-ink-muted">
           A candidate is non-blocking until an engineer confirms it.
         </p>
@@ -41,7 +39,7 @@ export function RuleCandidates({
       <Card padding="none">
         <CardHeader>Candidates awaiting the engineer gate</CardHeader>
         <CardBody className="flex flex-col gap-10">
-          {/* The server's sentence, unedited (INVARIANTS:58-59). */}
+          {/* The server's sentence, unedited. */}
           {refusal !== null && <Alert title="Refused" message={refusal} />}
 
           {candidates.length === 0 ? (
@@ -74,7 +72,7 @@ export function RuleCandidates({
   );
 }
 
-/** A pending rule, drawn as the not-in-force thing it is (INVARIANTS:38). */
+/** A pending rule, drawn as the not-in-force thing it is. */
 function Candidate({
   rule,
   canConfirm,
@@ -98,7 +96,7 @@ function Candidate({
       <dl className="grid grid-cols-2 gap-x-8 gap-y-3">
         <Fact label="Origin" value={rule.origin} />
         <Fact label="Version" value={String(rule.version)} />
-        {/* A null scope and a null confirmer are STATEMENTS, so they are said. */}
+        {/* A null scope and a null confirmer are statements, so they are said. */}
         <Fact
           label="Scope"
           value={rule.jurisdiction_scope ?? "every jurisdiction — unscoped"}

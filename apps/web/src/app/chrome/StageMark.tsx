@@ -2,15 +2,10 @@ import type { ReactNode } from "react";
 import { cx } from "../../components/ui";
 
 /**
- * The reference app's stage circle and stage badge — drawn on the rail's dark
- * column and on the order bar's white one.
- *
- * ⚠ RULED 2026-08-29 — `docs/frontend/design-2026-08/RULING-2026-08-29.md`:
- * the reference draws a green ✓ on a DONE stage, the stage's number otherwise,
- * an accent fill on the CURRENT one, and a finished badge pill where the
- * server hangs one. `done` and the badge string arrive off the wire
- * (`OrderStageTab`); `ordinal` is POSITIONAL — the item's place in the
- * server's own list, never a state the browser computed.
+ * The stage circle and stage badge — drawn on the rail's dark column and on
+ * the order bar's white one. `done` and the badge string arrive off the
+ * wire; `ordinal` is positional — the item's place in the server's own
+ * list, never a state the browser computed.
  */
 type StageGround = "rail" | "strip";
 
@@ -19,8 +14,8 @@ const CIRCLE: Readonly<
 > = {
   rail: {
     done: "bg-state-settled text-ink-on-action",
-    // The design's accent fill wants white; --color-rail-accent is a light
-    // lilac, so the ink inverts to keep the glyph legible.
+    // --color-rail-accent is a light lilac, so the ink inverts to keep the
+    // glyph legible.
     current: "bg-rail-accent text-rail-surface",
     waiting: "bg-rail-cap text-rail-ink-soft",
   },
@@ -62,9 +57,8 @@ export function StageCircle(props: {
 }
 
 /**
- * The stage's badge pill — the SERVED string, whole ("6", "ready", "2nd
- * read"). The reference paints "ready" green and workload amber; `tone` is
- * the server's word for which (`OrderStageTab.badge_tone`).
+ * The stage's badge pill — the served string, whole ("6", "ready", "2nd
+ * read"). `tone` is the server's word for how it paints.
  */
 export function StageBadge(props: {
   readonly tone: "attend" | "settled";

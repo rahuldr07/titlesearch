@@ -1,10 +1,9 @@
 import type { ReactNode } from "react";
 
 /**
- * One labelled band of the workbench. Split out of `main.tsx` because that
- * file crossed the 150-line gate, and because a file whose only other export
- * is a `createRoot` call cannot fast-refresh while it also exports a
- * component.
+ * One labelled band of the workbench. Its own file because a module whose
+ * only other export is a `createRoot` call cannot fast-refresh while it
+ * also exports a component.
  */
 export function Row(props: {
   readonly title: string;

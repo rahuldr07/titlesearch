@@ -4,9 +4,9 @@ import { post } from "../../shared/api";
 import { notify } from "../../shared/notify";
 
 /**
- * THE RELEASE ACT. One POST, no retry, no optimistic anything — the server's
- * returned seal is the only evidence a release happened, so the composition is
- * invalidated and repainted from the wire.
+ * One POST, no retry, no optimistic anything — the server's returned seal is
+ * the only evidence a release happened, so the composition is invalidated and
+ * repainted from the wire.
  */
 export function useRelease(orderId: string) {
   const client = useQueryClient();
@@ -14,26 +14,23 @@ export function useRelease(orderId: string) {
     mutationFn: (signature: string) =>
       post(`/api/orders/${orderId}/release`, ReleaseResponse, { signature }),
     onSuccess: async () => {
-      // The release files an audit event server-side (RULED 2026-08-29).
+      // The release files an audit event server-side.
       await Promise.all([
         client.invalidateQueries({ queryKey: ["orders", orderId, "composition"] }),
         client.invalidateQueries({ queryKey: ["audit"] }),
       ]);
     },
-    // The server's sentence, verbatim (INVARIANT 14). Never composed here.
+    // The server's sentence, verbatim — never composed here.
     onError: (error: Error) => notify.error(error.message),
   });
 }
 
 /**
- * WHY THE ACT IS HELD, one sentence per cause — `null` is live, because rule 9
- * makes the reason the disablement.
- *
- * ONLY CLIENT-KNOWABLE CAUSES ARE HELD HERE. An open gate is NOT one of them:
+ * Why the act is held, one sentence per cause — `null` means live. Only
+ * client-knowable causes: an open gate is not one of them, because
  * `releasable` is the server's verdict and the server issues its own refusal
- * (409) when the button is pressed. Pre-empting it here would replace the
- * server's sentence with ours, which is the thing INVARIANT 14 forbids — the
- * verdict is still drawn, verbatim, beside the button.
+ * (409) when the button is pressed. The verdict is still drawn, verbatim,
+ * beside the button.
  */
 export function releaseHold(
   composed: CompositionResponse,

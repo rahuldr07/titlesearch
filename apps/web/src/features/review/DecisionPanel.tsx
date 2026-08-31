@@ -13,22 +13,14 @@ import { ExcerptStrip } from "./ExcerptStrip";
 import { useDecisionKeys } from "./useReviewKeys";
 
 /**
- * THE OPEN DECISION — the workstation's subject, and the one place rule 1's
- * accent is spent on this screen. `DecisionCard` (`entities/decision`) draws
- * RECIPES' "Open decision" row; the acts are composed here because the feature
- * owns the chords.
- *
- * FOUR ACTS, NOT THREE. Confirm, correct, escalate — and declare an absence,
- * which is the design's "Law 3 Protocol: Declare Null Provenance" panel
- * (`AbsencePicker`). Without it the four ratified NA reasons were readable and
- * unwritable: nothing on this screen could file one, though
- * `CorrectFieldRequest.na_reason` has carried them since 2026-07-26.
- *
- * THE CONSEQUENCE LINE AND THE EXCERPT ARE THE SERVER'S SENTENCES. `Field
- * .consequence` and `Field.source_excerpt` landed on 2026-08-28; both are
- * passed straight through and neither is composed here. A claim about what a
- * wrong answer costs is the rulebook's to make, and the split of an excerpt at
- * its match is the engine's — see `ExcerptStrip`.
+ * The open decision — the workstation's subject. `DecisionCard`
+ * (`entities/decision`) draws the row; the acts are composed here because
+ * the feature owns the chords. Four acts, not three: confirm, correct,
+ * escalate — and declare an absence (`AbsencePicker`), without which the
+ * four NA reasons would be readable but unwritable. The consequence line
+ * and the excerpt are the server's sentences, passed straight through: a
+ * claim about what a wrong answer costs is the rulebook's to make, and the
+ * split of an excerpt at its match is the engine's.
  */
 export function DecisionPanel(props: {
   readonly field: Field | null;
@@ -38,8 +30,8 @@ export function DecisionPanel(props: {
 }) {
   const writes = useReviewWrites(props.orderId);
   const [mode, setMode] = useState<EditorMode>(null);
-  /* The value being filed. Held HERE so an adopt can write into an editor that
-     is already open without remounting it — INVARIANT 31. */
+  /* The value being filed. Held here so an adopt can write into an editor
+     that is already open without remounting it. */
   const [value, setValue] = useState("");
 
   const field = props.field;
@@ -58,10 +50,10 @@ export function DecisionPanel(props: {
   useDecisionKeys({
     enabled: field !== null && mode === null,
     /*
-     * ORPHAN O9 — the confirm CHORD never accepts a blank. A field the server
-     * sent no value for is settled by declaring which absence it is, and a
-     * held-down `c` must not bulk-accept absences. The BUTTON still files it:
-     * a click is an explicit act, which is the whole distinction.
+     * The confirm chord never accepts a blank: a field the server sent no
+     * value for is settled by declaring which absence it is, and a held-down
+     * `c` must not bulk-accept absences. The button still files it — a click
+     * is an explicit act, which is the whole distinction.
      */
     onConfirm: () => {
       if (field !== null && machineRead !== null) writes.confirm(field.id, machineRead);
@@ -92,8 +84,8 @@ export function DecisionPanel(props: {
         rubric={panelRubric(field, readCited(field)).text}
         readings={nominatedPair(field.readings ?? []) ?? undefined}
         onAdoptReading={(reading) => {
-          // INVARIANT 31 — into the editor, never retyped, and into one that is
-          // ALREADY OPEN without discarding what has been typed beside it.
+          // Into the editor, never retyped — and into one that is already
+          // open without discarding what has been typed beside it.
           open("correct", reading.value ?? ""); // rules-allow: FieldReading.value, not Field.value — a pre-merge reading has no provenance union to read through
         }}
         actions={

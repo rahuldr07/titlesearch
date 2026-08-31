@@ -4,9 +4,8 @@ import { Empty } from "./empty";
 import { onPanel } from "./kitGround";
 
 /**
- * `reason` IS REQUIRED, AND THAT IS THE WHOLE DESIGN. These four stories are
- * four DIFFERENT facts that a registry `<Empty>` would have rendered as the
- * same "No results".
+ * `reason` is required — these four stories are four different facts that
+ * would otherwise all render as the same "No results".
  */
 const meta = {
   title: "ui/Empty",

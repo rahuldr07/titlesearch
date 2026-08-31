@@ -5,12 +5,8 @@ import { Button } from "./button";
 import { onPanel } from "./kitGround";
 
 /**
- * ONE STORY PER TONE, PER STATE, AND ONE THAT PINS THE RULE THE COMPONENT
- * EXISTS TO ENFORCE: the server's sentence arrives unedited.
- *
- * The messages below are written in the register a server actually produces —
- * whole sentences, no "Error:", no trailing ellipsis — because a story is the
- * template the next screen is copied from.
+ * Messages here are written in the register a server actually produces —
+ * whole sentences, no "Error:" prefix, no trailing ellipsis.
  */
 const meta = {
   title: "ui/Alert",
@@ -22,7 +18,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** Halt — stopped, actionable. The default, and the eight-render case. */
+/** Halt — stopped, actionable. The default. */
 export const Halt: Story = {
   args: {
     tone: "halt",
@@ -90,10 +86,8 @@ export const AllTones: Story = {
 };
 
 /**
- * THE INVARIANT, AS AN ASSERTION. `INVARIANTS:58-59` — the server's message is
- * rendered verbatim. The `play` reads the rendered text back and demands exact
- * equality, so any prefix, suffix, added period or wrapping quote this
- * component ever grows fails here rather than in review.
+ * The server's message renders verbatim: the play asserts exact equality, so
+ * any prefix, suffix, added period or wrapping quote fails here.
  */
 const SERVER_SAID = "Queue unavailable — the router did not answer within 5s.";
 
@@ -106,10 +100,8 @@ export const MessageIsVerbatim: Story = {
 };
 
 /**
- * THE LIVE-REGION SPLIT. A halt is `alert` (assertive — the reader's next
- * keystroke is about to be wrong); the other two are `status` (polite). Pinned,
- * because it is invisible on screen and the whole reason a settled confirmation
- * does not barge in mid-sentence.
+ * A halt is role="alert" (assertive); the other two are role="status"
+ * (polite). Pinned because the split is invisible on screen.
  */
 export const LiveRegionRoles: Story = {
   render: () => (
@@ -127,10 +119,7 @@ export const LiveRegionRoles: Story = {
   },
 };
 
-/**
- * RULE 6'S MARKS, ON THE THREE FAMILIES AN ALERT MAY DRAW. ✓ ◆ • and nothing
- * else — the same closed vocabulary `badge.stories.tsx` pins for StatusMark.
- */
+/** The closed glyph vocabulary: ✓ ◆ • and nothing else. */
 export const Marks: Story = {
   render: () => (
     <div className="flex w-200 flex-col gap-6">

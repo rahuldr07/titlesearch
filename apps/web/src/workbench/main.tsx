@@ -1,22 +1,12 @@
 /**
- * THE WORKBENCH. Dev-only, not routed, not shipped.
- *
- * Storybook shows one component at a time in isolation, which is the right
- * tool for building one and the wrong tool for judging the set. This page puts
- * every primitive on one surface so the things that only exist BETWEEN
- * components can be checked:
- *
- *   - press feedback, which a screenshot cannot show at all
- *   - whether hover on a Button and hover on a Tab feel like the same system
- *   - the tab ORDER through a realistic screen, in one pass, without clicking
- *   - whether the focus ring is visible on every one of them, including the
- *     composites react-aria renders as <div>
- *   - whether the accent really is spent once, when everything is in view
- *
- * Nothing here is a fixture for the app. Every value is obviously synthetic —
- * no order refs that look real, no party names — because a convincing mock is
- * how invented data escapes into a screen (AGENTS.md: never emit a value you
- * cannot cite).
+ * The workbench. Dev-only, not routed, not shipped. Storybook shows one
+ * component at a time; this page puts every primitive on one surface so the
+ * things that only exist between components can be checked — press
+ * feedback, whether hover feels like one system, the tab order in one pass,
+ * the focus ring on every composite, and whether the accent really is spent
+ * once. Nothing here is a fixture for the app: every value is obviously
+ * synthetic, because a convincing mock is how invented data escapes into a
+ * screen.
  */
 
 import { StrictMode, useState } from "react";

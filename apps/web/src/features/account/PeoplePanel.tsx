@@ -9,15 +9,10 @@ import { QueryState } from "../../entities/state/QueryState";
 import { useAssignRole } from "./useSettings";
 
 /**
- * PEOPLE — the roster, WITH the drawn role picker.
- *
- * ⚠ RULED 2026-08-29 — `docs/frontend/design-2026-08/RULING-2026-08-29.md`.
- * The reference puts a role select on every row; the pre-ruling refusal ("no
- * endpoint accepts a role change") is closed by `PATCH /api/people/{id}/role`.
- * The picker's vocabulary is the RBAC matrix's `roles` — SERVED, so the pane
- * offers only words the server will accept. A seat without
- * `person.role.assign` sees the picker disabled with the reason (rule 9);
- * the server still refuses with 403 either way.
+ * People — the roster, with the role picker. The picker's vocabulary is the
+ * RBAC matrix's `roles` — served, so the pane offers only words the server
+ * will accept. A seat without `person.role.assign` sees the picker disabled
+ * with the reason; the server still refuses with 403 either way.
  */
 export function PeoplePanel() {
   const roster = useRead(people);
@@ -67,13 +62,13 @@ export function PeoplePanel() {
                       <span className="truncate text-meta font-semibold leading-close text-ink-primary">
                         {person.name}
                       </span>
-                      {/* Rule 3: an address is an identifier, so it is mono. */}
+                      {/* An address is an identifier, so it is mono. */}
                       <span className="truncate font-mono text-label leading-flat text-ink-muted">
                         {person.email}
                       </span>
                     </div>
-                    {/* The drawn picker — the served vocabulary, one PATCH per
-                        change, the roster repainting from its own re-read. */}
+                    {/* The served vocabulary, one PATCH per change, the
+                        roster repainting from its own re-read. */}
                     <Select
                       label={`Role for ${person.name}`}
                       data-testid={`person-role-${person.id}`}

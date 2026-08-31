@@ -23,31 +23,25 @@ import { isQueued, resolveSelection, stepSelection } from "./queue";
 import { useQueueKeys } from "./useReviewKeys";
 
 /**
- * THE EXAMINATION WORKSTATION at `/orders/{id}/review` — the reviewer's screen,
- * and the one PRODUCT.md says wins when roles conflict.
- *
- * TWO PANES ON A DRAG DIVIDER. `components/ui/resizable.tsx` was written for
- * this screen ("THE §7 EXAMINATION WORKSTATION SPLIT", 38–74% band in
- * `splitBand.ts`) and had no consumer; the panes were two fixed `flex-1`
- * columns, so the design's divider did not exist. `Split` also carries the
- * WCAG 2.5.7 keyboard alternative, which a hand-rolled divider would not.
+ * The Examination Workstation at `/orders/{id}/review` — the reviewer's
+ * screen. Two panes on a drag divider: `Split` also carries the keyboard
+ * alternative to dragging, which a hand-rolled divider would not.
  */
 export function WorkstationScreen(props: {
   readonly orderId: string;
   /** `?field=` off the route, matching `orderSearch.ts`'s optional key. */
   readonly fieldPath: string | undefined;
-  /** `?page=` off the route — the extraction matrix's "open the workstation AT
-      this page" (design §Screens 6). Treated below as an outright page ask. */
+  /** `?page=` off the route — "open the workstation at this page". Treated
+      below as an outright page ask. */
   readonly page: number | undefined;
   readonly onSelectField: (path: string) => void;
 }) {
   const fields = useRead(orderFields(props.orderId));
   const context = useRead(orderContext(props.orderId));
-  /* A VIEW ORDER, not a re-ranking. It reads the `flagged` boolean the section
-     already carries from the server's own queue membership — nothing here
-     counts, scores or re-derives what is flagged. ON by default: the reference
-     opens with sections sorted flagged-first (README §Screens 7, "sorted
-     flagged-first (toggle)") — the toggle is for turning it OFF. */
+  /* A view order, not a re-ranking. It reads the `flagged` boolean the
+     section already carries from the server's own queue membership —
+     nothing here counts, scores or re-derives what is flagged. On by
+     default; the toggle is for turning it off. */
   const [flaggedFirst, setFlaggedFirst] = useState(true);
   /* The outstanding page ask — the excerpt's "View on page" door AND the
      URL's `?page=` deep link, one state. See `usePageAsk.ts` for why the URL
@@ -82,8 +76,7 @@ export function WorkstationScreen(props: {
                 onFlaggedFirst={setFlaggedFirst}
               />
               <Split className="min-h-0 flex-1">
-                {/* 60, not an even split: the reference's `splitPct: 60` —
-                    the decision column leads. Inside splitBand's 38–74. */}
+                {/* 60, not an even split — the decision column leads. */}
                 <SplitPanel
                   defaultSize="60"
                   minSize={DECISION_MIN}
@@ -93,9 +86,9 @@ export function WorkstationScreen(props: {
                   <OrderRail orderId={props.orderId} />
                   <DecisionDock census={data.census} />
                   <div className="min-h-0 flex-1 overflow-y-auto">
-                    {/* THE SECOND READ LEADS, as the design draws it: it is the
-                        gate that blocks release, so it is read before the
-                        sections rather than found under them. */}
+                    {/* The second read leads: it is the gate that blocks
+                        release, so it is read before the sections rather
+                        than found under them. */}
                     <div className="p-8">
                       <CountersignPanel orderId={props.orderId} />
                     </div>
@@ -120,12 +113,11 @@ export function WorkstationScreen(props: {
 
                 <SplitPanel className="bg-surface-app">
                   {/*
-                   * INVARIANT 33: the citation renders as a pin on the source
-                   * page, and — since `LineCoords` was given a real shape on
-                   * 2026-08-28 — as a box over the region it was read from.
-                   * `line` stays null: a coordinate is a position, not an
-                   * ordinal, and guessing an index off `y` would be the browser
-                   * deciding which line the engine meant.
+                   * The citation renders as a pin on the source page and as
+                   * a box over the region it was read from. `line` stays
+                   * null: a coordinate is a position, not an ordinal, and
+                   * guessing an index off `y` would be the browser deciding
+                   * which line the engine meant.
                    */}
                   <ScanPane
                     orderId={props.orderId}

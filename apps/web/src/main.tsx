@@ -6,9 +6,8 @@ import { RouterProvider, createRouter } from "@tanstack/react-router";
 import { createQueryClient } from "./app/queryClient";
 import { routeTree } from "./app/routeTree";
 import { installCrashSink, reportCrash } from "./shared/crash";
-/* THE THREE FACES, SELF-HOSTED. The Google Fonts <link> this replaced failed
-   silently behind restrictive proxies — measured: zero FontFace records, the
-   whole app in system fallbacks — and index.html's own TODO named the fix.
+/* The fonts are bundled — the Google Fonts <link> this replaced failed
+   silently behind restrictive proxies, leaving the app in system fallbacks.
    Bundled woff2 loads from our origin or not at all, and the mono face
    carries citations, where a fallback's metrics would misalign the box. */
 import "@fontsource-variable/plus-jakarta-sans";
@@ -17,13 +16,9 @@ import "@fontsource-variable/source-serif-4/opsz.css";
 import "./styles.css";
 
 /**
- * THE ENTRY POINT, AND THE ONE REFUSAL IT OWNS.
- *
- * `VITE_API_MODE` is inlined at build time, so a bundle carrying a bad value
- * can be produced — `vite.config.ts` explains at length why it warns rather
- * than throws. The refusal lives HERE, where a test can reach it:
- * `e2e-live/refuses-invalid-mode.spec.ts` builds one and asserts this message
- * is on screen.
+ * `VITE_API_MODE` is inlined at build time, so a bundle carrying a bad
+ * value can be produced; the refusal lives here, on screen, where a test
+ * can reach it.
  */
 const apiMode = import.meta.env["VITE_API_MODE"] ?? "mock";
 
@@ -39,10 +34,10 @@ async function start(): Promise<void> {
   }
 
   /*
-   * MSW starts BEFORE the first render, never alongside it. A worker that
-   * registers late lets the first queries escape to the network, which in mock
-   * mode means they die against the static server and the screen blames the
-   * backend for a race in the client.
+   * MSW starts before the first render, never alongside it. A worker that
+   * registers late lets the first queries escape to the network, where they
+   * die against the static server and the screen blames the backend for a
+   * race in the client.
    */
   if (apiMode === "mock") {
     const { worker } = await import("@titlepipe/mocks/browser");
@@ -57,20 +52,16 @@ async function start(): Promise<void> {
   });
 
   /*
-   * React 19's own error channels, verified present in
-   * `@types/react-dom/client.d.ts:37-55`. This is the whole observability
-   * story and it costs 0 kB — the dependency spec records why Sentry is
-   * refused: its default breadcrumbs capture DOM click text, console output
-   * and fetch URLs, which is precisely the class of value the backend's
-   * structlog redaction exists to remove (party names, field values, reasons).
+   * React 19's own error channels — the whole observability story at 0 kB.
+   * Sentry is refused: its default breadcrumbs capture DOM click text,
+   * console output and fetch URLs, precisely the class of value the
+   * backend's redaction exists to remove.
    */
   createRoot(root, {
     /*
-     * The `info` React offers each of these is DROPPED HERE, deliberately.
-     * It carries `componentStack`, which in React 19 dev builds includes
-     * source file paths and can include `key` values from keyed lists — a row
-     * keyed by a party name would leak one. REVIEW-01 B4; `crash.ts` does not
-     * accept it, so this is a discard the compiler agrees with.
+     * The `info` React offers each of these is dropped deliberately: it
+     * carries `componentStack`, which dev builds fill with source paths and
+     * keyed-list `key` values. `crash.ts` does not accept it.
      */
     onUncaughtError: (error) => reportCrash("uncaught", error),
     onCaughtError: (error) => reportCrash("caught", error),

@@ -12,22 +12,13 @@ type AxeResults = Awaited<ReturnType<AxeBuilder["analyze"]>>;
 type Violation = AxeResults["violations"][number];
 
 /**
- * THE ACCESSIBILITY GATE, which until now did not exist.
+ * The accessibility gate. What it cannot do, stated so it is not
+ * over-trusted: axe finds roughly a third of WCAG failures, and cannot see
+ * a missing keyboard alternative (2.5.7) or a missing live region (4.1.3)
+ * — those two are why the app uses react-aria-components. This fixture is
+ * the floor under that choice, not a substitute for it.
  *
- * `@axe-core/playwright` has been a declared devDependency with ZERO call
- * sites anywhere in `e2e/` — latent defect 1 in the dependency spec. The
- * `invariants` CI job reported green the whole time, because all 91 harvested
- * specs are `test.skip` and nothing else ever loaded axe. A gate that has never
- * run is not a gate.
- *
- * WHAT THIS CANNOT DO, stated up front so it is not over-trusted. Axe finds
- * roughly a third of WCAG failures, and specifically CANNOT see a MISSING
- * keyboard alternative (2.5.7) or a MISSING live region (4.1.3). Those two are
- * why the dependency spec chose react-aria-components — `useMove` and
- * `@react-aria/live-announcer` ship them as code. This fixture is the floor
- * under that choice, not a substitute for it.
- *
- * Usage, once screens land:
+ * Usage:
  *
  *   test("queue is accessible", async ({ page }, testInfo) => {
  *     await page.goto("/queue");

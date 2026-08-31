@@ -3,18 +3,11 @@ import { ProgressMeter } from "../../components/ui";
 import { RouteButton } from "../../app/chrome/RouteButton";
 
 /**
- * The verdict band: kicker pill, 40px verdict, note, dot meter, primary action.
- *
- * `LifecycleStamp.label` is the server's already-chosen word — nothing here
- * reads it, and `tone` drives paint and nothing else (`intake.ts:290-294`).
- *
- * The meter draws the pair the design draws (README §Screens 4, "'N of M
- * decisions settled'"): `OrderCensus.settled`/`decisions` — server-counted,
- * never `fields - needs_review`, which is the arithmetic the shape exists to
- * remove. It is the KIT meter (`components/ui/progress-meter.tsx`), the same
- * one `DecisionDock` renders, so the hub and the workstation cannot draw the
- * same figure two ways — one dot PER decision, and past MAX_DOTS the graphic
- * is refused and the mono count stands alone (rule 11).
+ * The verdict band. `LifecycleStamp.label` is the server's already-chosen
+ * word; `tone` drives paint and nothing else. The meter draws
+ * `OrderCensus.settled`/`decisions` — server-counted, never
+ * `fields - needs_review` — and is the kit meter `DecisionDock` also renders,
+ * so the hub and the workstation cannot draw the same figure two ways.
  */
 export function VerdictCard(props: {
   readonly stamp: LifecycleStamp;
@@ -25,7 +18,6 @@ export function VerdictCard(props: {
   return (
     <section className="flex flex-wrap items-start justify-between gap-8 border-b border-line-subtle p-12">
       <div className="flex min-w-0 flex-1 flex-col gap-6">
-        {/* The reference's kicker, as drawn (RULING-2026-08-29). */}
         <span
           data-testid="verdict-kicker"
           className={`w-fit rounded-pill border px-5 py-1 text-label font-bold leading-flat ${PILL[props.stamp.tone]}`}
@@ -33,7 +25,6 @@ export function VerdictCard(props: {
           Order Life-Cycle Hub
         </span>
 
-        {/* 40px — the sixth type size, and the one place the product spends it. */}
         <p
           data-testid="verdict"
           className={`text-verdict font-bold leading-tight tracking-tight ${INK[props.stamp.tone]}`}
@@ -46,9 +37,8 @@ export function VerdictCard(props: {
           number below is added up here.
         </p>
 
-        {/* `settled`/`decisions` are AWAITING RATIFICATION on `OrderCensus`
-            (endpoints.ts, the ⚠ block) — optional, and absent is "the server
-            did not say", printed as silence rather than filled in. */}
+        {/* `settled`/`decisions` are optional — absent is "the server did not
+            say", printed as silence rather than filled in. */}
         {props.census?.settled === undefined ||
         props.census.decisions === undefined ? (
           <p data-testid="census-silent" className="text-meta leading-close text-ink-muted">
@@ -75,10 +65,9 @@ export function VerdictCard(props: {
         >
           Release compiler
         </RouteButton>
-        {/* ⚠ RULED 2026-08-29 — the drawn CTA copy is the SERVER'S
-            `census.verdict_action` (endpoints.ts), a word chosen by its
-            five-branch verdict machine, never re-derived here. Absent = the
-            server did not say, and the button names the door instead. */}
+        {/* The CTA copy is the server's `census.verdict_action`, never
+            re-derived here. Absent means the server did not say, and the
+            button names the door instead. */}
         <RouteButton
           variant="primary"
           size="lg"

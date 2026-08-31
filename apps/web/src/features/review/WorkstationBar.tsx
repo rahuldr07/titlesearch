@@ -2,17 +2,10 @@ import type { OrderCensus } from "@titlepipe/contract";
 import { cx, Kbd, ProgressMeter, Switch } from "../../components/ui";
 
 /**
- * THE WORKSTATION'S TOP BAR, measured off `reference-app.html`'s `isReview` —
- * and completed to the drawing under ⚠ RULING-2026-08-29
- * (`docs/frontend/design-2026-08/RULING-2026-08-29.md`): the bar now carries
- * the drawn meter with its mono "N/M VERIFIED" caption (both figures the
- * SERVER'S census — never a filter length), the drawn pill copy ("6 fields" /
- * "✓ Done"), and the drawn chord captions (C Confirm · E Edit · Q QC ·
- * J/K Nav · Z Zoom).
- *
- * SIX CHORDS, AND EVERY ONE IS INSTALLED. Rule 11: a screen may not advertise
- * a key it does not bind — `useReviewKeys.ts` installs all six, so the legend
- * and the bindings are one list (J and K share the drawn "J/K" chip).
+ * The workstation's top bar: the meter with its mono "N/M VERIFIED" caption
+ * (both figures the server's census — never a filter length), the remaining
+ * pill, and the chord captions. Every advertised chord is installed by
+ * `useReviewKeys.ts`, so the legend and the bindings are one list.
  */
 export function WorkstationBar(props: {
   readonly orderRef: string | null;
@@ -31,7 +24,7 @@ export function WorkstationBar(props: {
         <h1 className="text-body font-bold leading-tight text-ink-primary">
           Examination Workstation
         </h1>
-        {/* Rule 3: an order reference is an identifier. */}
+        {/* An order reference is an identifier, so it is mono. */}
         {props.orderRef !== null && (
           <span className="font-mono text-label leading-flat text-ink-muted">
             {props.orderRef}
@@ -39,7 +32,7 @@ export function WorkstationBar(props: {
         )}
       </div>
 
-      {/* The drawn meter: mono caption, then the dots — both server figures. */}
+      {/* The meter: mono caption, then the dots — both server figures. */}
       {settled !== undefined && decisions !== undefined && (
         <div className="flex shrink-0 items-center gap-4">
           <span
@@ -63,9 +56,9 @@ export function WorkstationBar(props: {
         )}
       </p>
 
-      {/* A VIEW ORDER OVER THE SECTIONS, and it re-ranks nothing: it reads the
-          `flagged` boolean each section already carries from the server's own
-          queue membership. No count, no score, no threshold. */}
+      {/* A view order over the sections, and it re-ranks nothing: it reads
+          the `flagged` boolean each section already carries from the
+          server's own queue membership. No count, no score, no threshold. */}
       <Switch
         data-testid="flagged-first"
         isSelected={props.flaggedFirst}
@@ -88,9 +81,9 @@ export function WorkstationBar(props: {
 }
 
 /**
- * WHAT THE SERVER IS STILL WAITING ON, in the drawn register: "6 fields", or
- * "✓ Done" once nothing is. Zero is a real answer; absent is the server
- * declining to say, and prints as that rather than as 0.
+ * What the server is still waiting on: "6 fields", or "✓ Done" once nothing
+ * is. Zero is a real answer; absent is the server declining to say, and
+ * prints as that rather than as 0.
  */
 function RemainingPill(props: { readonly remaining: number | undefined }) {
   const remaining = props.remaining;
@@ -122,7 +115,7 @@ function RemainingPill(props: { readonly remaining: number | undefined }) {
   );
 }
 
-/** One hotkey chip. `Kbd` carries the key's own register (rule 3: kbd is mono). */
+/** One hotkey chip. `Kbd` carries the key's own register. */
 function Chip(props: { readonly k: string; readonly label: string }) {
   return (
     <span className="flex items-center gap-2 rounded-pill border border-line-strong bg-surface-sunken px-4 py-1 text-label leading-flat text-ink-secondary">

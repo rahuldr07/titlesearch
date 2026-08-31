@@ -2,8 +2,8 @@ import { z } from "zod";
 import { NaReason } from "./enums.js";
 
 /**
- * Second half of the surface added under the 2026-08-28 ruling: intake
- * quarantine, templates, the typist's call-back sheet, and jurisdiction rules.
+ * Intake quarantine, templates, the typist's call-back sheet, and
+ * jurisdiction rules.
  */
 
 // ---- Intake: quarantine gateway + optical profile ---------------------------
@@ -20,8 +20,8 @@ export const QuarantineStep = z.object({
 export type QuarantineStep = z.infer<typeof QuarantineStep>;
 
 /**
- * Thresholds stay SERVER-OWNED. Each reading carries the server's verdict; the
- * client never compares a value against a floor.
+ * Thresholds stay server-owned. Each reading carries the server's verdict;
+ * the client never compares a value against a floor.
  */
 export const OpticalReading = z.object({
   id: z.string(),
@@ -33,13 +33,11 @@ export const OpticalReading = z.object({
 export type OpticalReading = z.infer<typeof OpticalReading>;
 
 /**
- * ⚠ RULED 2026-08-29 — `docs/frontend/design-2026-08/RULING-2026-08-29.md`.
- * What the server READ OFF THE PACKAGE once quarantine passed: the reference's
- * intake fills its read-only Page Count and Jurisdiction row from the recorded
- * clerk stamp ("never hand-entered"), so the values arrive HERE rather than on
- * `CreateOrderRequest`. The two `*_label` members and the note pair are
- * finished sentences — the client captions nothing and composes nothing.
- * `null` until every gateway step passes: an unread stamp resolves nothing.
+ * What the server read off the package once quarantine passed — jurisdiction
+ * comes from the recorded clerk stamp, never hand-entered, so the values
+ * arrive here rather than on `CreateOrderRequest`. The `*_label` members and
+ * the note pair are finished sentences — the client captions nothing. Null
+ * until every gateway step passes: an unread stamp resolves nothing.
  */
 export const QuarantineResolved = z.object({
   jurisdiction: z.string(),
@@ -56,10 +54,10 @@ export const QuarantineResolved = z.object({
 export type QuarantineResolved = z.infer<typeof QuarantineResolved>;
 
 /**
- * Served by `GET /api/orders/{id}/quarantine` and — since RULING-2026-08-29's
- * one-act intake — by `POST /api/intake/quarantine` (multipart, the `package`
- * file alone), the gateway the reference runs the moment a file is dropped,
- * BEFORE any order exists. `order_id` is null on that pre-order read.
+ * Served by `GET /api/orders/{id}/quarantine` and by
+ * `POST /api/intake/quarantine` (multipart, the `package` file alone) — the
+ * gateway that runs the moment a file is dropped, before any order exists.
+ * `order_id` is null on that pre-order read.
  */
 export const QuarantineResponse = z.object({
   order_id: z.string().nullable(),
@@ -74,13 +72,10 @@ export type QuarantineResponse = z.infer<typeof QuarantineResponse>;
 // ---- Templates architect ----------------------------------------------------
 
 /**
- * ⚠ RULED 2026-08-29 — `docs/frontend/design-2026-08/RULING-2026-08-29.md`.
- * The whole region below is the reference app's Templates Architect, built as
- * drawn. The pre-ruling surface was one read (`version`, seven blocks, two
- * samples, a spec string); the reference draws a CATALOG of client templates,
- * a live sheet per template, a per-block wording expression with its product
+ * The Templates Architect surface: a catalog of client templates, a live
+ * sheet per template, a per-block wording expression with its product
  * baseline, a four-state NA matrix, token palettes, and scoped sample
- * documents — so the wire carries each of those, server-authored.
+ * documents — each server-authored.
  */
 
 /** The four declared absence strings a block must state (never collapsed). */
@@ -143,9 +138,9 @@ export const TemplateSummary = z.object({
 export type TemplateSummary = z.infer<typeof TemplateSummary>;
 
 /**
- * `GET /api/templates` — the catalog, with the filter vocabularies the rail's
- * two selects offer. The vocabularies are SERVED: a client list spelled in a
- * component is a client list the contract never named.
+ * `GET /api/templates` — the catalog, with the filter vocabularies the
+ * rail's two selects offer. The vocabularies are served: a client list
+ * spelled in a component is a list the contract never named.
  */
 export const TemplateCatalogResponse = z.object({
   templates: z.array(TemplateSummary),
@@ -183,11 +178,9 @@ export const TemplateDetailResponse = TemplateSummary.extend({
 export type TemplateDetailResponse = z.infer<typeof TemplateDetailResponse>;
 
 /**
- * `PATCH /api/templates/{id}` — the drawn Save. Posts the edited wording per
- * block key; guarded by `template.edit` (the reference draws the Save DISABLED
- * for the Typist seat with "Read-only — RBAC grants VIEW", which the ruling
- * keeps for THIS surface in place of absent-not-dimmed). The server answers
- * with the saved draft's version.
+ * `PATCH /api/templates/{id}` — posts the edited wording per block key;
+ * guarded by `template.edit`. The server answers with the saved draft's
+ * version.
  */
 export const TemplateSaveRequest = z.object({
   wording: z.record(z.string(), z.string()),
@@ -221,10 +214,9 @@ export const SheetSection = z.object({
 export type SheetSection = z.infer<typeof SheetSection>;
 
 /**
- * `GET /api/blind/{order}/schedule` — what to key, in keying order.
- *
- * A BLIND-SIDE shape: it carries no machine value, no confidence and no other
- * seat's entry, so a typist reading it learns nothing about the model's answer.
+ * `GET /api/blind/{order}/schedule` — what to key, in keying order. A
+ * blind-side shape: no machine value, no confidence, no other seat's entry,
+ * so a typist reading it learns nothing about the model's answer.
  */
 export const CaptureScheduleResponse = z.object({
   order_id: z.string(),
@@ -265,13 +257,10 @@ export type JurisdictionResponse = z.infer<typeof JurisdictionResponse>;
 // ---- rail badges ------------------------------------------------------------
 
 /**
- * ⚠ RULED 2026-08-29 — `docs/frontend/design-2026-08/RULING-2026-08-29.md`:
- * "counts on rail doors, stage badges … are drawn, so they are built."
- *
- * `GET /api/rail` — the three door ornaments the reference app's rail draws.
- * Each arrives FINISHED: `qc` is the pill's whole text ("1 QC"), not a number
- * the client captions, and `template_version` is quoted from the templates
- * resource rather than restated. A count of what sits, never a rate.
+ * `GET /api/rail` — the three door ornaments the rail draws. Each arrives
+ * finished: `qc` is the pill's whole text ("1 QC"), not a number the client
+ * captions, and `template_version` is quoted from the templates resource
+ * rather than restated. A count of what sits, never a rate.
  */
 export const RailBadgesResponse = z.object({
   /** The All Orders door's pill — the browse endpoint's own total. */

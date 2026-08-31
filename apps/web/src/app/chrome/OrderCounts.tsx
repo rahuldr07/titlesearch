@@ -3,18 +3,10 @@ import { orderFields } from "../../shared/queries";
 import { get } from "../../shared/api";
 
 /**
- * THE FOUR FIGURES, AND NOT ONE OF THEM IS COUNTED HERE.
- *
- * `OrderCensus` (`endpoints.ts:160`) is the server's answer to "how many", and
- * the comment on it names this component as the reason it had to exist: the
- * strip used to filter the `fields` array for
- * `value !== null && source_doc_id === null && source_page === null &&
- * readings.length === 0` and print the result as `No source`. That is the
- * browser ruling on provenance — a server judgement (hard rule 3), and one the
- * screen could not cite. So the four members are printed, never tallied.
- *
- * A CENSUS, NEVER A RATE. Nothing here is per-hour, per-person or per-period,
- * and INVARIANT 23 means nothing here ever may be.
+ * The four figures, and not one of them is counted here. `OrderCensus` is
+ * the server's answer to "how many" — tallying the fields array in the
+ * browser would be the client ruling on provenance, a server judgement. The
+ * four members are printed, never tallied, and a census is never a rate.
  */
 export function OrderCounts(props: { readonly orderId: string }) {
   const descriptor = orderFields(props.orderId);
@@ -23,13 +15,14 @@ export function OrderCounts(props: { readonly orderId: string }) {
     queryFn: () => get(descriptor.path, descriptor.schema),
   });
 
-  // INVARIANT 59 — a region that has not answered yet says nothing, rather than
-  // standing four zeroes in for an answer nobody has given.
+  // A region that has not answered yet says nothing, rather than standing
+  // four zeroes in for an answer nobody has given.
   if (fields.data === undefined) return null;
 
   const census = fields.data.census;
-  /* ABSENT IS NOT ZERO. `census` is optional on the wire and its silence is a
-     statement: the server did not say. Printing `0 fields` would invent one. */
+  /* Absent is not zero. `census` is optional on the wire and its silence is
+     a statement: the server did not say. Printing `0 fields` would invent
+     one. */
   if (census === undefined) {
     return (
       <span data-testid="order-counts" className="text-meta leading-flat text-ink-faint">
@@ -48,7 +41,7 @@ export function OrderCounts(props: { readonly orderId: string }) {
   );
 }
 
-/** Rule 3: a count is data, so it is mono — and tabular, so 9 and 10 are one width. */
+/** A count is data, so it is mono — and tabular, so 9 and 10 are one width. */
 function Figure(props: { readonly label: string; readonly value: number }) {
   return (
     <div className="flex items-baseline gap-2">

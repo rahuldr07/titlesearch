@@ -5,9 +5,9 @@ import { Label } from "./label";
 import { Input } from "./input";
 
 /**
- * RECIPES §Inputs: "Labels: 11px w700 grey above." The stories exist mostly to
- * prove the label does NOT compete with the value it names — put a 13px value
- * under an 11px label and the hierarchy reads at a glance or it does not.
+ * The stories exist mostly to prove the label does not compete with the
+ * value it names — a 13px value under an 11px label reads at a glance or it
+ * does not.
  */
 const meta = {
   title: "ui/Label",
@@ -27,7 +27,7 @@ type Story = StoryObj<typeof meta>;
 
 export const Rest: Story = {};
 
-/** Rule 4: sentence case. ALL-CAPS is legal only for rubrics and certificates. */
+/** Sentence case. All-caps is legal only for rubrics and certificates. */
 export const SentenceCase: Story = { args: { children: "Recorded date and time" } };
 
 /** The assembly it is for: 11px grey above, 13px ink below. */
@@ -57,9 +57,9 @@ export const AlongsideBlockedControl: Story = {
 };
 
 /**
- * An invalid field does NOT turn its label red. The control gets a halt border
- * and the message gets halt ink; tinting all three makes a wrong digit look
- * like a broken screen.
+ * An invalid field does not turn its label red. The control gets a halt
+ * border and the message gets halt ink; tinting all three makes a wrong
+ * digit look like a broken screen.
  */
 export const AlongsideInvalidControl: Story = {
   render: () => (

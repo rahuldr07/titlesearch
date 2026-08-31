@@ -2,18 +2,12 @@ import type { ManifestBlock } from "@titlepipe/contract";
 import { ContractGap } from "../../entities/contract/ContractGap";
 
 /**
- * THE MANIFEST INDEX — one row per block the server composed, in the server's
- * own order, under the server's own numerals.
- *
- * The per-block figures are printed as the two numbers they are (`cited` of
- * `field_count`) and carry NO mark. A ✓/◆ here would be this screen deciding
- * that a block is short of citations, and no such verdict exists on the wire —
- * the gates are where citation coverage is adjudicated, by the server.
- *
- * The rail's two other prototype affordances are filed rather than drawn — see
- * the gap below. Both would need a field that does not exist, and a tab that
- * shows the same document twice, or a toggle that omits a block only in the
- * browser, teaches a reviewer that the sheet obeys them.
+ * One row per block the server composed, in the server's own order. The
+ * per-block figures carry no mark — a ✓/◆ here would be this screen deciding
+ * that a block is short of citations, and no such verdict exists on the wire;
+ * the gates are where citation coverage is adjudicated. Two of the design's
+ * rail affordances are filed as the gap below rather than drawn — both need
+ * fields that do not exist.
  */
 export function ManifestNav(props: { readonly blocks: readonly ManifestBlock[] }) {
   return (
@@ -29,7 +23,6 @@ export function ManifestNav(props: { readonly blocks: readonly ManifestBlock[] }
               data-testid={`manifest-nav-${block.id}`}
               className="tp-state flex items-baseline gap-5 rounded-md px-5 py-4 hover:bg-row-hover"
             >
-              {/* Rule 3: a block numeral is an identifier on a record. */}
               <span className="w-10 shrink-0 font-mono text-label leading-close text-ink-faint">
                 {block.numeral}
               </span>

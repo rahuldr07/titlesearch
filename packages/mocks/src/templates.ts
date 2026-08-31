@@ -10,14 +10,10 @@ import { guard, err } from "./guard.js";
 import { appendAudit, auditActor } from "./audit.js";
 
 /**
- * TEMPLATES ARCHITECT HANDLERS — the catalog, the per-template detail and the
- * drawn Save, added under RULING-2026-08-29. Data is the reference app's own
- * fixture set (`CLIENT_TEMPLATES`, `DEFAULT_WORDING`, `TOKENS`, `SAMPLES`,
- * naMatrix), served rather than baked into components.
- *
- * ONE MUTABLE STORE. A save PATCHes wording here and the next detail read
- * reflects it — the client never keeps an edited copy the server has not
- * accepted. Reset on reload, like every mutation in this package.
+ * Templates Architect handlers — the catalog, the per-template detail, and
+ * Save. One mutable store: a save PATCHes wording here and the next detail
+ * read reflects it — the client never keeps an edited copy the server has
+ * not accepted. Reset on reload, like every mutation in this package.
  */
 
 /** Quoted by `GET /api/rail` (via design.ts) and the catalog's first card. */
@@ -121,7 +117,6 @@ const SAMPLE_DOCS = [
   { id: "fa_01", name: "sample_fa_bringdown_2026.pdf", doc_id: "DOC-192-E", uploaded: "May 28, 2026", blocks_extracted: 4, notes: "Update report since prior title policy effective date", snippet: "BRINGDOWN SEARCH: No intervening encumbrances recorded between effective dates.", box: "[180, 220, 590, 310]", page: 1 },
 ] as const;
 
-/** The reference's `CLIENT_TEMPLATES`, verbatim. */
 const templateStore: TemplateRecord[] = [
   { id: "tpl_mc_co_v4", name: "Current Owner Search (v4.2)", client: "Mortgage Connect", product: "Current Owner", version: TEMPLATE_VERSION, status: "active", mapped_fields: 132, total_fields: 132, sha256: "8e2f1d9a04cb68314e6b21908bf9321c172a39f60e909a34bc1a72df8901c341", source_ref: "sample_mc_atlanta_co_2026.pdf", source_citation: "Page 2, §3 (Vesting) & Page 4 (Taxes)", sample_ids: ["mc_01", "mc_02"], wording: { ...CLIENT_WORDING }, draft_saved: false },
   { id: "tpl_or_to_v2", name: "Two Owner Search (v2.1)", client: "Old Republic", product: "Two Owner", version: "v2.1", status: "active", mapped_fields: 132, total_fields: 132, sha256: "19ad420b910e5436c64fa829031ef19c8f0012ea88b02130e9d6d37fa1249b55", source_ref: "sample_or_fulton_to_2026.pdf", source_citation: "Page 1, §1 (Header) & Page 3 (Deeds)", sample_ids: ["or_01"], wording: { ...CLIENT_WORDING }, draft_saved: false },
@@ -158,7 +153,7 @@ function blocks(t: TemplateRecord): TemplateSheetBlock[] {
   }));
 }
 
-/** The compiled spec, composed HERE — the browser prints it verbatim. */
+/** The compiled spec, composed here — the browser prints it verbatim. */
 function exportSpec(t: TemplateRecord): string {
   return JSON.stringify(
     {
@@ -221,11 +216,7 @@ export const templateHandlers = [
     return HttpResponse.json(detail(t));
   }),
 
-  /**
-   * The drawn Save. Guarded by `template.edit` — the reference disables the
-   * button for the Typist seat ("Read-only — RBAC grants VIEW"), and this 403
-   * is the same table saying the same thing on the wire.
-   */
+  /** Save, guarded by `template.edit` — the 403 is the authz table on the wire. */
   http.patch("/api/templates/:id", async ({ params, request }) => {
     const denied = guard(request, "template.edit");
     if (denied) return denied;

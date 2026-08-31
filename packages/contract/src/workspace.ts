@@ -1,23 +1,11 @@
 import { z } from "zod";
 
 /**
- * The workspace layer — the config, admin and intake resources the reviewer
- * flow reads but does not own.
- *
- * These shapes were carried as private constants inside individual screens for
- * one build. That was the wrong home twice over: nothing validated them, and a
- * real API could not drop in behind them. Here they are typed once, MSW serves
- * them, and every screen parses at the wire boundary like everything else.
- *
- * READ SHAPES ONLY, deliberately. Every resource below is something a screen
- * DISPLAYS. The writes that would go with them — publish a grid, retire a line,
- * resolve a checklist, close a completeness gap — are state transitions the
- * server owns, and are absent rather than guessed at. A GET is a description of
- * data; a POST would be this package inventing a state machine from a screen,
- * which is the one thing the rulebook forbids outright.
- *
- * Rulings Q4–Q10 still govern what the intake config layer MEANS. These shapes
- * carry what the approved design displays; they do not settle those questions.
+ * The workspace layer — the config, admin, and intake resources the reviewer
+ * flow reads but does not own. Read shapes only, deliberately: the writes
+ * that would go with them (publish a grid, retire a line, resolve a
+ * checklist) are state transitions the server owns, and are absent rather
+ * than guessed at.
  */
 
 // ---- products & sign-off config -------------------------------------------
@@ -97,23 +85,19 @@ export const ClientRecord = z.object({
   signoff_defaults: z.record(z.string(), z.string()),
   overrides: z.array(ClientOverride),
   /**
-   * ⚠ RULED 2026-08-29 (`docs/frontend/design-2026-08/RULING-2026-08-29.md`):
-   * the reference's intake client select draws "(14 sign-offs)" per option, so
-   * the figure rides the wire — FINISHED ("12 sign-offs"), the server's census
-   * of the client's effective checklist, never a browser tally over `effective`
-   * (hard rule 3). Optional: absent is "the server did not say".
+   * The finished label ("12 sign-offs") — the server's census of the
+   * client's effective checklist, never a browser tally over `effective`.
+   * Optional: absent is "the server did not say".
    */
   sign_offs: z.string().optional(),
 });
 export type ClientRecord = z.infer<typeof ClientRecord>;
 
 /**
- * The resolved checklist for one client against one product.
- *
- * RESOLUTION IS SERVER WORK. This is the answer, transcribed — never something
- * a screen recomputes from the baseline plus the override list. Two resolvers
- * disagreeing is exactly the defect that would ship a search missing a line
- * somebody thought was covered.
+ * The resolved checklist for one client against one product. Resolution is
+ * server work — never recomputed by a screen from the baseline plus the
+ * override list; two resolvers disagreeing is exactly the defect that ships
+ * a search missing a line somebody thought was covered.
  */
 export const EffectiveLine = z.object({
   line_id: z.string(),

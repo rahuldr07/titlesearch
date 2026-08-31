@@ -5,15 +5,10 @@ import { cx } from "@/components/ui/cx"
 import { descriptionClass, errorClass } from "@/components/ui/field-chrome"
 
 /**
- * A SINGLE FIELD AND ITS PARTS. The containers (set, legend, group, separator,
- * wrapping label) live in `field-set.tsx`; both are re-exported from here so a
- * screen still imports one module.
- *
- * `data-[invalid=true]:text-destructive` became `text-state-halt`, and it is
- * the ONLY thing the invalid state colours at this level: the registry tinted
- * the whole field red, which turns a wrong postcode into a screen that looks
- * broken. The control gets a halt border, the message gets halt ink, and the
- * label stays grey.
+ * A single field and its parts; the containers live in field-set.tsx and are
+ * re-exported from here so a screen still imports one module. Invalid
+ * colours only the message and the control border — tinting the whole field
+ * red turns a wrong postcode into a screen that looks broken.
  */
 const fieldVariants = cva(
   "group/field flex w-full gap-4 data-[invalid=true]:text-state-halt",
@@ -65,9 +60,9 @@ function FieldContent({ className, ...props }: React.ComponentProps<"div">) {
 }
 
 /**
- * The name of a field drawn as TEXT rather than as a `<label>` — a read-only
+ * The name of a field drawn as text rather than as a <label> — a read-only
  * row, or a row whose control labels itself. 13px, one tier above the 11px
- * form label, because this one sits BESIDE its value rather than above it.
+ * form label, because this one sits beside its value rather than above it.
  */
 function FieldTitle({ className, ...props }: React.ComponentProps<"div">) {
   return (
@@ -84,10 +79,8 @@ function FieldTitle({ className, ...props }: React.ComponentProps<"div">) {
 }
 
 /**
- * Standing help, and rule 9's inline home: a disabled control states its reason
- * HERE as well as in `title`, because a tooltip is unreachable on touch and by
- * most screen readers (disabled.ts). `hover:text-primary` on a link became the
- * action colour, which is the only place a link may spend it.
+ * Standing help, and the inline home for a disabled control's reason — a
+ * tooltip is unreachable on touch and by most screen readers (disabled.ts).
  */
 function FieldDescription({ className, ...props }: React.ComponentProps<"p">) {
   return (
@@ -106,10 +99,9 @@ function FieldDescription({ className, ...props }: React.ComponentProps<"p">) {
 }
 
 /**
- * The SERVER's message. `shared/notify.ts`: the client never authors refusal
- * wording, and a field-level refusal is refusal wording. `role="alert"` is kept
- * from the registry — a message that appears after submit and is never
- * announced is a message a screen-reader user does not receive.
+ * The server's message — the client never authors refusal wording
+ * (shared/notify.ts). role="alert" stays: a message that appears after
+ * submit and is never announced is one a screen-reader user does not receive.
  */
 function FieldError({
   className,

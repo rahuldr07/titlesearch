@@ -2,16 +2,9 @@ import { expect, test } from "vitest";
 import { readFileSync } from "node:fs";
 
 /**
- * REVIEW-03 B5. `entities.css` was imported by NOTHING for an entire rebuild.
- * `tp-paper-grain`, `tp-paper-tilt` and `tp-na-hatch` were never emitted, so
- * `PaperSheet` rendered with the class names on the element and
- * `backgroundImage: none, transform: none` — a flat beige rectangle where rule
- * 8 requires paper, and NOT_STATED without the hatch that is its distinguishing
- * channel against NOT_FOUND (rule 14, INVARIANT 7).
- *
- * A missing @import is invisible to tsc, eslint, check-rules AND Storybook,
- * because all four see the class NAME and none sees whether a rule was emitted.
- * So this asserts the import graph — the only layer where the failure lives.
+ * A missing @import is invisible to tsc, eslint, check-rules and Storybook:
+ * all four see the class name and none sees whether a rule was emitted. So
+ * these assert the import graph — the only layer where the failure lives.
  */
 const styles = readFileSync(new URL("../styles.css", import.meta.url), "utf8");
 

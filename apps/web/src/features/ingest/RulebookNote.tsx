@@ -1,14 +1,9 @@
 import type { QuarantineResolved } from "@titlepipe/contract";
 
 /**
- * THE NOTE UNDER THE PAIRED ROW — amber until quarantine passes, then green.
- *
- * ⚠ RULED 2026-08-29 (RULING-2026-08-29.md): the amber copy is the reference's
- * VERBATIM — it is the product's own statement of why jurisdiction stopped
- * being typable (CONFLICT-intake-hand-typed-jurisdiction.md, resolved). The
- * green state prints the SERVER's sentences (`QuarantineResolved.note_*`),
- * because "the rulebook bound" is a server claim the browser has no standing
- * to compose.
+ * Amber until quarantine passes, then green. The green state prints the
+ * server's sentences (`QuarantineResolved.note_*`) — "the rulebook bound" is
+ * a server claim the browser has no standing to compose.
  */
 export function RulebookNote(props: {
   readonly resolved: QuarantineResolved | null;

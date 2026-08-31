@@ -6,14 +6,10 @@ import { onPanel } from "./kitGround";
 import { Frame, Decision, Evidence } from "./splitStoryData";
 
 /**
- * THE §7 WORKSTATION, AS GEOMETRY. The band at both ends and at rest, both
- * orientations, and the assembly the screen actually builds — two panes each
- * scrolling internally inside a frame that does not.
- *
- * The two things about this component that are INVISIBLE on screen — the WCAG
- * 2.2 §2.5.7 keyboard alternative to dragging, and the chord scope mark — are
- * `resizable.a11y.stories.tsx`. They are assertions rather than pictures, and
- * mixing them in here is how the pictures stop being looked at.
+ * The workstation split, as geometry: the band at both ends and at rest,
+ * both orientations, and the assembly the screen actually builds — two panes
+ * each scrolling internally inside a frame that does not. The invisible
+ * behaviours are proved in resizable.a11y.stories.tsx.
  */
 const meta = {
   title: "ui/Split",

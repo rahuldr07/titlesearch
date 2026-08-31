@@ -1,25 +1,16 @@
 import type { ReactNode } from "react";
 
 /**
- * THE SPLIT'S STORY FIXTURES, SHARED BY TWO STORY FILES.
- *
- * `resizable.stories.tsx` shows the geometry — the band, both orientations, the
- * panes scrolling inside it. `resizable.a11y.stories.tsx` shows the two things
- * that are invisible on screen and are the reason the component was adapted at
- * all: the WCAG 2.2 §2.5.7 keyboard alternative to dragging, and the chord
- * scope mark. Two subjects, two files, one set of contents — repeating the
- * fixture in both is how the two drift into demonstrating different things.
- *
- * A fixture module rather than an export from a `.stories.tsx`: Storybook reads
- * every non-`default` export of a story file as A STORY, so a shared `Frame`
- * exported from one would appear in the gallery as a broken entry.
+ * The split's story fixtures, shared by two story files. A fixture module
+ * rather than an export from a .stories.tsx: Storybook reads every
+ * non-default export of a story file as a story, so a shared Frame exported
+ * from one would appear in the gallery as a broken entry.
  */
 
 /**
- * A split with no height is two panels of nothing. `overflow-hidden` is the
- * frame's own rule (styles.css: the app is one viewport tall and never
- * scrolls), restated here so a story cannot demonstrate the thing the design
- * forbids.
+ * A split with no height is two panels of nothing; `overflow-hidden`
+ * restates the frame's own rule so a story cannot demonstrate the thing the
+ * design forbids.
  */
 export function Frame({ children }: { readonly children: ReactNode }) {
   return (
@@ -29,7 +20,7 @@ export function Frame({ children }: { readonly children: ReactNode }) {
   );
 }
 
-/** The left half: the decision column, at the type sizes §7 actually uses. */
+/** The left half: the decision column. */
 export function Decision() {
   return (
     <div className="flex flex-col gap-5 p-8">
@@ -43,7 +34,7 @@ export function Decision() {
   );
 }
 
-/** The right half. Rule 8: evidence renders AS PAPER — serif, warm stock. */
+/** The right half. Evidence renders as paper — serif, warm stock. */
 export function Evidence() {
   return (
     <div className="h-full bg-surface-paper p-8 font-serif leading-document text-page-ink">

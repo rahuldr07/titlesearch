@@ -7,19 +7,16 @@ import { post } from "../../shared/api";
 import { Kbd } from "../../components/ui";
 
 /**
-
- * THE PROFILE BLOCK — the design's "deep well" at the foot of the rail. The WELL
-
- * ITSELF is `SidebarFooter` (`--color-rail-deep`, top hairline); this is its contents.
-
+ * The profile block — the "deep well" at the foot of the rail. The well
+ * itself is `SidebarFooter`; this is its contents.
  */
 export function ProfileBlock() {
   const account = useSignedIn((s) => s.account);
   const signOut = useSignedIn((s) => s.signOut);
   const toggle = useOverlays((s) => s.toggle);
 
-  // The rail does not render for a signed-out reader (INVARIANT 45), so this
-  // is a structural guard rather than a state a reader reaches.
+  // The rail does not render for a signed-out reader, so this is a
+  // structural guard rather than a state a reader reaches.
   if (account === null) return null;
 
   return (
@@ -50,30 +47,23 @@ export function ProfileBlock() {
           <span className="truncate text-meta font-semibold leading-flat text-surface-panel">
             {account.name}
           </span>
-          {/* 11px, not the design's 10.5 — see the header. Mono: rule 3, an
-              email address is an identifier. */}
+          {/* Mono: an email address is an identifier. */}
           <span className="truncate font-mono text-label leading-flat text-rail-ink-muted">
             {account.email}
           </span>
         </div>
         {/*
-         * THE PILL DOES NOT SHARE THE NAME'S ROW BY ACCIDENT — it did once, and
-         * "Sign out" was clipped off the 240px column, caught by screenshotting
-         * the built rail rather than by any assertion. `justify-between` on a
-         * fixed-width parent silently overflows rather than wrapping, so the
-         * last control simply left the frame while the DOM still had it and
-         * every text-based check stayed green. It fits here because the name
-         * block is `min-w-0` and truncates, which the pill is not asked to do.
+         * `justify-between` on a fixed-width parent silently overflows
+         * rather than wrapping. The pill fits on this row only because the
+         * name block is `min-w-0` and truncates.
          */}
         <span className="shrink-0 rounded-pill border border-rail-line px-4 py-1 text-label font-bold leading-flat text-rail-accent">
           {account.role}
         </span>
       </div>
 
-      {/* ⚠ RULED 2026-08-29 (RULING-2026-08-29.md): the reference's `roleHint`
-          line — what this role may do, under the name row. The lines live in
-          `demoAccounts.ts` beside the roster, per role, the reference's own
-          wording wherever its roster carries the role. */}
+      {/* What this role may do, under the name row. The lines live in
+          `demoAccounts.ts` beside the roster. */}
       <p data-testid="role-hint" className="text-label leading-body text-rail-ink-muted">
         {ROLE_HINTS[account.role]}
       </p>
@@ -95,12 +85,10 @@ export function ProfileBlock() {
 }
 
 /**
- * ⚠ RULED 2026-08-29 (RULING-2026-08-29.md): the reference's `resetWalkthrough`
- * control — "Restore the demo to fresh intake". `POST /api/demo/reset` re-seeds
- * the mock stores server-side (the reset is the SERVER'S, not a client purge of
- * its own caches pretending to be one), and every query is then refetched so
- * the screens show the reseeded truth. The signed-in seat survives, exactly as
- * the reference preserves `user` through its reset.
+ * Restore the demo to fresh intake. `POST /api/demo/reset` re-seeds the mock
+ * stores server-side — the reset is the server's, not a client purge of its
+ * own caches — and every query is then refetched so the screens show the
+ * reseeded truth. The signed-in seat survives.
  */
 function ResetButton() {
   const queryClient = useQueryClient();

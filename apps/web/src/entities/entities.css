@@ -1,15 +1,7 @@
 /*
- * THE HATCH, AND WHY IT IS CSS RATHER THAN A CLASS LIST.
- *
- * `tokens.css` §"the four no-value states": each NA member carries a border
- * STYLE and a FILL as well as an ink, "and that is what survives greyscale and
- * a red-green deficiency both." Three of the four express their fill with a
- * Tailwind utility. NOT_STATED's is a hatch stripe, which no utility spells, and
- * `check-rules.mjs` bans the arbitrary value that would spell it inline.
- *
- * Also the paper register (rule 8): grain and tilt are CSS art — the design
- * README is explicit that there are "no binary assets" and "all paper/scan
- * artwork is CSS".
+ * The NA hatch and the paper register, as CSS: NOT_STATED's hatch stripe has
+ * no Tailwind utility spelling and the arbitrary value is banned, and all
+ * paper/scan artwork is CSS — no binary assets ship.
  */
 
 /* NOT_STATED. The document is silent: a struck-through stock, not an empty one. */
@@ -22,9 +14,8 @@
 }
 
 /*
- * PAPER GRAIN. Rule 8: evidence renders as paper — warm stock, never a grey
- * placeholder bar. Two crossed hairline gradients read as laid stock at 100%
- * and disappear into texture below it, which is what a scan does.
+ * Paper grain. Two crossed hairline gradients read as laid stock at 100% and
+ * disappear into texture below it, which is what a scan does.
  */
 @utility tp-paper-grain {
   background-image:
@@ -34,9 +25,8 @@
 }
 
 /*
- * The sheet's own tilt (−.35°) and the clerk stamp's (−3.5°), per design
- * §Screens 7. Ten times the sheet's angle, because a stamp is applied by a hand
- * and a page is only ever laid down slightly crooked.
+ * The sheet's own tilt (−.35°) and the clerk stamp's (−3.5°) — a stamp is
+ * applied by a hand, a page is only ever laid down slightly crooked.
  */
 @utility tp-paper-tilt {
   transform: rotate(-0.35deg);
@@ -47,38 +37,29 @@
 }
 
 /*
- * THE DEGRADED-SCAN FILTER. `--filter-*` is NOT a Tailwind v4 theme namespace
- * (tokens.css §layering says so of --space-*, --z-* and --filter-* alike), so
- * `filter-scan` generates no utility and would have rendered nothing while the
- * build stayed green — the exact silent failure the token file warns about.
+ * The degraded-scan filter. `--filter-*` is not a Tailwind v4 theme
+ * namespace, so `filter-scan` generates no utility — without this the class
+ * renders nothing while the build stays green.
  */
 @utility tp-scan-filter {
   filter: var(--filter-scan);
 }
 
 /*
- * THE CITATION BOX: "1.5px accent + 13% fill" (design §Screens 7). Neither is
- * expressible as a utility — there is no 1.5px border width in Tailwind's scale
- * and check-rules.mjs bans the arbitrary value that would spell one. The fill
- * is the evidence mark's own token (16%, the register's value) with the accent
- * rule drawn at the design's weight.
+ * The citation box. A 1.5px border width is not on Tailwind's scale and the
+ * arbitrary value is banned, so it lives here.
  */
 @utility tp-citation-box {
   border: 1.5px solid var(--color-border-evidence);
 }
 
 /*
- * ZOOM-TO-CITATION — ⚠ RULED 2026-08-29
- * (docs/frontend/design-2026-08/RULING-2026-08-29.md): the reference animates
- * the evidence sheet to scale(1.85) over 300ms cubic-bezier(.32,.72,0,1) with
- * the transform-origin at the cited region's centre, and the ruling builds it
- * as drawn. The origin arrives at runtime as two percentages computed from
- * `LineCoords`; §6 bans both an inline `style` attribute and an arbitrary
- * Tailwind length, so — like `CitedRegion`'s SVG geometry — the data rides
- * outside the class system: the component writes the two custom properties
- * through the DOM API and this utility reads them. 1.85 and the curve are the
- * reference's own values, quoted. Reduced motion still wins: styles.css's
- * @media block zeroes every transition-duration.
+ * Zoom-to-citation: the evidence sheet scales to 1.85 with the
+ * transform-origin at the cited region's centre. The origin arrives at
+ * runtime as two percentages computed from LineCoords — inline styles and
+ * arbitrary lengths are banned, so the component writes the two custom
+ * properties through the DOM API and this utility reads them. Reduced motion
+ * still wins: the global @media block zeroes every transition-duration.
  */
 @utility tp-zoom-cite {
   transition: transform 300ms cubic-bezier(0.32, 0.72, 0, 1);

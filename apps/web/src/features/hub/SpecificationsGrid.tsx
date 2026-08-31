@@ -4,18 +4,11 @@ import { HubSectionLabel } from "./HubSectionLabel";
 
 /**
  * What was ordered, over what span, against how many pages, and who signed for
- * it. Drawn to the prototype's 120px label column.
- *
- * Four of the prototype's seven rows are not here. `OrderContextResponse`
- * (`intake.ts:301`) carries order_ref, product, period_label, pages and stamp
- * and nothing else, so the situs address, the tax parcel id, the jurisdiction
- * and the "Client & Order #" line have no member on the one read an
- * order-scoped screen can reach. CONTRACT GAP, not filled with a constant.
- *
- * The three nulls mean different things (`intake.ts:301`), so each absent value
- * prints its own meaning — the design's `—` says all three at once. The
- * signature is a record with no way to edit it (`INVARIANTS:75`), and policy
- * prefill never fills it in (`intake.ts:66`).
+ * it. The situs address, tax parcel id, jurisdiction and client line have no
+ * member on `OrderContextResponse` — CONTRACT GAP, not filled with a constant.
+ * The nulls mean different things, so each absent value prints its own
+ * meaning. The signature is a record with no way to edit it, and policy
+ * prefill never fills it in.
  */
 export function SpecificationsGrid(props: {
   readonly context: OrderContextResponse | undefined;
@@ -23,7 +16,6 @@ export function SpecificationsGrid(props: {
 }) {
   return (
     <Card className="flex flex-col gap-8">
-      {/* The reference's block title, as drawn (RULING-2026-08-29). */}
       <HubSectionLabel>Abstract Specifications</HubSectionLabel>
 
       {props.context === undefined ? (
@@ -66,7 +58,7 @@ export function SpecificationsGrid(props: {
   );
 }
 
-/** `absent` is required wherever the wire may be null — rule 14 at order level. */
+/** `absent` says what a null on this row means — never a bare dash. */
 function Cell(props: {
   readonly term: string;
   readonly value: string | null;

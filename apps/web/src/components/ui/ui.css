@@ -1,31 +1,15 @@
 /*
- * MOTION AND SURFACE UTILITIES FOR THE PRIMITIVE KIT.
- *
- * These are @utility declarations rather than component classes: they compose
- * with Tailwind, they can be overridden by a later utility, and they keep the
- * three motion tokens (rule 10) reachable WITHOUT any component writing a
- * duration. `check-rules.mjs` bans `duration-[…]` shaped arbitrary values, so
- * this file is the only legal way to spend a timing, and there are exactly
- * three of them.
- *
- * Entry/exit hangs off react-aria's own `data-entering` / `data-exiting`
- * attributes rather than off `motion`. React Aria sets them around the
- * open/close transition and waits for the CSS to finish, so an overlay animates
- * with zero JS and — the part that matters — the exit is not cut short by the
- * unmount. `motion` is reserved for the few places a layout projection is
- * genuinely needed; a popover is not one.
+ * Motion and surface utilities for the primitive kit — the only legal way to
+ * spend a timing, since arbitrary duration values are banned. Entry/exit
+ * hangs off react-aria's own `data-entering` / `data-exiting` attributes:
+ * React Aria waits for the CSS to finish, so the exit is not cut short by
+ * the unmount.
  */
 
 /*
- * THE SPACING BASE. `packages/ui-tokens/tokens.css` declares --space-1…15 as
- * `N x 2px` and states "the app's spacing base is 2px (set in web-v2's
- * index.css)" — but nothing set it, so every `p-6` in this kit would have
- * rendered at Tailwind's stock 4px base, i.e. exactly double. That is a silent
- * failure of the same family the token file warns about for line-height: it
- * renders, it just renders wrong, and only a screenshot shows it.
- *
- * Set here rather than in `styles.css` because this is the file the kit owns.
- * `--space-6` (12px) is now `p-6`, as the token file says it should be.
+ * The spacing base. Without this, every `p-6` in the kit renders at
+ * Tailwind's stock 4px base — exactly double. Set here because this is the
+ * file the kit owns.
  */
 @theme {
   --spacing: 2px;
@@ -35,45 +19,21 @@
    a control that resizes on hover is a control that moves under the pointer. */
 @utility tp-state {
   /*
-   * THE SHORTHAND GOES FIRST, AND THE ORDER IS THE WHOLE POINT.
-   *
-   * `transition: var(--ease-state)` expands to `transition: 140ms ease`, and a
-   * shorthand RESETS every longhand it does not name — including
-   * `transition-property`, which goes back to its initial value, `all`. Written
-   * the other way round, the property list below was dead on arrival. Measured
-   * in the browser before this change:
-   *
-   *     tp_state_property: "all"     ← not the five named
-   *     tp_move_property:  "all"
-   *
-   * `all` is not a harmless superset. This utility is on 32 files' worth of
-   * interactive elements, and `all` transitions LAYOUT properties too — width,
-   * height, padding, insets — so any of them changing on hover or selection
-   * animated over 140ms instead of applying. That is what the explicit list was
-   * written to prevent, and the reason Impeccable's detector flags the pair.
-   *
-   * Same family as REVIEW-03's B3 and B5: a correct declaration, documented in
-   * detail, cancelled by the next line, and invisible to every gate because the
-   * class name is present and the stylesheet compiles.
+   * The shorthand must come first: `transition: var(--ease-state)` resets
+   * every longhand it does not name — including transition-property, back to
+   * `all` — so written the other way round the property list below is dead
+   * and layout properties animate too.
    */
   transition: var(--ease-state);
   transition-property: color, background-color, border-color, box-shadow, opacity;
 }
 
 /*
- * PRESS. The one state the kit was missing, and its absence was audible: a
- * button that changes on hover and then does nothing on mousedown reads as
- * broken for the ~120ms before the mutation answers.
- *
- * `data-pressed` is react-aria's own attribute, and it is why this is a
- * utility rather than `:active`. React Aria presses fire on touch, pen, mouse,
- * Space AND Enter, and it keeps the state while the pointer is held and
- * dragged inside the target -- `:active` does none of that consistently.
- *
- * Design rule 10 governs the shape of it: 140ms on state, and NOTHING BOUNCES.
- * So this is a settle, not a squash -- brightness and an inset shadow, and a
- * 1px translate rather than a scale. A scale on a text button reflows the
- * glyphs; a translate moves them as one.
+ * Press. Keyed to `data-pressed`, react-aria's own attribute, rather than
+ * `:active`: React Aria presses fire on touch, pen, mouse, Space and Enter,
+ * and hold while the pointer is dragged inside the target. A settle, not a
+ * squash — a 1px translate rather than a scale, because a scale on a text
+ * button reflows the glyphs.
  */
 @utility tp-press {
   &[data-pressed] {
@@ -103,23 +63,11 @@
 }
 
 /*
- * SCREEN ENTRY. Design README §App shell: "Screen-enter animation 260ms
- * cubic-bezier(.32,.72,0,1)" — the same curve and duration `--ease-enter`
- * already carries, which is why this reuses the token rather than restating
- * the numbers.
- *
- * Separate from `tp-enter` because that one keys off react-aria's
- * `data-entering`/`data-exiting`, which a screen root does not have: a route
- * component MOUNTS, it does not transition, so the animation runs
- * unconditionally on mount and there is nothing to exit. The global
- * prefers-reduced-motion rule at the foot of `styles.css` kills it.
+ * Screen entry. Separate from `tp-enter` because that one keys off
+ * react-aria's `data-entering`/`data-exiting`, which a screen root does not
+ * have: a route component mounts, it does not transition, so the animation
+ * runs unconditionally on mount and there is nothing to exit.
  */
 @utility tp-screen-enter {
   animation: tp-rise var(--ease-enter) both;
 }
-
-/*
- * WCAG 2.2 §2.5.8 Target Size (Minimum): 24x24 CSS px. Applied to every
- * interactive primitive in the kit, including the visually small ones — a
- * 16px checkbox gets a 24px hit box rather than a smaller one plus an apology.
- */

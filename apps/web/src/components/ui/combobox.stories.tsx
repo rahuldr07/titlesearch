@@ -32,13 +32,9 @@ export const Selected: Story = {
 };
 
 /**
- * Open, unfiltered.
- *
- * Opened by CLICKING the disclosure button, not by a `defaultOpen` prop:
- * react-aria's ComboBox has no such prop (unlike Select and DialogTrigger,
- * which do) — its open state is derived from `menuTrigger` and from input. A
- * story that guessed one would have typechecked as an unknown prop and
- * rendered a closed panel.
+ * Open, unfiltered. Opened by clicking the disclosure button: react-aria's
+ * ComboBox has no `defaultOpen` prop (unlike Select and DialogTrigger) — its
+ * open state is derived from `menuTrigger` and from input.
  */
 export const Open: Story = {
   args: { children: counties },
@@ -55,38 +51,25 @@ async function openPanel(canvasElement: HTMLElement): Promise<void> {
   await userEvent.click(trigger);
 }
 
-/**
- * FILTERED TO NOTHING, which is the state the registry forgot: its
- * `ComboboxEmpty` was a component a caller had to remember to place, so a
- * forgotten one rendered a zero-height panel. `renderEmptyState` cannot be
- * forgotten.
- */
+/** Filtered to nothing — the empty state must render, not a zero-height panel. */
 export const NoMatches: Story = {
   args: { children: counties },
   play: async ({ canvasElement }) => {
     const input = canvasElement.querySelector("input");
     if (input === null) throw new Error("no input");
     /*
-     * Click the INPUT to focus it before typing. `userEvent.type` dispatches to
-     * the element it is given, but react-aria's ComboBox filters off its own
-     * controlled input state, which only updates while the field has focus —
-     * typing at an unfocused input left the collection unfiltered and the
-     * assertion reading four counties.
+     * Click the input to focus it before typing: react-aria's ComboBox
+     * filters off its own controlled input state, which only updates while
+     * the field has focus — typing at an unfocused input leaves the
+     * collection unfiltered.
      */
     await userEvent.click(input);
     await userEvent.type(input, "zzz");
     /*
-     * Asserted on the LISTBOX, not on `document.body`. React Aria mounts a
-     * `@react-aria/live-announcer` region that carries stale text like "4
-     * options available", and a body-wide `toContain` reads it as part of the
-     * page — which made this assertion answer about the announcer rather than
-     * about the panel. Scoping it to the collection is the fix.
-     */
-    /*
-     * Scoped to the PANEL, not to `document.body`: react-aria mounts a
-     * `@react-aria/live-announcer` region in the body that carries stale text
-     * ("4 options available"), and a body-wide `toContain` answers about the
-     * announcer rather than about the list.
+     * Scoped to the panel, not document.body: react-aria mounts a
+     * live-announcer region in the body that carries stale text ("4 options
+     * available"), and a body-wide toContain answers about the announcer
+     * rather than about the list.
      */
     await waitFor(() => {
       const list = document.querySelector("[data-slot='popover']");
@@ -96,13 +79,10 @@ export const NoMatches: Story = {
 };
 
 /**
- * THE CHORD CONTRACT, AND IT IS TWO CLAUSES HERE, NEITHER SUFFICIENT ALONE.
- *
- * The input carries `role="combobox"`, which is in `FOCUSED_ITEM_ROLES`, so it
- * owns every printable key while the caret is in it — that clause covers the
- * whole time before the panel opens. The open panel carries
- * `data-chord-scope="own"` from `Popover`, which covers the frames between the
- * panel mounting and focus reaching an option.
+ * The chord contract needs both clauses: role="combobox" owns printable keys
+ * while the caret is in the input, and the open panel's
+ * data-chord-scope="own" covers the frames between the panel mounting and
+ * focus reaching an option.
  */
 export const StandsTheChordsDown: Story = {
   args: { children: counties },
@@ -121,7 +101,7 @@ export const ClosedLeavesChordsLive: Story = {
   },
 };
 
-/** Rule 9: no boolean disabled exists, only a sentence. */
+/** No boolean disabled exists, only a sentence. */
 export const Blocked: Story = {
   args: {
     disabledBecause: "Blocked: the county set is fixed once a package is ordered.",

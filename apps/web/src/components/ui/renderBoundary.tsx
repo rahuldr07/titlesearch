@@ -1,24 +1,13 @@
 import { Component, type ReactNode } from "react";
 
 /**
- * A RENDER-PHASE THROW IS CATCHABLE BY EXACTLY ONE MECHANISM, AND try/catch IS
- * NOT IT.
- *
- * Written for `card.stories.tsx`, whose "nested cards throw" story first used
- * `try { return <Card><Card/></Card> } catch`. That story FAILED with the raw
- * throw rather than the assertion, and the reason is worth keeping: JSX is
- * lazy. `<Card><Card/></Card>` only CONSTRUCTS elements inside the try block;
- * React invokes the component later, during its own render pass, by which point
- * the caller's stack — and its catch — is long gone.
- *
- * So a story that wants to PROVE a guard fires needs an error boundary, and an
- * error boundary in React 19 is still a class component. That is the only
- * reason a class exists in this kit.
- *
- * This is a TEST AFFORDANCE, not an app one. An app-level boundary is a
- * different object with different obligations (reporting, a recovery path, a
- * sentence for the user); this one renders the message so a story can assert
- * on it, and nothing more.
+ * A render-phase throw cannot be caught by try/catch: JSX is lazy, so
+ * `<Card><Card/></Card>` only constructs elements inside the try block, and
+ * React invokes the component later, when the caller's stack — and its
+ * catch — is gone. A story proving a guard fires therefore needs an error
+ * boundary, which in React 19 is still a class component; that is the only
+ * reason a class exists in this kit. A test affordance, not an app-level
+ * boundary — it renders the message so a story can assert on it, no more.
  */
 export class RenderBoundary extends Component<
   { readonly children: ReactNode },

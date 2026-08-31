@@ -6,23 +6,12 @@ import { Textarea } from "./textarea";
 import { onPanel } from "./kitGround";
 
 /**
- * REVIEW-03 B1, THE RENDERED-BEHAVIOUR HALF — the test two comments cited for
- * months before it existed (`disabled.test.ts` and `a11y.css` both pointed at
- * files that were never written, which is the exact "asserting a mechanism
- * nobody built" failure this kit keeps finding in itself).
- *
- * `disabled.test.ts` proves the PROP NAME: a native control gets `disabled`,
- * never `isDisabled`. This proves the prop lands: react-aria's `Input` and
- * `TextArea` are thin native wrappers, so `el.disabled` must be `true` on the
- * real element and typing into it must change nothing — the B1 bug was a
- * "blocked" Input that was fully editable, with every static gate green.
- *
- * The Textarea story also MEASURES the three-line floor: `min-h-36` is 72px at
- * this app's 2px base, and REVIEW-03 B3 found `tp-target`'s `min-block-size`
- * silently clobbering it to 24px until `a11y.css` grew its `:not([class*=
- * "min-h-"])` guard. `tp-target.test.ts` asserts the guard's SOURCE; this
- * asserts the computed result, which is the only thing a reader's note box
- * actually gets.
+ * The rendered-behaviour half of disabled.test.ts: react-aria's Input and
+ * TextArea are thin native wrappers, so `el.disabled` must be true on the
+ * real element and typing into it must change nothing. The Textarea story
+ * also measures the three-line floor (min-h-36 is 72px at the 2px base) as a
+ * computed value — tp-target.test.ts asserts the guard's source, this
+ * asserts the result.
  */
 const meta = {
   title: "ui/Input/blocked",
@@ -43,7 +32,7 @@ export const BlockedInputRefusesTyping: Story = {
     const input = canvasElement.querySelector<HTMLInputElement>("[data-slot='input']");
     if (input === null) throw new Error("no input rendered");
 
-    // The NATIVE prop, on the NATIVE element — the whole point of B1.
+    // The native prop, on the native element.
     expect(input.disabled).toBe(true);
     expect(input.getAttribute("data-disabled-reason")).toBe(REASON);
 
@@ -51,8 +40,7 @@ export const BlockedInputRefusesTyping: Story = {
     input.focus();
     expect(document.activeElement).not.toBe(input);
 
-    // …and typing at it changes nothing. This is the assertion that was
-    // impossible to fake green in B1: the editable "blocked" input took text.
+    // …and typing at it changes nothing.
     await userEvent.type(input, "typed while blocked");
     expect(input.value).toBe("");
   },
@@ -76,7 +64,7 @@ export const BlockedTextareaRefusesTypingAndKeepsItsFloor: Story = {
     await userEvent.type(area, "typed while blocked");
     expect(area.value).toBe("");
 
-    // THE MEASURED FLOOR: 72px = three lines of 13px — computed, so a future
+    // The measured floor: 72px = three lines of 13px — computed, so a future
     // utility winning the cascade against `min-h-36` fails here, not in prose.
     const minHeight = Number.parseFloat(getComputedStyle(area).minHeight);
     expect(minHeight).toBeGreaterThanOrEqual(72);

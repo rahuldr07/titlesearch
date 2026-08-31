@@ -32,9 +32,9 @@ import {
 } from "../components/ui";
 
 /**
- * The second half of the workbench: marks, progress, surfaces and the overlays.
- * Split from `main.tsx` on the 150-line gate, along the seam between controls
- * a reader OPERATES and surfaces a reader READS.
+ * The second half of the workbench: marks, progress, surfaces and the
+ * overlays — the seam between controls a reader operates and surfaces a
+ * reader reads.
  */
 export function SecondHalf() {
   const [dialogOpen, setDialogOpen] = useState(false);

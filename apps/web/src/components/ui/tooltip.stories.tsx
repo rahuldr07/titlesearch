@@ -6,9 +6,8 @@ import { Button } from "./button";
 import { onCanvas } from "./kitGround";
 
 /**
- * A tooltip is dark CHROME on a light screen, so it stands on the canvas and
- * is graded there. `--color-rail-ink` on `--color-rail-deep` is the measured
- * pair (10.51:1); the registry's inverted `bg-foreground` had no token.
+ * A tooltip is dark chrome on a light screen, so it stands on the canvas and
+ * is graded there. Rail-ink on rail-deep is the measured pair (10.51:1).
  */
 const meta = {
   title: "ui/Tooltip",
@@ -38,9 +37,9 @@ export const Open: Story = {
 };
 
 /**
- * CARRYING A REASON. Rule 9's sentence rendered where a pointer can read it —
- * `disabled.ts` puts the same string on `title` and `data-disabled-reason`, so
- * a touch reader and Playwright both get it without the hover.
+ * Carrying a reason where a pointer can read it — disabled.ts puts the same
+ * string on `title` and `data-disabled-reason`, so a touch reader and
+ * Playwright both get it without the hover.
  */
 export const CarryingAReason: Story = {
   render: () => (
@@ -56,13 +55,10 @@ export const CarryingAReason: Story = {
 };
 
 /**
- * THE CHORD CONTRACT, INVERTED — and this is the only component in the kit
- * where the correct answer is NO MARK.
- *
- * A tooltip takes no focus and contains nothing tabbable, so nothing inside it
- * can consume a keystroke. Marking it `own` would suspend every chord in the
- * app for as long as a pointer happened to rest on a button. The assertion is
- * that the mark is ABSENT while one is open.
+ * The one component where the correct chord answer is no mark: a tooltip
+ * takes no focus and contains nothing tabbable, and `own` would suspend
+ * every chord for as long as a pointer rested on a button. The assertion is
+ * that the mark is absent while one is open.
  */
 export const TakesNoChordScope: Story = {
   render: () => (
@@ -81,9 +77,8 @@ export const TakesNoChordScope: Story = {
 };
 
 /**
- * OPENS ON KEYBOARD FOCUS — WCAG 1.4.13, and the reason `Focusable` wraps the
- * trigger. A tooltip that only opens on hover is a reason no keyboard reader
- * can ever see, which is rule 9 failing silently.
+ * Opens on keyboard focus (WCAG 1.4.13) — a tooltip that only opens on hover
+ * is a reason no keyboard reader can ever see.
  */
 export const OpensOnFocus: Story = {
   render: () => (

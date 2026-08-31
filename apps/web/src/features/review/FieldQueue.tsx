@@ -4,23 +4,14 @@ import { FieldRow } from "./FieldRow";
 import { isRuinous } from "./T1Pill";
 import type { Section } from "./fieldNaming";
 
-/**
-
- * THE FIELD LIST — the workstation's left column, built to `reference-app.html` rather
-
- * than to a guess. Its `isReview` body has TWO panes, not three: this list and the
-
- * scan.
-
- */
+/** The field list — the workstation's left column. */
 export function FieldQueue(props: {
   readonly sections: readonly Section[];
   /**
-   * The design's "Flagged first" toggle. A VIEW ORDER over the sections the
-   * server sent, driven by the `flagged` boolean each one already carries —
-   * nothing is counted, scored or re-ranked, and the fields inside a section
-   * keep the server's order either way (`fieldNaming.ts`: "NOT SORTED BY
-   * ANYTHING").
+   * The "Flagged first" toggle. A view order over the sections the server
+   * sent, driven by the `flagged` boolean each one already carries —
+   * nothing is counted, scored or re-ranked, and the fields inside a
+   * section keep the server's order either way.
    */
   readonly flaggedFirst: boolean;
   readonly selectedId: string | null;
@@ -36,11 +27,11 @@ export function FieldQueue(props: {
   return (
     <div className="flex flex-col">
       {sections.map((section) => {
-        /* The drawn header captions (RULING-2026-08-29): the section's cited
-           page range in mono beside the title, and "N flagged" on the right —
-           the count of THIS section's rows still in the server's queue, the
-           same membership `canSelect` reads. Both are summaries of what the
-           rows below already show, never a second source. */
+        /* The header captions: the section's cited page range in mono
+           beside the title, and "N flagged" on the right — the count of
+           this section's rows still in the server's queue, the same
+           membership `canSelect` reads. Both are summaries of what the rows
+           below already show, never a second source. */
         const queued = section.fields.filter(props.canSelect).length;
         const cited = section.fields
           .map((field) => field.source_page)

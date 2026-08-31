@@ -13,11 +13,10 @@ import { RuleList } from "./RuleList";
 import { NullStateMatrix } from "./NullStateMatrix";
 
 /**
- * THE JURISDICTION VIEW — what binds here, and how absence is written out.
- *
- * The picker is the design's jurisdiction simulator: it changes the code in the
- * read, and everything on the page is then the server's answer for that code.
- * Nothing is re-derived from the previous one.
+ * The jurisdiction view — what binds here, and how absence is written out.
+ * The picker changes the code in the read, and everything on the page is
+ * then the server's answer for that code. Nothing is re-derived from the
+ * previous one.
  */
 export function JurisdictionScreen() {
   const [code, setCode] = useState<string>(DEFAULT_JURISDICTION_CODE);
@@ -67,7 +66,7 @@ export function JurisdictionScreen() {
                 <span className="text-subject font-semibold leading-tight text-ink-primary">
                   {data.label}
                 </span>
-                {/* Rule 3: the code is the identifier the read was made with. */}
+                {/* The code is the identifier the read was made with. */}
                 <span className="font-mono text-meta leading-close text-ink-muted">
                   {data.code}
                 </span>
