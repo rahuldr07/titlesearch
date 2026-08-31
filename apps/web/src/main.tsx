@@ -6,6 +6,14 @@ import { RouterProvider, createRouter } from "@tanstack/react-router";
 import { createQueryClient } from "./app/queryClient";
 import { routeTree } from "./app/routeTree";
 import { installCrashSink, reportCrash } from "./shared/crash";
+/* THE THREE FACES, SELF-HOSTED. The Google Fonts <link> this replaced failed
+   silently behind restrictive proxies — measured: zero FontFace records, the
+   whole app in system fallbacks — and index.html's own TODO named the fix.
+   Bundled woff2 loads from our origin or not at all, and the mono face
+   carries citations, where a fallback's metrics would misalign the box. */
+import "@fontsource-variable/plus-jakarta-sans";
+import "@fontsource-variable/jetbrains-mono";
+import "@fontsource-variable/source-serif-4/opsz.css";
 import "./styles.css";
 
 /**

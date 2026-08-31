@@ -349,9 +349,13 @@
    * DATA ONLY — order refs, money, citations, hashes, timestamps, kbd. Never
    * labels, buttons or prose.
    */
-  --font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
-  --font-serif: 'Source Serif 4', Georgia, serif; /* PAPER ONLY — rule 8 */
+  /* The 'Variable' names are @fontsource-variable's registrations — the faces
+     are BUNDLED (apps/web/src/main.tsx imports them), never fetched from a
+     CDN; the plain names stay as the stack's second step for any context that
+     registered them itself. */
+  --font-sans: 'Plus Jakarta Sans Variable', 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace;
+  --font-serif: 'Source Serif 4 Variable', 'Source Serif 4', Georgia, serif; /* PAPER ONLY — rule 8 */
 
   /*
    * ⚠ THESE SET SIZE ONLY, AND TAILWIND STILL SUPPLIES THE LEADING. Tailwind v4

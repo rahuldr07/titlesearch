@@ -18,22 +18,15 @@
         - Source Serif 4 is PAPER — evidence scans and certificates render as
           stock, never as grey placeholder bars (rule 8).
 
-      `display=swap` so text paints in a fallback rather than waiting. This is
-      an authenticated internal tool that reviewers keep open all day: the
-      faces are cached after the first load, and a blocked first paint costs
-      more than one frame of fallback.
-
-      TODO (before airgap/offline deployment): self-host these. A county office
-      with no outbound internet gets no fonts at all from a CDN, and the mono
-      face carries citations — the one place a fallback's differing metrics
-      would misalign a bounding box against the evidence pane.
+      SELF-HOSTED, 2026-08-29 — the TODO below this comment used to load them
+      from the Google Fonts CDN, and behind a restrictive proxy that request
+      failed SILENTLY: measured zero FontFace records, the whole app in system
+      fallbacks — worst on the mono face, whose citations align bounding boxes
+      against the evidence pane. The faces now ship as bundled variable woff2
+      (@fontsource-variable, imported in src/main.tsx), so they load from our
+      origin or not at all, and an airgapped county office gets the same
+      pixels as everyone else. No <link> here on purpose.
     -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap"
-      rel="stylesheet"
-    />
   </head>
   <body>
     <div id="root"></div>

@@ -36,7 +36,7 @@ export function SpotlightOrder(props: { readonly order: Order }) {
             {context.data?.due != null && (
               <span
                 data-testid="spotlight-due"
-                className="rounded-pill bg-state-settled-surface px-5 py-1 font-mono text-label font-semibold leading-flat text-state-settled"
+                className="rounded-pill bg-state-settled-surface px-5 py-1 font-mono text-meta font-semibold leading-flat text-state-settled"
               >
                 {context.data.due}
               </span>
