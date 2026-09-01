@@ -5,7 +5,7 @@
 > a command; where something could not be verified, it says so.
 >
 > Read `00-HOW-TO-EXECUTE.md` first — it wins on process, this file wins on
-> content. The **eleven companion measurement documents** dated 2026-09-01 in
+> content. The **twelve companion measurement documents** dated 2026-09-01 in
 > this directory hold the evidence behind every claim below; they are cited
 > inline. Where one of them disagrees with this file, it is the later
 > measurement and it wins.
@@ -42,7 +42,7 @@ no later plan can prove it has actually replaced a mock.
 | endpoints the live frontend calls | 44 | `LEAD-MEASUREMENTS §1` |
 | endpoints the backend serves | **1** (`GET /api/rules`) | `STATE-AUDIT` |
 | real build target after dead surface removed | **~47** | `ENDPOINT-RECONCILIATION` |
-| database columns that exist | 31 | `SCHEMA-GAP` |
+| database columns that exist | 32 | `SCHEMA-GAP` |
 | database columns the contract needs | ≥141 | `SCHEMA-GAP` |
 | tables missing entirely | 10 (contract) + 4 more (domain) | `SCHEMA-GAP`, `PIPELINE-RESEARCH §5` |
 | backend tests passing | 249 | `STATE-AUDIT` |

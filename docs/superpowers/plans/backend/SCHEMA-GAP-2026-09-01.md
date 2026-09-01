@@ -21,7 +21,7 @@ Method: columns in `services/core-api/migrations/versions/0001_skeleton.py` and
 | `fields` | 4 | 21 | **+17** |
 | `field_readings` | 4 | 10 | **+6** |
 | `audit_log` | 3 | ? | — |
-| `rules` | 9 | 9 | 0 |
+| `rules` | 10 | 9 | 0 (the one complete table) |
 | `escalations` | — | 13 | **table missing** |
 | `reports` | — | 7 | **table missing** |
 | `deliveries` | — | 8 | **table missing** |
@@ -34,7 +34,7 @@ Method: columns in `services/core-api/migrations/versions/0001_skeleton.py` and
 | `complaints` | — | 9 | **table missing** |
 | `leaderboard` | — | 8 | **table missing** |
 
-**31 columns exist. The contract needs at least 141**, and that count omits
+**32 columns exist. The contract needs at least 141**, and that count omits
 `tenants`, `packages`, `pages` and `audit_log`, whose real shapes the contract
 does not describe because the frontend never reads them directly.
 
@@ -97,3 +97,34 @@ CONTEXT §11 describes three. It is already in the database as a Postgres ENUM,
 so changing it later is a migration on a live type rather than an edit. Nothing
 has been written to `fields` yet, which is the only reason the cost is still
 low. That window closes the moment the first plan populates it.
+
+---
+
+## Addendum — verified against the running database, 2026-09-01
+
+The counts above were parsed from the migration source. A live
+`postgres:18.4` (`titlepipe-db-postgres-1`, database `titlepipe`) is running on
+this host, so they were re-checked against the thing itself:
+
+```sql
+SELECT table_name, count(*) FROM information_schema.columns
+WHERE table_schema='public' AND table_name NOT LIKE 'alembic%'
+GROUP BY table_name ORDER BY table_name;
+```
+
+```
+audit_log|3   field_readings|4   fields|4   orders|3
+packages|3    pages|3            rules|10   tenants|2      TOTAL 32
+```
+
+Nine tables exist (the eight above plus `alembic_version`), every one owned by
+`titlepipe_owner`. The migrations and the database agree.
+
+**One correction this produced: `rules` has 10 columns, not the 9 first
+recorded here.** `origin` and `status` are Postgres ENUM columns constructed
+through a helper rather than written as `sa.Column("origin", ...)` literals, so
+the regex that counted the others skipped them. Totals corrected 31 → 32.
+
+Worth keeping as a method note: **counting a schema by grepping its migration
+undercounts every column built by a helper.** The database is the cheaper and
+more reliable source when one is running, and one was.
