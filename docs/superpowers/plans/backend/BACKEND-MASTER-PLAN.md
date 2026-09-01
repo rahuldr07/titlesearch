@@ -66,19 +66,19 @@ Per `00-HOW-TO-EXECUTE §5`: stop at these; do not pick a side.
 | **G2** | **can this machine get the prototype archive and the reference packages?** | the Gate 6 port, the six-engine bake-off, **and knowing which rules are `OPEN`** | `verify_archive.py` → `archive not found`; the manifest gives a `%LOCALAPPDATA%` path and this host is Linux. Compounded by an unmade owner decision on whether the source may enter VCS at all, since its tests embed real party names. It also covers `docs/spec.md`, which carries the **per-rule provenance tags**: `OPEN` means *do not build past it*, and nothing on this host says which of the 24 rules carry it (`RULES-AND-AUTHZ-VALIDATION §1`) |
 | **G3** | **Plan 03's four identity gates** | Plan 03 | WorkOS credentials; does `/api/rules` need a session; 401 vs 403 for an absent one; revocation latency. `03-identity.md` |
 | **G4** | **Q16 — is MFA a server gate or a banner?** | Plan 03 scope | The People screen says *"this is a production gate"*; the word implies enforcement, and only the server can enforce it |
-| **G5** | **Q17 — does `GET/PATCH /api/me/preferences` land?** | one small endpoint | `sidebar.spec.ts:88` asserts collapse survives reload; browser storage is forbidden by §9.11 and rejected by `check-rules` |
+| **G5** | **Q17 — what replaces the deleted rail toggle?** | 4 red e2e tests. **Not a backend gate.** | ⚠ **Re-measured 2026-09-01 and Q17's second half is out of date.** It says `GET/PATCH /api/me/preferences` *"was never added to the contract or the mocks"*. Both now exist: `workspace.ts:986,991` serve the pair, validating against `UpdatePreferencesRequest` (`intake.ts:409`) and refusing a bad body at 422. `sidebar.spec.ts:88` fails on `locator.click` timing out waiting for **`rail-toggle`**, a control no component renders — a missing UI affordance, not missing server persistence. The server half of Q17 is **answered**; what is open is a frontend question |
 | **G6** | **may `responsive-frame.spec` drop its 1024 and 900 widths?** | 7 red e2e tests | The design README, `styles.css:35` and the reference app's own CSS all declare a **1360px floor**; the spec asserts the app works 460px below it. `CONFLICT-...§4` recommends dropping the two below-floor widths but did not apply it, because narrowing a spec unilaterally is forbidden |
 
 **G1 is the expensive one, and it reaches further than first recorded** — into
-Plan 03's authz table, not just Plan 06. G5 is a half-day and G6 is one line.
-G2 is logistics, not judgement, and it gates **three** things: the port, the
-bake-off, and knowing which rules are `OPEN` — worth asking first because it
-has the longest lead time.
+Plan 03's authz table, not just Plan 06. **G5 turned out not to be a backend
+gate at all** once measured. G6 is one line. G2 is logistics, not judgement,
+and it gates **three** things: the port, the bake-off, and knowing which rules
+are `OPEN` — worth asking first because it has the longest lead time.
 
-**So only G5 and G6 are answerable without touching the other four.** Every
-plan from 03 onward is gated by G1, G2 or G3. The one substantial piece of work
-that is **not** blocked by any gate is Plan 03's task 0, repairing the live
-harness.
+**So the backend is gated by G1, G2 and G3, and nothing else.** G4 scopes Plan
+03 rather than blocking it; G5 and G6 are frontend questions. The one
+substantial piece of work blocked by no gate is Plan 03's task 0, repairing the
+live harness.
 
 **Note what G6 and G1 have in common.** Both are cases where a *test* fails and
 the *design* is right, and in both the team deliberately left the red rather

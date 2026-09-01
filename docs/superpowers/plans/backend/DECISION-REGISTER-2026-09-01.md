@@ -74,18 +74,28 @@ blocks the account; advisory shows a banner. **The word "gate" implies
 enforcement**, and the server is the only place it can be enforced. Blocks the
 identity plan's scope.
 
-### Q17 — does `GET/PATCH /api/me/preferences` land?
+### Q17 — ~~does `GET/PATCH /api/me/preferences` land?~~ **Its server half already did.**
 
-`open-rulings.md:166`. C16 decided user preferences belong on the server, but
-the endpoint *"was never added to the contract or the mocks."* Until it exists,
-`sidebar.spec`'s collapse-survives-reload assertion cannot be met without
-browser storage, which §9.11 forbids and `check-rules` rejects.
+`open-rulings.md:166` says C16 decided preferences belong on the server but the
+endpoint *"was never added to the contract or the mocks."*
 
-This matches my measurement independently: `/api/me/preferences` appears in the
-mocked-but-uncalled set (`ENDPOINT-RECONCILIATION §c`), documented at
-`components/ui/sidebar.tsx:30` and asserted by
-`e2e/invariants/sidebar.spec.ts:88`. A small endpoint that a frozen invariant
-depends on.
+**⚠ That is out of date, measured 2026-09-01.** Both halves exist:
+`workspace.ts:986` serves the GET, `:991` the PATCH, validating against
+`UpdatePreferencesRequest` (`intake.ts:409`) and refusing a malformed body at
+422 with the zod message.
+
+`sidebar.spec.ts:88` does fail — but on `locator.click` timing out waiting for
+**`rail-toggle`**, a control no component in `apps/web/src` renders. That is a
+missing UI affordance, not missing server persistence.
+
+**And I originally wrote that my measurement "matches this independently".** It
+did not. I had put `/api/me/preferences` in the mocked-but-uncalled bucket and
+then read Q17 as confirming a gap, when the two were describing different
+things — I never opened `workspace.ts` to check. Reading a document and
+believing it agrees with you is not a second measurement.
+
+So Q17's remaining question is a **frontend** one: what replaces the deleted
+rail toggle. Nothing here blocks the backend.
 
 ### Plan 03's four gates — identity
 

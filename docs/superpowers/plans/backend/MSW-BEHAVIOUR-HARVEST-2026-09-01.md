@@ -74,8 +74,15 @@ sentence uncomposed.
 | 404 | `no countersign is required on this field` |
 | 404 | `no such delivery` |
 | 422 | release gate: `${n} gates are open — the release gate refuses` |
+| 400 | `nothing to scan — the quarantine gateway runs against a package` |
+| 400 | `a report cannot be produced from this file — the order carries what the PDF cannot say` |
+| 422 | `PATCH /api/me/preferences` returns the **zod error message** for a body that fails `UpdatePreferencesRequest` (`workspace.ts:993`) |
 
-Counted across the mock: **7 × 409, 4 × 422, 2 × 404, 2 × 400.**
+Counted across the mock: **7 × 409, 4 × 422, 2 × 404, 2 × 400 = 15 refusal
+sites.** *(Corrected 2026-09-01: this table first listed 12 and the count said
+15. The three missing were the two intake 400s and the preferences 422 —
+found by reconciling my own table against my own count, which is exactly the
+kind of internal disagreement worth grepping for.)*
 
 ## 3. Three server behaviours these encode
 

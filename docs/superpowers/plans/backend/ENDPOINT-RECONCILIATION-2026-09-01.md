@@ -58,7 +58,7 @@ endpoint would delete the proof.
 
 | endpoint | status |
 |---|---|
-| `GET/PATCH /api/me/preferences` | documented at `components/ui/sidebar.tsx:30`; rail collapse is a persisted preference and `e2e/invariants/sidebar.spec.ts:88` asserts it |
+| `GET/PATCH /api/me/preferences` | **fully mocked, both halves** — `workspace.ts:986,991`, validating against `UpdatePreferencesRequest` (`intake.ts:409`) and refusing a bad body at 422. `sidebar.spec.ts:88` fails on a missing **`rail-toggle`** control, not on missing persistence. `open-rulings.md` Q17's claim that it *"was never added to the contract or the mocks"* is out of date |
 | `GET /api/orders/{id}/quarantine` | intake reads quarantine through `features/ingest/`; `POST /api/intake/quarantine` **is** live (`uploadPackage.ts:67`), the GET is the not-yet-wired half |
 | `GET /api/engines` | engine list, no caller yet |
 | `POST /api/deliveries/{id}/retry` | sibling of `reissue`, which **is** live |
