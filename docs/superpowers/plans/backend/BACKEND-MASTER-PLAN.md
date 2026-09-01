@@ -5,7 +5,7 @@
 > a command; where something could not be verified, it says so.
 >
 > Read `00-HOW-TO-EXECUTE.md` first — it wins on process, this file wins on
-> content. The **twelve companion measurement documents** dated 2026-09-01 in
+> content. The **thirteen companion measurement documents** dated 2026-09-01 in
 > this directory hold the evidence behind every claim below; they are cited
 > inline. Where one of them disagrees with this file, it is the later
 > measurement and it wins.
@@ -218,6 +218,19 @@ with its own tests. Do not let it hide inside 'extraction.'"*
 Extracting `$220,224.00` from a scan is solved. Knowing that the 2011
 assignment attaches to the 2008 DOT and not the 2015 subordinate one is
 relational reasoning across documents, and it is where reviewers find errors.
+
+**The artefact corroborates that, measurably.** `GATE_0_ARCHIVE_MANIFEST.md`
+carries byte sizes even though the source is unreadable from here:
+`assemble.py` is **17,397 bytes against `validators.py`'s 9,080**, and
+`test_assemble.py` (15,655) is the largest test file in the suite. Assembly is
+nearly twice the validators. Sizing this plan from the rulebook alone would
+underestimate it.
+
+**The port surface is also wider than `HANDOFF §2` lists.** HANDOFF names
+eight modules; the archive also holds **`inbox.py` (13,434)** and **`seed.py`
+(11,647)**, plus `tools/seed_golden.py` (15,960) — about **41 kB of unlisted
+code, a quarter of the package**. Totals: src 134,644 bytes, tests 68,673,
+bugfix patches 26,084 (`CONFIDENCE-AUDIT §the one real finding`).
 
 - **Entry gate:** Plan 07, **and G2** — this is where validators v1–v14, the
   chain terminator, MERS handling, release resolution and the five bug fixes
