@@ -5,13 +5,21 @@
 > a command; where something could not be verified, it says so.
 >
 > Read `00-HOW-TO-EXECUTE.md` first — it wins on process, this file wins on
-> content. Read the eight companion measurement documents for the evidence
-> behind any claim below; they are cited inline.
+> content. The **eleven companion measurement documents** dated 2026-09-01 in
+> this directory hold the evidence behind every claim below; they are cited
+> inline. Where one of them disagrees with this file, it is the later
+> measurement and it wins.
 
-**What this plan is for.** The frontend is complete: 15 screens, 390 unit
-tests, 81 passing e2e invariants, and `packages/mocks/src/` — 5,453 lines that
-are the de-facto specification of a server nobody has written. This plan
-sequences writing it.
+**What this plan is for.** The frontend is built out: **12 routed screens**
+(8 flat doors built from `builtScreens.ts`, plus `/account` with 6 tabs,
+3 order-scoped routes and the blind seat), 390 unit tests, 81 passing e2e
+invariants, and `packages/mocks/src/` — 5,453 lines that are the de-facto
+specification of a server nobody has written. This plan sequences writing it.
+
+*(Counted 2026-09-01. `HANDOFF §2`'s familiar "15 screens" figure is the
+**prototype-era** `.dc.html` count and does not describe this tree: nine of
+those screens were deleted in `7f04340` and the rulebook became an account
+tab. Do not carry the old number forward.)*
 
 **The exit criterion, stated once.** *Backend done* means **the mock can be
 switched off and the invariants still pass.* Not "the endpoints return 200".
