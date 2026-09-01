@@ -39,7 +39,7 @@ it means **the marginal cost of endpoint #2 is far below the cost of endpoint
 
 ---
 
-## 🔴 HUMAN GATES — five open, and they do not block equally
+## 🔴 HUMAN GATES — six open, and they do not block equally
 
 Per `00-HOW-TO-EXECUTE §5`: stop at these; do not pick a side.
 
@@ -50,10 +50,18 @@ Per `00-HOW-TO-EXECUTE §5`: stop at these; do not pick a side.
 | **G3** | **Plan 03's four identity gates** | Plan 03 | WorkOS credentials; does `/api/rules` need a session; 401 vs 403 for an absent one; revocation latency. `03-identity.md` |
 | **G4** | **Q16 — is MFA a server gate or a banner?** | Plan 03 scope | The People screen says *"this is a production gate"*; the word implies enforcement, and only the server can enforce it |
 | **G5** | **Q17 — does `GET/PATCH /api/me/preferences` land?** | one small endpoint | `sidebar.spec.ts:88` asserts collapse survives reload; browser storage is forbidden by §9.11 and rejected by `check-rules` |
+| **G6** | **may `responsive-frame.spec` drop its 1024 and 900 widths?** | 7 red e2e tests | The design README, `styles.css:35` and the reference app's own CSS all declare a **1360px floor**; the spec asserts the app works 460px below it. `CONFLICT-...§4` recommends dropping the two below-floor widths but did not apply it, because narrowing a spec unilaterally is forbidden |
 
-**G1 is the expensive one.** G5 is a half-day. G2 is logistics, not judgement,
-and it gates two P0 items at once — worth asking first because it has the
-longest lead time.
+**G1 is the expensive one.** G5 is a half-day and G6 is one line. G2 is
+logistics, not judgement, and it gates two P0 items at once — worth asking
+first because it has the longest lead time.
+
+**Note what G6 and G1 have in common.** Both are cases where a *test* fails and
+the *design* is right, and in both the team deliberately left the red rather
+than edit an assertion. That is the brief working as intended: *"never weaken a
+test assertion; if a screen cannot be built without it, that is a CONFLICT."*
+A red suite here is a record, not a defect list. Read
+`docs/frontend/design-2026-08/CONFLICT-*.md` before touching any failing spec.
 
 ### Already ruled — do not re-open
 
@@ -246,11 +254,25 @@ precondition), delivery digests, no-NPI-in-URLs enforcement.
 1. **CI has never run on `frontend/rebuild-2026-08`.** The last recorded run on
    `main` was a failure on 2026-08-26. A plan whose gates are CI jobs needs CI
    running first.
-2. **The e2e suite is 52 red.** ~26 are G1's conflict, deliberately left
-   failing as the record of an unmade decision. The other ~7 are
-   `styles.css:35`'s `min-width: 1360px` against a suite asserting 900/1024/
-   1280px, with no viewport set in `playwright.config.ts`. The second group is
-   a real defect with no ruling attached and can be fixed now.
+2. **The e2e suite is 52 red, and none of it is unattended.** ~26 are G1's
+   conflict, deliberately left failing as the record of an unmade decision.
+   The **~7 responsive-frame failures are a *fourth* recorded conflict**, not a
+   loose defect: `CONFLICT-deleted-queue-and-rail-controls.md §4` measured them
+   on 2026-08-28 and found the spec wrong rather than the app. The design
+   README, `styles.css:35` and **the reference app's own exported CSS** all
+   state a 1360px floor; the spec asserts the app works 460px below it. Both
+   landed in the same 2026-08-27 import.
+
+   The write-up carries a recommendation deliberately **not applied**: drop
+   1024 and 900 from the width list, keep 1440 and 1280 as genuine regression
+   guards above the floor. It was left undone because *"narrowing a spec's
+   range is exactly the kind of edit the brief forbids doing unilaterally."*
+   It needs a one-line ruling (**G6**), not a fix.
+
+   I initially recorded this group as a fixable defect. That was wrong, and
+   the error is instructive: the app measures `scrollWidth 1360` **constant
+   across all twelve screens**, which is the signature of a declared floor
+   rather than of content overflowing. A per-screen defect would vary.
 
 Also: an orphaned `vite preview` on port 4274 silently serves a **stale build**
 to the next run and produced a bogus `61 failed` for me. Check
