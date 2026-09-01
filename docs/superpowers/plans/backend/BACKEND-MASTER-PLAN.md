@@ -5,7 +5,7 @@
 > a command; where something could not be verified, it says so.
 >
 > Read `00-HOW-TO-EXECUTE.md` first — it wins on process, this file wins on
-> content. The **thirteen companion measurement documents** dated 2026-09-01 in
+> content. The **fourteen companion measurement documents** dated 2026-09-01 in
 > this directory hold the evidence behind every claim below; they are cited
 > inline. Where one of them disagrees with this file, it is the later
 > measurement and it wins.

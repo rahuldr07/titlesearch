@@ -17,7 +17,7 @@ The distinction being applied:
 
 ### 1. "Full contract surface: every endpoint, **request/response schema**, and refusal"
 
-`endpoints.ts` defines **54 exported zod schemas**. `ENDPOINT-RECONCILIATION`
+`endpoints.ts` defines 54 exported zod schemas — and the contract as a whole defines **171** (`CONTRACT-SCHEMA-INVENTORY`, which corrects this section's own undercount). `ENDPOINT-RECONCILIATION`
 enumerates **paths** — which of ~70 are live, dead or proof-bearing — and
 `MSW-BEHAVIOUR-HARVEST` captures the twelve refusal sentences verbatim.
 
