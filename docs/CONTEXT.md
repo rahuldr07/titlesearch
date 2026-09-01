@@ -98,7 +98,7 @@ Median well under 25%. **OCR/vision extraction is stage one, not an optimisation
 
 ```
 tenants(id, name, settings)
-users(id, tenant_id, email, role, clerk_id)
+users(id, tenant_id, email, role, clerk_id)   -- ⚠ workos_user_id at the port; ADR-0001 signed Clerk → WorkOS
 clients(id, tenant_id, name, delivery_method, delivery_config, report_shape, template_ref)
 
 orders(id, tenant_id, client_id, external_ref, jurisdiction, state, county,
@@ -152,7 +152,7 @@ audit_log(id, tenant_id, actor_id, action, entity, entity_id, at)  -- append-onl
 
 ---
 
-## 7. API contract (REST, FastAPI; tenant-scoped, Clerk session auth)
+## 7. API contract (REST, FastAPI; tenant-scoped, ~~Clerk~~ **WorkOS** session auth — superseded by [ADR-0001](adr/0001-core-api-fastapi.md))
 
 The 15 built screens already call these paths. `NEW` = not yet implemented.
 
@@ -476,7 +476,7 @@ No approve-all · no per-reviewer throughput ranking or counters anywhere · no 
 | Queue | **Procrastinate** (Postgres-native) | Graduate to Celery/Redis only on saturation |
 | Storage | Cloudflare R2 / DO Spaces | Zero-egress matters for PDF-heavy review traffic |
 | Hosting | Render (or DO) | 2-engineer ops budget |
-| Auth | Clerk (free tier) | Sessions; `tenant_id` in token |
+| Auth | ~~Clerk (free tier)~~ → **WorkOS AuthKit** | **Superseded by [ADR-0001](adr/0001-core-api-fastapi.md), signed 2026-08-05.** Sealed-session cookies + Python session helpers; **Postgres owns authorization**. `Session.authenticate()` *is* JWKS verification, not an alternative to it |
 | Rendering | docxtpl + programmatic Shapes A/B | Owner-editable Word templates |
 | AI billing | **API keys with hard spend caps**; Batch + prompt caching | A Max plan is development only — **never** a backend |
 | Compliance | Field-level encryption, append-only audit log, WISP; Sprinto/Drata when clients require SOC 2 | ALTA Pillar 3 / GLBA |
