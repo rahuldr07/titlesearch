@@ -7,7 +7,9 @@ import {
   type RailBadgesResponse,
 } from "@titlepipe/contract";
 import { get } from "../../shared/api";
+import { queueNext } from "../../shared/queries";
 import { DOORS, SECTION_RUBRIC, type RailSection } from "./doors";
+import { doorHref, doorIsActive } from "./doorTarget";
 import { hasDoor } from "../session/permissions";
 import { DoorBadge } from "./DoorBadge";
 import { RailGlyph } from "./RailGlyph";
@@ -27,6 +29,7 @@ export function Section(props: {
   readonly pathname: string;
   readonly badges: RailBadgesResponse | undefined;
 }) {
+  const orderId = useRailOrderId();
   const doors = DOORS.filter(
     (door) => door.section === props.section && hasDoor(props.rules, door.path),
   );
@@ -41,17 +44,11 @@ export function Section(props: {
       </SidebarGroupLabel>
       <SidebarMenu>
         {doors.map((door) => {
-          // `/` matches exactly; every other door matches its prefix, which
-          // is what the authz path means. Hoisted out of the JSX because the
-          // glyph needs the same answer — one derivation, not two.
-          const active =
-            door.path === "/"
-              ? props.pathname === "/"
-              : props.pathname.startsWith(door.path);
+          const active = doorIsActive(door.path, props.pathname);
           return (
             <SidebarMenuLink
               key={door.path}
-              to={door.path}
+              to={doorHref(door.path, orderId)}
               testId={`rail-door-${door.path}`}
               active={active}
             >
@@ -71,6 +68,24 @@ export function Section(props: {
       {props.section === "order" && <ActiveOrderStages />}
     </SidebarGroup>
   );
+}
+
+/**
+ * The order the rail's order-scoped doors point at: the one already on
+ * screen, else the one the server hands out. Never one picked from a list —
+ * `/api/queue/next` choosing is what INVARIANT 22 permits, and `/orders-list`
+ * stays a separate ops surface.
+ */
+function useRailOrderId(): string | null {
+  const routed = useRouterState({
+    select: (s) => /^\/orders\/([^/]+)/.exec(s.location.pathname)?.[1] ?? null,
+  });
+  const next = useQuery({
+    queryKey: queueNext.key,
+    queryFn: () => get(queueNext.path, queueNext.schema),
+    enabled: routed === null,
+  });
+  return routed ?? next.data?.order?.id ?? null;
 }
 
 /** The stages, gated on an order-scoped route exactly as the ref below is. */

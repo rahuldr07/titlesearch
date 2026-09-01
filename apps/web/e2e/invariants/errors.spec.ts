@@ -32,18 +32,20 @@ test("the escalation inbox says unavailable when the list 500s", async ({ page }
   });
 });
 
-// Rule (recorded nowhere else): a partial failure degrades that region only — the order spine still renders its identity.
-test("the order spine survives a timeline failure", async ({ page }) => {
+// Rule (recorded nowhere else): a partial failure degrades that region only.
+// Asserted on the hub, which is where the timeline is read now — the Review
+// screen's order spine was removed 2026-09-01 (it drew a third copy of the
+// order's identity and an event log the hub already carries, 128px above the
+// fold on the densest screen in the product).
+test("a timeline failure degrades the event trail only", async ({ page }) => {
   await interceptApi(page, {
     method: "GET",
     match: "/timeline",
     status: 500,
     body: { error: "boom" },
   });
-  await page.goto("/orders/ord_demo_1/review");
-  const rail = page.getByTestId("order-rail");
-  await expect(rail).toContainText("ord_demo_1");
-  await expect(rail).toContainText("timeline unavailable", {
-    timeout: 20_000,
-  });
+  await page.goto("/orders/ord_demo_1");
+  // The verdict is a different read, so it must still render.
+  await expect(page.getByTestId("order-ref")).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText("The server has not sent this order's thread.")).toBeVisible();
 });

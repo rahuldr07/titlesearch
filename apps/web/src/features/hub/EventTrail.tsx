@@ -13,7 +13,7 @@ export function EventTrail(props: {
 }) {
   return (
     <Card className="flex flex-col gap-8">
-      <HubSectionLabel>Immutable SOC 2 Event Trail</HubSectionLabel>
+      <HubSectionLabel>Order event trail</HubSectionLabel>
 
       {props.events === undefined ? (
         <p className="text-meta leading-body text-ink-muted">

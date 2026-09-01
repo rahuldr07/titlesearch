@@ -8,9 +8,14 @@ import type { ReadDescriptor } from "../shared/queries";
  * features may not import each other for the hook that does the fetching.
  * Written once so every read of a descriptor shares one cache.
  */
-export function useRead<T>(descriptor: ReadDescriptor<T>) {
+export function useRead<T>(
+  descriptor: ReadDescriptor<T>,
+  /** `false` while the read has no subject yet. The only option this hook takes. */
+  enabled = true,
+) {
   return useQuery({
     queryKey: descriptor.key,
     queryFn: () => get(descriptor.path, descriptor.schema),
+    enabled,
   });
 }

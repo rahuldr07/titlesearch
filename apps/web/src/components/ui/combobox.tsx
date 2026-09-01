@@ -12,6 +12,7 @@ import { cx } from "./cx";
 import { disabledAttributes, type Disablement } from "./disabled";
 import { BlockedHint } from "./blockedHint";
 import { Popover } from "./popover";
+import { controlHeight } from "./field-chrome";
 
 /**
  * The chord layer catches this component through two clauses, and both are
@@ -59,8 +60,10 @@ export function ComboBox({
       >
         <div
           className={cx(
-            "tp-state flex h-19 w-full items-center gap-2 rounded-md",
+            "tp-state flex w-full items-center gap-2 rounded-md",
+            controlHeight,
             "border border-control-border bg-control-fill pr-2 pl-5",
+            "hover:not-has-data-disabled:border-ink-faint",
             "has-data-[focus-visible]:outline has-data-[focus-visible]:outline-action",
           )}
         >

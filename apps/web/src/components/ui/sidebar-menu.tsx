@@ -10,7 +10,7 @@ import { cx } from "@/components/ui/cx";
 /** A rubric plus its doors. */
 export function SidebarGroup(props: { readonly children: ReactNode }) {
   return (
-    <div data-slot="sidebar-group" className="flex w-full min-w-0 flex-col px-6 pt-10">
+    <div data-slot="sidebar-group" className="flex w-full min-w-0 flex-col px-5 pt-10">
       {props.children}
     </div>
   );
@@ -69,7 +69,7 @@ export function SidebarMenuLink(props: {
       data-testid={props.testId}
       data-active={props.active}
       className={cx(
-        "tp-state tp-press flex h-19 w-full items-center gap-5 overflow-hidden rounded-lg px-6",
+        "tp-state tp-press flex h-19 w-full items-center gap-4 overflow-hidden rounded-lg px-6",
         "text-meta leading-flat",
         props.active
           ? "bg-action font-semibold text-ink-on-action"

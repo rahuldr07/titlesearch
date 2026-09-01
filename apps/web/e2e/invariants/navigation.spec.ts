@@ -59,24 +59,11 @@ test("?field= deep links land on the exact field in context", async ({ page }) =
   await expect(page.getByTestId("sel-state")).toContainText("PRESENT — UNREADABLE");
 });
 
-// Rule: the order's states travel with it — the spine shows queue, escalation and delivery state together.
-test("the order spine travels with the order on Review", async ({ page }) => {
-  await page.goto("/orders/ord_demo_1/review");
-  const rail = page.getByTestId("order-rail");
-  await expect(rail).toContainText("ord_demo_1");
-  await expect(rail).toContainText("still queued");
-  await expect(rail).toContainText("escalations open"); // esc cluster spans this order
-});
-
-// The delivery half of the same rule, asserted on an order that has a
-// delivery: queue and escalation state above, delivery state here, each on
-// an order it is actually true of.
-test("delivery state travels with the order too", async ({ page }) => {
-  await page.goto("/orders/ord_demo_13/review");
-  const rail = page.getByTestId("order-rail");
-  await expect(rail).toContainText("ord_demo_13");
-  await expect(rail).toContainText("delivered v1");
-  await expect(rail).toContainText("delivered v2");
-  // …and it is NOT the served order, so the queue chip must be absent.
-  await expect(rail).not.toContainText("still queued");
-});
+// The two "order spine travels with the order" tests were deleted 2026-09-01
+// with the spine itself (features/review/OrderRail). They asserted queue,
+// escalation and delivery chips ("still queued", "delivered v1") on Review;
+// the component had already stopped rendering those — it drew identity and an
+// event log — so the first of the two had been failing, and the second passed
+// only on the event text. The order's states are read on the hub, which the
+// stage rows and the order bar both reach. Nothing was re-pointed here because
+// Review no longer claims to carry that state.

@@ -14,6 +14,7 @@ export const controlClass = [
   "rounded-md border border-control-border bg-control-fill",
   "px-6 py-4 font-sans text-meta leading-close text-ink-primary",
   "placeholder:text-ink-muted outline-none",
+  "hover:not-disabled:not-read-only:border-ink-faint",
   "focus-visible:border-action focus-visible:outline-2 focus-visible:outline-offset-0",
   "focus-visible:outline-action",
   "aria-invalid:border-state-halt aria-invalid:outline-state-halt",

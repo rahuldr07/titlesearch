@@ -12,6 +12,7 @@ import { cx } from "./cx";
 import { disabledAttributes, type Disablement } from "./disabled";
 import { BlockedHint } from "./blockedHint";
 import { Popover } from "./popover";
+import { controlHeight } from "./field-chrome";
 
 /**
  * A trigger, a panel and options — a caller who needs search reaches for
@@ -55,9 +56,11 @@ export function Select({
         <ButtonPrimitive
           data-slot="select-trigger"
           className={cx(
-            "tp-state tp-press tp-ring flex h-19 w-full cursor-pointer items-center justify-between",
-            "gap-4 rounded-md border border-control-border bg-control-fill px-5 text-left",
-            "font-sans text-meta leading-close text-ink-primary outline-none",
+            "tp-state tp-press tp-ring tp-target flex w-full cursor-pointer items-center",
+            controlHeight,
+            "justify-between gap-4 rounded-md border border-control-border bg-control-fill",
+            "px-5 text-left font-sans text-meta leading-close text-ink-primary outline-none",
+            "hover:not-data-disabled:border-ink-faint",
             "data-disabled:cursor-not-allowed data-disabled:text-ink-disabled",
           )}
         >
@@ -66,10 +69,12 @@ export function Select({
            * trigger: react-aria renders children only while nothing is
            * selected. Passing it anywhere else makes it a dead prop.
            */}
-          <SelectValue className="truncate">
-            {({ isPlaceholder, selectedText }) =>
-              isPlaceholder ? placeholder : selectedText
-            }
+          <SelectValue className="min-w-0">
+            {({ isPlaceholder, selectedText }) => (
+              <span className={cx("block truncate", isPlaceholder && "text-ink-muted")}>
+                {isPlaceholder ? placeholder : selectedText}
+              </span>
+            )}
           </SelectValue>
           {/* The disclosure arrow is structural affordance — it says the
               control opens — rather than decoration. */}

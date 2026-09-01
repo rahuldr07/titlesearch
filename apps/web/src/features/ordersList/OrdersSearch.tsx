@@ -34,12 +34,26 @@ export function OrdersSearch({
   return (
     <div className="flex flex-col items-end gap-3">
       <div className="relative w-170">
+        <svg
+          aria-hidden
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          className="pointer-events-none absolute top-1/2 left-6 -translate-y-1/2 text-ink-faint"
+        >
+          <circle cx="11" cy="11" r="7" />
+          <path d="m20 20-3.5-3.5" />
+        </svg>
         <Input
           key={browse.resetKey}
           id="orders-search"
           aria-label="Search orders"
           aria-describedby="orders-search-scopes"
-          className="pr-40"
+          className="pr-40 pl-17"
           placeholder="Search — try client:riverbend stage:review, or a ref"
           onChange={(event) => {
             browse.type(event.target.value);

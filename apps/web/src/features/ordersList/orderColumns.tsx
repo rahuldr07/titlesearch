@@ -2,18 +2,8 @@ import type { OrderRow } from "@titlepipe/contract";
 import { cx, buttonVariants, DataCell, type TableColumn } from "../../components/ui";
 import { RouteButton } from "../../app/chrome/RouteButton";
 import { useOverlays } from "../../app/keyboard/overlays";
+import { STAGE_LABEL } from "../../entities/order/stageLabel";
 import { Absent, Address } from "./orderCells";
-
-/** The enum's own words, capitalised — so `stage:gate` still finds the "Gate" row. */
-const STAGE_LABEL: Readonly<Record<OrderRow["stage"], string>> = {
-  unassigned: "Unassigned",
-  intake: "Intake",
-  machine: "Machine",
-  gate: "Gate",
-  review: "Review",
-  escalated: "Escalated",
-  delivered: "Delivered",
-};
 
 export const ORDER_COLUMNS: readonly TableColumn<OrderRow>[] = [
   {
@@ -68,7 +58,7 @@ export const ORDER_COLUMNS: readonly TableColumn<OrderRow>[] = [
       row.due === null ? (
         <Absent>No due date</Absent>
       ) : (
-        <span className="block truncate text-right font-mono text-meta leading-close text-ink-secondary">
+        <span className="block text-right font-mono text-meta leading-tight text-balance text-ink-secondary">
           {row.due}
         </span>
       ),

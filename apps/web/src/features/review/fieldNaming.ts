@@ -20,7 +20,11 @@ export function fieldLabel(path: string): string {
   const rest = parts.slice(1);
   const index = rest[0] !== undefined && /^\d+$/.test(rest[0]) ? rest[0] : null;
   const name = (index === null ? rest : rest.slice(1)).join(" ").replace(/_/g, " ");
-  const leaf = name.toUpperCase();
+  /* A leaf may already open with the word the section abbreviates
+     (`assessment.tax_status`). Drop the repeat, but only while a word
+     survives it. */
+  const words = name.toUpperCase().split(" ");
+  const leaf = (words[0] === section && words.length > 1 ? words.slice(1) : words).join(" ");
   return index === null ? `${section} ${leaf}` : `${section} ${index} — ${leaf}`;
 }
 

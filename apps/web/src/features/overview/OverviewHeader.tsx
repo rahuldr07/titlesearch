@@ -25,13 +25,14 @@ export function OverviewHeader(props: {
         {/* The lede — fixed screen copy. */}
         <p className="max-w-320 text-body leading-body text-ink-secondary">
           Real-time abstract tracking across incoming packages, dual-engine
-          extraction, human verification, and SOC 2 delivery certification.
+          extraction, human verification, and certified delivery.
         </p>
       </div>
 
       <div className="flex shrink-0 items-center gap-6">
         {hasDoor(props.rules, "/ingest") && (
           <RouteButton variant="secondary" to="/ingest">
+            <PlusGlyph />
             Intake New Package
           </RouteButton>
         )}
@@ -66,6 +67,25 @@ function KickerGlyph() {
       <rect x="14" y="3" width="7" height="7" rx="1.5" />
       <rect x="14" y="14" width="7" height="7" rx="1.5" />
       <rect x="3" y="14" width="7" height="7" rx="1.5" />
+    </svg>
+  );
+}
+
+/** The intake button's leading plus. */
+function PlusGlyph() {
+  return (
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      aria-hidden="true"
+      className="shrink-0"
+    >
+      <path d="M12 5v14M5 12h14" />
     </svg>
   );
 }

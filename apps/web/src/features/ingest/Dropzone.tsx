@@ -97,7 +97,7 @@ export function Dropzone(props: {
         Drop scanned title package here
       </span>
       <span className="font-sans text-meta leading-close text-ink-muted">
-        or click to browse · single PDF bundle (20–150 pages) · 300 DPI
+        or click to browse · single PDF bundle (36–181 pages) · 300 DPI
         recommended
       </span>
       <input

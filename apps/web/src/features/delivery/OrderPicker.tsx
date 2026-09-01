@@ -5,6 +5,13 @@ import { cx } from "../../components/ui";
  * Chooses which delivered order the grid shows — `GET /api/deliveries` is not
  * order-scoped and there is no per-order endpoint. `aria-current` rather than
  * `aria-selected`: these are not tabs and own no panels — they re-scope the grid.
+ *
+ * CONTRACT GAP: the button prints `ord_demo_12`, an internal id, where every
+ * other screen prints the ref (`4176034-1`) — the rail's own comment says the
+ * id in the URL is not the ref. It is printed here because the wire carries no
+ * alternative: `DeliveryWithReport.report` has `order_id` and no `order_ref`,
+ * and a second read per order to resolve one would be this screen inventing a
+ * join. Add `order_ref` to the report shape and this becomes one word.
  */
 export function OrderPicker({
   orders,

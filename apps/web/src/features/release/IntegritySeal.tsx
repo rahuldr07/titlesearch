@@ -35,13 +35,15 @@ export function IntegritySeal(props: {
         </code>
       </div>
       <div className="flex shrink-0 flex-col items-end gap-2">
-        <span className="font-serif text-label leading-flat tracking-caps uppercase text-page-ink">
-          SOC 2 Type II certified
-        </span>
         {props.releasedAt !== null && (
-          <span className="font-mono text-label leading-flat text-scan-ink">
-            {`Timestamp: ${props.releasedAt}`}
-          </span>
+          <>
+            <span className="font-serif text-label leading-flat tracking-caps uppercase text-page-ink">
+              Released
+            </span>
+            <span className="font-mono text-label leading-flat text-scan-ink">
+              {props.releasedAt}
+            </span>
+          </>
         )}
         {/* A quiet ornament on the stock, aria-hidden. */}
         <div aria-hidden className="flex items-start gap-1 pt-3 opacity-40">

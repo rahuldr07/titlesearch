@@ -31,10 +31,9 @@ export function TemplatesScreen() {
 
   const templates = catalog.data?.templates ?? [];
   const activeId = picked ?? templates[0]?.id ?? null;
-  const detail = useRead(
-    // A stable descriptor even while the catalog loads; disabled below.
-    templateDetail(activeId ?? "none"),
-  );
+  /* A stable descriptor even while the catalog loads; the second argument
+     holds the request until there is an id to ask about. */
+  const detail = useRead(templateDetail(activeId ?? "none"), activeId !== null);
   const maySave = hasAction(permissions.data?.rules, "template.edit");
 
   const pick = (id: string) => {

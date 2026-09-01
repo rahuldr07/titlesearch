@@ -80,15 +80,15 @@ test("the ? map stands the REVIEW chords down — c must not confirm a T1 ruling
   page,
 }) => {
   await openReview(page);
-  const before = await page.getByTestId("decisions-settled").textContent();
+  const before = await page.getByTestId("verified-meter-label").textContent();
   await page.keyboard.press("?");
   await expect(page.getByTestId("key-map")).toBeVisible();
   await page.keyboard.press("c");
-  await expect(page.getByTestId("decisions-settled")).toHaveText(before ?? "");
+  await expect(page.getByTestId("verified-meter-label")).toHaveText(before ?? "");
   await page.keyboard.press("Escape");
   await expect(page.getByTestId("key-map")).toHaveCount(0);
   await page.keyboard.press("c");
-  await expect(page.getByTestId("decisions-settled")).not.toHaveText(
+  await expect(page.getByTestId("verified-meter-label")).not.toHaveText(
     before ?? "",
   );
 });

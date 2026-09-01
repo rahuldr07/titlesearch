@@ -52,11 +52,13 @@ export function PeoplePanel() {
             </p>
 
             <Card padding="none">
-              <ul>
+              {/* The columns live on the <ul> and each row is a `subgrid`, so
+                  every row shares one set of tracks. */}
+              <ul className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,1fr)_auto]">
                 {data.people.map((person) => (
                   <li
                     key={person.id}
-                    className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,1fr)_auto] items-center gap-8 border-b border-line-subtle px-12 py-8 last:border-b-0"
+                    className="col-span-full grid grid-cols-subgrid items-center gap-8 border-b border-line-subtle px-12 py-8 last:border-b-0"
                   >
                     <div className="flex min-w-0 flex-col gap-1">
                       <span className="truncate text-meta font-semibold leading-close text-ink-primary">

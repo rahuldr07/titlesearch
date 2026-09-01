@@ -47,8 +47,15 @@ body {
  * back deliberately; this app is keyboard-first, so it is load-bearing.
  * `scroll-margin` keeps a focused row from landing under the sticky order
  * bar.
+ *
+ * `[tabindex]` has to stay in the list — the virtualised table rows are
+ * tabIndex={-1} divs and this rule is the only thing that shows where the
+ * keyboard is on them — so a dialog is excluded by role instead. React Aria
+ * focuses the dialog NODE on open and it matches :focus-visible, which would
+ * ring the whole modal card; `dialog.tsx`'s own `outline-none` loses to this
+ * rule on source order at equal specificity.
  */
-:where(a, button, input, textarea, select, [tabindex]):focus-visible {
+:where(a, button, input, textarea, select, [tabindex]):not([role="dialog"]):focus-visible {
   outline: 2px solid var(--color-action);
   outline-offset: 2px;
   border-radius: var(--radius-xs);

@@ -28,7 +28,7 @@ export function RailBadge(props: {
       data-testid={`rail-badge-${props.path}`}
       title={props.title}
       className={cx(
-        "ml-auto shrink-0 rounded-pill px-4 py-1 font-mono text-label font-semibold leading-flat tabular-nums",
+        "ml-auto shrink-0 rounded-pill px-3 py-1 font-mono text-label font-semibold leading-flat tabular-nums",
         TONE[props.tone],
       )}
     >

@@ -3,6 +3,7 @@ import type { OrderRow } from "@titlepipe/contract";
 import { buttonVariants, cx } from "../../components/ui";
 import { RouteButton } from "../../app/chrome/RouteButton";
 import { useOverlays } from "../../app/keyboard/overlays";
+import { STAGE_LABEL } from "../../entities/order/stageLabel";
 
 /**
  * One browse row. Its action cell holds two destinations — the order's
@@ -41,9 +42,8 @@ export function RecentOrderRow(props: { readonly row: OrderRow }) {
         {row.client}
       </span>
 
-      {/* The server's own stage word, not a second label table. */}
       <span className="w-55 shrink-0 truncate px-6 text-meta leading-close text-ink-faint">
-        {row.stage}
+        {STAGE_LABEL[row.stage]}
       </span>
 
       <span className="w-60 shrink-0 truncate px-6 text-meta leading-close text-ink-secondary">
@@ -55,7 +55,7 @@ export function RecentOrderRow(props: { readonly row: OrderRow }) {
           served stage, not on the text. */}
       <span
         className={cx(
-          "w-65 shrink-0 truncate px-6 text-right font-mono text-meta leading-close",
+          "w-65 shrink-0 px-6 text-right font-mono text-meta leading-tight text-balance",
           row.stage === "delivered"
             ? "text-ink-disabled"
             : "font-semibold text-ink-secondary",

@@ -17,7 +17,6 @@ import { WorkstationFooter } from "./WorkstationFooter";
 import { ScanPane } from "./ScanPane";
 import { usePageAsk } from "./usePageAsk";
 import { DecisionDock } from "./DecisionDock";
-import { OrderRail } from "./OrderRail";
 import { sectionsOf, fieldLabel } from "./fieldNaming";
 import { isQueued, resolveSelection, stepSelection } from "./queue";
 import { useQueueKeys } from "./useReviewKeys";
@@ -83,7 +82,6 @@ export function WorkstationScreen(props: {
                   maxSize={DECISION_MAX}
                   className="border-r border-line-strong bg-surface-panel"
                 >
-                  <OrderRail orderId={props.orderId} />
                   <DecisionDock census={data.census} />
                   <div className="min-h-0 flex-1 overflow-y-auto">
                     {/* The second read leads: it is the gate that blocks

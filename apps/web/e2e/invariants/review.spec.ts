@@ -164,9 +164,11 @@ test("decision dock shows real answered-of-total progress from field state", asy
 }) => {
   await go(page);
   const dock = page.getByTestId("decision-dock");
-  await expect(dock).toContainText("12 of 18 answered");
-  // default selection lands on the first queued field (owner.zip) — one of
-  // the 18 is "open", so the rest of THIS order's queue is 17.
+  // The answered-of-total caption is the hub verdict card's, not this
+  // screen's; the bar's own meter carries it here. What the dock owns is the
+  // queue remainder: default selection lands on the first queued field
+  // (owner.zip), so one of the 18 is "open" and the rest is 17.
+  await expect(page.getByTestId("verified-meter-label")).toHaveText("12/18 VERIFIED");
   await expect(dock).toContainText("Rest of the queue · 17");
 });
 
