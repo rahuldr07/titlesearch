@@ -104,11 +104,15 @@ later plan's acceptance depends on it (`LIVE-HARNESS-BROKEN-2026-09-01.md`).
 Then the drafted plan. Ships a real session, a real principal, server-evaluated
 authz; retires three holes that **grant admin on a missing header**.
 
-Note the mock is currently *safer than the server*: it refuses an
-unidentified countersigner because *"an unidentified actor cannot PROVE a
-second pair of eyes"*. So G3's direction is settled by behaviour even though
-the status code is open — **absent identity is a refusal, never a grant**
-(`MSW-BEHAVIOUR-HARVEST §3`).
+Note the mock does **not** get this right in general, contrary to a claim I
+made earlier in this document's drafting: `guard.ts:15`, `handlers.ts:587` and
+`workspace.ts:974` each default a missing `x-mock-role` to **`admin`** — the
+same three-hole shape Plan 03 attributes to the server — and `audit.ts:93`
+attributes an unattributed action to `"L. Vance"`. The countersign
+(`design.ts:720`) is the **one** handler that refuses a missing identity, and
+it does so because separation of duties is unprovable without two identities.
+Treat it as a worked example of the correct refusal, not as a settled
+convention. G3 is genuinely open (`MSW-BEHAVIOUR-HARVEST §3`).
 
 - **Exposes:** `Principal`, the authz evaluator, `GET /api/me/permissions`.
 - **Injection:** delete the role check; INVARIANT 40 must fail — the role gate

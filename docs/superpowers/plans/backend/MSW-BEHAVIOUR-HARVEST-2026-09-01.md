@@ -87,16 +87,31 @@ not a release."* That is stricter than the prototype's approve-idempotency
 need reconciling in the port.
 
 **Separation of duties is enforced against identity, and a missing identity
-refuses.** `design.ts:719-724`: the countersign compares `x-mock-actor` against
-`row.ruled_by`, and refuses when the actor is **null** on the stated grounds
-that *"an unidentified actor cannot PROVE a second pair of eyes, so a missing
-identity refuses exactly as the ruling examiner does."*
+refuses — but only here.** `design.ts:719-724`: the countersign compares
+`x-mock-actor` against `row.ruled_by`, and refuses when the actor is **null**
+on the stated grounds that *"an unidentified actor cannot PROVE a second pair
+of eyes, so a missing identity refuses exactly as the ruling examiner does."*
 
-This is the correct shape and it is the exact opposite of what Plan 03 records
-as existing today, where three holes **grant admin on a missing header**. The
-mock is safer than the server. Whichever way Plan 03's gate 3 is ruled
-(401 vs 403 for an absent session), the *direction* is already settled here:
-absent identity is a refusal, never a grant.
+**Do not generalise that into "the mock is safer than the server". Verified
+2026-09-01 and it is not, in general.** Two different headers with opposite
+defaults live in this mock:
+
+| header | meaning | default when absent |
+|---|---|---|
+| `x-mock-role` | authorization | **`admin`** — `guard.ts:15`, `handlers.ts:587`, `workspace.ts:974` |
+| `x-mock-actor` | identity | **refused** at the countersign (`design.ts:720`); **`"L. Vance"`** in the audit log (`audit.ts:93`) |
+
+So the mock has **the same missing-header-grants-admin hole in three places**
+that Plan 03 says the server has, and the audit log will happily attribute an
+unattributed action to a named person. The countersign is the **one** handler
+that gets it right, and it gets it right because separation of duties is
+unprovable without two identities, not because the mock has a general policy.
+
+What transfers to the server is therefore narrower than it first looks: it is
+a **worked example of the correct refusal**, not evidence of a settled
+convention. Plan 03's gate 3 (401 vs 403 for an absent session) is still
+genuinely open, and the *direction* is argued by `design.ts:717-718`'s
+reasoning rather than by the mock's behaviour as a whole.
 
 **Ordering: the role gate runs before validation.**
 `e2e/invariants/authz.spec.ts:17` proves it through `POST /api/engines/routing`
