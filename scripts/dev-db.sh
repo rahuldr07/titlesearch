@@ -127,7 +127,7 @@ apply_schema() {
 # `0003_rules.py` grants `titlepipe_app` `SELECT` and deliberately no `INSERT`.
 seed_rulebook() {
   say "rulebook (e2e-live/seedRulebook.mjs, as titlepipe_owner)"
-  ( cd "${REPO_ROOT}/apps/web-v2" \
+  ( cd "${REPO_ROOT}/apps/web" \
     && TITLEPIPE_DATABASE_URL="${MIGRATION_DSN}" node e2e-live/seedRulebook.mjs )
 }
 
@@ -191,7 +191,7 @@ $(print_env)
 
 Then, in another shell, the frontend against it:
 
-    VITE_API_MODE=live VITE_API_PROXY_TARGET=http://127.0.0.1:8000 pnpm --filter web-v2 dev
+    VITE_API_MODE=live VITE_API_PROXY_TARGET=http://127.0.0.1:8000 pnpm --filter @titlepipe/web dev
 
 Verify with 'curl -sS http://127.0.0.1:8000/ready' — the body must contain
 "database_answers":true. A 200 alone is not enough: an unset DSN also answers
