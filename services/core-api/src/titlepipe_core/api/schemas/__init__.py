@@ -10,6 +10,6 @@ ADR-0001's third amendment (2026-08-05) puts the wire under Pydantic/OpenAPI,
 migrated endpoint by endpoint. `packages/contract`'s Zod is **not** demoted by
 that: `openapi-fetch` ships no validation, so Zod stays the browser's runtime
 boundary parser and every model here has to survive it. What proves it does is
-`tests/test_rules_contract_parity.py` plus `apps/web-v2/contract-parity.test.ts`,
+`tests/test_rules_contract_parity.py` plus `apps/web/contract-parity.test.ts`,
 which are two gates over one committed fixture and neither is sufficient alone.
 """

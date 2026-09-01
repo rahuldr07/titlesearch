@@ -9,7 +9,7 @@ regenerated deliberately rather than drifting silently.
 
 **This file is not the parity proof and cannot be.** Everything below is Python
 compared with Python — a second opinion from the same author. The parity proof is
-`apps/web-v2/contract-parity.test.ts`, which reads the same committed file and
+`apps/web/contract-parity.test.ts`, which reads the same committed file and
 hands it to the ACTUAL Zod `RulesResponse` from `@titlepipe/contract`. Neither gate
 is sufficient alone: without this one the fixture rots, without that one the shape
 is only ever checked against itself.
@@ -81,7 +81,7 @@ from titlepipe_core.db.models import RULE_ORIGIN_LABELS, RULE_STATUS_LABELS, Rul
 # `parents[3]` is the repository root: tests -> core-api -> services -> root. The
 # fixture sits at the root and not under either toolchain's test tree on purpose —
 # it is the one artifact both gates share, and a Python test reaching into
-# `apps/web-v2/` (or a Vitest test reaching into `services/core-api/tests/`) would
+# `apps/web/` (or a Vitest test reaching into `services/core-api/tests/`) would
 # make one of them look like the other's private detail.
 FIXTURE: Final = Path(__file__).resolve().parents[3] / "contract-fixtures" / "rules-response.json"
 

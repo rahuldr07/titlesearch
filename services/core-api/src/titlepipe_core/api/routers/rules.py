@@ -78,8 +78,9 @@ attempt.
 RULED: every status, unfiltered, in the repository's order. `db/rules.py::list_all`
 carries the reason — a `pending` rule is VISIBLE to everyone and only its EFFECT
 is gated — and the two live consumers
-(`apps/web-v2/src/features/rulebook/queries.ts` and
-`features/escalations/queries.ts`) take the whole set. The ordering is
+(`apps/web/src/shared/accountQueries.ts`'s `rules` descriptor, rendered by
+`features/account/RulesPanel.tsx`, and `features/escalations/useEscalations.ts`)
+take the whole set. The ordering is
 `list_all`'s and is a wire-stability decision; nothing here re-sorts, for the
 same reason `RulesResponse.from_rows` does not.
 """

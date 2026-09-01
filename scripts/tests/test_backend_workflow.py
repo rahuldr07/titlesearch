@@ -174,11 +174,11 @@ CONTRACT_FIXTURES_GLOB = "contract-fixtures/**"
 HARNESS_REQUIRED_PATHS = ("apps/**", "packages/**", "services/**", CONTRACT_FIXTURES_GLOB)
 
 # The vitest project holding the contract-parity gate, as it is invoked. Named by
-# the RUNNER and the PROJECT rather than by the whole `pnpm --filter web-v2 exec …`
+# the RUNNER and the PROJECT rather than by the whole `pnpm --filter @titlepipe/web exec …`
 # line, on `local_hook_gates`'s principle: identify a gate by the narrowest thing
 # that is actually it, so the workflow stays free to change how it is wrapped.
 #
-# `--project gates` matters and is not decoration. `pnpm --filter web-v2 test`
+# `--project gates` matters and is not decoration. `pnpm --filter @titlepipe/web test`
 # would satisfy a looser needle and would drag the Storybook BROWSER suite onto
 # every backend commit, which is the cost this workflow was arranged to avoid.
 HARNESS_CONTRACT_GATE = "vitest run --project gates"
@@ -761,7 +761,7 @@ def test_the_shared_contract_fixture_triggers_the_workflows_that_gate_it() -> No
        nothing. Both of the workflows that can execute a gate over it now name it.
 
     `frontend.yml` is deliberately NOT in this list. It runs the parity test as part
-    of `pnpm --filter web-v2 test`, and adding `services/**` to it — the other way to
+    of `pnpm --filter @titlepipe/web test`, and adding `services/**` to it — the other way to
     close the hole — would put the Storybook browser suite on every backend commit.
     The harness is where both sides meet, and it is where the gate was added.
     """

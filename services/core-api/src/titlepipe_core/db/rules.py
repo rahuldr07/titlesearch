@@ -129,8 +129,9 @@ class RuleRepository:
         one appearing fails by naming the row it hid rather than by a count.
 
         Filtering is the CALLER'S, and `GET /api/rules` does none — the two live
-        consumers (`apps/web-v2/src/features/rulebook/queries.ts`,
-        `features/escalations/queries.ts`) take the whole set.
+        consumers (`apps/web/src/shared/accountQueries.ts`'s `rules` descriptor,
+        rendered by `features/account/RulesPanel.tsx`, and
+        `features/escalations/useEscalations.ts`) take the whole set.
 
         **THE ORDERING IS A WIRE-STABILITY DECISION AND NOT A DOMAIN ONE.** An
         unqualified `SELECT` has no guaranteed order in PostgreSQL, so a response

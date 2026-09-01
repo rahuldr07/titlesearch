@@ -141,7 +141,7 @@ class CoreApiSettings(BaseSettings):
     #
     # Locally the `None` is load-bearing. `TITLEPIPE_ENVIRONMENT=development`
     # alone still boots this service with no database at all, which
-    # `apps/web-v2/e2e-live` depends on — its whole premise is a core-api
+    # `apps/web/e2e-live` depends on — its whole premise is a core-api
     # reachable from a browser before any storage exists — and
     # `lifespan.readiness` reports a database check only when one is configured,
     # so `/ready` stays 200 there.

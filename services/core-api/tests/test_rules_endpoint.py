@@ -593,7 +593,7 @@ def test_with_no_dsn_the_service_is_ready_and_the_rulebook_is_unavailable(
     Unset, the service starts, `/ready` answers 200 carrying NO database key, and
     `GET /api/rules` answers the 503 envelope. That combination is what a
     developer running `TITLEPIPE_ENVIRONMENT=development` alone gets, and what
-    `apps/web-v2/e2e-live` and `migration-harness.yml` both depend on.
+    `apps/web/e2e-live` and `migration-harness.yml` both depend on.
 
     🔴 IT USED TO BE WHAT A DEPLOYED ENVIRONMENT GOT TOO, AND THAT WAS THE
     DEFECT. The failure was invisible on both surfaces an operator watches —

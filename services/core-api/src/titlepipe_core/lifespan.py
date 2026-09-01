@@ -129,7 +129,7 @@ class ServiceResources:
         and a service with no `app_database_url` has no database dependency to be
         truthful about. Reporting `False` for an unconfigured database would make
         `/ready` 503 for every developer running `TITLEPIPE_ENVIRONMENT=development`
-        alone, which `apps/web-v2/e2e-live` and the migration harness both depend
+        alone, which `apps/web/e2e-live` and the migration harness both depend
         on; reporting `True` would be the lie the paragraph below exists to
         prevent.
 
