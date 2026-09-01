@@ -232,7 +232,11 @@ def isolation_dsn(app_dsn: str) -> str:
     indirection exists for one reason: the injection that proves this file is
     worth running has to swap the role, and it has to be re-runnable by whoever
     reads it. Respell the parameter as `migrated_database` — which yields the
-    superuser DSN — and every one of the seven fails. MEASURED 2026-08-06.
+    superuser DSN — and every one of the NINE fails. RE-MEASURED 2026-09-01
+    against postgres:18.4: `9 failed`, matching the module header. This
+    sentence said "the seven" until then — it was written when the file held
+    seven assertions and was not updated when `test_1a` and `test_2b` landed,
+    so it undercounted the very injection it documents.
 
     THAT NUMBER WAS SIX THE FIRST TIME IT WAS RUN, and the missing one is the
     reason this injection is worth having rather than a formality: assertion 4
@@ -241,8 +245,15 @@ def isolation_dsn(app_dsn: str) -> str:
     the other tenant's row absent, and fails with the rest.
 
     A superuser bypasses RLS unconditionally, so a file that quietly fell back to
-    the admin DSN would report seven passes about a database it was never
+    the admin DSN would report nine passes about a database it was never
     filtered by.
+
+    VERIFIED LIVE 2026-09-01, by catalog query rather than by reading: a probe
+    taking `app_dsn` answered `current_user = titlepipe_app`, `session_user =
+    titlepipe_app`, `is_superuser = off`, and `rolsuper = rolbypassrls = false`.
+    It was also REFUSED `pg_authid` outright — `permission denied for table
+    pg_authid` — which is a second, independent witness that this connection is
+    not the container superuser.
     """
     return app_dsn
 
