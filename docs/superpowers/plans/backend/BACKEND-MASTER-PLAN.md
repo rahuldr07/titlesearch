@@ -16,6 +16,15 @@ sequences writing it.
 **The exit criterion, stated once.** *Backend done* means **the mock can be
 switched off and the invariants still pass.* Not "the endpoints return 200".
 
+**⚠ The machinery that would prove that is currently broken.** `apps/web/e2e-live/`
+is the only mechanism that distinguishes "core-api served this" from "MSW
+served this", and all five of its specs navigate to `/rulebook` — a route the
+rebuild deleted — keyed on a `rule-row-*` testid nothing renders any more.
+Six of its eleven assertions are `toHaveCount(0)` and therefore **pass
+vacuously against a 404 page**. See `LIVE-HARNESS-BROKEN-2026-09-01.md`.
+**Repairing it is Plan 03's first task**, before any endpoint work: without it
+no later plan can prove it has actually replaced a mock.
+
 ---
 
 ## 0. Where we actually are
@@ -84,7 +93,15 @@ assertions pass against a system that denies everybody everything.
 
 ### Plan 03 — identity *(drafted, blocked on G3/G4)*
 
-Already written. Ships a real session, a real principal, server-evaluated
+**Task 0, and it is not blocked by any gate: repair the live harness.**
+Repoint `e2e-live/`'s five specs from the deleted `/rulebook` to
+`/account?tab=rules`, restore a per-rule testid, and **add the positive control
+the suite lacks** — assert the row is *visible* in the same run that asserts it
+is *absent*, so a missing route fails both halves instead of passing one. Six
+assertions currently pass against a 404. This is startable today and every
+later plan's acceptance depends on it (`LIVE-HARNESS-BROKEN-2026-09-01.md`).
+
+Then the drafted plan. Ships a real session, a real principal, server-evaluated
 authz; retires three holes that **grant admin on a missing header**.
 
 Note the mock is currently *safer than the server*: it refuses an
@@ -98,6 +115,9 @@ the status code is open — **absent identity is a refusal, never a grant**
   runs **before** validation, so `reviewer` gets 403 and `engineer` 422 on the
   *same invalid body* (`authz.spec.ts:17`). A test that only checks 403 on a
   *valid* body would pass with the ordering reversed.
+- **Injection for task 0:** point the repaired suite at a nonexistent route.
+  Both the visible-row and absent-row assertions must fail. If only one does,
+  the vacuity is still there.
 
 ### Plan 04 — the real data model
 
