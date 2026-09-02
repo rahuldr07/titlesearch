@@ -1,0 +1,130 @@
+SET
+SET
+########## Q1: contract-shaped band census (orders only), NO index
+                                                                                                                QUERY PLAN                                                                                                                
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ HashAggregate  (cost=1316.00..1588.86 rows=15592 width=40) (actual time=11.822..11.867 rows=4.00 loops=1)
+   Group Key: CASE WHEN (assigned_to = '33333333-3333-3333-3333-333333333333'::uuid) THEN 'mine'::text WHEN (status = 'held'::text) THEN 'held'::text WHEN (status = 'delivered'::text) THEN 'delivered'::text ELSE 'in_flight'::text END
+   Batches: 1  Memory Usage: 545kB
+   Buffers: shared hit=256 read=225
+   ->  Seq Scan on orders o  (cost=0.00..1232.00 rows=16800 width=32) (actual time=0.230..10.027 rows=20000.00 loops=1)
+         Filter: (((delivered_at IS NULL) OR (status = 'delivered'::text)) AND (tenant_id = (NULLIF(current_setting('app.current_tenant'::text, true), ''::text))::uuid))
+         Rows Removed by Filter: 5000
+         Buffers: shared hit=256 read=225
+ Planning:
+   Buffers: shared hit=111 dirtied=2
+ Planning Time: 0.340 ms
+ Execution Time: 12.079 ms
+(12 rows)
+
+########## Q2: full-tenant field-state census across ALL orders, NO index
+                                                                       QUERY PLAN                                                                       
+--------------------------------------------------------------------------------------------------------------------------------------------------------
+ Finalize GroupAggregate  (cost=110270.95..110272.71 rows=6 width=12) (actual time=524.229..526.960 rows=6.00 loops=1)
+   Group Key: state
+   Buffers: shared hit=1874 read=70979
+   ->  Gather Merge  (cost=110270.95..110272.58 rows=14 width=12) (actual time=524.217..526.947 rows=18.00 loops=1)
+         Workers Planned: 2
+         Workers Launched: 2
+         Buffers: shared hit=1874 read=70979
+         ->  Sort  (cost=109270.92..109270.94 rows=6 width=12) (actual time=512.775..512.776 rows=6.00 loops=3)
+               Sort Key: state
+               Sort Method: quicksort  Memory: 25kB
+               Buffers: shared hit=1874 read=70979
+               Worker 0:  Sort Method: quicksort  Memory: 25kB
+               Worker 1:  Sort Method: quicksort  Memory: 25kB
+               ->  Partial HashAggregate  (cost=109270.78..109270.84 rows=6 width=12) (actual time=512.747..512.748 rows=6.00 loops=3)
+                     Group Key: state
+                     Batches: 1  Memory Usage: 32kB
+                     Buffers: shared hit=1858 read=70979
+                     Worker 0:  Batches: 1  Memory Usage: 32kB
+                     Worker 1:  Batches: 1  Memory Usage: 32kB
+                     ->  Parallel Seq Scan on fields f  (cost=0.00..103775.04 rows=1099148 width=4) (actual time=4.639..411.404 rows=880000.00 loops=3)
+                           Filter: (tenant_id = (NULLIF(current_setting('app.current_tenant'::text, true), ''::text))::uuid)
+                           Rows Removed by Filter: 220000
+                           Buffers: shared hit=1858 read=70979
+ Planning:
+   Buffers: shared hit=39
+ Planning Time: 0.171 ms
+ JIT:
+   Functions: 33
+   Options: Inlining false, Optimization false, Expressions true, Deforming true
+   Timing: Generation 1.674 ms (Deform 0.593 ms), Inlining 0.000 ms, Optimization 0.848 ms, Emission 12.733 ms, Total 15.255 ms
+ Execution Time: 539.668 ms
+(31 rows)
+
+########## Q3: per-order decisions/settled rollup joined to band, NO index (the M3 motivator)
+                                                                                 QUERY PLAN                                                                                 
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Finalize GroupAggregate  (cost=124326.54..124328.10 rows=5 width=48) (actual time=687.419..690.127 rows=3.00 loops=1)
+   Group Key: (CASE WHEN (o.status = 'held'::text) THEN 'held'::text WHEN (o.status = 'delivered'::text) THEN 'delivered'::text ELSE 'in_flight'::text END)
+   Buffers: shared hit=3599 read=70697
+   ->  Gather Merge  (cost=124326.54..124327.94 rows=12 width=48) (actual time=687.408..690.115 rows=9.00 loops=1)
+         Workers Planned: 2
+         Workers Launched: 2
+         Buffers: shared hit=3599 read=70697
+         ->  Sort  (cost=123326.52..123326.53 rows=5 width=48) (actual time=677.151..677.153 rows=3.00 loops=3)
+               Sort Key: (CASE WHEN (o.status = 'held'::text) THEN 'held'::text WHEN (o.status = 'delivered'::text) THEN 'delivered'::text ELSE 'in_flight'::text END)
+               Sort Method: quicksort  Memory: 25kB
+               Buffers: shared hit=3599 read=70697
+               Worker 0:  Sort Method: quicksort  Memory: 25kB
+               Worker 1:  Sort Method: quicksort  Memory: 25kB
+               ->  Partial HashAggregate  (cost=123326.38..123326.46 rows=5 width=48) (actual time=677.114..677.116 rows=3.00 loops=3)
+                     Group Key: CASE WHEN (o.status = 'held'::text) THEN 'held'::text WHEN (o.status = 'delivered'::text) THEN 'delivered'::text ELSE 'in_flight'::text END
+                     Batches: 1  Memory Usage: 32kB
+                     Buffers: shared hit=3583 read=70697
+                     Worker 0:  Batches: 1  Memory Usage: 32kB
+                     Worker 1:  Batches: 1  Memory Usage: 32kB
+                     ->  Hash Join  (cost=1293.50..112346.32 rows=878405 width=36) (actual time=21.452..574.832 rows=880000.00 loops=3)
+                           Hash Cond: (f.order_id = o.id)
+                           Buffers: shared hit=3583 read=70697
+                           ->  Parallel Seq Scan on fields f  (cost=0.00..103775.04 rows=1099148 width=36) (actual time=8.772..401.087 rows=880000.00 loops=3)
+                                 Filter: (tenant_id = (NULLIF(current_setting('app.current_tenant'::text, true), ''::text))::uuid)
+                                 Rows Removed by Filter: 220000
+                                 Buffers: shared hit=2140 read=70697
+                           ->  Hash  (cost=1043.50..1043.50 rows=20000 width=40) (actual time=12.452..12.453 rows=20000.00 loops=3)
+                                 Buckets: 32768  Batches: 1  Memory Usage: 1678kB
+                                 Buffers: shared hit=1443
+                                 ->  Seq Scan on orders o  (cost=0.00..1043.50 rows=20000 width=40) (actual time=0.043..9.034 rows=20000.00 loops=3)
+                                       Filter: (tenant_id = (NULLIF(current_setting('app.current_tenant'::text, true), ''::text))::uuid)
+                                       Rows Removed by Filter: 5000
+                                       Buffers: shared hit=1443
+ Planning:
+   Buffers: shared hit=109
+ Planning Time: 0.226 ms
+ JIT:
+   Functions: 69
+   Options: Inlining false, Optimization false, Expressions true, Deforming true
+   Timing: Generation 2.370 ms (Deform 1.029 ms), Inlining 0.000 ms, Optimization 1.321 ms, Emission 24.609 ms, Total 28.299 ms
+ Execution Time: 690.813 ms
+(41 rows)
+
+########## Q4: single-order decisions count (the ~132-row claim), NO index
+                                                                         QUERY PLAN                                                                         
+------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Finalize Aggregate  (cost=108213.32..108213.33 rows=1 width=16) (actual time=71.487..74.631 rows=1.00 loops=1)
+   Buffers: shared hit=2424 read=70415
+   InitPlan 1
+     ->  Limit  (cost=0.00..0.05 rows=1 width=16) (actual time=3.793..3.794 rows=1.00 loops=1)
+           Buffers: shared hit=2
+           ->  Seq Scan on orders  (cost=0.00..1043.50 rows=20000 width=16) (actual time=0.019..0.019 rows=1.00 loops=1)
+                 Filter: (tenant_id = (NULLIF(current_setting('app.current_tenant'::text, true), ''::text))::uuid)
+                 Buffers: shared hit=2
+   ->  Gather  (cost=108213.04..108213.25 rows=2 width=16) (actual time=71.348..74.613 rows=3.00 loops=1)
+         Workers Planned: 2
+         Workers Launched: 2
+         Buffers: shared hit=2424 read=70415
+         ->  Partial Aggregate  (cost=107213.04..107213.05 rows=1 width=16) (actual time=57.993..57.994 rows=1.00 loops=3)
+               Buffers: shared hit=2422 read=70415
+               ->  Parallel Seq Scan on fields  (cost=0.00..107212.60 rows=44 width=4) (actual time=3.880..57.925 rows=44.00 loops=3)
+                     Filter: ((order_id = (InitPlan 1).col1) AND (tenant_id = (NULLIF(current_setting('app.current_tenant'::text, true), ''::text))::uuid))
+                     Rows Removed by Filter: 1099956
+                     Buffers: shared hit=2422 read=70415
+ Planning Time: 0.100 ms
+ JIT:
+   Functions: 32
+   Options: Inlining false, Optimization false, Expressions true, Deforming true
+   Timing: Generation 1.405 ms (Deform 0.451 ms), Inlining 0.000 ms, Optimization 0.719 ms, Emission 11.879 ms, Total 14.002 ms
+ Execution Time: 75.042 ms
+(24 rows)
+

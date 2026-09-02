@@ -646,6 +646,78 @@ so it is a scan across all orders, not one — then a stored count is justified.
 plausible future problem and it should be measured before it is solved.** The trigger design
 below is written so it exists when needed, not so it ships now.
 
+### 4.2.1 MEASURED 2026-09-02 — the §4 recommendation is no longer an argument from row count
+
+The claim above ("this is microseconds", "nobody has measured a problem") was asserted, not
+measured. It has now been measured, and **M1 survives the measurement, but not for the
+reason §4.2 originally gave.**
+
+**Rig.** `postgres:18.4` in `titlepipe-db-postgres-1` (the live dev container), database
+`bandbench`, default config (`shared_buffers=128MB`, `work_mem=4MB`,
+`max_parallel_workers_per_gather=2`, `jit=on`) on a 12-core i5-12400F / 25 GiB host, so the
+numbers are a *dev-box lower bound on hardware and an upper bound on contention* — no
+concurrent load. Schema is `0001_skeleton.py`'s shape plus PROPOSAL-B §2.2/§2.4's columns
+(`orders` +13, `fields` +17, `field_state` enum, `PRIMARY KEY (tenant_id, id)`).
+`ENABLE` + **`FORCE ROW LEVEL SECURITY`** and the `0002` `tenant_isolation` policy
+(`tenant_id = nullif(current_setting('app.current_tenant', true), '')::uuid`) on every
+table; every query run as `titlepipe_app` (a non-owner, non-`BYPASSRLS` role) with
+`app.current_tenant` set. **Two tenants seeded, not one** — tenant A 20,000 orders /
+2,640,000 `fields` rows, tenant B 5,000 orders / 660,000 rows — so the RLS predicate has
+rows to actually discard (`Rows Removed by Filter: 220000` per worker in the no-index plans
+is the proof it did). Totals: `fields` 3.3M rows / 771 MB, tenant-visible 2,640,000.
+
+**Results.** `EXPLAIN (ANALYZE, BUFFERS)` execution time, warm unless stated:
+
+| Query | No index | With index | Plan with index |
+|---|---|---|---|
+| **Q1 — band census over `orders` only** (the actual contract shape) | 12.1 ms cold seq scan | **1.96 ms** | `Index Only Scan using ix_orders_status`, `read=20` buffers |
+| Q2 — field-state census over all 2.64M visible `fields` | 540 ms (parallel seq scan, 71k buffers) | **151–170 ms** | `Parallel Index Only Scan using ix_fields_order_state`, `Heap Fetches: 0` |
+| Q3 — `orders ⋈ fields` per-band decisions/settled rollup | 691 ms | **280–309 ms** | hash join over the same index-only scan |
+| Q3b — same rollup through the **partial** index `ix_fields_open` (`WHERE state IN ('pending','escalated','countersign')`) | — | **147–150 ms** | `Parallel Index Only Scan using ix_fields_open` (12 MB vs 30 MB), 440k rows/worker instead of 880k |
+| Q4 — single-order decisions/settled (the "≤132 rows" claim) | 75 ms (parallel seq scan; **no index existed to use**) | **0.058–0.101 ms** | `Index Only Scan`, `rows=132`, `Heap Fetches: 0` |
+| **Full contract-shaped endpoint** — 4 censuses + 4 row lists (`row_number()` partitioned, 50 rows/band) | — | **24.6–28.8 ms**, two independent 5-run passes | — |
+
+Cold-cache Q1 after a container restart: **2.0 ms**, `shared read=20` — the working set for
+the census is 20 buffers, so the cold and warm numbers are the same number.
+
+**RLS costs nothing measurable here.** Same census as `titlepipe_app` under the policy
+(1.962 ms) versus as a `BYPASSRLS` superuser with the predicate written by hand (1.828 ms).
+The `current_setting()` call is a stable expression, folded into an `Index Cond`
+(`Index Cond: (tenant_id = (NULLIF(current_setting('app.current_tenant', true), ''))::uuid)`),
+**not** a per-row filter. The 0.13 ms delta is inside run-to-run noise.
+
+**What this actually settles, and what it does not:**
+
+1. **M1 is confirmed for `GET /api/queue/bands` — 27 ms for the whole endpoint at 20,000
+   orders, measured, not argued.** §4's recommendation stands.
+2. **The original reasoning was wrong even though the conclusion was right.** §4.2 defends
+   M1 by "≤132 rows per order". The band census does not read `fields` at all: the contract
+   `count` is a count of *orders in a band* (`endpoints.ts:94-97` — `count` is "a count of
+   what is left", the band row list is orders), so the 2.6M-row figure was never the
+   census's working set. That is why Q1 is 2 ms and Q2/Q3 are 150–300 ms: the expensive
+   queries are the ones the endpoint does not run.
+3. **The index is load-bearing and is not optional.** Q4 — the exact query §4.2 called
+   "microseconds" — measured **75 ms** with no supporting index, because Postgres has no
+   choice but a parallel seq scan of 3.3M rows to find 132 of them. With
+   `ix_fields_order_state` it is 0.06 ms, a **~1,250×** difference. §4.2's argument is
+   therefore *conditional on PROPOSAL-C's `fields (tenant_id, order_id, state)` index
+   shipping in the same release as any per-order count.* Without it, M1 is not fast, and the
+   claim "nobody has measured a problem" would have been measuring the wrong thing.
+4. **The partial index is worth ~2× on the only query that could ever justify M3.** If a
+   future endpoint does need a per-band *field* rollup (Q3), `ix_fields_open` halves it
+   (309 ms → 149 ms) at 12 MB, and `Heap Fetches: 0` says it stays index-only. That is the
+   cheap escalation to try **before** M3, and it carries none of M3's drift risk.
+5. **M3 remains unjustified.** Nothing measured is slow. The threshold that would change
+   this is a *measured* endpoint above the interaction budget, and 27 ms is two orders of
+   magnitude under it.
+
+**Honest limits of this measurement.** Single-connection, zero concurrency, dev hardware, a
+synthetic uniform distribution (`assigned_to` matched 1-in-7, band sizes even), and 25,000
+orders total rather than a multi-year corpus. It does not model connection-pool contention,
+autovacuum during load, or bloat from the update churn a real review workload produces. It
+establishes the order of magnitude — **tens of milliseconds, not seconds** — and that is the
+decision §4 needed. It does not establish a production SLO.
+
 ### 4.3 The test that must exist before any trigger ships — non-negotiable
 
 If M3 is ever adopted, the test below is a **precondition of the migration**, not a
@@ -832,9 +904,16 @@ attention are **D-4** (unlabelled, unjustified) and **D-7** (unnoticed, and the 
    `orders.county`) or J2 (keep, trigger-defended). Recommendation: **J1** — a trigger
    defending a redundancy is §4's defect class.
 9. **§4** — counts. Recommendation: **M1, computed on read, everywhere, at P0.** M2 is
-   disqualified by matview/RLS interaction. M3 only after `GET /api/queue/bands` is
-   *measured* slow, and only with the phase-6 injection test **and** the
-   `REVOKE UPDATE (count_column)` that makes the injection non-vacuous.
+   disqualified by matview/RLS interaction. **MEASURED 2026-09-02 (§4.2.1): the full
+   contract-shaped `GET /api/queue/bands` runs in 24.6–28.8 ms under forced RLS at 20,000
+   orders / 2.64M tenant-visible `fields` rows, so M3 is not justified.** It becomes
+   arguable only if a future endpoint needs a per-band *field* rollup, and even then the
+   partial index `fields (tenant_id, order_id) WHERE state IN ('pending','escalated',
+   'countersign')` is the first move (309 ms → 149 ms, 12 MB, no drift risk), M3 the last —
+   and only with the phase-6 injection test **and** the `REVOKE UPDATE (count_column)` that
+   makes the injection non-vacuous. **`fields (tenant_id, order_id, state)` is a
+   precondition of M1, not an optimization of it: without it the per-order count is 75 ms,
+   with it 0.06 ms.**
 
 **Deferred with a named cost (the standard the proposals set for themselves):**
 
@@ -899,10 +978,16 @@ attention are **D-4** (unlabelled, unjustified) and **D-7** (unnoticed, and the 
   correction. The question survives only as a serializer
   question: `data.ts:88-89,140`'s `place` (`"Clayton County · GA"`) is a display string
   the wire assembles, not a stored value.
-- **Query plans.** No `EXPLAIN` was run. The §4 claim that M1 is fast enough is an argument
-  from row count (≤132 rows per order on a proposed index), not a measurement. **It should
-  be measured before P1**, and if it is measured, that measurement is also the thing that
-  would legitimately promote M3.
+- **Query plans — RESOLVED 2026-09-02, see §4.2.1.** This entry used to read *"No `EXPLAIN`
+  was run. The §4 claim that M1 is fast enough is an argument from row count."* It has now
+  been run, against `postgres:18.4` with forced RLS, `app.current_tenant` set, two tenants
+  and 3.3M `fields` rows (2.64M tenant-visible). **The full contract-shaped
+  `GET /api/queue/bands` measures 24.6–28.8 ms; M1 is confirmed and M3 stays unjustified.**
+  Two things the measurement changed rather than confirmed: the band census reads `orders`,
+  not `fields`, so the 2.6M figure was never its working set; and the per-order count §4.2
+  called "microseconds" is **75 ms without `fields (tenant_id, order_id, state)`** and
+  0.06 ms with it, so the index is a precondition of the recommendation, not an optimization.
+  What remains unmeasured: concurrency, bloat, and production hardware.
 - **`packages/contract/src/design.ts` in full**, and the 15 built screens. §2.4's blast
   radius is a grep count (295 occurrences, 72 files), not a read of each site.
 - **Whether `field_readings` genuinely needs no unique constraint.** I argued from
