@@ -8,9 +8,35 @@ normal form each table satisfies — then rule on the four places where the sche
 
 **Provenance of this document's own premise:** `grep -i -E '1NF|2NF|3NF|BCNF|normal form'`
 across the four proposal documents returns zero hits. The proposals do the substance
-implicitly — 341 `NOT NULL`, 56 `CHECK`, composite FKs `(tenant_id, x)` throughout — and
-never name a normal form. That is not a cosmetic omission: three of the six findings below
-are only visible if you write the FDs down.
+implicitly — composite FKs `(tenant_id, x)` throughout, and dense `NOT NULL`/`CHECK` use in
+their DDL — and never name a normal form. That is not a cosmetic omission: three of the six
+findings below are only visible if you write the FDs down.
+
+**Recount, and what population the numbers describe.** An earlier draft of this paragraph
+cited "341 `NOT NULL`, 56 `CHECK`". Those are counts of *proposed* DDL text in
+`PROPOSAL-A-minimal.md` + `PROPOSAL-B-full.md` + `PROPOSAL-C-evidence.md`, summed across
+three mutually exclusive alternatives. They are **not** properties of any schema, shipped or
+chosen — no one proposal contains them, and adopting one proposal cannot yield their sum.
+Recounted per source:
+
+| Population | `NOT NULL` | `CHECK` |
+| --- | ---: | ---: |
+| Proposal A (matching lines / raw occurrences) | 84 / 84 | 6 |
+| Proposal B | 144 / 144 | 24 |
+| Proposal C | 111 / 118 | 26 |
+| **A+B+C summed** (`grep -c`) | **339** | **56** |
+| A+B+C, occurrences inside fenced code blocks only | 319 | 30 (`CHECK (` in blocks: 30) |
+| Shipped migrations `services/core-api/migrations/versions/*.py` | 9 `nullable=False` | **0** `CheckConstraint` |
+| Live DB `tp_audit_check`, `pg_attribute.attnotnull` / `pg_constraint` | 28 columns | **0** (`contype='c'`) |
+
+The `56` reproduces exactly under `grep -cw CHECK` over A+B+C; the same method gives **339**
+for `NOT NULL`, so "341" was a +2 miscount of that same population. Corrected above.
+
+The gap that matters is not the arithmetic: the live schema has **zero** CHECK constraints
+and 28 NOT NULL columns across 9 tables (`alembic_version`, `tenants`, `orders`, `packages`,
+`pages`, `fields`, `field_readings`, `audit_log`, `rules`). Every enum/state invariant the
+proposals express as `CHECK` is currently unenforced at the database layer. No claim in this
+document or in the proposals may be read as asserting those constraints exist today.
 
 **What this document rules and what it does not.** It rules on facts that follow from the
 documents (which normal form, which FD holds). It presents options with consequences and
@@ -292,6 +318,36 @@ believe the second branch holds, but the roadmap is the owner's to state.
 ## 3. TRANSITIVE DEPENDENCY — `orders(jurisdiction, state, county)`
 
 ### 3.1 The violation, stated formally
+
+**🔴 FRAMING CORRECTION (verified firsthand against the migrations, 2026-09-02).
+`orders` DOES NOT HAVE THESE COLUMNS TODAY.** `0001_skeleton.py:279` is the whole
+of the shipped `orders` table:
+`op.create_table("orders", *_identity_columns(), _tenant_column(), _tenant_primary_key())`
+— that is `id`, `created_at`, `tenant_id`, `PRIMARY KEY (tenant_id, id)`, and
+nothing else. There is no `jurisdiction`, no `state`, no `county`, no
+`client_id`, no `external_ref`, no `status`. `0002` adds only RLS and grants
+(`0002_forced_rls_and_grants.py:305`), `0003` creates only `rules`
+(`0003_rules.py:214-229`). The three columns below exist in `PRD.md:89-90` and in
+the three proposals as **PROPOSED DDL**.
+
+**Consequences of the correction, and they are all in the fix's favour:**
+
+1. This is a **greenfield DDL decision, not a migration of extant data**. The
+   `orders` table holds no jurisdiction values to convert, so Option J1 below
+   ("drop `state` and `county`") is not a `DROP COLUMN` at all — it is simply
+   *not adding two of the three proposed columns*. Zero rows, zero risk, zero
+   backfill.
+2. **§8's open question "whether `jurisdiction` is a code or a free string in
+   live data" is MOOT for the database.** There is no live data. The FK in §3.2
+   needs no data migration; the shape is chosen, not discovered. The question
+   survives only as a *contract* question — what `data.ts:88-89,140` serves as
+   `place` ("Clayton County · GA") is a display string assembled for the wire,
+   and the audit's recommendation is that the stored column be the code
+   (`'GA-CLAYTON'`) with the display string derived by the serializer.
+3. The 3NF analysis itself is **unchanged and still worth making**: an FD that
+   would be violated by DDL nobody has run yet is exactly the cheapest kind to
+   fix. The update/insert/delete anomalies below are stated in the conditional —
+   they are what happens *if the proposed DDL ships as written*.
 
 `CONTEXT.md:105` and all three proposals (`PROPOSAL-A-minimal.md:104-106`;
 `PROPOSAL-B-full.md:199-201`; `PROPOSAL-C-evidence.md:175-177`) put three columns on
@@ -770,13 +826,47 @@ attention are **D-4** (unlabelled, unjustified) and **D-7** (unnoticed, and the 
   `0001_skeleton.py:174-179` as quoted in the proposals; I did not read `PRD.md` directly.
   If PRD §7 mandates a user-visible order number, `orders` gains a natural key
   `(tenant_id, order_no)` and §5's 2NF analysis must be redone for it.
-- **The alembic migration files themselves** (`0001_skeleton.py`, `0003_rules.py`). Every
-  citation to them here is second-hand through the proposals and the adversarial review.
-  The line numbers are theirs, not mine.
-- **Whether `jurisdiction` is a code or a free string in live data.** §3 assumes a code
-  like `'GA-CLAYTON'`. `data.ts:88-89,140` shows `place` as `"Clayton County · GA"`, a
-  display string. If `orders.jurisdiction` currently holds display strings, the FK in §3.2
-  needs a data migration, not just DDL.
+- ~~**The alembic migration files themselves.**~~ **RESOLVED 2026-09-02 — all three
+  revisions read firsthand.** Every migration citation in this document was re-verified
+  against the source. Findings:
+  - `0001_skeleton.py:174-179` — **accurate.** Resolves to the `_tenant_primary_key`
+    docstring's "BOUNDED today only because ids are 128-bit and server-generated … It
+    stops being bounded the moment a natural key lands, and PRD §7 gives `orders` an order
+    number and `pages` a page index." Quoted correctly at §5 and §1.1.
+  - `0001_skeleton.py:154-179` — **accurate.** The `_tenant_primary_key` docstring
+    including the measured existence-oracle transcript at `:164-171`.
+  - `0001_skeleton.py:58-64` — **approximately right, cited one line late.** The
+    fires-on-zero-rows argument ("A row trigger … does not fire at all when a statement
+    affects none — and under `0002`'s RLS a cross-tenant `UPDATE` matches exactly zero
+    rows") is at **`:54-59`**; `:61-65` is the separate named-SQLSTATE paragraph. The
+    claim the audit makes is supported; the span should read `:54-59`.
+  - `0003_rules.py:90` — **accurate.** `## PRIMARY KEY (id), and why that is not the
+    omission 0001 warns about`.
+  - `0003_rules.py:208` — **accurate.** The `🔴 NO tenant_id AND NO
+    PrimaryKeyConstraint("tenant_id", "id")` comment above the `create_table`.
+  - `0003_rules.py:19-30` — **accurate as a pointer, misleading as a location.** Those
+    lines are the module docstring *explaining* the catalog-derived RLS assertion, and
+    they name `EXPECTED_GLOBAL_TABLES`. The list itself is **not in the migration**: it is
+    `tests/test_forced_rls_and_grants.py:157` (`frozenset({"rules"})`). §3.2's instruction
+    to "add it to `EXPECTED_GLOBAL_TABLES`" therefore points at a file the citation does
+    not name. **And it is incomplete — see the next bullet.**
+- **NEW FINDING, from reading the migrations firsthand: a global table requires TWO edits,
+  not one.** §3.2 tells the reader that `jurisdictions` (and by extension
+  `jurisdiction_tax_cadence`, `jurisdiction_null_states`, `sections`, and `templates` if
+  global) must be added to `EXPECTED_GLOBAL_TABLES`. There is a **second** list:
+  `tests/conftest.py::ISOLATION_GLOBAL_TABLES`, whose guard message
+  (`conftest.py:1620-1631`) states it explicitly — *"a GLOBAL one belongs in
+  `ISOLATION_GLOBAL_TABLES` here AND in `EXPECTED_GLOBAL_TABLES` in
+  `tests/test_forced_rls_and_grants.py`, with the reason recorded in the migration that
+  creates it."* Omitting the conftest half does not fail silently — the isolation seam
+  refuses to guess and raises — but a reader following §3.2 alone will hit it. **§3.2's
+  numbered point 2 should name both lists and the migration-docstring requirement.**
+- ~~**Whether `jurisdiction` is a code or a free string in live data.**~~ **MOOT for the
+  database — resolved 2026-09-02.** `orders` has no `jurisdiction` column
+  (`0001_skeleton.py:279`) and the live `fields` table is empty; there is no data to
+  migrate. See §3.1's framing correction. The question survives only as a serializer
+  question: `data.ts:88-89,140`'s `place` (`"Clayton County · GA"`) is a display string
+  the wire assembles, not a stored value.
 - **Query plans.** No `EXPLAIN` was run. The §4 claim that M1 is fast enough is an argument
   from row count (≤132 rows per order on a proposed index), not a measurement. **It should
   be measured before P1**, and if it is measured, that measurement is also the thing that
