@@ -450,7 +450,7 @@ ALTER TABLE fields ADD CONSTRAINT fields_path_is_well_formed CHECK (
 
   | Table | Rows accepted | Rows rejected | Error |
   |---|---|---|---|
-  | `NULLIF(...)::integer` (audit's original) | 19 / 48 | 28 × `22P02`, 1 × `23514` | `ERROR: 22P02: invalid input syntax for type integer: "total"` (`pg_strtoint32_safe`, `numutils.c:615`) |
+  | `NULLIF(...)::integer` (audit's original) | 19 / 48 | 28 × `22P02`, 1 × `23514` | `ERROR: 22P02: invalid input syntax for type integer: "building"` — the first offender, `assessment.building`; identical errors follow for `"total"`, `"land"`, `"zip"`, `"grantor"`, … (`pg_strtoint32_safe`, `numutils.c:615`) |
   | `CASE WHEN ... ~ '^[0-9]+$'` (corrected) | 47 / 48 | 1 × `23514` | only the `'x'` fixture, on the CHECK, as intended |
 
   A bulk single-statement `INSERT` of all 48 rows into the original form aborts entirely
@@ -474,7 +474,64 @@ ALTER TABLE fields ADD CONSTRAINT fields_path_is_well_formed CHECK (
   three-segment count, in the corrected table). Null means "not a repeating-instrument
   path", and the CHECK — not the cast — is what excludes malformed input.
 - It does not touch the contract. The API serializes `path` exactly as today. Zero
-  frontend change. Zero mock change. Zero Playwright change.
+  frontend change. Zero mock change. Zero Playwright change — **with the one exception
+  decided in §2.5a.**
+
+### 2.5a The contract half — do the 11 `path` fields tighten to `.regex()`?
+
+**DECISION: tighten on the three *request* schemas only. Leave the response and
+projection schemas as `z.string()`.** This is a split, not a blanket answer, and the
+split follows from where a bad `path` can actually reach a Postgres `INSERT`.
+
+The 13 call sites (`grep 'path: z.string()\|field_path: z.string()' packages/contract/src`):
+
+| Site | Schema | Direction | Verdict |
+|---|---|---|---|
+| `entities.ts:339` | `BlindEntryInput.path` | request → INSERT | **`.regex()`** |
+| `endpoints.ts:312` | `ReconciliationRulingRequest.path` | request → INSERT | **`.regex()`** |
+| `endpoints.ts:500` | `CreateComplaintRequest.field_path` | request → INSERT | **`.regex()`** |
+| `entities.ts:105` | `Field.path` | response | leave `z.string()` |
+| `entities.ts:217` | `GoldenField.path` | response | leave |
+| `entities.ts:231` | `Reconciliation.path` | response | leave |
+| `entities.ts:289` | `Complaint.field_path` | response | leave |
+| `endpoints.ts:341` | `BenchFailRow.path` | response | leave |
+| `endpoints.ts:408` | `MetricsBacklogRow.path` | response | leave |
+| `endpoints.ts:582` | `GrantedPermissionSchema.path` | **not a field path** — an RBAC route path (`/orders/$orderId`) | leave; a field-path regex here would be a category error |
+| `design.ts:194`, `design2.ts:200`, `design2.ts:232` | countersign / `SheetField` / `NullStateRow` | response | leave |
+
+**Why tighten the requests.** Without it the only rejection is the `23514` at INSERT
+time, which arrives at the API as a constraint-violation exception and has to be mapped
+back to a 422 by constraint name. That mapping is real work, it is easy to get wrong,
+and it produces a worse error body than Zod's. `.regex(/^[a-z_]+(\.[0-9]+)?\.[a-z_]+$/)`
+on the request schema — **the same regex as the CHECK, character for character, or the
+two boundaries disagree and the disagreement is a bug** — moves rejection to the API
+boundary where it belongs. The DB CHECK stays regardless: it is the backstop for every
+writer that is not an HTTP request (backfills, the assemble stage, engine adapters).
+
+**Why NOT tighten the responses.** A response schema is the client's parser. Tightening
+it means the frontend *refuses to render* an order because the server sent a path shape
+the client did not expect — a client-side rejection of server-owned data, which inverts
+the ownership rule the whole invariant suite exists to protect. The failure mode is a
+blank screen instead of a slightly odd label. Response schemas stay permissive.
+
+**Effect on `apps/web/e2e/invariants/server-owns-state.spec.ts:12`: none, and that is
+the correct outcome.** That line is `path: "x"` in the local `field()` fixture factory,
+which builds `Field` objects — a **response** shape, delivered through
+`interceptApi` (`apps/web/e2e/helpers/net.ts:13`) as a synthetic `GET` body. `"x"`
+violates both the CHECK and the proposed request regex, but it is never validated
+against either: it is server output as far as the client is concerned, and `Field.path`
+stays `z.string()`. The three real paths the spec asserts on
+(`assessment.tax_status:34`, `owner.zip:45`, `deed.book_page:53`) are all well-formed
+two-segment paths and all survive the corrected DDL. **The spec needs no edit** — which
+matters, because it is an invariant test and its header rule is "never weaken an
+assertion; a test that cannot pass against the new design is a conflict in the design."
+Had the decision been to tighten `Field.path`, this fixture would have had to change,
+and that requirement would itself have been the evidence that tightening responses is
+wrong.
+
+**Follow-on, not done here:** the regex must be defined once (e.g. `FieldPath =
+z.string().regex(...)` in `packages/contract/src/entities.ts`) and the migration must
+reference the same literal, so the API boundary and the DB CHECK cannot drift.
 
 **The cost, stated honestly and not hidden:**
 
