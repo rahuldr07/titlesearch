@@ -78,10 +78,10 @@ precedent that collides with `entities.ts:90-91` — see §2.
 
 | # | divergence | why nobody has decided it |
 |---|---|---|
-| **U1** | **`cost_usd`/`latency_ms` non-nullability.** Contract says required non-null (`entities.ts:90-91`); the declared-not-faked precedent (`CONTEXT.md:227`, `HANDOFF.md:30`) says an engine without the capability must emit **null**. A cached, stubbed or failed read has no measured cost, so the contract forces a sentinel `0` — and `0` asserts somebody measured, the exact failure mode `Order.pages` was made nullable to avoid (`entities.ts:63-72`). **Two ruled principles point opposite ways on the same two columns.** Both proposals took the contract's side (`PROPOSAL-A-minimal.md:280-284`, `PROPOSAL-C-evidence.md:376-377`) citing `entities.ts:90-91` — neither noticed the collision. |
-| **U2** | **The grain question: PROPOSAL-A columns vs PROPOSAL-C `engine_runs` ledger.** See §2 — this is the blocked item. |
+| **U1** | **`cost_usd`/`latency_ms` non-nullability — and B's `DEFAULT 0`.** Contract says required non-null (`entities.ts:90-91`); the declared-not-faked precedent (`CONTEXT.md:227`, `HANDOFF.md:30`) says an engine without the capability must emit **null**. A cached, stubbed or failed read has no measured cost, so the contract forces a sentinel `0` — and `0` asserts somebody measured, the exact failure mode `Order.pages` was made nullable to avoid (`entities.ts:63-72`). **Two ruled principles point opposite ways on the same two columns.** **All three** proposals took the contract's side (`PROPOSAL-A-minimal.md:280-284`, `PROPOSAL-B-full.md:352-353`, `PROPOSAL-C-evidence.md:376-377`) citing `entities.ts:90-91`; none noticed the collision. **B is worse than the other two**: it writes `NOT NULL DEFAULT 0`, so the sentinel is supplied by DDL rather than by a writer — see §2.2, where this is classified as an unnoticed violation rather than a fourth position. |
+| **U2** | **The grain question, three-way.** *Not* an A-vs-C binary: **B and C both build `engine_runs`** (`PROPOSAL-B-full.md:400-413`, `PROPOSAL-C-evidence.md:318-332`) and **A alone defers it** (DEF-4). The live splits are (i) A's deferral vs the other two, and (ii) `field_readings.engine_run_id`, which is **C-only** — B builds both structures with no link between them. See §2. |
 | **U3** | **`cost_usd` numeric type/precision and `latency_ms` integrality.** No governing doc specifies either. Contract has `z.number()` with no `.int()` on `latency_ms` — but `golden_coverage` *is* `.int()` and `p95_latency_ms` is not, an asymmetry with no stated reason (`entities.ts:332-333`). Both proposals independently chose `numeric(12,6)` + `integer` (`PROPOSAL-C-evidence.md:360` argues float is wrong because costs are summed). Sound, but **unratified**. |
-| **U4** | **Is `p95_latency_ms` computed over `engine_runs` or `field_readings`?** Both carry `latency_ms`. No doc rules. The mock computes it on read (`packages/mocks/src/handlers.ts:281`); the contract does not say whether it is a stored rollup. Bears directly on U2. |
+| **U4** | **Is `p95_latency_ms` computed over `engine_runs` or `field_readings`? — HALF CLOSED.** The *stored-rollup* half is answered: `PROPOSAL-B-full.md:668-678` rules the leaderboard a computed read-time projection over `engine_runs`+`field_readings`+`golden_fields`, because `no_truth_yet` is a server-owned threshold that materializing would freeze; `REVIEW-adversarial.md:381-388` affirms it independently, and the mock agrees (`handlers.ts:281`). The *which-table* half is unstated but indicated by `ix_engine_runs_engine_created` (`PROPOSAL-B-full.md:413`) being built on `engine_runs` and nowhere else. Needs a one-line ratification, and only answerable after U2 item 1. See §2.4. |
 | **U5** | **The NO TRUTH YET golden-coverage threshold value.** `PRD.md:169` says "< threshold" and never quantifies it. A CHECK/derivation cannot be written without a number. |
 | **U6** | **May per-call cost/latency appear on any reviewer-visible payload?** `Field.readings` (`entities.ts:119`) embeds full `FieldReading`s including cost and latency, and the review UI renders readings side by side. `PRD.md:40` bans reviewer dashboard/throughput data but does not name per-call engine cost. Today it is moot (zero UI readers — `ReadingPair.tsx` and `features/review/readings.ts` never touch them), but the shape ships it. |
 | **U7** | **`escalations.order_ids uuid[]` is a 1NF violation** the contract mandates (`entities.ts:170`, `CONTEXT.md:135`). Both B and C flag it as a contract weakness and decline to fix it (`NORMALIZATION-AUDIT.md:248`). Consequence: no FK can constrain members; a deleted order leaves a dangling id. Recorded, not urgent, **not decided**. |
@@ -95,71 +95,199 @@ precedent that collides with `entities.ts:90-91` — see §2.
 
 ---
 
-## 2. The blocked proposal grain — what the owner must decide
+## 2. The proposal grain — a three-way comparison, and what the owner must decide
 
-**BLOCKED: the per-call telemetry grain. `PROPOSAL-A` columns-on-`field_readings`
-vs `PROPOSAL-C` `engine_runs` ledger.** Neither can be implemented until ruled,
-because the two are not interchangeable — they record *different events*.
+> **Correction, 2026-09-02.** An earlier revision of this section framed the
+> telemetry grain as an A-vs-C binary and stated that `PROPOSAL-A` defers
+> `engine_runs` while `PROPOSAL-C` builds it. That framing was wrong by omission:
+> **`PROPOSAL-B-full.md` is a third position** and it builds `engine_runs`
+> (`PROPOSAL-B-full.md:400-413`), argues for it in prose
+> (`:423-430`), gives it an FK policy (`:785`), sequences it (`:809`), and lists
+> it under *"deliberately built with no consumer"* (`:1050`). The earlier text
+> also did not account for `REVIEW-adversarial.md`, which ranks **B > C > A**
+> (`REVIEW-adversarial.md:560`) and is already live on `engine_runs`'s structure
+> (`:148-150`). Both documents are read in full below.
 
-**PROPOSAL-A** (`PROPOSAL-A-minimal.md:280-284`) puts `cost_usd numeric(12,6) NOT
-NULL` and `latency_ms integer NOT NULL` on `field_readings` and **defers
-`engine_runs` entirely** (DEF-4, `:639`). Its own words: *"this is the most
-expensive deferral on the list."* Consequences it states:
+### 2.1 The three positions, side by side
 
-- per-order engine cost must be **summed from readings**, not read;
-- **a run that produced no readings is invisible** — i.e. a failed engine call
-  leaves no trace.
+| | **A** (minimal) | **B** (full) | **C** (evidence) |
+|---|---|---|---|
+| `field_readings.cost_usd` | `numeric(12,6) NOT NULL`, no default (`PROPOSAL-A-minimal.md:280-281`) | `numeric(12,6) NOT NULL **DEFAULT 0**` (`PROPOSAL-B-full.md:352-353`) | `numeric(12,6) NOT NULL` + `CHECK (cost_usd >= 0)` (`PROPOSAL-C-evidence.md:376-377`) |
+| `engine_runs` table | **deferred**, DEF-4, self-described *"the most expensive deferral on the list"* (`PROPOSAL-A-minimal.md:639`) | **built**, revision `0010`, with `error text` and `ix_engine_runs_engine_created (tenant_id, engine_id, created_at DESC)` (`:400-413`) | **built**, with `CHECK (cost_usd >= 0)`, `CHECK (latency_ms >= 0)` (`PROPOSAL-C-evidence.md:318-332`) |
+| `field_readings.engine_run_id` FK | n/a | **absent** — B has no link between the reading and the run (`PROPOSAL-B-full.md:344-357`, `:746-775`) | **present**, C's own addition (`PROPOSAL-C-evidence.md:376-385`) |
+| justification for `engine_runs` | — | *"has no screen and no contract entity, and it should still be built"*; a run that produced no fields still costs money and *"has nowhere else to be recorded"* (`:423-430`) | evidence that cannot be retrofitted |
+| delete policy | — | `engine_runs → engines` is **`RESTRICT`**: *"the cost ledger must survive an engine being retired"* (`:785`) | — |
+| `leaderboard` | deferred with the deleted screens (DEF-7) | **refused on structural grounds** — a computed projection over `engine_runs` + `field_readings` + `golden_fields` (`:669-678`) | — |
 
-**PROPOSAL-C** (`PROPOSAL-C-evidence.md:318-332`) creates `engine_runs(tenant_id,
-id, engine_id, order_id, pages, cost_usd, latency_ms, error)` with `CHECK
-(cost_usd >= 0)`, `CHECK (latency_ms >= 0)`, **and** keeps the columns on
-`field_readings`, adding `field_readings.engine_run_id` as an FK (`:376-385`).
-That link is C's own addition — it is **not** in `CONTEXT.md:127-130` — and its
-stated purpose (`:637-639`) is that without it *"a reading's `cost_usd` and the
-run's `cost_usd` are two unrelated numbers and neither reconciles against the
-other."* `NORMALIZATION-AUDIT.md:247` rules this an FD *addition*, not a
-denormalization.
+So the grain question is **not** "columns vs ledger". Two of three proposals
+build both, and B is the one that also says *where the leaderboard reads from*.
+The residual disagreements are narrower than the old framing claimed:
 
-Both are defensible. The rulebook mandates **both** structures — `PRD.md:101`
-puts cost/latency on `field_readings`, `PRD.md:105` mandates `engine_runs` as its
-own table — so "which one" is not answerable from the documents. **What is
-genuinely undecided is whether `engine_runs` lands in P0 or is deferred**, and
-that turns on the error case.
+- **A alone defers `engine_runs`** — this is the real fork, and it is still open.
+- **C alone links reading to run.** B builds both structures and leaves them
+  unreconcilable, which is precisely the defect C's `engine_run_id` exists to
+  prevent (`PROPOSAL-C-evidence.md:637-639`: without it *"a reading's `cost_usd`
+  and the run's `cost_usd` are two unrelated numbers"*). **B inherits that defect
+  silently** — it is not argued anywhere in B, and `REVIEW-adversarial.md` §5's
+  hybrid restores the link from C (`:589`) without naming it as a B defect.
+- **All three write `cost_usd NOT NULL`**, and none of the three notices U1.
 
-### The owner must decide exactly four things
+### 2.2 (a) Is B's `NOT NULL DEFAULT 0` a fourth position on U1?
+
+**No. It is an unnoticed violation of declared-not-faked, and it is strictly the
+worst of the three variants.**
+
+The evidence that B did not *decide* this, but drifted into it:
+
+1. **B knows the pattern and applies it elsewhere.** `PROPOSAL-B-full.md:146-149`
+   adds `tenants.name` with a default and then immediately drops it, with the
+   comment: *"the default exists only to make the `ADD` legal on a non-empty
+   table; it is not a domain value."* No such `DROP DEFAULT` follows `cost_usd`
+   or `latency_ms` (`:352-354`). The one place the distinction is load-bearing is
+   the one place B does not make it.
+2. **B's stated reason argues NOT NULL, never DEFAULT.** `:359-362` — *"`cost_usd`
+   and `latency_ms` are `NOT NULL` because `entities.ts:85-86` types them
+   non-nullable, and the adapter rule is that cost and latency are recorded per
+   call — a null would be an adapter that declined to record."* That is A's and
+   C's argument verbatim in substance. The `DEFAULT 0` clause carries no
+   justification anywhere in the document.
+3. **The default inverts the argument it is attached to.** B's premise is that a
+   null would mean *an adapter that declined to record*. `DEFAULT 0` means an
+   adapter that declines to record gets **`0` written on its behalf, silently, by
+   the database** — an assertion that a call was measured and cost nothing. B
+   defends nullability-as-product-rule for `engine_routing.approved_by`
+   (`:416-421`) and defends `probes.caught` staying nullable because
+   `NOT NULL DEFAULT false` *"would silently score every open probe as a miss"*
+   (`:573-575`). `cost_usd NOT NULL DEFAULT 0` is that identical failure shape,
+   in money.
+4. **`engine_runs.cost_usd` in the same proposal has no default** (`:406`). Two
+   columns of the same name and meaning, two nullability regimes, one document.
+
+So U1 stands with **three** proposals on the contract's side, not two, and B's
+variant additionally supplies the sentinel automatically. `REVIEW-adversarial.md`
+caught the structurally identical defect one section over — B-3 (`:358-371`),
+`orders.status NOT NULL DEFAULT 'received'`, *"a one-member vocabulary invented
+to make an `ADD COLUMN` legal on a non-empty table"* — and **did not catch
+`cost_usd DEFAULT 0`**, which is the same sentence with a number in it. Add it to
+the fix list at `REVIEW-adversarial.md:602-624` as item 11.
+
+**Amendment U1 must now cover:** drop `DEFAULT 0` from `field_readings.cost_usd`
+and `latency_ms` regardless of how the null-vs-`0` ruling lands. A default is
+indefensible under either ruling: if nulls are permitted the default hides them,
+and if `0` is a permitted assertion it must be asserted by a writer, not by DDL.
+
+### 2.3 (b) Is the "`error` column" finding new, or a rediscovery?
+
+**New as an argument; adjacent to, but distinct from, an existing
+`REVIEW-adversarial` point.**
+
+- `REVIEW-adversarial.md:148-150` attacks `engine_runs` — specifically **C's** —
+  for having **no text column**: *"C's own `engine_runs` (§2.6) has no text
+  column: `pages, cost_usd, latency_ms, error`. There is nowhere in C's schema
+  for page text to exist."* That is finding S-4, and its subject is page
+  provenance (`SourcePage.lines`, `endpoints.ts:633`), not telemetry. It quotes
+  `error` only as part of the column list it is proving *insufficient*.
+- The finding recorded in §2.4 item 1 below — that `field_readings` cannot carry
+  an `error` column because a failed call produces no reading, so **under A a
+  failed engine call is recorded nowhere** — appears in neither
+  `REVIEW-adversarial.md` nor `PROPOSAL-B-full.md`. The review never engages
+  A's DEF-4 at all; `engine_runs` appears in it exactly three times, all inside
+  S-4.
+- It is **not** original to this file either: `PROPOSAL-A-minimal.md:639` states
+  the consequence in its own deferral table (*"it cannot record a run that
+  produced no readings — i.e. a failed engine call is invisible"*), and
+  `PROPOSAL-B-full.md:427-430` states the same fact as an argument *for* building
+  the table. What is new is treating it as **the decisive input to the ruling**
+  rather than as an accepted cost.
+
+Net: the error-column argument survives contact with the adversarial review, and
+the review's live attack on `engine_runs` (missing text) is **orthogonal** — it
+argues `engine_runs` needs *more* columns, never fewer, so it strengthens rather
+than undercuts the case for building the table.
+
+### 2.4 (c) Does `PROPOSAL-B-full.md:669` close U4?
+
+**It closes half of U4 and answers the half U4 actually blocks on. U4 is
+downgraded, not closed.**
+
+U4 asked two things. B answers them unevenly:
+
+- **Stored rollup vs computed on read: CLOSED by B, with a reason.** `:668-678`
+  — `LeaderboardCell` has no `id`, is *"a computed projection over `engine_runs`,
+  `field_readings` and `golden_fields`"*, and materializing it would freeze
+  `no_truth_yet`, which is a **server-owned threshold** and so must be evaluated
+  at read time against the current threshold. `REVIEW-adversarial.md:381-388`
+  independently affirms this (B-5, *"B's `leaderboard` refusal is correct and
+  should survive into the hybrid"*, noting `endpoints.ts:373`
+  `LeaderboardResponse` is a response shape). Two documents agree; this is no
+  longer an open question and it matches the mock's read-time computation
+  (`handlers.ts:281`).
+- **Which table `p95_latency_ms` reads: NOT stated, but strongly indicated.** B
+  never names `p95_latency_ms`. The indication is structural:
+  `ix_engine_runs_engine_created ON engine_runs (tenant_id, engine_id,
+  created_at DESC)` (`:413`) is the exact index a read-time per-engine percentile
+  needs, and B builds it on `engine_runs` and on nothing else. A latency
+  percentile *per call* is a run-grain statistic; `field_readings.latency_ms` is
+  field-grain and would weight a call by how many fields it happened to yield.
+  That reasoning is sound but it is **inference from an index**, not a ruling.
+
+**U4 rewritten:** the "stored or computed" half is resolved (computed, on read).
+What remains is a one-line ratification that `p95_latency_ms` is computed over
+`engine_runs`, which is only answerable after item 1 below. If A's deferral is
+accepted, `engine_runs` does not exist and p95 must come off `field_readings` at
+the wrong grain — which is a **second** cost of DEF-4 that A does not list.
+
+### 2.5 The owner must decide exactly four things
 
 1. **Does `engine_runs` land in P0, or is A's DEF-4 deferral accepted?**
-   Decisive fact: `PRD.md:105`/`CONTEXT.md:122` give `engine_runs` an **`error`
-   column**. `field_readings` has no error column and cannot have one — a failed
-   call produces no reading to hang it on. So under Proposal A **a failed engine
-   call is not recorded anywhere in the system.** If "cost + latency recorded per
-   call" (`PRD.md:140`) means *every call including the failures*, A does not
-   satisfy the hard rule and C is forced. If it means *every reading*, A
-   satisfies it and `engine_runs` may wait. **This is the ruling.**
+   **Two of three proposals build it** (`PROPOSAL-B-full.md:400-413`,
+   `PROPOSAL-C-evidence.md:318-332`), and the adversarial review ranks the
+   builders first and second (`REVIEW-adversarial.md:560`). Decisive fact
+   unchanged: `PRD.md:105`/`CONTEXT.md:122` give `engine_runs` an **`error`**
+   column; `field_readings` has no error column and cannot have one, because a
+   failed call produces no reading to hang it on. So under A **a failed engine
+   call is not recorded anywhere in the system**, and (per §2.4) `p95_latency_ms`
+   loses its correct grain. If *"cost + latency recorded per call"*
+   (`PRD.md:140`) means every call including failures, A does not satisfy the
+   hard rule. **This is the ruling.** Note it is now a ruling against **one**
+   proposal, not a choice between two.
 
-2. **If both land, is `field_readings.engine_run_id` (C §2.7, `:376-385`) part of
-   P0?** It is the only thing that makes per-order cost reconcilable two ways.
-   Without it the duplication is real duplication.
+2. **If `engine_runs` lands, is `field_readings.engine_run_id` part of P0?**
+   This is now the sharpest A/B/C split, and it is **C-only**
+   (`PROPOSAL-C-evidence.md:376-385`). B builds both structures with no link
+   (`PROPOSAL-B-full.md:344-357`, FK graph `:746-775`), so under B the reading's
+   cost and the run's cost are two unreconcilable numbers.
+   `NORMALIZATION-AUDIT.md:247` rules the link an FD **addition**, not a
+   denormalization, and `REVIEW-adversarial.md:589` puts it in the hybrid.
+   **Recommend: yes**, and record it as a defect B did not see.
 
-3. **U1 — null or `0` when an engine reports no cost?** Pick one and amend the
-   loser: either relax `entities.ts:90-91` to `.nullable()` (which
-   `HANDOFF.md:30`/`CONTEXT.md:227` declared-not-faked precedent supports, and
-   which breaks **nothing** — zero UI readers, ~14 mock sites and 3 fixture
-   sites keep compiling since they supply values), or affirm NOT NULL and state
-   in writing that a cost of `0` is a permitted assertion. **Do not ship
-   `NOT NULL` columns while the precedent says null.**
+3. **U1 — null or `0` when an engine reports no cost?** Unchanged in substance,
+   widened in scope: **all three** proposals write `NOT NULL`, and **B
+   additionally writes `DEFAULT 0`** (`PROPOSAL-B-full.md:352-353`), which is a
+   defect independent of the ruling (§2.2). Either relax `entities.ts:90-91` to
+   `.nullable()` — supported by the declared-not-faked precedent
+   (`HANDOFF.md:30`, `CONTEXT.md:227`), and it breaks nothing: zero UI readers,
+   ~14 mock sites and 3 fixture sites supply values — or affirm `NOT NULL` and
+   state in writing that `0` is a permitted assertion. **In both cases delete the
+   `DEFAULT 0`.**
 
-4. **U3/U4 — ratify `numeric(12,6)` + `integer`, and say where `p95_latency_ms`
-   is computed.** If p95 is a stored rollup it needs a home table; if computed on
-   read (as the mock does, `handlers.ts:281`) it needs an index on
-   `(tenant_id, engine_id, created_at)` — which C already proposes (`:697`) and A
-   does not.
+4. **U3/U4 — ratify `numeric(12,6)` + `integer`, and confirm `p95_latency_ms` is
+   computed over `engine_runs`.** All three proposals independently chose
+   `numeric(12,6)` + `integer`; three independent agreements is evidence, not
+   ratification. On p95: B closes the stored-vs-computed half on a stated reason
+   (`:668-678`, affirmed at `REVIEW-adversarial.md:381-388`) and indicates the
+   table only through its index (`:413`). The index B proposes is the one this
+   file previously credited to C alone (`PROPOSAL-C-evidence.md:697`); **both**
+   build it and only A does not.
 
 Until (1) is answered, **no telemetry migration should be written.** Writing A's
 columns and later adding `engine_runs` is cheap; writing them and later
 discovering failed calls were meant to be recorded means backfilling a history
-that was never captured. The cost of the wrong choice is asymmetric, and it
-falls entirely on the deferral side.
+that was never captured — and under `REVIEW-adversarial.md`'s measured transcript
+2 (`:668-691`), an FK added to `field_readings` after Plan 07 populates it
+**reports `convalidated = 't'` while checking nothing**. The cost of the wrong
+choice is asymmetric, it falls entirely on the deferral side, and the measured
+FK result makes the "add it later" option worse than it looked.
 
 ---
 
@@ -169,4 +297,9 @@ falls entirely on the deferral side.
   with `BACKEND-MASTER-PLAN.md`.
 - U5–U14 are recorded so they stop being rediscovered. Only U1–U4 block the
   telemetry slice; the rest block their own slices.
+- §2 was rewritten 2026-09-02 from an A-vs-C binary to a three-way A/B/C
+  comparison after `PROPOSAL-B-full.md` and `REVIEW-adversarial.md` were read in
+  full. The remaining `REVIEW-adversarial.md` findings (S-1…S-5, A-1…A-5,
+  B-1…B-5, C-1…C-7) are **not** classified here; they are schema-correctness
+  defects, not contract/catalog divergences, and belong in the plan.
 - `alembic upgrade head` on the dev DB is a maintenance action, not a decision.
