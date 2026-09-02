@@ -155,10 +155,29 @@ EXPECTED_PRIMARY_KEYS: dict[str, tuple[str, ...]] = {
 
 EXPECTED_TRIGGERS = frozenset({"audit_log_append_only", "audit_log_no_truncate"})
 
-# `pg_trigger.tgenabled` for an ordinary, firing trigger. The other three values
-# — `'D'` disabled, `'R'` replica, `'A'` always — all change when the trigger
-# fires, and `'D'` means never.
-TRIGGER_ENABLED = "O"
+# `pg_trigger.tgenabled` at HEAD, which is `0004`'s `'A'` — ALWAYS — and no
+# longer `0001`'s `'O'`.
+#
+# 🔴 THE VALUE CHANGED 2026-09-02 AND THE CHANGE IS THE POINT, not a catalog
+# detail that drifted. `'O'` is ORIGIN, the `CREATE TRIGGER` default, and it does
+# not fire under `session_replication_role = 'replica'` — so at `'O'` the whole
+# append-only guarantee was off for any session in replica mode. MEASURED
+# against `postgres:18.4` on `0001`'s exact trigger pair: `SET
+# session_replication_role='replica'; DELETE FROM ...` removed every row with no
+# refusal at all. `0004` moves both to `'A'`, under which all three verbs are
+# refused in replica mode; the measurement is in that revision's docstring and
+# `test_the_append_only_triggers_hold_under_session_replication_role_replica` is
+# the behavioural proof.
+#
+# The other two values are the ways this can go wrong, and both keep `tgtype`
+# intact so only THIS constant catches them: `'D'` is disabled and fires never,
+# `'R'` is replica-only and fires in exactly the sessions `'O'` covered and none
+# of the ones it did not. Neither is an acceptable state for these two triggers.
+TRIGGER_ENABLED = "A"
+
+# What `0004`'s `downgrade()` returns the triggers to, which is `0001`'s created
+# state. Read by the round-trip test below; nothing else may assert against it.
+TRIGGER_ENABLED_BEFORE_0004 = "O"
 
 # The two server defaults every skeleton table carries, as PostgreSQL renders
 # them back. Read from the catalog rather than assumed.

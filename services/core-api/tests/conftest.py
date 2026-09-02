@@ -1999,6 +1999,19 @@ def worker_role() -> str:
 
 
 @pytest.fixture(scope="session")
+def blind_role() -> str:
+    """`titlepipe_blind`, which like `titlepipe_worker` holds NOTHING here.
+
+    `0002` names it nowhere — see that revision's "`titlepipe_blind` is
+    deliberately absent" note — and `0003` does not either. It belongs to
+    blind-svc, and it exists as a fixture for the same reason `worker_role` does:
+    a test proving `audit_log` refuses a role needs the refusal to come from the
+    role rather than from an index into `MANAGED_ROLES` that moved.
+    """
+    return BLIND_ROLE
+
+
+@pytest.fixture(scope="session")
 def owner_role() -> str:
     """`titlepipe_owner`. Not in `MANAGED_ROLES` — see that constant for why."""
     return OWNER_ROLE
