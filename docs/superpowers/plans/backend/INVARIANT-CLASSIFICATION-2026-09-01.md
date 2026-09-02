@@ -9,9 +9,9 @@ version was reported at `plausible` confidence and never checked.
 
 ## The split
 
-**43 of 68 invariants are server obligations. 25 are pure UI.**
+**42 of 68 invariants are server obligations. 26 are pure UI.** *(Corrected 2026-09-02 — INVARIANT 23, the no-pace-indicators rule, is a rendering prohibition and constrains no server behaviour. See `RULES-AND-AUTHZ-VALIDATION` addendum.)*
 
-Every one of the 68 is classified; none double-counted. The 43 are: 1–25, 27,
+Every one of the 68 is classified; none double-counted. The 42 are: 1–22, 24, 25, 27,
 28, 29, 33, 34, 35, 36, 37, 38, 40, 41, 44, 45, 47, 48, 55, 56, 67.
 
 The concentration matters more than the count. **Sections 1–5 are entirely

@@ -68,7 +68,7 @@ summary is a reading.
 | endpoint reconciliation | three greps over three sources: 41 / 70 / 44 / 1 |
 | archive absent | `verify_archive.py` printed `archive not found` |
 | rules + invariants mapping | 68 classified by hand with set arithmetic; grep proved 0 of R1–R24 enforced in `services/`, `libs/` **and** `apps/web/src` |
-| identity/authz | counted 47 actions / 19 doors / 9 dead from `authz.ts`; read all three `admin`-on-missing-header defaults; confirmed `workos` in no lockfile |
+| identity/authz | counted 44 actions / 19 doors / 9 dead from `authz.ts` (first reported 47 — see the addendum); read all three `admin`-on-missing-header defaults; confirmed `workos` in no lockfile |
 | live harness broken | drove a real production build; `/rulebook` renders "Nothing lives at this address" |
 | live DB verification | queried `information_schema`, `pg_class`, `pg_roles`, `pg_enum` on the running container |
 | compliance | mixed: the built controls were read in source and their tests run; the **unbuilt** obligations are a reading |

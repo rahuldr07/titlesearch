@@ -66,10 +66,10 @@ Counted from `packages/contract/src/authz.ts`:
 
 | measure | count |
 |---|---|
-| total actions | **47** |
+| total actions | **44** |
 | screen doors | **19** |
 | screen doors for screens deleted in `7f04340` | **9** |
-| mutation actions (non-screen) | **28** |
+| mutation actions (non-screen) | **25** |
 
 The nine dead doors are `/queue`, `/bench`, `/dashboard`, `/complaints`,
 `/reconciliation`, `/seed-correction`, `/blind-status`, `/golden`,
@@ -86,7 +86,7 @@ Roles by breadth: `admin` 43 mentions, `senior` 17, `ops` 17, `engineer` 15,
 
 **Why this matters for Plan 03.** INVARIANT 41 is *"one permission table gates
 UI affordances and server mutations alike — they cannot drift."* The server
-will evaluate against this table. If it implements all 47 actions, it grants
+will evaluate against this table. If it implements all 44 actions, it grants
 roles access to six mutations whose screens do not exist; if it implements only
 the live ones, the table and the server have already drifted, which is the
 thing 41 forbids.
@@ -117,3 +117,58 @@ wheel version it was verified against (`workos==10.1.1`).
 - I did not confirm the per-rule provenance tags, because the file that
   carries them is absent. That is the finding in §1, not a gap in the check.
 - I did not exercise WorkOS at all.
+
+---
+
+## Addendum — re-derived 2026-09-02, two numbers corrected
+
+Both flagged claims were re-derived by a **different method** than the grep
+that first produced them. One held, one did not.
+
+### The action count was 47; it is **44**
+
+`grep -c "action:"` returns 47, and that is what this file first recorded.
+Parsing for actual table rows — `\{\s*action:\s*"` — returns **44**. The three
+extras are not table entries:
+
+- `authz.ts:169` — `action: Action`, a **function parameter** in the signature
+  of the permission checker.
+- `authz.ts:194` — `const granted: GrantedPermission = { action: p.action }`,
+  a **constructed literal** inside the response builder.
+- one further non-row occurrence in the same helper.
+
+So: **44 actions, 19 screen doors, 25 mutation actions.** The 9-dead-doors
+figure is unaffected and re-confirmed by parsing `path:` declarations, of
+which there are exactly 19, nine matching a screen deleted in `7f04340`.
+
+The consequence for G1 does not change — nine doors and six mutation actions
+still serve screens that do not exist — but the denominator was wrong, and a
+denominator counted by grepping a colon is not a count of rows.
+
+### The invariant split was 43/25; it is **42/26**
+
+Re-adjudicating each of the 68 against an independent keyword pass surfaced
+sixteen disagreements. Fifteen resolved in favour of the original hand
+classification, on reasoning worth keeping — several look like UI rules but
+are server obligations *because of what the UI is forbidden to do*:
+
+> **5.** *"The UI never re-derives counts, chain termination, or release
+> resolution."* A prohibition on the client is an obligation on the server:
+> if the UI may not derive them, the server must supply them.
+
+The same shape covers 3, 7, 20, 25, 28, 29, 34, 45 and 55.
+
+**One reclassified.** INVARIANT **23** — *"no pace indicators, no throughput
+language, no timers, and no time ESTIMATES"* — I had filed as a server
+obligation. It is a **rendering prohibition**: the server may legitimately
+hold timestamps, and the rule is that the UI must never render pace from
+them. It constrains no server behaviour.
+
+**Corrected split: 42 server obligations, 26 pure UI.** The concentration
+claim is unchanged — sections 1–5 remain 21 consecutive server obligations.
+
+### The schema count held
+
+`171` top-level exported schemas and `35` carrying an endpoint in their doc
+comment both reproduce exactly under an anchored `^export const \w+ = z\.`
+parse. No correction.
