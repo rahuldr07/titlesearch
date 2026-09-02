@@ -217,6 +217,52 @@ jobs:
       # this process can read the rulebook and cannot write it. The seeding is
       # done by `e2e-live/seedRulebook.mjs` over the migration role instead.
       #
+      # 🔴 THE CLOSED-WORLD ACL CONTRACT, AGAINST **THIS** DATABASE.
+      #
+      # `services/core-api/tests/test_exact_acl_and_update_surface.py` asserts
+      # that the whole `public` schema holds EXACTLY the non-owner grants this
+      # repository names — relations, columns, the schema itself, routines and
+      # `pg_default_acl`, as one set compared to one literal. It is the only
+      # closed-world privilege assertion in the tree, and until now it ran
+      # against ONE database: `tests/conftest.py`'s testcontainer, whose roles
+      # are applied by an in-process `psql` child as the container's own
+      # `seam_admin` superuser and whose schema is applied by an in-process
+      # `command.upgrade`.
+      #
+      # THIS JOB BUILDS THE OTHER ONE. A `postgres:18.4` SERVICE container,
+      # `roles.sql` applied by the runner's `psql` as the image's `postgres`
+      # superuser, `alembic upgrade head` from the CLI, database `postgres`
+      # rather than `seam`. Same two artifacts, four different things about how
+      # they were applied — and the entries most likely to differ are precisely
+      # the ones nobody writes: `schema:public:USAGE:PUBLIC` and the
+      # `pg_database_owner` pair are properties of how the DATABASE was created.
+      # A database owned by a different superuser can carry a different
+      # `nspacl`, and nothing here was looking.
+      #
+      # It runs `tests/acl_contract.py` — the module the test now imports its
+      # literal, its query and its owner filter FROM, so there is one source and
+      # not two copies to drift. It is read-only by construction: no fixture, no
+      # teardown, no `DROP`. That is why the conftest fixtures could not be
+      # reused for this, and it is why this is safe to run against the database
+      # the Playwright job is about to seed and read.
+      #
+      # AS THE SUPERUSER, deliberately. `titlepipe_app` cannot see another
+      # role's ACL entries in a way that makes a closed-world read meaningful,
+      # and `titlepipe_migration` is not a superuser either. The catalogs this
+      # reads (`pg_class.relacl`, `pg_attribute.attacl`, `pg_namespace.nspacl`,
+      # `pg_proc.proacl`, `pg_default_acl`) are world-readable, but
+      # `x.grantee::regrole` resolution and `acldefault` are not the place to
+      # discover a permission surprise — so it connects as `postgres`.
+      #
+      # BEFORE core-api starts, on purpose: if the grants are wrong, the useful
+      # failure is this step naming the offending entry, not a browser assertion
+      # about a missing row several minutes later.
+      - name: The ACL converges here too
+        working-directory: services/core-api
+        run: |
+          uv run python tests/acl_contract.py \
+            "postgresql+psycopg://postgres:postgres@${DB_HOST}:${DB_PORT}/${DB_NAME}"
+
       # 🔴 THE LOOP WAITS ON `/ready` AND GREPS FOR `database_answers":true`. It
       # polled `/health` alone, whose stated job is to touch NO dependency, so
       # the one failure this step exists to catch was the one it could not see: a

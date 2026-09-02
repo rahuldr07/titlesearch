@@ -183,6 +183,24 @@ HARNESS_REQUIRED_PATHS = ("apps/**", "packages/**", "services/**", CONTRACT_FIXT
 # every backend commit, which is the cost this workflow was arranged to avoid.
 HARNESS_CONTRACT_GATE = "vitest run --project gates"
 
+# The closed-world ACL contract, run against the database THE HARNESS builds.
+#
+# `services/core-api/tests/test_exact_acl_and_update_surface.py` asserts it
+# against `tests/conftest.py`'s testcontainer, whose roles are applied in-process
+# as the container's own `seam_admin` superuser. The harness builds a second
+# database by an entirely different path — a service container, `roles.sql`
+# applied by the runner's `psql` as the image's `postgres` superuser, and
+# `alembic upgrade head` from the CLI — and the ACL entries most likely to differ
+# between the two (`schema:public:USAGE:PUBLIC`, the `pg_database_owner` pair)
+# are properties of how the DATABASE was created rather than of any revision.
+#
+# Needled on the script path rather than on `pytest`, because this is deliberately
+# NOT a pytest invocation: the conftest fixtures that would carry the literal drop
+# eight tables on teardown, and pointing those at the harness's database would
+# destroy the schema the browser job then depends on. `acl_contract.py` is
+# read-only by construction, which is what makes it safe here.
+HARNESS_ACL_CONTRACT = "tests/acl_contract.py"
+
 # The job whose matrix is supposed to enumerate every Python project.
 PROJECT_JOB = "project"
 
@@ -823,6 +841,40 @@ def test_the_migration_harness_runs_the_contract_gate_from_an_enforcing_step() -
         f"shell tokens rather than printed or commented out — and only when its "
         f"result counts: no continue-on-error, no if: other than {CANCELLED_GUARD}, "
         f"and no if: on its job."
+    )
+
+
+def test_the_migration_harness_asserts_the_acl_against_the_database_it_builds() -> None:
+    """The harness runs the closed-world ACL contract, and its failure counts.
+
+    🔴 A CONTRACT ASSERTED AGAINST ONE OF THE TWO DATABASES THIS REPOSITORY
+       STANDS UP IS A CONTRACT WITH A HOLE THE SHAPE OF THE DEPLOYMENT.
+
+    The closed-world assertion is the only privilege check in the tree that can
+    fail for an object nobody listed — every other one is a loop over tables it
+    already expects. It ran only against the pytest seam's testcontainer. This
+    step runs the SAME literal, imported from the same module, against the
+    service-container database the harness builds by a different path.
+
+    Held to `_step_enforces` and `_invocations` exactly like the contract-parity
+    gate above, so a step that prints the command, comments it out, carries
+    `continue-on-error` or sits in a conditional job does not satisfy it.
+    """
+    enforcing = enforcing_run_blocks(HARNESS_WORKFLOW)
+    assert enforcing, (
+        f"{rel(HARNESS_WORKFLOW)} has no run: step whose failure would fail the run"
+    )
+
+    commands = [command for block in enforcing for command in _invocations(block)]
+    assert _is_invoked(HARNESS_ACL_CONTRACT, commands), (
+        f"{rel(HARNESS_WORKFLOW)} never invokes {HARNESS_ACL_CONTRACT!r} from a step "
+        f"whose failure would fail the run. The harness builds a database by a "
+        f"different path from the pytest seam's — different superuser, different "
+        f"driver, different database name — and without this step the only "
+        f"closed-world privilege assertion in this repository has never been read "
+        f"against it. A step satisfies this only when it RUNS the script, named as "
+        f"shell tokens, with no continue-on-error and no if: other than "
+        f"{CANCELLED_GUARD}."
     )
 
 
