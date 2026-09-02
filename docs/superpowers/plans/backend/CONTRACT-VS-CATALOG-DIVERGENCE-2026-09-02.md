@@ -303,3 +303,97 @@ FK result makes the "add it later" option worse than it looked.
   B-1…B-5, C-1…C-7) are **not** classified here; they are schema-correctness
   defects, not contract/catalog divergences, and belong in the plan.
 - `alembic upgrade head` on the dev DB is a maintenance action, not a decision.
+
+---
+
+## Addendum, 2026-09-02 — the two AUTHORITATIVE sources this file had not opened
+
+Both were named AUTHORITATIVE by `docs/INDEX.md` and neither had been read
+directly when `U1`–`U14` were written. Read end to end now.
+
+### A. `docs/frontend/decisions.md` + `open-rulings.md` — no D-numbered ruling touches U1/U3/U4/U8
+
+Read in full: `decisions.md` (183 lines, D1–D3 plus three unnumbered sections)
+and `open-rulings.md` (176 lines, Q1–Q17).
+
+| Ruling | Subject | Touches U1/U3/U4/U8? |
+|---|---|---|
+| D1 (`decisions.md:9`) | Escalation resolution refused without a rule; resolves Q11 | No |
+| D2 (`decisions.md:63`) | `PdfPane` surround; reversed by owner, design-mock ships | No |
+| D3 (`decisions.md:129`) | `NaReason` widened 2 → 4; resolves Q1 | No — but see below |
+| Incidental (`:139`) | 11 colliding token names, legacy wins | No |
+| "Six mapping gaps" (`:151`) | ui-tokens | No |
+
+**So U1, U3, U4 and U8 are confirmed open, not merely unlocated.** The frontend
+ledgers are about the *reviewer surface*: no line in either file mentions
+telemetry nullability, numeric precision, p95 computation, or contract
+strictness. `decisions.md`'s only nullability ruling is D3, and it is about
+*document* no-value states, not *measurement* absence.
+
+**D3 is nevertheless the strongest precedent available for U1, and it points
+away from the contract.** D3's ratio (`decisions.md:135`) is that `pending`
+("we have not looked yet") is *"a statement about the pipeline, not the
+document"* and must not be collapsed into a `NaReason` member — *"conflating
+them is the ghost-chasing bug one level up."* That is structurally identical to
+U1: `cost_usd = 0` collapses "no engine measured this" into "an engine measured
+zero." The four-state taxonomy exists precisely to refuse sentinel collapse,
+and `CLAUDE.md`'s hard rules restate it (`never derive needs_review from
+value === null`). **This does not close U1** — it is a ruling about a different
+field on a different surface, and only the owner can extend it — but it means
+the null side of U1 now has a ratified precedent behind it while the `0` side
+has only the contract's un-annotated `z.number()`. Recommend U1 be put to the
+owner as "does D3's anti-collapse rule extend to measurement columns?" rather
+than as an open design question.
+
+Also relevant to `U12`: `open-rulings.md` Q1a (`:56`) asks whether golden
+capture's `__DONT_KNOW__` is a fifth member or a separate capture-time
+vocabulary. That is an *open string vocabulary* question of exactly U12's kind,
+still unanswered, and it means U12 has a live frontend twin.
+
+### B. `infra/observability/README.md` — reconciled against U6, which it does **not** close
+
+Read in full (76 lines). Its subject is **technical telemetry**: what may leave
+a process on the logs/traces/metrics/errors pipelines.
+
+What it actually rules:
+
+- Forbidden from telemetry: document text, party names, addresses/parcels/legal
+  descriptions, **model prompts and completions**, presigned URLs, request and
+  response bodies, SQL bind values, query strings.
+- **Required** in telemetry: request id, event name, level, timestamp, service,
+  **duration**, status code, error code, **counts**.
+- Metric labels: bounded set only; forbidden are tenant/order/user id, package
+  hash, file name, any free-form string.
+- `audit_events` is a separate store — *"Product audit is not telemetry"* —
+  with its own retention and access control.
+- Queue/worker metrics stay internal; *"per-reviewer throughput does not exist
+  as data anywhere in this system."*
+
+**Reconciliation with U6 (may per-call cost/latency appear on a reviewer-visible
+payload?): the file is silent, and its silence is structural rather than
+accidental.** Three points:
+
+1. It governs the **egress** direction (process → collector), while U6 is about
+   the **API response** direction (server → reviewer's browser). Different
+   boundary, different document. Nothing here constrains `Field.readings`.
+2. Its one adjacent permission is *inbound*: `duration` is on the
+   must-always-be-present list, so `latency_ms` is explicitly safe as
+   *operational* data. It says nothing about cost, and nothing about showing
+   either to a reviewer.
+3. Its one adjacent prohibition is the closest thing to an argument for U6's
+   restrictive answer: per-reviewer throughput *"does not exist as data anywhere
+   in this system"*, and queue metrics are *"never surfaced as product
+   dashboards."* That is the same anti-pattern family as `PRD.md:40`, and it
+   establishes that operations numbers are systematically kept off product
+   surfaces. It is about **reviewer-measuring** data, though, and per-call
+   engine cost measures the *engine*, not the person.
+
+**U6 therefore stands open, with its scope narrowed:** it is not a telemetry
+question and `infra/observability/README.md` is not its governing document. The
+governing tension is `PRD.md:40` (no throughput/dashboard data on reviewer
+surfaces) against `entities.ts:119` (`Field.readings` embeds full
+`FieldReading`s). One new consideration this file does contribute: since
+`audit_events` is defined as a *separate store with separate access control*,
+there is an established pattern for "recorded, retained, but not on the product
+surface" — which is the likely shape of U6's answer (record per-call cost,
+serve it to the bench/leaderboard surfaces, strip it from the review payload).

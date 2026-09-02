@@ -9,6 +9,12 @@
 > this directory hold the evidence behind every claim below; they are cited
 > inline. Where one of them disagrees with this file, it is the later
 > measurement and it wins.
+>
+> **Added 2026-09-02:** `CONTRACT-VS-CATALOG-DIVERGENCE-2026-09-02.md` is the
+> successor to `SCHEMA-GAP-2026-09-01.md`. `SCHEMA-GAP` counted the gap; the
+> divergence file classifies it and names the **fourteen unruled questions
+> (`U1`–`U14`)** that sit under any migration. `U1`–`U4` block column
+> definitions and are human gates in substance, not just in form.
 
 **What this plan is for.** The frontend is built out: **12 routed screens**
 (8 flat doors built from `builtScreens.ts`, plus `/account` with 6 tabs,
@@ -46,6 +52,7 @@ no later plan can prove it has actually replaced a mock.
 | database columns the contract needs | ≥141 | `SCHEMA-GAP` |
 | tables missing entirely | 10 (contract) + 4 more (domain) | `SCHEMA-GAP`, `PIPELINE-RESEARCH §5` |
 | backend tests passing | 249 | `STATE-AUDIT` |
+| contract/catalog divergences with no ruling | 14 (`U1`–`U14`, 4 blocking) | `CONTRACT-VS-CATALOG-DIVERGENCE-2026-09-02` |
 | core-api lines that are the one domain feature | 504 of 3,520 (**15%**) | `STATE-AUDIT` |
 
 **Read the 15% correctly.** The other 85% is the tenant seam, the forced-RLS

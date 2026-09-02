@@ -64,6 +64,9 @@ same commit.
 | `plans/backend/02-first-vertical-slice.md` | RECORD | Plan 02 as issued (executed, merged via PR #7) |
 | `plans/backend/02-WHAT-HAPPENED.md` | RECORD | Plan 02 handover — §5 is the transferable part; read before Plan 03 work |
 | `plans/backend/03-identity.md` | AUTHORITATIVE | Plan 03 DRAFT — four human gates open; not executable until ruled |
+| `plans/backend/BACKEND-MASTER-PLAN.md` | AUTHORITATIVE | The measured backend plan (2026-09-01) and its fourteen companion measurement documents |
+| `plans/backend/SCHEMA-GAP-2026-09-01.md` | RECORD | Counts the contract-vs-catalog gap. Superseded in part by the divergence file below |
+| `plans/backend/CONTRACT-VS-CATALOG-DIVERGENCE-2026-09-02.md` | AUTHORITATIVE | Successor to `SCHEMA-GAP`: classifies every contract/catalog divergence and records the **fourteen unruled questions `U1`–`U14`**; `U1`–`U4` block column definitions |
 | `specs/2026-08-27-frontend-dependency-set-design.md` | AUTHORITATIVE | The rebuild's dependency set — kit, observability, manifest, execution steps (owner-approved 2026-08-27) |
 
 *The 2026-07 design-fidelity wave plans (`plans/2026-07-28-*`, six `2026-07-30-design-fidelity-*`,

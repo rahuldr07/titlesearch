@@ -4,6 +4,14 @@ Third companion to `LEAD-MEASUREMENTS-2026-09-01.md`. Counted by the lead from
 the migrations and the contract, not taken from a document's description of
 either.
 
+> **SUPERSEDED IN PART, 2026-09-02.** The counts below stand (as corrected by
+> the addendum). What they *mean* is now carried by
+> `CONTRACT-VS-CATALOG-DIVERGENCE-2026-09-02.md`, which classifies each
+> divergence and records the fourteen unruled questions `U1`–`U14` — including
+> `U1` (`cost_usd`/`latency_ms` non-nullability vs. declared-not-faked) and
+> `U12` (open wire vocabularies vs. the enum warning in §"The unruled enum
+> still sits under all of it"). Read that file before writing a migration.
+
 Method: columns in `services/core-api/migrations/versions/0001_skeleton.py` and
 `0003_rules.py`, against the entity shapes in
 `packages/contract/src/entities.ts` that the frontend actually consumes.
