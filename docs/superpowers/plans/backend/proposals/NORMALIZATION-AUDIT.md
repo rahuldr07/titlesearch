@@ -60,6 +60,28 @@ and the derived-count mechanism (§4). Those are owner calls, and each is marked
 
 ## 1. Normal form per table
 
+**🔴 SCOPE NOTE, verified firsthand 2026-09-02.** Every table in §1.1, §1.2 and §1.3 below
+is **PROPOSED**, not extant, with exactly one exception. The shipped schema is three
+alembic revisions and seven tables: `tenants`, `orders`, `packages`, `pages`, `fields`,
+`field_readings`, `audit_log` (`0001_skeleton.py:276-299`) plus `rules`
+(`0003_rules.py:214-229`). The six tenant tables carry **only** `id`, `created_at`,
+`tenant_id` and `PRIMARY KEY (tenant_id, id)`; `fields` adds `na_reason` and
+`field_readings` adds `line_coords`, and that is the whole of it. There is no `client_id`,
+no `path`, no `value`, no `state`, no `order_id`, no `package_id`, no FK anywhere
+(`0001_skeleton.py:422-423`: *"there are no foreign keys"*). `users`, `clients`,
+`documents`, `engines`, `engine_routing`, `engine_runs`, `escalations`, `bugs`, `reports`,
+`deliveries`, `probes`, `golden_fields`, `blind_entries`, `reconciliations`, `complaints`
+**do not exist as tables at all**. `rules` is the single exception: it is real, and the
+§1.2 row for it is the only row in these tables describing shipped DDL.
+
+**What follows from that, and it applies to every finding in this document:** the missing
+unique indexes (`fields`, `golden_fields`, `blind_entries`, `reconciliations`,
+`delivery_receipt_steps`, `reports`), the §2.5 `ALTER TABLE fields` and the §3 `orders`
+transitive dependency are all **corrections to DDL that has not been written yet**. None
+is a migration against data. That makes every one of them cheap now and expensive later,
+which strengthens rather than weakens the audit — but the document must not be read as
+describing defects in a running database.
+
 Reading: **BCNF** = every determinant is a superkey. **3NF** = no non-key attribute
 transitively depends on the key. Where a table is BCNF I say so once; where it is not, the
 violating FD is named.
@@ -77,7 +99,7 @@ violating FD is named.
 | `documents(T,id,package_id,doc_type,page_start,page_end,recording_no,book_page,recorded_date,dated_date,segmentation_state)` | `(T,id)` | `id → all` | **BCNF**, with one honest caveat | The caveat is real: `recording_no` and `book_page` are the *same fact under two jurisdictional conventions* (`CONTEXT.md` §11: "Recording conventions differ: book/page vs instrument number, by jurisdiction"). Which column is populated is determined by the jurisdiction, i.e. `jurisdiction → (which of recording_no/book_page is non-null)`. That determinant is not in this table at all — it reaches `documents` via `package_id → order_id → jurisdiction`. This is a **transitive dependency across a join**, not within the row, so it is not formally a 3NF violation of `documents`. It *is* the reason §3's `jurisdictions` table matters: without it, "is a null `book_page` structurally absent or not found" is unanswerable from the database. See §3.3. |
 | `fields(...)` | `(T,id)`; `(T,order_id,path)` — unique in B (`uq_fields_order_path`) and C (`fields_order_path_uq`); **absent in A** | `id → all`; `(order_id,path) → id, value, state, ...` | **BCNF in B and C.** **A is not**: without the unique index, `(order_id,path)` determines nothing enforceable and two contradictory rows for `mortgages.1.lender` on one order are storable. That is a *correctness* defect, not a purity one — the review UI would show the field twice with two states. | Whether `path` itself is 1NF-legal is §2. Note the two questions are independent: the unique index is right regardless of how §2 is decided. |
 | `field_readings(T,id,field_id,engine_id,value,page,snippet,confidence_raw,cost_usd,latency_ms,line_coords)` | `(T,id)` | `id → all` | **BCNF.** | Deliberately **no** `UNIQUE (field_id, engine_id)`: an engine may legitimately produce two readings for a value spanning two lines (`entities.ts:29-35` — "A value spanning two lines has two readings, each with its own box"). Adding that unique index would be a normalization-flavoured mistake that destroys a documented domain fact. **Do not add it.** |
-| `engines(T,id,kind,enabled,adapter_version,config)` | `(T,id)` | `id → all` | **BCNF** | A's OPEN-2 (tenant-scoped vs global, `PROPOSAL-A-minimal.md` §1.7) is an RLS/ownership question, not a normalization one. Note only that if `engines` goes global it loses `T` and every composite FK `(T, engine_id)` from `fields`, `pages.class_engine`, `field_readings` and `engine_routing` must become single-column — four FK rewrites, and `EXPECTED_GLOBAL_TABLES` must be edited in the same commit or the table drops silently out of the RLS derivation (`0003_rules.py:19-30`, quoted at `PROPOSAL-A-minimal.md` §1.7). |
+| `engines(T,id,kind,enabled,adapter_version,config)` | `(T,id)` | `id → all` | **BCNF** | A's OPEN-2 (tenant-scoped vs global, `PROPOSAL-A-minimal.md` §1.7) is an RLS/ownership question, not a normalization one. Note only that if `engines` goes global it loses `T` and every composite FK `(T, engine_id)` from `fields`, `pages.class_engine`, `field_readings` and `engine_routing` must become single-column — four FK rewrites, and **both** `EXPECTED_GLOBAL_TABLES` (`tests/test_forced_rls_and_grants.py:157`) and `ISOLATION_GLOBAL_TABLES` (`tests/conftest.py`) must be edited in the same commit or the table drops silently out of the RLS derivation. (`0003_rules.py:19-30` explains that mechanism; it does not contain either list — verified firsthand 2026-09-02. See §3.2 point 2.) |
 | `audit_log(T,id,actor_id,action,entity,entity_id,at)` | `(T,id)` | `id → all` | **BCNF.** `(entity, entity_id)` is a deliberate polymorphic reference with no FK, correct because the log must outlive the rows it describes (`PROPOSAL-C-evidence.md:644`). A polymorphic pointer is not an FD violation; it is an absent referential constraint, chosen. |
 
 ### 1.2 Tables in B and C only
@@ -410,11 +432,18 @@ departure from the schema's `(tenant_id, id)` convention and it needs its reason
    surrogate would require a code→id lookup on every request to serve a resource whose
    identity in the contract *is* the code.
 2. **It is a global reference table, not tenant data.** Clayton County's recording
-   convention is not a tenant's fact. So it takes **no `tenant_id`** — which means it must
-   be added to `EXPECTED_GLOBAL_TABLES` in `tests/test_forced_rls_and_grants.py` **in the
-   same commit**, or it drops silently out of the catalog-derived RLS assertion
-   (`0003_rules.py:19-30`, cited at `PROPOSAL-A-minimal.md` §1.7 and
-   `REVIEW-adversarial.md:354`). This is the single most likely way to get this table
+   convention is not a tenant's fact. So it takes **no `tenant_id`** — which means
+   **THREE edits in the same commit, not one** (verified firsthand 2026-09-02; the
+   original text named only the first and cited the wrong file for it):
+   (a) `EXPECTED_GLOBAL_TABLES` in `tests/test_forced_rls_and_grants.py:157`, currently
+   `frozenset({"rules"})` — the catalog-derived assertion at `:869`;
+   (b) `ISOLATION_GLOBAL_TABLES` in `tests/conftest.py`, whose guard at `:1620-1631` spells
+   out that a global table belongs in both lists;
+   (c) the reason recorded in the migration that creates the table, as
+   `0003_rules.py:8-34` does for `rules`.
+   Note that `0003_rules.py:19-30` *explains* this mechanism but does not contain either
+   list. Omitting (a) drops the table silently out of the RLS assertion; omitting (b)
+   raises rather than passing. This is the single most likely way to get this table
    wrong.
 3. **Stable and short.** ~3,100 US counties, changing approximately never.
 
@@ -463,7 +492,7 @@ the storage layer for `documents`, where `fields` gets it right via `na_reason`.
 -- jurisdiction via package_id -> order_id -> jurisdiction.
 ```
 I flag rather than specify this trigger: it needs the same fires-on-zero-rows care as
-`0001_skeleton.py:58-64`'s statement-level append-only trigger, and §4 is where that
+`0001_skeleton.py:54-59`'s statement-level append-only trigger, and §4 is where that
 argument is made. **Minimum viable version: store the convention, have the ingest layer
 set `na_reason = 'NOT_PRESENT'` rather than leaving null, and test it.**
 
@@ -584,7 +613,7 @@ is the output of a state machine over rows. Grouping it with `decisions` under t
 | Shape | `SELECT count(*) ... GROUP BY` in the query serving the endpoint | `CREATE MATERIALIZED VIEW order_field_counts`, `REFRESH CONCURRENTLY` | `orders.decisions_count integer`, `AFTER INSERT/UPDATE/DELETE ON fields` trigger |
 | Can it drift? | **No. Impossible by construction.** | **Yes, bounded** — stale until refresh, and staleness is visible and measurable | **Yes, unbounded and silent** — a missed trigger path drifts forever with no signal |
 | Cost | index scan on `fields (T, order_id, state)`, which B and C already propose | refresh cost, amortized | ~zero read cost |
-| RLS interaction | inherits the caller's RLS naturally | ⚠ **matviews do not respect RLS of the querying role** — the view is populated as its owner. A tenant-scoped count in a matview is a **cross-tenant leak surface** unless `tenant_id` is in the view's grouping *and* every read filters on it. This alone should disqualify M2 here. | trigger must handle the forced-RLS zero-row case (`0001_skeleton.py:58-64`) |
+| RLS interaction | inherits the caller's RLS naturally | ⚠ **matviews do not respect RLS of the querying role** — the view is populated as its owner. A tenant-scoped count in a matview is a **cross-tenant leak surface** unless `tenant_id` is in the view's grouping *and* every read filters on it. This alone should disqualify M2 here. | trigger must handle the forced-RLS zero-row case (`0001_skeleton.py:54-59`) |
 | Correctness for `remaining` | ✅ — it is a state-machine query, expressible in SQL | ✅ | ⚠ the trigger would have to fire on escalation and countersign changes too, not just `fields` |
 
 **Recommendation: M1 for every count in the contract, at P0. No exceptions, no stored
@@ -639,7 +668,7 @@ def test_field_count_trigger_fires_on_every_mutation_path(tenant_session):
     every phase below fails.
 
     Phases: INSERT, UPDATE-that-changes-nothing-relevant, DELETE, and the
-    multi-row statement — the last because 0001_skeleton.py:58-64 records that
+    multi-row statement — the last because 0001_skeleton.py:54-59 records that
     a FOR EACH ROW trigger does not fire when a statement affects ZERO rows,
     which under forced RLS is exactly the cross-tenant case.
     """
@@ -835,11 +864,12 @@ attention are **D-4** (unlabelled, unjustified) and **D-7** (unnoticed, and the 
     number and `pages` a page index." Quoted correctly at §5 and §1.1.
   - `0001_skeleton.py:154-179` — **accurate.** The `_tenant_primary_key` docstring
     including the measured existence-oracle transcript at `:164-171`.
-  - `0001_skeleton.py:58-64` — **approximately right, cited one line late.** The
+  - `0001_skeleton.py:54-59` — **the claim is supported; the original span `:58-64` was
+    off by four lines and has been corrected throughout this document.** The
     fires-on-zero-rows argument ("A row trigger … does not fire at all when a statement
     affects none — and under `0002`'s RLS a cross-tenant `UPDATE` matches exactly zero
-    rows") is at **`:54-59`**; `:61-65` is the separate named-SQLSTATE paragraph. The
-    claim the audit makes is supported; the span should read `:54-59`.
+    rows") is at `:54-59`; `:61-65` is the separate named-SQLSTATE paragraph, which the
+    audit was not citing.
   - `0003_rules.py:90` — **accurate.** `## PRIMARY KEY (id), and why that is not the
     omission 0001 warns about`.
   - `0003_rules.py:208` — **accurate.** The `🔴 NO tenant_id AND NO
@@ -862,9 +892,11 @@ attention are **D-4** (unlabelled, unjustified) and **D-7** (unnoticed, and the 
   refuses to guess and raises — but a reader following §3.2 alone will hit it. **§3.2's
   numbered point 2 should name both lists and the migration-docstring requirement.**
 - ~~**Whether `jurisdiction` is a code or a free string in live data.**~~ **MOOT for the
-  database — resolved 2026-09-02.** `orders` has no `jurisdiction` column
-  (`0001_skeleton.py:279`) and the live `fields` table is empty; there is no data to
-  migrate. See §3.1's framing correction. The question survives only as a serializer
+  database — resolved 2026-09-02.** `orders` has no `jurisdiction` column at all
+  (`0001_skeleton.py:279`), so no stored value can be a code or a display string and there
+  is nothing to migrate. (I verified the *schema*, not row counts — no database was
+  queried — but a column that does not exist holds no data regardless.) See §3.1's framing
+  correction. The question survives only as a serializer
   question: `data.ts:88-89,140`'s `place` (`"Clayton County · GA"`) is a display string
   the wire assembles, not a stored value.
 - **Query plans.** No `EXPLAIN` was run. The §4 claim that M1 is fast enough is an argument
