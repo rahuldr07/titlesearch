@@ -16,9 +16,22 @@ docker exec titlepipe-db-postgres-1 psql -U postgres \
   -c "CREATE DATABASE bandbench OWNER titlepipe_owner"
 for f in 01-schema 02-seed 03-rls 04-explain-no-index 05-indexes 06-explain-with-index 07-endpoint-and-rls-overhead; do
   docker cp "$f.sql" titlepipe-db-postgres-1:/tmp/
-  docker exec titlepipe-db-postgres-1 psql -U postgres -d bandbench -f "/tmp/$f.sql"
+  docker exec titlepipe-db-postgres-1 psql -U postgres -d bandbench -f "/tmp/$f.sql" || break
 done
 ```
+
+**Do not edit `-d bandbench` in that loop.** These files are destructive DDL —
+`CREATE TYPE`/`CREATE TABLE`, `ENABLE`/`FORCE ROW LEVEL SECURITY`, and
+`GRANT USAGE ON SCHEMA public TO titlepipe_app` (`03-rls.sql`) — and a copy-paste
+loop is exactly the shape that gets `-d titlepipe` substituted into it once. Every
+`.sql` here therefore opens with `\set ON_ERROR_STOP on` and a `DO` block that
+raises unless `current_database() = 'bandbench'`, so the substitution aborts on the
+first file instead of rewriting the live schema. MEASURED 2026-09-02 against
+`titlepipe-db-postgres-1`: `psql -d titlepipe -f 01-schema.sql` →
+`ERROR: REFUSED: bench rig must run against bandbench, not titlepipe`, exit 3, and
+`\dt` on `titlepipe` unchanged. The `|| break` above is what stops the loop from
+walking through the remaining six refusals. Renaming the benchmark database means
+editing the guard in all seven files, deliberately.
 
 Seed takes ~23 s (3.3M rows). Drop `bandbench` when done; it is 771 MB of `fields` plus
 ~470 MB of indexes.

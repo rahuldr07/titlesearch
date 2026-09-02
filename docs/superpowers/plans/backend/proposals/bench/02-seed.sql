@@ -1,4 +1,15 @@
 \set ON_ERROR_STOP on
+-- GUARD (do not remove). Every file in this directory is destructive DDL plus a
+-- GRANT to the application role. Run against `titlepipe` and it rewrites the live
+-- schema. The rig is only ever valid against the throwaway `bandbench` database,
+-- so each file refuses to do anything anywhere else. `ON_ERROR_STOP` above is what
+-- turns the refusal into a non-zero exit instead of a skipped statement.
+DO $guard$ BEGIN
+  IF current_database() <> 'bandbench' THEN
+    RAISE EXCEPTION 'REFUSED: bench rig must run against bandbench, not %', current_database();
+  END IF;
+END $guard$;
+
 \timing on
 INSERT INTO tenants (id) VALUES ('11111111-1111-1111-1111-111111111111'),('22222222-2222-2222-2222-222222222222');
 
