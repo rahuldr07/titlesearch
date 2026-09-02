@@ -890,6 +890,141 @@ export const demoFields: Field[] = [
 ];
 
 /**
+ * READINGS PAYLOADS THAT ARE NOT A TWO-ENGINE PAIR.
+ *
+ * Every fixture in `demoFields` carries exactly two readings from two
+ * distinct engines, which is why no test could ever catch the UI treating
+ * "the array has 2+ entries with differing values" as "the engines
+ * disagreed", or treating `readings[0..1]` as a server nomination. Both
+ * shapes below are permitted by the contract — `Field.readings` is an
+ * unbounded `z.array(FieldReading)` of ALL pre-merge values, and
+ * `services/core-api` has no readings serializer or `(field_id, engine_id)`
+ * unique constraint to bound it.
+ *
+ * DELIBERATELY NOT MEMBERS OF `demoFields`. The demo order's queue length,
+ * its per-state counts and its coverage spine are asserted across the
+ * Playwright suite; a fixture that exists to prove a refusal must not move
+ * those numbers. These are imported directly by the tests that need them.
+ */
+
+/**
+ * THREE readings, three engines. `nominatedPair` used to return the first
+ * two and drop the third silently — the UI editing the evidence.
+ */
+export const threeReadingField: Field = {
+  id: "fld_three_readings",
+  order_id: oid,
+  path: "vesting.owner",
+  value: null,
+  na_reason: null,
+  state: "needs_review",
+  source_doc_id: "doc_deed",
+  source_page: 8,
+  source_snippet: null,
+  source_line_coords: null,
+  engine_id: null,
+  engine_confidence_raw: null,
+  rule_refs: [],
+  approved_by: null,
+  approved_at: null,
+  asking: "Is the vested owner MARIA L. ESTRADA?",
+  consequence: "The wrong vested owner insures a stranger's interest.",
+  why: "Three readers were consulted and did not converge.",
+  readings: [
+    {
+      id: "rdg_three_a",
+      field_id: "fld_three_readings",
+      engine_id: "gemini-2.5-flash",
+      value: "MARIA L. ESTRADA",
+      page: 8,
+      snippet: "…unto MARIA L. ESTRADA, a married woman…",
+      confidence_raw: 0.88,
+      cost_usd: 0.0004,
+      latency_ms: 1610,
+      line_coords: null,
+    },
+    {
+      id: "rdg_three_b",
+      field_id: "fld_three_readings",
+      engine_id: "llmwhisperer-hq",
+      value: "MARIA I. ESTRADA",
+      page: 8,
+      snippet: "…unto MARIA I. ESTRADA, a married woman…",
+      confidence_raw: 0.74,
+      cost_usd: 0.015,
+      latency_ms: 3220,
+      line_coords: { page: 8, x: 0.1, y: 0.31, w: 0.52, h: 0.03 },
+    },
+    {
+      id: "rdg_three_c",
+      field_id: "fld_three_readings",
+      engine_id: "paddle-ocr",
+      value: "MARIA L ESTRADA",
+      page: 8,
+      snippet: "…unto MARIA L ESTRADA, a married woman…",
+      confidence_raw: 0.69,
+      cost_usd: 0.0002,
+      latency_ms: 890,
+      line_coords: { page: 8, x: 0.1, y: 0.31, w: 0.52, h: 0.03 },
+    },
+  ],
+};
+
+/**
+ * TWO readings, ONE engine — one value spanning two lines, which the
+ * contract says is two readings each with its own box (entities.ts:25).
+ * The values differ because they are FRAGMENTS of one value, not two
+ * accounts of it. Cardinality-based disagreement drew a false A≠B chip here
+ * and handed `ReadingPair` the same engine id for both seats.
+ */
+export const lineFragmentField: Field = {
+  id: "fld_line_fragments",
+  order_id: oid,
+  path: "legal.description",
+  value: null,
+  na_reason: null,
+  state: "needs_review",
+  source_doc_id: "doc_deed",
+  source_page: 9,
+  source_snippet: null,
+  source_line_coords: null,
+  engine_id: null,
+  engine_confidence_raw: null,
+  rule_refs: [],
+  approved_by: null,
+  approved_at: null,
+  asking: "Confirm the legal description.",
+  consequence: "A truncated legal description describes a parcel that does not exist.",
+  why: "The description wraps across two printed lines.",
+  readings: [
+    {
+      id: "rdg_frag_1",
+      field_id: "fld_line_fragments",
+      engine_id: "llmwhisperer-hq",
+      value: "ALL THAT TRACT OR PARCEL OF LAND lying and being in",
+      page: 9,
+      snippet: "ALL THAT TRACT OR PARCEL OF LAND lying and being in",
+      confidence_raw: 0.93,
+      cost_usd: 0.015,
+      latency_ms: 3100,
+      line_coords: { page: 9, x: 0.08, y: 0.41, w: 0.7, h: 0.02 },
+    },
+    {
+      id: "rdg_frag_2",
+      field_id: "fld_line_fragments",
+      engine_id: "llmwhisperer-hq",
+      value: "Land Lot 44 of the 13th District, Clayton County, Georgia.",
+      page: 9,
+      snippet: "Land Lot 44 of the 13th District, Clayton County, Georgia.",
+      confidence_raw: 0.91,
+      cost_usd: 0.015,
+      latency_ms: 3100,
+      line_coords: { page: 9, x: 0.08, y: 0.435, w: 0.72, h: 0.02 },
+    },
+  ],
+};
+
+/**
  * Rulebook demo: live rules an escalation can cite, plus one PENDING draft —
  * pending rules render visibly inert everywhere and cannot affect the
  * pipeline until an engineer confirms.

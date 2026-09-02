@@ -18,6 +18,16 @@ export type ReadingSegment = {
  * once per seat — because the two sides mark different characters and a single
  * shared segment list would have to encode both, which is how a diff renderer
  * ends up highlighting the wrong side.
+ *
+ * ONLY MEANINGFUL WHERE THE TWO STRINGS ARE TWO ACCOUNTS OF ONE VALUE, and
+ * nothing here can check that — a character diff of two unrelated strings is
+ * still a character diff, just a meaningless one. Measured on the two line
+ * FRAGMENTS of one legal description (`lineFragmentField`): 32 segments, 65%
+ * of the characters marked — a highlight that reads as total disagreement
+ * between two engines when it is one engine's value wrapping across a line.
+ * `nominatedPair` (features/review/readings.ts) is what keeps that payload
+ * from reaching here; this function trusts that gate and does not re-litigate
+ * it.
  */
 export function segmentsFor(mine: string, theirs: string): readonly ReadingSegment[] {
   return diffChars(theirs, mine)

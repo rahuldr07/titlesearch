@@ -22,6 +22,28 @@ export type ReadingPairProps = {
 };
 
 export function ReadingPair({ a, b, onAdopt, adoptBlockedBecause }: ReadingPairProps) {
+  /*
+   * 🔴 THE TWO SEATS MUST BE TWO ENGINES, AND NOTHING BELOW WORKS OTHERWISE.
+   * Both the attribution line and `data-testid={`use-${engine_id}`}` address a
+   * seat BY ENGINE — deliberately, so a test adopts a reading rather than a
+   * layout position. Hand this one engine twice and both are ambiguous: two
+   * identical testids (a strict-mode locator resolves to neither) attributed
+   * to the same engine, drawn as if two readers had been consulted. That is
+   * reachable payload, not a hypothetical: one value spanning two lines is two
+   * readings from one engine (contract entities.ts:25).
+   *
+   * `nominatedPair` is the gate that guarantees it, and this throw is what
+   * makes the guarantee load-bearing rather than a comment — a caller that
+   * assembles a pair by hand fails loudly instead of shipping a silent
+   * double-attribution.
+   */
+  if (a.engine_id === b.engine_id) {
+    throw new Error(
+      `ReadingPair: both seats carry engine "${a.engine_id}". Two readings from ` +
+        "one engine are not a comparison — see nominatedPair in features/review/readings.ts.",
+    );
+  }
+
   return (
     <div data-reading-pair className="flex flex-col gap-5">
       {a.value !== b.value && <PairRubric />}
