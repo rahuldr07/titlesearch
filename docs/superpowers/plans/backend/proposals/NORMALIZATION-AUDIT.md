@@ -858,7 +858,7 @@ performance arguments, and correctness arguments do not need measurement. The on
 | **D-1** | `tenant_id` in every PK and every FK | A `:465`, B `:72`, C `:63` | Cross-tenant FK impossibility + closing the existence oracle. `0001_skeleton.py:154-179` is cited as having *"measured the oracle"* | **PARTIAL — and it is the only one with any measurement at all.** `REVIEW-adversarial.md:645-661` and `:671-685` contain **executed SQL transcripts with actual outputs** proving the FK/RLS behaviours. That is real evidence about the *mechanism*. No measurement of the *cost* (index size, write amplification) exists, and none is needed at this scale. | **Correct. Keep.** A security invariant, not a performance trade. |
 | **D-2** | `escalations.order_ids uuid[]` — repeating group, no FK | B §2.7, C `:576-583` | Contract shape (`CONTEXT.md:135`, `entities.ts:170`); the cluster is the unit | **ASSERTED**, and *honestly* — both proposals explicitly name the dangling-id weakness rather than hiding it | **Accept for P0.** Record the junction table as the fix. Add a GIN index the first time "escalations touching order X" is a real query. |
 | **D-3** | `deliveries.receipt jsonb` array | B §2.8 | *"an authored document, not a queryable relation"* | **ASSERTED** | **A's separate table is better** (§1.2). The unanswered objection is `ReceiptStep.who` being a principal that cannot be FK'd inside JSON. |
-| **D-4** | `reconciliations.value_a` / `value_b` duplicating `blind_entries.value` | B §2 (golden/blind block) | **NONE GIVEN — nobody labelled this as a denormalization at all** | **ASSERTED by omission** | **Needs a ruling.** The defensible argument is that a reconciliation snapshots values as they stood at ruling time, which is an audit requirement and makes the copy correct. **That argument is available and nobody made it.** Make it explicitly, or derive the columns. Silence here is how a redundancy becomes a bug. |
+| **D-4** | `reconciliations.value_a` / `value_b` duplicating `blind_entries.value` | B §2 (golden/blind block) | **RULED 2026-09-02 — ruling-time snapshot, now stated in `docs/CONTEXT.md` §6 and `docs/PRD.md` §9** | **ASSERTED, explicitly** | **Ruled: keep the columns, do not derive them.** A ruling records what the reviewer was shown when they ruled; a later edit or retention deletion of a typist entry must not change the ruling's account of itself. The copy is therefore correct, but only under four obligations — see §7, items 3a–3d. None are implemented today. |
 | **D-5** | `complaints.shipped_value` duplicating the delivered `fields.value` | B | Implicit: the value as shipped | **ASSERTED, but obviously correct** | **Keep.** A temporal snapshot is not redundancy — the shipped value must not follow later corrections. **Say so in a comment**; it is one line and it prevents a future "cleanup". |
 | **D-6** | `jurisdictions.tax_vocabulary` as a single column (this document, §3.3) | — | convenience | n/a | **Do not add it as a plain column** without also adding `jurisdiction_tax_cadence`. Anchorage's 2022 change makes the single column false (§3.3b). |
 | **D-7** | `orders.state` + `orders.county` alongside `jurisdiction` | A `:104-106`, B `:199-201`, C `:175-177` | **NONE — not recognized as a denormalization by anyone** | **ASSERTED by omission** | **This is §3.** Not a considered trade-off, an unnoticed 3NF violation. |
@@ -889,7 +889,27 @@ attention are **D-4** (unlabelled, unjustified) and **D-7** (unnoticed, and the 
    `delivery_receipt_steps (T, delivery_id, step_no)`. Four indexes, four real defect
    classes closed. The `blind_entries` one is the blindness invariant's storage half.
 4. Composite self-FK `reports (T, order_id, supersedes) → reports (T, order_id, version)`.
-5. Label **D-5** in a comment; rule on **D-4**.
+5. ~~Label **D-5** in a comment; rule on **D-4**.~~ **DONE 2026-09-02** — D-4 ruled as a
+   ruling-time snapshot and D-5 (`complaints.shipped_value`) labelled the same way, both
+   written into `docs/CONTEXT.md` §6 and `docs/PRD.md` §9. **The ruling is only sound if
+   the following four obligations hold, and none of them hold today. They are P0 backend
+   work, not documentation:**
+   - **3a. Write-once at creation.** `reconciliations.value_a` / `value_b` (and
+     `complaints.shipped_value`) are set when the row is created and never updated. Needs
+     enforcement, not convention: a `BEFORE UPDATE` trigger or a column-level `REVOKE
+     UPDATE` on the app role, plus a test that proves the update is refused.
+   - **3b. Retention deletion must not cascade.** Deleting `blind_entries` under a
+     retention policy must leave `reconciliations` intact — so no `ON DELETE CASCADE` on
+     that path, and if an FK exists at all it must be `ON DELETE NO ACTION`/absent. A
+     cascade here silently destroys the audit record the snapshot exists to preserve.
+   - **3c. `UNIQUE (tenant_id, order_id, typist_seat, path)` on `blind_entries`** — item 3
+     above lists this as a defect-class index; the D-4 ruling makes it load-bearing. Without
+     it "the seat-A value at ruling time" is not a single well-defined fact, and the
+     snapshot has no referent to be a snapshot *of*.
+   - **3d. The snapshot must not collapse the two NA states.** `NOT_PRESENT` and
+     `PRESENT_UNREADABLE` (CONTEXT §11) must survive into `value_a`/`value_b`; a bare null
+     for both makes the ruling unreadable after the fact. Whatever representation
+     `blind_entries` uses for NA, the snapshot carries it, not a nulled-out version.
 6. Add the D-10 cost-reconciliation test.
 
 **Needs an owner decision:**

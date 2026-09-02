@@ -149,6 +149,8 @@ audit_log(id, tenant_id, actor_id, action, entity, entity_id, at)  -- append-onl
 - Field-level envelope encryption (application layer): DOBs, SSNs if ever present, bankruptcy details.
 - `packages/` is **never** in VCS. (See §19 — this already caused a 644 MB incident.)
 - **`bugs` ≠ corrections.** Corrections are reviewer field edits. Bugs are broken *inputs* / derived-field defects and route to **developers**, not senior reviewers. Two tables, two audiences.
+- **`reconciliations.value_a` / `value_b` are a ruling-time snapshot, not a cache of `blind_entries.value`.** They look like a redundancy (audit D-4) and are not one: a ruling is a record of *what the reviewer was shown when they ruled*. If a typist entry is later edited or its row is retention-deleted, the ruling's account of itself must not change. Consequences, all currently unimplemented: the snapshot is **written once at creation** and never updated; retention deletion of `blind_entries` **must not cascade** to `reconciliations`; `UNIQUE (tenant_id, order_id, typist_seat, path)` on `blind_entries` is what makes "the seat-A value at ruling time" a single well-defined fact; and the snapshot carries the **two NA states** (§11) intact — a `NOT_PRESENT` entry must not snapshot as a bare null indistinguishable from `PRESENT_UNREADABLE`.
+- **`complaints.shipped_value` is the same kind of snapshot** — what the client actually received, frozen at complaint time, never re-read from `fields` or the report.
 
 ---
 

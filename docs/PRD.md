@@ -112,16 +112,19 @@ golden_fields(id, order_id, path, value, tag,  -- delivered_report|ruled|suspect
               source_citation, corrected_from, corrected_by, corrected_at, correction_reason)
 blind_entries(id, order_id, typist_seat,        -- A|B, never a user name in UI
               path, value, source_citation, confidence)  -- certain|probable|unclear
-reconciliations(id, order_id, path, value_a, value_b, ruling_value,
+reconciliations(id, order_id, path, value_a, value_b, ruling_value,  -- value_a/value_b: ruling-time SNAPSHOT, write-once
                 citation, reason, ruled_by, general_rule_id)
 probes(id, order_id, field_path, planted_value, caught, reviewer_action)
 reports(id, order_id, version, shape, storage_key, rendered_at)
 deliveries(id, report_id, method, status, attempted_at, delivered_at, evidence)
-complaints(id, order_id, field_path, shipped_value, client_value,
+complaints(id, order_id, field_path, shipped_value, client_value,   -- shipped_value: snapshot at complaint time
            how_it_got_through,   -- auto_confirmed|human_confirmed
            resolution, rule_id, golden_offer_accepted)
 audit_log(id, tenant_id, actor_id, action, entity, entity_id, at)  -- append-only
 ```
+
+**`reconciliations.value_a` / `value_b` are a ruling-time snapshot, not a cache of `blind_entries.value`** (audit D-4; CONTEXT §6). A ruling records what the reviewer was shown when they ruled, so a later edit or retention deletion of a typist entry must not change it. Four consequent obligations, none implemented today: written once at creation and never updated; retention deletion of `blind_entries` must not cascade; `UNIQUE (tenant_id, order_id, typist_seat, path)` on `blind_entries` is what makes "the seat-A value at ruling time" single-valued; and the snapshot preserves both NA states — `NOT_PRESENT` must not collapse into a null indistinguishable from `PRESENT_UNREADABLE`. **`complaints.shipped_value` is the same kind of snapshot** (D-5): what the client received, frozen at complaint time, never re-read from `fields` or the report.
+
 Field-level encryption (application-layer envelope): DOBs, SSNs if ever present, bankruptcy details. RLS policies on every tenant-scoped table; app connects as non-owner role; `SET LOCAL app.current_tenant` per transaction.
 
 ## 8. Engine layer (full spec)
