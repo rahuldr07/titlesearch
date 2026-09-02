@@ -35,7 +35,7 @@ same commit.
 
 | Document | Cited by | State |
 |---|---|---|
-| `docs/rulings_2026-07.md` | HANDOFF §3/§9, CONTEXT §9/§23, PRD §10, both Gate 0 docs | **Missing — owner to supply.** Full text of R13–R24 + implementation impact. Note: `rulebook-source/Implementation_Rulebook_v1.docx` is a *different* document (the Vendor 66805 typing rulebook, its own rule numbering) and does not contain it |
+| `docs/rulings_2026-07.md` | HANDOFF §3/§9, CONTEXT §9/§23, PRD §10, both Gate 0 docs | **Missing — owner to supply. Confirmed 2026-09-02 NOT recoverable from the .docx sources (`docs/rulebook-source/RECOVERY-2026-09-02.md`); all citations demoted.** Full text of R13–R24 + implementation impact. Note: `rulebook-source/Implementation_Rulebook_v1.docx` is a *different* document (the Vendor 66805 typing rulebook, its own rule numbering) and does not contain it |
 | `docs/spec.md` | CONTEXT §23, HANDOFF §9, Gate 0/1 prompt | **Missing — owner to supply.** The 18-section extraction spec with provenance tags; not reconstructable from anything tracked |
 | `docs/frontend/PLAN.md` | BRIEF §5 Phase 0 | Never existed; the harvest substituted `prompts/frontend-master-prompt.md` (BRIEF-DELTAS D-7) |
 

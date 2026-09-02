@@ -1,10 +1,21 @@
-# NORMALIZATION AUDIT — the pass all three proposals missed
+# NORMALIZATION AUDIT OF THE THREE SCHEMA PROPOSALS — the pass all three missed
+
+> **This document audits proposed DDL, not a running schema.** Of the 32 tables analysed
+> below, **8 exist** in the shipped database and **24 do not exist at all** (§1.0, verified
+> against `pg_catalog` on 2026-09-02). Every finding except one is therefore a correction to
+> DDL that has not been written yet — free now, expensive later. **The one finding that is
+> live is `rules`: `UNIQUE (code, version)` is not declared, so duplicate rule rows are
+> storable today** (§1.0d, reproduced by insert). Read §7's ordering with that split in mind;
+> it is the reason §7 was reordered.
 
 **Scope:** every table proposed in `PROPOSAL-A-minimal.md`, `PROPOSAL-B-full.md`,
-`PROPOSAL-C-evidence.md`, plus the tables `REVIEW-adversarial.md` says are missing.
+`PROPOSAL-C-evidence.md`, plus the tables `REVIEW-adversarial.md` says are missing, plus
+— newly, in §1.0 — the shipped schema those proposals will be applied to.
 **Method:** state the candidate key, the functional dependencies (FDs), and the highest
-normal form each table satisfies — then rule on the four places where the schema is
-*not* in a normal form and somebody has to decide whether that is correct.
+normal form each *proposed* table satisfies — then rule on the four places where the
+proposed schema is *not* in a normal form and somebody has to decide whether that is
+correct. Where a proposed table also exists live, §1.0 states what the live one actually
+carries, so no reader mistakes a proposal's columns for shipped ones.
 
 **Provenance of this document's own premise:** `grep -i -E '1NF|2NF|3NF|BCNF|normal form'`
 across the four proposal documents returns zero hits. The proposals do the substance
@@ -27,7 +38,7 @@ Recounted per source:
 | **A+B+C summed** (`grep -c`) | **339** | **56** |
 | A+B+C, occurrences inside fenced code blocks only | 319 | 30 (`CHECK (` in blocks: 30) |
 | Shipped migrations `services/core-api/migrations/versions/*.py` | 9 `nullable=False` | **0** `CheckConstraint` |
-| Live DB `tp_audit_check`, `pg_attribute.attnotnull` / `pg_constraint` | 28 columns | **0** (`contype='c'`) |
+| Live DB (`titlepipe` at `0003`), `pg_attribute.attnotnull` / `pg_constraint` | 28 columns | **0** (`contype='c'`) |
 
 The `56` reproduces exactly under `grep -cw CHECK` over A+B+C; the same method gives **339**
 for `NOT NULL`, so "341" was a +2 miscount of that same population. Corrected above.
@@ -37,6 +48,11 @@ and 28 NOT NULL columns across 9 tables (`alembic_version`, `tenants`, `orders`,
 `pages`, `fields`, `field_readings`, `audit_log`, `rules`). Every enum/state invariant the
 proposals express as `CHECK` is currently unenforced at the database layer. No claim in this
 document or in the proposals may be read as asserting those constraints exist today.
+**The nine tables in that list are the whole of the live schema** — the same nine §1.0
+enumerates, `alembic_version` included. The 28 NOT NULL columns are almost all structural:
+`rules` carries 7 of them and each of the six tenant tables carries exactly 3
+(`id`, `created_at`, `tenant_id`). Not one is a domain column, because there are no domain
+columns.
 
 **What this document rules and what it does not.** It rules on facts that follow from the
 documents (which normal form, which FD holds). It presents options with consequences and
@@ -58,29 +74,150 @@ and the derived-count mechanism (§4). Those are owner calls, and each is marked
 
 ---
 
+## 1.0 THE LIVE CATALOG — what the shipped database actually contains
+
+**Method, so this is reproducible and not another citation of a citation.** `scripts/dev-db.sh
+up` against `postgres:18.4` in `titlepipe-db-postgres-1` (port **55432**, not 5432), then
+`pg_tables`, `information_schema.columns`, `pg_index`, `pg_constraint`, `pg_attribute` and
+`pg_class.relrowsecurity` read directly, 2026-09-02. Not read from the migrations — read from
+the catalog the migrations produced. Where this disagrees with any other section, **this
+section wins.**
+
+### 1.0a `alembic_version` — the table nothing in this audit ever mentioned
+
+`select version_num from alembic_version` → **`0003`**. It is a real table in `public`,
+one `varchar(32)` NOT NULL column, `PRIMARY KEY (version_num)` as
+`alembic_version_pkc`, **no `tenant_id`, and RLS neither enabled nor forced**. Every earlier
+draft of this document counted nine live tables and named eight. The ninth is this one, and
+it matters twice: it is the only authority on which revision is live (**`0003`**, so every
+"three alembic revisions" claim in this document is confirmed by the database and not just
+by `ls migrations/versions/`), and it is a **global, un-RLS'd table that appears in neither
+`EXPECTED_GLOBAL_TABLES` nor `ISOLATION_GLOBAL_TABLES`** as this audit describes them —
+because Alembic creates it, not a migration. The catalog-derived RLS assertion therefore
+exempts it by a **third route**, neither list: `_global_tables` and `_tenant_tables` both
+carry `AND c.relname NOT IN (:version_table, :registry_table)` in the derivation SQL itself
+(`tests/test_forced_rls_and_grants.py:378-403`, fixture at `tests/conftest.py:1864`). §8 has
+the full quotation. **This does not weaken §3.2's two-list rule**, which governs new global
+tables that have no such exemption. Normal form: trivially BCNF, a one-column relation. It is
+listed here for completeness of the live inventory, not because it has a normalization finding.
+
+### 1.0b Per-table: what the proposals claim vs what is live
+
+`✗` = the table does not exist. For live tables, "live columns" is the complete list;
+there is nothing omitted for brevity.
+
+| Table | Live? | Live columns (complete) | Live PK | Proposals claim | Delta |
+|---|:--:|---|---|---|---|
+| `alembic_version` | ✅ | `version_num` | `(version_num)` | **never mentioned by any proposal or by this audit before now** | Alembic's own bookkeeping; global, no RLS |
+| `tenants` | ✅ | `id`, `created_at` | `(id)` | `(id, name, settings)` | `name`, `settings` **absent** |
+| `orders` | ✅ | `id`, `created_at`, `tenant_id` | `(tenant_id, id)` | +`client_id`, `external_ref`, `jurisdiction`, `state`, `county`, `status`, … (13 more in B §2.2) | **every domain column absent — including `state` and `county`, which is why §3's 3NF violation is unpaid** |
+| `packages` | ✅ | `id`, `created_at`, `tenant_id` | `(tenant_id, id)` | +`order_id`, `storage_key`, `page_count`, `sha256`, `accepted_by` | all absent; C's `sha256` unique index has no column to sit on |
+| `pages` | ✅ | `id`, `created_at`, `tenant_id` | `(tenant_id, id)` | +`package_id`, `page_no`, `has_text_layer`, `class`, … | all absent; `(package_id, page_no)` is not a missing index, it is a missing pair of columns |
+| `fields` | ✅ | `id`, `created_at`, `tenant_id`, **`na_reason`** | `(tenant_id, id)` | +`order_id`, `path`, `value`, `state`, and the 17-column provenance envelope | all absent but `na_reason`; **§2's whole `path` question is about a column that does not exist**, and §2.5's `ALTER TABLE` has nothing to alter |
+| `field_readings` | ✅ | `id`, `created_at`, `tenant_id`, **`line_coords`** | `(tenant_id, id)` | +`field_id`, `engine_id`, `value`, `page`, `snippet`, `confidence_raw`, `cost_usd`, `latency_ms` | all absent but `line_coords` |
+| `audit_log` | ✅ | `id`, `created_at`, `tenant_id` | `(tenant_id, id)` | +`actor_id`, `action`, `entity`, `entity_id`, `at` | all absent |
+| `rules` | ✅ | `id`, `created_at`, `code`, `text`, `origin`, `status`, `jurisdiction_scope`, `version`, `confirmed_by`, `source_doc_ref` | **`(id)` only** | `(code, version)` unique | **the only live table with real domain columns, and the only live finding — see §1.0d** |
+| `users`, `clients`, `documents`, `engines`, `engine_routing`, `engine_runs`, `escalations`, `bugs`, `reports`, `deliveries`, `delivery_receipt_steps`, `probes`, `golden_fields`, `blind_entries`, `reconciliations`, `complaints` | ✗ ×16 | — | — | §1.1/§1.2 analyse all sixteen | **do not exist as tables at all** |
+| `jurisdictions`, `countersigns`, `page_texts`, `templates`, `escalation_orders`, `sections`, `jurisdiction_null_states`, `jurisdiction_tax_cadence` | ✗ ×8 | — | — | §1.3 / §3.2 / §3.3 propose all eight | do not exist; correctly, they were never claimed to |
+
+**Count: 8 live tables of the 32 this document analyses, plus `alembic_version` = 9 live
+tables total. 24 of the 32 are absent.** `to_regclass('public.<t>') IS NULL` for all 24,
+checked one at a time.
+
+### 1.0c Zero non-PK unique indexes, and zero indexes of any other kind
+
+`pg_indexes` over `public` returns **nine rows, all nine of them primary-key indexes**:
+`alembic_version_pkc`, `pk_tenants`, `pk_orders`, `pk_packages`, `pk_pages`, `pk_fields`,
+`pk_field_readings`, `pk_audit_log`, `pk_rules`. There is **no secondary index of any kind
+in the shipped database** — not unique, not partial, not expression, not GIN. `pg_constraint`
+agrees and is starker: **`contype` histogram is `p`: 9, `n`: 28, and nothing else.** No `u`,
+no `c`, no `f`. Restated: **zero unique constraints beyond the primary keys, zero CHECK
+constraints, zero foreign keys** — which confirms `0001_skeleton.py:422-423`'s *"there are no
+foreign keys"* from the catalog rather than from the comment.
+
+Consequences for this audit, stated exactly:
+
+- **`ix_fields_order_state` — §4.2.1's load-bearing index, the one measured at a ~1,250×
+  difference — does not exist in the live database.** §4.2.1's rig built it in a scratch
+  database (`bandbench`) on a synthetic PROPOSAL-B-shaped schema. That measurement is still
+  valid as a measurement; it is not a description of the shipped database, and §4.2.1's
+  finding 3 ("the index is load-bearing and is not optional") is a **requirement on a future
+  migration**, not a report on a present one.
+- **RLS is real and is not proposed.** `relrowsecurity` and `relforcerowsecurity` are both
+  **true** on all six tenant tables and on `tenants`; both **false** on `rules` and on
+  `alembic_version`. This is the one place where the shipped database is ahead of the
+  proposals, and §4.2.1's forced-RLS measurement is measuring a mechanism that genuinely ships.
+- Three enum types exist and are the shipped domain vocabulary: `na_reason`
+  (`NOT_PRESENT, NOT_FOUND, NOT_STATED, PRESENT_UNREADABLE` — **the two-NA-states invariant
+  is enforced by a Postgres type, not by a CHECK**), `rule_origin`
+  (`spec, escalation, reconciliation, complaint, senior`) and `rule_status`
+  (`live, pending, retired`).
+
+### 1.0d 🔴 THE ONE LIVE DEFECT — `rules` has no `UNIQUE (code, version)`
+
+`rules` is `PRIMARY KEY (id)` and nothing else. §1.2's row for it says *"BCNF if
+`(code, version)` is unique; otherwise 3NF. Nobody declared it."* **Nobody declared it, and
+the table is shipped, so it is 3NF and duplicate rows are storable right now.** Reproduced
+against the live database:
+
+```sql
+INSERT INTO rules (id, code, text, origin, status, version) VALUES
+  (gen_random_uuid(), 'R_DUP_PROBE', 'a', 'spec', 'pending', 1),
+  (gen_random_uuid(), 'R_DUP_PROBE', 'b', 'spec', 'pending', 1);
+-- INSERT 0 2          ← accepted, no error
+SELECT count(*) FROM rules WHERE code = 'R_DUP_PROBE';
+-- 2                   ← two rows, same (code, version), different text
+```
+
+Both rows inserted; the probe rows were then deleted. **This is the only finding in this
+entire document that describes a defect in a running database**, and it is the only item in
+§7 that is a migration rather than a correction to unwritten DDL.
+
+**Why it is not cosmetic.** `(code, version)` is the rulebook's citation identity. A rule is
+cited by code and version from `fields.rule_refs`, from escalation resolutions, and from the
+seed that `apps/web/e2e-live/seedRulebook.mjs` writes. Two rows with the same `(code, version)`
+and different `text` means **a citation resolves to two different rules and the reader cannot
+tell which one was applied** — a direct breach of the provenance principle (*never emit a
+value you can't cite*), because a citation that resolves ambiguously is not a citation.
+A re-run of the seeder that inserts rather than upserts is the obvious way it happens, and
+nothing in the database stops it.
+
+**Cost of the fix: one migration, one index, and it can be added today**, because a unique
+index on an empty-or-clean table takes no lock worth naming and there is no data to
+reconcile. That is exactly the property that makes it urgent: it is free now for the same
+reason the other twenty-odd items are free, but unlike them the window is already open and
+rows are already storable.
+
+---
+
 ## 1. Normal form per table
 
 **🔴 SCOPE NOTE, verified firsthand 2026-09-02.** Every table in §1.1, §1.2 and §1.3 below
-is **PROPOSED**, not extant, with exactly one exception. The shipped schema is three
-alembic revisions and seven tables: `tenants`, `orders`, `packages`, `pages`, `fields`,
-`field_readings`, `audit_log` (`0001_skeleton.py:276-299`) plus `rules`
+is **PROPOSED**, not extant, with exactly one exception, and §1.0 above is the catalog
+evidence. The shipped schema is three alembic revisions (`alembic_version` = `0003`) and
+eight tables plus `alembic_version` itself: `tenants`, `orders`, `packages`, `pages`,
+`fields`, `field_readings`, `audit_log` (`0001_skeleton.py:276-299`) plus `rules`
 (`0003_rules.py:214-229`). The six tenant tables carry **only** `id`, `created_at`,
 `tenant_id` and `PRIMARY KEY (tenant_id, id)`; `fields` adds `na_reason` and
 `field_readings` adds `line_coords`, and that is the whole of it. There is no `client_id`,
 no `path`, no `value`, no `state`, no `order_id`, no `package_id`, no FK anywhere
-(`0001_skeleton.py:422-423`: *"there are no foreign keys"*). `users`, `clients`,
+(`0001_skeleton.py:422-423`: *"there are no foreign keys"*, confirmed from `pg_constraint`
+in §1.0c). `users`, `clients`,
 `documents`, `engines`, `engine_routing`, `engine_runs`, `escalations`, `bugs`, `reports`,
 `deliveries`, `probes`, `golden_fields`, `blind_entries`, `reconciliations`, `complaints`
-**do not exist as tables at all**. `rules` is the single exception: it is real, and the
-§1.2 row for it is the only row in these tables describing shipped DDL.
+**do not exist as tables at all** — 24 absent in total (§1.0b). `rules` is the single
+exception: it is real, and the §1.2 row for it is the only row in these tables describing
+shipped DDL — **and its `(code, version)` uniqueness is genuinely missing today** (§1.0d).
 
-**What follows from that, and it applies to every finding in this document:** the missing
+**What follows from that, and it applies to every finding in this document except §1.0d:**
+the missing
 unique indexes (`fields`, `golden_fields`, `blind_entries`, `reconciliations`,
 `delivery_receipt_steps`, `reports`), the §2.5 `ALTER TABLE fields` and the §3 `orders`
 transitive dependency are all **corrections to DDL that has not been written yet**. None
 is a migration against data. That makes every one of them cheap now and expensive later,
 which strengthens rather than weakens the audit — but the document must not be read as
-describing defects in a running database.
+describing defects in a running database. **The single exception is `rules`
+`UNIQUE (code, version)` (§1.0d), which is a defect in a running database and is item 1 of §7.**
 
 Reading: **BCNF** = every determinant is a superkey. **3NF** = no non-key attribute
 transitively depends on the key. Where a table is BCNF I say so once; where it is not, the
@@ -118,7 +255,7 @@ violating FD is named.
 | `blind_entries(T,id,order_id,typist_seat,path,value,source_citation,confidence)` (B) | `(T,id)`; `(T,order_id,typist_seat,path)` **not declared unique** | `(order_id,typist_seat,path) → value, source_citation, confidence` | 3NF; not BCNF without the index. | The unique index here is also the **blindness invariant's storage half**: seat A and seat B each get exactly one entry per path, and `reconciliations` joins them pairwise. Without it, "the two readings" is not well defined and `reconciliations.value_a`/`value_b` have no unambiguous source. **Add it.** |
 | `reconciliations(T,id,order_id,path,value_a,value_b,ruling_value,citation,reason,ruled_by,general_rule_id)` (B) | `(T,id)`; `(T,order_id,path)` | `(order_id,path) → value_a, value_b, ruling_value, ...` | 3NF; not BCNF without the index. **Plus a real redundancy:** `value_a` and `value_b` are *copies* of `blind_entries.value` for seats A and B. | This is a **denormalization nobody labelled** — see §6, D-4. `value_a`/`value_b` duplicate facts that live in `blind_entries`, and nothing keeps them in sync. Either derive them in the view, or state that a reconciliation snapshots the values as they were at ruling time (which is a defensible and probably correct audit argument — but it is an argument nobody made). |
 | `complaints(T,id,order_id,field_path,shipped_value,client_value,how_it_got_through,resolution,rule_id,golden_offer_accepted)` (B) | `(T,id)` | `id → all` | **BCNF.** `shipped_value` is a deliberate historical snapshot — the value as delivered, which must not follow later corrections to `fields.value`. That is a correct temporal denormalization and B does not need to defend it beyond naming it. It is named here as **D-5** in §6. | |
-| `rules(id, code, text, origin, status, jurisdiction_scope, version, confirmed_by, source_doc_ref)` — global, `PRIMARY KEY (id)` per `0003_rules.py:90,208` | `id`; `(code, version)` **if unique** | `id → all`; `(code,version) → text, status, ...` | **BCNF if `(code,version)` is unique; otherwise 3NF.** Nobody declared it. | `jurisdiction_scope text NULL` is a *third* undeclared jurisdiction column (`entities.ts:160`). Null = applies everywhere. §3.3 is where this lands. |
+| **`rules` — 🔴 SHIPPED, the only live row in this table.** `(id, created_at, code, text, origin, status, jurisdiction_scope, version, confirmed_by, source_doc_ref)`, global, `PRIMARY KEY (id)` per `0003_rules.py:90,208` and confirmed from `pg_index` (§1.0c) | `id` only. `(code, version)` **is not a key: the unique index does not exist in the live database** | `id → all`; `(code,version) ⇸ text, status, ...` — asserted by the domain, **not enforced** | **3NF, not BCNF — as shipped, today.** Not a proposal defect; a live one. | **The one actionable live item in this audit (§1.0d).** Duplicate `(code, version)` rows were inserted against the live database and accepted. Fix is one migration; §7 item 1. Separately, `jurisdiction_scope text NULL` is a *third* undeclared jurisdiction column (`entities.ts:160`). Null = applies everywhere. §3.3 is where that lands. |
 
 ### 1.3 Tables the adversarial review found missing, and their normal form as specified here
 
@@ -268,10 +405,14 @@ into typed tables.**
 Concretely:
 
 ```sql
+-- CORRECTED FORM. The CASE guard is mandatory, not a fallback; see the
+-- empirical note below, which executed both variants on PostgreSQL 18.4.
 ALTER TABLE fields
   ADD COLUMN section    text GENERATED ALWAYS AS (split_part(path,'.',1)) STORED,
   ADD COLUMN ordinal    integer GENERATED ALWAYS AS (
-      NULLIF(split_part(path,'.',2), '')::integer) STORED,   -- see the cast note
+      CASE WHEN split_part(path,'.',2) ~ '^[0-9]+$'
+           THEN split_part(path,'.',2)::integer
+           ELSE NULL END) STORED,
   ADD COLUMN attribute  text GENERATED ALWAYS AS (
       CASE WHEN split_part(path,'.',3) = '' THEN split_part(path,'.',2)
            ELSE split_part(path,'.',3) END) STORED;
@@ -290,12 +431,48 @@ ALTER TABLE fields ADD CONSTRAINT fields_path_is_well_formed CHECK (
   recomputes on every write and the column cannot be set directly. This is the one place in
   this whole audit where a derived stored value is safe by construction, and it is worth
   contrasting with §4, where it is not.
-- The regex CHECK makes the ordinal cast total. **Note carefully:** the cast in the
-  `ordinal` expression will throw on any existing malformed path, so the CHECK must be
-  added and validated *before* the generated column, or the migration fails mid-way. If
-  any legacy path cannot satisfy the regex, use a `CASE ... WHEN split_part(path,'.',2) ~
-  '^[0-9]+$' THEN ...::integer ELSE NULL END` form instead and accept a silently-null
-  ordinal. **Prefer the strict version and fix the data.**
+- 🔴 **CORRECTION, EXECUTED 2026-09-02 (this replaces the earlier claim that the regex
+  CHECK makes the ordinal cast total, and the earlier preference for "the strict version
+  and fix the data" — that preference was wrong, and there is no data to fix).**
+  `NULLIF(split_part(path,'.',2),'')::integer` **throws on every well-formed
+  two-segment path**, which is the majority of real paths. Two-segment paths like
+  `assessment.total` are not malformed legacy data: they satisfy the regex CHECK exactly
+  as written, because `(\.[0-9]+)?` is optional. `split_part('assessment.total','.',2)`
+  is `'total'`, not `''`, so `NULLIF` returns `'total'` and the cast dies.
+
+  **Empirical run.** Scratch database `tp_path_ddl_scratch` on the project's
+  PostgreSQL 18.4 container (`titlepipe-db-postgres-1`; the `titlepipe` database was not
+  touched, and the scratch DB was dropped afterwards). Two tables, identical except for
+  the `ordinal` expression, both carrying the §2.5 CHECK. Inserted all 47 harvested
+  path literals that match the regex (28 two-segment, 19 three-segment), harvested from
+  `packages/contract/src`, `packages/mocks/src`, `apps/web/src`, `apps/web/e2e`, plus the
+  e2e `'x'` fixture (`apps/web/e2e/invariants/server-owns-state.spec.ts:12`).
+
+  | Table | Rows accepted | Rows rejected | Error |
+  |---|---|---|---|
+  | `NULLIF(...)::integer` (audit's original) | 19 / 48 | 28 × `22P02`, 1 × `23514` | `ERROR: 22P02: invalid input syntax for type integer: "total"` (`pg_strtoint32_safe`, `numutils.c:615`) |
+  | `CASE WHEN ... ~ '^[0-9]+$'` (corrected) | 47 / 48 | 1 × `23514` | only the `'x'` fixture, on the CHECK, as intended |
+
+  A bulk single-statement `INSERT` of all 48 rows into the original form aborts entirely
+  on the first two-segment path. **SQLSTATE `22P02` (`invalid_text_representation`)**, not
+  a constraint violation, so it surfaces as a driver-level `DataError`, not as a
+  recognisable constraint name the API layer could map to a 422.
+
+  **The CHECK cannot rescue the cast, in either ordering.** Inserting a path that
+  *violates* the regex in its second segment — `'Foo.Bar.baz'` — also raises `22P02`,
+  never `23514`: PostgreSQL evaluates stored generated columns *before* it evaluates
+  table constraints, so the failing cast always wins the race. The earlier advice to
+  "add and validate the CHECK before the generated column" is therefore necessary but
+  nowhere near sufficient; with the strict expression, no CHECK ordering makes the
+  migration safe. In the corrected form the CHECK is the only rejection mechanism, and
+  it fires with a named constraint (`fields_path_is_well_formed`, `23514`) that the API
+  layer can map.
+
+  The "silently-null ordinal" objection to the `CASE` form does not apply: `ordinal IS
+  NULL` is the *correct* reading for a two-segment path, which genuinely has no ordinal,
+  and it is exactly what the 28 two-segment paths produce (`count(ordinal) = 19`, the
+  three-segment count, in the corrected table). Null means "not a repeating-instrument
+  path", and the CHECK — not the cast — is what excludes malformed input.
 - It does not touch the contract. The API serializes `path` exactly as today. Zero
   frontend change. Zero mock change. Zero Playwright change.
 
@@ -711,6 +888,16 @@ The `current_setting()` call is a stable expression, folded into an `Index Cond`
    this is a *measured* endpoint above the interaction budget, and 27 ms is two orders of
    magnitude under it.
 
+**Reconciliation with §1.0, added after the catalog read.** The `bandbench` rig is a
+*synthetic PROPOSAL-B-shaped schema*, not the shipped one. The live `fields` table has four
+columns and no `state`, no `order_id` (§1.0b), and the live database has **no secondary
+indexes at all** (§1.0c) — so `ix_orders_status`, `ix_fields_order_state` and `ix_fields_open`
+exist nowhere but in that rig. Nothing here is invalidated: the measurement answers "what
+would this cost once PROPOSAL-B ships", which is the question §4 asks. But finding 3 below
+("the index is load-bearing and is not optional") must be read as a **precondition placed on
+a future migration**, not as a report on the present database, and the same goes for the
+partial index in finding 4.
+
 **Honest limits of this measurement.** Single-connection, zero concurrency, dev hardware, a
 synthetic uniform distribution (`assigned_to` matched 1-in-7, band sizes even), and 25,000
 orders total rather than a multi-year corpus. It does not model connection-pool contention,
@@ -878,18 +1065,98 @@ attention are **D-4** (unlabelled, unjustified) and **D-7** (unnoticed, and the 
 
 ## 7. What must change, in order
 
-**Free, no contract impact, do now:**
+**Reordered 2026-09-02 against the live catalog (§1.0), because the previous ordering was
+backwards.** It listed six index items as "free, do now" and three as "needs an owner
+decision". The catalog reverses that reading twice over:
 
-1. `UNIQUE (tenant_id, order_id, path)` on `fields` in **A** — B and C have it; A does not,
-   and without it one order can hold two contradictory rows for one path.
-2. `UNIQUE (tenant_id, package_id, page_no)` on `pages` in **A**, in the same migration as
-   the `page_no` column.
-3. `UNIQUE` on `golden_fields (T, order_id, path)`, `blind_entries (T, order_id,
+- **Five of the six "do now" items target tables that do not exist** — `golden_fields`,
+  `blind_entries`, `reconciliations`, `delivery_receipt_steps` and `reports` are all absent
+  (§1.0b), and `fields`/`pages` lack the very columns (`path`, `page_no`, `order_id`,
+  `package_id`) the indexes would be built on. **They are not executable as migrations.**
+  They are edits to three markdown files, and that is all they are.
+- **The two "needs an owner decision" items are free right now, and only right now.**
+  `orders.state`/`orders.county` (§3, D-7) and `fields.path` (§2) are described as one-way
+  doors. **Neither door has been walked through: `orders` has no `state` and no `county`,
+  and `fields` has no `path`** (§1.0b). Choosing J1 — never adding them — costs *nothing*
+  today: no migration, no backfill, no data to reconcile, no consumer to unteach. The cost
+  being deferred is not the cost of deciding; it is the cost of deciding *after* the columns
+  ship and the frontend reads them. **The decision is cheapest at this exact moment and gets
+  monotonically more expensive from here.** That is the opposite of "defer it".
+- **Exactly one item is a migration against a real table**, and the old §7 did not contain it.
+
+### 7.1 🔴 LIVE DEFECT — one migration, do it today
+
+1. **`CREATE UNIQUE INDEX ... ON rules (code, version)`.** `rules` ships with
+   `PRIMARY KEY (id)` and no other unique constraint (§1.0c), so two rows with the same
+   `(code, version)` and different `text` are storable — **reproduced against the live
+   database in §1.0d, both rows accepted.** A rulebook citation that resolves to two
+   different rules is a provenance breach: the reader cannot tell which rule was applied.
+   One migration; no lock worth naming; no data to reconcile. **This is the only item in
+   this entire document that fixes something broken now.**
+
+### 7.2 Free because the columns do not exist yet — decide, do not defer
+
+These are the old §7's "needs an owner decision" items. They are ordered *above* the DDL
+edits because delay is the only thing that can make them expensive.
+
+2. **§3 / D-7 — `orders.state` and `orders.county`.** The 3NF violation
+   (`county ⇸ state`, `jurisdiction ⇸ state, county`) is real in all three proposals and
+   **unpaid in the database: neither column exists.** Recommendation: **J1 — never add
+   them**; carry `jurisdiction` alone and resolve state/county through `jurisdictions`
+   (natural key `code`, global, **with `EXPECTED_GLOBAL_TABLES` *and*
+   `ISOLATION_GLOBAL_TABLES` edited in the same commit — two lists, not one, see §8**), plus
+   `jurisdiction_null_states`, `jurisdiction_tax_cadence`, `rule_jurisdiction_scope`.
+   J2 (keep the columns, trigger-defended) is §4's defect class wearing a different hat.
+   **Cost of choosing J1 today: delete two lines from each of three proposal documents.
+   Cost of choosing it after the columns ship: a migration, a backfill, a contract field
+   removal, and every consumer that learned to read `order.state`.** OWNER.
+3. **§2 — `fields.path`.** Recommendation: keep `path`, add generated
+   `section`/`ordinal`/`attribute`, add the well-formedness CHECK (§2.5). §2.5 names
+   entrenchment as the real cost — *"a one-way door on the cheap side of the choice"*.
+   **The door is still open: `fields.path` does not exist** (§1.0b). The 295 contract
+   occurrences of `path` (§2.4) live in the frontend, the contract package and the mock;
+   the database has committed to nothing. Cost: three columns, entrenchment, and **no type
+   safety**. Trigger to revisit: any roadmap item requiring SQL-level arithmetic over
+   extracted values. OWNER.
+4. **§4 — counts.** Recommendation: **M1, computed on read, everywhere, at P0.** M2 is
+   disqualified by matview/RLS interaction. **MEASURED 2026-09-02 (§4.2.1): the full
+   contract-shaped `GET /api/queue/bands` runs in 24.6–28.8 ms under forced RLS at 20,000
+   orders / 2.64M tenant-visible `fields` rows, so M3 is not justified.** Read that with
+   §4.2.1's reconciliation note: the rig is a synthetic PROPOSAL-B schema and **none of its
+   indexes exist in the live database** (§1.0c). M3 becomes arguable only if a future
+   endpoint needs a per-band *field* rollup, and even then the partial index
+   `fields (tenant_id, order_id) WHERE state IN ('pending','escalated','countersign')` is the
+   first move (309 ms → 149 ms, 12 MB, no drift risk), M3 the last — and only with the
+   phase-6 injection test **and** the `REVOKE UPDATE (count_column)` that makes the injection
+   non-vacuous. **`fields (tenant_id, order_id, state)` is a precondition of M1, not an
+   optimization of it: without it the per-order count is 75 ms, with it 0.06 ms.** OWNER.
+
+### 7.3 Corrections to unwritten DDL — free, but they are document edits, not migrations
+
+Every item here targets a table or a column that does not exist (§1.0b). **None can be run
+as a migration today.** The work is editing `PROPOSAL-A-minimal.md`, `PROPOSAL-B-full.md`
+and `PROPOSAL-C-evidence.md` so that whichever proposal is adopted already carries the index
+in its DDL — which is exactly why they stay cheap only until a proposal is adopted.
+
+5. `UNIQUE (tenant_id, order_id, path)` on `fields` in **A** — B and C have it; A does not,
+   and without it one order can hold two contradictory rows for one path. *(`fields` is live;
+   `order_id` and `path` are not.)*
+6. `UNIQUE (tenant_id, package_id, page_no)` on `pages` in **A**, in the same migration as
+   the `page_no` column. *(`pages` is live; neither column is.)*
+7. `UNIQUE` on `golden_fields (T, order_id, path)`, `blind_entries (T, order_id,
    typist_seat, path)`, `reconciliations (T, order_id, path)`,
    `delivery_receipt_steps (T, delivery_id, step_no)`. Four indexes, four real defect
    classes closed. The `blind_entries` one is the blindness invariant's storage half.
-4. Composite self-FK `reports (T, order_id, supersedes) → reports (T, order_id, version)`.
-5. ~~Label **D-5** in a comment; rule on **D-4**.~~ **DONE 2026-09-02** — D-4 ruled as a
+   *(All four tables absent.)*
+8. Composite self-FK `reports (T, order_id, supersedes) → reports (T, order_id, version)`.
+   *(`reports` absent — and since the live database has **zero** foreign keys of any kind
+   (§1.0c), this would be the first FK ever declared.)*
+9. Add the D-10 cost-reconciliation test. *(Requires `engine_runs` and
+   `field_readings.cost_usd`; neither exists, so the test is writable only after the schema is.)*
+
+### 7.4 D-4 / D-5 — ruled, with obligations that are backend work
+
+10. ~~Label **D-5** in a comment; rule on **D-4**.~~ **DONE 2026-09-02** — D-4 ruled as a
    ruling-time snapshot and D-5 (`complaints.shipped_value`) labelled the same way, both
    written into `docs/CONTEXT.md` §6 and `docs/PRD.md` §9. **The ruling is only sound if
    the following four obligations hold, and none of them hold today. They are P0 backend
@@ -902,49 +1169,74 @@ attention are **D-4** (unlabelled, unjustified) and **D-7** (unnoticed, and the 
      retention policy must leave `reconciliations` intact — so no `ON DELETE CASCADE` on
      that path, and if an FK exists at all it must be `ON DELETE NO ACTION`/absent. A
      cascade here silently destroys the audit record the snapshot exists to preserve.
-   - **3c. `UNIQUE (tenant_id, order_id, typist_seat, path)` on `blind_entries`** — item 3
-     above lists this as a defect-class index; the D-4 ruling makes it load-bearing. Without
+   - **3c. `UNIQUE (tenant_id, order_id, typist_seat, path)` on `blind_entries`** — §7.3
+     item 7 lists this as a defect-class index; the D-4 ruling makes it load-bearing. Without
      it "the seat-A value at ruling time" is not a single well-defined fact, and the
      snapshot has no referent to be a snapshot *of*.
    - **3d. The snapshot must not collapse the two NA states.** `NOT_PRESENT` and
      `PRESENT_UNREADABLE` (CONTEXT §11) must survive into `value_a`/`value_b`; a bare null
      for both makes the ruling unreadable after the fact. Whatever representation
      `blind_entries` uses for NA, the snapshot carries it, not a nulled-out version.
-6. Add the D-10 cost-reconciliation test.
 
-**Needs an owner decision:**
+### 7.5 The old ordering, retained so the change is auditable
 
-7. **§2** — `fields.path`. Recommendation: keep, add generated `section`/`ordinal`/
-   `attribute`, add the well-formedness CHECK. Cost: three columns, entrenchment, and **no
-   type safety**. Trigger to revisit: any roadmap item requiring SQL-level arithmetic over
-   extracted values.
-8. **§3** — `jurisdictions` (natural key `code`, global, **and `EXPECTED_GLOBAL_TABLES`
-   edited in the same commit**), plus `jurisdiction_null_states`,
-   `jurisdiction_tax_cadence`, `rule_jurisdiction_scope`. Then J1 (drop `orders.state`,
-   `orders.county`) or J2 (keep, trigger-defended). Recommendation: **J1** — a trigger
-   defending a redundancy is §4's defect class.
-9. **§4** — counts. Recommendation: **M1, computed on read, everywhere, at P0.** M2 is
-   disqualified by matview/RLS interaction. **MEASURED 2026-09-02 (§4.2.1): the full
-   contract-shaped `GET /api/queue/bands` runs in 24.6–28.8 ms under forced RLS at 20,000
-   orders / 2.64M tenant-visible `fields` rows, so M3 is not justified.** It becomes
-   arguable only if a future endpoint needs a per-band *field* rollup, and even then the
-   partial index `fields (tenant_id, order_id) WHERE state IN ('pending','escalated',
-   'countersign')` is the first move (309 ms → 149 ms, 12 MB, no drift risk), M3 the last —
-   and only with the phase-6 injection test **and** the `REVOKE UPDATE (count_column)` that
-   makes the injection non-vacuous. **`fields (tenant_id, order_id, state)` is a
-   precondition of M1, not an optimization of it: without it the per-order count is 75 ms,
-   with it 0.06 ms.**
+The previous §7 read: items 1–6 "free, no contract impact, do now"; items 7–9 "needs an
+owner decision"; items 10–13 "deferred with a named cost". The re-ordering above moves the
+two one-way-door decisions **up** (free now, never cheaper), moves the six index items
+**down** (unexecutable against the live schema), and inserts the `rules` unique index **at
+the top** (the only executable one). **No item was dropped**; the D-4/D-5 ruling and its
+four obligations are §7.4 and are unchanged in substance.
 
-**Deferred with a named cost (the standard the proposals set for themselves):**
+### 7.6 Deferred with a named cost (the standard the proposals set for themselves)
 
-10. `escalation_orders` junction (fixes D-2's dangling ids).
-11. `templates` (`clients.template_ref` points at nothing — `REVIEW-adversarial.md:170`).
-12. `countersigns` (`REVIEW-adversarial.md:122-137`).
-13. `page_texts` + `pages.text_of_record_engine_id` (`REVIEW-adversarial.md:157-163`).
+11. `escalation_orders` junction (fixes D-2's dangling ids).
+12. `templates` (`clients.template_ref` points at nothing — `REVIEW-adversarial.md:170`).
+13. `countersigns` (`REVIEW-adversarial.md:122-137`).
+14. `page_texts` + `pages.text_of_record_engine_id` (`REVIEW-adversarial.md:157-163`).
+
+All four are absent tables in a document full of absent tables (§1.0b); what distinguishes
+them is that nobody has argued they belong in P0.
+
 
 ---
 
 ## 8. What I did not check
+
+**Added 2026-09-02, after the §1.0 catalog pass — what that pass resolved, and what it opened.**
+
+- ~~**Whether the live database matches what this document says about it.**~~ **RESOLVED —
+  §1.0.** The catalog was read directly (`pg_tables`, `information_schema.columns`,
+  `pg_index`, `pg_constraint`, `pg_attribute`, `pg_class.relrowsecurity`), not inferred from
+  migrations. Results: 8 of the 32 analysed tables exist, **24 do not**; 9 indexes exist and
+  **all 9 are primary keys**; `contype` is `p`:9 and `n`:28 with **no `u`, no `c`, no `f`**;
+  `alembic_version` = `0003`. The reframed header, §1.0 and the reordered §7 all follow from
+  this read.
+- ~~**Whether `rules (code, version)` is unique in the shipped table.**~~ **RESOLVED, and it
+  is not** — §1.0d. Duplicate rows were inserted into the live `rules` table and accepted,
+  then deleted. This is the audit's only live defect and is §7.1.
+- **How `alembic_version` is exempted from the catalog-derived RLS assertion — ASKED AND
+  ANSWERED, 2026-09-02, by reading the assertion body.** It is a global, un-RLS'd table in
+  `public` (§1.0a) with no `tenant_id`, and `EXPECTED_GLOBAL_TABLES` is `frozenset({"rules"})`
+  (`tests/test_forced_rls_and_grants.py:157`) — which does not contain it. It does not need
+  to: **the exclusion is in the SQL, by name, not in the expected set.** `_global_tables`
+  (`tests/test_forced_rls_and_grants.py:378-403`) carries
+  `AND c.relname NOT IN (:version_table, :registry_table)`, where `version_table` comes from
+  the `alembic_version_table` fixture (`tests/conftest.py:1864`) and `registry_table` is
+  `tenants`. Its docstring says so outright: *"`alembic_version` is excluded by name … without
+  the name it would land in this set and every assertion below would be run against Alembic's
+  own bookkeeping."* `_tenant_tables` excludes it the same way. **So the two-list instruction
+  in §3.2 is complete as written** — a *new* global table has no such SQL exemption and does
+  need both list edits. `alembic_version` is a third category: excluded by the derivation
+  itself, because it is not the schema's, it is Alembic's.
+- **I did not run the test suite** after these edits. This commit changes one markdown file
+  and no code; `scripts/dev-db.sh up` was run (it is idempotent and it is what produced the
+  catalog), and the two probe rows in `rules` were deleted, verified by `DELETE 2`.
+- **I did not verify the §1.0b "proposals claim" column exhaustively against every proposal's
+  DDL.** The live half of that table is from the catalog and is exact. The claimed half is
+  from this document's own §1.1/§1.2 rows, which were written from the proposals — so an
+  error there would be inherited, not introduced.
+- **I did not re-measure §4.2.1.** Its numbers are left as they were; only the framing note
+  reconciling its synthetic rig with the live catalog was added.
 
 - **R15 and R20's actual text.** I did not locate it in the documents I read. The
   state-law-dependence claim in §3.3(d) is from the brief, not independently confirmed. The
@@ -988,8 +1280,10 @@ attention are **D-4** (unlabelled, unjustified) and **D-7** (unnoticed, and the 
   `ISOLATION_GLOBAL_TABLES` here AND in `EXPECTED_GLOBAL_TABLES` in
   `tests/test_forced_rls_and_grants.py`, with the reason recorded in the migration that
   creates it."* Omitting the conftest half does not fail silently — the isolation seam
-  refuses to guess and raises — but a reader following §3.2 alone will hit it. **§3.2's
-  numbered point 2 should name both lists and the migration-docstring requirement.**
+  refuses to guess and raises — but a reader following an older §3.2 would have hit it.
+  ~~**§3.2's numbered point 2 should name both lists and the migration-docstring
+  requirement.**~~ **APPLIED** — §3.2 point 2 now names all three edits (a) `EXPECTED_GLOBAL_TABLES`,
+  (b) `ISOLATION_GLOBAL_TABLES`, (c) the reason in the creating migration. Nothing outstanding.
 - ~~**Whether `jurisdiction` is a code or a free string in live data.**~~ **MOOT for the
   database — resolved 2026-09-02.** `orders` has no `jurisdiction` column at all
   (`0001_skeleton.py:279`), so no stored value can be a code or a display string and there

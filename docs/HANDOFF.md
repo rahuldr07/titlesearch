@@ -49,7 +49,7 @@ The v1 prototype in §2 is still the Flask/SQLite artefact. Separately, a **new*
 
 **→ The handover document is [`docs/superpowers/plans/backend/01-WHAT-HAPPENED.md`](superpowers/plans/backend/01-WHAT-HAPPENED.md)**: the exact interface Plans 02–06 call, the measured constraints (forced RLS hides tenant tables from the migration role; RLS defends a *forgotten* `WHERE` and not a *concatenated* one; superusers bypass RLS unconditionally), what the gate refuses, and the open items. Read it before writing Plan 02.
 
-## 3. THE RULEBOOK — 24 LIVE RULES (docs/rulings_2026-07.md has full text)
+## 3. THE RULEBOOK — 24 LIVE RULES (docs/rulings_2026-07.md **is MISSING** — see docs/rulebook-source/RECOVERY-2026-09-02.md)
 
 R1–R12 (elicitation): deed field sourcing · assessment priority · consideration never derived from transfer tax · re-recording as one mortgage block · chain terminator purchase test (contemporaneous purchase-money mortgage OR excise/transfer tax above nominal; confirmed 10/10 packages) · judgment counting · mortgage counting · release handling · recorded-date ordering · CONDO/PUD from rider checkboxes · non-person name derivation · copies-of-chains flag.
 
@@ -131,7 +131,7 @@ Setup sequence: (1) admin PowerShell `wsl --install` + reboot; (2) Ollama for Wi
 
 ## 9. DELIVERED FILES (this chat)
 
-titlepipe_bugfixes.zip (fix_segment.py, fix_assemble.py, fix_api.py — 24 tests) · rulings_2026-07.md (R13–R24 full text + implementation impact) · titlepipe_PRD.md (v1) · titlepipe_PRD_v2.md · **titlepipe_PRD_full_v2.1.md (THE build document: data model, API contract, acceptance criteria/release gates)** · stack research report (artifact) · LLMWhisperer research (inline w/ citations). Prior sessions: 15 .dc.html screens + api.js + support.js in design tool; docs/spec.md (18 sections); seed DB (titlepipe.seed).
+titlepipe_bugfixes.zip (fix_segment.py, fix_assemble.py, fix_api.py — 24 tests) · rulings_2026-07.md (R13–R24 full text + implementation impact — **not in the repo, owner to supply**) · titlepipe_PRD.md (v1) · titlepipe_PRD_v2.md · **titlepipe_PRD_full_v2.1.md (THE build document: data model, API contract, acceptance criteria/release gates)** · stack research report (artifact) · LLMWhisperer research (inline w/ citations). Prior sessions: 15 .dc.html screens + api.js + support.js in design tool; docs/spec.md (18 sections); seed DB (titlepipe.seed).
 
 ## 10. OPEN ITEMS
 

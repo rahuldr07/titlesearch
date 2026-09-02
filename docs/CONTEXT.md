@@ -294,7 +294,9 @@ Rules carry **jurisdiction scope** (R15 and R20 are state-law-dependent). Four c
 
 deed field sourcing · assessment priority per field · consideration never derived from transfer tax · re-recording as one mortgage block · chain terminator (purchase test) · judgment counting · mortgage counting · release handling · recorded-date ordering · CONDO/PUD from rider checkboxes · non-person name derivation · copies-of-chains flag.
 
-### R13–R24 (senior examiner rulings, July 2026 — full text `docs/rulings_2026-07.md`, origin `ruled/senior-2026-07`)
+### R13–R24 (senior examiner rulings, July 2026 — origin `ruled/senior-2026-07`)
+
+> ⚠ **Full text `docs/rulings_2026-07.md` is MISSING and is NOT recoverable from `docs/rulebook-source/*.docx`** (those carry a *different, colliding* R-numbering — see `docs/rulebook-source/RECOVERY-2026-09-02.md`). The summaries below are the best surviving statement; treat rule rows derived from them as `DERIVED`, never `RULED`, until the owner supplies the file.
 
 - **R13 — Judgment enforceability screening.** Report only judgments that (a) affect the subject owner and (b) remain **active and enforceable**. Canceled / satisfied / vacated / released / duplicates → suppress **with reason logged**. Status unknown → `needs_review` (never assume active, never assume canceled). Party identity remains a *distinct* check: name match alone is insufficient; requires corroboration (address, middle name, suffix); ambiguity → needs_review.
   - *Resolves the long-open mystery:* Mecklenburg **10M006178-590** (Huntington Forest HOA v. Richard Lee Buchanan) was dropped because its court status was **Canceled 05/27/2010** — a STATUS exclusion, **not** a name-identity exclusion. This reframed the entire party-identity question after three sessions of chasing it.
@@ -618,7 +620,7 @@ Reviewer session protocol doc (P0) · **R15 audit (P0)** · WSL2/Docker install 
 ## 23. Reference material
 
 - `docs/spec.md` — the 18-section extraction spec, every rule provenance-tagged. **Folding R13–R24 in is a P1 task.**
-- `docs/rulings_2026-07.md` — full text of R13–R24 + implementation impact.
+- `docs/rulings_2026-07.md` — full text of R13–R24 + implementation impact. **MISSING, owner to supply** (not in the .docx sources — `docs/rulebook-source/RECOVERY-2026-09-02.md`).
 - `titlepipe_PRD_full_v2.1.md` — the build-ready PRD (Product / System / Execution). *(Saved in this repo as `docs/PRD.md`.)*
 - Stack research report (July 2026) — architecture decisions with verified pricing.
 - 15 screen briefs + built `.dc.html` components + `api.js`.

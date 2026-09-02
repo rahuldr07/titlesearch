@@ -63,7 +63,7 @@ Ordered by dependency, not importance. Each phase is a separate, revertable set 
    - `RECORD` — immutable history (executed plans, session handoffs, gate closures, verbatim-as-issued prompts). Never edited, never deleted.
    - `SUPERSEDED by <path>` — kept for the citation trail.
    No document content changes. The index is the convention F-3 is missing; `BRIEF.md`/`BRIEF-DELTAS.md` already model it.
-3. **Extract `docs/rulings_2026-07.md` from `Implementation_Rulebook_v1.docx`** as markdown (R13–R24 verified present in the docx body). This closes F-2's worse half with content already in the repo, makes the rulings text diffable and citable, and removes the dependency on a refused binary. `docs/spec.md` is not reconstructable from anything in VCS — record it in the index as **missing, owner to supply**, and correct the four documents that cite it only if the owner confirms it is gone.
+3. ~~**Extract `docs/rulings_2026-07.md` from `Implementation_Rulebook_v1.docx`** as markdown~~ — **WITHDRAWN 2026-09-02.** The docx was opened and text-extracted: its `R13`–`R24` are a *different* rulebook (Vendor 66805 typing, own numbering) whose R15/R20/R21 do not match the senior rulings at all. Executing this step would have fabricated authoritative text. See `docs/rulebook-source/RECOVERY-2026-09-02.md`. The original claim below is retained for the record: ~~This closes F-2's worse half with content already in the repo, makes the rulings text diffable and citable, and removes the dependency on a refused binary. `docs/spec.md` is not reconstructable from anything in VCS — record it in the index as **missing, owner to supply**, and correct the four documents that cite it only if the owner confirms it is gone.~~
 4. **Retire or update `.zcode/AGENTS.md`.** It predates the rebuild. Either update its stack/commands sections to match `.claude/CLAUDE.md` or reduce it to a pointer. Two agent-config files disagreeing is worse than one.
 
 ### Phase 2 — Root and binary hygiene ⚖ (owner sign-off required where marked)
@@ -105,7 +105,7 @@ Deliberately minimal. Mass-moving history breaks the SHA-and-path citations that
 - Root `README.md` exists; a newcomer can find the authority chain in under a minute.
 - `docs/INDEX.md` covers every tracked `.md`; no doc is ambiguous between current and historical.
 - `git ls-files | xargs python3 scripts/check_no_client_data.py` exits 0.
-- `docs/rulings_2026-07.md` exists and matches the docx source; `docs/spec.md` is either recovered or its citations corrected.
+- ~~`docs/rulings_2026-07.md` exists and matches the docx source~~ → replaced: its citations are demoted to "missing, owner to supply" (done 2026-09-02); `docs/spec.md` is either recovered or its citations corrected.
 - No tracked path matches `.gitignore`.
 - The doc-link check passes and is enforced.
 - The client-data CI job is green on `main`.

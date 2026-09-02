@@ -217,7 +217,7 @@ Server-side owns: all state machines, needs_review logic, queue ordering, derive
 ## 10. Rulebook (24 live rules)
 R1–R12 (elicitation): deed field sourcing · assessment priority per field · consideration never derived from transfer tax · re-recording as one mortgage block · chain terminator (purchase test) · judgment counting · mortgage counting · release handling · recorded-date ordering · CONDO/PUD from rider checkboxes · non-person name derivation · copies-of-chains flag.
 
-R13–R24 (senior rulings, July 2026 — full text `docs/rulings_2026-07.md`):
+R13–R24 (senior rulings, July 2026 — full text `docs/rulings_2026-07.md` is **MISSING, owner to supply**; not recoverable from `docs/rulebook-source/*.docx`, see `docs/rulebook-source/RECOVERY-2026-09-02.md`):
 - **R13** Judgment enforceability screening: report active+enforceable only; canceled/satisfied/vacated/released/duplicates suppress with reason; status unknown → needs_review. (Resolves 10M006178-590: status Canceled 05/27/2010.)
 - **R14** Re-recording: identity match + corrective-language (strongest) + recording pattern; **substantive-change veto** → modification/new instrument.
 - **R15** ⚠ Liens **survive** arm's-length sale. Suppress only on verified release (ref-doc matched). Chain termination sets search depth, never lien disposition. New CI assertion **v14** enforces.
@@ -303,4 +303,4 @@ Session protocol doc (P0) · Shape B (P2) · tenant_id/RLS (P1) · blind fifty e
 
 ---
 
-*Companions: `docs/spec.md` (18 sections; R13–R24 fold-in = P1 task) · `docs/rulings_2026-07.md` · 15 screen briefs + built .dc.html components + api.js · stack research report · seed DB (`titlepipe.seed`).*
+*Companions: `docs/spec.md` (18 sections; R13–R24 fold-in = P1 task) · `docs/rulings_2026-07.md` (**missing**) · 15 screen briefs + built .dc.html components + api.js · stack research report · seed DB (`titlepipe.seed`).*
