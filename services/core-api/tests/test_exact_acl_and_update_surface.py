@@ -41,19 +41,23 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
+# 🔴 THE LITERAL, THE QUERY AND THE OWNER FILTER MOVED TO `acl_contract.py`, AND
+# THE MOVE IS THE POINT. `.github/workflows/migration-harness.yml` builds a
+# second database by a different path — service container, `psql`-applied
+# `roles.sql`, CLI `alembic upgrade head` — and now runs the same contract
+# against it as a job step. Two callers, one source: a literal edited here can no
+# longer be true on the seam's database and false on the harness's.
+from acl_contract import (
+    CATALOG_ACL_QUERY,
+    COLUMN_ACL_QUERY,
+    CONNECT_TIME_STATE_QUERY,
+    DEFAULT_ACL_QUERY,
+    acl_divergence,
+    connect_time_state,
+)
 from sqlalchemy import Engine, text
 
 from titlepipe_core.db import models
-
-# The roles `roles.sql` creates. Written out rather than imported, for the reason
-# `test_forced_rls_and_grants.py` gives at `EXPECTED_TENANT_TABLES`.
-OWNER_ROLE = "titlepipe_owner"
-APP_ROLE = "titlepipe_app"
-WORKER_ROLE = "titlepipe_worker"
-BLIND_ROLE = "titlepipe_blind"
-MIGRATION_ROLE = "titlepipe_migration"
-
-NON_OWNER_ROLES = frozenset({APP_ROLE, WORKER_ROLE, BLIND_ROLE, MIGRATION_ROLE})
 
 
 # ---------------------------------------------------------------------------
@@ -156,19 +160,7 @@ def test_no_column_level_grant_exists_anywhere_in_public(
     engine = seam_engine(migrated_database)
     try:
         with engine.connect() as connection:
-            column_acls = connection.execute(
-                text(
-                    "SELECT c.relname, a.attname, x.privilege_type, "
-                    "       CASE WHEN x.grantee = 0 THEN 'PUBLIC' "
-                    "            ELSE x.grantee::regrole::text END "
-                    "FROM pg_attribute a "
-                    "JOIN pg_class c ON c.oid = a.attrelid "
-                    "JOIN pg_namespace n ON n.oid = c.relnamespace, "
-                    "     aclexplode(a.attacl) AS x "
-                    "WHERE n.nspname = 'public' AND c.relkind = 'r' "
-                    "  AND a.attacl IS NOT NULL AND NOT a.attisdropped"
-                )
-            ).all()
+            column_acls = connection.execute(text(COLUMN_ACL_QUERY)).all()
     finally:
         engine.dispose()
 
@@ -199,18 +191,7 @@ def test_no_default_privilege_grants_on_objects_a_later_revision_creates(
     engine = seam_engine(migrated_database)
     try:
         with engine.connect() as connection:
-            defaults = connection.execute(
-                text(
-                    "SELECT coalesce(n.nspname, '<all schemas>'), d.defaclobjtype, "
-                    "       x.privilege_type, "
-                    "       CASE WHEN x.grantee = 0 THEN 'PUBLIC' "
-                    "            ELSE x.grantee::regrole::text END, "
-                    "       d.defaclrole::regrole::text "
-                    "FROM pg_default_acl d "
-                    "LEFT JOIN pg_namespace n ON n.oid = d.defaclnamespace, "
-                    "     aclexplode(d.defaclacl) AS x"
-                )
-            ).all()
+            defaults = connection.execute(text(DEFAULT_ACL_QUERY)).all()
     finally:
         engine.dispose()
 
@@ -226,65 +207,17 @@ def test_no_default_privilege_grants_on_objects_a_later_revision_creates(
 # ---------------------------------------------------------------------------
 # (iii) EXACT-ACL CONVERGENCE
 # ---------------------------------------------------------------------------
-# Every non-owner ACL entry the schema is allowed to hold, as
-# `<objkind>:<object>:<verb>:<grantee>`. Owner entries are OMITTED from the
-# comparison and asserted structurally instead — `acldefault` gives the owner
-# everything, that is ownership rather than a grant, and pinning it would make
-# this literal a transcription of PostgreSQL's defaults rather than of this
-# system's decisions.
+# `EXACT_NON_OWNER_ACL`, `CATALOG_ACL_QUERY` and the owner filter now live in
+# `tests/acl_contract.py`, which `.github/workflows/migration-harness.yml` runs
+# as a job step against the SERVICE-CONTAINER database it builds by an entirely
+# different path. That file's module docstring holds the argument; the short
+# version is that this contract was asserted against one of the two databases
+# this repository stands up, and the entries most likely to differ between them
+# (`schema:public:USAGE:PUBLIC`, the `pg_database_owner` pair) are properties of
+# how the database was CREATED rather than of any revision.
 #
-# 🔴 THIS IS THE ONLY CLOSED-WORLD ASSERTION ABOUT PRIVILEGE IN THIS REPOSITORY.
-# It is a whole-catalog snapshot: relations, columns, schemas, routines and
-# default privileges in one set. Anything granted anywhere that is not on this
-# list fails, INCLUDING on objects no test knows the name of.
-EXACT_NON_OWNER_ACL = frozenset(
-    {
-        # `0002`: SELECT/INSERT/UPDATE to the app on the six tenant tables and
-        # the registry, minus UPDATE on the append-only `audit_log`.
-        *(
-            f"relation:{table}:{verb}:{APP_ROLE}"
-            for table in (
-                "orders",
-                "packages",
-                "pages",
-                "fields",
-                "field_readings",
-                "tenants",
-            )
-            for verb in ("SELECT", "INSERT", "UPDATE")
-        ),
-        f"relation:audit_log:SELECT:{APP_ROLE}",
-        f"relation:audit_log:INSERT:{APP_ROLE}",
-        # `0003`: the rulebook is read-only to the app.
-        f"relation:rules:SELECT:{APP_ROLE}",
-        # `roles.sql` (~line 284): `GRANT USAGE ON SCHEMA public TO
-        # titlepipe_owner, titlepipe_app, titlepipe_worker`. The owner's entry is
-        # dropped by the owner filter below; the other two are here. THE WORKER
-        # HOLDS SCHEMA USAGE AND NO OBJECT PRIVILEGE AT ALL — that is `roles.sql`'s
-        # decision and it is inert on its own (USAGE without a table grant reaches
-        # nothing), which is why `test_forced_rls_and_grants.py`'s "worker holds
-        # nothing" loop is about `has_table_privilege` and not about this.
-        # `titlepipe_migration` is deliberately ABSENT: it holds USAGE through
-        # `PUBLIC` below, and `roles.sql` does not name it.
-        f"schema:public:USAGE:{APP_ROLE}",
-        f"schema:public:USAGE:{WORKER_ROLE}",
-        # PostgreSQL 15+ SHIPPED STATE for schema `public`, not anything this
-        # repository wrote: the schema is owned by the `pg_database_owner`
-        # pseudo-role and `PUBLIC` retains USAGE (only CREATE was revoked from
-        # PUBLIC upstream in 15). `roles.sql` §"OBJECT-LEVEL GRANTS ARE NOT
-        # CONVERGED" (~line 198) states that it does not converge these.
-        #
-        # 🔴 `schema:public:USAGE:PUBLIC` IS A REAL EXPOSURE THAT THIS LINE
-        # ACCEPTS, and it is accepted because it grants reachability and not
-        # readability: every table ACL asserted above names `titlepipe_app`
-        # explicitly, so schema USAGE by PUBLIC opens no row. If a revision ever
-        # grants a table verb to PUBLIC, the `relation:` entries here fail, not
-        # this one.
-        "schema:public:USAGE:PUBLIC",
-        "schema:public:USAGE:pg_database_owner",
-        "schema:public:CREATE:pg_database_owner",
-    }
-)
+# 🔴 THE LITERAL IS STILL THE THING UNDER REVIEW. Do not edit it to whatever a
+# database says. It is now wrong in two places at once when you do.
 
 
 def test_the_whole_catalog_acl_converges_to_exactly_the_named_grants(
@@ -313,50 +246,15 @@ def test_the_whole_catalog_acl_converges_to_exactly_the_named_grants(
     engine = seam_engine(migrated_database)
     try:
         with engine.connect() as connection:
-            rows = connection.execute(
-                text(
-                    """
-                    SELECT 'relation', c.relname, x.privilege_type,
-                           CASE WHEN x.grantee = 0 THEN 'PUBLIC'
-                                ELSE x.grantee::regrole::text END
-                      FROM pg_class c
-                      JOIN pg_namespace n ON n.oid = c.relnamespace,
-                           aclexplode(coalesce(c.relacl, acldefault('r', c.relowner))) AS x
-                     WHERE n.nspname = 'public' AND c.relkind IN ('r', 'S', 'v', 'm', 'p')
-                    UNION ALL
-                    SELECT 'column', c.relname || '.' || a.attname, x.privilege_type,
-                           CASE WHEN x.grantee = 0 THEN 'PUBLIC'
-                                ELSE x.grantee::regrole::text END
-                      FROM pg_attribute a
-                      JOIN pg_class c ON c.oid = a.attrelid
-                      JOIN pg_namespace n ON n.oid = c.relnamespace,
-                           aclexplode(a.attacl) AS x
-                     WHERE n.nspname = 'public' AND a.attacl IS NOT NULL AND NOT a.attisdropped
-                    UNION ALL
-                    SELECT 'schema', n.nspname, x.privilege_type,
-                           CASE WHEN x.grantee = 0 THEN 'PUBLIC'
-                                ELSE x.grantee::regrole::text END
-                      FROM pg_namespace n,
-                           aclexplode(coalesce(n.nspacl, acldefault('n', n.nspowner))) AS x
-                     WHERE n.nspname = 'public'
-                    UNION ALL
-                    SELECT 'routine', p.proname, x.privilege_type,
-                           CASE WHEN x.grantee = 0 THEN 'PUBLIC'
-                                ELSE x.grantee::regrole::text END
-                      FROM pg_proc p
-                      JOIN pg_namespace n ON n.oid = p.pronamespace,
-                           aclexplode(p.proacl) AS x
-                     WHERE n.nspname = 'public' AND p.proacl IS NOT NULL
-                    """
-                )
-            ).all()
+            rows = connection.execute(text(CATALOG_ACL_QUERY)).all()
     finally:
         engine.dispose()
 
-    observed = {f"{row[0]}:{row[1]}:{row[2]}:{row[3]}" for row in rows if str(row[3]) != OWNER_ROLE}
-
-    unexpected = sorted(observed - EXACT_NON_OWNER_ACL)
-    missing = sorted(EXACT_NON_OWNER_ACL - observed)
+    # Same function the harness step calls, so the owner filter cannot drift
+    # between the two databases.
+    unexpected, missing = acl_divergence(
+        [(str(row[0]), str(row[1]), str(row[2]), str(row[3])) for row in rows]
+    )
 
     assert not unexpected, (
         "privileges exist that no revision line in this repository is pointed "
@@ -367,3 +265,321 @@ def test_the_whole_catalog_acl_converges_to_exactly_the_named_grants(
         "privileges the contract requires are absent — the app will take 42501 "
         "on these:\n  " + "\n  ".join(missing)
     )
+
+
+# ---------------------------------------------------------------------------
+# (iv) CONNECT-TIME STATE, WHICH NO ACL ASSERTION ABOVE CAN REACH
+# ---------------------------------------------------------------------------
+def test_no_connect_time_setting_exists_for_this_database_or_any_titlepipe_role(
+    migrated_database: str, seam_engine: Callable[[str], Engine]
+) -> None:
+    """🔴 `pg_db_role_setting` IS EMPTY IN ALL THREE SCOPES, INCLUDING `setrole = 0`.
+
+    `test_roles.py::test_no_titlepipe_role_carries_a_per_role_setting_default`
+    asserts the same emptiness and CANNOT SEE ONE OF THE THREE SCOPES: its
+    `_role_settings` helper does `JOIN pg_roles r ON r.oid = s.setrole`, and an
+    `ALTER DATABASE d SET ...` row carries `setrole = 0`, which joins to nothing.
+    That row applies to EVERY role connecting to the database — a strictly wider
+    blast radius than the per-role rows the other test does read.
+
+    MEASURED 2026-09-02 against postgres:18.4, on a throwaway database, planted
+    by the cluster superuser and torn down afterwards:
+
+        ALTER ROLE titlepipe_app IN DATABASE d SET role = titlepipe_owner;
+          app DSN -> current_user = titlepipe_owner, session_user = titlepipe_app
+        ALTER DATABASE d SET app.current_tenant = '8888…';
+          app DSN -> current_setting('app.current_tenant') = '8888…'
+          and set_config(…, false) then RESET goes BACK to '8888…'
+
+    Both survive a full `roles.sql` rerun: its two `RESET ALL` passes are
+    generated from `pg_roles`/`pg_db_role_setting` filtered on `rolname LIKE
+    'titlepipe\\_%'`, so the `setrole = 0` row is not in either generator's
+    result and no statement is ever issued for it (`migrations/sql/roles.sql`,
+    the per-role GUC defaults section). MEASURED the same day: rerun exits 0,
+    the row is still there.
+
+    `engine.make_engine`'s `connect_args` DOES override the tenant GUC — libpq
+    `options` is applied after these defaults — so the deny floor survives the
+    second plant for connections `make_engine` and `migrations/env.py` open.
+    Nothing in this tree pins `role`, so the first plant is undefended
+    everywhere. Neither is a privilege, so no assertion in this file's other
+    three tests can see either one.
+
+    ZERO ROWS rather than "no dangerous rows", for the reason the sibling test
+    in `test_roles.py` gives: nothing here writes one, so any row is drift, and
+    a denylist of harmful GUCs is a denylist against a list PostgreSQL grows.
+    """
+    engine = seam_engine(migrated_database)
+    try:
+        with engine.connect() as connection:
+            rows = connection.execute(text(CONNECT_TIME_STATE_QUERY)).all()
+    finally:
+        engine.dispose()
+
+    planted = connect_time_state([(str(row[0]), str(row[1]), str(row[2])) for row in rows])
+
+    assert planted == [], (
+        "a connect-time setting exists. It is applied as the connection is "
+        "established and consulted by nothing afterwards: `role` is a silent "
+        "identity swap needing no membership at use time, and "
+        "`app.current_tenant` is a valid tenant established before any "
+        "application code runs:\n  " + "\n  ".join(planted)
+    )
+
+
+# ---------------------------------------------------------------------------
+# (iv) THE SCHEMA-SIDE COUNTERPART TO (i)
+# ---------------------------------------------------------------------------
+# (i) walks `models.Base.registry.mappers`. That is a MODEL-side read, and the
+# model is not the schema: `tests/conftest.py::migrated_database` runs
+# `alembic upgrade head`, so every column this database actually has came out of
+# `migrations/versions/`, and a revision can add a column write that no mapper
+# carries. `orm-update-targetlist-measure` reached the same edge from the other
+# side — it built its database with `Base.metadata.create_all`, so a
+# `server_onupdate` defined only in a migration would not have appeared there
+# either. Both blind spots are the same blind spot, and this is the catalog read
+# that closes it.
+#
+# THE CENSUS OF SERVER-SIDE WRITES, taken by reading every file under
+# `migrations/versions/` (2026-09-02):
+#
+# * COLUMN DEFAULTS — `0001::_identity_columns` (lines 129, 135) and its near-copy
+#   `0003::_identity_columns` (lines 163, 169) give every table an
+#   `id DEFAULT gen_random_uuid()` and a `created_at DEFAULT now()`. Sixteen
+#   defaults over eight tables, and NOTHING else: no `DEFAULT` appears anywhere
+#   else in any revision.
+# * GENERATED COLUMNS — none. No revision writes `Computed(...)` or
+#   `GENERATED ... AS`.
+# * IDENTITY COLUMNS — none. `0002` says so in a comment at line 348 while
+#   explaining why it grants no sequence privilege: "the primary key defaults to
+#   `gen_random_uuid()` and nothing here is `serial` or `IDENTITY`".
+# * TRIGGERS — exactly two, both on `audit_log`, both created by
+#   `0001::_create_append_only_trigger` (lines 405, 412) and both flipped to
+#   `ENABLE ALWAYS` by `0004`. Both are `FOR EACH STATEMENT`, and both call a
+#   function whose whole body is `RAISE EXCEPTION USING ERRCODE = '0A000'`.
+#
+# WHY THAT CENSUS MAKES THE COLUMN-GRANT QUESTION COME OUT CLEAN, and why the
+# three catalogs still need reading:
+#
+# * a column DEFAULT is INSERT-only and, crucially, PostgreSQL does not require
+#   INSERT privilege on a column the statement did not name and the default
+#   filled. So the sixteen defaults cost a narrow grant nothing.
+# * a GENERATED or IDENTITY column is written by the server on every statement
+#   that touches it, and is exactly the kind of column a column-scoped grant is
+#   then measured against.
+# * a BEFORE **ROW** trigger assigning `NEW.col` is the sharp one, and the prior
+#   proof is the reason this test exists: an owner-owned `BEFORE UPDATE` trigger
+#   setting `NEW.col` fires with the INVOKER's privileges (it is not SECURITY
+#   DEFINER, and trigger functions do not switch role), so the write lands
+#   outside the caller's column grant and takes 42501 — a failure with no line in
+#   any handler. `audit_log`'s two triggers are `FOR EACH STATEMENT`, which has
+#   no `NEW` at all, so today there is no such write. THE ROW/STATEMENT
+#   DISTINCTION IS THE ENTIRE MARGIN, and `0001` chose statement-level for an
+#   unrelated reason (a row trigger does not fire when a statement matches no
+#   rows, which is the case under RLS). A revision that "fixes" that by making it
+#   `FOR EACH ROW` is one word, is defensible on its own terms, and silently
+#   moves this system into the failing case.
+#
+# So (i) stays as it is and this is added beside it: same question, catalog side.
+
+# `pg_attrdef` joined back to the column it defaults, for user columns of user
+# tables in `public`. `attnum > 0` drops the system columns; `NOT attisdropped`
+# drops the tombstones a dropped column leaves behind, which keep their
+# `pg_attribute` row and would otherwise appear as a column no schema mentions.
+SERVER_DEFAULT_QUERY = """
+    SELECT c.relname, a.attname, pg_get_expr(d.adbin, d.adrelid)
+      FROM pg_attrdef d
+      JOIN pg_class c ON c.oid = d.adrelid
+      JOIN pg_namespace n ON n.oid = c.relnamespace
+      JOIN pg_attribute a ON a.attrelid = d.adrelid AND a.attnum = d.adnum
+     WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p')
+       AND a.attnum > 0 AND NOT a.attisdropped
+"""
+
+# `attgenerated` is `''` for an ordinary column and `'s'` for a STORED generated
+# column; `attidentity` is `''`, `'a'` (ALWAYS) or `'d'` (BY DEFAULT). Both are
+# read in one pass because both describe the same thing — a value the server
+# writes into that column without the statement naming it.
+GENERATED_OR_IDENTITY_QUERY = """
+    SELECT c.relname, a.attname, a.attgenerated, a.attidentity
+      FROM pg_attribute a
+      JOIN pg_class c ON c.oid = a.attrelid
+      JOIN pg_namespace n ON n.oid = c.relnamespace
+     WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p')
+       AND a.attnum > 0 AND NOT a.attisdropped
+       AND (a.attgenerated <> '' OR a.attidentity <> '')
+"""
+
+# Every non-internal trigger in `public`, with the two `tgtype` bits that decide
+# whether it can write `NEW.*`: bit 0 (`1`) set means FOR EACH ROW, bit 1 (`2`)
+# set means BEFORE. `tgisinternal` excludes the ones PostgreSQL creates for
+# foreign keys and deferred constraints, which are not ours and which no
+# revision can be held responsible for.
+TRIGGER_TIMING_QUERY = """
+    SELECT c.relname, t.tgname, (t.tgtype & 1) <> 0, (t.tgtype & 2) <> 0,
+           p.proname, p.prosecdef
+      FROM pg_trigger t
+      JOIN pg_class c ON c.oid = t.tgrelid
+      JOIN pg_namespace n ON n.oid = c.relnamespace
+      JOIN pg_proc p ON p.oid = t.tgfoid
+     WHERE n.nspname = 'public' AND NOT t.tgisinternal
+"""
+
+# The sixteen defaults the census above accounts for, as `<table>.<column>` ->
+# the expression PostgreSQL stores. Written out per table rather than generated
+# from a table list for `0001`'s stated reason: a loop cannot fail for a table
+# somebody forgot to put in it, and the table this would omit is the one a new
+# revision adds.
+EXPECTED_SERVER_DEFAULTS = {
+    "tenants.id": "gen_random_uuid()",
+    "tenants.created_at": "now()",
+    "orders.id": "gen_random_uuid()",
+    "orders.created_at": "now()",
+    "packages.id": "gen_random_uuid()",
+    "packages.created_at": "now()",
+    "pages.id": "gen_random_uuid()",
+    "pages.created_at": "now()",
+    "fields.id": "gen_random_uuid()",
+    "fields.created_at": "now()",
+    "field_readings.id": "gen_random_uuid()",
+    "field_readings.created_at": "now()",
+    "audit_log.id": "gen_random_uuid()",
+    "audit_log.created_at": "now()",
+    "rules.id": "gen_random_uuid()",
+    "rules.created_at": "now()",
+}
+
+
+def test_the_migrated_schema_holds_exactly_the_sixteen_insert_only_defaults(
+    migrated_database: str, seam_engine: Callable[[str], Engine]
+) -> None:
+    """`pg_attrdef`, as a CLOSED SET, on the database `alembic upgrade head` built.
+
+    The expected value is `id DEFAULT gen_random_uuid()` and
+    `created_at DEFAULT now()` on all eight tables and NOTHING ELSE. Both are
+    INSERT-only — a `DEFAULT` is not consulted by `UPDATE` — and PostgreSQL does
+    not demand INSERT privilege on a column the statement did not name, so
+    neither costs a column-scoped grant anything. They are pinned anyway because
+    a NEW entry in this catalog is the cheapest way to find out that a revision
+    started writing a column the ORM does not model.
+
+    `alembic_version` carries no default and is absent from the expectation on
+    purpose: it is Alembic's bookkeeping and not this system's schema, so a
+    default appearing on it should fail here rather than be pre-excused.
+
+    MEASURED at head: exactly the sixteen below.
+    """
+    engine = seam_engine(migrated_database)
+    try:
+        with engine.connect() as connection:
+            rows = connection.execute(text(SERVER_DEFAULT_QUERY)).all()
+    finally:
+        engine.dispose()
+
+    found = {f"{row[0]}.{row[1]}": str(row[2]) for row in rows}
+
+    assert found == EXPECTED_SERVER_DEFAULTS, (
+        "the set of server-side column DEFAULTs on the migrated schema is not "
+        "the one the migration census accounts for. Unexpected: "
+        f"{sorted(set(found) - set(EXPECTED_SERVER_DEFAULTS))}; missing: "
+        f"{sorted(set(EXPECTED_SERVER_DEFAULTS) - set(found))}; changed: "
+        f"{sorted(k for k in set(found) & set(EXPECTED_SERVER_DEFAULTS) if found[k] != EXPECTED_SERVER_DEFAULTS[k])}"
+    )
+
+
+def test_no_column_in_the_migrated_schema_is_generated_or_identity(
+    migrated_database: str, seam_engine: Callable[[str], Engine]
+) -> None:
+    """🔴 `pg_attribute.attgenerated` AND `attidentity` ARE READ BY NOTHING ELSE HERE.
+
+    Unlike a DEFAULT, a GENERATED column is recomputed on every UPDATE that
+    touches the row and an `IDENTITY ... GENERATED ALWAYS` column is written on
+    every INSERT regardless of what the caller named. Either is a column in the
+    effective target list of a statement whose SET clause never mentions it, and
+    neither appears in `models.Base.registry.mappers` in any form the guard
+    above can see — `onupdate`, `server_onupdate` and `version_id_col` are the
+    three things it checks, and `Computed()` is none of them.
+
+    `0002` (~line 348) already asserts the identity half in PROSE, as the reason
+    it grants no sequence privilege: "nothing here is `serial` or `IDENTITY`".
+    This is the same sentence, addressed to the catalog, so that the day it stops
+    being true the grant reasoning that depends on it fails too.
+
+    MEASURED at head: the empty set.
+    """
+    engine = seam_engine(migrated_database)
+    try:
+        with engine.connect() as connection:
+            rows = connection.execute(text(GENERATED_OR_IDENTITY_QUERY)).all()
+    finally:
+        engine.dispose()
+
+    found = sorted(
+        f"{row[0]}.{row[1]} (attgenerated={row[2]!r}, attidentity={row[3]!r})" for row in rows
+    )
+    assert found == [], (
+        "generated or identity columns exist. Each is written by the server on "
+        "statements that do not name it, so it is inside the effective target "
+        "list and outside every column-scoped grant:\n  " + "\n  ".join(found)
+    )
+
+
+def test_no_before_row_trigger_exists_that_could_write_new_dot_anything(
+    migrated_database: str, seam_engine: Callable[[str], Engine]
+) -> None:
+    """🔴 THE SHARP ONE: a BEFORE ROW trigger writes with the INVOKER's privileges.
+
+    A trigger function is not SECURITY DEFINER unless it says so, and a plain
+    trigger function does not switch role — so an owner-owned `BEFORE UPDATE ...
+    FOR EACH ROW` trigger assigning `NEW.col` performs that write as whoever
+    issued the UPDATE. Under a column-scoped grant the caller does not hold on
+    `col`, the statement takes 42501 from a line that appears in no handler, no
+    model and no test expectation.
+
+    Two triggers exist at head, `audit_log_append_only` and
+    `audit_log_no_truncate` (`0001` lines 405/412, `ENABLE ALWAYS` since `0004`),
+    and BOTH are `FOR EACH STATEMENT`. A statement trigger has no `NEW` record at
+    all, so neither can widen a target list. That is the entire margin, and it is
+    one word wide: `0001` chose statement-level for a DIFFERENT reason — a row
+    trigger does not fire for a statement that matches no rows, which is the
+    ordinary case under `0002`'s RLS — so nothing in the repository ties the
+    row/statement choice to the privilege consequence. This does.
+
+    The assertion is "no BEFORE ROW trigger ANYWHERE in public", not "these two
+    are still statement-level": a new trigger on `pages` is the change this is
+    watching for, and a loop over the tables somebody remembered would not see
+    it. `prosecdef` is reported in the failure message because a SECURITY
+    DEFINER trigger function is the one shape of BEFORE ROW trigger that does
+    NOT trip a narrow grant, and whoever reads this failure needs to know which
+    kind they are looking at before deciding.
+
+    MEASURED at head: the empty set.
+    """
+    engine = seam_engine(migrated_database)
+    try:
+        with engine.connect() as connection:
+            rows = connection.execute(text(TRIGGER_TIMING_QUERY)).all()
+    finally:
+        engine.dispose()
+
+    before_row = sorted(
+        f"{row[1]} on {row[0]} -> {row[4]}() (BEFORE, FOR EACH ROW, "
+        f"security_definer={bool(row[5])})"
+        for row in rows
+        if bool(row[2]) and bool(row[3])
+    )
+    assert before_row == [], (
+        "BEFORE ROW triggers exist. Each fires with the INVOKER's privileges and "
+        "any NEW.* it assigns is a column write outside the caller's grant:\n  "
+        + "\n  ".join(before_row)
+    )
+
+    # The positive control, in the same test so the negative above cannot pass by
+    # reading an empty catalog: `0001`'s two triggers must actually be there. A
+    # query that returned nothing at all — wrong schema name, `tgisinternal`
+    # inverted — would satisfy the assertion above and prove nothing.
+    names = sorted(f"{row[1]} on {row[0]}" for row in rows)
+    assert names == [
+        "audit_log_append_only on audit_log",
+        "audit_log_no_truncate on audit_log",
+    ], f"the trigger census itself has moved, so the BEFORE-ROW read above is stale: {names}"
