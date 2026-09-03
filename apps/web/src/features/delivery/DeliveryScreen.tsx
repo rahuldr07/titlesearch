@@ -15,12 +15,31 @@ import { OrderPicker } from "./OrderPicker";
  * Grouping is by `report.order_id`, the server's own field; both versions of a
  * reissued order stay visible — the pair is the defect record.
  */
-export function DeliveryScreen() {
+export function DeliveryScreen({ order }: { readonly order?: string | undefined }) {
   const deliveries = useDeliveries();
   const [selected, setSelected] = useState<string | null>(null);
 
   const orders = groupByOrder(deliveries.data?.deliveries ?? []);
-  const current = orders.find(([id]) => id === selected) ?? orders[0] ?? null;
+  /*
+   * `?order=` is the stage strip naming the order it came from. It is the
+   * FALLBACK for the picker, not an override — a reader who picks another
+   * order stays where they put themselves. An order with no delivered record
+   * matches nothing and the first row shows, which is the same answer as
+   * arriving with no key at all.
+   */
+  const asked = order === undefined ? null : (orders.find(([id]) => id === order) ?? null);
+  const current =
+    orders.find(([id]) => id === selected) ?? asked ?? orders[0] ?? null;
+  /*
+   * Two screens share this route. Arriving from an order's stage strip
+   * (`?order=`) it is that order's record and its own versions — "only the
+   * active one and past histories". Arriving from the rail door with no
+   * order it stays the ops index over everything delivered. The other
+   * orders are never hidden, only demoted: a delivered record is history,
+   * and history you cannot reach is not a record.
+   */
+  const scoped = asked !== null && selected === null;
+  const others = orders.filter(([id]) => id !== (current?.[0] ?? null));
 
   return (
     <div
@@ -49,11 +68,25 @@ export function DeliveryScreen() {
         />
       ) : (
         <>
-          <OrderPicker
-            orders={orders}
-            current={current === null ? null : current[0]}
-            onSelect={setSelected}
-          />
+          {scoped ? (
+            <p
+              data-testid="delivery-scope"
+              className="font-sans text-meta leading-body text-ink-secondary"
+            >
+              This order's delivered record.{" "}
+              <span className="text-ink-muted">
+                {current !== null && current[1].length > 1
+                  ? `${String(current[1].length)} versions on the record — every one is kept.`
+                  : "One version on the record."}
+              </span>
+            </p>
+          ) : (
+            <OrderPicker
+              orders={orders}
+              current={current === null ? null : current[0]}
+              onSelect={setSelected}
+            />
+          )}
 
           {current !== null && (
             <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,340px)] items-start gap-12">
@@ -68,6 +101,22 @@ export function DeliveryScreen() {
                 <ReissueGateway deliveries={current[1]} />
               </div>
             </div>
+          )}
+
+          {scoped && others.length > 0 && (
+            <section
+              data-testid="other-delivered"
+              className="flex min-w-0 flex-col gap-6 border-t border-line-subtle pt-12"
+            >
+              <h2 className="font-sans text-label leading-flat font-bold text-ink-faint">
+                Other delivered orders
+              </h2>
+              <OrderPicker
+                orders={others}
+                current={null}
+                onSelect={setSelected}
+              />
+            </section>
           )}
         </>
       )}

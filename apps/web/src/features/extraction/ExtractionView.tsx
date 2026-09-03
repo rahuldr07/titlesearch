@@ -38,7 +38,7 @@ export function ExtractionView(props: { readonly orderId: string }) {
   }
 
   return (
-    <div className="flex flex-col gap-12 bg-surface-app p-14" data-testid="extraction">
+    <div className="flex flex-col gap-12 bg-surface-app p-16" data-testid="extraction">
       <ExtractionHeader orderId={props.orderId} etaLabel={pipeline.data.eta_label} />
 
       {pipeline.data.gate_halted && (

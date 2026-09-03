@@ -83,7 +83,7 @@ function MatrixCell({
       disabled={held !== null}
       onClick={() => onCycle(rowId, cell.role)}
       className={cx(
-        "tp-state inline-flex h-9 w-fit min-w-24 items-center justify-center rounded-pill px-4 font-mono text-label leading-flat font-semibold",
+        "tp-state inline-flex h-12 w-fit min-w-25 items-center justify-center rounded-lg px-4 font-mono text-label leading-flat font-semibold",
         held === null ? "cursor-pointer" : "cursor-not-allowed",
         cell.level === "edit"
           ? "bg-state-settled-surface text-state-settled"

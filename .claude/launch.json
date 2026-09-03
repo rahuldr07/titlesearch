@@ -2,9 +2,9 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "web-v2",
+      "name": "@titlepipe/web",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--filter", "web-v2", "dev"],
+      "runtimeArgs": ["--filter", "@titlepipe/web", "dev"],
       "port": 5174
     }
   ]

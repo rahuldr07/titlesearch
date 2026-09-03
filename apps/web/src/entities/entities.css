@@ -32,6 +32,13 @@
   transform: rotate(-0.35deg);
 }
 
+/* The draft legend's angle. A named utility because the rotations in this
+   register are design constants, not arbitrary values — see tp-paper-tilt
+   and tp-clerk-stamp, which exist for the same reason. */
+@utility tp-draft-tilt {
+  transform: rotate(-16deg);
+}
+
 @utility tp-clerk-stamp {
   transform: rotate(-3.5deg);
 }

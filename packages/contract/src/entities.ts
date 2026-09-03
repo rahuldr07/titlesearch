@@ -242,6 +242,14 @@ export type Reconciliation = z.infer<typeof Reconciliation>;
 export const Report = z.object({
   id: z.string(),
   order_id: z.string(),
+  /**
+   * The order's REFERENCE — `4176034-1`, what every other screen prints.
+   * Added because the delivered screen carried only `order_id` and had to
+   * print `ord_demo_12`, an internal id, on a certified record; resolving
+   * the ref would have been that screen inventing a join. Nullable: a report
+   * whose order the server cannot name says so rather than printing the id.
+   */
+  order_ref: z.string().nullable(),
   version: z.number().int(),
   shape: z.string(),
   rendered_at: z.string(),

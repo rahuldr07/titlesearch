@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ReleaseResponse, type CompositionResponse } from "@titlepipe/contract";
 import { post } from "../../shared/api";
 import { notify } from "../../shared/notify";
+import { composition } from "../../shared/releaseQueries";
 
 /**
  * One POST, no retry, no optimistic anything — the server's returned seal is
@@ -16,7 +17,12 @@ export function useRelease(orderId: string) {
     onSuccess: async () => {
       // The release files an audit event server-side.
       await Promise.all([
-        client.invalidateQueries({ queryKey: ["orders", orderId, "composition"] }),
+        // `composition(orderId).key`, not a re-spelling of it: if the
+        // descriptor's key ever changes, a literal here stops matching and
+        // this invalidation silently does nothing — leaving the release
+        // screen painted from the pre-release cache, which is exactly the
+        // "repaints from the wire, never optimistic" promise above.
+        client.invalidateQueries({ queryKey: composition(orderId).key }),
         client.invalidateQueries({ queryKey: ["audit"] }),
       ]);
     },

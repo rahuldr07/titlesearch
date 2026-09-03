@@ -225,7 +225,7 @@ function refuseStaleBundles(): void {
       throw new Error(
         `${dir} is ${built === undefined ? "missing" : "older than src/"}. ` +
           "The harness bundles are built by e2e-live/buildBundles.mjs, which only " +
-          "`pnpm --filter web-v2 test:e2e:live` runs. Use that, or run the script " +
+          "`pnpm --filter @titlepipe/web test:e2e:live` runs. Use that, or run the script " +
           "by hand first — a stale bundle passes this suite against code nobody built.",
       );
     }

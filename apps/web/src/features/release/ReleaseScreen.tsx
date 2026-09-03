@@ -48,7 +48,7 @@ export function ReleaseScreen(props: { readonly orderId: string }) {
                   tabIndex={0}
                   role="region"
                   aria-label="Composed report"
-                  className="tp-state flex min-h-0 flex-1 items-start justify-center overflow-y-auto bg-surface-app p-16"
+                  className="tp-state flex min-h-0 flex-1 items-start justify-center overflow-y-auto bg-surface-panel p-16"
                 >
                   <ManifestSheet composed={data} />
                 </div>

@@ -175,14 +175,14 @@ COMMIT;
 `;
 
 /**
- * What `pnpm --filter web-v2 test:e2e:live` needs, stated where somebody
+ * What `pnpm --filter @titlepipe/web test:e2e:live` needs, stated where somebody
  * hits it: a `psql` on PATH and an already-migrated database. Neither is
  * discoverable — psql's absence surfaces as a bare `ENOENT`, an
  * un-migrated database as `relation "rules" does not exist` — so both are
  * named below with the command that fixes them.
  */
 const PREREQUISITES =
-  "`pnpm --filter web-v2 test:e2e:live` needs, beyond a browser:\n" +
+  "`pnpm --filter @titlepipe/web test:e2e:live` needs, beyond a browser:\n" +
   "  * psql on PATH (this script pipes SQL to it; no Postgres driver is a dependency),\n" +
   "  * a database with the schema already applied —\n" +
   "      cd services/core-api && TITLEPIPE_DATABASE_URL=… uv run alembic upgrade head\n" +

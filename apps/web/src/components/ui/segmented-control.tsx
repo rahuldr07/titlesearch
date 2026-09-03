@@ -46,7 +46,7 @@ export function SegmentedControl({
         selectionMode="single"
         disallowEmptySelection
         aria-label={label}
-        className="inline-flex gap-1 rounded-md border border-line-strong bg-surface-sunken p-2"
+        className="inline-flex gap-2 rounded-lg border border-line-strong bg-surface-panel p-2"
       >
         {children}
       </ToggleButtonGroup>
@@ -58,7 +58,16 @@ export type SegmentProps = Omit<
   ToggleButtonProps,
   "isDisabled" | "className" | "children"
 > &
-  Disablement & { readonly children: ReactNode };
+  Disablement & {
+    readonly children: ReactNode;
+    /**
+     * Fill the selected segment with the accent instead of lifting it as a
+     * white chip. For a strip that IS the screen's subject — the orders
+     * filter — where nothing else spends the accent. Never on a screen that
+     * already has a primary: RECIPES allows one accent-dominant element.
+     */
+    readonly accent?: boolean;
+  };
 
 /*
  * No item-level BlockedHint: wrapping a collection item is the shape that
@@ -67,17 +76,19 @@ export type SegmentProps = Omit<
  * group-level wrapper above, so a whole blocked control still states its
  * rule on hover.
  */
-export function Segment({ disabledBecause, children, ...props }: SegmentProps) {
+export function Segment({ disabledBecause, children, accent = false, ...props }: SegmentProps) {
   return (
     <ToggleButton
       {...props}
       {...disabledAttributes(disabledBecause)}
       data-slot="segment"
       className={cx(
-        "tp-state tp-press tp-target tp-ring flex cursor-pointer items-center justify-center rounded-sm px-6",
+        "tp-state tp-press tp-target tp-ring flex h-16 cursor-pointer items-center justify-center rounded-md px-6",
         "font-sans text-meta leading-close font-medium text-ink-secondary",
         "hover:not-data-disabled:text-ink-primary",
-        "data-selected:bg-surface-panel data-selected:font-semibold data-selected:text-ink-primary data-selected:shadow-card",
+        accent
+          ? "data-selected:bg-action data-selected:font-semibold data-selected:text-ink-on-action"
+          : "data-selected:bg-surface-sunken data-selected:font-semibold data-selected:text-ink-primary",
         "data-disabled:cursor-not-allowed data-disabled:text-ink-disabled",
       )}
     >

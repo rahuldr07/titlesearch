@@ -10,7 +10,7 @@ export function DraftWatermark() {
   return (
     <span
       data-testid="draft-watermark"
-      className="pointer-events-none absolute inset-0 flex -rotate-12 items-center justify-center font-serif text-verdict leading-flat font-semibold tracking-caps uppercase select-none text-page-ink/10"
+      className="tp-draft-tilt pointer-events-none absolute inset-0 flex items-center justify-center font-serif text-verdict leading-flat font-semibold tracking-caps uppercase select-none text-page-ink/5"
     >
       Draft — not released
     </span>

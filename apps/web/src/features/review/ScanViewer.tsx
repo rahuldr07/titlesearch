@@ -26,6 +26,8 @@ export function ScanViewer(props: {
   readonly box: LineCoords | null;
   /** A page the decision pane asked for — its excerpt's "View on page" door. */
   readonly request: PageRequest | null;
+  /** The sheet is drawing a hovered row's citation, not the open field's. */
+  readonly previewing: boolean;
   /** Magnification. Owned by `ScanPane` so the `Z` chord can reach it. */
   readonly zoom: ZoomLevel;
   readonly onZoom: (zoom: ZoomLevel) => void;
@@ -98,6 +100,7 @@ export function ScanViewer(props: {
           zoom={props.zoom}
           line={pinned ? props.line : null}
           pinned={pinned}
+          previewing={props.previewing}
           box={box}
           citeZoom={props.citeZoom}
           onCiteZoom={props.onCiteZoom}

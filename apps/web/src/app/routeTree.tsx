@@ -3,7 +3,9 @@ import { rootRoute } from "./rootRoute";
 import { BLIND_SEAT_SCREEN } from "./chrome/orderScreens";
 import { accountSearch } from "./accountSearch";
 import { AccountScreen } from "../features/account/AccountScreen";
-import { staticRoutes, ACCOUNT_PATH } from "./staticRoutes";
+import { staticRoutes, ACCOUNT_PATH, DELIVERY_PATH } from "./staticRoutes";
+import { deliverySearch } from "./deliverySearch";
+import { DeliveryScreen } from "../features/delivery/DeliveryScreen";
 import { Placeholder } from "./chrome/Placeholder";
 import { orderRoutes } from "./orderRoutes";
 
@@ -34,6 +36,18 @@ function AccountRoute() {
   return <AccountScreen tab={tab} />;
 }
 
+const deliveryRoute = createRoute({
+  getParentRoute: parent,
+  path: DELIVERY_PATH,
+  validateSearch: deliverySearch,
+  component: DeliveryRoute,
+});
+
+function DeliveryRoute() {
+  const { order } = deliveryRoute.useSearch();
+  return <DeliveryScreen order={order} />;
+}
+
 const blindSeatRoute = createRoute({
   getParentRoute: parent,
   path: "/blind/$orderId",
@@ -44,5 +58,6 @@ export const routeTree = rootRoute.addChildren([
   ...staticRoutes,
   ...orderRoutes,
   accountRoute,
+  deliveryRoute,
   blindSeatRoute,
 ]);

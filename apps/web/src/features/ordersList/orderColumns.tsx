@@ -1,5 +1,5 @@
 import type { OrderRow } from "@titlepipe/contract";
-import { cx, buttonVariants, DataCell, type TableColumn } from "../../components/ui";
+import { cx, buttonVariants, type TableColumn } from "../../components/ui";
 import { RouteButton } from "../../app/chrome/RouteButton";
 import { useOverlays } from "../../app/keyboard/overlays";
 import { STAGE_LABEL } from "../../entities/order/stageLabel";
@@ -10,7 +10,11 @@ export const ORDER_COLUMNS: readonly TableColumn<OrderRow>[] = [
     id: "ref",
     header: "Order ref",
     width: "130px",
-    cell: (row) => <DataCell>{row.order_ref}</DataCell>,
+    cell: (row) => (
+      <span className="truncate font-mono text-meta leading-close text-ink-muted">
+        {row.order_ref}
+      </span>
+    ),
   },
   {
     id: "addr",
@@ -23,7 +27,7 @@ export const ORDER_COLUMNS: readonly TableColumn<OrderRow>[] = [
     header: "Client",
     width: "170px",
     cell: (row) => (
-      <span className="truncate text-meta leading-close text-ink-secondary">{row.client}</span>
+      <span className="truncate text-meta leading-close text-ink-faint">{row.client}</span>
     ),
   },
   {
@@ -31,7 +35,7 @@ export const ORDER_COLUMNS: readonly TableColumn<OrderRow>[] = [
     header: "Stage",
     width: "110px",
     cell: (row) => (
-      <span className="truncate text-meta leading-close text-ink-secondary">
+      <span className="truncate text-meta leading-close text-ink-faint">
         {STAGE_LABEL[row.stage]}
       </span>
     ),
@@ -44,7 +48,7 @@ export const ORDER_COLUMNS: readonly TableColumn<OrderRow>[] = [
       row.assigned_to === null ? (
         <Absent>Unassigned</Absent>
       ) : (
-        <span className="truncate text-meta leading-close text-ink-secondary">
+        <span className="truncate text-meta leading-close text-ink-faint">
           {row.assigned_to}
         </span>
       ),
@@ -58,7 +62,7 @@ export const ORDER_COLUMNS: readonly TableColumn<OrderRow>[] = [
       row.due === null ? (
         <Absent>No due date</Absent>
       ) : (
-        <span className="block text-right font-mono text-meta leading-tight text-balance text-ink-secondary">
+        <span className="block text-right font-mono text-meta leading-tight font-semibold text-balance text-ink-primary">
           {row.due}
         </span>
       ),
@@ -66,8 +70,7 @@ export const ORDER_COLUMNS: readonly TableColumn<OrderRow>[] = [
   {
     id: "action",
     header: "Action",
-    /* Wide enough for both actions — at 120px the clock clipped into Due. */
-    width: "150px",
+    width: "120px",
     /*
      * Two row actions: the audit-history modal, then Open →. The clock
      * button names the order for the one history overlay. A native

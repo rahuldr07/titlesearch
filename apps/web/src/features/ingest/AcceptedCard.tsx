@@ -37,9 +37,13 @@ export function AcceptedCard(props: {
       </p>
 
       <div className="flex flex-wrap items-center justify-center gap-8">
+        {/* The extraction screen itself, not the hub. This pointed at
+            `/orders/{id}` back when the hub also rendered the telemetry
+            underneath; once extraction moved to its own route the button
+            promised one screen and opened another. */}
         <RouteButton
           variant="primary"
-          to="/orders/$orderId"
+          to="/orders/$orderId/extraction"
           params={{ orderId: props.order.id }}
         >
           View Live Dual-Engine Extraction →

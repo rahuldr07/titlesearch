@@ -76,9 +76,22 @@ export function Section(props: {
  * `/api/queue/next` choosing is what INVARIANT 22 permits, and `/orders-list`
  * stays a separate ops surface.
  */
+/** The order the reader is in: the path's, else `/delivery`'s `?order=`. */
+function orderInLocation(pathname: string, search: unknown): string | null {
+  const routed = /^\/orders\/([^/]+)/.exec(pathname)?.[1];
+  if (routed !== undefined) return routed;
+  if (typeof search !== "object" || search === null) return null;
+  const asked = (search as { order?: unknown }).order;
+  return typeof asked === "string" && asked !== "" ? asked : null;
+}
+
 function useRailOrderId(): string | null {
   const routed = useRouterState({
-    select: (s) => /^\/orders\/([^/]+)/.exec(s.location.pathname)?.[1] ?? null,
+    /* The path names it on an order route; `?order=` names it on the one
+       order-scoped screen that is not under `/orders` — `/delivery`, which
+       has no per-order endpoint to route by. Both are the reader saying
+       which order they are in. */
+    select: (s) => orderInLocation(s.location.pathname, s.location.search),
   });
   const next = useQuery({
     queryKey: queueNext.key,
@@ -88,10 +101,22 @@ function useRailOrderId(): string | null {
   return routed ?? next.data?.order?.id ?? null;
 }
 
-/** The stages, gated on an order-scoped route exactly as the ref below is. */
+/**
+ * The stages, drawn for the order the READER is in — the path's, or
+ * `/delivery`'s `?order=`. This used to read the path alone, so arriving on
+ * Delivered from an order's own stage strip collapsed the section to a bare
+ * heading and read as the order being deselected; `useRailOrderId` (right
+ * above) already knew better, and the two disagreed.
+ *
+ * Still nothing when no order is named. reference-app.html draws its Active
+ * Order block unconditionally because the prototype always has one hard-coded
+ * order; we refuse, because off an order route the only candidate is whatever
+ * `/api/queue/next` hands back, and naming five stages for an order the
+ * reader never opened states something untrue.
+ */
 function ActiveOrderStages() {
   const orderId = useRouterState({
-    select: (s) => /^\/orders\/([^/]+)/.exec(s.location.pathname)?.[1] ?? null,
+    select: (s) => orderInLocation(s.location.pathname, s.location.search),
   });
   if (orderId === null) return null;
   return <OrderStages orderId={orderId} />;
@@ -115,6 +140,10 @@ function ActiveOrderRef(props: { readonly section: RailSection }) {
   return (
     <Link
       to="/orders"
+      /* The ref is a label that happens to be a door, not a page marker.
+         Without `exact` it carried `aria-current="page"` on every screen
+         beneath `/orders`, so a screen reader met two current items. */
+      activeOptions={{ exact: true }}
       data-testid="rail-active-order"
       /*
        * Padded to the 24px WCAG target size rather than given a pseudo-

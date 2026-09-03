@@ -65,9 +65,15 @@ export function Card({ tone, edge, padding, className, children }: CardProps) {
 }
 
 /**
- * CardHeader deviates from the spec's ink-faint on purpose: it measures
- * 3.17:1 at 11px bold on control-fill, below AA's 4.5:1, so the header uses
- * ink-muted — the next tier up, which clears AA.
+ * CardHeader carries the spec's ink-faint at 11px bold on `surface-sunken`.
+ *
+ * This comment used to claim the header deviated to ink-muted because
+ * ink-faint measured 3.17:1 there, under AA's 4.5:1 — but card-slots.tsx has
+ * always rendered ink-faint, so the deviation was described and never made,
+ * and the header was below AA for as long as the note said it wasn't. The
+ * token was darkened instead (see tokens.css and apps/web/tokens.contrast.test.ts):
+ * ink-faint is 5.09:1 on sunken now, so the spec's own tier is the correct
+ * one here and no deviation is needed.
  */
 export { CardHeader, CardBody } from "./card-slots";
 

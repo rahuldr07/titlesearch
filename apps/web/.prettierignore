@@ -4,25 +4,3 @@ BRIEF.md
 
 # MSW's generated worker — vendored output, not ours to format.
 public/mockServiceWorker.js
-
-# DEFERRED, NOT EXEMPT. Each file below crosses the 150-line cap the moment
-# prettier's 88-column wrapping is applied — and the cap is the senior gate
-# (§6: "a component is missing"). Formatting one of these means extracting a
-# real component first, the way Button/DecisionDock/NewRuleForm/PageFacsimile
-# were split when the format landed. Pull a file from this list in the same
-# commit that splits it; adding to this list requires the same justification.
-src/app/chrome/AppChrome.tsx
-src/app/chrome/OrderStrip.stories.tsx
-src/app/chrome/ProfileCard.tsx
-src/app/preferences.ts
-src/app/routeTree.tsx
-src/entities/field/AsRead.tsx
-src/entities/field/DecisionCard.tsx
-src/entities/nav/LifecycleRail.stories.tsx
-src/entities/nav/Sidebar.stories.tsx
-src/entities/nav/Sidebar.tsx
-src/features/completeness/GapCard.tsx
-src/features/products/BaselineGrid.tsx
-src/features/products/ProductList.tsx
-src/features/queue/BandOrders.tsx
-src/features/queue/NextOrderCard.tsx

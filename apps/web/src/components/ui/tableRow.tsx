@@ -32,7 +32,7 @@ export function TableHeaderRow<TRow>({
           key={column.id}
           role="columnheader"
           className={cx(
-            "truncate px-8 py-5 font-sans text-label leading-flat font-bold text-ink-muted",
+            "flex h-22 items-center truncate px-6 font-sans text-label leading-flat font-semibold text-ink-muted",
             ALIGN_CLASS[column.align ?? "start"],
           )}
         >

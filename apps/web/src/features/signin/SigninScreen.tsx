@@ -52,7 +52,7 @@ export function SigninScreen() {
           </h1>
           {/* The design's own mono line; the register it sets is the
               terminal one. */}
-          <p className="mt-2 font-mono text-label leading-flat text-rail-ink-muted">
+          <p className="mt-2 font-mono text-label leading-flat text-rail-ink-soft">
             Title abstract production · examiner sign-in
           </p>
         </div>
@@ -81,7 +81,7 @@ export function SigninScreen() {
 
         {/* The footer — two lines, mono, centred, with our product name in
             place of the fixture firm's. */}
-        <p className="mt-8 text-center font-mono text-label leading-airy text-rail-ink-muted">
+        <p className="mt-8 text-center font-mono text-label leading-airy text-rail-ink-soft">
           Sessions are audited · actor identity stamps every ruling
           <br />
           TitlePipe Abstracting · v2 prototype

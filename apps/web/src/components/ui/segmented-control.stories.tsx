@@ -98,10 +98,16 @@ export const WholeControlBlocked: Story = {
 };
 
 /**
- * The radius arithmetic, visible and asserted: a 10px track holding 6px
- * cells with 4px of padding between. 6 = 10 − 4, one number and a
- * subtraction — written as rounded-md / p-2 / rounded-sm so a redesign of
+ * The radius arithmetic, visible and asserted: a 14px track holding 10px
+ * cells with 4px of padding between. 10 = 14 − 4, one number and a
+ * subtraction — written as rounded-lg / p-2 / rounded-md so a redesign of
  * any one of the three cannot silently break the relationship.
+ *
+ * The track moved md → lg when the strip was restyled onto `surface-panel`.
+ * The cell moved with it, to lg, which made inner = outer and flattened the
+ * arithmetic to nothing — this assertion is what caught that. The gap is
+ * `--space-2`, the same 4px the token scale subtracts; see
+ * apps/web/tokens.contrast.test.ts for the token-level half of the rule.
  */
 export const TheRadiusArithmetic: Story = {
   args: { defaultSelectedKeys: ["all"] },
@@ -109,16 +115,16 @@ export const TheRadiusArithmetic: Story = {
     <div className="flex flex-col gap-6">
       <SegmentedControl {...args}>{cells}</SegmentedControl>
       <p className="font-mono text-label leading-flat text-ink-muted">
-        track 10px · padding 4px · cell 6px
+        track 14px · padding 4px · cell 10px
       </p>
     </div>
   ),
   play: ({ canvasElement }) => {
     const track = canvasElement.querySelector("[data-slot='segmented-control']");
     const cell = canvasElement.querySelector("[data-slot='segment']");
-    expect(track?.getAttribute("class")).toContain("rounded-md");
+    expect(track?.getAttribute("class")).toContain("rounded-lg");
     expect(track?.getAttribute("class")).toContain("p-2");
-    expect(cell?.getAttribute("class")).toContain("rounded-sm");
+    expect(cell?.getAttribute("class")).toContain("rounded-md");
   },
 };
 

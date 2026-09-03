@@ -16,7 +16,11 @@ const SHORT: Readonly<Record<string, string>> = {
 export function fieldLabel(path: string): string {
   const parts = path.split(".");
   const head = parts[0] ?? path;
-  const section = (SHORT[head] ?? head).toUpperCase();
+  /* The head is humanised the same way the leaf is: a section path is a
+     snake_case identifier (`deed_of_trust`), and printing it raw put
+     "DEED_OF_TRUST GRANTOR" on the row while the section heading above it
+     already read "Deed of trust". */
+  const section = (SHORT[head] ?? head.replace(/_/g, " ")).toUpperCase();
   const rest = parts.slice(1);
   const index = rest[0] !== undefined && /^\d+$/.test(rest[0]) ? rest[0] : null;
   const name = (index === null ? rest : rest.slice(1)).join(" ").replace(/_/g, " ");

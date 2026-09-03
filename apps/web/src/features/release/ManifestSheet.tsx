@@ -19,6 +19,7 @@ export function ManifestSheet(props: { readonly composed: CompositionResponse })
 
   return (
     <PaperSheet
+      stock="page"
       className="w-full max-w-420"
       {...(composed.seal_sha256 !== null
         ? {

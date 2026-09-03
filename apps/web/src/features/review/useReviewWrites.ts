@@ -72,7 +72,7 @@ export function useReviewWrites(orderId: string) {
   const correct = useCallback(
     (
       fieldId: string,
-      body: { value: string | null; reason: string; na_reason?: string | null },
+      body: { value: string | null; reason?: string; na_reason?: string | null },
       after?: () => void,
     ) => act(() => post(`/api/fields/${fieldId}/correct`, Ack, body), after),
     [act],

@@ -1,0 +1,12 @@
+{
+ "_README": "EMPTY BY DESIGN \u2014 DO NOT COMMIT REAL PACKAGE DATA INTO THIS FILE. It is a public repository, and a county search package names real people, real addresses and real judgments against them. Populate it locally with `node packages/mocks/scripts/build-real-package.mjs <ocr-run-dir> packages/mocks/src/realPackage.json` and leave the result uncommitted.",
+ "source": "",
+ "total": 0,
+ "pages": [],
+ "instruments": [],
+ "fields": [],
+ "boxes": {},
+ "composition": {
+  "blocks": []
+ }
+}

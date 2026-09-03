@@ -11,13 +11,23 @@ function Pin(props: {
   readonly n: number;
   readonly marked: number | null;
   readonly box: LineCoords | null;
+  /** See PageBody's prop — decides whose citation this sentence claims. */
+  readonly previewing: boolean;
 }) {
+  /*
+   * WHOSE citation this is. While a row is being hovered the sheet shows
+   * THAT row's page, not the open field's — and this sentence used to say
+   * "the selected field cites this page" either way, which put a citation
+   * on screen for a field that does not carry it. The subject is named
+   * from what is actually being drawn.
+   */
+  const subject = props.previewing ? "the row under the pointer" : "the selected field";
   const text =
     props.marked !== null
-      ? `p${props.n} · line ${props.marked + 1} — the selected field cites the marked line.`
+      ? `p${props.n} · line ${props.marked + 1} — ${subject} cites the marked line.`
       : props.box !== null
-        ? `p${props.n} — the selected field cites this page, and the boxed region is where the reading was taken.`
-        : `p${props.n} — the selected field cites this page. No line coordinate was recorded, so the pin marks the page.`;
+        ? `p${props.n} — ${subject} cites this page, and the boxed region is where the reading was taken.`
+        : `p${props.n} — ${subject} cites this page. No line coordinate was recorded, so the pin marks the page.`;
 
   return (
     <p
@@ -66,6 +76,8 @@ export function PageBody(props: {
   readonly page: SourcePage | null;
   readonly line: number | null;
   readonly pinned: boolean;
+  /** The sheet is drawing a hovered row's citation, not the open field's. */
+  readonly previewing: boolean;
   readonly box: LineCoords | null;
 }) {
   const page = props.page;
@@ -79,7 +91,9 @@ export function PageBody(props: {
 
   return (
     <div className="flex flex-col gap-6">
-      {props.pinned && <Pin n={props.n} marked={marked} box={props.box} />}
+      {props.pinned && (
+        <Pin n={props.n} marked={marked} box={props.box} previewing={props.previewing} />
+      )}
       {/*
         The box is measured against the lines, not the sheet — that is the
         whole reason this div is positioned. Hung off `PaperSheet` the

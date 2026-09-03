@@ -40,6 +40,13 @@
  * `z-overlay` generate no utility at all — without these, every overlay
  * lands at `z-index: auto` while the build stays green.
  */
+/* Sticky table row headers and pinned cells. Was used by tableRow.tsx and
+   table.tsx while declared nowhere — the same dead-class defect as
+   `tp-field-row-grid`, and both are now covered by FieldRow.test.ts. */
+@utility tp-z-raised {
+  z-index: var(--z-raised);
+}
+
 @utility tp-z-popup {
   z-index: var(--z-popup);
 }

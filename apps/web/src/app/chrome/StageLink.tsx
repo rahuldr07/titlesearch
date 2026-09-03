@@ -21,6 +21,16 @@ export function StageLink(props: {
     className: props.className,
     "data-testid": props.testId,
     children: props.children,
+    /*
+     * EXACT, or a stage lights up for every screen beneath it. `Link` marks
+     * itself active on descendants by default, so on
+     * `/orders/{id}/extraction` the hub row and the intake row both claimed
+     * "you are here" alongside the real one — measured at SEVEN links
+     * carrying `aria-current="page"` on the review route. A stage strip whose
+     * marker means "somewhere at or under here" tells the reader nothing
+     * about where they are.
+     */
+    activeOptions: { exact: true },
   };
   switch (props.id) {
     case "review":
@@ -40,9 +50,19 @@ export function StageLink(props: {
         />
       );
     case "delivered":
-      return <Link to="/delivery" {...shared} />;
+      /* The order travels with the step. Without it this lands on whichever
+         delivered order the list happens to hold first. */
+      return <Link to="/delivery" search={{ order: props.orderId }} {...shared} />;
+    case "processing":
+      return (
+        <Link
+          to="/orders/$orderId/extraction"
+          params={{ orderId: props.orderId }}
+          {...shared}
+        />
+      );
     default:
-      // "upload" and "processing" — the hub composes both surfaces.
+      // "upload" — the hub carries intake.
       return (
         <Link to="/orders/$orderId" params={{ orderId: props.orderId }} {...shared} />
       );

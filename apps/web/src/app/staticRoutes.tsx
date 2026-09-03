@@ -15,13 +15,14 @@ import { BUILT_SCREENS } from "./chrome/builtScreens";
  * A convincing mock reads as finished, which is worse than an honest gap.
  */
 
-/** Named once because the loop below excludes it. */
+/** Named once because the loop below excludes them. */
 export const ACCOUNT_PATH = "/account";
+export const DELIVERY_PATH = "/delivery";
 
 const parent = () => rootRoute;
 
 export const staticRoutes = UNBUILT_SCREENS.filter(
-  (descriptor) => descriptor.path !== ACCOUNT_PATH,
+  (descriptor) => descriptor.path !== ACCOUNT_PATH && descriptor.path !== DELIVERY_PATH,
 ).map((descriptor) => {
   const Built = BUILT_SCREENS[descriptor.path];
   return createRoute({

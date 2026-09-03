@@ -52,28 +52,67 @@ export function OrderHistoryOverlay() {
     >
       <Body orderId={orderId} />
       <DialogFooter>
+        {/*
+         * The design pairs a meta line with a "Launch Workstation" primary
+         * here. The line is drawn; the button is not — this modal is what
+         * opens for an order whose dataset never loaded, so a primary that
+         * jumps into review is the one action it cannot promise. The row's
+         * own Open → already offers it where it does hold.
+         */}
+        <FooterMeta orderId={orderId} />
         <Button onPress={() => close("order-history")}>Close</Button>
       </DialogFooter>
     </Dialog>
   );
 }
 
+/** The footer's left half: the server's page count, and nothing derived. */
+function FooterMeta({ orderId }: { readonly orderId: string }) {
+  const context = useRead(orderContext(orderId));
+  const pages = context.data?.pages;
+  if (pages === null || pages === undefined) return null;
+  return (
+    <span className="mr-auto self-center font-mono text-label leading-flat text-ink-faint">
+      Order pages: {String(pages)} pp
+    </span>
+  );
+}
+
 function Body({ orderId }: { readonly orderId: string }) {
   const context = useRead(orderContext(orderId));
   const timeline = useRead(orderTimeline(orderId));
+  const pages = context.data?.pages;
 
   return (
     <DialogBody>
-      <div className="flex items-baseline gap-6">
-        <span className="font-mono text-subject font-semibold leading-flat text-ink-primary">
-          {context.data?.order_ref ?? orderId}
-        </span>
-        <span className="font-mono text-label leading-flat text-ink-muted">
-          {context.data?.pages === null || context.data?.pages === undefined
-            ? "Page count unread"
-            : `${String(context.data.pages)} pages`}
-        </span>
+      {/*
+       * Identity, as the design heads this modal: the ref with its page
+       * count, then the property and the client on one line. `place` and
+       * `client` come off the order context — the same read the hub uses —
+       * so nothing here is stitched together locally.
+       */}
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-wrap items-center gap-5">
+          <span className="font-mono text-subject font-bold leading-flat text-ink-secondary">
+            {context.data?.order_ref ?? orderId}
+          </span>
+          <span className="shrink-0 rounded-pill border border-line-strong bg-surface-sunken px-4 py-1 font-mono text-label leading-flat text-ink-muted">
+            {pages === null || pages === undefined ? "Page count unread" : `${String(pages)} pp`}
+          </span>
+        </div>
+        {context.data !== undefined && (
+          <span className="text-meta font-semibold leading-close text-ink-primary">
+            {context.data.place} · {context.data.client}
+          </span>
+        )}
       </div>
+
+      {/* The design's kicker here reads "SOC 2 Compliance & Dual-Engine Audit
+          Trail" — see the header comment for why only the second half of that
+          claim survives. */}
+      <span className="font-sans text-label font-semibold leading-flat text-ink-faint">
+        Dual-engine audit trail
+      </span>
 
       <QueryState query={timeline} of="this order's history">
         {(data) =>
@@ -84,7 +123,7 @@ function Body({ orderId }: { readonly orderId: string }) {
             />
           ) : (
             // 420px — the design's own scroll height for this trail.
-            <ol className="max-h-210 overflow-auto">
+            <ol className="flex max-h-210 flex-col gap-6 overflow-auto">
               {data.events.map((event, index) => (
                 <Row
                   // `at` + `kind` is not unique — an order can be delivered
@@ -102,16 +141,25 @@ function Body({ orderId }: { readonly orderId: string }) {
   );
 }
 
+/**
+ * One recorded event, boxed. The circled ordinal is the design's own device
+ * for "this happened Nth" — it carries the accent border because the sequence
+ * is the subject of this modal, and it is drawn, never counted: `n` is the
+ * server's position in the list it sent.
+ */
 function Row(props: { readonly event: OrderTimelineEvent; readonly n: number }) {
   const { event, n } = props;
   return (
     <li
       data-event-kind={event.kind}
       data-event-attend={event.attend}
-      className="flex items-start gap-6 border-b border-line-subtle py-6 last:border-b-0"
+      className="flex items-center gap-6 rounded-lg border border-line-strong bg-surface-sunken p-6"
     >
-      <span className="w-8 shrink-0 font-mono text-label leading-airy tabular-nums text-ink-muted">
-        {n}
+      <span
+        aria-hidden
+        className="grid size-18 shrink-0 place-content-center rounded-pill border border-action-border bg-action-surface font-mono text-label font-bold leading-flat tabular-nums text-ink-secondary"
+      >
+        {String(n).padStart(2, "0")}
       </span>
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <div className="flex items-baseline justify-between gap-6">
@@ -127,12 +175,12 @@ function Row(props: { readonly event: OrderTimelineEvent; readonly n: number }) 
             {event.label}
           </span>
           {/* Rule 3: a timestamp is data — printed as the server sent it. */}
-          <span className="shrink-0 font-mono text-label leading-flat tabular-nums text-ink-muted">
+          <span className="shrink-0 font-mono text-label leading-flat tabular-nums text-ink-faint">
             {event.at}
           </span>
         </div>
         {event.detail !== null && (
-          <span className="text-meta leading-body text-ink-secondary">{event.detail}</span>
+          <span className="truncate text-label leading-close text-ink-muted">{event.detail}</span>
         )}
       </div>
     </li>

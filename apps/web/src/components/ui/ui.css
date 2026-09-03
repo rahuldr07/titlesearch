@@ -57,7 +57,10 @@
 @utility tp-move {
   /* Shorthand first — see `tp-state` for why the order is load-bearing.
      `width` is here because the progress fill genuinely travels by growing
-     (`progress.tsx:113`); the switch thumb uses `transform` (`switch.tsx:67`). */
+     (progress.tsx sets its indicator width inline, with a rules-allow note);
+     the switch thumb uses `transform` instead (switch.tsx's `translate-x-8`).
+     Named by symbol, not by line: the previous form cited two line numbers
+     and both had drifted. */
   transition: var(--ease-move);
   transition-property: transform, height, width;
 }

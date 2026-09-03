@@ -32,6 +32,14 @@ export default defineConfig({
             // parsed with the real Zod schemas. Node env because it reads a file
             // off disk; it is a static invariant like the two above, not a screen.
             "contract-parity.test.ts",
+            // The tripwire on the build-phase `reason` relaxation: fails the
+            // day the contract re-tightens and the inline editor has not
+            // caught up. Node env — it reads a source file off disk.
+            "correction-reason.test.ts",
+            // Token arithmetic: the AA floor on --color-ink-faint and the
+            // inner = outer − gap radius relationship. Node env because it
+            // reads tokens.css off disk, like the three above.
+            "tokens.contrast.test.ts",
             // Pure-logic entity tests. Kept DOM-free on purpose so rules like
             // no-value exhaustiveness are provable without a browser.
             "src/**/*.test.ts",

@@ -20,7 +20,12 @@ export function Address({ row }: { readonly row: OrderRow }) {
         {row.addr}
       </span>
       {/* The county and state sit under the address: beside it they read as
-          one run of one sentence. */}
+          one run of one sentence.
+
+          NOT the design's `#B9BEC9` (= ink-disabled). Copied from the
+          prototype it measured 1.84:1 on white at 11px — axe called it a
+          SERIOUS violation. The design is authority on geometry, not on
+          whether a reader can see the text. */}
       <span className="truncate text-label leading-flat text-ink-faint">{row.place}</span>
     </span>
   );

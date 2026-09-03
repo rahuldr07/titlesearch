@@ -1,6 +1,5 @@
-import type { Key } from "react";
 import type { SheetField } from "@titlepipe/contract";
-import { TextField } from "react-aria-components";
+import { type Key, TextField } from "react-aria-components";
 import { Input, Label, Option, Select } from "../../components/ui";
 import { NoValueChip } from "../../entities/field/NoValueChip";
 import { ABSENCES, isAnswered, type DraftEntry } from "./draftEntry";

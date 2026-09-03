@@ -83,9 +83,18 @@ export function TemplatesScreen() {
                       setDrafts((prev) => ({ ...prev, [blockKey]: value }));
                     }}
                     onReset={() => {
-                      const baseline = tpl.blocks.find((b) => b.key === blockKey)?.baseline;
-                      if (baseline !== undefined) {
-                        setDrafts((prev) => ({ ...prev, [blockKey]: baseline }));
+                      /*
+                       * `wording`, NOT `baseline`. Reset discards the unsaved
+                       * draft and returns the box to what the server holds —
+                       * which is the client's saved wording. `baseline` is the
+                       * product default the Split Diff compares against (see
+                       * TemplateDiff's header), so resetting to it would stage
+                       * the generic text as an edit and a following Save would
+                       * overwrite the client's customisation with it.
+                       */
+                      const saved = tpl.blocks.find((b) => b.key === blockKey)?.wording;
+                      if (saved !== undefined) {
+                        setDrafts((prev) => ({ ...prev, [blockKey]: saved }));
                       }
                     }}
                   />

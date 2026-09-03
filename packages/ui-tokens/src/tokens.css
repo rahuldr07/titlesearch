@@ -18,8 +18,8 @@
  * the numeric --radius-* scale (six radii, inner = outer − gap). Tailwind
  * failing to generate a class is silent, so the enforcement is three layers
  * deep: the namespace resets at the head of the @theme block, check-rules.mjs
- * naming both families, and tokens.test.ts pinning the arithmetic and
- * cardinality.
+ * naming both families, and apps/web/tokens.contrast.test.ts pinning the
+ * radius arithmetic and the AA floor on --color-ink-faint.
  *
  * There is no dark theme in this register. The --color-rail-* family is a
  * dark-chrome surface vocabulary (navigator, auth, code panels), not a theme;
@@ -54,13 +54,15 @@
   --color-ink-secondary: #454a55;
   --color-ink-muted: #6e7480;
   /*
-   * Fails WCAG 2.2 AA for normal text on every surface in this palette
+   * The ink on every 11px label. The design system's own value (#8a8e98)
+   * failed WCAG 2.2 AA for normal text on every surface in this palette
    * (3.28:1 on panel, 2.83:1 on the app canvas, against a 4.5:1 floor), and
-   * it is the ink on every 11px label. The value is unchanged because it is
-   * the design system's; the fix is a token, not a screen — `#686C76` is the
-   * same hue darkened enough to clear all four surfaces.
+   * it is spent at ~65 call sites — so the fix was a token, not 65 screens.
+   * This is the same hue darkened until it clears all five surfaces:
+   * 5.26:1 on panel, 5.09:1 on sunken, 4.82:1 on paper, 4.78:1 on viewer,
+   * 4.53:1 on the app canvas. Asserted in tokens.contrast.test.ts.
    */
-  --color-ink-faint: #8a8e98;
+  --color-ink-faint: #686c76;
   --color-ink-disabled: #b9bec9;
 
   /* ── action — spend once per screen ───────────────────────────────────── */
@@ -82,6 +84,12 @@
   --color-surface-panel: #ffffff; /* cards, rows, primary panels */
   --color-surface-sunken: #fbfbfd; /* wells, table caps, inset tracks */
   --color-row-hover: #fbfbfd; /* = sunken */
+  /* The source-page pane, behind the sheet. A rung ABOVE the app canvas,
+     because the sheet is the subject there and the canvas grey reads as
+     chrome behind it. NOT `--color-surface-evidence`, which is the citation
+     highlight ON the sheet — two different things, and naming this one that
+     shadowed it silently. */
+  --color-surface-viewer: #f3f4f7;
 
   /* ── lines and controls ───────────────────────────────────────────────── */
   /*
@@ -94,6 +102,13 @@
   --color-line-faint: #f3f4f7;
   --color-control-border: #d6d9e1;
   --color-control-fill: #fbfbfd;
+  /* Read-only controls. A rung BELOW `control-fill`, which is what makes a
+     read-only row legible as one: `surface-sunken` is the same #fbfbfd as
+     the editable fill, so a read-only box painted with it says nothing. The
+     value is the design's own — reference-app.html's
+     `input[readonly] { background:#F5F6F9 }`. Pairs with ink-muted text; the
+     text alone was carrying the whole signal. */
+  --color-control-fill-readonly: #f5f6f9;
 
   /* ── status: settled / attend / halt ──────────────────────────────────── */
   /*
@@ -217,12 +232,13 @@
    * emits no `bg-*` utility and a bare colour is not a valid box-shadow, so
    * the modal would silently lose its backdrop while the build stayed green.
    */
-  --color-scrim: rgb(20 22 28 / 0.4);
+  --color-scrim: rgb(20 22 28 / 0.45);
 
   /* ── radii — inner = outer − gap ──────────────────────────────────────── */
-  /* Asserted in apps/web-v2/src/shared/tokens.test.ts: sm = md − 4,
-     md = lg − 4. `--radius-paper` is the "documents are not rounded" value.
-     The numeric scale (--radius-1 … --radius-10) is deleted — see header. */
+  /* Asserted in apps/web/tokens.contrast.test.ts: sm = md − 4, md = lg − 4,
+     where 4 is --space-2. `--radius-paper` is the "documents are not
+     rounded" value. The numeric scale (--radius-1 … --radius-10) is deleted
+     — see header. */
   --radius-xs: 4px; /* kbd */
   --radius-sm: 6px; /* inner, inside a 10px wrapper */
   --radius-md: 10px; /* inputs */

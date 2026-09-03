@@ -1,4 +1,6 @@
 import { fileURLToPath, URL } from "node:url";
+import { createReadStream, existsSync } from "node:fs";
+import { basename, join } from "node:path";
 import { defineConfig, loadEnv, type PluginOption, type Rollup } from "vite";
 import react, { reactCompilerPreset } from "@vitejs/plugin-react";
 import babel from "@rolldown/plugin-babel";
@@ -99,6 +101,48 @@ function pdfMustStayLazy(): PluginOption {
  * `process.env`, so an explicit `VITE_API_MODE=live pnpm build` still wins over
  * a stale `.env`.
  */
+
+/**
+ * Serves the package page rasters in dev, from an absolute path OUTSIDE the
+ * working tree — county packages never enter VCS (CONTEXT §19). Point
+ * `TITLEPIPE_SCAN_DIR` at an OCR run directory holding `page_0001.png` …;
+ * with nothing set it serves nothing and the sheet falls back to the text
+ * render. Dev only: there is no production story for reading a developer's
+ * filesystem, and `apply: "serve"` is what says so.
+ */
+function scanRasters(): PluginOption {
+  const dir = process.env["TITLEPIPE_SCAN_DIR"] ?? "";
+  const pdf = process.env["TITLEPIPE_SCAN_PDF"] ?? "";
+  return {
+    name: "titlepipe:scan-rasters",
+    apply: "serve",
+    configureServer(server) {
+      if (dir === "" && pdf === "") return;
+      server.middlewares.use("/scan", (req, res, next) => {
+        const name = basename((req.url ?? "").split("?")[0] ?? "");
+        const png = /^page_\d{4}\.png$/.test(name);
+        // The package itself, when `TITLEPIPE_SCAN_PDF` names one. Same rule
+        // as the rasters: an absolute path outside the working tree, and only
+        // this one filename is ever answered.
+        const isPdf = name === "package.pdf" && pdf !== "";
+        if (!png && !isPdf) {
+          next();
+          return;
+        }
+        const file = isPdf ? pdf : join(dir, name);
+        if (!existsSync(file)) {
+          res.statusCode = 404;
+          res.end();
+          return;
+        }
+        res.setHeader("Content-Type", isPdf ? "application/pdf" : "image/png");
+        res.setHeader("Cache-Control", "max-age=3600");
+        createReadStream(file).pipe(res);
+      });
+    },
+  };
+}
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, APP_DIR, "VITE_");
   const apiMode = env.VITE_API_MODE ?? "mock";
@@ -151,6 +195,7 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [
+      scanRasters(),
       react(),
       /*
        * REACT COMPILER, and the wiring is not what the dependency spec wrote.

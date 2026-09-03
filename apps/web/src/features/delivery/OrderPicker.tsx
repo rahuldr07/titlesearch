@@ -6,12 +6,11 @@ import { cx } from "../../components/ui";
  * order-scoped and there is no per-order endpoint. `aria-current` rather than
  * `aria-selected`: these are not tabs and own no panels — they re-scope the grid.
  *
- * CONTRACT GAP: the button prints `ord_demo_12`, an internal id, where every
- * other screen prints the ref (`4176034-1`) — the rail's own comment says the
- * id in the URL is not the ref. It is printed here because the wire carries no
- * alternative: `DeliveryWithReport.report` has `order_id` and no `order_ref`,
- * and a second read per order to resolve one would be this screen inventing a
- * join. Add `order_ref` to the report shape and this becomes one word.
+ * The button prints the REF (`4176034-1`), not the internal id. It printed
+ * `ord_demo_12` until `Report.order_ref` was added to the wire — the join a
+ * screen may not invent, now carried. An order whose report the server cannot
+ * name falls back to the id rather than printing nothing: an unnamed record
+ * is still a record.
  */
 export function OrderPicker({
   orders,
@@ -46,7 +45,9 @@ export function OrderPicker({
                   : "font-medium text-ink-muted hover:text-ink-primary",
               )}
             >
-              <span className="font-mono text-meta leading-close">{orderId}</span>
+              <span className="font-mono text-meta leading-close">
+                {rows.find((r) => r.report?.order_ref != null)?.report?.order_ref ?? orderId}
+              </span>
               <span className="font-sans text-label leading-flat">
                 {rows.length === 1 ? "one version" : `${String(rows.length)} versions`}
               </span>

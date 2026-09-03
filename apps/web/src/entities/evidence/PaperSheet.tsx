@@ -18,19 +18,35 @@ export type PaperSheetProps = {
    * property of the page, never inferred from how extraction went.
    */
   readonly degraded?: boolean | undefined;
+  /**
+   * Which stock. `scan` is the warm, tilted, grained county exhibit —
+   * something photographed. `page` is the clean flat stock a deliverable is
+   * PRINTED on: `--color-page`, no tilt, no grain. RECIPES lists them as two
+   * rows and the composer was drawing its certificate on the scan stock, so
+   * the document being typed looked like a document being photographed.
+   */
+  readonly stock?: "scan" | "page" | undefined;
   readonly className?: string | undefined;
 };
 
-export function PaperSheet({ children, stamp, degraded, className }: PaperSheetProps) {
+export function PaperSheet({
+  children,
+  stamp,
+  degraded,
+  stock = "scan",
+  className,
+}: PaperSheetProps) {
+  const printed = stock === "page";
   return (
     <div
       data-paper-sheet
+      data-stock={stock}
       data-degraded={degraded === true}
       className={cx(
-        "tp-paper-tilt tp-paper-grain relative rounded-paper border shadow-page",
-        "border-page-line px-14 py-15",
+        "relative border shadow-page border-page-line px-14 py-15",
+        printed ? "rounded-none bg-page" : "tp-paper-tilt tp-paper-grain rounded-paper",
         // The two stocks. Degraded is a warm step below the clean scan.
-        degraded === true ? "tp-scan-filter bg-scan" : "bg-surface-paper",
+        !printed && (degraded === true ? "tp-scan-filter bg-scan" : "bg-surface-paper"),
         className,
       )}
     >

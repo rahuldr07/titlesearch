@@ -26,7 +26,7 @@ authoritative vs. historical record vs. superseded.
 
 | Path | What it is |
 |---|---|
-| `apps/web-v2/` | The frontend (React 19 · Vite 8 · TS strict · Tailwind v4). The only app; `apps/web` was deleted at rebuild. |
+| `apps/web/` | The frontend (React 19 · Vite 8 · TS strict · Tailwind v4), package `@titlepipe/web`. The only app; `apps/web-v2` was the rebuild's scratch copy and was deleted once its work landed here. |
 | `packages/` | pnpm workspace source: `contract` (Zod 4 wire schemas), `mocks` (MSW — the backend until FastAPI routes land), `ui-tokens`. **Not** county packages — those never enter VCS. |
 | `services/` | Python 3.13 services, one uv project each: `core-api` (FastAPI, ADR-0001), `blind-svc`, `extraction-svc`, `render-svc`. |
 | `libs/` | Shared Python: `domain` (tenant canon), `test-support`. |
@@ -40,12 +40,12 @@ authoritative vs. historical record vs. superseded.
 Frontend (repo root):
 
 ```bash
-pnpm --filter web-v2 dev        # Vite on :5174, MSW serves all data
-pnpm --filter web-v2 build      # tsc -b + vite build
-pnpm --filter web-v2 test       # Vitest
-pnpm --filter web-v2 test:e2e   # Playwright
-pnpm --filter web-v2 lint       # eslint
-pnpm --filter web-v2 check:rules
+pnpm --filter @titlepipe/web dev        # Vite on :5174, MSW serves all data
+pnpm --filter @titlepipe/web build      # tsc -b + vite build
+pnpm --filter @titlepipe/web test       # Vitest
+pnpm --filter @titlepipe/web test:e2e   # Playwright
+pnpm --filter @titlepipe/web lint       # eslint
+pnpm --filter @titlepipe/web check:rules
 pnpm typecheck                  # all TS projects
 ```
 

@@ -70,7 +70,7 @@ export function CitedRegion(props: { readonly box: LineCoords }) {
  */
 export function CitedRegionNote(props: {
   readonly box: LineCoords | null;
-  /** The cited page, when a field with provenance is open. */
+  /** The previewed field's cited page — the hovered row, else the open one. */
   readonly citedPage: number | null;
   readonly shown: number;
   /** The zoom state — the note names the way back. */
@@ -79,9 +79,9 @@ export function CitedRegionNote(props: {
   const text = props.zoomed
     ? "Zoomed to citation — Z or Esc to fit, double-click the page"
     : props.citedPage === null
-      ? "Choose a field on the left to mark where its value was read."
+      ? "Hover or focus any field on the left to mark where its value was read — a field whose reader recorded no page marks nothing."
       : props.box === null
-        ? `The open field cites p${props.citedPage}. The engine that read it recorded no coordinate, so the page is marked and no region is.`
+        ? `That field cites p${props.citedPage}. The engine that read it recorded no coordinate, so the page is marked and no region is.`
         : props.box.page === props.shown
           ? `The box marks the region on p${props.box.page} the recorded reading was taken from.`
           : `The recorded region is on p${props.box.page}. This sheet is p${props.shown}.`;

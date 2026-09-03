@@ -48,10 +48,10 @@ export function OrdersListScreen() {
               if (chosen.success) browse.choose(chosen.data);
             }}
           >
-            <Segment id="all">All orders</Segment>
-            <Segment id="active">In pipeline</Segment>
-            <Segment id="waiting">Queries and gaps</Segment>
-            <Segment id="delivered">Delivered history</Segment>
+            <Segment accent id="all">All orders</Segment>
+            <Segment accent id="active">In pipeline</Segment>
+            <Segment accent id="waiting">Queries and gaps</Segment>
+            <Segment accent id="delivered">Delivered history</Segment>
           </SegmentedControl>
           {query.data !== undefined && (
             <span className="font-mono text-meta leading-close text-ink-secondary">

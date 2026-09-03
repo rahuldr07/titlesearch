@@ -54,3 +54,8 @@ apps/web/public/pdf.worker.min.mjs
 # Fidelity captures. compare.mjs writes these; they are evidence for a review,
 # never an artefact of the build.
 /shots*/
+
+# Local-only: the real county package fixture is populated by
+# packages/mocks/scripts/build-real-package.mjs and names real people.
+# The committed realPackage.json is the empty shape; never commit a populated one.
+/data/

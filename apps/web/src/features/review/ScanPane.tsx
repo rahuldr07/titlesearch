@@ -39,6 +39,12 @@ export function ScanPane(props: {
   readonly box: LineCoords | null;
   /** A page the decision pane asked to be shown. */
   readonly request: PageRequest | null;
+  /**
+   * True while the sheet is showing a HOVERED row's citation rather than
+   * the open field's. The pin names whose citation it is drawing, so it
+   * has to be told when the answer is not "the selected field".
+   */
+  readonly previewing: boolean;
 }) {
   const pages = useRead(orderPages(props.orderId));
   const [zoom, setZoom] = useState<ZoomLevel>("fit");
@@ -60,7 +66,7 @@ export function ScanPane(props: {
       aria-label="Source page"
       data-testid="evidence-pane"
       data-zoomed={citeZoom ? "1" : "0"}
-      className="flex min-h-0 min-w-0 flex-1 flex-col bg-surface-app"
+      className="flex min-h-0 min-w-0 flex-1 flex-col bg-surface-viewer"
     >
       {/*
         A failed read renders a named unavailable state and degrades this
@@ -77,6 +83,7 @@ export function ScanPane(props: {
             line={props.line}
             box={props.box}
             request={props.request}
+            previewing={props.previewing}
             zoom={zoom}
             onZoom={(next) => {
               /* The reference drops the citation zoom when the magnifier is

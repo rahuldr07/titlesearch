@@ -43,7 +43,15 @@ const IMPORTS_FIELD =
 /** `.value` read as a member, computed or not. `x["value"]` included. */
 const FIELD_VALUE_ACCESS = /\.\s*value\b|\[\s*["']value["']\s*\]/;
 
-const LINE_LIMIT = 150;
+/*
+ * Raised from 150 on the owner's call, 2026-09-01. The rule is worth keeping —
+ * a 400-line component really is a missing component — but at 150 it was
+ * splitting files that had nothing to split: dialog.tsx crossed it by nine
+ * lines for a 32px close button, and the "fix" was a second module holding one
+ * function. A limit that manufactures indirection is not measuring what it
+ * meant to.
+ */
+const LINE_LIMIT = 250;
 /** A 2-line 1,900-character file passed the line count. Bytes catch that. */
 const CHAR_LIMIT = 8000;
 
@@ -167,8 +175,18 @@ const BANNED = [
   },
   {
     name: "ts-escape-hatch",
-    // `as unknown as X` is the standard laundering of `any` and used to pass.
-    re: /@ts-ignore|@ts-nocheck|\bas any\b|:\s*any\b|<any>|\bas unknown as\b/,
+    /*
+     * `as unknown as X` is the standard laundering of `any` and used to pass.
+     *
+     * `[<,=]\s*any\s*[,>]` is the generic-position arm, and it is the one
+     * that matters most: `<any>` alone only caught a SINGLE type argument, so
+     * `Record<string, any>`, `Map<K, any>` and a `<T = any>` default — the
+     * three commonest spellings of `any` in real code — all walked past a
+     * rule the repo states as absolute. Requiring a bracket, comma or equals
+     * before and a comma or close after is what keeps the word `any` in
+     * prose ("anything queued", "any of these") out of it.
+     */
+    re: /@ts-ignore|@ts-nocheck|\bas any\b|:\s*any\b|<any>|[<,=]\s*any\s*[,>]|\bas unknown as\b/,
     why: "no `any`, no @ts-ignore, no `as unknown as` laundering (§6)",
   },
 ];
@@ -399,6 +417,37 @@ function stringLiterals(line) {
   return [...line.matchAll(/"([^"]*)"|'([^']*)'|`([^`]*)`/g)].map(
     (m) => m[1] ?? m[2] ?? m[3] ?? "",
   );
+}
+
+/*
+ * A token declared twice is a token whose value is whichever declaration came
+ * last, silently. `--color-surface-evidence` was declared once as the
+ * citation highlight and again as a pane background; the second name lost,
+ * and two panes painted themselves with the highlight tint. Nothing else in
+ * the toolchain sees it — CSS custom properties are legally redeclarable, so
+ * this is not a Tailwind error, a tsc error or a lint error.
+ */
+{
+  const tokensPath = new URL(
+    "../../../packages/ui-tokens/src/tokens.css",
+    import.meta.url,
+  ).pathname;
+  const text = readFileSync(tokensPath, "utf8");
+  const seen = new Map();
+  text.split("\n").forEach((line, i) => {
+    const m = /^\s*(--[a-z0-9-]+)\s*:/.exec(line);
+    // `--foo-*: initial` is a namespace reset, not a value; it is meant to
+    // be followed by the declarations it clears.
+    if (m === null || line.includes(": initial")) return;
+    const first = seen.get(m[1]);
+    if (first === undefined) seen.set(m[1], i + 1);
+    else
+      offenses.push(
+        `packages/ui-tokens/src/tokens.css:${i + 1} [duplicate-token] ` +
+          `${m[1]} was already declared at line ${first} — the later value ` +
+          `silently wins`,
+      );
+  });
 }
 
 if (offenses.length) {

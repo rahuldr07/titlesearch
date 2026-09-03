@@ -38,7 +38,7 @@ export function CredentialsForm() {
           <Input autoComplete="current-password" />
         </TextField>
       </Field>
-      <Button type="submit" variant="primary" size="lg" className="mt-4 w-full">
+      <Button type="submit" variant="primary" className="mt-4 w-full">
         Sign in
       </Button>
       {refused && (

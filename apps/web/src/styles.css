@@ -58,7 +58,6 @@ body {
 :where(a, button, input, textarea, select, [tabindex]):not([role="dialog"]):focus-visible {
   outline: 2px solid var(--color-action);
   outline-offset: 2px;
-  border-radius: var(--radius-xs);
 }
 
 :where(a, button, input, textarea, select, [tabindex], [role="row"], [role="option"]) {

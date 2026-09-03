@@ -53,10 +53,14 @@ import {
   demoComplaints,
   demoEscalations,
   demoFields,
+  realFields,
   demoGolden,
   demoOrderEntity,
   demoOrderRow,
   demoOrders,
+  demoOrderRows,
+  addCreatedOrder,
+  clearCreatedOrders,
   demoPages,
   demoQueue,
   demoRules,
@@ -130,7 +134,7 @@ export function queueBandsFor(role: string): QueueBandsResponse {
     : ["mine", "held", "delivered"];
   return {
     bands: ids.map((id) => {
-      const all = demoOrders.filter((r) => r.band === id);
+      const all = demoOrderRows().filter((r) => r.band === id);
       const visible = id === "held" && !senior ? all.filter((r) => r.mine) : all;
       return {
         id,
@@ -216,8 +220,9 @@ const STAGE_IDS: readonly DemoContextStageId[] = [
  * not zero.
  */
 function outstandingFor(orderId: string): number | null {
-  if (orderId !== FIELDS_ORDER_ID) return null;
-  return fieldStore.filter((f) => f.state === "needs_review").length;
+  const mine = fieldStore.filter((f) => f.order_id === orderId);
+  if (mine.length === 0) return null;
+  return mine.filter((f) => f.state === "needs_review").length;
 }
 
 function stageItems(
@@ -284,17 +289,11 @@ const timelineHandler = http.get("/api/orders/:id/timeline", ({ params }) => {
 });
 
 /** Field store: deep-copied once per page session, then mutated by handlers. */
-const fieldStore: Field[] = demoFields.map((f) => ({
+const fieldStore: Field[] = [...demoFields, ...realFields].map((f) => ({
   ...f,
   rule_refs: [...f.rule_refs],
   readings: f.readings?.map((r) => ({ ...r })),
 }));
-
-/**
- * The one order this fixture describes. Read from the data rather than
- * repeated as a literal, so the two cannot part company.
- */
-const FIELDS_ORDER_ID = demoFields[0]?.order_id ?? "";
 
 /*
  * FIXTURE CONFLICT, unresolved — for the owner, not for this file to guess.
@@ -562,6 +561,44 @@ export const handlers = [
       delivered_at: null,
     };
     seenPackages.set(sha, order.external_ref);
+    /*
+     * REGISTER IT. Minting an id, returning it and storing it nowhere meant
+     * intake finished, navigated to `/orders/ord_new_1`, and the server
+     * answered "no such order" — the screen reporting no order at the
+     * address it had just been sent to.
+     *
+     * What the package has not said yet is left unsaid: no address, no
+     * period, no page-level reading. The jurisdiction IS known, because the
+     * gateway resolved it off the recorded clerk stamp before the order
+     * existed, which is the one fact intake refuses to let anyone type.
+     */
+    addCreatedOrder({
+      id: order.id,
+      order_ref: order.external_ref === "" ? order.id : order.external_ref,
+      client_id: order.client_id,
+      jurisdiction: order.jurisdiction,
+      state: order.state,
+      county: order.county,
+      status: order.status,
+      arrived_at: order.arrived_at,
+      accepted_at: null,
+      delivered_at: null,
+      product: order.product,
+      period: "Period not resolved until the package is read",
+      pages: order.pages,
+      band: "mine",
+      stage: "intake",
+      queue_position: null,
+      addr: "Address not yet read from the package",
+      place: `${order.county} County · ${order.state}`,
+      waited: null,
+      waiting_on: "Awaiting extraction",
+      state_label: null,
+      stamp_label: "Package ingested",
+      stamp_tone: "settled",
+      mine: true,
+      failed: false,
+    });
     return HttpResponse.json({ order }, { status: 201 });
   }),
 
@@ -619,7 +656,7 @@ export const handlers = [
    */
   http.get("/api/orders/:id/fields", ({ params }) => {
     const id = String(params["id"]);
-    const fields = id === FIELDS_ORDER_ID ? fieldStore : [];
+    const fields = fieldStore.filter((f) => f.order_id === id);
     /*
      * The decision figures, decided here. `decisions` is every field this
      * order ever put in front of a person — settled plus queued, not
@@ -708,7 +745,6 @@ export const handlers = [
     if (denied) return denied;
     const parsed = CorrectFieldRequest.safeParse(await request.json());
     if (!parsed.success) {
-      // The refusal is the product requirement: no reason, no correction.
       return err(parsed.error.message, 422);
     }
     const field = fieldStore.find((f) => f.id === params["id"]);
@@ -1521,6 +1557,7 @@ export const handlers = [
     complaintCount = 0;
     createdOrders = 0;
     seenPackages.clear();
+    clearCreatedOrders();
     // The sibling modules' stores: deliveries + seals + countersigns +
     // appended timeline events (design.ts), template wording drafts,
     // the RBAC matrix, people roles, and the live audit rows.

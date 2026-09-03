@@ -1,10 +1,11 @@
 import { useState } from "react";
 import type { Field } from "@titlepipe/contract";
-import { Alert, Card } from "../../components/ui";
+import { Alert } from "../../components/ui";
 import { DecisionCard } from "../../entities/decision/DecisionCard";
 import { readingComparison } from "./readings";
 import { fieldLabel } from "./fieldNaming";
 import { panelRubric } from "./panelRubric";
+import { isQueued } from "./queue";
 import { confirmValue, readCited } from "../../shared/provenance";
 import { useReviewWrites } from "./useReviewWrites";
 import { DecisionActions } from "./DecisionActions";
@@ -48,7 +49,7 @@ export function DecisionPanel(props: {
   };
 
   useDecisionKeys({
-    enabled: field !== null && mode === null,
+    enabled: field !== null && isQueued(field) && mode === null,
     /*
      * The confirm chord never accepts a blank: a field the server sent no
      * value for is settled by declaring which absence it is, and a held-down
@@ -64,13 +65,11 @@ export function DecisionPanel(props: {
 
   if (field === null) {
     return (
-      <div className="shrink-0 border-b border-line-strong bg-surface-app p-8">
-        <Card>
-          <p className="text-meta leading-body text-ink-secondary">
-            No field is open. The queue in the middle column holds what the server
-            flagged; choosing one opens it here beside its source page.
-          </p>
-        </Card>
+      <div className="shrink-0 px-8 py-6">
+        <p className="text-meta leading-body text-ink-secondary">
+          No field is open. The queue in the middle column holds what the server
+          flagged; choosing one opens it here beside its source page.
+        </p>
       </div>
     );
   }
@@ -81,7 +80,10 @@ export function DecisionPanel(props: {
   const comparison = readingComparison(field.readings ?? []);
 
   return (
-    <div className="flex shrink-0 flex-col gap-6 border-b border-line-strong bg-surface-app p-8">
+    <div
+      data-testid="open-decision"
+      className="my-7 flex shrink-0 flex-col gap-6 border-l-3 border-l-action py-11 pr-10 pl-11"
+    >
       <DecisionCard
         field={field}
         label={fieldLabel(field.path)}
@@ -94,11 +96,30 @@ export function DecisionPanel(props: {
           open("correct", reading.value ?? ""); // rules-allow: FieldReading.value, not Field.value — a pre-merge reading has no provenance union to read through
         }}
         actions={
-          <DecisionActions
-            pending={writes.pending}
-            onConfirm={() => writes.confirm(field.id, machineRead)}
-            onOpen={(next) => open(next, next === "correct" ? (machineRead ?? "") : "")}
-          />
+          /*
+           * Acts are offered only on a field the SERVER put in front of a
+           * person. A field it settled itself is a record: re-confirming an
+           * auto-confirmed value files an act nobody asked for, and the
+           * screen would be inventing a transition the state machine does
+           * not have. Reachable because `resolveSelection` falls back to the
+           * first field when the queue is empty, and by `?field=` deep link.
+           */
+          isQueued(field) ? (
+            <DecisionActions
+              pending={writes.pending}
+              onConfirm={() => writes.confirm(field.id, machineRead)}
+              onOpen={(next) => open(next, next === "correct" ? (machineRead ?? "") : "")}
+            />
+          ) : (
+            <p
+              data-testid="settled-no-acts"
+              className="text-meta leading-body text-ink-secondary"
+            >
+              The server settled this field and did not put it in the review
+              queue. It is shown here with its provenance; nothing on this
+              screen re-opens it.
+            </p>
+          )
         }
       />
 

@@ -1,6 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
-import { OrderContextResponse, type Order } from "@titlepipe/contract";
-import { get } from "../../shared/api";
+import { type Order } from "@titlepipe/contract";
+import { useRead } from "../../app/useRead";
+import { orderContext } from "../../shared/queries";
 import { Button, Card } from "../../components/ui";
 import { OrderRef } from "../../entities/order/OrderRef";
 import { SpotlightMeta } from "./SpotlightMeta";
@@ -16,10 +16,11 @@ import { useOverlays } from "../../app/keyboard/overlays";
 export function SpotlightOrder(props: { readonly order: Order }) {
   const order = props.order;
   const openHistory = useOverlays((s) => s.openOrderHistory);
-  const context = useQuery({
-    queryKey: ["orders", order.id, "context"],
-    queryFn: () => get(`/api/orders/${order.id}/context`, OrderContextResponse),
-  });
+  /* The descriptor, not a hand-spelled key. queries.ts owns one spelling of
+     this path and this cache key; a second copy here is a second cache the
+     moment either drifts, and it drifts silently — as a refetch and a stale
+     due date, never an error. */
+  const context = useRead(orderContext(order.id));
 
   return (
     <Card className="border-l-4 border-l-action">
@@ -70,8 +71,13 @@ export function SpotlightOrder(props: { readonly order: Order }) {
           >
             Audit History
           </Button>
+          {/* `lg` — RECIPES reserves it for "the one action a decision screen
+              leads with", and the design draws this CTA at 16px against the
+              13px of Audit History beside it. At `md` the two were the same
+              size and the primary read only as "the coloured one". */}
           <RouteButton
             variant="primary"
+            size="lg"
             to="/orders/$orderId/review"
             params={{ orderId: order.id }}
             data-testid="spotlight-open"

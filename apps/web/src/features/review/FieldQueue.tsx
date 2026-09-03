@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import type { Field } from "@titlepipe/contract";
 import { FieldRow } from "./FieldRow";
+import { InlineEdit } from "./InlineEdit";
+import { confirmValue } from "../../shared/provenance";
 import { isRuinous } from "./ruinous";
 import type { Section } from "./fieldNaming";
 
@@ -17,6 +19,19 @@ export function FieldQueue(props: {
   readonly selectedId: string | null;
   readonly canSelect: (field: Field) => boolean;
   readonly onSelect: (field: Field) => void;
+  /**
+   * Hovering or focusing a row marks its citation on the sheet. Offered for
+   * EVERY row, not only the selectable ones: a settled field's provenance is
+   * exactly what a reviewer checking the work behind it wants to see.
+   */
+  readonly onPreview: (field: Field) => void;
+  /** The pointer/focus left that row — the sheet returns to the open field. */
+  readonly onPreviewEnd: () => void;
+  readonly onEdit: (field: Field) => void;
+  readonly editingPath: string | null;
+  readonly pending: boolean;
+  readonly onSaveInline: (field: Field, value: string) => void;
+  readonly onCancelInline: () => void;
   /** The open decision, dropped under the row it belongs to. */
   readonly renderOpen: () => ReactNode;
 }) {
@@ -66,19 +81,34 @@ export function FieldQueue(props: {
             )}
           </div>
 
-          {section.fields.map((field) => (
-            <div key={field.id}>
-              <FieldRow
-                field={field}
-                selected={field.id === props.selectedId}
-                ruinous={isRuinous(field)}
-                onSelect={() => {
-                  if (props.canSelect(field)) props.onSelect(field);
-                }}
-              />
+          <div className="flex flex-col gap-2">
+            {section.fields.map((field) => (
+            <div key={field.id} onDoubleClick={() => props.onEdit(field)}>
+              {props.editingPath === field.path ? (
+                <InlineEdit
+                  path={field.path}
+                  initial={confirmValue(field) ?? ""}
+                  pending={props.pending}
+                  onSave={(value) => props.onSaveInline(field, value)}
+                  onCancel={props.onCancelInline}
+                />
+              ) : (
+                <FieldRow
+                  field={field}
+                  selected={field.id === props.selectedId}
+                  ruinous={isRuinous(field)}
+                  onPreview={() => props.onPreview(field)}
+                  onPreviewEnd={props.onPreviewEnd}
+                  onEdit={() => props.onEdit(field)}
+                  onSelect={() => {
+                    if (props.canSelect(field)) props.onSelect(field);
+                  }}
+                />
+              )}
               {field.id === props.selectedId && props.renderOpen()}
             </div>
-          ))}
+            ))}
+          </div>
         </section>
         );
       })}

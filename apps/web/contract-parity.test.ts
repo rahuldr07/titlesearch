@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, test } from "vitest";
 // The WORKSPACE ALIAS, not a relative path into `packages/contract/src`, and not a
-// local re-declaration. These are the exact schemas `apps/web-v2/src` parses live
+// local re-declaration. These are the exact schemas `apps/web/src` parses live
 // responses with; a re-typed copy here would be this file agreeing with itself.
 //
 // `authz.test.ts` reaches in relatively and says the alias "would need emitted

@@ -1,5 +1,4 @@
-import type { Key } from "react";
-import { TextField } from "react-aria-components";
+import { type Key, TextField } from "react-aria-components";
 import { Input, Label, Option, Select } from "../../components/ui";
 import { CONFIDENCES, type DraftEntry } from "./draftEntry";
 

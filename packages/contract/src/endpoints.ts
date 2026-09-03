@@ -185,11 +185,21 @@ export const ConfirmFieldRequest = z.object({
 });
 export type ConfirmFieldRequest = z.infer<typeof ConfirmFieldRequest>;
 
-/** POST /api/fields/{id}/correct — a correction without a reason is refused. */
+/**
+ * POST /api/fields/{id}/correct.
+ *
+ * `reason` was `z.string().min(1)` — the refusal rule named in AGENTS.md.
+ * Relaxed to optional by owner instruction on 2026-09-02, for the build
+ * phase, so an inline row edit can file a value on its own. RE-TIGHTEN
+ * BEFORE ANY REAL PACKAGE IS DELIVERED: a correction overrides both engines
+ * on a legal record, and without a recorded reason nothing downstream can
+ * tell whether the examiner read the document or typed over it.
+ * `services/core-api` must match this or the wire and the server disagree.
+ */
 export const CorrectFieldRequest = z.object({
   value: z.string().nullable(),
   na_reason: z.string().nullable().optional(),
-  reason: z.string().min(1),
+  reason: z.string().optional(),
 });
 export type CorrectFieldRequest = z.infer<typeof CorrectFieldRequest>;
 
@@ -633,6 +643,13 @@ export const SourcePage = z.object({
   lines: z.array(z.string()),
   /** Scan quality finding. Drives the degraded render; never inferred client-side. */
   degraded: z.boolean(),
+  /**
+   * The page raster, where the server holds one. Absent means there is no
+   * image and the sheet renders `lines` — not that the page is missing. The
+   * recorded coordinates are normalised against THIS raster, so a box drawn
+   * over it lands where the reader measured it.
+   */
+  image_url: z.string().nullable().optional(),
 });
 export type SourcePage = z.infer<typeof SourcePage>;
 

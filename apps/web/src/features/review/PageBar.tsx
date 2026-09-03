@@ -76,7 +76,7 @@ export function PageBar(props: {
         isSelected={props.following}
         onChange={props.onFollowing}
       >
-        {props.following ? "Following the citation" : "Free — the page stays put"}
+        {props.following ? "◉ Following" : "○ Free"}
       </Toggle>
 
       <SegmentedControl

@@ -29,7 +29,6 @@ function InputGroup({ className, ...props }: GroupProps) {
         "has-[[data-slot=input-group-control]:focus-visible]:outline-action",
         "has-[[data-slot][aria-invalid=true]]:border-state-halt",
         "has-disabled:bg-surface-sunken has-disabled:border-line-strong",
-        "in-data-[slot=combobox-content]:focus-within:border-inherit",
         // A block-aligned addon stacks, so the fixed height has to go.
         "has-[>[data-align=block-end]]:h-auto has-[>[data-align=block-end]]:flex-col",
         "has-[>[data-align=block-start]]:h-auto has-[>[data-align=block-start]]:flex-col",

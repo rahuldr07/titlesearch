@@ -4,6 +4,7 @@ import { orderSearch } from "./orderSearch";
 import { OrderRoute } from "./chrome/OrderRoute";
 import { WorkstationScreen } from "../features/review/WorkstationScreen";
 import { ReleaseScreen } from "../features/release/ReleaseScreen";
+import { ExtractionView } from "../features/extraction/ExtractionView";
 
 /**
  * The order-scoped routes — hand-written because their params buy a
@@ -84,4 +85,30 @@ function ReleaseRoute() {
   return <ReleaseScreen orderId={orderId} />;
 }
 
-export const orderRoutes = [reviewRoute, reviewWorkstationRoute, releaseRoute];
+/**
+ * `/orders/{id}/extraction` — the dual-engine telemetry, beneath the same
+ * `/orders` door. Its own address because it is its own screen: the design
+ * draws it as one (`isProcessing`), and stacking it under the hub gave the
+ * pipeline's stage list two renderings on one page.
+ */
+const extractionRoute = createRoute({
+  getParentRoute: parent,
+  path: "/orders/$orderId/extraction",
+  component: ExtractionRoute,
+});
+
+function ExtractionRoute() {
+  const { orderId } = extractionRoute.useParams();
+  return (
+    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+      <ExtractionView orderId={orderId} />
+    </div>
+  );
+}
+
+export const orderRoutes = [
+  reviewRoute,
+  reviewWorkstationRoute,
+  extractionRoute,
+  releaseRoute,
+];

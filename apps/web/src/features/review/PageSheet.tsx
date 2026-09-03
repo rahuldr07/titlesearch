@@ -1,8 +1,10 @@
+import { useState } from "react";
 import type { LineCoords, SourcePage } from "@titlepipe/contract";
 import { Button, cx } from "../../components/ui";
 import { PaperSheet } from "../../entities/evidence/PaperSheet";
 import { ClerkStamp } from "../../entities/evidence/ClerkStamp";
 import { PageBody } from "./PageBody";
+import { CitedRegion } from "./CitedRegion";
 import type { ZoomLevel } from "./PageBar";
 
 /**
@@ -33,6 +35,8 @@ export function PageSheet(props: {
   readonly page: SourcePage | null;
   readonly line: number | null;
   readonly pinned: boolean;
+  /** The pin is drawing a hovered row's citation, not the open field's. */
+  readonly previewing: boolean;
   /**
    * The recorded region, when the open field's reading carried one AND it is on
    * this sheet. The caller does that comparison — a box drawn on the wrong page
@@ -46,6 +50,14 @@ export function PageSheet(props: {
 }) {
   const zoomed = props.citeZoom && props.box !== null;
   const box = props.box;
+  /* A raster the server names but this environment cannot serve is a
+     configuration fact, not a missing page: the sheet falls back to the text
+     it already has rather than showing a broken image. `/scan` unconfigured
+     returns the SPA shell with a 200, so `onError` (a decode failure) is the
+     signal, not the status code. */
+  const [rasterFailed, setRasterFailed] = useState<string | null>(null);
+  const named = props.page?.image_url ?? null;
+  const raster = named !== null && named !== rasterFailed ? named : null;
 
   return (
     <div className={cx("relative flex justify-center overflow-hidden p-8", ZOOM[props.zoom])}>
@@ -64,25 +76,38 @@ export function PageSheet(props: {
         }}
         className={cx("w-198 shrink-0 tp-zoom-cite", zoomed && "tp-zoom-cite-on")}
       >
-        <PaperSheet
-          degraded={props.page?.degraded === true}
-          stamp={
-            props.page === null ? undefined : (
-              <ClerkStamp
-                caption={props.page.kind}
-                detail={`p${props.n} / ${props.total}`}
-              />
-            )
-          }
-        >
-          <PageBody
-            n={props.n}
-            page={props.page}
-            line={props.line}
-            pinned={props.pinned}
-            box={props.box}
-          />
-        </PaperSheet>
+        {raster === null ? (
+          <PaperSheet
+            degraded={props.page?.degraded === true}
+            stamp={
+              props.page === null ? undefined : (
+                <ClerkStamp
+                  caption={props.page.kind}
+                  detail={`p${props.n} / ${props.total}`}
+                />
+              )
+            }
+          >
+            <PageBody
+              n={props.n}
+              page={props.page}
+              line={props.line}
+              pinned={props.pinned}
+              previewing={props.previewing}
+              box={props.box}
+            />
+          </PaperSheet>
+        ) : (
+          <div data-testid="page-raster" className="relative shadow-page">
+            <img
+              src={raster}
+              alt={`Page ${props.n} of ${props.total} — ${props.page?.kind ?? ""}`}
+              onError={() => setRasterFailed(raster)}
+              className="block w-full"
+            />
+            {props.box !== null && <CitedRegion box={props.box} />}
+          </div>
+        )}
       </div>
 
       {zoomed && (

@@ -9,12 +9,16 @@ export function NaMatrixPanel({ block }: { readonly block: TemplateSheetBlock })
   return (
     <div className="flex flex-col gap-6">
             <div className="border-b border-line-subtle pb-5">
+              {/* The design puts a green "Compliance verified" pill here. Not
+                  transcribed: nothing on TemplateSheetBlock records a
+                  compliance check, so the pill would be this panel attesting
+                  on the server's behalf that something passed — the same
+                  refusal OrderHistoryOverlay makes against the design's
+                  "SOC 2 Compliance" kicker. The sentence below states what is
+                  actually served: the four declared absence strings. */}
               <div className="flex items-center justify-between gap-4">
                 <span className="font-sans text-meta leading-close font-bold text-ink-primary">
                   Null state matrix
-                </span>
-                <span className="rounded-pill bg-state-settled-surface px-3 py-1 font-mono text-label leading-flat font-bold text-state-settled">
-                  Compliance verified
                 </span>
               </div>
               <p className="pt-2 font-sans text-label leading-close text-ink-muted">
@@ -57,11 +61,11 @@ export function AuditPanelTab({ template }: { readonly template: TemplateDetailR
               <span className="font-mono font-semibold">{template.source_ref}</span>
             </AuditFact>
             <AuditFact label="Source citation">{template.source_citation}</AuditFact>
-            <AuditFact label="Isolation audit">
-              <span className="font-semibold text-state-settled">
-                ✓ Zero cross-client contamination
-              </span>
-            </AuditFact>
+            {/* The design carries an "Isolation audit — ✓ Zero cross-client
+                contamination" row here. Not transcribed: TemplateDetailResponse
+                has no isolation or audit-result member, so the tick would be a
+                tenant-isolation assertion this screen cannot cite. The rows
+                that remain each print a served value. */}
             <AuditFact label="SHA-256 cryptographic seal">
               <code className="block rounded-md border border-line-subtle bg-surface-sunken p-4 font-mono text-label leading-body break-all text-ink-secondary">
                 {template.sha256}

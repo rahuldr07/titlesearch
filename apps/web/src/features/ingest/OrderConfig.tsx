@@ -61,7 +61,7 @@ export function OrderConfig(props: {
           </span>
           <span
             data-testid="order-pages-readonly"
-            className="flex h-19 items-center rounded-md border border-control-border bg-surface-sunken px-5 font-mono text-meta leading-close text-ink-muted"
+            className="flex h-18 items-center rounded-md border border-control-border bg-control-fill-readonly px-6 font-mono text-meta leading-close text-ink-muted"
           >
             {props.resolved?.page_count_label ?? "—"}
           </span>
@@ -73,7 +73,7 @@ export function OrderConfig(props: {
           <span
             data-testid="order-jurisdiction-readonly"
             title="Read from the recorded clerk stamp — never hand-entered"
-            className="flex h-19 items-center truncate rounded-md border border-control-border bg-surface-sunken px-5 font-mono text-meta leading-close text-ink-muted"
+            className="flex h-18 items-center truncate rounded-md border border-control-border bg-control-fill-readonly px-6 font-mono text-meta leading-close text-ink-muted"
           >
             {props.resolved?.jurisdiction_label ?? "— read from clerk stamp"}
           </span>

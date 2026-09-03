@@ -35,20 +35,24 @@ export function RowMark({ field }: RowMarkProps) {
   const render = MARK[field.state];
   // The server said this field is an absence AND that a person settled it.
   const acceptedAbsence = field.na_reason !== null && field.state === "confirmed";
+  /* The design gives this track 24px and puts ONE GLYPH in it. The word was
+     rendered beside the mark and clipped on every settled row — measured
+     "✓ confirmed" at scrollWidth 66 in a 24px cell. It survives as the
+     accessible name and the hover title. */
+  const word = acceptedAbsence ? "accepted N/A" : render.word;
 
   return (
     <span
       data-testid="row-mark"
       data-field-state={field.state}
+      title={word}
       className={cx(
-        "flex items-center gap-2 whitespace-nowrap font-sans text-label leading-flat font-semibold",
+        "flex items-center justify-end font-mono text-body leading-flat font-bold",
         render.chrome,
       )}
     >
-      <span aria-hidden className="font-mono">
-        {render.mark}
-      </span>
-      {acceptedAbsence ? "accepted N/A" : render.word}
+      <span aria-hidden>{render.mark}</span>
+      <span className="sr-only">{word}</span>
     </span>
   );
 }

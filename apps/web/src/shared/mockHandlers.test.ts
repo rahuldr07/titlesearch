@@ -130,7 +130,11 @@ describe("demo reset restores every mutable store to its seed", () => {
 
     // The mutations took: draft row, drained ledger, appended timeline event,
     // saved draft label derived from the template's OWN version, audit rows.
-    expect((await getJson<Deliveries>("/api/deliveries")).deliveries.length).toBe(seedDeliveries.length + 1);
+    // TWO deliveries, not one: the reissue files its draft row, and a
+    // release now files the delivery it produced. Before that, signing a
+    // release moved nothing and left the delivered record empty, so the
+    // certified artifact had no screen to appear on.
+    expect((await getJson<Deliveries>("/api/deliveries")).deliveries.length).toBe(seedDeliveries.length + 2);
     const drained = await getJson<Countersigns>("/api/orders/ord_demo_1/countersigns");
     expect(drained.required.every((r) => r.countersigned_by !== null)).toBe(true);
     expect((await getJson<{ events: unknown[] }>("/api/orders/ord_demo_1/timeline")).events.length).toBe(seedTimeline.events.length + 1);

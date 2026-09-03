@@ -89,6 +89,16 @@ export function RulesPanel() {
                     {shown.map((rule) => (
                       <li
                         key={rule.id}
+                        /*
+                         * Named for the machine, not the reader. `e2e-live/`
+                         * asserts this row is ABSENT when core-api is down, and
+                         * an absence assertion is only worth its salt if the
+                         * same selector can find the row when it IS there — so
+                         * the id has to survive a restyle. Keyed on `code`
+                         * rather than `id` because the seeded fixture and the
+                         * live database agree on `R13` and disagree on uuids.
+                         */
+                        data-testid={`rule-row-${rule.code}`}
                         className="flex flex-col gap-4 border-b border-line-subtle px-12 py-8 last:border-b-0"
                       >
                         <div className="flex flex-wrap items-baseline gap-6">

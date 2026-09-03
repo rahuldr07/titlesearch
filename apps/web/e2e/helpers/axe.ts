@@ -1,5 +1,5 @@
 import AxeBuilder from "@axe-core/playwright";
-import { expect, type Page, type TestInfo } from "@playwright/test";
+import { expect, test, type Page, type TestInfo } from "@playwright/test";
 
 /**
  * `axe-core` is a transitive dependency of `@axe-core/playwright`, not a
@@ -146,4 +146,26 @@ export async function expectRouteAccessible(
   await page.goto(route);
   await expect(page.locator("main, header").first()).toBeVisible();
   await expectNoAxeViolations(page, testInfo, options);
+}
+
+/**
+ * Declares one test per route, which is the point: a single test over a loop
+ * would stop at the first failing route and report one page's violations as if
+ * they were the app's. Separate tests give a per-route inventory, and a route
+ * that regresses names itself.
+ *
+ * No sign-in step. The demo session store boots as admin on load, so every
+ * route in the door table is reachable by `goto` alone — the same assumption
+ * `e2e/smoke/routes.spec.ts` already runs on. Seat-scoped scans belong in a
+ * spec that switches seats in-page, not here.
+ */
+export function describeAxeForRoutes(
+  routes: readonly string[],
+  options: AxeScanOptions = {},
+): void {
+  for (const route of routes) {
+    test(`a11y ${route}`, async ({ page }, testInfo) => {
+      await expectRouteAccessible(page, route, testInfo, options);
+    });
+  }
 }

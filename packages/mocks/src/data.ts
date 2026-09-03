@@ -135,6 +135,15 @@ function row(spec: DemoOrderSpec): DemoOrderRow {
 
 export const demoOrders: readonly DemoOrderRow[] = [
   row({
+    id: "ord_real_1", order_ref: "4087333-1", queue_position: null,
+    band: "mine", stage: "review", mine: true, failed: false,
+    addr: "Real search package — Lincoln County", place: "Lincoln County · MO",
+    jurisdiction: "lincoln-mo", county: "Lincoln", state: "MO",
+    product: PRODUCT_NAME, period: PERIOD_LABEL, pages: 104,
+    waited: null, waiting_on: "Real OCR package", state_label: null,
+    stamp_label: "Read by unlimited-ocr", stamp_tone: "settled",
+  }),
+  row({
     id: "ord_demo_1", order_ref: "4176034-1", queue_position: 0,
     band: "mine", stage: "gate", mine: true, failed: false,
     addr: "4152 Creekstone Dr, Demoville GA", place: "Clayton County · GA",
@@ -262,8 +271,65 @@ export const demoOrders: readonly DemoOrderRow[] = [
   }),
 ];
 
+/*
+ * What a release CHANGES. The rows are readonly and static, so a signed
+ * release filed a seal and left the order still reading "Review" in the rail,
+ * the stage strip and every list — the one act in the pipeline that is
+ * supposed to move an order moved nothing. This overlay is that movement.
+ * Session-lived, like the seal it follows.
+ */
+const releasedOverlay = new Map<string, Partial<DemoOrderRow>>();
+
+export function markOrderReleased(id: string, at: string): void {
+  releasedOverlay.set(id, {
+    stage: "delivered",
+    status: "delivered",
+    delivered_at: at,
+    waiting_on: "Released and sealed",
+    state_label: null,
+    stamp_label: "Released · sealed",
+    stamp_tone: "settled",
+  });
+}
+
+export function clearReleasedOverlay(): void {
+  releasedOverlay.clear();
+}
+
+/** Every row, with any release applied. The one list handlers should read. */
+/*
+ * Orders created this session by `POST /api/orders`. The handler minted an
+ * id, returned it and registered it NOWHERE, so the screen it navigated to
+ * asked for `ord_new_1` and the server answered "no such order" — an intake
+ * that completes and then denies its own package.
+ */
+const createdRows: DemoOrderRow[] = [];
+
+export function addCreatedOrder(row: DemoOrderRow): void {
+  createdRows.push(row);
+}
+
+export function clearCreatedOrders(): void {
+  createdRows.length = 0;
+}
+
+export function demoOrderRows(): readonly DemoOrderRow[] {
+  return [...demoOrders, ...createdRows].map((r) => {
+    const over = releasedOverlay.get(r.id);
+    return over === undefined ? r : { ...r, ...over };
+  });
+}
+
+/** An order's reference from its id — the join the wire now carries. */
+export function refOf(orderId: string): string | null {
+  return [...demoOrders, ...createdRows].find((r) => r.id === orderId)?.order_ref ?? null;
+}
+
 export function demoOrderRow(id: string): DemoOrderRow | undefined {
-  return demoOrders.find((r) => r.id === id);
+  const base = [...demoOrders, ...createdRows].find((r) => r.id === id);
+  if (base === undefined) return undefined;
+  const over = releasedOverlay.get(id);
+  return over === undefined ? base : { ...base, ...over };
 }
 
 /**
@@ -317,6 +383,67 @@ export const demoQueue: readonly DemoOrderRow[] = demoOrders
 export const demoOrder: Order = demoOrderEntity(rowOrThrow("ord_demo_1"));
 /** @deprecated See `demoOrder`. */
 export const demoOrder2: Order = demoOrderEntity(rowOrThrow("ord_demo_2"));
+
+import { realPackage } from "./realPackage.js";
+
+/**
+ * The package's five divisions, as PATH HEADS.
+ *
+ * The review screen's `sectionOf` is the path's FIRST SEGMENT and nothing
+ * else, which is why `demoFields` is pathed `mortgages.1.lender` and
+ * `assessment.tax_status`. The extractor emitted every real field under one
+ * flat `package.` prefix, so all 69 landed in a single bucket and the
+ * workstation drew them as one undivided flow of 69 rows with the heading
+ * "Package" — the document's own structure, which the OCR had correctly
+ * captured, thrown away at the last step.
+ *
+ * The fixture's `section` member cannot carry it instead: `Field` has no
+ * `section`, so Zod strips it at the browser boundary, and widening the
+ * contract locally to suit one fixture is forbidden. So the division rides
+ * where the screen already looks for it.
+ *
+ * Unmapped sections throw rather than defaulting: a regenerated
+ * `realPackage.json` that introduces a sixth division must be spelled here,
+ * because the failure mode of a silent fallback is exactly the collapse
+ * above — invisible, and wrong in the direction of "looks fine".
+ */
+const REAL_SECTION_PATH: Readonly<Record<string, string>> = {
+  "ABSTRACTOR CALL BACK SHEET": "callback",
+  "CURRENT VESTING DEED INFORMATION": "vesting",
+  "DEED OF TRUST": "deed_of_trust",
+  "PRIOR DEED": "prior_deed",
+  "JUDGMENTS/LIENS": "judgments",
+};
+
+/**
+ * The real 104-page county package, OCR'd at
+ * projects/ocr/runs/web_1786595970_6ef37d. Values, pages, snippets and
+ * coordinates are all read off the document — nothing here is authored.
+ * Every field is `auto_confirmed`: the pipeline read it and no human has,
+ * which is the only state the OCR output supports. No `asking`, `why` or
+ * `consequence` — those are rulebook prose and this package has no ruling.
+ */
+export const realFields: Field[] = realPackage.fields.map((f) => {
+  const head = REAL_SECTION_PATH[f.section];
+  if (head === undefined) {
+    throw new Error(
+      `realPackage.json: section ${JSON.stringify(f.section)} has no path head. ` +
+        `Add it to REAL_SECTION_PATH in data.ts, or the review screen draws ` +
+        `this package as one undivided list.`,
+    );
+  }
+  return {
+    ...f,
+    order_id: "ord_real_1",
+    path: `${head}.${f.path.replace(/^package\./, "")}`,
+    na_reason: null,
+    state: "auto_confirmed" as const,
+    engine_confidence_raw: null,
+    rule_refs: [] as string[],
+    approved_by: null,
+    approved_at: null,
+  };
+});
 
 /** The live review order — the package `demoFields` and `demoPages` describe. */
 const oid = "ord_demo_1";
@@ -1215,6 +1342,7 @@ export const demoDeliveries: DeliveryWithReport[] = [
     report: {
       id: "rep_1",
       order_id: deliveredOrder.id,
+      order_ref: refOf(deliveredOrder.id),
       version: 1,
       shape: "A",
       rendered_at: "2026-07-24T17:18:20Z",
@@ -1240,6 +1368,7 @@ export const demoDeliveries: DeliveryWithReport[] = [
     report: {
       id: "rep_2",
       order_id: bouncedOrder.id,
+      order_ref: refOf(bouncedOrder.id),
       version: 1,
       shape: "A",
       rendered_at: "2026-07-24T16:02:20Z",
@@ -1264,6 +1393,7 @@ export const demoDeliveries: DeliveryWithReport[] = [
     report: {
       id: "rep_3",
       order_id: complainedOrder.id,
+      order_ref: refOf(complainedOrder.id),
       version: 1,
       shape: "B",
       rendered_at: "2026-07-24T15:48:10Z",
@@ -1288,6 +1418,7 @@ export const demoDeliveries: DeliveryWithReport[] = [
     report: {
       id: "rep_4",
       order_id: complainedOrder.id,
+      order_ref: refOf(complainedOrder.id),
       version: 2,
       shape: "B",
       rendered_at: "2026-07-24T17:17:00Z",
@@ -1505,6 +1636,11 @@ export const demoPages: Record<
     instruments: PackageInstrument[];
   }
 > = {
+  ord_real_1: {
+    total: realPackage.total,
+    pages: realPackage.pages,
+    instruments: realPackage.instruments,
+  },
   [liveOrder.id]: {
     total: liveOrder.pages ?? PACKAGE_PAGES,
     pages: [

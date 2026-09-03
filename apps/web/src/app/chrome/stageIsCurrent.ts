@@ -5,6 +5,7 @@
  * is the one already on screen.
  */
 export function stageIsCurrent(id: string, pathname: string): boolean {
+  if (id === "processing") return /\/orders\/[^/]+\/extraction$/.test(pathname);
   if (id === "review") return /\/orders\/[^/]+\/review$/.test(pathname);
   if (id === "composer") return /\/orders\/[^/]+\/release$/.test(pathname);
   if (id === "delivered") return pathname.startsWith("/delivery");

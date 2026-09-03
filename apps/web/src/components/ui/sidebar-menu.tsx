@@ -67,6 +67,19 @@ export function SidebarMenuLink(props: {
       to={props.to}
       data-slot="sidebar-menu-button"
       data-testid={props.testId}
+      // No `aria-current` here on purpose: TanStack Router's `Link` sets
+      // `aria-current="page"` itself, so the programmatic "you are here" is
+      // already served. A second, prop-driven copy would not be redundant but
+      // WRONG — `active` is this rail's door-level notion (is this door the
+      // SECTION I am in) while the router's is the exact page.
+      //
+      // `activeOptions.exact` is what makes that second half true. Without it
+      // `Link` marks itself current for every DESCENDANT of its href, so the
+      // `/orders/{id}` door announced "you are here" while the reader was on
+      // `/orders/{id}/extraction` or `/review` — measured at four and five
+      // links carrying `aria-current="page"` on one screen. The comment above
+      // asserted an exact match that the router was not performing.
+      activeOptions={{ exact: true }}
       data-active={props.active}
       className={cx(
         "tp-state tp-press flex h-19 w-full items-center gap-4 overflow-hidden rounded-lg px-6",

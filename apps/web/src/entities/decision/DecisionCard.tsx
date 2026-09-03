@@ -1,18 +1,22 @@
 import type { Field, FieldReading } from "@titlepipe/contract";
 import { readCited } from "../../shared/provenance";
-import { cx } from "../../components/ui";
 import { FieldValueView } from "../field/FieldValueView";
 import { ReadingPair } from "../field/ReadingPair";
 import { StatePill } from "../field/StatePill";
 import { DecisionQuestion } from "./DecisionQuestion";
 
 /**
- * The open decision. This card is the screen's one accent spend — the rail
- * and the field name are accent here and nowhere else, and the actions are
- * handed in rather than built: a card that rendered its own primary button
- * would spend the accent twice. `asking` and `why` are server-authored and
- * passed straight through — see DecisionQuestion, which refuses to compose
- * them.
+ * The open decision. It carries NO chrome of its own — no fill, no border,
+ * no radius, no shadow. RECIPES §Open decision: "3px left rail, **no fill
+ * box**", and the rail belongs to `DecisionPanel`, which owns the whole open
+ * decision including the excerpt and the editor beneath this block. A card
+ * here would put a box inside that rail and nest one surface in another.
+ *
+ * The field name is the screen's accent spend alongside that rail, and the
+ * actions are handed in rather than built: a block that rendered its own
+ * primary button would spend the accent twice. `asking` and `why` are
+ * server-authored and passed straight through — see DecisionQuestion, which
+ * refuses to compose them.
  */
 export type DecisionCardProps = {
   readonly field: Field;
@@ -57,10 +61,7 @@ export function DecisionCard({
     <section
       data-decision-card
       data-field-path={field.path}
-      className={cx(
-        "flex flex-col gap-8 rounded-lg border border-l-3 bg-surface-panel p-12 shadow-card",
-        "border-line-strong border-l-action",
-      )}
+      className="flex flex-col gap-8"
     >
       <header className="flex items-start justify-between gap-8">
         <span
@@ -93,7 +94,7 @@ export function DecisionCard({
       <FieldValueView
         value={readCited(field)}
         onOpenCitation={onOpenCitation}
-        className="[&>span:first-child]:text-title"
+        className="[&>span:first-child]:text-title [&>span:first-child]:font-semibold"
       />
 
       {readings !== undefined && (

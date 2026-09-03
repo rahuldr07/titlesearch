@@ -1,3 +1,4 @@
+import { realPackage } from "./realPackage.js";
 import { http, HttpResponse } from "msw";
 import type {
   CompositionResponse,
@@ -15,7 +16,7 @@ import type {
   ArtifactsResponse,
   CountersignsResponse,
 } from "@titlepipe/contract";
-import { demoOrders, demoDeliveries, demoFields, demoTimelines, resetDemoTimelines } from "./data.js";
+import { demoOrders, demoOrderRows, markOrderReleased, clearReleasedOverlay, refOf, demoDeliveries, demoFields, demoTimelines, resetDemoTimelines } from "./data.js";
 import { guard } from "./guard.js";
 import { appendAudit, auditActor } from "./audit.js";
 import { TEMPLATE_VERSION } from "./templates.js";
@@ -246,6 +247,7 @@ const seals = new Map<string, { sha256: string; at: string; version: number }>()
  */
 export function resetDesignStores(): void {
   deliveryStore.splice(0, deliveryStore.length, ...seedDeliveries());
+  clearReleasedOverlay();
   reissueCount = 0;
   seals.clear();
   countersignStore.clear();
@@ -254,7 +256,57 @@ export function resetDesignStores(): void {
 }
 
 const composition = (orderId: string): CompositionResponse =>
-  orderId === CLEARED_ORDER_ID ? clearedComposition(orderId) : blockedComposition(orderId);
+  orderId === CLEARED_ORDER_ID
+    ? clearedComposition(orderId)
+    : orderId === "ord_real_1"
+      ? realComposition(orderId)
+      : blockedComposition(orderId);
+
+/**
+ * The real package's own sheet. `blockedComposition` is 4176034-1's document
+ * reused as a stand-in for every uncleared order, which on the real package
+ * put ANOTHER ORDER'S report on the compiler — the one thing a title
+ * deliverable may never do. These blocks follow the package's own partition:
+ * each value joins the instrument whose page range contains its citation.
+ *
+ * Three gates fail because the checks behind them have not been run on this
+ * package, and saying so is the honest answer; two pass on facts the
+ * extraction actually establishes.
+ */
+function realComposition(orderId: string): CompositionResponse {
+  const filedSeal = seals.get(orderId);
+  const gates: CompositionResponse["gates"] = [
+    { id: "g1", label: "Every flagged decision answered", passed: true, detail: "nothing was queued for review" },
+    { id: "g2", label: "Every value carries a citation", passed: true, detail: `${String(realPackage.fields.length)} of ${String(realPackage.fields.length)} carry a page and a region` },
+    /*
+     * STAND-INS, by owner instruction 2026-09-02, so the real package can be
+     * walked end to end. Each says on the screen that it was not performed —
+     * a gate that passes silently would be this fixture asserting a chain
+     * analysis nobody ran, and that is the claim a title report may never
+     * make. Re-close these the moment the stages exist.
+     */
+    { id: "g3", label: "Chain of title unbroken through the statutory period", passed: true, detail: "NOT PERFORMED — stand-in for the demo; no chain analysis exists yet" },
+    { id: "g4", label: "T1 second read countersigned", passed: true, detail: "NOT PERFORMED — no ruinous-exposure classification exists, so nothing was classified or countersigned" },
+    { id: "g5", label: "Completeness gate cleared", passed: true, detail: "NOT PERFORMED — stand-in for the demo; no completeness check exists yet" },
+  ];
+  return {
+    order_id: orderId,
+    template_version: TEMPLATE_VERSION,
+    blocks: realPackage.composition.blocks.map((b) => ({
+      ...b,
+      values: b.values.map((v) => ({ ...v, field_id: null })),
+    })),
+    gates,
+    releasable: true,
+    blocked_reason: null,
+    blocked_door: null,
+    /* The filed seal, not a literal null — the screen reads these two to
+       decide watermark vs stamp, and hardcoding null left a released order
+       still drawing DRAFT. */
+    seal_sha256: filedSeal?.sha256 ?? null,
+    released_at: filedSeal?.at ?? null,
+  };
+}
 
 /** A settled row — no pending flag, no jump target. */
 const row = (label: string, value: string): ManifestValue => ({
@@ -449,7 +501,7 @@ export const designHandlers = [
     const q = url.searchParams.get("q") ?? "";
     const filter = (url.searchParams.get("filter") ?? "all") as OrderFilter;
     const page = Math.max(1, Number(url.searchParams.get("page") ?? "1") || 1);
-    const rows = demoOrders.map(toRow).filter((r) => inFilter(r, filter) && matches(r, q));
+    const rows = demoOrderRows().map(toRow).filter((r) => inFilter(r, filter) && matches(r, q));
     const page_count = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
     const clamped = Math.min(page, page_count);
     const body: OrdersPageResponse = {
@@ -478,7 +530,7 @@ export const designHandlers = [
     if (!body?.signature) {
       return HttpResponse.json({ error: "a release is refused without its signature" }, { status: 422 });
     }
-    if (orderId !== CLEARED_ORDER_ID) {
+    if (orderId !== CLEARED_ORDER_ID && orderId !== "ord_real_1") {
       // The count is the composition's own — quoted, so a countersign filed
       // live cannot leave this sentence claiming a gate that since closed.
       const open = blockedComposition(orderId).gates.filter((g) => !g.passed).length;
@@ -495,9 +547,10 @@ export const designHandlers = [
     }
     // The digest is over the composed manifest, which is what the seal claims
     // to fix. Seeded from the blocks so it could not be mistaken for a nonce.
+    const composed = orderId === "ord_real_1" ? realComposition(orderId) : clearedComposition(orderId);
     const filed = {
       sha256: fixtureDigest(
-        clearedComposition(orderId)
+        composed
           .blocks.map((b) => `${b.numeral}:${b.title}:${b.values.map((v) => `${v.label}=${v.value}`).join(";")}`)
           .join("|"),
       ),
@@ -505,6 +558,37 @@ export const designHandlers = [
       version: 1,
     };
     seals.set(orderId, filed);
+    /*
+     * A release MOVES the order. Filing only the seal left it reading
+     * "Review" everywhere but the certificate — and left the delivered
+     * record with nothing in it, so the artifact was unreachable.
+     */
+    markOrderReleased(orderId, filed.at);
+    deliveryStore.unshift({
+      id: `del_${orderId}`,
+      report_id: `rep_${orderId}`,
+      method: "portal",
+      status: "acknowledged",
+      attempted_at: filed.at,
+      delivered_at: filed.at,
+      evidence: "filed in this session",
+      receipt: [
+        { id: "signed", at: filed.at, what: "Release signed & sealed", who: `${body.signature} · signed on this screen`, done: true },
+        { id: "digest", at: filed.at, what: "SHA-256 digest recorded", who: "seal filed on the composition", done: true },
+        { id: "transmit", at: filed.at, what: "Transmitted · portal", who: "portal accepted", done: true },
+        { id: "ack", at: filed.at, what: "Client acknowledged receipt", who: "authorized user", done: true },
+      ],
+      report: {
+        id: `rep_${orderId}`,
+        order_id: orderId,
+        order_ref: refOf(orderId),
+        version: filed.version,
+        shape: "A",
+        rendered_at: filed.at,
+        supersedes: null,
+        reason: null,
+      },
+    });
     // A release is a moment of record — the audit ledger appends live.
     appendAudit(auditActor(request), "release_executed", "orders", orderId);
     return HttpResponse.json({
@@ -524,6 +608,28 @@ export const designHandlers = [
    */
   http.get("/api/orders/:id/artifacts", ({ params }) => {
     const orderId = String(params["id"]);
+    /*
+     * The real package's artifact is the actual file — `/scan/package.pdf`,
+     * the 8 MB bundle the readings were taken from, served by the dev
+     * middleware from outside the tree. Every other order's artifact is a
+     * fixture row with a synthetic digest; this one points at something a
+     * reader can open, which is the whole reason the order exists.
+     */
+    const realSeal = orderId === "ord_real_1" ? seals.get(orderId) : undefined;
+    if (realSeal !== undefined) {
+      const real: ArtifactsResponse = {
+        artifacts: [{
+          id: "art_real_1",
+          report_id: "rep_real_1",
+          filename: "4087333-1 - Search Package.pdf",
+          media_type: "application/pdf",
+          bytes: 8_092_395,
+          sha256: realSeal.sha256,
+          href: "/scan/package.pdf",
+        }],
+      };
+      return HttpResponse.json(real);
+    }
     const body: ArtifactsResponse = {
       artifacts: demoDeliveries
         .flatMap((delivery) => {
@@ -533,7 +639,10 @@ export const designHandlers = [
           return [{
             id: `art_${delivery.report_id}`,
             report_id: delivery.report_id,
-            filename: `${orderId}-title-report-v${String(report.version)}.pdf`,
+            /* The delivered file is named by the ORDER REF, as the client
+               receives it — `ord_demo_12-title-report-v1.pdf` put an internal
+               id on a document that leaves the building. */
+            filename: `${report.order_ref ?? orderId}-title-report-v${String(report.version)}.pdf`,
             media_type: "application/pdf",
             bytes: 486_112 + report.version * 2_048,
             sha256: fixtureDigest(`${delivery.report_id}:v${String(report.version)}`),
@@ -639,6 +748,7 @@ export const designHandlers = [
     const report = {
       id: `rep_reissue_${String(reissueCount)}`,
       order_id: released.order_id,
+      order_ref: refOf(released.order_id),
       version: supersedes + 1,
       shape: released.shape,
       rendered_at: new Date().toISOString(),

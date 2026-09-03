@@ -11,6 +11,9 @@ export function CardHeader({ children, className }: SlotProps) {
       data-slot="card-header"
       className={cx(
         "flex items-center justify-between gap-6 border-b border-line-subtle bg-surface-sunken px-12 py-8",
+        /* ink-MUTED, not the design's `#8A8E98` (= ink-faint): at 11px that is
+           ~3.2:1, below WCAG 1.4.3's 4.5:1, and `field-chrome.ts` had already
+           made this exact call for form labels. */
         "font-sans text-label leading-flat font-bold text-ink-muted",
         className,
       )}
