@@ -1,7 +1,8 @@
 # TitlePipe Core API.
 #
 # Build context is the repository root, because the service depends on
-# `libs/domain` by path and a narrower context could not see it.
+# `libs/domain` and `libs/service-kit` by path, and a narrower context could not
+# see them.
 #
 #   docker build -f infra/containers/Dockerfile.core-api -t titlepipe/core-api:dev .
 #
@@ -32,11 +33,13 @@ WORKDIR /build
 # Manifests first, so a source-only change does not invalidate the dependency
 # layer.
 COPY libs/domain/pyproject.toml libs/domain/
+COPY libs/service-kit/pyproject.toml libs/service-kit/
 COPY services/core-api/pyproject.toml services/core-api/uv.lock services/core-api/
 
 # The path dependency must exist before resolution, but its sources are copied
 # after, so editing domain code does not rebuild the wheel cache.
 COPY libs/domain/ libs/domain/
+COPY libs/service-kit/ libs/service-kit/
 COPY services/core-api/ services/core-api/
 
 WORKDIR /build/services/core-api

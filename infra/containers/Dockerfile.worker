@@ -1,9 +1,9 @@
-# TitlePipe render worker.
+# TitlePipe worker.
 #
 # Build context is the repository root, because the service depends on
-# `libs/domain` by path.
+# `libs/domain` and `libs/service-kit` by path.
 #
-#   docker build -f infra/containers/Dockerfile.render-svc -t titlepipe/render-svc:dev .
+#   docker build -f infra/containers/Dockerfile.worker -t titlepipe/worker:dev .
 #
 # A worker, not a server: no port is exposed and nothing listens. Its health
 # check is the `check` command, which validates configuration and exits.
@@ -26,11 +26,13 @@ ENV UV_COMPILE_BYTECODE=1     UV_LINK_MODE=copy     UV_PYTHON_DOWNLOADS=never \
 WORKDIR /build
 
 COPY libs/domain/pyproject.toml libs/domain/
-COPY services/render-svc/pyproject.toml services/render-svc/uv.lock services/render-svc/
+COPY libs/service-kit/pyproject.toml libs/service-kit/
+COPY services/worker/pyproject.toml services/worker/uv.lock services/worker/
 COPY libs/domain/ libs/domain/
-COPY services/render-svc/ services/render-svc/
+COPY libs/service-kit/ libs/service-kit/
+COPY services/worker/ services/worker/
 
-WORKDIR /build/services/render-svc
+WORKDIR /build/services/worker
 RUN uv sync --frozen --no-dev --no-editable
 
 # ---------------------------------------------------------------- runtime ---
@@ -52,6 +54,6 @@ USER titlepipe
 # Configuration validity is the only thing this worker can truthfully assert
 # at this gate. `check` exits non-zero on invalid configuration, so a
 # misconfigured replica is reported unhealthy rather than left to look idle.
-HEALTHCHECK --interval=60s --timeout=10s --start-period=5s --retries=3     CMD ["titlepipe-render", "check"]
+HEALTHCHECK --interval=60s --timeout=10s --start-period=5s --retries=3     CMD ["titlepipe-worker", "check"]
 
-CMD ["titlepipe-render", "run"]
+CMD ["titlepipe-worker", "run"]
