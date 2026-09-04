@@ -1,0 +1,66 @@
+[project]
+name = "titlepipe-worker"
+version = "0.1.0"
+description = "TitlePipe worker — validation, segmentation, extraction, assembly, routing, DOCX generation, PDF conversion, report versioning."
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "titlepipe-domain",
+    "titlepipe-service-kit",
+    "pydantic==2.13.*",
+    "pydantic-settings==2.14.*",
+    "structlog>=26.1,<27",
+]
+
+# ONE worker, not two. `extraction-svc` and `render-svc` were two uv projects,
+# two locks, two images and two CI matrix entries whose only real difference
+# was six settings fields — their CLIs differed by two log fields and their
+# telemetry packages were byte-identical. Both halves are queue-driven, both
+# are I/O-bound, and neither has a work loop yet, so the split was paying two
+# builds and two supply chains for a boundary nothing had yet crossed.
+#
+# Gate 1 is the worker shell. The heavy native stack lands with the code that
+# uses it: pikepdf, pypdfium2, pdfplumber, pillow and the provider SDKs at
+# Gate 5/7; docxtpl, python-docx, boto3 and httpx at Gate 8. PaddleOCR in
+# particular only ever enters the environment that needs its native stack.
+# Gotenberg is never a Python dependency — it is a pinned, network-restricted
+# container declared in infra/compose. No LangChain, no PyMuPDF.
+
+[project.scripts]
+titlepipe-worker = "titlepipe_worker.cli:run"
+
+[dependency-groups]
+dev = [
+    "ruff==0.15.*",
+    "pyright==1.1.*",
+    "pytest==9.1.*",
+    "pytest-asyncio==1.4.*",
+    "pytest-cov==7.*",
+    "titlepipe-test-support",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/titlepipe_worker"]
+
+[tool.uv.sources]
+titlepipe-domain = { path = "../../libs/domain", editable = true }
+titlepipe-service-kit = { path = "../../libs/service-kit", editable = true }
+titlepipe-test-support = { path = "../../libs/test-support", editable = true }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --strict-markers --strict-config"
+asyncio_mode = "strict"
+
+[tool.pyright]
+include = ["src", "tests"]
+typeCheckingMode = "strict"
+pythonVersion = "3.13"
+reportMissingTypeStubs = false
+
+[[tool.pyright.executionEnvironments]]
+root = "tests"
+reportUnusedFunction = false

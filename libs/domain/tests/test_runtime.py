@@ -34,6 +34,7 @@ def test_every_deployable_has_a_name() -> None:
         "blind-api",
         "extraction-worker",
         "render-worker",
+        "worker",
     }
 
 
