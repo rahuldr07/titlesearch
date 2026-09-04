@@ -23,8 +23,7 @@ PROJECTS = (
     "libs/service-kit",
     "services/core-api",
     "services/blind-svc",
-    "services/extraction-svc",
-    "services/render-svc",
+    "services/worker",
 )
 
 
