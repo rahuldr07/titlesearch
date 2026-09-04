@@ -54,10 +54,13 @@ import os
 from logging.config import fileConfig
 
 from alembic import context
+from alembic.script import ScriptDirectory
 from sqlalchemy import engine_from_config, pool, text
+from sqlalchemy.engine import Connection
 
 from titlepipe_core.db.engine import DENY_SENTINEL_OPTIONS
 from titlepipe_core.db.models import Base
+from titlepipe_core.db.rls_coverage import assert_rls_coverage
 
 # `roles.sql` creates it; `tests/test_roles.py` proves nothing else can become
 # it. Spelled here rather than imported from `conftest.py`, which is test-only
@@ -206,6 +209,50 @@ def run_migrations_offline() -> None:
     )
 
 
+def _assert_coverage_at_head(connection: Connection) -> None:
+    """`assert_rls_coverage`, but only when the run finished ON a head.
+
+    ---------------------------------------------------------------------------
+    🔴 THE INVARIANT BELONGS TO HEAD, NOT TO EVERY POINT IN THE CHAIN, AND
+       ASSERTING IT UNCONDITIONALLY BREAKS THE CHAIN.
+    ---------------------------------------------------------------------------
+    MEASURED on this tree, with the assertion called unconditionally: **two
+    tests fail**, and both are correct behaviour being refused —
+
+        tests/test_forced_rls_and_grants.py
+          ::test_downgrading_only_0002_removes_every_policy_grant_and_force
+          ::test_the_migration_refuses_when_the_schema_grant_did_not_land
+
+    `0001` creates the seven tables and `0002` isolates them, so **at revision
+    `0001` the invariant is legitimately false** — that is what the split between
+    the two revisions IS, and `0002`'s own docstring says so: it exists so that
+    "the tables exist" and "the tables are isolated" are separately reversible.
+    An unconditional check makes `downgrade 0002` and `upgrade 0001` impossible,
+    which is a coverage check that has quietly become a chain-shape check.
+
+    So the condition is the state the database ends the run IN, not the direction
+    it travelled: if the current revision is one of the script directory's heads,
+    this is a database somebody intends to RUN, and the invariant holds there or
+    the run is refused. `downgrade base` ends at `None`, a partial upgrade or
+    downgrade ends mid-chain, and neither is asserted.
+
+    `get_heads()` rather than `get_current_head()`: the latter raises when the
+    chain has more than one head, which is the ordinary state while several
+    workers each add a migration, and a check that crashed on that would be a
+    check everyone deletes.
+
+    WHAT THE CONDITION COSTS, stated rather than left to be discovered. A
+    deliberate `alembic upgrade <mid-chain revision>` is not asserted, so a
+    deployment pinned to a revision that is not a head does not get this check at
+    migration time. `lifespan.py` is what covers that case, and it covers it for
+    every start of every replica rather than once at deploy.
+    """
+    current = context.get_context().get_current_revision()
+    heads = ScriptDirectory.from_config(config).get_heads()
+    if current is not None and current in heads:
+        assert_rls_coverage(connection)
+
+
 def run_migrations_online() -> None:
     """Connect as `titlepipe_migration`, become `titlepipe_owner`, then migrate."""
     configuration = dict(config.get_section(config.config_ini_section) or {})
@@ -268,6 +315,27 @@ def run_migrations_online() -> None:
 
             with context.begin_transaction():
                 context.run_migrations()
+
+                # 🔴 THE COVERAGE ASSERTION, INSIDE THE MIGRATION'S OWN
+                # TRANSACTION. PLAN §5 rule 4's migration-time half.
+                #
+                # A migration that creates a tenant-scoped table and forgets
+                # `ENABLE`, `FORCE` or the policy raises here, and because this
+                # is inside `begin_transaction()` the whole run rolls back with
+                # it. Checking after the commit would leave the database in the
+                # un-isolated state the check just refused, with
+                # `alembic_version` claiming the revision landed.
+                #
+                # It runs as `titlepipe_owner` — who the `SET ROLE` above made
+                # this connection — which reads `pg_class` and `pg_policies` for
+                # everything in the schema.
+                #
+                # WHAT THIS DOES NOT CATCH, and why `lifespan.py` runs the same
+                # check again at boot: a table that arrived by any path that was
+                # not this one. This only ever inspects a database somebody
+                # migrated, so it catches the author who used the migration and
+                # nobody else.
+                _assert_coverage_at_head(connection)
     finally:
         connectable.dispose()
 
