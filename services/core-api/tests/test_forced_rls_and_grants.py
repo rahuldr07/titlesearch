@@ -104,6 +104,7 @@ from uuid import UUID
 import pytest
 from alembic import command
 from alembic.config import Config
+from minimal_rows import insert_orders_returning
 from sqlalchemy import Connection, Engine, text
 from sqlalchemy.exc import DBAPIError
 
@@ -772,7 +773,7 @@ def _seed_two_tenants(engine: Engine) -> dict[UUID, UUID]:
         connection.execute(text("DELETE FROM orders"))
         for tenant in (TENANT_ONE, TENANT_TWO):
             row_id = connection.execute(
-                text("INSERT INTO orders (tenant_id) VALUES (:tenant) RETURNING id"),
+                text(insert_orders_returning("id", "tenant")),
                 {"tenant": tenant},
             ).scalar_one()
             written[UUID(str(row_id))] = tenant

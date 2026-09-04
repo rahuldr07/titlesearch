@@ -55,6 +55,7 @@ from typing import NamedTuple
 from uuid import UUID
 
 import pytest
+from minimal_rows import insert_orders_returning
 from sqlalchemy import Engine, select, text
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -262,7 +263,7 @@ def _seed_two_tenants(engine: Engine) -> Mapping[UUID, UUID]:
     with engine.begin() as connection:
         connection.execute(text("DELETE FROM orders"))
         rows = connection.execute(
-            text("INSERT INTO orders (tenant_id) VALUES (:one), (:two) RETURNING tenant_id, id"),
+            text(insert_orders_returning("tenant_id, id", "one", "two")),
             {"one": TENANT_ONE, "two": TENANT_TWO},
         ).all()
     return {UUID(str(row[0])): UUID(str(row[1])) for row in rows}

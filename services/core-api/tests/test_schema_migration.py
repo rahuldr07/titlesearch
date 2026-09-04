@@ -90,7 +90,27 @@ IDENTITY_COLUMNS = frozenset({"id", "created_at"})
 # `0002`.
 EXPECTED_COLUMNS: dict[str, frozenset[str]] = {
     "tenants": IDENTITY_COLUMNS,
-    "orders": IDENTITY_COLUMNS | {"tenant_id"},
+    # `0008` fills the skeleton's three-column `orders` out to the domain table
+    # `models/orders.py` describes. `product_id`, `frozen_config_version_id` and
+    # `period_label` are NOT here: they belong to the intake layer, which is built
+    # under assumption, and `0014` adds them so that reversing that ruling is a
+    # matter of dropping two revisions rather than editing this one.
+    "orders": IDENTITY_COLUMNS
+    | {
+        "tenant_id",
+        "client_id",
+        "external_ref",
+        "jurisdiction",
+        "state_code",
+        "county",
+        "status",
+        "page_count",
+        "arrived_at",
+        "accepted_at",
+        "delivered_at",
+        "extraction_released_at",
+        "extraction_released_by",
+    },
     "packages": IDENTITY_COLUMNS | {"tenant_id"},
     "pages": IDENTITY_COLUMNS | {"tenant_id"},
     "fields": IDENTITY_COLUMNS | {"tenant_id", "na_reason"},
