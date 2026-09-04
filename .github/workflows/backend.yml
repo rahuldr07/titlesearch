@@ -187,8 +187,7 @@ jobs:
           - libs/service-kit
           - services/core-api
           - services/blind-svc
-          - services/extraction-svc
-          - services/render-svc
+          - services/worker
     steps:
       - uses: actions/checkout@v4
 
@@ -263,7 +262,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        service: [core-api, blind-svc, extraction-svc, render-svc]
+        service: [core-api, blind-svc, worker]
     steps:
       - uses: actions/checkout@v4
 
@@ -379,14 +378,10 @@ jobs:
               test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8100/docs)" = 404
               docker rm -f probe
               ;;
-            extraction-svc)
-              docker run --rm -e TITLEPIPE_EXTRACTION_ENVIRONMENT=production \
-                "${image}" titlepipe-extraction check
-              ;;
-            render-svc)
-              docker run --rm -e TITLEPIPE_RENDER_ENVIRONMENT=production \
-                -e TITLEPIPE_RENDER_GOTENBERG_URL=http://gotenberg.internal:3000 \
-                "${image}" titlepipe-render check
+            worker)
+              docker run --rm -e TITLEPIPE_WORKER_ENVIRONMENT=production \
+                -e TITLEPIPE_WORKER_GOTENBERG_URL=http://gotenberg.internal:3000 \
+                "${image}" titlepipe-worker check
               ;;
           esac
 
@@ -400,8 +395,7 @@ jobs:
           image="titlepipe/${{ matrix.service }}:${{ github.sha }}"
           case "${{ matrix.service }}" in
             core-api|blind-svc) probe=(timeout 20 docker run --rm "${image}") ;;
-            extraction-svc)     probe=(docker run --rm "${image}" titlepipe-extraction check) ;;
-            render-svc)         probe=(docker run --rm "${image}" titlepipe-render check) ;;
+            worker)             probe=(docker run --rm "${image}" titlepipe-worker check) ;;
           esac
           if output="$("${probe[@]}" 2>&1)"; then
             echo "::error::image started with no environment configured"

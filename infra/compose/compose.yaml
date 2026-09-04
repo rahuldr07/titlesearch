@@ -1,8 +1,8 @@
-# Gate 1 compose: build and run the four service shells, nothing more.
+# Gate 1 compose: build and run the three service shells, nothing more.
 #
 #   docker compose -f infra/compose/compose.yaml build
 #   docker compose -f infra/compose/compose.yaml up -d core-api blind-api
-#   docker compose -f infra/compose/compose.yaml run --rm extraction-worker check
+#   docker compose -f infra/compose/compose.yaml run --rm worker check
 #
 # No PostgreSQL here, and that is still true — but the reason has narrowed, so
 # read the current one rather than the original.
@@ -79,14 +79,15 @@ services:
     networks:
       - blind
 
-  extraction-worker:
+  worker:
     build:
       context: ../..
-      dockerfile: infra/containers/Dockerfile.extraction-svc
-    image: titlepipe/extraction-svc:dev
+      dockerfile: infra/containers/Dockerfile.worker
+    image: titlepipe/worker:dev
     environment:
-      TITLEPIPE_EXTRACTION_ENVIRONMENT: development
-      TITLEPIPE_EXTRACTION_LOG_RENDERER: json
+      TITLEPIPE_WORKER_ENVIRONMENT: development
+      TITLEPIPE_WORKER_LOG_RENDERER: json
+      TITLEPIPE_WORKER_GOTENBERG_URL: http://gotenberg:3000
     read_only: true
     tmpfs:
       - /tmp:size=256m
@@ -98,27 +99,7 @@ services:
       - core
     # `run` exits non-zero until the queue exists (Gate 5). Restarting a
     # deliberately unimplemented loop would just be a crash loop, so it does
-    # not restart; use `run --rm extraction-worker check` at this gate.
-    restart: "no"
-
-  render-worker:
-    build:
-      context: ../..
-      dockerfile: infra/containers/Dockerfile.render-svc
-    image: titlepipe/render-svc:dev
-    environment:
-      TITLEPIPE_RENDER_ENVIRONMENT: development
-      TITLEPIPE_RENDER_LOG_RENDERER: json
-      TITLEPIPE_RENDER_GOTENBERG_URL: http://gotenberg:3000
-    read_only: true
-    tmpfs:
-      - /tmp:size=256m
-    security_opt:
-      - no-new-privileges:true
-    cap_drop:
-      - ALL
-    networks:
-      - core
+    # not restart; use `run --rm worker check` at this gate.
     restart: "no"
 
 networks:
