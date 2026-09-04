@@ -1,0 +1,51 @@
+[project]
+name = "titlepipe-service-kit"
+version = "0.1.0"
+description = "Process scaffolding every TitlePipe deployable runs: typed settings, redacted structured logging, telemetry seams."
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "titlepipe-domain",
+    "pydantic==2.13.*",
+    "pydantic-settings==2.14.*",
+    "structlog>=26.1,<27",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "ruff==0.15.*",
+    "pyright==1.1.*",
+    "pytest==9.1.*",
+    "pytest-cov==7.*",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/titlepipe_service_kit"]
+
+[tool.uv.sources]
+titlepipe-domain = { path = "../domain", editable = true }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --strict-markers --strict-config"
+
+[tool.pyright]
+include = ["src", "tests"]
+typeCheckingMode = "strict"
+pythonVersion = "3.13"
+reportMissingTypeStubs = false
+
+[[tool.pyright.executionEnvironments]]
+root = "tests"
+reportUnusedFunction = false
+
+# This package must never grow a WEB FRAMEWORK dependency. It is imported by the
+# Core API, the Blind API and the worker; FastAPI here would put a web server in
+# the worker image, and a `Request` in this package would make the settings and
+# logging that a worker needs unusable without one. The three runtime
+# dependencies above are the whole allowance: the domain vocabulary, the
+# settings model, and the log pipeline. `tests/test_import_boundary.py` is what
+# refuses a fourth.
