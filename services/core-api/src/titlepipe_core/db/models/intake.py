@@ -87,7 +87,7 @@ class ClientConfigVersion(_TenantRow):
 
     Clients hold only OVERRIDES. An edit publishes a NEW version; an order
     FREEZES a version at intake, so a later edit can never reach an in-flight
-    order (`orders.frozen_config_version_id`, and `0010`'s trigger that refuses
+    order (`orders.frozen_config_version_id`, and `0051`'s trigger that refuses
     to move it once set). Editing configuration in place is the failure this
     shape exists to prevent — it changes what an order was searched under, after
     it was searched.
@@ -97,7 +97,7 @@ class ClientConfigVersion(_TenantRow):
     a REQUEST in the build report, not a silent omission, and until it lands the
     reference is an unproven residual.
 
-    **ONE CURRENT VERSION PER (client, product)** — `0010`'s PARTIAL unique index
+    **ONE CURRENT VERSION PER (client, product)** — the PARTIAL unique index below
     over `is_current`, not a plain unique constraint, because the whole point is
     that the superseded versions stay.
     """
@@ -121,6 +121,20 @@ class ClientConfigVersion(_TenantRow):
         sa.CheckConstraint(
             "NOT is_current OR published_at IS NOT NULL",
             name="current_means_published",
+        ),
+        # 🔴 DECLARED HERE AND NOT ONLY IN THE MIGRATION, BECAUSE `alembic check`
+        # COMPARES INDEXES. An index the database has and `Base.metadata` does not
+        # is drift at every revision from now on — autogenerate emits a
+        # `drop_index` for it — and the drift would be permanent, since the index
+        # is required. A `UniqueConstraint` cannot express this: the whole design
+        # is that superseded versions STAY, so the uniqueness has to be partial.
+        sa.Index(
+            "ix_client_config_versions_one_current_per_client_product",
+            "tenant_id",
+            "client_id",
+            "product_id",
+            unique=True,
+            postgresql_where=sa.text("is_current"),
         ),
     )
 
@@ -193,7 +207,7 @@ class IntakeSignoff(_TenantRow):
     configuration nobody can name is a set of claims with no baseline to judge
     them against.
 
-    **THE FREEZE IS A TRIGGER, NOT A CONVENTION.** `0010`'s
+    **THE FREEZE IS A TRIGGER, NOT A CONVENTION.** `0051`'s
     `intake_signoff_lines_are_frozen_once_signed` refuses any update to a LINE
     whose parent sign-off carries a `signed_at`. It lives on the child table
     because that is where the edit would land, and it reads the parent rather
@@ -280,7 +294,7 @@ class CompletenessGap(_TenantRow):
     """A gap between what the sign-off CLAIMED and what the package SUPPORTS.
 
     **THE GATE BLOCKS EXTRACTION, AND THE BLOCK IS A TRIGGER ON `orders`.** This
-    table holds the gaps; `0010`'s
+    table holds the gaps; `0051`'s
     `orders_extraction_release_needs_a_closed_gate` is what makes them matter. It
     fires when `orders.extraction_released_at` moves from NULL to non-null and
     refuses if the order has a signed sign-off missing, or any gap here still

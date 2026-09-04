@@ -173,7 +173,7 @@ JUDGMENT_STATUS_LABELS: Final = (
 #
 # `failed_transit` IS A TRANSIT STATE AND NEVER A QUALITY SIGNAL — stated in the
 # contract at `entities.ts:279` and in the plan's §1. Nothing in an enum can
-# enforce that reading; what does is `0009`'s
+# enforce that reading; what does is `0050`'s
 # `ck_deliveries_delivered_at_needs_a_transmitting_status`, which makes
 # `delivered_at` unsettable while the row sits in `failed_transit`, so a retry
 # cannot inherit a delivery instant from the attempt that failed.
