@@ -13,7 +13,15 @@ FROM python:3.13-slim-bookworm AS builder
 
 COPY --from=ghcr.io/astral-sh/uv:0.11.26 /uv /uvx /bin/
 
-ENV UV_COMPILE_BYTECODE=1     UV_LINK_MODE=copy     UV_PYTHON_DOWNLOADS=never
+# The venv is built at the path it will be READ from. uv bakes an ABSOLUTE
+# interpreter path into each console-script trampoline, so a venv synced at
+# /build/... and copied to /app/.venv leaves every entry point pointing at a
+# directory the runtime stage does not have, and exec fails with ENOENT on the
+# interpreter rather than on the script. UV_PYTHON_DOWNLOADS=never already
+# forces the image's own /usr/local/bin/python3.13, so pyvenv.cfg's `home`
+# resolves in the runtime stage too.
+ENV UV_COMPILE_BYTECODE=1     UV_LINK_MODE=copy     UV_PYTHON_DOWNLOADS=never \
+    UV_PROJECT_ENVIRONMENT=/app/.venv
 
 WORKDIR /build
 
@@ -33,7 +41,7 @@ RUN groupadd --system --gid 10001 titlepipe     && useradd --system --uid 10001 
 ENV PATH="/app/.venv/bin:$PATH"     PYTHONUNBUFFERED=1     PYTHONDONTWRITEBYTECODE=1
 
 WORKDIR /app
-COPY --from=builder --chown=titlepipe:titlepipe /build/services/extraction-svc/.venv /app/.venv
+COPY --from=builder --chown=titlepipe:titlepipe /app/.venv /app/.venv
 
 # No ENV default for the deployment environment. The settings model
 # requires it, so a deployment that forgets to set it fails at startup
