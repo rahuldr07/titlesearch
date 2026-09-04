@@ -38,10 +38,10 @@ from fastapi import FastAPI
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from structlog.typing import FilteringBoundLogger
+from titlepipe_service_kit.telemetry.hooks import NullRequestMetrics, RequestMetrics
 
 from titlepipe_core.db import check_database, make_engine, make_sessionmaker
 from titlepipe_core.settings import CoreApiSettings
-from titlepipe_core.telemetry.hooks import NullRequestMetrics, RequestMetrics
 from titlepipe_core.telemetry.logging import get_logger
 from titlepipe_domain import Clock, IdFactory, SystemClock, Uuid4IdFactory
 
