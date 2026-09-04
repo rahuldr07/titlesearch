@@ -32,11 +32,13 @@ above is about.
 
 `HTTPException` IS BANNED IN THIS FILE and everywhere else under `src/` except
 `api/errors.py` — `scripts/check_backend_rules.py` rule 4. What is raised is a
-`DomainError`, which `api/errors.py` maps to a status through `status_for` and
-renders through `envelope`, so the caller gets the same
-`{"error": {code, message, request_id, details}}` shape as every other failure
-in this service and can branch on a `code` that does not move when the wording
-does.
+`DomainError`, which `api/error_envelope.py` maps to a status through
+`status_for` and renders through `envelope`, so the caller gets the same
+`{"error": ..., "code": ..., "request_id": ..., "details": {}}` shape as every
+other failure in this service and can branch on a `code` that does not move when
+the wording does. `error` IS THE SENTENCE AND IS NOT AN OBJECT — the browser
+keeps it only if it is a non-empty string, and that module carries the
+measurement.
 
 ### Retryable and permanent are different answers, and the split is `_RETRYABLE`
 
@@ -90,8 +92,9 @@ from __future__ import annotations
 from fastapi import APIRouter, Request
 
 from titlepipe_core.api.reads import scoped_read
-from titlepipe_core.api.schemas.rules import RulesResponse
+from titlepipe_core.api.schemas.rules import RuleHistoryResponse, RulesResponse
 from titlepipe_core.db import RuleRepository
+from titlepipe_domain import NotFoundError
 
 # `/api` here rather than on each route, and `/health` and `/ready` are NOT under
 # it — `api/routers/health.py` records why: they are platform surface, this is
@@ -133,3 +136,54 @@ async def list_rules(request: Request) -> RulesResponse:
         read=lambda session: RuleRepository(session).list_all(),
     )
     return RulesResponse.from_rows(rows)
+
+
+@router.get(
+    "/rules/{code}",
+    response_model=RuleHistoryResponse,
+    summary="Every version carried under one rule code",
+)
+async def rule_history(request: Request, code: str) -> RuleHistoryResponse:
+    """One code's versions, oldest first, every status.
+
+    **THE 404 IS DECIDED HERE AND NOWHERE BELOW.** `RuleRepository.history_for`
+    returns an empty sequence for a code it does not know and refuses to call that
+    an error, because whether "no rows" is a missing RESOURCE or an empty
+    COLLECTION is a question about the URL, and `db/` cannot see one. The answer
+    for this URL is that it is missing: `/api/rules/{code}` names one rule, and a
+    code the rulebook has never carried is not a rule with no versions. Serving
+    `{"code": "R99", "versions": []}` with a 200 would tell a caller checking
+    whether a rule exists that it does, and there is no other read that would
+    correct them.
+
+    Contrast `GET /api/rules`, which serves `{"rules": []}` with a 200 for an
+    empty rulebook and is right to: that URL names the collection itself, which
+    exists and happens to be empty.
+
+    `NotFoundError` and not `HTTPException` — banned in this file by
+    `scripts/check_backend_rules.py` rule 4 — so the refusal renders through the
+    one envelope with a `NOT_FOUND` code the caller can branch on. The message
+    names the code that was asked for and nothing else: it is client-safe by
+    contract, and the code is already in the caller's own URL.
+
+    **THE RAISE IS OUTSIDE `scoped_read`, LIKE `from_rows` ABOVE.** A 404 is an
+    answer about the data, not a database failure, and putting it inside `read`
+    would run it under that function's `except SQLAlchemyError` — which does not
+    catch a `DomainError` today and would swallow this refusal into a 503 the
+    first time anyone widened it. The empty check needs the rows and nothing else,
+    so it costs nothing to do it after the session has closed.
+
+    `tenant=None` for `list_rules`'s reason: the rulebook is global, and the
+    session sits at the DENY floor reading the one table that floor does not
+    cover.
+    """
+    rows = await scoped_read(
+        request,
+        resource="rulebook",
+        unavailable_message=_UNAVAILABLE_MESSAGE,
+        tenant=None,
+        read=lambda session: RuleRepository(session).history_for(code),
+    )
+    if not rows:
+        raise NotFoundError(f"No rule is carried under the code {code!r}.")
+    return RuleHistoryResponse.from_rows(code, rows)

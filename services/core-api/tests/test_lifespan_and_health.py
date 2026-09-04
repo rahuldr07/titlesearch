@@ -176,6 +176,13 @@ def test_the_rulebook_is_the_only_product_route_and_the_probes_are_not_under_api
     this one names the route that must be there AND keeps the ceiling, so the
     next endpoint added without a plan behind it fails here rather than shipping.
 
+    `GET /api/rules/{code}` is the second, and it arrived through this test —
+    adding the route turned this red, which is the ceiling working. The list is a
+    LITERAL and not a prefix count for that reason: every new endpoint costs one
+    deliberate line here, and a route registered by accident (a stray
+    `include_router`, a path typo that leaves both spellings served) fails rather
+    than passing a `>= 1` check.
+
     `/health` and `/ready` staying out of `/api` is asserted rather than assumed.
     `api/routers/health.py` argues it — they are platform surface, and Plan 03
     authenticates a prefix — and an `include_router` that gave the health router
@@ -184,10 +191,14 @@ def test_the_rulebook_is_the_only_product_route_and_the_probes_are_not_under_api
     paths = route_paths(app)
     assert {"/health", "/ready"} <= paths, f"platform routes missing; saw {sorted(paths)}"
     # `sorted`, because `route_paths` returns a SET and a comprehension over one
-    # yields str-hash order. With a single `/api` path today the comparison is
-    # accidentally stable; the day a second product route lands it would fail
-    # intermittently, on ordering, in a test about which routes exist.
-    assert sorted(path for path in paths if path.startswith("/api")) == ["/api/rules"]
+    # yields str-hash order. THE SECOND PRODUCT ROUTE HAS NOW LANDED, which is what
+    # this comment was written in anticipation of: with one path the comparison was
+    # accidentally stable, and with two an unsorted one would fail intermittently,
+    # on ordering, in a test about which routes exist.
+    assert sorted(path for path in paths if path.startswith("/api")) == [
+        "/api/rules",
+        "/api/rules/{code}",
+    ]
 
 
 def test_docs_are_absent_when_disabled(

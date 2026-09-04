@@ -797,3 +797,106 @@ async def test_a_subclass_of_the_base_names_itself_in_its_own_refusal() -> None:
         f"than the class the caller actually constructed. That is what a hardcoded name at the "
         f"call site does, and it is the reason the helper takes the instance."
     )
+
+
+# `history_for("R13")`'s answer, worked out by hand from `SEED_ROWS` under
+# `ORDER BY version, id`. The three R13 rows and nothing else: R15 shares the
+# table and no code with them, so a `where` that did nothing would return four.
+#
+# The two v1 rows are the whole point of the literal. They tie on `version`, so
+# `ORDER BY version` alone cannot sequence them and only the `id` tiebreak can —
+# and they are WRITTEN higher-id first, so a repository missing that tiebreak
+# returns them in heap order and fails.
+EXPECTED_HISTORY_ORDER = (RULE_R13_V1_LOWER_ID, RULE_R13_V1_HIGHER_ID, RULE_R13_V2)
+
+
+@pytest.mark.asyncio
+async def test_one_code_comes_back_whole_in_its_own_total_order(
+    app_dsn: str, seeded_rulebook: SeededRulebook
+) -> None:
+    """`history_for` — every version of one code, `(version, id)`, nothing else.
+
+    THIS TEST EXISTS BECAUSE THE PARITY FIXTURE CANNOT REPLACE IT, and that was
+    measured rather than assumed. `tests/test_rule_history_contract_parity.py`
+    builds its fixture from model instances, so deleting `history_for`'s
+    `.order_by(...)` outright leaves all twelve of its tests green: a list
+    constructed in Python arrives in the order it was written no matter what the
+    query would have done. Two other mutations to the same endpoint (serving an
+    empty history instead of refusing; echoing the code off `rows[0]`) were caught
+    there, which is what makes the survivor worth a test of its own rather than a
+    note. The order is a property of the SQL and only a database can hold it.
+
+    THREE ROWS AND NOT FOUR. `R15` is in the table under a different code, so the
+    `where` clause is asserted by the length as well as by the sequence — a
+    repository that filtered nothing would come back with it and fail on both.
+
+    `pending` is in the result and is meant to be: `history_for` filters no status,
+    for `list_all`'s reason, and the engineer confirming a pending version is
+    exactly the caller who needs to see it beside what it supersedes. `R13 v2` is
+    the pending row and its presence in `EXPECTED_HISTORY_ORDER` is that ruling.
+
+    Read INSIDE the session block, for `test_the_rulebook_comes_back_in_a_total
+    _order`'s measured reason: attribute expiry is a different property with its
+    own test, and reading outside would fail this one with a
+    `DetachedInstanceError` that names nothing about ordering.
+    """
+    engine = make_engine(app_dsn)
+    try:
+        sessionmaker = make_sessionmaker(engine)
+        async with tenant_session(sessionmaker, None) as session:
+            returned = await RuleRepository(session).history_for("R13")
+            order = [rule.id for rule in returned]
+            legible = [(rule.code, rule.version, str(rule.id)[:8]) for rule in returned]
+    finally:
+        await engine.dispose()
+
+    seeded_row = {row_id: (code, version) for row_id, code, version, _ in SEED_ROWS}
+    expected_legible = [(*seeded_row[row_id], str(row_id)[:8]) for row_id in EXPECTED_HISTORY_ORDER]
+    assert order == list(EXPECTED_HISTORY_ORDER), (
+        f"R13's history came back as {legible}, not {expected_legible}, which is what "
+        f"(version, id) sorts the three seeded R13 rows to. They were WRITTEN in the order "
+        f"{[(code, version, str(row_id)[:8]) for row_id, code, version, _ in SEED_ROWS if code == 'R13']}. "
+        f"No ordering at all gives that write order; `version` alone leaves the two v1 rows "
+        f"unordered and returns the higher id first."
+    )
+    assert {rule.code for rule in returned} == {"R13"}, (
+        f"history_for('R13') returned codes {sorted({rule.code for rule in returned})}; the "
+        f"`where` clause is what keeps R15 out and a sequence assertion alone would not notice "
+        f"it arriving"
+    )
+
+
+@pytest.mark.asyncio
+async def test_a_code_the_rulebook_does_not_carry_comes_back_empty_and_not_as_an_error(
+    app_dsn: str, seeded_rulebook: SeededRulebook
+) -> None:
+    """The repository's half of the 404, which is that it does not make one.
+
+    `db/rules.py::history_for` rules that whether "no rows" means a missing
+    RESOURCE or an empty COLLECTION is a question about a URL, and that `db/`
+    cannot see one — so it answers with an empty sequence and
+    `api/routers/rules.py` decides. This holds the layer boundary from below:
+    a `NotFoundError` raised here would put an HTTP-shaped judgement one layer
+    beneath the only layer allowed to make one, and `test_rule_history_contract
+    _parity.py` would keep passing, because it stubs the read out entirely.
+
+    The seeded fixture is taken so that the empty answer is a fact about the CODE
+    and not about the table. Against an empty rulebook this passes for the wrong
+    reason, which is the vacuous-denial shape `seeded_rulebook`'s docstring
+    records.
+    """
+    engine = make_engine(app_dsn)
+    try:
+        sessionmaker = make_sessionmaker(engine)
+        async with tenant_session(sessionmaker, None) as session:
+            repository = RuleRepository(session)
+            returned = await repository.history_for("R99-NOT-IN-THE-RULEBOOK")
+            present = await repository.history_for("R13")
+    finally:
+        await engine.dispose()
+
+    assert list(returned) == []
+    assert present, (
+        "the rulebook held no R13 either, so the empty answer above is a fact about the table "
+        "rather than about the code that was asked for"
+    )

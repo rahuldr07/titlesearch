@@ -1,0 +1,38 @@
+{
+  "code": "R-001",
+  "versions": [
+    {
+      "id": "00000000-0000-4000-8000-0000000000a1",
+      "code": "R-001",
+      "text": "The grantor is recorded exactly as the instrument spells it.",
+      "origin": "spec",
+      "status": "retired",
+      "jurisdiction_scope": "FL",
+      "version": 1,
+      "confirmed_by": "eng_ada",
+      "source_doc_ref": "PRD §7"
+    },
+    {
+      "id": "00000000-0000-4000-8000-0000000000a2",
+      "code": "R-001",
+      "text": "The grantor is recorded as the instrument spells it, including suffixes.",
+      "origin": "reconciliation",
+      "status": "live",
+      "jurisdiction_scope": "FL/Broward",
+      "version": 2,
+      "confirmed_by": "eng_ada",
+      "source_doc_ref": null
+    },
+    {
+      "id": "00000000-0000-4000-8000-0000000000a3",
+      "code": "R-001",
+      "text": "A third version, raised from an escalation and awaiting an engineer.",
+      "origin": "escalation",
+      "status": "pending",
+      "jurisdiction_scope": null,
+      "version": 3,
+      "confirmed_by": null,
+      "source_doc_ref": null
+    }
+  ]
+}

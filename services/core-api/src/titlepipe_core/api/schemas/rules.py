@@ -122,3 +122,55 @@ class RulesResponse(BaseModel):
         as a response the browser rejects.
         """
         return cls(rules=[RuleResponse.model_validate(row) for row in rows])
+
+
+class RuleHistoryResponse(BaseModel):
+    """Every version carried under one rule code. `GET /api/rules/{code}`.
+
+    **THE ROW SHAPE IS `RuleResponse` AND IS NOT RE-DECLARED HERE.** That model is
+    transcribed from `packages/contract/src/entities.ts` and checked against it by
+    `tests/test_rules_contract_parity.py` and `apps/web/contract-parity.test.ts`
+    together, so reusing it means a rule on this endpoint is the same document as a
+    rule on `/api/rules`, proved by the machine that already exists. A parallel
+    model here would be a second transcription of the same nine columns, and the
+    two would be free to drift with nothing comparing them.
+
+    **`code` IS ECHOED AT THE TOP LEVEL EVEN THOUGH EVERY ELEMENT REPEATS IT**, and
+    that is not redundancy for a reader — it is the only member that survives when
+    the list is empty. It does not survive today, because the router refuses an
+    unknown code with a 404 rather than serving an empty history (`api/routers/
+    rules.py` says why), so the echo is currently provable-equal to every
+    `versions[i].code`. `tests/test_rule_history_contract_parity.py` asserts that
+    equality rather than assuming it: the day a caller is allowed an empty history,
+    the echo is what tells them which code they asked about, and it must already be
+    the asked-for code and not a value read back off the first row.
+
+    `versions`, not `rules`: the members of this list are versions OF one rule, and
+    calling them rules would make `{"rules": [...]}` mean two different sets on two
+    endpoints of the same service.
+
+    NO COUNT FIELD. `len(versions)` is the count, and a second place to compute it
+    is a second place for it to be wrong — CLAUDE.md's "UI never re-derives counts"
+    cuts both ways, and a server that emits a count the client can already see has
+    published a claim it now has to keep true.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    code: str
+    versions: list[RuleResponse]
+
+    @classmethod
+    def from_rows(cls, code: str, rows: Iterable[RuleRow]) -> RuleHistoryResponse:
+        """Map one code's rows onto the wire in the order they arrive.
+
+        `code` comes from the CALLER'S PATH, not from `rows[0].code`. The two are
+        equal on every response this service can produce, and taking it from the
+        row would still be wrong: it would make the echoed value a fact about
+        whatever the query happened to return rather than an answer to what was
+        asked, and it has no value at all to return when the list is empty.
+
+        No re-sort, for `RulesResponse.from_rows`'s reason — `history_for` owns the
+        order and this method preserving it is what keeps that docstring true.
+        """
+        return cls(code=code, versions=[RuleResponse.model_validate(row) for row in rows])
