@@ -13,7 +13,9 @@ src = [
     "services/blind-svc/src",
     "services/extraction-svc/src",
     "services/render-svc/src",
+    "services/worker/src",
     "libs/domain/src",
+    "libs/service-kit/src",
     "libs/test-support/src",
 ]
 
