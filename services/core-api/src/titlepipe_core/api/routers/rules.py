@@ -88,15 +88,10 @@ same reason `RulesResponse.from_rows` does not.
 from __future__ import annotations
 
 from fastapi import APIRouter, Request
-from sqlalchemy.exc import InterfaceError, OperationalError, SQLAlchemyError
-from sqlalchemy.exc import TimeoutError as SQLAlchemyTimeoutError
-from structlog.typing import FilteringBoundLogger
 
+from titlepipe_core.api.reads import scoped_read
 from titlepipe_core.api.schemas.rules import RulesResponse
-from titlepipe_core.db import RuleRepository, tenant_session
-from titlepipe_core.lifespan import get_resources
-from titlepipe_core.telemetry.logging import get_logger
-from titlepipe_domain import DependencyUnavailableError
+from titlepipe_core.db import RuleRepository
 
 # `/api` here rather than on each route, and `/health` and `/ready` are NOT under
 # it — `api/routers/health.py` records why: they are platform surface, this is
@@ -110,79 +105,31 @@ router = APIRouter(prefix="/api", tags=["rules"])
 # they can retry on.
 _UNAVAILABLE_MESSAGE = "The rulebook is temporarily unavailable. Try again shortly."
 
-# The database failures a retry can fix. Everything else `SQLAlchemyError` covers
-# is a fault in this service's own configuration and propagates to a 500 — see
-# the "Retryable and permanent" section above.
-#
-# An ALLOWLIST, not a denylist, and the direction matters. A new SQLAlchemy error
-# class this file has never heard of is more likely to be a defect than an
-# outage, and the failure mode of guessing wrong in this direction is a 500 in a
-# log an operator reads — where guessing wrong in the other is a caller retrying
-# forever against a permanent fault, which is the defect this list exists to
-# close.
-#
-# `SQLAlchemyTimeoutError` is SQLAlchemy's, NOT the builtin: it is what
-# `QueuePool` raises when no connection becomes free inside `pool_timeout`,
-# which is load shedding and is exactly retryable. It is imported under an alias
-# because the unaliased name shadows the builtin that `lifespan.probe_database`
-# catches from `asyncio.timeout`, and two different `TimeoutError`s in one
-# package is how somebody eventually catches the wrong one.
-_RETRYABLE: tuple[type[SQLAlchemyError], ...] = (
-    OperationalError,
-    InterfaceError,
-    SQLAlchemyTimeoutError,
-)
-
-
-def _log() -> FilteringBoundLogger:
-    """Acquired at call time, never bound at import — the same rule `errors.py`
-    and `lifespan.py` state, and for the same reason: a module-level logger pins
-    whatever logging configuration was active first, and two apps in one process
-    must each log under their own settings."""
-    return get_logger(__name__)
-
 
 @router.get("/rules", response_model=RulesResponse, summary="The whole rulebook")
 async def list_rules(request: Request) -> RulesResponse:
     """Every rule, every status, in `RuleRepository.list_all`'s order.
 
-    The sessionmaker comes off the app's resources rather than being built here.
-    A route that built its own engine would open a pool per request and would
-    hold a credential the lifespan never released — `lifespan.py`'s opening is
-    about precisely that.
+    `tenant=None` is passed EXPLICITLY and is not a default. `api/reads.py`
+    records why the parameter has none: `None` here means the session runs at the
+    DENY floor and reads the one table that floor does not cover, and it is the
+    right argument for a global table — but it is the wrong argument for the
+    sixty-nine tenant-scoped reads that follow this one, so it is not the value
+    anybody gets by forgetting.
 
-    An absent sessionmaker means no `app_database_url` was configured, and it is
-    answered with the same failure as a database that will not talk. The two are
-    different to an OPERATOR and identical to a CALLER: in both cases the
-    rulebook cannot be read now and a retry is the reasonable next move. The log
-    lines below distinguish them, which is where the difference belongs.
+    **`RulesResponse.from_rows` IS OUTSIDE `scoped_read` AND THAT IS THE DESIGN.**
+    A `ValidationError` raised here means a label reached the boundary that
+    `packages/contract` does not have — a defect in this service, which
+    `handle_unexpected` renders as a 500. Moving the call inside `read` would put
+    it under that function's `except SQLAlchemyError`, which does not catch a
+    `ValidationError` today, and would become wrong the moment anyone widened it.
+    `api/schemas/rules.py` explains why the boundary catch belongs where it is.
     """
-    resources = get_resources(request.app)
-    sessionmaker = resources.sessionmaker
-    if sessionmaker is None:
-        _log().error("rulebook_read_unconfigured")
-        raise DependencyUnavailableError(_UNAVAILABLE_MESSAGE)
-
-    try:
-        async with tenant_session(sessionmaker, None) as session:
-            rows = await RuleRepository(session).list_all()
-    except SQLAlchemyError as error:
-        retryable = isinstance(error, _RETRYABLE)
-        # Logged for BOTH outcomes, and the `retryable` field is what makes the
-        # two greppable apart. It is also what a narrowed `except` loses: an
-        # `except OperationalError` would let a `ProgrammingError` past this
-        # line entirely, so the permission denial that reaches the 500 would
-        # arrive with no `rulebook_read_failed` beside it naming the table.
-        _log().error("rulebook_read_failed", error_name=type(error).__name__, retryable=retryable)
-        if not retryable:
-            # NOT converted. A permanent fault must not be answered with a
-            # status that invites a retry — `handle_unexpected` renders the 500
-            # and puts the traceback in the log under this request id.
-            raise
-        raise DependencyUnavailableError(_UNAVAILABLE_MESSAGE) from error
-
-    # Outside the `except`, and outside the session block. `make_sessionmaker`
-    # sets `expire_on_commit=False`, so the rows stay readable after
-    # `tenant_session` commits and closes; `tests/test_tenant_session.py` pins
-    # that and it is not re-proved here.
+    rows = await scoped_read(
+        request,
+        resource="rulebook",
+        unavailable_message=_UNAVAILABLE_MESSAGE,
+        tenant=None,
+        read=lambda session: RuleRepository(session).list_all(),
+    )
     return RulesResponse.from_rows(rows)
