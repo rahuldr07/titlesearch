@@ -44,7 +44,27 @@ filter and that the Zod half of that proof never ran on a backend change:
    trigger nobody notices is dead;
 8. the harness INVOKES the contract-parity vitest project from an ENFORCING step.
    `frontend.yml` runs it too and does not watch `services/**`, so the harness is
-   the only place it can execute on the change class that regenerates the fixture.
+   the only place it can execute on the change class that regenerates the fixture;
+9. the `containers` matrix names exactly the set of `infra/containers/Dockerfile.*`,
+   and every one of those builds a `services/<name>` that still holds a
+   `pyproject.toml`. A missing entry is an image nobody builds — no smoke test, no
+   Trivy scan, nothing red to say so;
+10. `check_locks.py` and `audit_dependencies.py` name exactly the set of directories
+   holding a `pyproject.toml`. Both iterate their own list and print success over
+   it, so an unlisted project has no lock gate and no vulnerability scan, and the
+   absence is invisible in a green run.
+
+## CHECKS 9 AND 10 WERE NEEDLED BEFORE BEING TRUSTED
+
+MEASURED 2026-09-04, one injection at a time, each reverted before the next.
+Every one FAILED as intended, and the suite was green before and after:
+
+1. a `Dockerfile.ghost-svc` the matrix does not name — check 9, both halves;
+2. a `render-svc` matrix entry with no Dockerfile — check 9;
+3. a `Dockerfile.render-svc` whose `services/render-svc` does not exist — the
+   literal state this repository was in when these were written;
+4. `services/worker` removed from `check_locks.py`'s `PROJECTS` — check 10;
+5. `services/render-svc` added to `audit_dependencies.py`'s `PROJECTS` — check 10.
 
 ## 🔴 CHECK 2 USED TO ASK WHETHER A NAME APPEARED IN *SOME* `run:` STRING, AND
    FIVE DIFFERENT WORKFLOWS THAT RUN NO GATE AT ALL SATISFIED IT
@@ -128,6 +148,7 @@ and say so; they never pass by default.
 
 from __future__ import annotations
 
+import ast
 import json
 import re
 import shlex
@@ -861,9 +882,7 @@ def test_the_migration_harness_asserts_the_acl_against_the_database_it_builds() 
     `continue-on-error` or sits in a conditional job does not satisfy it.
     """
     enforcing = enforcing_run_blocks(HARNESS_WORKFLOW)
-    assert enforcing, (
-        f"{rel(HARNESS_WORKFLOW)} has no run: step whose failure would fail the run"
-    )
+    assert enforcing, f"{rel(HARNESS_WORKFLOW)} has no run: step whose failure would fail the run"
 
     commands = [command for block in enforcing for command in _invocations(block)]
     assert _is_invoked(HARNESS_ACL_CONTRACT, commands), (
@@ -883,3 +902,130 @@ def test_this_suite_is_running_the_repository_it_is_checking() -> None:
     assert WORKFLOW.is_file(), f"{rel(WORKFLOW)} not found from {Path(__file__)} on {sys.platform}"
     assert PRE_COMMIT.is_file(), f"{rel(PRE_COMMIT)} not found"
     assert HARNESS_WORKFLOW.is_file(), f"{rel(HARNESS_WORKFLOW)} not found"
+
+
+# --- the deployables ----------------------------------------------------------
+#
+# WHY THESE EXIST, MEASURED 2026-09-04: `services/extraction-svc` and
+# `services/render-svc` were retired into a single `services/worker`, and the
+# whole build topology went on naming them. Both Dockerfiles survived and built
+# packages that no longer existed; the `containers` matrix still had four
+# entries; `check_locks.py` and `audit_dependencies.py` still listed the two
+# dead projects and had drifted apart from each other on `libs/service-kit`.
+# `test_the_project_matrix_covers_every_python_project` caught none of it,
+# because it watches one list in one file.
+#
+# The container half is the one that fails LATE otherwise: a stale matrix entry
+# is a build that runs for minutes before failing on a missing COPY source, and
+# a MISSING entry is worse — an image nobody builds, whose smoke test and Trivy
+# scan simply do not run, with nothing red to say so.
+
+CONTAINER_JOB = "containers"
+CONTAINER_MATRIX_KEY = "service"
+CONTAINERS_DIR = REPO_ROOT / "infra" / "containers"
+DOCKERFILE_PREFIX = "Dockerfile."
+
+# The lists that must agree with the working tree for a project to be locked and
+# audited at all. Read as source rather than imported: these are scripts with
+# `main()` entry points, and a test that has to execute a script to find out
+# what it covers has coupled itself to that script staying import-safe.
+PROJECT_LIST_SCRIPTS = ("check_locks.py", "audit_dependencies.py")
+
+
+def dockerfile_services() -> set[str]:
+    """The service each `infra/containers/Dockerfile.<name>` claims to build."""
+    return {
+        path.name[len(DOCKERFILE_PREFIX) :]
+        for path in CONTAINERS_DIR.glob(f"{DOCKERFILE_PREFIX}*")
+        if path.is_file()
+    }
+
+
+def container_matrix() -> list[str]:
+    job = jobs().get(CONTAINER_JOB)
+    assert job is not None, f"{rel(WORKFLOW)} has no {CONTAINER_JOB!r} job"
+    matrix = job.get("strategy", {}).get("matrix", {}).get(CONTAINER_MATRIX_KEY)
+    assert isinstance(matrix, list), (
+        f"{rel(WORKFLOW)}: the {CONTAINER_JOB!r} job has no {CONTAINER_MATRIX_KEY} matrix"
+    )
+    assert matrix, f"{rel(WORKFLOW)}: the {CONTAINER_JOB} {CONTAINER_MATRIX_KEY} matrix is empty"
+    return cast(list[str], matrix)
+
+
+def string_tuple(source: str, name: str, where: str) -> set[str]:
+    """The elements of a module-level `NAME = (...)` tuple of string literals.
+
+    Parsed, not executed. A non-literal element is an assertion failure rather
+    than a silently smaller set, because a list that quietly loses a member is
+    exactly the failure this file exists to catch.
+    """
+    for node in ast.walk(ast.parse(source)):
+        if not isinstance(node, ast.Assign):
+            continue
+        if not any(isinstance(t, ast.Name) and t.id == name for t in node.targets):
+            continue
+        assert isinstance(node.value, ast.Tuple), f"{where}: {name} is not a tuple literal"
+        values: set[str] = set()
+        for element in node.value.elts:
+            assert isinstance(element, ast.Constant), (
+                f"{where}: {name} holds a non-literal element, so this gate cannot read it"
+            )
+            assert isinstance(element.value, str), (
+                f"{where}: {name} holds a non-string element: {element.value!r}"
+            )
+            values.add(element.value)
+        return values
+    raise AssertionError(f"{where}: no module-level {name} assignment")
+
+
+def test_the_container_matrix_names_every_dockerfile_and_only_those() -> None:
+    dockerfiles = dockerfile_services()
+    assert dockerfiles, f"no {DOCKERFILE_PREFIX}* found under {rel(CONTAINERS_DIR)}"
+
+    entries = set(container_matrix())
+    unbuilt = sorted(dockerfiles - entries)
+    stale = sorted(entries - dockerfiles)
+    assert not unbuilt, (
+        f"these Dockerfiles exist and are absent from the {CONTAINER_JOB} matrix in "
+        f"{rel(WORKFLOW)}, so nothing builds, smoke-tests or scans them: {unbuilt}"
+    )
+    assert not stale, (
+        f"the {CONTAINER_JOB} matrix in {rel(WORKFLOW)} names services with no "
+        f"{DOCKERFILE_PREFIX}<name> in {rel(CONTAINERS_DIR)}: {stale}"
+    )
+
+
+def test_every_dockerfile_builds_a_service_that_exists() -> None:
+    """A `Dockerfile.<name>` whose `services/<name>` has been deleted is an image
+    that cannot build. That is the state this gate was written after."""
+    projects = python_projects()
+    orphans = sorted(
+        service for service in dockerfile_services() if f"services/{service}" not in projects
+    )
+    assert not orphans, (
+        f"these Dockerfiles under {rel(CONTAINERS_DIR)} build a services/<name> that holds "
+        f"no pyproject.toml: {orphans}"
+    )
+
+
+def test_the_lock_and_audit_scripts_cover_every_python_project() -> None:
+    """`uv lock --check` and `pip-audit` only reach a project that is named.
+
+    An unlisted project has no lock gate and no vulnerability scan, and neither
+    absence is visible in a green run — the scripts iterate their own list and
+    report success over it.
+    """
+    projects = python_projects()
+    assert projects, "found no pyproject.toml anywhere in the working tree"
+
+    for script in PROJECT_LIST_SCRIPTS:
+        path = REPO_ROOT / "scripts" / script
+        assert path.exists(), f"{rel(path)} does not exist"
+        listed = string_tuple(path.read_text(encoding="utf-8"), "PROJECTS", rel(path))
+        missing = sorted(projects - listed)
+        stale = sorted(listed - projects)
+        assert not missing, (
+            f"{rel(path)}: these directories hold a pyproject.toml and are absent from "
+            f"PROJECTS, so the script reports success without ever checking them: {missing}"
+        )
+        assert not stale, f"{rel(path)}: PROJECTS names directories with no pyproject.toml: {stale}"
