@@ -32,8 +32,6 @@ def test_every_deployable_has_a_name() -> None:
     assert {s.value for s in ServiceName} == {
         "core-api",
         "blind-api",
-        "extraction-worker",
-        "render-worker",
         "worker",
     }
 

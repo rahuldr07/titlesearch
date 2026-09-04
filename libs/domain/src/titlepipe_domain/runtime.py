@@ -53,8 +53,6 @@ class ServiceName(StrEnum):
 
     CORE_API = "core-api"
     BLIND_API = "blind-api"
-    EXTRACTION_WORKER = "extraction-worker"
-    RENDER_WORKER = "render-worker"
     WORKER = "worker"
 
 
