@@ -67,6 +67,17 @@ ignore = [
     "INP001",  # pytest collects test dirs without __init__.py by design
 ]
 
+# Migrations. A migration builds DDL — including plpgsql function bodies that
+# contain SELECT and INSERT — by interpolating module-level constants for type,
+# table and function names. There is no request-scoped or caller-supplied value
+# anywhere in a migration, so S608 has no signal here; it fires on the shape of
+# the string, not on a reachable injection path. The identifiers being
+# interpolated are the reason the constants exist: naming a policy or a type in
+# one place is what keeps upgrade() and downgrade() from drifting apart.
+"services/*/migrations/versions/*.py" = [
+    "S608",    # DDL built from module constants, never from input
+]
+
 [lint.flake8-tidy-imports]
 ban-relative-imports = "all"
 
