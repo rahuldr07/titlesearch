@@ -12,9 +12,9 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 from pydantic_settings import SettingsConfigDict
-from titlepipe_service_kit.settings import SEALED_VALIDATOR, BaseServiceSettings
 
 from titlepipe_domain import Environment, LogRenderer, ServiceName
+from titlepipe_service_kit.settings import SEALED_VALIDATOR, BaseServiceSettings
 
 
 class ExampleSettings(BaseServiceSettings):

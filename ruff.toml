@@ -67,6 +67,18 @@ ignore = [
     "INP001",  # pytest collects test dirs without __init__.py by design
 ]
 
+# Every `titlepipe_*` distribution in this repository is ours, whichever project
+# is being linted. Without this, isort resolves first-party by looking for the
+# module under the project being linted, so `titlepipe_service_kit` sorted into
+# the third-party block in one service and the first-party block in another —
+# the same import in two groups depending on which directory ruff was run from.
+[lint.isort]
+known-first-party = [
+    "titlepipe_domain",
+    "titlepipe_service_kit",
+    "titlepipe_test_support",
+]
+
 [lint.flake8-tidy-imports]
 ban-relative-imports = "all"
 
