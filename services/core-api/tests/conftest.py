@@ -1098,9 +1098,9 @@ def roles_applied(admin_dsn: str, role_passwords: Mapping[str, str]) -> str:
 #
 # REJECTED 2026-08-05: moving the constants and helpers to `libs/test-support`
 # instead. That package's only dependency is `titlepipe-domain`, and
-# `blind-svc`, `extraction-svc` and `render-svc` all depend on it while none of
-# them has a database. Putting `sqlalchemy` and `testcontainers` in there would
-# install a PostgreSQL driver into three services that never open a connection,
+# `blind-svc` and `worker` both depend on it while neither has a database.
+# Putting `sqlalchemy` and `testcontainers` in there would install a PostgreSQL
+# driver into two services that never open a connection,
 # and every one of their locks would carry it. The move becomes right the day a
 # SECOND service needs these DSN rules — at that point the rules are genuinely
 # shared and the dependency earns its place. Not before.

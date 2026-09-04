@@ -1,6 +1,6 @@
 """The framework-free boundary, enforced statically.
 
-`libs/domain` is imported by all four deployables. A framework dependency added
+`libs/domain` is imported by every deployable. A framework dependency added
 here is added everywhere, and — for `boto3`, `workos` or a provider SDK — a
 credential-bearing client becomes reachable from a process that must not have
 one.
@@ -70,10 +70,12 @@ FORBIDDEN_ROOTS = frozenset(
         "prometheus_client",
         "sentry_sdk",
         # Sibling packages: domain must not depend on anything above it.
+        # `titlepipe_worker` is the package the two retired worker shells
+        # collapsed into; it is named here for the same reason they were.
         "titlepipe_core",
         "titlepipe_blind",
-        "titlepipe_extraction",
-        "titlepipe_render",
+        "titlepipe_worker",
+        "titlepipe_service_kit",
         "titlepipe_test_support",
     }
 )
