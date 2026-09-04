@@ -127,7 +127,7 @@ SEEDED_RULES: Final = 5
 # — is still made with `json.loads` on both sides, where no narrowing is needed
 # because nothing is indexed.
 _DOCUMENT: Final = TypeAdapter(dict[str, list[dict[str, object]]])
-_ENVELOPE: Final = TypeAdapter(dict[str, dict[str, object]])
+_ENVELOPE: Final = TypeAdapter(dict[str, object])
 _LOG_RECORD: Final = TypeAdapter(list[dict[str, object]])
 
 
@@ -441,8 +441,8 @@ def test_a_role_that_may_not_read_rules_is_a_permanent_fault_not_a_retryable_one
 
     # Permanent, so it does NOT invite a retry.
     assert response.status_code == 500, response.text
-    assert response.json()["error"]["code"] == "INTERNAL_ERROR"
-    assert response.json()["error"]["code"] != DEPENDENCY_UNAVAILABLE
+    assert response.json()["code"] == "INTERNAL_ERROR"
+    assert response.json()["code"] != DEPENDENCY_UNAVAILABLE
 
     # WHICH failure this was, from the route's own log line. Without this the
     # test cannot tell a live grant refusal from a connection that never opened.
@@ -672,11 +672,18 @@ def _assert_unavailable_envelope(response: Response) -> None:
     assert response.status_code == 503, response.text
     assert response.headers["content-type"].startswith("application/json")
 
-    error = _ENVELOPE.validate_json(response.content)["error"]
+    error = _ENVELOPE.validate_json(response.content)
 
-    assert set(error) == {"code", "message", "request_id", "details"}
+    assert set(error) == {"error", "code", "request_id", "details"}
     assert error["code"] == DEPENDENCY_UNAVAILABLE
     assert error["details"] == {}
+    # The browser keeps `body.error` only while it is a non-empty string
+    # (`apps/web/src/shared/api.ts::readError`); anything else renders as the
+    # bare status line. Asserting the type here is what makes the set-equality
+    # above about the wire the client reads rather than about key spelling.
+    sentence = error["error"]
+    assert isinstance(sentence, str), error
+    assert sentence, error
 
     # The header and the envelope must agree. A hand-written 503 could carry one
     # or the other; only the real middleware pair produces the same id in both.

@@ -14,7 +14,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from pydantic import BaseModel, field_validator
 
-from titlepipe_core.api.errors import (
+from titlepipe_core.api.error_envelope import (
     CODE_INTERNAL_ERROR,
     GENERIC_INTERNAL_MESSAGE,
     sanitise_validation_errors,
@@ -90,9 +90,9 @@ def test_each_domain_error_maps_to_its_documented_status_and_code(
         response = client.get("/raises")
 
     assert response.status_code == status
-    body = response.json()["error"]
+    body = response.json()
     assert body["code"] == code
-    assert body["message"] == "A safe explanation."
+    assert body["error"] == "A safe explanation."
     assert body["request_id"]
     assert body["details"] == {}
 
@@ -108,7 +108,7 @@ def test_domain_error_details_reach_the_caller(app: FastAPI) -> None:
         )
 
     with TestClient(app) as client:
-        body = client.get("/refused").json()["error"]
+        body = client.get("/refused").json()
 
     assert body["code"] == "REFUSED"
     assert body["details"] == {"required": "rule_id"}
@@ -202,12 +202,12 @@ def test_only_a_genuinely_unmapped_error_is_logged_as_unmapped(
     # Arm one: registered. The status and the code prove the mapping was found,
     # so a silent log here is silence about a mapping that exists.
     assert registered.status_code == 503
-    assert registered.json()["error"]["code"] == "DEPENDENCY_UNAVAILABLE"
+    assert registered.json()["code"] == "DEPENDENCY_UNAVAILABLE"
 
     # Arm two: unregistered. 500 AND the log, because 500 alone is what the old
     # condition already produced and is not the thing that regressed.
     assert unregistered.status_code == 500
-    assert unregistered.json()["error"]["code"] == "UNREGISTERED_FAILURE"
+    assert unregistered.json()["code"] == "UNREGISTERED_FAILURE"
     assert "domain_error_unmapped" in shouted, (
         "a DomainError with no entry in DOMAIN_ERROR_STATUS must be reported "
         "loudly; deleting the log is not the fix for the false positive"
@@ -245,8 +245,8 @@ def test_a_registered_503_is_not_reported_as_unmapped(
 
 def test_a_missing_route_uses_the_envelope(client: TestClient) -> None:
     body = client.get("/nope").json()
-    assert body["error"]["code"] == "NOT_FOUND"
-    assert body["error"]["request_id"]
+    assert body["code"] == "NOT_FOUND"
+    assert body["request_id"]
 
 
 def test_a_schema_failure_is_422_and_names_the_field(app: FastAPI) -> None:
@@ -258,7 +258,7 @@ def test_a_schema_failure_is_422_and_names_the_field(app: FastAPI) -> None:
         response = client.post("/needs-reason", json={})
 
     assert response.status_code == 422
-    body = response.json()["error"]
+    body = response.json()
     assert body["code"] == "VALIDATION_FAILED"
     assert body["details"]["errors"][0]["loc"] == ["body", "reason"]
 
@@ -313,9 +313,9 @@ def test_an_unhandled_exception_leaks_nothing_in_production(
         response = client.get("/boom")
 
     assert response.status_code == 500
-    body = response.json()["error"]
+    body = response.json()
     assert body["code"] == CODE_INTERNAL_ERROR
-    assert body["message"] == GENERIC_INTERNAL_MESSAGE
+    assert body["error"] == GENERIC_INTERNAL_MESSAGE
     assert body["details"] == {}
     assert body["request_id"]
 
@@ -335,7 +335,7 @@ def test_an_unhandled_exception_is_diagnosable_in_development(app: FastAPI) -> N
         raise RuntimeError("something specific")
 
     with TestClient(app, raise_server_exceptions=False) as client:
-        body = client.get("/boom").json()["error"]
+        body = client.get("/boom").json()
 
     assert body["code"] == CODE_INTERNAL_ERROR
     assert body["details"]["exception"] == "RuntimeError"
@@ -393,7 +393,7 @@ def test_a_validator_message_never_reaches_the_caller(
     assert response.status_code == 422
     assert "Timothy Buchanan" not in response.text
 
-    errors = response.json()["error"]["details"]["errors"]
+    errors = response.json()["details"]["errors"]
     assert errors == [{"type": "value_error", "loc": ["body", "grantor"]}]
 
 
@@ -417,7 +417,7 @@ def test_an_unhandled_500_carries_the_correlation_header_and_cors(
     assert response.status_code == 500
     assert response.headers["X-Request-ID"] == "trace-500"
     assert response.headers["access-control-allow-origin"] == "https://app.titlepipe.example"
-    assert response.json()["error"]["request_id"] == "trace-500"
+    assert response.json()["request_id"] == "trace-500"
     assert "hunter2" not in response.text
     assert "RuntimeError" not in response.text
 
