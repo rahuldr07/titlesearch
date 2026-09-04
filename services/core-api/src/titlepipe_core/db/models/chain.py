@@ -149,10 +149,17 @@ class ChainRootAssertion(_TenantRow):
     checked: an assertion that overrides a computed answer is the one place where
     "why" is the only thing auditable afterwards.
 
-    **ONE STANDING ASSERTION PER ORDER**, enforced by `0007`'s PARTIAL unique
-    index over `retracted_at IS NULL` rather than by a plain unique constraint. A
-    plain one would make retraction-and-reassertion impossible; the partial one
-    keeps the history and still refuses two live assertions.
+    **ONE STANDING ASSERTION PER ORDER**, enforced by the PARTIAL unique index
+    over `retracted_at IS NULL` declared below rather than by a plain unique
+    constraint. A plain one would make retraction-and-reassertion impossible; the
+    partial one keeps the history and still refuses two live assertions.
+
+    **THE INDEX IS DECLARED HERE AND CREATED IN `0040`.** An earlier version of
+    this docstring attributed it to `0007`, which was never possible — `0007` is
+    a revision before this table exists, and an index cannot precede its table.
+    It is declared in `__table_args__` rather than left to the migration alone
+    because `alembic check` reads an index the catalog has and the metadata does
+    not as an index to DROP.
     """
 
     __tablename__ = "chain_root_assertions"
@@ -162,6 +169,20 @@ class ChainRootAssertion(_TenantRow):
         sa.CheckConstraint(
             "num_nonnulls(retracted_at, retracted_by) IN (0, 2)",
             name="retraction_is_whole",
+        ),
+        # Named explicitly: `NAMING_CONVENTION`'s `uq` pattern covers
+        # `UniqueConstraint` and not `Index`, and `ix` would render this as
+        # `ix_chain_root_assertions_tenant_id_order_id` — a name that says
+        # nothing about the predicate that makes it the standing-assertion rule.
+        # Tenant-prefixed for `_TenantRow`'s reason: unique enforcement runs
+        # before the policy, so `UNIQUE (order_id)` alone would answer whether
+        # another tenant holds a standing assertion on this order.
+        sa.Index(
+            "uq_chain_root_assertions_one_standing_per_order",
+            "tenant_id",
+            "order_id",
+            unique=True,
+            postgresql_where=sa.text("retracted_at IS NULL"),
         ),
     )
 
