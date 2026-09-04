@@ -86,11 +86,11 @@ TENANT_KEY_COLUMN: Final = "tenant_id"
 REGISTRY_TABLE: Final = "tenants"
 REGISTRY_KEY_COLUMN: Final = "id"
 
-# 🔴 THE ALLOWLIST. Every name here is a table that must NOT be isolated, and
-# every one needs its reason in this comment rather than in a commit message.
+# 🔴 THE ALLOWLIST. Every name here must NOT be isolated, and needs its reason in
+# this comment rather than in a commit message.
 #
-# `alembic_version` — Alembic's own bookkeeping. An `id`-keyed policy on it locks
-#   Alembic out of reading its own migration state; there is no tenant in it.
+# `alembic_version` — Alembic's bookkeeping. An `id`-keyed policy on it locks
+#   Alembic out of its own migration state; there is no tenant in it.
 # `rules` — global by CONVENTIONS §1. The rulebook is the same for every tenant,
 #   its repository is a SIBLING of the tenant-scoped ones rather than a subclass,
 #   and a `tenant_id` on it would be a per-tenant rulebook nobody asked for.
@@ -135,9 +135,10 @@ class RlsCoverageError(RuntimeError):
     def __init__(self, faults: Sequence[RlsCoverageFault]) -> None:
         self.faults: Final = tuple(faults)
         lines = "\n".join(f"  {f.table}: {f.fault} — {f.detail}" for f in self.faults)
+        tables = len({f.table for f in self.faults})
         super().__init__(
-            f"row-level security coverage is incomplete on {len(self.faults)} "
-            f"table(s) in schema {SCHEMA}:\n{lines}\n"
+            f"row-level security coverage is incomplete: {len(self.faults)} fault(s) "
+            f"on {tables} table(s) in schema {SCHEMA}:\n{lines}\n"
             f"Every table must have ENABLE, FORCE and exactly one tenant-scoping "
             f"policy in the migration that creates it, or be named in "
             f"titlepipe_core.db.rls_coverage.UNSCOPED_TABLES with a reason."
@@ -381,10 +382,9 @@ async def audit_rls_coverage_async(
     """`audit_rls_coverage` over an async connection. The boot-time half.
 
     MEASURED 2026-09-04 against postgres:18.4: `titlepipe_app` — no superuser, no
-    ownership, `NOBYPASSRLS`, holding `SELECT` on two of the four tables present —
-    reads `pg_policies.qual` and `pg_class.relrowsecurity` for ALL FOUR. So the
-    boot check sees the tables the app role cannot open, which is exactly the set
-    a forgotten policy would be hiding in.
+    ownership, `NOBYPASSRLS`, holding `SELECT` on two of four tables — reads
+    `pg_policies.qual` and `pg_class.relrowsecurity` for ALL FOUR, so the boot
+    check sees the tables the app role cannot open: where a gap would be hiding.
     """
     tables = _read_tables((await connection.execute(text(_TABLE_FACTS_SQL), _PARAMETERS)).all())
     policies = _read_policies(

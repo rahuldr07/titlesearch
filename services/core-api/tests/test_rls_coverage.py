@@ -1,0 +1,455 @@
+"""`titlepipe_core.db.rls_coverage`, proved red before it is trusted green.
+
+A coverage check that has only ever been run against a schema that satisfies it
+is a check nobody has seen fail. Half this file is the other half of that: each
+live test BREAKS the migrated schema on purpose, in the specific way a worker
+would break it by accident, asserts the fault, and puts the schema back.
+
+## The breakage is real DDL against the real migrated database
+
+Not a fabricated catalog. `_temporary_table` runs `CREATE TABLE` as
+`titlepipe_owner` on the module's own migrated database and drops it in a
+`finally`, because `conftest.py::_scrub_migration_objects` drops the tables the
+MIGRATION creates, by name, and knows nothing about one a test invented. A table
+leaked out of here would survive the module teardown and fail `test_roles.py`,
+which asserts the database is empty afterwards.
+
+## Why the pure tests are not enough on their own, and vice versa
+
+`analyse_coverage` is a pure function, so every fault it can emit is reachable
+from a `TableFacts`/`PolicyFacts` literal with no database at all — which is the
+only affordable way to cover twelve faults. But a pure test cannot notice that
+the SQL selects the wrong column, that `pg_policies.cmd` answers `'ALL'` rather
+than `'*'`, or that the deparse is not the string the pattern expects. The live
+tests are what pin the two `SELECT`s to the server's real answers, and they are
+written as breakages so that they also pin the verdict.
+"""
+
+from __future__ import annotations
+
+import contextlib
+from collections.abc import Callable, Generator
+
+import pytest
+from sqlalchemy import Connection, Engine, text
+
+from titlepipe_core.db import make_engine
+from titlepipe_core.db.rls_coverage import (
+    POLICY_COMMAND,
+    PUBLIC_ROLES,
+    TENANT_GUC,
+    UNSCOPED_TABLES,
+    PolicyFacts,
+    RlsCoverageError,
+    TableFacts,
+    analyse_coverage,
+    assert_rls_coverage,
+    assert_rls_coverage_async,
+    audit_rls_coverage,
+)
+
+# The deparsed tenant predicate, written out. Every "healthy" literal below uses
+# it, so a change to the pattern that accidentally accepts less shows up here as
+# a test that stops being able to build a healthy row.
+GOOD_QUAL = (
+    "(tenant_id = (NULLIF(current_setting('app.current_tenant'::text, true), ''::text))::uuid)"
+)
+REGISTRY_QUAL = GOOD_QUAL.replace("tenant_id", "id", 1)
+
+# The role that runs the boot check. Spelled here rather than imported from
+# `conftest.py` so that this file states which role it claims the check works as.
+APP_ROLE = "titlepipe_app"
+
+
+def _healthy_table(name: str = "orders") -> TableFacts:
+    return TableFacts(name=name, rls_enabled=True, rls_forced=True, has_tenant_column=True)
+
+
+def _healthy_policy(table: str = "orders", qual: str = GOOD_QUAL) -> PolicyFacts:
+    return PolicyFacts(
+        table=table,
+        name="tenant_isolation",
+        qual=qual,
+        with_check=None,
+        roles=PUBLIC_ROLES,
+        command=POLICY_COMMAND,
+        permissive=True,
+    )
+
+
+def _faults(tables: list[TableFacts], policies: list[PolicyFacts]) -> set[str]:
+    return {fault.fault for fault in analyse_coverage(tables, policies)}
+
+
+# ---------------------------------------------------------------------------
+# The pure half: every fault, reachable, and the healthy shape reaching none.
+# ---------------------------------------------------------------------------
+
+
+def test_a_correctly_isolated_table_produces_no_fault() -> None:
+    """The positive control. Without it every assertion below is satisfied by an
+    `analyse_coverage` that returns a fault for everything."""
+    assert analyse_coverage([_healthy_table()], [_healthy_policy()]) == ()
+
+
+def test_the_registry_is_allowed_to_key_on_its_own_id_and_nothing_else_is() -> None:
+    """`tenants` keys on `id`; the same predicate on any other table is wrong.
+
+    Both directions, because a check that special-cased the registry by dropping
+    the column comparison entirely would pass the first and not the second."""
+    registry = TableFacts("tenants", rls_enabled=True, rls_forced=True, has_tenant_column=False)
+    assert analyse_coverage([registry], [_healthy_policy("tenants", REGISTRY_QUAL)]) == ()
+    assert "policy_scopes_by_the_wrong_column" in _faults(
+        [_healthy_table()], [_healthy_policy(qual=REGISTRY_QUAL)]
+    )
+
+
+@pytest.mark.parametrize(
+    ("table", "expected"),
+    [
+        pytest.param(
+            TableFacts("orders", rls_enabled=False, rls_forced=True, has_tenant_column=True),
+            "row_level_security_not_enabled",
+            id="enable-missing",
+        ),
+        pytest.param(
+            TableFacts("orders", rls_enabled=True, rls_forced=False, has_tenant_column=True),
+            "row_level_security_not_forced",
+            id="force-missing",
+        ),
+        pytest.param(
+            TableFacts("orders", rls_enabled=True, rls_forced=True, has_tenant_column=False),
+            "no_tenant_column",
+            id="tenant-column-missing",
+        ),
+    ],
+)
+def test_each_missing_half_of_the_table_side_is_its_own_fault(
+    table: TableFacts, expected: str
+) -> None:
+    assert expected in _faults([table], [_healthy_policy()])
+
+
+def test_a_table_with_no_policy_at_all_is_the_fault_this_module_exists_for() -> None:
+    assert _faults([_healthy_table()], []) == {"no_policy"}
+
+
+@pytest.mark.parametrize(
+    ("policy", "expected"),
+    [
+        pytest.param(
+            _healthy_policy(qual="(true)"),
+            "no_policy_scoping_by_tenant",
+            id="using-true",
+        ),
+        pytest.param(
+            _healthy_policy(
+                qual="(EXISTS ( SELECT 1\n   FROM orders o\n  WHERE (o.id = t.order_id)))"
+            ),
+            "no_policy_scoping_by_tenant",
+            id="joins-another-relation",
+        ),
+        pytest.param(
+            _healthy_policy(
+                qual="(NULLIF(current_setting('app.current_tenant'::text, true), ''::text) IS NOT NULL)"
+            ),
+            "no_policy_scoping_by_tenant",
+            id="mentions-the-guc-but-not-the-row",
+        ),
+        pytest.param(
+            _healthy_policy(qual=GOOD_QUAL.replace("app.current_tenant", "app.bypass")),
+            "policy_reads_the_wrong_setting",
+            id="reads-a-second-guc",
+        ),
+        pytest.param(
+            _healthy_policy()._replace(with_check="(true)"),
+            "policy_write_side_differs_from_read_side",
+            id="own-with-check",
+        ),
+        pytest.param(
+            _healthy_policy()._replace(roles="{titlepipe_app}"),
+            "policy_is_bound_to_roles",
+            id="bound-to-a-role",
+        ),
+        pytest.param(
+            _healthy_policy()._replace(command="SELECT"),
+            "policy_does_not_cover_all_commands",
+            id="select-only",
+        ),
+        pytest.param(
+            _healthy_policy()._replace(permissive=False),
+            "policy_is_restrictive",
+            id="restrictive",
+        ),
+        pytest.param(
+            _healthy_policy()._replace(qual=None),
+            "no_policy_scoping_by_tenant",
+            id="no-using-clause",
+        ),
+    ],
+)
+def test_a_policy_that_exists_is_not_a_policy_that_scopes(
+    policy: PolicyFacts, expected: str
+) -> None:
+    """The whole point of the module. `USING (true)` and a policy joining another
+    relation are both PRESENT, and presence is what a coverage check that counted
+    policies would have accepted."""
+    assert expected in _faults([_healthy_table()], [policy])
+
+
+def test_a_second_permissive_policy_is_a_second_way_in() -> None:
+    """Permissive policies OR together, so the correct one does not bound the
+    wrong one. The exact-set assertion, not a floor."""
+    extra = _healthy_policy(qual="(true)")._replace(name="tenant_maintenance")
+    assert _faults([_healthy_table()], [_healthy_policy(), extra]) == {"more_than_one_policy"}
+
+
+def test_the_allowlist_cannot_be_used_to_silence_a_tenant_table() -> None:
+    """A table on `UNSCOPED_TABLES` that carries a `tenant_id` is a fault, so the
+    cheapest way to make this check pass — add the name to the list — is the one
+    thing it refuses."""
+    exempt = next(iter(sorted(UNSCOPED_TABLES)))
+    silenced = TableFacts(exempt, rls_enabled=False, rls_forced=False, has_tenant_column=True)
+    assert _faults([silenced], []) == {"exempt_table_is_tenant_scoped"}
+
+
+def test_an_allowlisted_table_carrying_a_policy_is_a_contradiction() -> None:
+    """The half that closes PLAN §5 rule 5 over the schema rather than over the
+    isolated part of it: a policy on a table declared to have no tenant in it."""
+    exempt = next(iter(sorted(UNSCOPED_TABLES)))
+    facts = TableFacts(exempt, rls_enabled=True, rls_forced=True, has_tenant_column=False)
+    assert _faults([facts], [_healthy_policy(exempt)]) == {"unscoped_table_carries_a_policy"}
+
+
+def test_the_error_names_every_faulting_table_and_not_just_the_first() -> None:
+    """An operator fixing a schema needs the list. `RlsCoverageError` carries the
+    faults as data as well as rendering them, so a caller can log them."""
+    tables = [_healthy_table("orders"), _healthy_table("packages")]
+    with pytest.raises(RlsCoverageError) as caught:
+        raise RlsCoverageError(analyse_coverage(tables, []))
+    assert {fault.table for fault in caught.value.faults} == {"orders", "packages"}
+    assert "orders" in str(caught.value)
+    assert "packages" in str(caught.value)
+
+
+# ---------------------------------------------------------------------------
+# The live half. Every one of these breaks the migrated schema on purpose.
+# ---------------------------------------------------------------------------
+
+
+@contextlib.contextmanager
+def _temporary_table(connection: Connection, ddl: str, name: str) -> Generator[None]:
+    """`CREATE TABLE` as the owner, and `DROP` it whatever happens.
+
+    The drop is in a `finally` and is not `IF EXISTS`: a table that has already
+    gone means something else dropped it, and that is worth an error rather than
+    a shrug — the reason `0001` gives for `checkfirst=False`.
+    """
+    connection.execute(text(f"SET ROLE {'titlepipe_owner'}"))
+    connection.execute(text(ddl))
+    connection.commit()
+    try:
+        yield
+    finally:
+        connection.execute(text(f"DROP TABLE {name}"))
+        connection.commit()
+
+
+def test_the_migrated_schema_passes_its_own_coverage_check(
+    migrated_database: str, seam_engine: Callable[[str], Engine]
+) -> None:
+    """The positive control, and the one assertion here that is not a breakage.
+
+    It is also the assertion that would have to be edited by anybody adding an
+    un-isolated table, which is the point: the edit is the reviewable diff.
+    """
+    with seam_engine(migrated_database).connect() as connection:
+        assert audit_rls_coverage(connection) == ()
+
+
+def test_a_new_tenant_table_with_no_policy_turns_the_check_red(
+    migrated_database: str, seam_engine: Callable[[str], Engine]
+) -> None:
+    """🔴 THE PROOF. A table shaped exactly like the ones a worker is landing this
+    week — real `tenant_id`, composite primary key, correct naming — and no RLS.
+
+    Before this module existed the whole suite stayed green on this schema, and
+    `tests/test_forced_rls_and_grants.py` would have reported it as a set
+    mismatch whose obvious fix is to add the name to `EXPECTED_TENANT_TABLES`.
+    """
+    ddl = (
+        "CREATE TABLE escalations ("
+        "  tenant_id uuid NOT NULL,"
+        "  id uuid NOT NULL,"
+        "  CONSTRAINT pk_escalations PRIMARY KEY (tenant_id, id))"
+    )
+    with seam_engine(migrated_database).connect() as connection:
+        with _temporary_table(connection, ddl, "escalations"):
+            faults = audit_rls_coverage(connection)
+            assert {(f.table, f.fault) for f in faults} == {
+                ("escalations", "row_level_security_not_enabled"),
+                ("escalations", "row_level_security_not_forced"),
+                ("escalations", "no_policy"),
+            }
+            with pytest.raises(RlsCoverageError, match="escalations"):
+                assert_rls_coverage(connection)
+        assert audit_rls_coverage(connection) == ()
+
+
+def test_a_table_missing_the_tenant_column_entirely_is_still_seen(
+    migrated_database: str, seam_engine: Callable[[str], Engine]
+) -> None:
+    """The hole in the `has a tenant_id` derivation, driven.
+
+    `tests/test_forced_rls_and_grants.py` builds its set from the presence of the
+    column, so this table is invisible to it: it is not a tenant table by that
+    definition and not a named global either. Here it is a fault.
+    """
+    ddl = "CREATE TABLE complaints (id uuid NOT NULL, CONSTRAINT pk_complaints PRIMARY KEY (id))"
+    with seam_engine(migrated_database).connect() as connection:
+        with _temporary_table(connection, ddl, "complaints"):
+            faults = {(f.table, f.fault) for f in audit_rls_coverage(connection)}
+        assert ("complaints", "no_tenant_column") in faults
+        assert ("complaints", "no_policy") in faults
+
+
+def test_a_policy_that_merely_exists_turns_the_check_red(
+    migrated_database: str, seam_engine: Callable[[str], Engine]
+) -> None:
+    """ENABLE, FORCE, and a policy — three ticks, and every row of every tenant
+    readable by every established session. This is the failure a check that
+    counted policies reports as healthy."""
+    ddl = (
+        "CREATE TABLE deliveries ("
+        "  tenant_id uuid NOT NULL,"
+        "  id uuid NOT NULL,"
+        "  CONSTRAINT pk_deliveries PRIMARY KEY (tenant_id, id))"
+    )
+    with seam_engine(migrated_database).connect() as connection:
+        with _temporary_table(connection, ddl, "deliveries"):
+            connection.execute(text("ALTER TABLE deliveries ENABLE ROW LEVEL SECURITY"))
+            connection.execute(text("ALTER TABLE deliveries FORCE ROW LEVEL SECURITY"))
+            connection.execute(text("CREATE POLICY tenant_isolation ON deliveries USING (true)"))
+            connection.commit()
+            faults = {(f.table, f.fault) for f in audit_rls_coverage(connection)}
+        assert faults == {("deliveries", "no_policy_scoping_by_tenant")}
+
+
+def test_a_policy_that_joins_another_relation_turns_the_check_red(
+    migrated_database: str, seam_engine: Callable[[str], Engine]
+) -> None:
+    """PLAN §5 rule 5's own example, against the real server's deparse.
+
+    A NULL `order_id` makes the row invisible to its OWN tenant; the inverted
+    polarity makes it visible to everyone. Neither raises. The anchored
+    whole-predicate match is the machine, and this is it running.
+    """
+    ddl = (
+        "CREATE TABLE reconciliations ("
+        "  tenant_id uuid NOT NULL,"
+        "  id uuid NOT NULL,"
+        "  order_id uuid,"
+        "  CONSTRAINT pk_reconciliations PRIMARY KEY (tenant_id, id))"
+    )
+    with seam_engine(migrated_database).connect() as connection:
+        with _temporary_table(connection, ddl, "reconciliations"):
+            connection.execute(text("ALTER TABLE reconciliations ENABLE ROW LEVEL SECURITY"))
+            connection.execute(text("ALTER TABLE reconciliations FORCE ROW LEVEL SECURITY"))
+            connection.execute(
+                text(
+                    "CREATE POLICY tenant_isolation ON reconciliations USING ("
+                    "  EXISTS (SELECT 1 FROM orders o WHERE o.id = reconciliations.order_id))"
+                )
+            )
+            connection.commit()
+            faults = {(f.table, f.fault) for f in audit_rls_coverage(connection)}
+        assert faults == {("reconciliations", "no_policy_scoping_by_tenant")}
+
+
+def test_a_second_policy_on_a_correctly_isolated_table_turns_the_check_red(
+    migrated_database: str, seam_engine: Callable[[str], Engine]
+) -> None:
+    """Against `orders`, which is correctly isolated, so the only thing that
+    changes is the count. `DROP POLICY` restores it."""
+    with seam_engine(migrated_database).connect() as connection:
+        connection.execute(text("SET ROLE titlepipe_owner"))
+        connection.execute(
+            text(
+                "CREATE POLICY tenant_maintenance ON orders FOR UPDATE "
+                "USING (true) WITH CHECK (true)"
+            )
+        )
+        connection.commit()
+        try:
+            faults = {(f.table, f.fault) for f in audit_rls_coverage(connection)}
+            assert faults == {("orders", "more_than_one_policy")}
+        finally:
+            connection.execute(text("DROP POLICY tenant_maintenance ON orders"))
+            connection.commit()
+        assert audit_rls_coverage(connection) == ()
+
+
+def test_the_allowlist_names_exactly_the_tables_the_schema_leaves_unisolated(
+    migrated_database: str, seam_engine: Callable[[str], Engine]
+) -> None:
+    """`UNSCOPED_TABLES` is asserted against the live schema rather than trusted.
+
+    A name that stops being a real table is a stale exemption that would silently
+    cover a future table created under the same name.
+    """
+    with seam_engine(migrated_database).connect() as connection:
+        present = {
+            str(row[0])
+            for row in connection.execute(
+                text(
+                    "SELECT relname FROM pg_class "
+                    "WHERE relnamespace = 'public'::regnamespace AND relkind IN ('r', 'p')"
+                )
+            ).all()
+        }
+        unisolated = {
+            str(row[0])
+            for row in connection.execute(
+                text(
+                    "SELECT relname FROM pg_class "
+                    "WHERE relnamespace = 'public'::regnamespace AND relkind IN ('r', 'p') "
+                    "  AND NOT relrowsecurity"
+                )
+            ).all()
+        }
+    assert present >= UNSCOPED_TABLES
+    assert unisolated == set(UNSCOPED_TABLES)
+
+
+@pytest.mark.asyncio
+async def test_the_boot_check_reads_the_catalog_as_the_unprivileged_app_role(
+    migrated_database: str, app_dsn: str
+) -> None:
+    """The boot half runs as `titlepipe_app`, which owns nothing and bypasses
+    nothing, so whether it can READ `pg_policies.qual` is the question the whole
+    boot check rests on.
+
+    MEASURED 2026-09-04 against postgres:18.4 before this test was written: that
+    role reads `relrowsecurity`, `relforcerowsecurity` and `qual` for every table
+    in the schema, including tables it holds no grant on — which is exactly the
+    set a forgotten policy would be hiding in. This is that measurement, pinned.
+    """
+    assert migrated_database  # the schema this reads is the migrated one
+    engine = make_engine(app_dsn)
+    try:
+        async with engine.connect() as connection:
+            current = await connection.execute(text("SELECT current_user"))
+            assert str(current.scalar_one()) == APP_ROLE
+            await assert_rls_coverage_async(connection)
+    finally:
+        await engine.dispose()
+
+
+def test_the_guc_the_check_requires_is_the_one_the_policies_read(
+    tenant_guc: str,
+) -> None:
+    """`TENANT_GUC` is written out in `rls_coverage.py` rather than imported from
+    `engine.py`, so this is what keeps the copy honest — against `conftest.py`'s
+    fixture, which is the same value `tests/test_forced_rls_and_grants.py` holds
+    the migration to."""
+    assert tenant_guc == TENANT_GUC
