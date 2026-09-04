@@ -160,6 +160,27 @@ AUDITED_TABLES = ("record_classifications", "legal_holds")
 
 CHAIN_POSITION_CONSTRAINT = "uq_audit_log_tenant_id_chain_position"
 
+# 🔴 THE TWO CHECK CONSTRAINTS ARE NAMED HERE WITHOUT THEIR `ck_audit_log_`
+# PREFIX, AND THE ASYMMETRY WITH `CHAIN_POSITION_CONSTRAINT` ABOVE IS REAL RATHER
+# THAN AN OVERSIGHT. `Base.metadata`'s naming convention (`models.py::
+# NAMING_CONVENTION`) spells `ck` as `ck_%(table_name)s_%(constraint_name)s` and
+# `uq` as `uq_%(table_name)s_%(column_0_N_name)s`. SQLAlchemy re-applies a
+# convention to an ALREADY-NAMED constraint only when the template contains
+# `%(constraint_name)s` — so the `ck` name given to `create_check_constraint` AND
+# to `drop_constraint` is the SUFFIX and gets prefixed at both ends, while the
+# `uq` name is passed through untouched and must therefore be spelled in full.
+#
+# MEASURED 2026-09-04: `downgrade()` previously passed the full
+# `ck_audit_log_a_cited_rule_carries_its_provenance` to `drop_constraint`, which
+# rendered `ALTER TABLE audit_log DROP CONSTRAINT
+# ck_audit_log_ck_audit_log_a_cited_rule_carries_its_provenance` and raised
+# `42704 undefined_object`. Every `upgrade()` succeeded, so nothing noticed until
+# a module-scoped test database tore itself down — which is CONVENTIONS §8's
+# "every migration has a real downgrade" failing in the only way that stays
+# invisible while the forward path is all anybody runs.
+CITED_RULE_CONSTRAINT = "a_cited_rule_carries_its_provenance"
+PROVENANCE_TAG_CONSTRAINT = "rule_provenance_is_one_of_the_four_tags"
+
 
 def upgrade() -> None:
     _require_the_audit_log_is_empty()
@@ -275,7 +296,7 @@ def _add_assertion_columns() -> None:
 
     tags = ", ".join(f"'{tag}'" for tag in RULE_PROVENANCE_TAGS)
     op.create_check_constraint(
-        "rule_provenance_is_one_of_the_four_tags",
+        PROVENANCE_TAG_CONSTRAINT,
         AUDIT_TABLE,
         f"rule_provenance IS NULL OR rule_provenance IN ({tags})",
     )
@@ -284,7 +305,7 @@ def _add_assertion_columns() -> None:
     # what stops a later confirmation rewriting the past, so a cited rule without
     # one is a citation that will silently change meaning.
     op.create_check_constraint(
-        "a_cited_rule_carries_its_provenance",
+        CITED_RULE_CONSTRAINT,
         AUDIT_TABLE,
         "(rule_id IS NULL) = (rule_provenance IS NULL)",
     )
@@ -639,14 +660,8 @@ def downgrade() -> None:
     op.execute(f"DROP FUNCTION {CHAIN_FUNCTION}()")
 
     op.drop_constraint(CHAIN_POSITION_CONSTRAINT, AUDIT_TABLE, type_="unique")
-    op.drop_constraint(
-        f"ck_{AUDIT_TABLE}_a_cited_rule_carries_its_provenance", AUDIT_TABLE, type_="check"
-    )
-    op.drop_constraint(
-        f"ck_{AUDIT_TABLE}_rule_provenance_is_one_of_the_four_tags",
-        AUDIT_TABLE,
-        type_="check",
-    )
+    op.drop_constraint(CITED_RULE_CONSTRAINT, AUDIT_TABLE, type_="check")
+    op.drop_constraint(PROVENANCE_TAG_CONSTRAINT, AUDIT_TABLE, type_="check")
 
     for column in (
         "chain_position",
