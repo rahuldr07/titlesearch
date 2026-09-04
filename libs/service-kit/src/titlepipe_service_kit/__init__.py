@@ -17,7 +17,7 @@ Like `titlepipe_domain`, this package may not import a web framework — see the
 note at the bottom of `pyproject.toml` and `tests/test_import_boundary.py`.
 """
 
-from titlepipe_service_kit.settings import BaseServiceSettings
+from titlepipe_service_kit.settings import BaseHttpServiceSettings, BaseServiceSettings
 from titlepipe_service_kit.telemetry.hooks import NullRequestMetrics, RequestMetrics
 from titlepipe_service_kit.telemetry.logging import (
     build_redaction_processor,
@@ -26,6 +26,7 @@ from titlepipe_service_kit.telemetry.logging import (
 )
 
 __all__ = [
+    "BaseHttpServiceSettings",
     "BaseServiceSettings",
     "NullRequestMetrics",
     "RequestMetrics",
