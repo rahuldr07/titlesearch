@@ -199,16 +199,30 @@ class BaseServiceSettings(BaseSettings):
         return self
 
     def __init_subclass__(cls, **kwargs: Unpack[ConfigDict]) -> None:
-        """Refuse a subclass that redefines the sealed validator.
+        """Refuse a subclass that REDEFINES a sealed validator.
 
         pydantic resolves a same-named validator in the child in place of the
         parent's, so this one edit would replace the base refusal instead of
         extending it — and nothing else in the process would notice. Raising
         here makes the attempt an import-time error in whatever imports that
         subclass, including the test that collects it.
+
+        "Redefines" means an ancestor already defines the name. The class that
+        INTRODUCES one does not, and must not be refused: `SEALED_VALIDATORS`
+        names `_seal_password_is_a_fernet_key`, which is first written on
+        `BaseHttpServiceSettings` — a membership test against `vars(cls)` alone
+        made that class illegal at its own definition, so importing
+        `titlepipe_service_kit` at all raised `TypeError` and every service
+        that depends on it failed at import. Sealing a name has to start from
+        the class that owns it, not from the guard's list.
         """
         super().__init_subclass__(**kwargs)
-        redefined = sorted(SEALED_VALIDATORS & vars(cls).keys())
+        ancestors = cls.__mro__[1:]
+        redefined = sorted(
+            name
+            for name in SEALED_VALIDATORS & vars(cls).keys()
+            if any(name in vars(ancestor) for ancestor in ancestors)
+        )
         if redefined:
             raise TypeError(
                 f"{cls.__name__} redefines {', '.join(repr(name) for name in redefined)}, "
