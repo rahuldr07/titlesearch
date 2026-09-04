@@ -20,10 +20,10 @@ from titlepipe_blind.api.request_context import RequestContextMiddleware
 from titlepipe_blind.api.routers import health
 from titlepipe_blind.lifespan import build_lifespan, build_resources
 from titlepipe_blind.settings import BlindApiSettings
-from titlepipe_blind.telemetry.hooks import RequestMetrics
-from titlepipe_blind.telemetry.logging import configure_logging
 from titlepipe_blind.telemetry.sensitivity import BLIND_SENSITIVE_KEY_PARTS
 from titlepipe_domain import Clock, IdFactory
+from titlepipe_service_kit.telemetry.hooks import RequestMetrics
+from titlepipe_service_kit.telemetry.logging import configure_logging
 
 API_TITLE = "TitlePipe Blind API"
 API_VERSION = "0.1.0"

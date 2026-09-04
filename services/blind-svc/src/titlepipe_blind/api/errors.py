@@ -39,7 +39,6 @@ from starlette.responses import JSONResponse
 from structlog.typing import FilteringBoundLogger
 
 from titlepipe_blind.api.request_context import current_request_id, request_id_for
-from titlepipe_blind.telemetry.logging import get_logger
 from titlepipe_domain import (
     ConflictError,
     DependencyUnavailableError,
@@ -51,6 +50,7 @@ from titlepipe_domain import (
     UnauthenticatedError,
     ValidationError,
 )
+from titlepipe_service_kit.telemetry.logging import get_logger
 
 
 def _log() -> FilteringBoundLogger:
