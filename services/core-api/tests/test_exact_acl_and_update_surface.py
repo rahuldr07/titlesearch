@@ -793,6 +793,11 @@ def test_the_only_identity_column_is_the_vendored_one_and_nothing_is_generated(
 # The enumeration below is kept BESIDE it, not instead of it, so a fifth BEFORE
 # ROW trigger is still a diff somebody reads.
 EXPECTED_BEFORE_ROW_TRIGGERS = {
+    # `0100`. It assigns `NEW.actor_user_id` and `NEW.actor_principal`, so it is
+    # a second assigning trigger on `audit_log` and lands in the census for the
+    # same reason `audit_log_chain_link` does. `audit_log`'s INSERT grant is
+    # table-wide, so the conjunction this test asserts is still not met.
+    "audit_log_bind_actor on audit_log",
     "audit_log_chain_link on audit_log",
     "packages_identity_is_immutable on packages",
     "trg_escalations_resolution_needs_a_live_rule on escalations",
@@ -873,10 +878,11 @@ def test_no_table_carries_both_a_column_grant_and_a_before_row_trigger(
 
     # THE POSITIVE CONTROL ON THE READ ITSELF, which the conjunction needs more
     # than the old empty-set assertion did: it is satisfied by an empty
-    # intersection, and two empty catalogs intersect emptily. Twenty-two triggers
-    # and seventeen column grants, MEASURED at head 2026-09-05.
-    assert len(triggers) == 22, (
-        f"the trigger read returned {len(triggers)} rows, not 22 — wrong schema "
+    # intersection, and two empty catalogs intersect emptily. Twenty-THREE
+    # triggers and seventeen column grants, MEASURED at head 2026-09-05 — the
+    # twenty-third is `0100`'s `audit_log_bind_actor`.
+    assert len(triggers) == 23, (
+        f"the trigger read returned {len(triggers)} rows, not 23 — wrong schema "
         f"name, or `tgisinternal` inverted. The collision assertion above passes "
         f"trivially on an empty read."
     )

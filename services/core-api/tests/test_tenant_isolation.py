@@ -191,6 +191,31 @@ INSUFFICIENT_PRIVILEGE_SQLSTATE = "42501"
 #     new row violates row-level security policy for table "orders"
 RLS_REFUSAL_FRAGMENT = "row-level security policy"
 
+# 🔴 ONE TABLE IS REFUSED BEFORE THE POLICY IS EVER CONSULTED, AND THIS NAMES IT
+# RATHER THAN LOOSENING THE ASSERTION TO "SOME CODE".
+#
+# `0100` puts `audit_log_bind_actor` on `audit_log` as a `BEFORE INSERT ... FOR
+# EACH ROW` trigger. A `BEFORE` trigger runs before the policy's `WITH CHECK`, so
+# the write is refused by the ACTOR GATE and never reaches RLS. The other two
+# audited tables are unaffected: `audit_record_change` is an `AFTER` trigger, so
+# the policy still answers for them first.
+#
+# The exception is a DIFFERENT EXACT CODE and a DIFFERENT EXACT FRAGMENT rather
+# than an exemption — "refused with 28000 because no actor was declared" is as
+# specific a claim as "refused with 42501 by the policy", and a database that
+# ACCEPTED the row fails here either way, which is what this loop is for.
+#
+# 🔴 WHAT THIS LOOP NO LONGER PROVES FOR `audit_log`, SAID SO IT IS NOT READ AS
+# COVERED: the refusal above is about the ABSENT actor and not about tenancy —
+# `_cross_tenant_insert_refusals` writes `tenant_id` and nothing else. The
+# tenancy claim for this table moved to
+# `tests/test_actor_identity.py::test_a_session_cannot_write_an_audit_row_into_another_tenant`,
+# which establishes a VALID actor of its own tenant first and is therefore a
+# statement about the tenant boundary rather than about a missing GUC.
+EARLIER_REFUSALS: Mapping[str, tuple[str, str]] = MappingProxyType(
+    {"audit_log": ("28000", "no actor is established for this change")}
+)
+
 # MEASURED 2026-08-06 against postgres:18.4, `titlepipe_app` (no membership in
 # `titlepipe_owner`) issuing `SET ROLE titlepipe_owner`:
 #
@@ -483,8 +508,18 @@ APPEND_ONLY_TABLE_KEY = "tenant_id"
 #    They are `SET LOCAL` (the `true` argument): every session here is rolled back,
 #    and an actor that outlived the transaction would attach this file's name to
 #    whatever ran next on the pooled connection.
-ISOLATION_ACTOR_GUCS = ("app.actor_subject", "app.actor_seat")
-ISOLATION_ACTOR = "TEST-ONLY"
+# 🔴 A PAIR NOW, NOT ONE VALUE FOR BOTH. `0100` resolves `(tenant_id,
+# actor_subject, actor_seat)` against `users` and refuses `28000` unless it names
+# an ACTIVE row whose `role` IS the declared seat, so `'TEST-ONLY'` in both
+# slots stopped being a legal actor. The seed writes `identity_subject =
+# 'TEST-ONLY-' || :ordinal_text` with `role = 'reviewer'` in every tenant, and
+# ordinal 1 is the one every tenant has — see `conftest.ISOLATION_ACTOR_SUBJECT`,
+# which these two mirror for the same reason every other constant in this file
+# is repeated rather than imported.
+ISOLATION_ACTOR_GUCS = (
+    ("app.actor_subject", "TEST-ONLY-1"),
+    ("app.actor_seat", "reviewer"),
+)
 
 # 🔴 A REFUSAL THAT IS NEITHER THE ACL'S NOR THE POLICY'S, AND IT IS STRONGER THAN
 #    BOTH. `0031` puts a `BEFORE UPDATE` trigger on `packages` that refuses any
@@ -661,10 +696,10 @@ async def _unqualified_update_outcomes(
             count = f"SELECT count(*) FROM {table}"  # noqa: S608
             update = f"UPDATE {table} SET {key_column} = :target"  # noqa: S608
             async with tenant_session(sessionmaker, writer) as session:
-                for guc in ISOLATION_ACTOR_GUCS:
+                for guc, actor_value in ISOLATION_ACTOR_GUCS:
                     await session.execute(
                         text("SELECT set_config(:guc, :value, true)"),
-                        {"guc": guc, "value": ISOLATION_ACTOR},
+                        {"guc": guc, "value": actor_value},
                     )
                 before = int((await session.execute(text(count))).scalar_one())
                 connection = await session.connection()
@@ -1209,16 +1244,20 @@ async def test_2_a_write_carrying_another_tenants_id_is_refused_with_42501(
     )
 
     for table, (code, message) in sorted(refusals.items()):
-        assert code == INSUFFICIENT_PRIVILEGE_SQLSTATE, (
+        expected_code, expected_fragment = EARLIER_REFUSALS.get(
+            table, (INSUFFICIENT_PRIVILEGE_SQLSTATE, RLS_REFUSAL_FRAGMENT)
+        )
+        assert code == expected_code, (
             f"tenant {isolation_tenant_a} wrote a row keyed to "
             f"{isolation_tenant_b} into {table} and got {code!r} rather than "
-            f"{INSUFFICIENT_PRIVILEGE_SQLSTATE!r}. A code of None means the write "
+            f"{expected_code!r}. A code of None means the write "
             f"was ACCEPTED — one tenant writing rows into another's account at "
             f"will and never seeing them again: {message}"
         )
-        assert RLS_REFUSAL_FRAGMENT in message, (
-            f"{table} answered 42501 for some reason other than the policy — a "
-            f"missing INSERT grant returns the identical code: {message}"
+        assert expected_fragment in message, (
+            f"{table} answered {expected_code} for some reason other than the "
+            f"control this test names — a missing INSERT grant returns 42501 "
+            f"identically, and an unset actor returns 28000 identically: {message}"
         )
 
     acl_denied = await _acl_denied_key_updates(isolation_dsn, isolation_key_columns)

@@ -72,7 +72,7 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping
 
 import pytest
-from minimal_rows import insert_audit_log
+from minimal_rows import insert_actor, insert_audit_log
 from sqlalchemy import Engine, text
 from sqlalchemy.exc import DBAPIError
 
@@ -333,6 +333,9 @@ def test_the_owner_is_still_permitted_to_insert(
                 text("SELECT set_config(:guc, :tenant, true)"),
                 {"guc": tenant_guc, "tenant": str(tenant)},
             )
+            # `0100`: the tenant needs an active seat before it can have an
+            # audit row. See the note in the replica-mode test above.
+            connection.execute(text(insert_actor("tenant")), {"tenant": tenant})
             inserted = connection.execute(
                 text(insert_audit_log(tenant="tenant", returning="id")),
                 {"tenant": tenant},
@@ -408,7 +411,18 @@ def test_the_append_only_triggers_hold_under_session_replication_role_replica(
             # A row, so DELETE and UPDATE have something to remove: at 'O' the
             # measured failure was a DELETE that SUCCEEDED and emptied the table,
             # and a refusal against an empty table cannot be told from that.
-            connection.execute(text(INSERT_STATEMENT))
+            #
+            # THE SEAT FIRST. `0100` binds `audit_log.actor_user_id` in a `BEFORE
+            # INSERT` trigger and refuses `28000` unless the row's tenant has an
+            # ACTIVE `users` row matching the declared subject and seat, so an
+            # invented tenant needs one before it can have an audit trail. The
+            # binder is `ENABLE ALWAYS`, which is why it still fires here — under
+            # `session_replication_role = 'replica'`, which is the state this
+            # test exists to hold — and a plain `ENABLE` binder would leave
+            # `actor_user_id` NULL and fail on the column instead.
+            tenant = connection.execute(text("SELECT gen_random_uuid()")).scalar_one()
+            connection.execute(text(insert_actor("tenant")), {"tenant": tenant})
+            connection.execute(text(insert_audit_log(tenant="tenant")), {"tenant": tenant})
 
             with pytest.raises(DBAPIError) as raised:
                 connection.execute(text(statement))
