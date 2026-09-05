@@ -1,8 +1,15 @@
 """`orders` gets the domain columns `0001` left it without
 
 Revision ID: 0008
-Revises: 0004
+Revises: 0007
 Create Date: 2026-09-04
+
+LINEARIZED AT INTEGRATION, 2026-09-05: `down_revision` was `0004` — the head as this file's
+author found it, per CONVENTIONS §8 — and is now `0007`. the parent this file's own "Assumed parent" section names for integration: Kaveri's audit
+writer. Nothing in it touches a table, type or function `0005`-`0007` create, so the reorder
+changes the graph and not the result.
+The prose below is the author's and describes the branch as written; this line is the read of
+the chain that `alembic upgrade head` actually walks.
 
 ---------------------------------------------------------------------------
 🔴 `orders` ALREADY EXISTS. THIS IS AN `ALTER`, NOT A `CREATE`, AND THAT IS
@@ -87,7 +94,7 @@ from alembic import op
 from sqlalchemy.dialects import postgresql
 
 revision: str = "0008"
-down_revision: str | None = "0004"
+down_revision: str | None = "0007"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
