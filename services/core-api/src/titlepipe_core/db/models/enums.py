@@ -9,10 +9,12 @@ rule for choosing. They are first below, under their own heading, because their
 migrations (`0001` and `0003`) already exist and repeat their labels verbatim —
 which is a constraint on editing them that the domain's types do not carry.
 
-This module imports nothing from `base.py`, and `base.py` imports nothing from
-here. Enum types are DDL objects with no dependency on the declarative base, and
-keeping that true is what lets a domain module import both without an ordering
-problem.
+This module imports nothing from `base.py`. `base.py` imports ONE name from here
+— `AUDIT_ACTION`, for `audit_log.action` — and that direction is the only one
+that may ever exist: enum types are DDL objects with no dependency on the
+declarative base, so the edge points from the tables to the types and the import
+graph stays a tree. The reverse edge would be the ordering problem, and there is
+no reason to add it.
 
 🔴 **TWO CLASSES OF ENUM LIVE HERE AND THE DIFFERENCE IS THE MOST IMPORTANT
 THING IN THE FILE.** A CONFIRMED enum's labels are `packages/contract/src/*.ts`
@@ -248,6 +250,47 @@ PAGE_KIND_LABELS: Final = ("instrument", "index_search", "exhibit")
 CONFIG_LINE_EFFECT_LABELS: Final = ("waive", "narrow", "replace", "add")
 
 # ---------------------------------------------------------------------------
+# THE RETENTION AND AUDIT THREE — created by migrations `0005` and `0007`, which
+# repeat every label below verbatim, exactly as `0001` and `0003` do for the
+# skeleton's. They arrived on a branch that still had `db/models.py` as one file;
+# the labels are Kaveri's and are moved here unchanged, because this module is
+# where a PostgreSQL enum type lives.
+# ---------------------------------------------------------------------------
+
+# 🔴 INVENTED, AND THE TWO AXES ARE THE POINT — COLLAPSING THEM MAKES A REAL
+# RECORD UNREPRESENTABLE. `record_class` answers HOW LONG a record must be kept;
+# `data_class` answers WHAT KIND OF DATA is in it. An escrow ledger containing
+# NPI is `escrow_accounting` + `npi` and needs BOTH columns to say so; one axis
+# would force a choice between recording the statutory bucket and recording that
+# the row holds NPI.
+#
+# `operational_telemetry` IS A LABEL OF THE TYPE AND IS REFUSED IN
+# `record_classifications` — PLAN.md wants an explicit telemetry slot so telemetry
+# cannot default into a statutory bucket, and also says telemetry lives in a
+# separate store. Both are true at once only if the label exists and a row
+# carrying it is impossible; `ck_record_classifications_telemetry_is_not_stored
+# _here` on `RecordClassification` is the second half.
+RECORD_CLASS_LABELS: Final = (
+    "evidence_of_insurability",
+    "escrow_accounting",
+    "policy",
+    "derived_artifact",
+    "npi_payload",
+    "operational_telemetry",
+)
+
+# 🔴 INVENTED. `discovery-data-domain.md` §"Classes used", lower-cased; `pub_id`
+# is that document's `PUB-ID`. Measured against the one real corpus package
+# rather than decided here.
+DATA_CLASS_LABELS: Final = ("npi", "pub_id", "client", "ops", "ref", "safe")
+
+# 🔴 INVENTED, and NOT the four verbs it looks like. These are `TG_OP`'s three
+# ROW-level verbs and nothing else. `TRUNCATE` is deliberately absent: it is
+# statement-level, it cannot name a row, and on every audited table it is refused
+# before it could be recorded.
+AUDIT_ACTION_LABELS: Final = ("insert", "update", "delete")
+
+# ---------------------------------------------------------------------------
 # The type names and the bound `ENUM` objects.
 # ---------------------------------------------------------------------------
 # `<domain>_<concept>`, per the shared conventions §3.
@@ -262,6 +305,9 @@ GAP_CLOSE_KIND_TYPE_NAME: Final = "gap_close_kind"
 PACKAGE_STATUS_TYPE_NAME: Final = "package_status"
 PAGE_KIND_TYPE_NAME: Final = "page_kind"
 CONFIG_LINE_EFFECT_TYPE_NAME: Final = "config_line_effect"
+RECORD_CLASS_TYPE_NAME: Final = "record_class"
+DATA_CLASS_TYPE_NAME: Final = "data_class"
+AUDIT_ACTION_TYPE_NAME: Final = "audit_action"
 
 FIELD_STATE: Final = ENUM(*FIELD_STATE_LABELS, name=FIELD_STATE_TYPE_NAME, create_type=False)
 JUDGMENT_STATUS: Final = ENUM(
@@ -287,3 +333,6 @@ PAGE_KIND: Final = ENUM(*PAGE_KIND_LABELS, name=PAGE_KIND_TYPE_NAME, create_type
 CONFIG_LINE_EFFECT: Final = ENUM(
     *CONFIG_LINE_EFFECT_LABELS, name=CONFIG_LINE_EFFECT_TYPE_NAME, create_type=False
 )
+RECORD_CLASS: Final = ENUM(*RECORD_CLASS_LABELS, name=RECORD_CLASS_TYPE_NAME, create_type=False)
+DATA_CLASS: Final = ENUM(*DATA_CLASS_LABELS, name=DATA_CLASS_TYPE_NAME, create_type=False)
+AUDIT_ACTION: Final = ENUM(*AUDIT_ACTION_LABELS, name=AUDIT_ACTION_TYPE_NAME, create_type=False)
