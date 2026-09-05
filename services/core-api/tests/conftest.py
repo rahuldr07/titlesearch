@@ -28,6 +28,7 @@ from alembic import command
 from alembic.config import Config
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from minimal_rows import seed_insert, seed_order
 from pydantic import SecretStr
 from sqlalchemy import URL, Connection, Engine, create_engine, make_url, text
 from sqlalchemy.exc import ArgumentError, SQLAlchemyError
@@ -1152,6 +1153,13 @@ ALEMBIC_VERSION_TABLE = "alembic_version"
 # happen rather than be forgotten — it holds this literal against
 # `Base.metadata`, in both directions.
 MIGRATION_TABLES = (
+    # `0070`-`0072`, FIRST because the scrub drops in list order and
+    # `golden_corrections` carries a composite foreign key to `golden_fields`,
+    # which carries one to `orders`. A `DROP TABLE IF EXISTS` without `CASCADE`
+    # fails on a dependent constraint, so reverse creation order is not
+    # decoration here the way it is for the skeleton's seven.
+    "golden_corrections",
+    "golden_fields",
     "rules",
     "audit_log",
     "field_readings",
@@ -1183,8 +1191,19 @@ MIGRATION_TABLES = (
 # asserts only `migration_tables[0]` — so the one test built for the scenario was
 # blind to it, and the debris would have reached the next module as
 # `type "rule_origin" already exists`.
-MIGRATION_ENUM_TYPES = ("na_reason", "rule_status", "rule_origin")
-MIGRATION_FUNCTION = "audit_log_reject_mutation"
+MIGRATION_ENUM_TYPES = ("na_reason", "rule_status", "rule_origin", "golden_tag", "golden_act")
+
+# EVERY function the migrations create, not one. `0001` created the only one
+# there was; `0071` adds `golden_corrections`' append-only body and `0072` the
+# ledger requirement. A function left behind by a broken downgrade is what makes
+# the NEXT upgrade die on `DuplicateFunction` — `CREATE FUNCTION` is deliberately
+# not `CREATE OR REPLACE` in all three revisions — so a scrub that knows about
+# one of three is a scrub that leaves the database unusable for the next module.
+MIGRATION_FUNCTIONS = (
+    "audit_log_reject_mutation",
+    "golden_corrections_reject_mutation",
+    "golden_fields_require_ledger",
+)
 
 
 def _alembic_config(dsn: str) -> Config:
@@ -1235,7 +1254,7 @@ def _scrub_migration_objects(admin_dsn: str) -> None:
     statements = [
         *(f"DROP TABLE IF EXISTS {table}" for table in MIGRATION_TABLES),
         *(f"DROP TYPE IF EXISTS {enum_type}" for enum_type in MIGRATION_ENUM_TYPES),
-        f"DROP FUNCTION IF EXISTS {MIGRATION_FUNCTION}()",
+        *(f"DROP FUNCTION IF EXISTS {function}()" for function in MIGRATION_FUNCTIONS),
     ]
 
     failures: list[str] = []
@@ -1465,6 +1484,18 @@ MINIMUM_ISOLATION_TABLES = 7
 # stops being true.
 ISOLATION_UNCLEARABLE_TABLE = "audit_log"
 
+# 🔴 `audit_log` IS NO LONGER THE ONLY ONE. `0071`'s `golden_corrections` carries
+# the same trigger pair for the same reason — a correction to ground truth is
+# permanent — so `DELETE FROM golden_corrections` is refused with `0A000` and
+# would abort the seed's clearing pass before it reached a single INSERT.
+#
+# A frozenset rather than a second scalar, because the next append-only table
+# should be one word here and not a second `!=` somewhere. The argument that
+# makes clearing unnecessary is `ISOLATION_UNCLEARABLE_TABLE`'s and is unchanged:
+# `migrated_database` is MODULE-scoped and builds every table fresh, and the
+# row-count read-back below is what would notice the day that stops being true.
+ISOLATION_UNCLEARABLE_TABLES = frozenset({ISOLATION_UNCLEARABLE_TABLE, "golden_corrections"})
+
 # Every table and column name the seed interpolates into SQL is checked against
 # this before it is used. The names come from `pg_class`/`pg_attribute` on the
 # container rather than from a literal in this file, and a derivation that reads
@@ -1633,6 +1664,41 @@ def _isolation_tables(connection: Connection) -> Mapping[str, str]:
     return MappingProxyType(keyed)
 
 
+def _isolation_columns(
+    connection: Connection, tables: Mapping[str, str]
+) -> Mapping[str, frozenset[str]]:
+    """table -> the column names it has AT THIS REVISION. Read, never assumed.
+
+    `minimal_rows.MINIMAL_ROWS` describes each table as the MODELS declare it,
+    and the seed runs against schemas that are not that one —
+    `test_forced_rls_and_grants.py` downgrades to `0001` and seeds THERE, where
+    `orders` has three columns and the golden tables do not exist at all. See
+    `minimal_rows.seed_insert` for why the intersection is a requirement and for
+    what still catches a spec entry that is simply misspelled.
+
+    `attnum > 0 AND NOT attisdropped` for `_isolation_tables`' reason: system
+    columns sit at negative `attnum`, and a dropped column keeps its
+    `pg_attribute` row under a mangled name.
+    """
+    rows = connection.execute(
+        text(
+            "SELECT c.relname, a.attname FROM pg_class c "
+            "JOIN pg_namespace n ON n.oid = c.relnamespace "
+            "JOIN pg_attribute a ON a.attrelid = c.oid "
+            "WHERE n.nspname = 'public' AND c.relkind = 'r' "
+            "AND a.attnum > 0 AND NOT a.attisdropped "
+            "AND c.relname = ANY(:tables)"
+        ),
+        {"tables": sorted(tables)},
+    ).all()
+
+    found: dict[str, set[str]] = {table: set() for table in tables}
+    for table, column in rows:
+        found[str(table)].add(str(column))
+
+    return MappingProxyType({table: frozenset(columns) for table, columns in found.items()})
+
+
 def _seed_isolation_rows(
     engine: Engine,
 ) -> tuple[Mapping[str, str], Mapping[str, Mapping[UUID, tuple[UUID, ...]]]]:
@@ -1701,18 +1767,43 @@ def _seed_isolation_rows(
     with engine.begin() as connection:
         keyed = _isolation_tables(connection)
 
-        for table in sorted(keyed):
-            if table != ISOLATION_UNCLEARABLE_TABLE:
+        # PARENTS BEFORE CHILDREN ON THE WAY IN, CHILDREN BEFORE PARENTS ON THE
+        # WAY OUT. `sorted()` was both orders while no table referenced another,
+        # and is wrong once one does: `golden_corrections` sorts before
+        # `golden_fields` and can be written neither before it nor deleted after
+        # it. `minimal_rows.seed_order` is the one place that knows the shape.
+        columns = _isolation_columns(connection, keyed)
+        insert_order = seed_order(columns)
+
+        for table in reversed(insert_order):
+            if table not in ISOLATION_UNCLEARABLE_TABLES:
                 connection.execute(text(f"DELETE FROM {table}"))  # noqa: S608
 
-        for table, key_column in sorted(keyed.items()):
-            insert = f"INSERT INTO {table} ({key_column}) VALUES (:tenant) RETURNING id"  # noqa: S608
+        for table in insert_order:
+            key_column = keyed[table]
+            insert = text(seed_insert(table, key_column, columns[table]))
             per_tenant: dict[UUID, tuple[UUID, ...]] = {}
             for tenant, count in ISOLATION_ROW_COUNTS.items():
                 rows = ISOLATION_REGISTRY_ROWS if key_column == ISOLATION_REGISTRY_KEY else count
+                # `ordinal` is 1-based and per tenant, which is what makes it a
+                # usable OFFSET into the parent's rows for this same tenant, and
+                # what keeps a tenant-prefixed natural key distinct between the
+                # two rows tenant A gets. `ordinal_text` is the same number for
+                # the expressions that concatenate rather than count.
                 per_tenant[tenant] = tuple(
-                    UUID(str(connection.execute(text(insert), {"tenant": tenant}).scalar_one()))
-                    for _ in range(rows)
+                    UUID(
+                        str(
+                            connection.execute(
+                                insert,
+                                {
+                                    "tenant": tenant,
+                                    "ordinal": ordinal,
+                                    "ordinal_text": str(ordinal),
+                                },
+                            ).scalar_one()
+                        )
+                    )
+                    for ordinal in range(1, rows + 1)
                 )
             seeded[table] = MappingProxyType(per_tenant)
 

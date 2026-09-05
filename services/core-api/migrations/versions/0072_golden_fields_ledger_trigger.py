@@ -15,7 +15,7 @@ ASSUMED PARENT: `0071`, this worker's own previous revision.
    nothing anywhere reporting the hole.
 ---------------------------------------------------------------------------
 
-**THE MACHINE:** `golden_fields_require_ledger`, a `BEFORE UPDATE ... FOR EACH
+**THE MACHINE:** `golden_fields_require_ledger`, an `AFTER UPDATE ... FOR EACH
 ROW` trigger at `tgenabled = 'A'`, which refuses the statement unless a
 `golden_corrections` row already exists describing exactly this transition of
 exactly this row. It is not a convention, a service-layer check or a code review
@@ -58,6 +58,32 @@ not have. And the case it exists for is the opposite one: a statement that
 changes no rows changes no truth, so there is nothing for it to refuse. The two
 files reach different answers from the same fact, and the fact is what to carry
 forward rather than the answer.
+
+## 🔴 `AFTER`, NOT `BEFORE`, AND THAT IS A SECURITY PROPERTY RATHER THAN A TASTE
+
+`tests/test_exact_acl_and_update_surface.py::test_no_before_row_trigger_exists
+_that_could_write_new_dot_anything` refuses a `BEFORE ... FOR EACH ROW` trigger
+ANYWHERE in `public`, and the reason is exact: a trigger function is not
+`SECURITY DEFINER` unless it says so and does not switch role, so a `BEFORE ROW`
+trigger assigning `NEW.col` performs that write as WHOEVER ISSUED THE STATEMENT.
+Under a column-scoped grant the caller does not hold on `col`, the statement
+takes `42501` from a line that appears in no handler, no model and no test.
+
+This trigger assigns nothing — but "it does not assign anything today" is a
+claim about a function body, and the only thing that would hold it is a
+source-level regex over `prosrc` that cannot tell a plpgsql assignment from a
+comparison. **`AFTER` makes the claim structural instead.** An `AFTER ROW`
+trigger's return value is DISCARDED by PostgreSQL, so it cannot modify the row
+under any body whatsoever, and the whole class of failure is gone rather than
+argued away. The function returns `NULL` for that reason: the value is ignored,
+and returning `NEW` would suggest otherwise.
+
+What `AFTER` costs is nothing that matters here. `RAISE EXCEPTION` aborts the
+statement either way, so no changed row survives; the only difference is that the
+write work is done before it is thrown away. `0001` chose `BEFORE` for
+`audit_log` so that "nothing is written before the refusal", which is the right
+answer for a table that must never be touched and the wrong trade for one whose
+refusal is a comparison against a row that has to exist first.
 
 ## `SECURITY INVOKER`, and what that means when the owner tries to correct a row
 
@@ -180,7 +206,7 @@ def upgrade() -> None:
                AND NEW.tag IS NOT DISTINCT FROM OLD.tag
                AND NEW.source_citation IS NOT DISTINCT FROM OLD.source_citation
                AND NEW.revision IS NOT DISTINCT FROM OLD.revision THEN
-                RETURN NEW;
+                RETURN NULL;
             END IF;
 
             IF NEW.revision IS DISTINCT FROM OLD.revision + 1 THEN
@@ -216,7 +242,11 @@ def upgrade() -> None:
                            'describes this exact transition.';
             END IF;
 
-            RETURN NEW;
+            -- NULL rather than NEW: an AFTER ROW trigger's return value is
+            -- discarded, and returning the row would imply this function could
+            -- change it. It cannot, and that is the point — see the module
+            -- docstring's note on AFTER versus BEFORE.
+            RETURN NULL;
         END;
         $$
         """  # noqa: S608
@@ -225,7 +255,7 @@ def upgrade() -> None:
     op.execute(
         f"""
         CREATE TRIGGER {LEDGER_TRIGGER}
-        BEFORE UPDATE ON {TABLE}
+        AFTER UPDATE ON {TABLE}
         FOR EACH ROW EXECUTE FUNCTION {LEDGER_FUNCTION}()
         """
     )

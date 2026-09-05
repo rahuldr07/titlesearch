@@ -219,9 +219,23 @@ SET_ROLE_REFUSAL_FRAGMENT = "permission denied to set role"
 # `id` — but it is one of the seven `0002` writes a policy on, and leaving it out
 # of the proof is how it came to be read only in the deny state.
 EXPECTED_ISOLATION_TABLES = frozenset(
-    {"tenants", "orders", "packages", "pages", "fields", "field_readings", "audit_log"}
+    {
+        "tenants",
+        "orders",
+        "packages",
+        "pages",
+        "fields",
+        "field_readings",
+        "audit_log",
+        # `0070`-`0071`. The golden set is TENANT-SCOPED, unlike the rulebook: a
+        # golden value quotes the content of one tenant's document, reached
+        # through `order_id`. `migrations/versions/0070_golden_fields.py` holds
+        # the decision and the tension with PLAN §1 it resolves.
+        "golden_fields",
+        "golden_corrections",
+    }
 )
-MINIMUM_ISOLATION_TABLES = 7
+MINIMUM_ISOLATION_TABLES = 9
 
 
 @pytest.fixture
@@ -394,6 +408,13 @@ async def _cross_tenant_insert_refusals(
 # of those assertions MORE true. `test_2b` is the positive control that closes it;
 # the module docstring carries the mutation and the `1 failed, 198 passed`.
 APPEND_ONLY_TABLE = "audit_log"
+
+# 🔴 `audit_log` IS NO LONGER THE ONLY ONE. `0071`'s `golden_corrections` holds
+# exactly one verb for `titlepipe_app` too — `INSERT` — so an UPDATE against it
+# is refused by the ACL before any policy is reached, and both arms of the
+# cross-tenant write proof come back `42501 permission denied` rather than the
+# policy's message. Same ruling, second table.
+APPEND_ONLY_TABLES = frozenset({APPEND_ONLY_TABLE, "golden_corrections"})
 
 # The fragment PostgreSQL puts in the message when the refusal is the ACL's
 # rather than the policy's. MEASURED 2026-08-06, as above. It is asserted
@@ -811,7 +832,7 @@ async def test_1b_the_positive_control_each_tenant_sees_its_own_rows_in_every_ta
     assert set(isolation_seed) == set(EXPECTED_ISOLATION_TABLES), (
         f"the seeded tables are {sorted(isolation_seed)}, not "
         f"{sorted(EXPECTED_ISOLATION_TABLES)}. A count of "
-        f"{MINIMUM_ISOLATION_TABLES} is satisfied by seven decoys just as readily."
+        f"{MINIMUM_ISOLATION_TABLES} is satisfied by that many decoys just as readily."
     )
 
     for table in sorted(isolation_seed):
@@ -1047,7 +1068,7 @@ async def test_2_a_write_carrying_another_tenants_id_is_refused_with_42501(
     )
 
     for table, outcome in sorted(reach.items()):
-        if table == APPEND_ONLY_TABLE:
+        if table in APPEND_ONLY_TABLES:
             assert outcome.sqlstate == INSUFFICIENT_PRIVILEGE_SQLSTATE, (
                 f"{table} is granted no UPDATE, so an UPDATE by "
                 f"{isolation_tenant_a} must be refused by the ACL before the "
@@ -1085,7 +1106,7 @@ async def test_2_a_write_carrying_another_tenants_id_is_refused_with_42501(
         )
 
     for table, outcome in sorted(retenanted.items()):
-        expected = ACL_REFUSAL_FRAGMENT if table == APPEND_ONLY_TABLE else RLS_REFUSAL_FRAGMENT
+        expected = ACL_REFUSAL_FRAGMENT if table in APPEND_ONLY_TABLES else RLS_REFUSAL_FRAGMENT
         assert outcome.sqlstate == INSUFFICIENT_PRIVILEGE_SQLSTATE, (
             f"{isolation_tenant_a} re-tenanted its own rows in {table} to "
             f"{isolation_tenant_b} and got {outcome.sqlstate!r} rather than "

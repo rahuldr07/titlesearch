@@ -67,7 +67,20 @@ SKELETON_TABLES = frozenset(
 # that keeps the exemption from spreading to a second table unnoticed.
 RULEBOOK_TABLES = frozenset({"rules"})
 
-MIGRATED_TABLES = SKELETON_TABLES | RULEBOOK_TABLES
+# 🔴 `0070`-`0072`'s TWO TABLES, IN A THIRD CONSTANT FOR `RULEBOOK_TABLES`'
+# REASON. They arrived in their own revisions under their own decisions and a
+# reader should be able to see which revision put each name here.
+#
+# Both are TENANT-SCOPED, which is the opposite of `rules` and is deliberate: a
+# golden value quotes the content of one tenant's document, reached through
+# `order_id`. PLAN §1 calls the golden set "cross-customer by nature" in the
+# argument against a database per tenant, and
+# `migrations/versions/0070_golden_fields.py` records why that does not make the
+# ROWS global — the cross-tenant aggregate is a question about who may read
+# across tenants, which is a role rather than a missing column.
+GOLDEN_TABLES = frozenset({"golden_fields", "golden_corrections"})
+
+MIGRATED_TABLES = SKELETON_TABLES | RULEBOOK_TABLES | GOLDEN_TABLES
 
 # Every skeleton table has these two.
 IDENTITY_COLUMNS = frozenset({"id", "created_at"})
@@ -113,6 +126,46 @@ EXPECTED_COLUMNS: dict[str, frozenset[str]] = {
         "confirmed_by",
         "source_doc_ref",
     },
+    # 🔴 NO `engine_id`, NO `engine_version`, NO `confidence`, NO `model`, AND
+    # THE ABSENCE IS THE DESIGN. A golden row cannot record which engine produced
+    # it, so "promote this reading to truth" has no shape here — a value gets in
+    # by a person typing it with a citation and a reason. This dictionary is an
+    # EXACT set per table, so an engine column cannot appear without an edit
+    # here; `tests/test_golden_set.py` carries the same property as a
+    # closed-world assertion over the whole schema rather than over two names.
+    "golden_fields": IDENTITY_COLUMNS
+    | {
+        "tenant_id",
+        "order_id",
+        "path",
+        "value",
+        "na_reason",
+        "tag",
+        "source_citation",
+        "established_by",
+        "established_reason",
+        "revision",
+    },
+    # `value_before`/`value_after` and `na_reason_before`/`na_reason_after` are
+    # four columns rather than two because a correction moves BETWEEN two whole
+    # truths, and each of those is a value or a reason for absence — never both
+    # and never neither.
+    "golden_corrections": IDENTITY_COLUMNS
+    | {
+        "tenant_id",
+        "golden_field_id",
+        "act",
+        "signed_by",
+        "reason",
+        "source_citation",
+        "tag_before",
+        "tag_after",
+        "value_before",
+        "na_reason_before",
+        "value_after",
+        "na_reason_after",
+        "revision_after",
+    },
 }
 
 # 🔴 THE PRIMARY KEY OF EVERY TABLE, BY NAME AND BY KEY COLUMNS IN KEY ORDER.
@@ -151,8 +204,18 @@ EXPECTED_PRIMARY_KEYS: dict[str, tuple[str, ...]] = {
     # nothing for a composite key to close. Same shape as `tenants`, different
     # reason: the registry's `id` IS a tenant id, the rulebook has no tenant at all.
     "rules": ("id",),
+    # Composite, like the six skeleton tenant tables and for their reason. These
+    # two are tenant-scoped, so `(id)` alone would answer "does another tenant
+    # hold this golden field?" to a caller who cannot read the row.
+    "golden_fields": ("tenant_id", "id"),
+    "golden_corrections": ("tenant_id", "id"),
 }
 
+# `audit_log`'s pair, and ONLY `audit_log`'s — the one assertion that reads this
+# calls `_triggers(connection, "audit_log")`, so widening it to every trigger in
+# the schema makes it fail for tables it was never about. `0071`'s ledger carries
+# the identical pair and `0072` adds a third trigger to `golden_fields`; both are
+# asserted in `tests/test_golden_set.py`, per table, the same way.
 EXPECTED_TRIGGERS = frozenset({"audit_log_append_only", "audit_log_no_truncate"})
 
 # `pg_trigger.tgenabled` at HEAD, which is `0004`'s `'A'` — ALWAYS — and no

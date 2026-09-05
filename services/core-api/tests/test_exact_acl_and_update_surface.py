@@ -345,25 +345,44 @@ def test_no_connect_time_setting_exists_for_this_database_or_any_titlepipe_role(
 #
 # * COLUMN DEFAULTS — `0001::_identity_columns` (lines 129, 135) and its near-copy
 #   `0003::_identity_columns` (lines 163, 169) give every table an
-#   `id DEFAULT gen_random_uuid()` and a `created_at DEFAULT now()`. Sixteen
-#   defaults over eight tables, and NOTHING else: no `DEFAULT` appears anywhere
-#   else in any revision.
+#   `id DEFAULT gen_random_uuid()` and a `created_at DEFAULT now()` — sixteen
+#   over the first eight tables, and `0070`'s two golden tables carry the same
+#   pair, which is twenty. RE-TAKEN 2026-09-05.
+#
+#   🔴 `golden_fields.revision DEFAULT 0` IS THE TWENTY-FIRST AND IS THE FIRST
+#   DEFAULT IN THIS SCHEMA THAT IS NOT AN IDENTITY COLUMN. It costs a narrow
+#   grant exactly what the other twenty cost — nothing, for the reason two
+#   paragraphs down: a column DEFAULT is INSERT-only and PostgreSQL does not
+#   require INSERT privilege on a column the statement did not name. It is not
+#   a fabricated value to satisfy a `NOT NULL` (CONVENTIONS §4): revision 0 IS
+#   the establishment, and every number above it is a correction that `0072`'s
+#   trigger requires a signed ledger row for.
 # * GENERATED COLUMNS — none. No revision writes `Computed(...)` or
 #   `GENERATED ... AS`.
 # * IDENTITY COLUMNS — none. `0002` says so in a comment at line 348 while
 #   explaining why it grants no sequence privilege: "the primary key defaults to
 #   `gen_random_uuid()` and nothing here is `serial` or `IDENTITY`".
-# * TRIGGERS — exactly two, both on `audit_log`, both created by
-#   `0001::_create_append_only_trigger` (lines 405, 412) and both flipped to
-#   `ENABLE ALWAYS` by `0004`. Both are `FOR EACH STATEMENT`, and both call a
-#   function whose whole body is `RAISE EXCEPTION USING ERRCODE = '0A000'`.
+# * TRIGGERS — five, RE-TAKEN 2026-09-05. `audit_log`'s two, created by
+#   `0001::_create_append_only_trigger` (lines 405, 412) and flipped to
+#   `ENABLE ALWAYS` by `0004`; `golden_corrections`' identical pair from `0071`,
+#   created at `ENABLE ALWAYS`. All four are `FOR EACH STATEMENT` and all four
+#   call a function whose whole body is `RAISE EXCEPTION USING ERRCODE = '0A000'`.
+#
+#   The fifth is `0072`'s `golden_fields_ledger_required`, which is the only
+#   `FOR EACH ROW` trigger in the schema — it compares `OLD` with `NEW`, which a
+#   statement trigger cannot. It is `AFTER`, and that is what keeps the
+#   BEFORE-ROW assertion below at the empty set as a STRUCTURAL fact rather than
+#   a claim about a function body: an `AFTER ROW` trigger's return value is
+#   discarded by PostgreSQL, so no body it could ever have can widen an UPDATE's
+#   target list. `0072`'s module docstring records why that beats a `prosrc`
+#   regex, which cannot tell a plpgsql assignment from a comparison.
 #
 # WHY THAT CENSUS MAKES THE COLUMN-GRANT QUESTION COME OUT CLEAN, and why the
 # three catalogs still need reading:
 #
 # * a column DEFAULT is INSERT-only and, crucially, PostgreSQL does not require
 #   INSERT privilege on a column the statement did not name and the default
-#   filled. So the sixteen defaults cost a narrow grant nothing.
+#   filled. So every default in this schema costs a narrow grant nothing.
 # * a GENERATED or IDENTITY column is written by the server on every statement
 #   that touches it, and is exactly the kind of column a column-scoped grant is
 #   then measured against.
@@ -425,7 +444,7 @@ TRIGGER_TIMING_QUERY = """
      WHERE n.nspname = 'public' AND NOT t.tgisinternal
 """
 
-# The sixteen defaults the census above accounts for, as `<table>.<column>` ->
+# The defaults the census above accounts for, as `<table>.<column>` ->
 # the expression PostgreSQL stores. Written out per table rather than generated
 # from a table list for `0001`'s stated reason: a loop cannot fail for a table
 # somebody forgot to put in it, and the table this would omit is the one a new
@@ -447,10 +466,16 @@ EXPECTED_SERVER_DEFAULTS = {
     "audit_log.created_at": "now()",
     "rules.id": "gen_random_uuid()",
     "rules.created_at": "now()",
+    "golden_fields.id": "gen_random_uuid()",
+    "golden_fields.created_at": "now()",
+    # The one non-identity default in the schema. See the census above.
+    "golden_fields.revision": "0",
+    "golden_corrections.id": "gen_random_uuid()",
+    "golden_corrections.created_at": "now()",
 }
 
 
-def test_the_migrated_schema_holds_exactly_the_sixteen_insert_only_defaults(
+def test_the_migrated_schema_holds_exactly_the_insert_only_defaults_it_declares(
     migrated_database: str, seam_engine: Callable[[str], Engine]
 ) -> None:
     """`pg_attrdef`, as a CLOSED SET, on the database `alembic upgrade head` built.
@@ -467,7 +492,11 @@ def test_the_migrated_schema_holds_exactly_the_sixteen_insert_only_defaults(
     purpose: it is Alembic's bookkeeping and not this system's schema, so a
     default appearing on it should fail here rather than be pre-excused.
 
-    MEASURED at head: exactly the sixteen below.
+    MEASURED at head: exactly the set below. THIS TEST WAS NAMED
+    `..._the_sixteen_insert_only_defaults` until 2026-09-05, when `0070` made
+    the count twenty-one — a test named after a number is a test renamed by
+    every revision that adds a table, and the old name is written here so a
+    grep for it lands.
     """
     engine = seam_engine(migrated_database)
     try:
@@ -575,11 +604,24 @@ def test_no_before_row_trigger_exists_that_could_write_new_dot_anything(
     )
 
     # The positive control, in the same test so the negative above cannot pass by
-    # reading an empty catalog: `0001`'s two triggers must actually be there. A
-    # query that returned nothing at all — wrong schema name, `tgisinternal`
+    # reading an empty catalog: the five triggers at head must actually be there.
+    # A query that returned nothing at all — wrong schema name, `tgisinternal`
     # inverted — would satisfy the assertion above and prove nothing.
+    #
+    # 🔴 `golden_fields_ledger_required` IS A ROW TRIGGER AND IT IS IN THIS LIST
+    # WITHOUT WEAKENING THE ASSERTION ABOVE, because it is `AFTER`. The read
+    # above filters on `(tgtype & 1) <> 0 AND (tgtype & 2) <> 0` — row AND
+    # before — and an `AFTER ROW` trigger fails the second bit. That is not a
+    # technicality that lets it through: an `AFTER ROW` trigger's return value is
+    # DISCARDED by PostgreSQL, so it cannot assign `NEW.col` under any body it
+    # could ever be given, which is exactly the property the assertion above is
+    # protecting. `0072`'s module docstring records why `AFTER` was chosen for
+    # that reason rather than a source-level check on `prosrc`.
     names = sorted(f"{row[1]} on {row[0]}" for row in rows)
     assert names == [
         "audit_log_append_only on audit_log",
         "audit_log_no_truncate on audit_log",
+        "golden_corrections_append_only on golden_corrections",
+        "golden_corrections_no_truncate on golden_corrections",
+        "golden_fields_ledger_required on golden_fields",
     ], f"the trigger census itself has moved, so the BEFORE-ROW read above is stale: {names}"
