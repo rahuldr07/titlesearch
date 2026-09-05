@@ -167,6 +167,7 @@ from typing import NamedTuple
 from uuid import UUID
 
 import pytest
+from minimal_rows import a_minimal_order
 from sqlalchemy import Select, func, select, text
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncEngine
@@ -600,7 +601,7 @@ async def test_1_a_second_scoped_session_on_the_reused_connection_sees_nothing(
         sessionmaker = make_sessionmaker(engine)
 
         async with tenant_session(sessionmaker, tenant_a) as session:
-            session.add(Order(tenant_id=isolation_tenant_a))
+            session.add(a_minimal_order(isolation_tenant_a))
             await session.flush()
             wrote_on = (await session.execute(select(func.pg_backend_pid()))).scalar_one()
             established = (await session.execute(_read_the_guc(tenant_guc))).scalar_one()
@@ -986,7 +987,7 @@ async def test_2_a_write_carrying_another_tenants_id_is_refused_with_42501(
     try:
         sessionmaker = make_sessionmaker(engine)
         async with tenant_session(sessionmaker, TenantId(isolation_tenant_a)) as session:
-            session.add(Order(tenant_id=isolation_tenant_b))
+            session.add(a_minimal_order(isolation_tenant_b))
             with pytest.raises(DBAPIError) as raised:
                 await session.flush()
             await session.rollback()
@@ -1384,7 +1385,7 @@ async def test_4_a_savepoint_rolled_back_leaves_the_tenant_established(
             before = set((await session.scalars(select(Order.id))).all())
 
             savepoint = await session.begin_nested()
-            session.add(Order(tenant_id=isolation_tenant_a))
+            session.add(a_minimal_order(isolation_tenant_a))
             await session.flush()
             inside = set((await session.scalars(select(Order.id))).all())
             await savepoint.rollback()

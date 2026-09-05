@@ -28,6 +28,7 @@ from alembic import command
 from alembic.config import Config
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from minimal_rows import seed_insert, seed_order
 from pydantic import SecretStr
 from sqlalchemy import URL, Connection, Engine, create_engine, make_url, text
 from sqlalchemy.exc import ArgumentError, SQLAlchemyError
@@ -1633,6 +1634,41 @@ def _isolation_tables(connection: Connection) -> Mapping[str, str]:
     return MappingProxyType(keyed)
 
 
+def _isolation_columns(
+    connection: Connection, tables: Mapping[str, str]
+) -> Mapping[str, frozenset[str]]:
+    """table -> the column names it has AT THIS REVISION. Read, never assumed.
+
+    `minimal_rows.MINIMAL_ROWS` describes each table as the MODELS declare it,
+    and the seed runs against several schemas that are not that one — every
+    revision the domain chain lands through, and `0001` itself, which
+    `test_forced_rls_and_grants.py` downgrades to and then seeds. See
+    `minimal_rows.seed_insert` for why the intersection is a requirement and for
+    what still catches a spec entry that is simply misspelled.
+
+    `attnum > 0 AND NOT attisdropped` for `_isolation_tables`' reason: system
+    columns sit at negative `attnum`, and a dropped column keeps its
+    `pg_attribute` row under a mangled name.
+    """
+    rows = connection.execute(
+        text(
+            "SELECT c.relname, a.attname FROM pg_class c "
+            "JOIN pg_namespace n ON n.oid = c.relnamespace "
+            "JOIN pg_attribute a ON a.attrelid = c.oid "
+            "WHERE n.nspname = 'public' AND c.relkind = 'r' "
+            "AND a.attnum > 0 AND NOT a.attisdropped "
+            "AND c.relname = ANY(:tables)"
+        ),
+        {"tables": sorted(tables)},
+    ).all()
+
+    found: dict[str, set[str]] = {table: set() for table in tables}
+    for table, column in rows:
+        found[str(table)].add(str(column))
+
+    return MappingProxyType({table: frozenset(columns) for table, columns in found.items()})
+
+
 def _seed_isolation_rows(
     engine: Engine,
 ) -> tuple[Mapping[str, str], Mapping[str, Mapping[UUID, tuple[UUID, ...]]]]:
@@ -1701,18 +1737,43 @@ def _seed_isolation_rows(
     with engine.begin() as connection:
         keyed = _isolation_tables(connection)
 
-        for table in sorted(keyed):
+        # PARENTS BEFORE CHILDREN ON THE WAY IN, CHILDREN BEFORE PARENTS ON THE
+        # WAY OUT. `sorted()` was both orders until this schema grew a foreign
+        # key: `documents` sorts before `packages` and can be written neither
+        # before it nor deleted after it. `minimal_rows.seed_order` is the one
+        # place that knows the shape.
+        columns = _isolation_columns(connection, keyed)
+        insert_order = seed_order(columns)
+
+        for table in reversed(insert_order):
             if table != ISOLATION_UNCLEARABLE_TABLE:
                 connection.execute(text(f"DELETE FROM {table}"))  # noqa: S608
 
-        for table, key_column in sorted(keyed.items()):
-            insert = f"INSERT INTO {table} ({key_column}) VALUES (:tenant) RETURNING id"  # noqa: S608
+        for table in insert_order:
+            key_column = keyed[table]
+            insert = text(seed_insert(table, key_column, columns[table]))
             per_tenant: dict[UUID, tuple[UUID, ...]] = {}
             for tenant, count in ISOLATION_ROW_COUNTS.items():
                 rows = ISOLATION_REGISTRY_ROWS if key_column == ISOLATION_REGISTRY_KEY else count
+                # `ordinal` is 1-based and per tenant, which is what makes it a
+                # usable OFFSET into the parent's rows for this same tenant, and
+                # what keeps a tenant-prefixed natural key distinct between the
+                # two rows tenant A gets. `ordinal_text` is the same number for
+                # the expressions that concatenate rather than count.
                 per_tenant[tenant] = tuple(
-                    UUID(str(connection.execute(text(insert), {"tenant": tenant}).scalar_one()))
-                    for _ in range(rows)
+                    UUID(
+                        str(
+                            connection.execute(
+                                insert,
+                                {
+                                    "tenant": tenant,
+                                    "ordinal": ordinal,
+                                    "ordinal_text": str(ordinal),
+                                },
+                            ).scalar_one()
+                        )
+                    )
+                    for ordinal in range(1, rows + 1)
                 )
             seeded[table] = MappingProxyType(per_tenant)
 

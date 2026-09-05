@@ -131,6 +131,7 @@ from uuid import UUID, uuid4
 import pytest
 from alembic import command
 from alembic.config import Config
+from minimal_rows import a_minimal_order, insert_orders_returning
 from sqlalchemy import Connection, Engine, Select, create_engine, event, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import QueuePool
@@ -229,7 +230,7 @@ def _seed_two_tenants(engine: Engine) -> dict[UUID, UUID]:
     with engine.begin() as connection:
         connection.execute(text("DELETE FROM orders"))
         rows = connection.execute(
-            text("INSERT INTO orders (tenant_id) VALUES (:one), (:two) RETURNING tenant_id, id"),
+            text(insert_orders_returning("tenant_id, id", "one", "two")),
             {"one": TENANT_ONE, "two": TENANT_TWO},
         ).all()
     return {UUID(str(row[0])): UUID(str(row[1])) for row in rows}
@@ -606,7 +607,7 @@ async def test_a_row_written_in_one_tenant_session_is_readable_from_the_next(
         async with tenant_session(sessionmaker, TENANT_ONE) as session:
             # NO FLUSH, AND NO `TenantRepository.add` — see the docstring. This
             # line queues an INSERT that only the block's own commit can send.
-            session.add(Order(id=written_id, tenant_id=TENANT_ONE))
+            session.add(a_minimal_order(TENANT_ONE, id=written_id))
 
         async with tenant_session(sessionmaker, TENANT_ONE) as session:
             found = await TenantRepository(session, Order).get(written_id)
@@ -653,7 +654,7 @@ async def _write_then_fail(sessionmaker: async_sessionmaker[AsyncSession], order
     "the row is absent afterwards" would be true because it was never sent.
     """
     async with tenant_session(sessionmaker, TENANT_ONE) as session:
-        session.add(Order(id=order_id, tenant_id=TENANT_ONE))
+        session.add(a_minimal_order(TENANT_ONE, id=order_id))
         await session.flush()
         raise _DeliberateFailure(order_id)
 
@@ -1194,7 +1195,7 @@ async def test_the_repository_reads_and_writes_through_the_scoped_session(
         sessionmaker = make_sessionmaker(engine)
         async with tenant_session(sessionmaker, TENANT_ONE) as session:
             orders = TenantRepository(session, Order)
-            written = Order(tenant_id=TENANT_ONE)
+            written = a_minimal_order(TENANT_ONE)
             await orders.add(written)
             written_id = written.id
 
