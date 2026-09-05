@@ -132,11 +132,78 @@ REVISION_0002_TENANT_TABLES = frozenset(
 # tenants is a role rather than a missing column.
 GOLDEN_TENANT_TABLES = frozenset({"golden_fields", "golden_corrections"})
 
-EXPECTED_TENANT_TABLES = REVISION_0002_TENANT_TABLES | GOLDEN_TENANT_TABLES
+# ---------------------------------------------------------------------------
+# 🔴 TWENTY MORE TENANT TABLES, FROM THE `integration/backend-2026-09` MERGE.
+# ---------------------------------------------------------------------------
+# One constant per revision, for the reason the two above give and for the sharper
+# one this merge produced: `down_revision` was assumed rather than reconciled in
+# every one of these (CONVENTIONS §8), so the revision that created a table is
+# the only durable fact about which workstream it came from.
+#
+# ALL TWENTY CARRY `tenant_id`, SO ALL TWENTY ARE IN THE DERIVED SET AND EVERY
+# ASSERTION IN THIS FILE ALREADY APPLIED TO THEM the moment they existed. Nothing
+# here is new coverage — `_tenant_tables` asks the catalog and found them on the
+# first run. What this literal adds is that a twenty-first cannot arrive without
+# an edit somebody reads, which is the whole reason the derivation is checked
+# against a written set.
+#
+# Only `REVISION_0002_TENANT_TABLES` is iterated by
+# `test_downgrading_only_0002_removes_every_policy_grant_and_force`, which stands
+# at `0001` where none of these exist. Keep it that way.
+
+# `0005`. `retention_windows` beside it is GLOBAL and is in
+# `EXPECTED_GLOBAL_TABLES`; the classification of one tenant's record is not.
+RETENTION_TENANT_TABLES = frozenset({"record_classifications"})
+
+# `0006`, `0020`, `0030`, `0080` — one table each.
+LEGAL_HOLD_TENANT_TABLES = frozenset({"legal_holds"})
+DIRECTORY_TENANT_TABLES = frozenset({"users"})
+DOCUMENT_TENANT_TABLES = frozenset({"documents"})
+CLIENT_TENANT_TABLES = frozenset({"clients"})
+
+# `0040`, `0041`, `0050`, `0051`.
+CHAIN_TENANT_TABLES = frozenset({"instruments", "chain_links", "chain_root_assertions"})
+ESCALATION_TENANT_TABLES = frozenset({"escalations", "escalation_orders"})
+DELIVERY_TENANT_TABLES = frozenset(
+    {"reports", "report_verified_checks", "deliveries", "delivery_receipt_steps"}
+)
+INTAKE_TENANT_TABLES = frozenset(
+    {
+        "products",
+        "client_config_versions",
+        "client_config_lines",
+        "intake_signoffs",
+        "intake_signoff_lines",
+        "completeness_gaps",
+    }
+)
+
+EXPECTED_TENANT_TABLES = (
+    REVISION_0002_TENANT_TABLES
+    | GOLDEN_TENANT_TABLES
+    | RETENTION_TENANT_TABLES
+    | LEGAL_HOLD_TENANT_TABLES
+    | DIRECTORY_TENANT_TABLES
+    | DOCUMENT_TENANT_TABLES
+    | CLIENT_TENANT_TABLES
+    | CHAIN_TENANT_TABLES
+    | ESCALATION_TENANT_TABLES
+    | DELIVERY_TENANT_TABLES
+    | INTAKE_TENANT_TABLES
+)
 
 # The floor, as its own literal beside the set it is a floor for. See the module
 # docstring for which failure each of the two catches.
-MINIMUM_TENANT_TABLES = 8
+#
+# 🔴 IT MOVES WITH THE SET AND IT IS NOT `len(EXPECTED_TENANT_TABLES)`. Deriving
+# it from the set it floors would make it satisfied by construction, which is the
+# one thing a floor cannot be: the failure it catches is a `_tenant_tables`
+# derivation that returns fewer rows than the schema has, and a floor computed
+# from the expectation would agree with a derivation that returned nothing only
+# after the exact-set comparison had already failed — leaving every `for` loop
+# below silently passing over an empty set in the meantime. Twenty-eight is
+# written out and MEASURED against a database at head, 2026-09-05.
+MINIMUM_TENANT_TABLES = 28
 
 REGISTRY_TABLE = "tenants"
 POLICY_NAME = "tenant_isolation"
@@ -172,12 +239,60 @@ POLICY_NAME = "tenant_isolation"
 # `test_the_registry_is_forced_and_isolated_on_its_own_id` is where it is
 # asserted. Folding it in here would make this set mean "not a tenant table",
 # which is a different and much weaker claim than "outside tenancy altogether".
+# ---------------------------------------------------------------------------
+# 🔴 THE THIRD, FOURTH, FIFTH AND SIXTH GLOBAL TABLES ARE NOT THIS REPOSITORY'S,
+#    AND `0060` ASKED FOR THIS TO BE DERIVABLE RATHER THAN LISTED.
+# ---------------------------------------------------------------------------
+# `0060` installs `migrations/sql/procrastinate_schema_3.9.0.sql` verbatim: four
+# tables with no `tenant_id`, so `_global_tables` finds all four and this file's
+# exact-set assertion named them on the first run after the merge. That is the
+# derivation working — a table in `public` with no tenancy at all is exactly what
+# it exists to surface.
+#
+# THEY CANNOT BE TENANT-SCOPED AND REMAIN THE LIBRARY'S, and `0060`'s docstring
+# is the ruling: `procrastinate_fetch_job_v2` picks the next job across the whole
+# queue, so a policy keyed on a per-session GUC would make a worker's own fetch
+# return nothing — a worker has no one tenant to be. Adding the column means
+# forking the DDL and the eighteen functions that read these tables by name.
+#
+# WHAT IT COSTS, RESTATED HERE BECAUSE THIS FILE IS WHERE A READER LOOKS FOR IT:
+# any role holding `SELECT` on `procrastinate_jobs` reads every tenant's job
+# arguments. Two roles hold it — `titlepipe_worker`, which must, and
+# `titlepipe_app`, because `INSERT ... RETURNING id` is a read. Nothing in the
+# database stops a caller putting a name or a document excerpt in a job's `args`;
+# that residual is `0060`'s and is recorded there.
+#
+# 🔴 DERIVED FROM THE CATALOG, NOT FROM THIS LITERAL, AND THE LITERAL IS THE
+# CROSS-CHECK. `0060` asks for exactly that: it writes `QUEUE-INFRASTRUCTURE:` as
+# the first token of each table's `COMMENT ON TABLE` so that a coverage check can
+# be "a table in `public` with no `tenant_id` is either commented as
+# infrastructure or it is a defect", *"instead of from a list that ages in a test
+# file"*. `test_the_tables_outside_tenancy_are_exactly_the_ones_named_as_exceptions`
+# now reads that comment and requires the two to agree, so a fifth queue table
+# arriving with the marker is accepted by the derivation and still fails the
+# literal — one edit, deliberate, reviewable — and a table smuggling the marker
+# onto something that is not queue infrastructure fails the literal too.
+QUEUE_INFRASTRUCTURE_TABLES = frozenset(
+    {
+        "procrastinate_jobs",
+        "procrastinate_events",
+        "procrastinate_periodic_defers",
+        "procrastinate_workers",
+    }
+)
+
+# The token `0060` writes as the first word of each queue table's COMMENT. Read
+# back rather than trusted: a `COMMENT ON TABLE` is available to any table owner,
+# so this marker is a claim the migration makes and this file checks, not a
+# privilege boundary.
+QUEUE_INFRASTRUCTURE_MARKER = "QUEUE-INFRASTRUCTURE:"
+
 # `retention_windows` is the "second global table" the paragraph above says
 # cannot appear without a deliberate edit to this line. This is that edit: `0005`
 # creates a statutory retention floor, and a floor is not a tenant's property, so
 # it carries no `tenant_id` to key a policy on. `db.rls_coverage.UNSCOPED_TABLES`
 # and `conftest.ISOLATION_GLOBAL_TABLES` are the other two lists saying so.
-EXPECTED_GLOBAL_TABLES = frozenset({"retention_windows", "rules"})
+EXPECTED_GLOBAL_TABLES = frozenset({"retention_windows", "rules"}) | QUEUE_INFRASTRUCTURE_TABLES
 
 RULES_TABLE = "rules"
 
@@ -243,6 +358,15 @@ WORKER_ROLE = "titlepipe_worker"
 OWNER_ROLE = "titlepipe_owner"
 MIGRATION_ROLE = "titlepipe_migration"
 
+# 🔴 `titlepipe_blind` HOLDS NOTHING IN THIS SCHEMA AND IS NAMED HERE ANYWAY.
+# `test_every_sequence_is_usable_by_every_role_that_inserts_into_its_table` asks
+# each of the three non-owner login roles two questions and compares the answers,
+# so a role that holds neither `INSERT` on a table nor `USAGE` on its sequence
+# contributes `set() == set()` and passes. That is not a wasted iteration: the
+# day something grants it one and not the other, the pairing is asserted for it
+# with no edit here.
+BLIND_ROLE = "titlepipe_blind"
+
 # The label both `aclexplode` readers below translate `grantee = 0` to. It is a
 # pseudo-role rather than a role: `grantee::regrole` renders 0 as `-`, which is
 # not a name anybody can grep for or grant to. Spelled once here and matched
@@ -270,8 +394,71 @@ APPEND_ONLY_TABLE = "audit_log"
 # the identical trigger pair for the identical reason — a correction to ground
 # truth is permanent — and therefore the identical two-verb grant. A frozenset
 # rather than a second scalar, so the next append-only table is one word here.
-APPEND_ONLY_TABLES = frozenset({APPEND_ONLY_TABLE, "golden_corrections"})
+# 🔴 AND `0050`'s `reports` IS THE THIRD, WHICH IS WHY THE FROZENSET ABOVE WAS
+# THE RIGHT SHAPE. Same trigger pair, same two verbs, and a third distinct
+# reason: a report that has been delivered is a statement this firm MADE, so a
+# reissue is a new row at a higher `version` and never an edit to the one the
+# customer already holds. `0050`'s `_create_append_only_trigger` is the record —
+# and note that `report_verified_checks` beside it deliberately gets the ordinary
+# three verbs and NO trigger, so this is a per-table ruling rather than a
+# subsystem-wide one.
+APPEND_ONLY_TABLES = frozenset({APPEND_ONLY_TABLE, "golden_corrections", "reports"})
 APPEND_ONLY_GRANTED_VERBS = ("SELECT", "INSERT")
+
+# ---------------------------------------------------------------------------
+# 🔴 `fields` HOLDS NO TABLE-LEVEL `UPDATE` ANY MORE, AND `has_table_privilege`
+#    CANNOT TELL THAT FROM HOLDING NOTHING.
+# ---------------------------------------------------------------------------
+# `0032::_narrow_the_update_grant` does `REVOKE UPDATE ON fields FROM
+# titlepipe_app` and then `GRANT UPDATE (<seventeen columns>) ON fields`. The
+# revoke has to be table-wide and has to come first, because a column grant is
+# ADDED to a table grant rather than shadowing it — leaving the table grant in
+# place would leave `state` writable and the whole state machine decorative.
+#
+# WHAT THAT DOES TO THIS FILE. `_table_privileges` calls `has_table_privilege`,
+# which answers about the TABLE and returns FALSE for a role holding only column
+# grants. So the derived loop below, left alone, would assert `titlepipe_app has
+# no UPDATE on fields` — true of the catalog it reads and a false statement about
+# the system, because the app updates seventeen of that table's columns on every
+# correction. That is the exact blind spot
+# `tests/test_exact_acl_and_update_surface.py` opens its module docstring with;
+# the difference is that it is no longer hypothetical, so this file has to grow a
+# `has_column_privilege` read rather than cite one.
+#
+# THE SIX WITHHELD COLUMNS ARE THE POINT AND ARE DERIVED, NOT LISTED. `id`,
+# `created_at`, `tenant_id`, `order_id`, `path` and `state` are what is left when
+# the seventeen are subtracted from the table, and each is a different refusal:
+# `tenant_id` is the column every `tenant_isolation` policy keys on and `0002`
+# writes no `WITH CHECK`, so a role that could re-tenant a row could then read it;
+# `state` moves only through `titlepipe_field_transition`, the one `SECURITY
+# DEFINER` function `0032` grants; `order_id` and `path` are the field's identity.
+# Deriving them means a column that leaves the granted list arrives in the
+# withheld one automatically and is asserted as refused rather than becoming
+# unasserted in both directions.
+COLUMN_SCOPED_UPDATE_TABLES = frozenset({"fields"})
+
+# `0032::FIELD_APP_UPDATABLE_COLUMNS`, written out rather than imported for
+# `REVISION_0002_TENANT_TABLES`' reason: a test that builds its expectation from
+# the module under test moves whenever that module does and pins nothing.
+FIELDS_UPDATABLE_COLUMNS = (
+    "value",
+    "na_reason",
+    "source_document_id",
+    "source_page_no",
+    "source_snippet",
+    "source_line_coords",
+    "engine_id",
+    "engine_confidence_raw",
+    "approved_by",
+    "approved_at",
+    "correction_reason",
+    "excluded_reason",
+    "excluded_by",
+    "excluded_at",
+    "asking",
+    "why",
+    "consequence",
+)
 
 # 🔴 `rules` IS THE ONE TABLE AT A SINGLE VERB, AND THE NARROWNESS IS A PLAN 02
 # RULING RATHER THAN A GAP. Task 4 is `GET /api/rules` — read-only. Rule CREATION
@@ -319,6 +506,19 @@ def _expected_grants(table: str) -> tuple[Sequence[str], Sequence[str]]:
     """
     if table in APPEND_ONLY_TABLES:
         granted: Sequence[str] = APPEND_ONLY_GRANTED_VERBS
+    elif table in COLUMN_SCOPED_UPDATE_TABLES:
+        # 🔴 THE THIRD BRANCH, AND IT IS ABOUT WHAT `has_table_privilege` CAN
+        # SEE RATHER THAN ABOUT WHAT THE APP MAY DO. `0032` revoked the
+        # table-wide `UPDATE` on `fields` and granted seventeen columns instead,
+        # so the TABLE privilege really is absent and asserting it present would
+        # fail. `UPDATE` is therefore withheld here and asserted per COLUMN by
+        # `test_the_narrowed_update_grant_on_fields_is_exactly_seventeen_columns`,
+        # which is the only assertion in this file that reads
+        # `has_column_privilege`. Dropping `UPDATE` from both lists instead would
+        # have left the app's ability to write `fields` unasserted in every
+        # direction, which is how `UPDATE` came to be unasserted the first time —
+        # see the paragraph above.
+        granted = APPEND_ONLY_GRANTED_VERBS
     elif table == RULES_TABLE:
         granted = RULES_GRANTED_VERBS
     else:
@@ -326,6 +526,13 @@ def _expected_grants(table: str) -> tuple[Sequence[str], Sequence[str]]:
     withheld = tuple(verb for verb in (*GRANTED_VERBS, *REFUSED_VERBS) if verb not in granted)
     return granted, withheld
 
+
+# `object_not_in_prerequisite_state`, which `0008`, `0031` and `0032` raise from
+# `_refuse_if_populated` and `0005`/`0006` raise for the same class of refusal:
+# the schema change is well-formed, the database is simply not in a state where it
+# can be applied. Spelled here as a literal rather than imported from a revision
+# for `REVISION_0002_TENANT_TABLES`' reason.
+NOT_IN_PREREQUISITE_STATE = "55000"
 
 # `feature_not_supported`, raised by `0001`'s append-only trigger.
 APPEND_ONLY_SQLSTATE = "0A000"
@@ -434,6 +641,28 @@ def _global_tables(connection: Connection, version_table: str) -> set[str]:
         {"version_table": version_table, "registry_table": REGISTRY_TABLE},
     )
     return {str(row[0]) for row in result}
+
+
+def _table_comments(connection: Connection) -> dict[str, str]:
+    """table -> its `COMMENT ON TABLE`, for every user table in `public`.
+
+    Tables with no comment are ABSENT rather than mapped to `''`, so a caller
+    asking whether a comment starts with a marker has to say what a missing
+    comment means instead of getting `''.startswith(...)` for free.
+
+    `obj_description(oid, 'pg_class')` and not `obj_description(oid)`: the
+    one-argument form is deprecated and resolves the catalog by searching, which
+    is ambiguous for an oid that exists in more than one.
+    """
+    result = connection.execute(
+        text(
+            "SELECT c.relname, obj_description(c.oid, 'pg_class') "
+            "FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace "
+            "WHERE n.nspname = 'public' AND c.relkind = 'r' "
+            "  AND obj_description(c.oid, 'pg_class') IS NOT NULL"
+        )
+    )
+    return {str(row[0]): str(row[1]) for row in result}
 
 
 def _row_security(connection: Connection) -> dict[str, tuple[bool, bool]]:
@@ -808,6 +1037,44 @@ def _seed_two_tenants(engine: Engine) -> dict[UUID, UUID]:
     return written
 
 
+def _empty_the_tables_a_re_upgrade_reads(engine: Engine) -> None:
+    """Delete every row from the tables whose revisions refuse a populated table.
+
+    ---------------------------------------------------------------------------
+    🔴 WHY A SCHEMA ROUND TRIP HAS TO EMPTY A TABLE FIRST, AND WHY THAT IS NOT
+       PAPERING OVER ANYTHING.
+    ---------------------------------------------------------------------------
+    The two tests below downgrade to `0001`/`0002` to assert what a downgrade
+    REVERSES, and return to `head` in a `finally` so the rest of the module and
+    `migrated_database`'s teardown find the schema they expect. That return trip
+    re-runs `0008`, `0031` and `0032`, each of which adds `NOT NULL` columns with
+    no server default and REFUSES — correctly, by design, CONVENTIONS §4 — if the
+    table it is altering holds rows. `_seed_two_tenants` leaves two committed
+    `orders` rows behind on purpose, so the `finally` was asking three revisions
+    to do a data migration they explicitly decline to do.
+
+    The refusal is right and the seed is right; what was wrong is that a test
+    about POLICY REVERSAL was carrying data across a schema round trip. Emptying
+    first makes the round trip a schema round trip, which is the only thing these
+    two assert.
+
+    NOTHING ELSE IN THE MODULE LOSES ROWS BY THIS. Every consumer of the seed
+    calls `_seed_two_tenants` itself and that function opens with
+    `DELETE FROM orders`, so this is order-independent and holds under
+    `pytest-randomly`.
+
+    `audit_log` is deliberately absent: it is append-only by trigger and cannot be
+    emptied, and no revision on the way back to `head` adds a `NOT NULL` column to
+    it — `0007` adds fourteen, and every one is nullable or has the trigger fill
+    it. If that ever changes, this function cannot be the fix and the revision
+    needs its own backfill.
+    """
+    with engine.begin() as connection:
+        for table in ("field_readings", "fields", "pages", "packages", "orders"):
+            # Children first. `S608`: every name is a literal in the tuple above.
+            connection.execute(text(f"DELETE FROM {table}"))  # noqa: S608
+
+
 def _seed_rules(engine: Engine) -> dict[UUID, str]:
     """Three committed rulebook rows, one per `status`. Returns id -> status.
 
@@ -892,6 +1159,7 @@ def test_the_tables_outside_tenancy_are_exactly_the_ones_named_as_exceptions(
     try:
         with engine.connect() as connection:
             derived = _global_tables(connection, alembic_version_table)
+            comments = _table_comments(connection)
     finally:
         engine.dispose()
 
@@ -901,6 +1169,35 @@ def test_the_tables_outside_tenancy_are_exactly_the_ones_named_as_exceptions(
         f"is therefore invisible to _tenant_tables, so nothing else in this file "
         f"would ever mention it. A new name means a table that carries no tenancy "
         f"at all: give it one, or name it here with the ruling that says why not."
+    )
+
+    # 🔴 THE MARKER, IN BOTH DIRECTIONS, AND THIS IS THE PART `0060` ASKED FOR.
+    # That revision writes `QUEUE-INFRASTRUCTURE:` as the first token of each of
+    # its four tables' `COMMENT ON TABLE` so a coverage check can be derived from
+    # the catalog "instead of from a list that ages in a test file". Both
+    # directions are asserted because each catches a different mistake: a queue
+    # table that lost its comment (a reinstall from an unmarked schema file), and
+    # a NON-queue table that acquired the marker — which would be the cheapest way
+    # to make a domain table with no `tenant_id` read as deliberate.
+    for table in sorted(QUEUE_INFRASTRUCTURE_TABLES):
+        assert comments.get(table, "").startswith(QUEUE_INFRASTRUCTURE_MARKER), (
+            f"{table} is queue infrastructure and its COMMENT ON TABLE does not "
+            f"start with {QUEUE_INFRASTRUCTURE_MARKER!r}: {comments.get(table)!r}. "
+            f"0060 writes that marker so a coverage check can be derived from the "
+            f"catalog rather than from this file."
+        )
+
+    marked = {
+        table
+        for table, comment in comments.items()
+        if comment.startswith(QUEUE_INFRASTRUCTURE_MARKER)
+    }
+    assert marked == set(QUEUE_INFRASTRUCTURE_TABLES), (
+        f"the tables commented as queue infrastructure are {sorted(marked)}, not "
+        f"{sorted(QUEUE_INFRASTRUCTURE_TABLES)}. COMMENT ON TABLE is available to "
+        f"every table owner, so this marker is a claim a migration makes and this "
+        f"line is what checks it — a domain table wearing it would be a table with "
+        f"no tenancy that reads as deliberate."
     )
 
 
@@ -1288,6 +1585,215 @@ def test_every_tenant_table_is_forced_isolated_and_reachable_by_the_app(
             )
 
 
+def test_the_narrowed_update_grant_on_fields_is_exactly_seventeen_columns(
+    migrated_database: str, seam_engine: Callable[[str], Engine], app_role: str
+) -> None:
+    """🔴 THE ONE ASSERTION IN THIS FILE THAT READS `has_column_privilege`.
+
+    Everything else here asks `has_table_privilege`, which answers about the
+    TABLE and returns FALSE for a role holding only column grants. `0032` revoked
+    the table-wide `UPDATE ON fields` and granted seventeen columns instead, so
+    every other assertion in this file now reports `titlepipe_app has no UPDATE
+    on fields` — true of the catalog, and a false statement about the system,
+    because the app writes seventeen of that table's columns on every correction.
+
+    BOTH DIRECTIONS, AS AN EXACT PARTITION OF THE TABLE'S COLUMNS. The granted
+    seventeen are asserted present and the remaining six absent, and the six are
+    DERIVED by subtracting the seventeen from the catalog rather than listed — so
+    a column added to `fields` by a later revision lands in the withheld set
+    automatically and is asserted refused, instead of being unasserted in both
+    directions until somebody remembers it.
+
+    WHAT EACH WITHHELD COLUMN IS PROTECTING, since a bare list reads as an
+    oversight:
+
+    * `tenant_id` — the column every `tenant_isolation` policy keys on. `0002`
+      writes no `WITH CHECK`, so the read predicate is reused for writes, and a
+      role that could re-tenant a row could then read it. This is the exploit
+      `test_exact_acl_and_update_surface.py`'s module docstring opens with, and
+      the reason it insists column ACLs be read at all;
+    * `state` — moves only through `titlepipe_field_transition`, the one
+      `SECURITY DEFINER` function `0032` grants the app, which refuses a
+      transition out of a terminal state and raises `55000` rather than
+      reporting zero rows affected;
+    * `order_id` and `path` — the field's identity. A field that can be
+      repointed at another order is a correction nobody can audit;
+    * `id` and `created_at` — insert-only by `0001`'s server defaults.
+
+    A `GRANT UPDATE ON fields TO titlepipe_app` restoring the table-wide grant
+    fails here on all six, which is the point: a column grant is ADDED to a table
+    grant rather than shadowing it, so the narrowing survives only as long as the
+    table-level revoke does.
+    """
+    granted = set(FIELDS_UPDATABLE_COLUMNS)
+    engine = seam_engine(migrated_database)
+    try:
+        with engine.connect() as connection:
+            columns = {
+                str(row[0])
+                for row in connection.execute(
+                    text(
+                        "SELECT a.attname FROM pg_attribute a "
+                        "WHERE a.attrelid = 'public.fields'::regclass "
+                        "  AND a.attnum > 0 AND NOT a.attisdropped"
+                    )
+                )
+            }
+            writable = {
+                column
+                for column in sorted(columns)
+                if connection.execute(
+                    text("SELECT has_column_privilege(:role, 'fields', :column, 'UPDATE')"),
+                    {"role": app_role, "column": column},
+                ).scalar_one()
+            }
+    finally:
+        engine.dispose()
+
+    assert granted <= columns, (
+        f"FIELDS_UPDATABLE_COLUMNS names columns fields does not have: "
+        f"{sorted(granted - columns)}. 0032 granted UPDATE on them, so either the "
+        f"column was renamed and the grant was not, or this literal is stale."
+    )
+
+    assert writable == granted, (
+        f"{app_role} can UPDATE {sorted(writable)} on fields, not "
+        f"{sorted(granted)}. Extra: {sorted(writable - granted)} — the six "
+        f"withheld columns are tenant_id, state, order_id, path, id and "
+        f"created_at, and each is a different refusal; missing: "
+        f"{sorted(granted - writable)} — the app takes 42501 from a line that "
+        f"appears in no handler."
+    )
+
+
+def test_a_row_count_by_the_owner_under_force_is_zero_however_many_rows_exist(
+    migrated_database: str, seam_engine: Callable[[str], Engine], migration_dsn: str
+) -> None:
+    """🔴 THE MEASUREMENT THAT MADE THREE MIGRATIONS' EMPTINESS GUARD A NO-OP.
+
+    `0008`, `0031` and `0032` each add `NOT NULL` columns with no server default,
+    and each opens with a `_refuse_if_populated` that issues `SELECT count(*)` and
+    raises `55000` if the answer is not zero. `FORCE ROW LEVEL SECURITY` is
+    precisely the clause that removes the table OWNER's exemption, `env.py`
+    connects as `titlepipe_migration` and `SET ROLE`s to `titlepipe_owner`, and no
+    migration establishes `app.current_tenant` — so that count comes back ZERO on
+    a populated table and the guard never fires. `0008` shipped that way; `0031`
+    and `0032` were written later, by another workstream, and both do
+    `ALTER TABLE ... NO FORCE` around the read.
+
+    This is the property, asserted directly, so that a fourth guard written the
+    obvious way has something to fail against. It is not a test OF those three
+    revisions — `test_the_populated_table_guard_actually_refuses` below is —
+    it is the reason none of them may be written the obvious way.
+
+    THE SEQUENCE MATTERS AND IS WHY THIS IS ONE TEST RATHER THAN TWO: the same
+    connection, the same role, the same table, one `ALTER` in between. A test that
+    only showed the count coming back zero would be indistinguishable from a test
+    against an empty table.
+    """
+    seeded = _seed_two_tenants(seam_engine(migrated_database))
+    assert len(seeded) == 2, "the seed must actually write, or the zero below proves nothing"
+
+    engine = seam_engine(migration_dsn)
+    try:
+        with engine.begin() as connection:
+            connection.execute(text(f"SET ROLE {OWNER_ROLE}"))
+            under_force = connection.execute(text("SELECT count(*) FROM orders")).scalar_one()
+            connection.execute(text("ALTER TABLE orders NO FORCE ROW LEVEL SECURITY"))
+            without_force = connection.execute(text("SELECT count(*) FROM orders")).scalar_one()
+            connection.execute(text("ALTER TABLE orders FORCE ROW LEVEL SECURITY"))
+            restored = connection.execute(
+                text("SELECT relforcerowsecurity FROM pg_class WHERE relname = 'orders'")
+            ).scalar_one()
+    finally:
+        engine.dispose()
+
+    assert under_force == 0, (
+        f"the owner counted {under_force} rows under FORCE ROW LEVEL SECURITY. If "
+        f"this is ever non-zero the three _refuse_if_populated guards could have "
+        f"been written the obvious way after all — check whether FORCE was "
+        f"dropped from orders, which would be a much larger problem than this test."
+    )
+    assert without_force == len(seeded), (
+        f"the owner counted {without_force} rows with FORCE off, not {len(seeded)}. "
+        f"NO FORCE is what a migration's emptiness guard relies on to see the rows "
+        f"it is about to break."
+    )
+    assert restored is True, "FORCE was not put back on orders"
+
+
+def test_the_populated_table_guard_actually_refuses(
+    migrated_database: str,
+    alembic_config: Callable[[str], Config],
+    migration_dsn: str,
+    seam_engine: Callable[[str], Engine],
+) -> None:
+    """🔴 `0008`'s EMPTINESS GUARD, FIRING. IT DID NOT UNTIL 2026-09-05.
+
+    `_refuse_if_populated` exists so that re-running `0008` against a populated
+    `orders` produces `SQLSTATE 55000: orders holds N row(s) ... this is a request
+    for a BACKFILL migration` and not PostgreSQL's `NotNullViolation: column
+    "client_id" of relation "orders" contains null values` — a message that names
+    one column of seven and reads like a defect in the DDL.
+
+    It counted through `FORCE ROW LEVEL SECURITY` and therefore always answered
+    zero. The test above holds that measurement; this holds the consequence, which
+    is the half that matters: the guard's own docstring said it "reads the table
+    rather than trusting that it is empty", and it did not.
+
+    MEASURED 2026-09-05 on this tree, one committed order, `downgrade 0001` then
+    `upgrade head`:
+
+        before the fix -> sqlalchemy.exc.IntegrityError
+                          (psycopg.errors.NotNullViolation) column "client_id"
+                          of relation "orders" contains null values
+                          [SQL: ALTER TABLE orders ADD COLUMN client_id UUID NOT NULL]
+        after          -> RuntimeError: SQLSTATE 55000: orders holds 1 row(s),
+                          and this revision adds NOT NULL columns to it with no
+                          server default: client_id, external_ref, jurisdiction,
+                          state_code, county, status, arrived_at.
+
+    THE ASSERTION IS ON THE MESSAGE AND NOT ONLY ON THE RAISE, because both
+    outcomes above are a failed upgrade. A test that asserted "the upgrade fails"
+    passed on the broken tree, which is why the broken tree had one.
+
+    `0031` and `0032` carry the identical guard on `packages`, `pages`, `fields`
+    and `field_readings`, correct since they were written. They are not re-proved
+    here: the return trip runs all three, and a regression in either would surface
+    as this test failing on the wrong revision's message.
+    """
+    seeded = _seed_two_tenants(seam_engine(migrated_database))
+    config = alembic_config(migration_dsn)
+
+    command.downgrade(config, "0001")
+    try:
+        with pytest.raises(RuntimeError) as raised:
+            command.upgrade(config, "head")
+    finally:
+        # Whatever happened, get back to `head` for the rest of the module and
+        # for `migrated_database`'s teardown. The failed upgrade rolled `0008`
+        # back, so the chain is at `0007` and the rows are still there.
+        _empty_the_tables_a_re_upgrade_reads(seam_engine(migrated_database))
+        command.upgrade(config, "head")
+
+    message = str(raised.value)
+    assert f"orders holds {len(seeded)} row(s)" in message, (
+        f"the upgrade failed, but not with 0008's refusal: {message}. A "
+        f"NotNullViolation naming one column here means _refuse_if_populated "
+        f"counted through row-level security again and never ran."
+    )
+    assert NOT_IN_PREREQUISITE_STATE in message, (
+        f"0008's refusal did not carry SQLSTATE {NOT_IN_PREREQUISITE_STATE}, which "
+        f"is what distinguishes 'the database is not in a state where this can be "
+        f"applied' from a malformed statement: {message}"
+    )
+    assert "BACKFILL" in message, (
+        f"0008's refusal did not name the remedy. The whole value of refusing "
+        f"rather than letting the ALTER fail is that the operator is told this is "
+        f"a request for a backfill migration and not for a retry: {message}"
+    )
+
+
 def test_the_registry_is_forced_and_isolated_on_its_own_id(
     migrated_database: str,
     seam_engine: Callable[[str], Engine],
@@ -1532,37 +2038,147 @@ def test_the_append_only_trigger_still_answers_for_the_paths_the_acl_does_not(
     )
 
 
-def test_there_are_no_sequences_for_a_sequence_grant_to_reach(
+def test_every_sequence_is_usable_by_every_role_that_inserts_into_its_table(
     migrated_database: str, seam_engine: Callable[[str], Engine]
 ) -> None:
-    """Why `0002` omits `GRANT USAGE, SELECT ON ALL SEQUENCES`.
+    """🔴 THIS TEST WAS `test_there_are_no_sequences_for_a_sequence_grant_to_reach`
+    AND IT WENT RED ON PURPOSE. THE OLD NAME IS HERE SO A GREP FOR IT LANDS.
 
-    Every primary key in this schema defaults to `gen_random_uuid()` and nothing
-    is `serial` or `IDENTITY`, so the statement would grant nothing to nobody
-    while reading like a covered case. MEASURED 2026-08-05: zero relations of
-    kind `S` in `public`.
+    What it asserted was that schema `public` holds zero relations of kind `S`,
+    which was `0002`'s stated reason for omitting `GRANT USAGE, SELECT ON ALL
+    SEQUENCES`: every primary key defaults to `gen_random_uuid()`, nothing is
+    `serial` or `IDENTITY`, and the statement would have granted nothing to
+    nobody while reading like a covered case. Its own docstring said *"this is the
+    test that notices the day that stops being true."*
 
-    This is the test that notices the day that stops being true. A revision that
-    adds a `serial` column creates a sequence, and `titlepipe_app` then gets
-    `permission denied for sequence …` on its first INSERT — a failure that
-    points at the sequence and not at the missing grant.
+    IT NOTICED. `0060` installs Procrastinate's vendored schema, in which
+    `procrastinate_jobs`, `procrastinate_events` and `procrastinate_periodic_defers`
+    are `bigserial` — three sequences. That revision's docstring predicted this
+    failure by name, said the remedy is not to delete the test, and could not
+    write the replacement because core-api's suite was outside its file set:
+
+        *"The remedy is not to delete it but to replace the claim with the
+        stronger one this revision has to satisfy anyway — every sequence in
+        `public` is USAGE-granted to every role that inserts into the table
+        owning it."*
+
+    THIS IS THAT REPLACEMENT, AND IT IS STRICTLY STRONGER THAN WHAT IT REPLACES.
+    "There are no sequences" is vacuously satisfied by a schema with no sequences
+    and says nothing about one that has them. This asserts the property the old
+    claim was a proxy for — that no role can hold `INSERT` on a table whose
+    sequence it cannot use — and that property is false in exactly the case the
+    old test existed to predict: `titlepipe_app` takes `permission denied for
+    sequence procrastinate_jobs_id_seq`, an error naming the sequence and not the
+    missing grant.
+
+    DERIVED, NOT LISTED. The pairing of a sequence to the roles that must reach
+    it comes from the catalog — the table that owns the sequence, and who holds
+    `INSERT` on that table — so a fourth `bigserial` table arriving with an
+    `INSERT` grant and no sequence grant fails here without anybody remembering
+    to add it.
+
+    🔴 AN IDENTITY COLUMN'S SEQUENCE IS THE ONE EXEMPTION AND IT IS ASSERTED
+    RATHER THAN SKIPPED. `procrastinate_workers.id` is `GENERATED ALWAYS AS
+    IDENTITY`; its sequence is internally dependent on the column, PostgreSQL
+    checks no privilege for it, and `0060` deliberately grants none. So the
+    expectation for that one is the EMPTY grantee set — a `USAGE` grant appearing
+    on it would mean somebody stopped believing the exemption and started
+    covering it, which is a change in reasoning worth a failure.
+
+    `services/worker/tests/test_queue_schema.py::test_the_identity_sequence_needs_no_grant`
+    is the behavioural half: it inserts a worker row as `titlepipe_worker` with
+    nothing granted on that sequence.
     """
     engine = seam_engine(migrated_database)
     try:
         with engine.connect() as connection:
-            sequences = connection.execute(
+            # `pg_depend` with `deptype` in ('a','i') is what ties a sequence to
+            # the column that owns it: `'a'` is the AUTO dependency a `serial`
+            # creates, `'i'` the INTERNAL one an IDENTITY column creates. Reading
+            # the name for a `_id_seq` suffix instead would be a string
+            # convention rather than a catalog fact, and Procrastinate is not the
+            # last thing that will be vendored in here.
+            owned = connection.execute(
                 text(
-                    "SELECT c.relname FROM pg_class c "
-                    "JOIN pg_namespace n ON n.oid = c.relnamespace "
-                    "WHERE n.nspname = 'public' AND c.relkind = 'S'"
+                    "SELECT s.relname, t.relname, a.attidentity <> '' "
+                    "FROM pg_class s "
+                    "JOIN pg_namespace n ON n.oid = s.relnamespace "
+                    "JOIN pg_depend d ON d.objid = s.oid AND d.classid = 'pg_class'::regclass "
+                    "JOIN pg_class t ON t.oid = d.refobjid "
+                    "JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = d.refobjsubid "
+                    "WHERE n.nspname = 'public' AND s.relkind = 'S' "
+                    "  AND d.deptype IN ('a', 'i')"
                 )
             ).all()
+            unowned = connection.execute(
+                text(
+                    "SELECT s.relname FROM pg_class s "
+                    "JOIN pg_namespace n ON n.oid = s.relnamespace "
+                    "WHERE n.nspname = 'public' AND s.relkind = 'S' "
+                    "  AND NOT EXISTS (SELECT 1 FROM pg_depend d "
+                    "                  WHERE d.objid = s.oid "
+                    "                    AND d.classid = 'pg_class'::regclass "
+                    "                    AND d.deptype IN ('a', 'i'))"
+                )
+            ).all()
+
+            faults: list[str] = []
+            for sequence, table, is_identity in owned:
+                inserters = {
+                    role
+                    for role in (APP_ROLE, WORKER_ROLE, BLIND_ROLE)
+                    if connection.execute(
+                        text("SELECT has_table_privilege(:role, :table, 'INSERT')"),
+                        {"role": role, "table": str(table)},
+                    ).scalar_one()
+                }
+                usable = {
+                    role
+                    for role in (APP_ROLE, WORKER_ROLE, BLIND_ROLE)
+                    if connection.execute(
+                        text("SELECT has_sequence_privilege(:role, :sequence, 'USAGE')"),
+                        {"role": role, "sequence": str(sequence)},
+                    ).scalar_one()
+                }
+                # An IDENTITY sequence needs no grant and must not have one; a
+                # `serial` sequence must be usable by everyone who can INSERT.
+                expected: set[str] = set() if is_identity else inserters
+                if usable != expected:
+                    kind = "GENERATED AS IDENTITY" if is_identity else "serial"
+                    faults.append(
+                        f"{sequence} (owned by {kind} column of {table}): USAGE is held "
+                        f"by {sorted(usable)}, expected {sorted(expected)} — "
+                        f"INSERT on {table} is held by {sorted(inserters)}"
+                    )
     finally:
         engine.dispose()
 
-    assert [str(row[0]) for row in sequences] == [], (
-        "this schema now has sequences, so 0002's omitted sequence grant is no "
-        "longer a no-op and titlepipe_app cannot INSERT into whatever uses them"
+    assert faults == [], (
+        "a sequence grant does not match the INSERT grants on the table that owns "
+        "it. 0002 grants no sequence privilege at all, which was a no-op until "
+        "0060 vendored three bigserial tables; a role that can INSERT and cannot "
+        "use the sequence takes `permission denied for sequence <name>`, an error "
+        "that names the sequence and not the missing grant:\n  " + "\n  ".join(faults)
+    )
+
+    # THE POSITIVE CONTROL. Every assertion above is a loop over sequences, and a
+    # loop over nothing passes — which is precisely the state this test used to
+    # ASSERT, so an empty catalog here would look like the old test passing rather
+    # than like this one being blind. Four sequences, MEASURED at head 2026-09-05.
+    assert len(owned) == 4, (
+        f"the derivation found {len(owned)} owned sequences. Until 0060 the answer "
+        f"was zero and this file asserted it; a zero here now means the queue "
+        f"schema did not install, not that the grant question went away."
+    )
+
+    # A sequence owned by no column is reached by `nextval('name')` and by nothing
+    # else, so there is no table whose INSERT grant could imply who needs it — the
+    # derivation above cannot speak for one, and this says so rather than skipping
+    # it silently.
+    assert [str(row[0]) for row in unowned] == [], (
+        "sequences exist that no column owns, so the INSERT-implies-USAGE "
+        "derivation above cannot say who should reach them: "
+        f"{[str(row[0]) for row in unowned]}"
     )
 
 
@@ -1743,6 +2359,12 @@ def test_downgrading_only_0002_removes_every_policy_grant_and_force(
     `migrated_database`'s own teardown, which downgrades from wherever this left
     things.
     """
+    # Before the downgrade, not after: at `0001` these tables still hold their
+    # rows and still have their `tenant_isolation` policies, and a `DELETE` issued
+    # by the owner under `FORCE` deletes nothing it cannot see. See
+    # `_empty_the_tables_a_re_upgrade_reads` for why the `finally` below needs it.
+    _empty_the_tables_a_re_upgrade_reads(seam_engine(migrated_database))
+
     config = alembic_config(migration_dsn)
     command.downgrade(config, "0001")
     try:
@@ -1879,6 +2501,11 @@ def test_the_migration_refuses_when_the_schema_grant_did_not_land(
     nothing to do with schema privileges; leaving it subtly different is worse,
     because nothing at all would say so.
     """
+    # Same reason as the test above: this one also returns to `head` in a
+    # `finally`, and `0008`/`0031`/`0032` refuse to re-run against a populated
+    # table. See `_empty_the_tables_a_re_upgrade_reads`.
+    _empty_the_tables_a_re_upgrade_reads(seam_engine(migrated_database))
+
     hardened_roles = ", ".join(["PUBLIC", *sorted({owner_role, *managed_roles})])
 
     config = alembic_config(migration_dsn)

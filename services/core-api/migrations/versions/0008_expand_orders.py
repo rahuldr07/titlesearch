@@ -111,11 +111,67 @@ def _refuse_if_populated(table: str, columns: Sequence[str]) -> None:
     Reads the table rather than trusting that it is empty, and raises with the
     column list and the remedy. The alternative is PostgreSQL's own message,
     which names one column and reads like a defect in the DDL.
+
+    ---------------------------------------------------------------------------
+    🔴 THIS GUARD READ THROUGH ROW-LEVEL SECURITY AND THEREFORE NEVER FIRED.
+       IT COUNTED ZERO ON EVERY DATABASE, INCLUDING THE ONES IT EXISTS TO REFUSE.
+    ---------------------------------------------------------------------------
+    `0002` puts `FORCE ROW LEVEL SECURITY` on `orders`, and `FORCE` is precisely
+    the clause that removes the table OWNER's exemption. `env.py` connects as
+    `titlepipe_migration` and `SET ROLE`s to `titlepipe_owner`, and no migration
+    establishes `app.current_tenant` — so `tenant_isolation` evaluates against
+    the empty sentinel and every row of `orders` is invisible to the `SELECT
+    count(*)` below. MEASURED 2026-09-05 against `postgres:18.4`, one committed
+    order in the table:
+
+        as postgres (superuser)                     -> count = 1
+        as titlepipe_migration, SET ROLE owner      -> count = 0
+        as the owner with `SET LOCAL row_security = off`
+                                                    -> ERROR: query would be
+                                                       affected by row-level
+                                                       security policy for
+                                                       table "orders"
+        as the owner after `ALTER TABLE orders NO FORCE ROW LEVEL SECURITY`
+                                                    -> count = 1
+
+    So the refusal never happened and the revision fell through to
+    `ALTER TABLE orders ADD COLUMN client_id UUID NOT NULL`, which is a heap scan
+    that ignores RLS entirely and sees every row. The operator got
+    `NotNullViolation: column "client_id" of relation "orders" contains null
+    values` — PostgreSQL's own message, naming one column, reading like a defect
+    in the DDL — which is the exact outcome the paragraph above says this
+    function exists to prevent. A guard that cannot fail is worse than no guard:
+    it is a line a reviewer counts as cover.
+
+    HOW IT WAS FOUND, because it matters that it was not found by reading:
+    `tests/test_forced_rls_and_grants.py::test_downgrading_only_0002_removes_every
+    _policy_grant_and_force` downgrades to `0001` and returns to `head` in a
+    `finally`, and an earlier test in that module leaves two committed `orders`
+    rows behind on purpose. The re-upgrade is the only path in this repository
+    that runs this revision against a populated table, and it went red on the
+    `integration/backend-2026-09` merge.
+
+    `0031::_refuse_if_populated` CARRIES THE CORRECT VERSION AND THE SAME
+    MEASUREMENT, and `0032` copies it. Both were written after this one, by
+    another workstream, and neither could reach back into `0008`. This is that
+    fix, verbatim, so the three are the same three lines.
+
+    `ALTER TABLE ... NO FORCE` is the right escape hatch BECAUSE it is a
+    privilege rather than a setting: only the owner may issue it, where any role
+    can `SET` a GUC. It is transactional DDL, so it rolls back with the rest of
+    the revision, and it takes `ACCESS EXCLUSIVE`, so no other session sees
+    unfiltered rows in the meantime. `FORCE` is restored on the line after the
+    read rather than in a `finally` for `0031`'s stated reason: nothing between
+    them can raise and leave the table unforced, because a failure anywhere in
+    this revision aborts the transaction and takes the `ALTER` back with it.
     """
+    op.execute(f"ALTER TABLE {table} NO FORCE ROW LEVEL SECURITY")
     # `sa.table` rather than an f-string into `sa.text`: the identifier is quoted
     # by the compiler, and ruff's S608 does not have to be argued with.
     counted = sa.select(sa.func.count()).select_from(sa.table(table))
     count = op.get_bind().execute(counted).scalar_one()
+    op.execute(f"ALTER TABLE {table} FORCE ROW LEVEL SECURITY")
+
     if count:
         raise RuntimeError(
             f"SQLSTATE {NOT_IN_PREREQUISITE_STATE}: {table} holds {count} row(s), and this "

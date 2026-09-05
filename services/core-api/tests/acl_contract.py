@@ -44,14 +44,227 @@ MIGRATION_ROLE = "titlepipe_migration"
 
 NON_OWNER_ROLES = frozenset({APP_ROLE, WORKER_ROLE, BLIND_ROLE, MIGRATION_ROLE})
 
-# The tenant-keyed tables `0002` grants the app SELECT/INSERT/UPDATE on.
+# Not a role. `aclexplode` reports `grantee = 0` for it and `CATALOG_ACL_QUERY`
+# renders that as this word, because `0::regrole` is `-`, which is not a name
+# anybody can grep for or grant to.
+PUBLIC_ROLE = "PUBLIC"
+
+# The tenant-keyed tables the app holds SELECT/INSERT/UPDATE on at table level.
+#
+# 🔴 `fields` LEFT THIS TUPLE ON 2026-09-05 AND DID NOT LOSE A PRIVILEGE.
+# `0032::_narrow_the_update_grant` does `REVOKE UPDATE ON fields FROM
+# titlepipe_app` and then `GRANT UPDATE (<seventeen columns>) ON fields` — the
+# revoke has to be table-wide and has to come first, because a column grant is
+# ADDED to a table grant rather than shadowing it. So the app writes seventeen of
+# that table's columns and holds no table-level `UPDATE`, which is why `fields`
+# appears below under `APP_APPEND_SHAPED_TABLES` for its two table verbs and
+# again in `FIELDS_COLUMN_UPDATE_GRANTS` for the seventeen. Moving it back here
+# would restore the table-wide grant and make `state`, `tenant_id`, `order_id` and
+# `path` writable again.
+#
+# The other nineteen names arrived with the `integration/backend-2026-09` merge.
+# Each is a tenant-scoped table created by `0005`-`0080` whose revision grants the
+# ordinary three verbs; the exceptions are the two lists after this one, and the
+# reason a table is in one of those rather than here is always a trigger or a
+# ruling and never an omission.
 APP_WRITABLE_TABLES = (
+    # `0001`, minus `fields`. See above.
     "orders",
     "packages",
     "pages",
-    "fields",
     "field_readings",
     "tenants",
+    # `0005`, `0006`, `0020`, `0030`, `0080`.
+    "record_classifications",
+    "legal_holds",
+    "users",
+    "documents",
+    "clients",
+    # `0040` — the instrument spine and the DERIVED links over it.
+    "instruments",
+    "chain_links",
+    "chain_root_assertions",
+    # `0041`.
+    "escalations",
+    "escalation_orders",
+    # `0050`. `reports` is NOT here: it is append-only by trigger and is two
+    # verbs below. `report_verified_checks` beside it deliberately is here — the
+    # stored assurance sentences are amendable, the delivered report is not.
+    "report_verified_checks",
+    "deliveries",
+    "delivery_receipt_steps",
+    # `0051`.
+    "products",
+    "client_config_versions",
+    "client_config_lines",
+    "intake_signoffs",
+    "intake_signoff_lines",
+    "completeness_gaps",
+    # `0070`. `UPDATE` is what a correction needs; `0072`'s trigger is what makes
+    # it narrow, by refusing any UPDATE no `golden_corrections` row signs.
+    "golden_fields",
+)
+
+# SELECT and INSERT and no UPDATE. Three of these four are append-only by trigger
+# — `audit_log` (`0001`), `golden_corrections` (`0071`), `reports` (`0050`) — so
+# granting UPDATE would change no behaviour and would MISSTATE THE INTENT on the
+# tables this system promises never to edit in place.
+#
+# `fields` is the fourth and is here for a DIFFERENT reason, which is why this
+# tuple is not called "the append-only tables": it has no append-only trigger and
+# is edited constantly. It holds two TABLE verbs because its third is granted per
+# column. See `APP_WRITABLE_TABLES`.
+APP_APPEND_SHAPED_TABLES = (
+    "audit_log",
+    "golden_corrections",
+    "reports",
+    "fields",
+)
+
+# Read-only to the app, and both are outside tenancy. `rules` is the global
+# rulebook (`0003`; rule creation and the engineer-confirm write arrive with
+# their own refusal tests, not ahead of them). `retention_windows` is the
+# statutory floor (`0005`) — the law is not the app's to rewrite.
+APP_READ_ONLY_TABLES = ("rules", "retention_windows")
+
+# `0032::FIELD_APP_UPDATABLE_COLUMNS`. THE SIX THAT ARE ABSENT ARE THE POINT:
+# `id`, `created_at`, `tenant_id`, `order_id`, `path`, `state`. `tenant_id` is the
+# column every `tenant_isolation` policy keys on and `0002` writes no `WITH
+# CHECK`, so a role that could re-tenant a row could then read it; `state` moves
+# only through `titlepipe_field_transition`; `order_id` and `path` are the field's
+# identity.
+FIELDS_UPDATABLE_COLUMNS = (
+    "value",
+    "na_reason",
+    "source_document_id",
+    "source_page_no",
+    "source_snippet",
+    "source_line_coords",
+    "engine_id",
+    "engine_confidence_raw",
+    "approved_by",
+    "approved_at",
+    "correction_reason",
+    "excluded_reason",
+    "excluded_by",
+    "excluded_at",
+    "asking",
+    "why",
+    "consequence",
+)
+
+# ---------------------------------------------------------------------------
+# 🔴 `0060`'s QUEUE GRANTS. NOT THIS REPOSITORY'S TABLES, STILL THIS
+#    REPOSITORY'S PRIVILEGE DECISIONS.
+# ---------------------------------------------------------------------------
+# The vendored Procrastinate DDL ships no GRANTs at all — `0060` writes them, and
+# reads them back so the revision fails if they did not land. What it granted is
+# the interesting part and it is asymmetric on purpose:
+#
+# * `titlepipe_worker` gets DELETE as well as the other three, because a worker
+#   prunes finished jobs. It is the ONLY grantee of DELETE anywhere in this
+#   schema and the only place `REFUSED_VERBS` in
+#   `test_forced_rls_and_grants.py` does not apply — that file's loops never
+#   reach these tables, because they carry no `tenant_id`;
+# * `titlepipe_app` gets SELECT and INSERT on `procrastinate_jobs` and INSERT on
+#   `procrastinate_events`, which is what "enqueue a job" costs. `INSERT ...
+#   RETURNING id` is a read, which is why SELECT is there;
+# * `titlepipe_blind` holds NOTHING here and is not named in `0060` at all.
+#
+# 🔴 SELECT ON `procrastinate_jobs` READS EVERY TENANT'S JOB ARGUMENTS, and two
+# roles hold it. There is no RLS on these tables and cannot be — a worker
+# services every tenant, so a policy keyed on a per-session GUC would make its own
+# fetch return nothing. `0060`'s docstring is the ruling and records the residual:
+# nothing in the database stops a caller putting a name or a document excerpt into
+# a job's `args`.
+QUEUE_WORKER_FULL_TABLES = (
+    "procrastinate_jobs",
+    "procrastinate_periodic_defers",
+    "procrastinate_workers",
+)
+QUEUE_WORKER_VERBS = ("SELECT", "INSERT", "UPDATE", "DELETE")
+
+# `procrastinate_events` is append-shaped for the worker too — it holds DELETE
+# for pruning and no UPDATE, because an event that happened does not change.
+QUEUE_EVENTS_TABLE = "procrastinate_events"
+QUEUE_EVENTS_WORKER_VERBS = ("SELECT", "INSERT", "DELETE")
+
+# The three `bigserial` sequences and who must reach them. `procrastinate_workers`
+# is `GENERATED ALWAYS AS IDENTITY` and gets NO sequence grant, deliberately: an
+# identity column's sequence is internally dependent on the column and PostgreSQL
+# checks no privilege for it. That absence is asserted rather than assumed, here
+# and in `test_forced_rls_and_grants.py::test_every_sequence_is_usable_by_every_role
+# _that_inserts_into_its_table`.
+QUEUE_SEQUENCE_GRANTS = (
+    ("procrastinate_jobs_id_seq", (APP_ROLE, WORKER_ROLE)),
+    ("procrastinate_events_id_seq", (APP_ROLE, WORKER_ROLE)),
+    ("procrastinate_periodic_defers_id_seq", (WORKER_ROLE,)),
+)
+
+# ---------------------------------------------------------------------------
+# 🔴 ROUTINE GRANTS, AND WHY `PUBLIC` IS ON EIGHTEEN OF THEM.
+# ---------------------------------------------------------------------------
+# `EXECUTE` on a function is granted to `PUBLIC` by PostgreSQL's own
+# `acldefault`, so a function nobody has granted on carries a NULL `proacl` and is
+# invisible to `CATALOG_ACL_QUERY` below, which reads `proacl IS NOT NULL`. The
+# eighteen queue functions appear here ONLY because `0060` granted EXECUTE to
+# `titlepipe_worker`, which materialised the ACL and wrote the default out with
+# it. That is the shipped state and not a decision `0060` made.
+#
+# It is inert for these eighteen: none is `SECURITY DEFINER`, so each runs with
+# the CALLER's privileges and a role with no `INSERT` on `procrastinate_jobs`
+# still cannot enqueue by calling `procrastinate_defer_jobs_v1`.
+#
+# 🔴 THE BLIND SPOT THAT LEAVES IS REAL AND IS ASSERTED ELSEWHERE, because it
+# cannot be asserted here: every function with a NULL `proacl` also carries
+# `EXECUTE TO PUBLIC` and this contract cannot see any of them. One of those is
+# `SECURITY DEFINER` — `0041`'s `escalations_resolution_needs_a_live_rule`, where
+# `0032` `REVOKE`s from `PUBLIC` on its own `SECURITY DEFINER` function and `0041`
+# does not. What stops it mattering is that it returns `trigger`, and PostgreSQL
+# refuses to call a trigger function directly. `test_exact_acl_and_update_surface
+# .py::test_every_function_public_can_execute_is_a_trigger_function` is the
+# assertion that keeps that from being a coincidence.
+QUEUE_ROUTINES = (
+    "procrastinate_cancel_job_v1",
+    "procrastinate_defer_jobs_v1",
+    "procrastinate_defer_periodic_job_v2",
+    "procrastinate_fetch_job_v2",
+    "procrastinate_finish_job_v1",
+    "procrastinate_notify_queue_abort_job_v1",
+    "procrastinate_notify_queue_job_inserted_v1",
+    "procrastinate_prune_stalled_workers_v1",
+    "procrastinate_register_worker_v1",
+    "procrastinate_retry_job_v1",
+    "procrastinate_retry_job_v2",
+    "procrastinate_trigger_abort_requested_events_procedure_v1",
+    "procrastinate_trigger_function_scheduled_events_v1",
+    "procrastinate_trigger_function_status_events_insert_v1",
+    "procrastinate_trigger_function_status_events_update_v1",
+    "procrastinate_unlink_periodic_defers_v1",
+    "procrastinate_unregister_worker_v1",
+    "procrastinate_update_heartbeat_v1",
+)
+
+# This repository's own functions that the app may call, each granted by the
+# revision that created it and each `REVOKE`d from `PUBLIC` first where it is
+# `SECURITY DEFINER`.
+#
+# `titlepipe_field_transition` (`0032`) is the only `SECURITY DEFINER` one here
+# and is the whole reason the column grant on `fields` can be as narrow as it is:
+# `state` is writable by nobody and moves only through this function, which runs
+# as the owner and is still filtered by `tenant_isolation`, because `FORCE`
+# removes the owner's exemption too.
+#
+# The other four are readers — `audit_chain_verify` (`0007`) re-walks the hash
+# chain, `legal_hold_is_active` and `retention_is_disposable` and
+# `retention_window` (`0005`/`0006`) are the ONE path through which disposal is
+# allowed to decide.
+APP_ROUTINES = (
+    "audit_chain_verify",
+    "legal_hold_is_active",
+    "retention_is_disposable",
+    "retention_window",
+    "titlepipe_field_transition",
 )
 
 # Every non-owner ACL entry the schema is allowed to hold, as
@@ -74,26 +287,65 @@ EXACT_NON_OWNER_ACL = frozenset(
             for table in APP_WRITABLE_TABLES
             for verb in ("SELECT", "INSERT", "UPDATE")
         ),
-        f"relation:audit_log:SELECT:{APP_ROLE}",
-        f"relation:audit_log:INSERT:{APP_ROLE}",
-        # `0003`: the rulebook is read-only to the app.
-        f"relation:rules:SELECT:{APP_ROLE}",
+        # `0001`/`0050`/`0071` by trigger, and `fields` for its own reason. See
+        # `APP_APPEND_SHAPED_TABLES`.
+        *(
+            f"relation:{table}:{verb}:{APP_ROLE}"
+            for table in APP_APPEND_SHAPED_TABLES
+            for verb in ("SELECT", "INSERT")
+        ),
+        # `0003` and `0005`: the rulebook and the statutory floor are read-only.
+        *(f"relation:{table}:SELECT:{APP_ROLE}" for table in APP_READ_ONLY_TABLES),
+        # `0032`: the seventeen columns that replaced the table-wide UPDATE on
+        # `fields`. THESE ARE THE ONLY COLUMN-LEVEL ENTRIES IN THIS CONTRACT and
+        # the only ones there should ever be — a column grant is invisible to
+        # `relacl` and to `has_table_privilege`, so anything not written here is a
+        # privilege no other assertion in this repository can see.
+        *(f"column:fields.{column}:UPDATE:{APP_ROLE}" for column in FIELDS_UPDATABLE_COLUMNS),
+        # `0060`: the queue, granted by hand because the vendored DDL ships no
+        # GRANTs. The worker's DELETE is the only DELETE anywhere in this schema.
+        *(
+            f"relation:{table}:{verb}:{WORKER_ROLE}"
+            for table in QUEUE_WORKER_FULL_TABLES
+            for verb in QUEUE_WORKER_VERBS
+        ),
+        *(
+            f"relation:{QUEUE_EVENTS_TABLE}:{verb}:{WORKER_ROLE}"
+            for verb in QUEUE_EVENTS_WORKER_VERBS
+        ),
+        # What "enqueue a job" costs the app. `INSERT ... RETURNING id` is a read,
+        # which is why SELECT is on `procrastinate_jobs` — and it is also what
+        # lets that role read every tenant's job arguments. `0060`'s docstring
+        # states the residual; this line is where it is priced.
+        f"relation:procrastinate_jobs:SELECT:{APP_ROLE}",
+        f"relation:procrastinate_jobs:INSERT:{APP_ROLE}",
+        f"relation:{QUEUE_EVENTS_TABLE}:INSERT:{APP_ROLE}",
+        *(
+            f"relation:{sequence}:USAGE:{role}"
+            for sequence, roles in QUEUE_SEQUENCE_GRANTS
+            for role in roles
+        ),
+        # `0060`'s EXECUTE grants, plus the `PUBLIC` entry PostgreSQL's own
+        # `acldefault` writes out alongside them. See `QUEUE_ROUTINES` for why
+        # `PUBLIC` is inert on these eighteen and what it is NOT inert about.
+        *(
+            f"routine:{routine}:EXECUTE:{role}"
+            for routine in QUEUE_ROUTINES
+            for role in (PUBLIC_ROLE, WORKER_ROLE, APP_ROLE)
+        ),
+        # This repository's own functions, granted by the revision that made each.
+        *(f"routine:{routine}:EXECUTE:{APP_ROLE}" for routine in APP_ROUTINES),
         # `0070`: the golden set is writable, and `UPDATE` is what a correction
         # needs. The grant is not what makes it narrow — `0072`'s trigger refuses
         # any UPDATE that no `golden_corrections` row signs, whatever the ACL
         # says. NO `DELETE`: ground truth is not removed by the application, and
         # `0070`'s docstring records that this is an ACL rather than a trigger
         # and why (retention belongs to another card).
-        f"relation:golden_fields:SELECT:{APP_ROLE}",
-        f"relation:golden_fields:INSERT:{APP_ROLE}",
-        f"relation:golden_fields:UPDATE:{APP_ROLE}",
         # `0071`: the correction ledger is append-only, so it gets `audit_log`'s
         # treatment exactly — SELECT and INSERT, and no UPDATE. Granting UPDATE
         # would change no behaviour, because the triggers refuse it whatever the
         # ACL says, and would MISSTATE THE INTENT on the one table this system
         # promises never to edit in place.
-        f"relation:golden_corrections:SELECT:{APP_ROLE}",
-        f"relation:golden_corrections:INSERT:{APP_ROLE}",
         # `roles.sql` (~line 284): `GRANT USAGE ON SCHEMA public TO
         # titlepipe_owner, titlepipe_app, titlepipe_worker`. The owner's entry is
         # dropped by the owner filter; the other two are here. THE WORKER HOLDS
@@ -236,6 +488,37 @@ CONNECT_TIME_STATE_QUERY = """
 """
 
 
+# The rendered form of `0032`'s seventeen, so the test and the harness step
+# compare the same strings. `sorted()` at use so the literal reads by column
+# rather than alphabetically, which is how `FIELD_APP_UPDATABLE_COLUMNS` reads.
+EXPECTED_COLUMN_GRANTS = frozenset(
+    f"UPDATE on fields.{column} to {APP_ROLE}" for column in FIELDS_UPDATABLE_COLUMNS
+)
+
+
+def column_grant_divergence(
+    rows: Sequence[tuple[str, str, str, str]],
+) -> tuple[list[str], list[str]]:
+    """`(unexpected, missing)` for `COLUMN_ACL_QUERY`'s rows.
+
+    🔴 THIS RETURNED "EVERY ROW IS UNEXPECTED" UNTIL 2026-09-05, because the
+    contract was TABLE-LEVEL GRANTS ONLY and the expected value was the empty set.
+    `0032` changed that deliberately: it revoked the table-wide `UPDATE ON fields`
+    and granted seventeen columns, which is a NARROWING — `state`, `tenant_id`,
+    `order_id` and `path` stopped being writable by the app.
+
+    The expectation is now those seventeen and nothing else, which keeps the
+    property the empty set was standing in for: a column grant is invisible to
+    `relacl` and reported FALSE by `has_table_privilege`, so any column grant not
+    written down here is a privilege no other assertion in this repository can
+    see. `GRANT UPDATE (tenant_id) ON pages TO titlepipe_blind` — the shape the
+    test's docstring is about — still fails, and now fails naming itself rather
+    than being one of eighteen lines.
+    """
+    observed = {f"{row[2]} on {row[0]}.{row[1]} to {row[3]}" for row in rows}
+    return sorted(observed - EXPECTED_COLUMN_GRANTS), sorted(EXPECTED_COLUMN_GRANTS - observed)
+
+
 def acl_divergence(rows: Sequence[tuple[str, str, str, str]]) -> tuple[list[str], list[str]]:
     """`(unexpected, missing)` for `CATALOG_ACL_QUERY`'s rows.
 
@@ -283,9 +566,22 @@ def _check(dsn: str) -> int:
             "application code runs:\n  " + "\n  ".join(planted_state)
         )
 
-    column_grants = sorted(f"{row[2]} on {row[0]}.{row[1]} to {row[3]}" for row in columns)
-    if column_grants:
-        failures.append("column-level grants exist:\n  " + "\n  ".join(column_grants))
+    unexpected_columns, missing_columns = column_grant_divergence(
+        [(str(row[0]), str(row[1]), str(row[2]), str(row[3])) for row in columns]
+    )
+    if unexpected_columns:
+        failures.append(
+            "column-level grants exist that this contract does not name. Nothing "
+            "else in this repository reads pg_attribute.attacl — relacl is "
+            "unchanged by them and has_table_privilege reports FALSE for a role "
+            "holding one:\n  " + "\n  ".join(unexpected_columns)
+        )
+    if missing_columns:
+        failures.append(
+            "0032's narrowed UPDATE grant on fields is incomplete, so the app "
+            "takes 42501 on a correction from a line in no handler:\n  "
+            + "\n  ".join(missing_columns)
+        )
 
     default_grants = sorted(
         f"{row[2]} on future {row[1]!r} in {row[0]} to {row[3]} (by {row[4]})" for row in defaults

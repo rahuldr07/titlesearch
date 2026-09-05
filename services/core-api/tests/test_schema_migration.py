@@ -68,6 +68,100 @@ SKELETON_TABLES = frozenset(
 # that keeps the exemption from spreading to a second table unnoticed.
 RULEBOOK_TABLES = frozenset({"rules"})
 
+# ---------------------------------------------------------------------------
+# 🔴 THE ELEVEN CONSTANTS BELOW ARE THE MERGE. READ THIS BEFORE ADDING A TWELFTH.
+# ---------------------------------------------------------------------------
+# Until 2026-09-05 this file knew nine table names. `integration/backend-2026-09`
+# merged five workstreams onto one chain and the schema is now thirty-six
+# relations. `test_the_migration_creates_exactly_the_expected_tables` went red
+# naming all of them, WHICH IS THE ASSERTION WORKING: an exact-set comparison is
+# how twenty-six tables arriving from five branches becomes a diff somebody reads
+# rather than a schema nobody enumerated.
+#
+# ONE CONSTANT PER REVISION, for `RULEBOOK_TABLES`' stated reason and for a
+# second one the merge made concrete: `down_revision` was assumed rather than
+# reconciled in every one of these (CONVENTIONS §8), so which revision created a
+# table is the only durable fact about where it came from. A single flat set of
+# thirty-five names would lose that on the day it was written.
+#
+# The table -> revision map was taken from `create_table` in each file under
+# `migrations/versions/`, 2026-09-05, and cross-read against a database at head.
+
+# `0005`: the record-class taxonomy and the statutory retention floor. Both are
+# GLOBAL — a retention window is the law's property, not a customer's — and
+# `record_classifications` is the tenant-scoped side that points at it.
+RETENTION_TABLES = frozenset({"record_classifications", "retention_windows"})
+
+# `0006`: the one table disposal is allowed to consult, and the function it
+# consults it through.
+LEGAL_HOLD_TABLES = frozenset({"legal_holds"})
+
+# `0020`: the tenant-scoped user directory and the `user_role` type.
+DIRECTORY_TABLES = frozenset({"users"})
+
+# `0030`: the segmentation boundary, promoted from a column to a real table.
+DOCUMENT_TABLES = frozenset({"documents"})
+
+# `0040`: `instruments`, the DERIVED `chain_links` over them, and the human stop
+# that terminates a chain.
+CHAIN_TABLES = frozenset({"instruments", "chain_links", "chain_root_assertions"})
+
+# `0041`: a question that cannot be closed without citing a LIVE rule, and the
+# orders it blocks.
+ESCALATION_TABLES = frozenset({"escalations", "escalation_orders"})
+
+# `0050`: `reports` and their stored assurance sentences, `deliveries` and the
+# per-step receipt.
+DELIVERY_TABLES = frozenset(
+    {"reports", "report_verified_checks", "deliveries", "delivery_receipt_steps"}
+)
+
+# `0051`: products, client configuration and its frozen versions, sign-off and
+# its lines, and the completeness gaps a sign-off cannot ignore.
+INTAKE_TABLES = frozenset(
+    {
+        "products",
+        "client_config_versions",
+        "client_config_lines",
+        "intake_signoffs",
+        "intake_signoff_lines",
+        "completeness_gaps",
+    }
+)
+
+# 🔴 `0060`'s FOUR, AND THEY ARE NOT THIS REPOSITORY'S TABLES. That revision
+# executes `migrations/sql/procrastinate_schema_3.9.0.sql` verbatim — a byte copy
+# of the library's own DDL — so their columns, their primary-key NAMES, their
+# `bigserial` ids and their sequences are Procrastinate's and change when the
+# vendored file is bumped.
+#
+# THE SPLIT BELOW IS WHY THIS IS A SEPARATE CONSTANT RATHER THAN A TWELFTH
+# CATEGORY. Three assertions in this file are about DECISIONS THIS REPOSITORY
+# MADE — `pk_<table>` from `NAMING_CONVENTION`, the `(tenant_id, id)` key prefix,
+# `id uuid DEFAULT gen_random_uuid()` — and holding a vendored schema to them
+# would be asserting that an upstream library follows our conventions, which it
+# does not and never agreed to. `alembic_version` is excluded from the same three
+# for the same reason, one line at a time; these four are excluded as a set.
+#
+# What they are NOT excluded from is `MIGRATED_TABLES`. A vendored table is still
+# a table in `public` that a migration created, and the exact-set assertion is
+# what would notice the queue schema being installed twice, half-dropped by a
+# downgrade, or bumped to a version with a fifth table.
+#
+# `0060`'s docstring records why they carry no `tenant_id`: a worker services
+# every tenant, so a policy keyed on a per-session GUC would make its own fetch
+# return nothing. `tests/test_forced_rls_and_grants.py::QUEUE_INFRASTRUCTURE_TABLES`
+# carries the tenancy half of that exemption and the `COMMENT ON TABLE` marker
+# `0060` writes so a later coverage check can derive it from the catalog.
+QUEUE_TABLES = frozenset(
+    {
+        "procrastinate_jobs",
+        "procrastinate_events",
+        "procrastinate_periodic_defers",
+        "procrastinate_workers",
+    }
+)
+
 # 🔴 `0070`-`0072`'s TWO TABLES, IN A THIRD CONSTANT FOR `RULEBOOK_TABLES`'
 # REASON. They arrived in their own revisions under their own decisions and a
 # reader should be able to see which revision put each name here.
@@ -81,7 +175,32 @@ RULEBOOK_TABLES = frozenset({"rules"})
 # across tenants, which is a role rather than a missing column.
 GOLDEN_TABLES = frozenset({"golden_fields", "golden_corrections"})
 
-MIGRATED_TABLES = SKELETON_TABLES | RULEBOOK_TABLES | GOLDEN_TABLES
+# `0080`: the customer an order belongs to. `0008` gave `orders.client_id` its
+# column and could not give it a foreign key, because this table was on another
+# branch; the composite `(tenant_id, client_id) REFERENCES clients (tenant_id,
+# id)` is still unwritten and is recorded as a residual in `0008`, not here.
+CLIENT_TABLES = frozenset({"clients"})
+
+# Every table this repository writes a `CREATE TABLE` for, in one name, because
+# three assertions need exactly this set and not `MIGRATED_TABLES`: the primary
+# key NAME, the key COLUMN ORDER, and the `id`/`created_at` identity pair. See
+# `QUEUE_TABLES` for what is excluded from those three and why.
+TITLEPIPE_TABLES = (
+    SKELETON_TABLES
+    | RULEBOOK_TABLES
+    | RETENTION_TABLES
+    | LEGAL_HOLD_TABLES
+    | DIRECTORY_TABLES
+    | DOCUMENT_TABLES
+    | CHAIN_TABLES
+    | ESCALATION_TABLES
+    | DELIVERY_TABLES
+    | INTAKE_TABLES
+    | GOLDEN_TABLES
+    | CLIENT_TABLES
+)
+
+MIGRATED_TABLES = TITLEPIPE_TABLES | QUEUE_TABLES
 
 # Every skeleton table has these two.
 IDENTITY_COLUMNS = frozenset({"id", "created_at"})
@@ -102,13 +221,52 @@ IDENTITY_COLUMNS = frozenset({"id", "created_at"})
 # the registry a `tenant_id` would move it into the derived set and change which
 # assertions and which seed rows it gets, silently. It just would not change
 # `0002`.
+# ---------------------------------------------------------------------------
+# 🔴 WHICH TABLES THIS DICTIONARY COVERS, AND WHY IT IS NOT ALL THIRTY-ONE.
+# ---------------------------------------------------------------------------
+# It covers the ten tables THIS FILE STATES A RULING ABOUT: `0001`'s seven,
+# `0003`'s global rulebook, and `0070`-`0071`'s golden pair. Each entry below is
+# an EXACT set and each carries the sentence that makes it exact — why `rules`
+# has no `tenant_id`, why a golden row has no engine column, why a correction
+# needs four value columns rather than two.
+#
+# The merge added twenty-one more tables and they are DELIBERATELY NOT LISTED.
+# Transcribing three hundred and seventy-two column names out of a database this
+# file has not read the revisions for would produce a literal that looks like a
+# contract and is a screenshot — `test_exact_acl_and_update_surface.py` states
+# the same rule about its ACL literal, and the failure mode is identical: the
+# next person edits it to whatever the database says, because that is visibly
+# what it already is.
+#
+# WHAT COVERS THOSE TWENTY-ONE INSTEAD IS STRICTLY MORE THAN COVERED THEM BEFORE,
+# and it is structural rather than nominal. The two loops in
+# `test_every_tenant_table_carries_its_own_tenant_id_and_the_registry_does_not`
+# used to iterate THIS DICTIONARY, so they asserted `id`, `created_at` and
+# `tenant_id` for ten tables and nothing at all for the other twenty-one. They
+# now iterate `TITLEPIPE_TABLES` and the catalog:
+#
+#   * every table this repository creates has `id uuid NOT NULL DEFAULT
+#     gen_random_uuid()` and `created_at timestamptz NOT NULL DEFAULT now()`;
+#   * every one of them carries `tenant_id uuid NOT NULL` unless it is named in
+#     `NON_TENANT_TABLES`, which is three names and a ruling each.
+#
+# So a twenty-second table cannot arrive without a tenancy decision, and a column
+# added to `documents` is not caught here — which is the honest position, because
+# it was not caught here yesterday either.
 EXPECTED_COLUMNS: dict[str, frozenset[str]] = {
     "tenants": IDENTITY_COLUMNS,
     # `0008` fills the skeleton's three-column `orders` out to the domain table
-    # `models/orders.py` describes. `product_id`, `frozen_config_version_id` and
-    # `period_label` are NOT here: they belong to the intake layer, which is built
+    # `models/orders.py` describes.
+    #
+    # 🔴 THE LAST THREE ARE THE INTAKE LAYER AND THEY ARE NOW HERE. This comment
+    # used to say they were NOT: "they belong to the intake layer, which is built
     # under assumption, and `0014` adds them so that reversing that ruling is a
-    # matter of dropping two revisions rather than editing this one.
+    # matter of dropping two revisions rather than editing this one." `0014` was
+    # never written — `0051` is the revision that landed the intake tables, and
+    # `0008` itself adds these three columns in its own `upgrade()` with the
+    # foreign keys deferred. The droppability argument therefore did not survive
+    # the merge and is recorded here rather than deleted: reversing intake now
+    # means editing `0008`, not dropping a revision after it.
     "orders": IDENTITY_COLUMNS
     | {
         "tenant_id",
@@ -124,12 +282,160 @@ EXPECTED_COLUMNS: dict[str, frozenset[str]] = {
         "delivered_at",
         "extraction_released_at",
         "extraction_released_by",
+        "product_id",
+        "frozen_config_version_id",
+        "period_label",
     },
-    "packages": IDENTITY_COLUMNS | {"tenant_id"},
-    "pages": IDENTITY_COLUMNS | {"tenant_id"},
-    "fields": IDENTITY_COLUMNS | {"tenant_id", "na_reason"},
-    "field_readings": IDENTITY_COLUMNS | {"tenant_id", "line_coords"},
-    "audit_log": IDENTITY_COLUMNS | {"tenant_id"},
+    # `0031` fills `packages` and `pages` out for `0008`'s reason, and its
+    # docstring records something worth reading before editing either entry:
+    # `models/packages.py` cited revision `0005` for the
+    # `packages_identity_is_immutable` trigger and the one-accepted-per-order
+    # index, `0005` on another branch was the record-class taxonomy, and NEITHER
+    # MACHINE EXISTED IN ANY REVISION ON ANY BRANCH. `0031` implements both. The
+    # columns below are the ones those two machines are about.
+    "packages": IDENTITY_COLUMNS
+    | {
+        "tenant_id",
+        "order_id",
+        "sha256",
+        "byte_size",
+        "page_count",
+        "status",
+        "quarantine_note",
+        "received_at",
+        "accepted_at",
+    },
+    # `page_kind`, `is_relevant` and `is_degraded` are what segmentation writes;
+    # `width_pt`/`height_pt`/`rotation_deg` are what a `line_coords` box on a
+    # reading is measured against, which is why `field_readings.line_coords_space`
+    # exists one entry down.
+    "pages": IDENTITY_COLUMNS
+    | {
+        "tenant_id",
+        "package_id",
+        "page_no",
+        "width_pt",
+        "height_pt",
+        "rotation_deg",
+        "text_char_count",
+        "page_kind",
+        "is_relevant",
+        "is_degraded",
+        "raster_uri",
+    },
+    # 🔴 `correction_reason` IS ON THIS LIST AND `0032` PUT IT THERE TO CLOSE A
+    # DISCARD, not to add a field. `CorrectFieldRequest.reason` was
+    # `z.string().optional()` on the wire and the handler never read it: a
+    # reviewer typed why they changed a title value, got a 200, and the reason
+    # reached no store and no audit row. `ck_fields_corrected_states_a_reason` is
+    # the constraint that makes it a database refusal instead. CLAUDE.md's
+    # "correction needs reason" is this column plus that constraint.
+    #
+    # `excluded_reason`/`excluded_by`/`excluded_at` are the same shape for the
+    # other terminal state, and `asking`/`why`/`consequence` are the escalation
+    # triple — a question with no `asking` is not a question.
+    "fields": IDENTITY_COLUMNS
+    | {
+        "tenant_id",
+        "na_reason",
+        "order_id",
+        "path",
+        "value",
+        "state",
+        "source_document_id",
+        "source_page_no",
+        "source_snippet",
+        "source_line_coords",
+        "engine_id",
+        "engine_confidence_raw",
+        "approved_by",
+        "approved_at",
+        "correction_reason",
+        "excluded_reason",
+        "excluded_by",
+        "excluded_at",
+        "asking",
+        "why",
+        "consequence",
+    },
+    # 🔴 `cost_usd` AND `latency_ms` ARE PER READING AND THAT IS THE MANDATE, not
+    # bookkeeping. CLAUDE.md requires cost and latency recorded per engine call;
+    # a reading IS the call, so this is where they can be recorded honestly.
+    # `attempt_ordinal` is what makes a retry a second row rather than an edit to
+    # the first — an ensemble that overwrote its own earlier reading would have
+    # no disagreement left to adjudicate.
+    "field_readings": IDENTITY_COLUMNS
+    | {
+        "tenant_id",
+        "line_coords",
+        "line_coords_space",
+        "field_id",
+        "engine_id",
+        "engine_version",
+        "attempt_ordinal",
+        "value",
+        "page_no",
+        "snippet",
+        "confidence_raw",
+        "cost_usd",
+        "latency_ms",
+    },
+    # ---------------------------------------------------------------------
+    # 🔴 SEVENTEEN COLUMNS, AND THE EXPECTATION WAS NOT PARTIAL — THE TABLE
+    #    CHANGED. `0007` IS THE REVISION AND IT SAYS SO.
+    # ---------------------------------------------------------------------
+    # This entry read `IDENTITY_COLUMNS | {"tenant_id"}` until 2026-09-05 and
+    # that was the COMPLETE column set of `0001`'s `audit_log`: three columns, a
+    # table with an append-only trigger, a hash chain the docstrings described
+    # and no column to put one in. `0007_audit_writer.py` opens by quoting
+    # PLAN.md §5 on exactly that — *"the table, triggers, and grants are fully
+    # hardened ... and NOTHING WRITES TO IT"* — and closes it. So the right
+    # reading is not that this line under-asserted; it is that a revision made
+    # the assertion out of date, which is the case an exact-set comparison
+    # exists to produce.
+    #
+    # THE FOURTEEN ARE THREE GROUPS AND THE GROUPING IS LOAD-BEARING:
+    #
+    # * the ASSERTION — `occurred_at`, `actor_subject`, `actor_seat`, `action`,
+    #   `subject_table`, `subject_id`, `rule_id`, `rule_provenance`,
+    #   `request_id`. Who did what to which row under which rule, on whose
+    #   request. NPI-free by construction, which is the property that lets this
+    #   table be permanently undeletable;
+    # * the ENGINE pair — `engine_id`, `engine_model_version`. Nullable: a human
+    #   action has no engine;
+    # * the CHAIN — `prev_hash`, `row_hash`, `chain_position`, written by
+    #   `audit_chain_link` rather than by any caller. `test_exact_acl_and_update_
+    #   surface.py::test_the_before_row_triggers_are_exactly_the_ones_named` is
+    #   where that trigger's BEFORE-ROW `NEW.*` assignment is now asserted, and
+    #   why it costs what it costs.
+    #
+    # 🔴 WHAT IS STILL ABSENT IS THE POINT OF KEEPING THIS AN EXACT SET. `0007`
+    # ships the assertion half ONLY: there is no `payload`, no `value_before`,
+    # no `value_after` and no `payload_ciphertext`, because field encryption is
+    # gated on a KMS decision nobody has made and a plaintext before/after column
+    # would put NPI in a table this system promises never to delete. An audit row
+    # written today records THAT a value changed and not WHAT it became. That is
+    # an unmet requirement of PLAN.md §5, recorded as one in
+    # `build-retention-audit.md` §7 — and this exact set is what refuses the
+    # nullable `payload_ciphertext` that would quietly close the gap on paper.
+    "audit_log": IDENTITY_COLUMNS
+    | {
+        "tenant_id",
+        "occurred_at",
+        "actor_subject",
+        "actor_seat",
+        "action",
+        "subject_table",
+        "subject_id",
+        "rule_id",
+        "rule_provenance",
+        "request_id",
+        "engine_id",
+        "engine_model_version",
+        "prev_hash",
+        "row_hash",
+        "chain_position",
+    },
     # 🔴 NO `tenant_id`, AND HERE THAT IS THE RULING RATHER THAN THE REGISTRY'S
     # SPECIAL CASE. `tenants` above lacks the column because its own `id` IS a
     # tenant id; `rules` lacks it because the rulebook is GLOBAL — scoped by
@@ -189,6 +495,36 @@ EXPECTED_COLUMNS: dict[str, frozenset[str]] = {
     },
 }
 
+# ---------------------------------------------------------------------------
+# 🔴 THE THREE TABLES THIS REPOSITORY CREATES THAT CARRY NO `tenant_id`, AND A
+#    RULING FOR EACH. THE LOOP BELOW IS THE COMPLEMENT OF THIS LINE.
+# ---------------------------------------------------------------------------
+# `test_every_tenant_table_carries_its_own_tenant_id_and_the_registry_does_not`
+# used to iterate `EXPECTED_COLUMNS`, so "every tenant table" meant "the ten
+# tables somebody remembered". It now iterates `TITLEPIPE_TABLES` minus this
+# constant, which inverts the default: a new table is TENANT-SCOPED unless a
+# person writes its name here, rather than unscoped unless a person remembers to
+# assert it.
+#
+# * `tenants` is the registry. Its own `id` IS a tenant id, `0002` keys its
+#   policy on `id`, and giving it a `tenant_id` would move it into the derived
+#   set in `test_forced_rls_and_grants.py` and `conftest.py`, where it would be
+#   expected to carry a key it does not have.
+# * `rules` is the GLOBAL rulebook — scoped by `jurisdiction_scope`, not by
+#   customer. RULED 2026-08-05; `0003`'s module docstring is the record.
+# * `retention_windows` is a statutory floor. A retention period is the law's
+#   property and not a customer's, so there is no tenant to key it on. `0005`
+#   is the record, and `db.rls_coverage.UNSCOPED_TABLES` plus
+#   `conftest.ISOLATION_GLOBAL_TABLES` are the other two lists that say so.
+#
+# `QUEUE_TABLES` is NOT here and its four members carry no `tenant_id` either.
+# That is not an oversight: they are excluded one level up, by
+# `TITLEPIPE_TABLES`, because they are Procrastinate's tables and not ours. The
+# distinction matters — a name in THIS constant is a decision this repository
+# made about a table it wrote; a name in `QUEUE_TABLES` is a boundary around a
+# schema it vendored.
+NON_TENANT_TABLES = frozenset({"tenants", "rules", "retention_windows"})
+
 # 🔴 THE PRIMARY KEY OF EVERY TABLE, BY NAME AND BY KEY COLUMNS IN KEY ORDER.
 #
 # MEASURED 2026-08-05 on the tree before this constant existed: removing EVERY
@@ -209,6 +545,25 @@ EXPECTED_COLUMNS: dict[str, frozenset[str]] = {
 # whole point.
 #
 # `tenants` is `(id)` because its `id` IS a tenant id.
+#
+# 🔴 THIRTY-ONE ENTRIES AS OF 2026-09-05, AND THE COMPARISON IS AGAINST
+# `TITLEPIPE_TABLES` RATHER THAN AGAINST EVERY RELATION IN `public`. Two names
+# are excluded and for two different reasons, both asserted rather than assumed
+# by `test_every_table_has_the_primary_key_it_is_supposed_to_have`:
+#
+# * `alembic_version` — Alembic creates it outside every revision script and
+#   names its constraint `alembic_version_pkc`. Its key IS Alembic's to choose;
+# * `QUEUE_TABLES` — MEASURED at head, all four are `<table>_pkey` on `(id)`,
+#   which is the DDL Procrastinate ships. Holding `procrastinate_jobs` to
+#   `pk_procrastinate_jobs` and to a `tenant_id` prefix would be asserting that
+#   an upstream library follows `NAMING_CONVENTION` and `0001`'s oracle
+#   argument. It does not, it has no `tenant_id` to prefix with, and `0060`'s
+#   docstring is the record of why that is accepted.
+#
+# EVERY OTHER TABLE IS HERE AND EVERY ONE OF THE TWENTY-EIGHT TENANT-SCOPED
+# ONES IS `(tenant_id, id)`. That was not free and it is the finding worth
+# stating: twenty-one tables arrived from five branches that never saw each
+# other, and not one of them keyed on `(id)` alone. The convention held.
 EXPECTED_PRIMARY_KEYS: dict[str, tuple[str, ...]] = {
     "tenants": ("id",),
     "orders": ("tenant_id", "id"),
@@ -230,6 +585,56 @@ EXPECTED_PRIMARY_KEYS: dict[str, tuple[str, ...]] = {
     # hold this golden field?" to a caller who cannot read the row.
     "golden_fields": ("tenant_id", "id"),
     "golden_corrections": ("tenant_id", "id"),
+    # 🔴 `retention_windows` IS THE THIRD `(id)` AND THE THIRD REASON. A
+    # statutory retention floor belongs to the law rather than to a customer, so
+    # like `rules` it has no tenant to prefix with. `record_classifications`
+    # beside it IS tenant-scoped and composite — the taxonomy is global, a
+    # record's classification is one tenant's fact about one tenant's row.
+    # `0005` creates both.
+    "retention_windows": ("id",),
+    "record_classifications": ("tenant_id", "id"),
+    # `0006`.
+    "legal_holds": ("tenant_id", "id"),
+    # `0020`. The user directory is per tenant; a person who works for two firms
+    # is two rows, which `0020`'s docstring argues for at length.
+    "users": ("tenant_id", "id"),
+    # `0030`.
+    "documents": ("tenant_id", "id"),
+    # `0040`.
+    "instruments": ("tenant_id", "id"),
+    "chain_links": ("tenant_id", "id"),
+    "chain_root_assertions": ("tenant_id", "id"),
+    # `0041`.
+    "escalations": ("tenant_id", "id"),
+    "escalation_orders": ("tenant_id", "id"),
+    # `0050`.
+    "reports": ("tenant_id", "id"),
+    "report_verified_checks": ("tenant_id", "id"),
+    "deliveries": ("tenant_id", "id"),
+    "delivery_receipt_steps": ("tenant_id", "id"),
+    # `0051`.
+    "products": ("tenant_id", "id"),
+    "client_config_versions": ("tenant_id", "id"),
+    "client_config_lines": ("tenant_id", "id"),
+    "intake_signoffs": ("tenant_id", "id"),
+    "intake_signoff_lines": ("tenant_id", "id"),
+    "completeness_gaps": ("tenant_id", "id"),
+    # `0080`.
+    "clients": ("tenant_id", "id"),
+}
+
+# `QUEUE_TABLES`' four, as `pg_constraint` reports them at head. A SEPARATE
+# constant rather than four more entries above, because these are read back by a
+# different assertion that checks only that each has SOME primary key on `(id)` —
+# the `pk_<table>` name and the `tenant_id` prefix are this repository's
+# conventions and `0060` vendors a schema that predates them. Pinned rather than
+# skipped so that bumping `procrastinate_schema_3.9.0.sql` to a version that
+# drops a key, renames one, or adds a fifth table is a diff and not a surprise.
+EXPECTED_QUEUE_PRIMARY_KEYS: dict[str, tuple[str, tuple[str, ...]]] = {
+    "procrastinate_jobs": ("procrastinate_jobs_pkey", ("id",)),
+    "procrastinate_events": ("procrastinate_events_pkey", ("id",)),
+    "procrastinate_periodic_defers": ("procrastinate_periodic_defers_pkey", ("id",)),
+    "procrastinate_workers": ("procrastinate_workers_pkey", ("id",)),
 }
 
 # `audit_log`'s pair, and ONLY `audit_log`'s — the one assertion that reads this
@@ -237,7 +642,32 @@ EXPECTED_PRIMARY_KEYS: dict[str, tuple[str, ...]] = {
 # the schema makes it fail for tables it was never about. `0071`'s ledger carries
 # the identical pair and `0072` adds a third trigger to `golden_fields`; both are
 # asserted in `tests/test_golden_set.py`, per table, the same way.
-EXPECTED_TRIGGERS = frozenset({"audit_log_append_only", "audit_log_no_truncate"})
+EXPECTED_REFUSAL_TRIGGERS = frozenset({"audit_log_append_only", "audit_log_no_truncate"})
+
+# ---------------------------------------------------------------------------
+# 🔴 `audit_log` HAS A THIRD TRIGGER NOW AND IT IS NOT A REFUSAL. THE TEST THAT
+#    READS THESE WAS NAMED `..._are_statement_level_before_and_enabled`, AND ONE
+#    OF THOSE THREE WORDS IS NO LONGER TRUE OF EVERY TRIGGER ON THE TABLE.
+# ---------------------------------------------------------------------------
+# `0007` adds `audit_log_chain_link`, a `BEFORE INSERT ... FOR EACH ROW` trigger
+# that assigns `NEW.prev_hash`, `NEW.row_hash` and `NEW.chain_position`. It is a
+# WRITER, not a refusal, and the row/statement choice is forced rather than
+# stylistic: it compares and computes over `NEW`, and a statement trigger has no
+# `NEW` at all.
+#
+# SPLITTING THE CONSTANT IN TWO RATHER THAN ADDING A NAME TO IT is the whole
+# repair. The old set fed a loop asserting `is_statement_level is True` of every
+# member; adding `audit_log_chain_link` to it would have failed, and dropping the
+# `is_statement_level` assertion to make one set fit would have thrown away the
+# claim that the two REFUSAL triggers are statement-level — which is `0001`'s
+# measured decision and the entire reason a zero-match cross-tenant UPDATE is
+# refused under RLS. Two constants keep both claims and cost one line.
+#
+# The exact-set assertion is over the UNION, so a fourth trigger on this table
+# still has to be named in one of them.
+EXPECTED_WRITER_TRIGGERS = frozenset({"audit_log_chain_link"})
+
+EXPECTED_TRIGGERS = EXPECTED_REFUSAL_TRIGGERS | EXPECTED_WRITER_TRIGGERS
 
 # `pg_trigger.tgenabled` at HEAD, which is `0004`'s `'A'` — ALWAYS — and no
 # longer `0001`'s `'O'`.
@@ -699,14 +1129,36 @@ def test_every_tenant_table_carries_its_own_tenant_id_and_the_registry_does_not(
 
     for table, expected in sorted(EXPECTED_COLUMNS.items()):
         assert set(columns[table]) == set(expected), f"{table} has the wrong columns"
-        assert columns[table]["id"] == ColumnFacts("uuid", False, UUID_DEFAULT)
-        assert columns[table]["created_at"] == ColumnFacts("timestamptz", False, NOW_DEFAULT)
 
-    # TWO TABLES ARE EXCLUDED AND THEY ARE EXCLUDED FOR DIFFERENT REASONS, each
-    # asserted by name below rather than left as a subtraction a reader has to
-    # interpret. `tenants` is the registry, whose own `id` IS a tenant id.
-    # `rules` is GLOBAL — the rulebook has no tenant at all.
-    for table in sorted(EXPECTED_COLUMNS.keys() - {"tenants"} - RULEBOOK_TABLES):
+    # 🔴 THE TWO LOOPS BELOW ITERATE `TITLEPIPE_TABLES`, NOT `EXPECTED_COLUMNS`,
+    # AND THAT IS THE WIDENING. Before 2026-09-05 both iterated the dictionary
+    # above, so "every table" meant the ten this file happens to name and the
+    # twenty-one that arrived in the merge were asserted by nothing at all. The
+    # identity pair and the tenancy key are STRUCTURAL claims — they hold for a
+    # table this file has never heard of — so the catalog is the right thing to
+    # ask, and `TITLEPIPE_TABLES` is the right set to ask it about.
+    #
+    # `QUEUE_TABLES` is not in that union: three of Procrastinate's four have a
+    # `bigserial` `id`, the fourth is `GENERATED ALWAYS AS IDENTITY`, none has a
+    # `created_at`, and none of that is this repository's to hold to a
+    # convention. See `QUEUE_TABLES` for the argument.
+    for table in sorted(TITLEPIPE_TABLES):
+        assert columns[table]["id"] == ColumnFacts("uuid", False, UUID_DEFAULT), (
+            f"{table}.id is {columns[table]['id']}, not a uuid defaulting to "
+            f"{UUID_DEFAULT}. A serial or identity id would put this table's key "
+            f"in a sequence, which 0002 grants nobody USAGE on."
+        )
+        assert columns[table]["created_at"] == ColumnFacts("timestamptz", False, NOW_DEFAULT), (
+            f"{table}.created_at is {columns[table]['created_at']}, not a "
+            f"timestamptz defaulting to {NOW_DEFAULT}"
+        )
+
+    # THREE TABLES ARE EXCLUDED AND THEY ARE EXCLUDED FOR THREE DIFFERENT
+    # REASONS, each named in `NON_TENANT_TABLES` with the ruling that produced
+    # it rather than left as a subtraction a reader has to interpret. The
+    # complement is asserted below, one table at a time, so that a name added to
+    # that constant to silence this loop fails the assertion underneath it.
+    for table in sorted(TITLEPIPE_TABLES - NON_TENANT_TABLES):
         assert columns[table]["tenant_id"] == ColumnFacts("uuid", False, None), (
             f"{table}.tenant_id must be uuid NOT NULL; every RLS policy keys on it"
         )
@@ -718,6 +1170,14 @@ def test_every_tenant_table_carries_its_own_tenant_id_and_the_registry_does_not(
         "in test_forced_rls_and_grants.py and conftest.py, where it would then be "
         "expected to carry a tenant_isolation policy it deliberately does not have "
         "— which is the accidental way this ruling gets reversed."
+    )
+
+    assert "tenant_id" not in columns["retention_windows"], (
+        "retention_windows is the statutory floor: a retention period is the law's "
+        "property and not a customer's, so there is no tenant to key a policy on. "
+        "0005 is the record, and db.rls_coverage.UNSCOPED_TABLES and "
+        "conftest.ISOLATION_GLOBAL_TABLES are the other two lists that have to "
+        "agree with this one."
     )
 
     assert "tenant_id" not in columns["tenants"], (
@@ -827,6 +1287,16 @@ def test_every_table_has_the_primary_key_it_is_supposed_to_have(
 
     `alembic_version` is excluded rather than asserted: Alembic creates that
     table outside every revision script and its constraint is Alembic's to name.
+
+    🔴 `QUEUE_TABLES` IS EXCLUDED FROM THE TWO CLAIMS ABOVE AND ASSERTED UNDER
+    ITS OWN CONSTANT, for `alembic_version`'s reason one level out: `0060`
+    executes a vendored Procrastinate schema verbatim, so `procrastinate_jobs_pkey`
+    on `(id)` is upstream's name and upstream's key. Neither the `pk_<table>`
+    pattern nor the `tenant_id` prefix is a promise that library ever made, and a
+    test that held it to both would be asserting that this repository's
+    conventions apply to code it did not write. What IS asserted about those four
+    is that each still has the key `EXPECTED_QUEUE_PRIMARY_KEYS` records, so a
+    version bump that drops one is a failure here.
     """
     engine = seam_engine(migrated_database)
     try:
@@ -838,10 +1308,36 @@ def test_every_table_has_the_primary_key_it_is_supposed_to_have(
     # THE KEY SET FIRST. A table with no primary key contributes no row to
     # `pg_constraint`, so it is simply missing here — and the loop below is a
     # `for`, which passes over nothing.
-    assert set(keys) - {alembic_version_table} == set(EXPECTED_PRIMARY_KEYS), (
-        f"these tables have a primary key: {sorted(keys)}; expected "
-        f"{sorted({*EXPECTED_PRIMARY_KEYS, alembic_version_table})}"
+    #
+    # 🔴 THE FAILURE MESSAGE NAMES THE MISSING TABLES RATHER THAN LISTING THE
+    # THIRTY-SIX THAT ARE PRESENT. It used to print `sorted(keys)`, and when the
+    # merge took this schema from nine tables to thirty-six the message was a
+    # wall of names beginning `['alembic_version', 'audit_log', ...` with the one
+    # fact a reader needs — WHICH table is unaccounted for — nowhere in it. Both
+    # directions are printed because they mean opposite things: a name only the
+    # database has is a table nobody enumerated, and a name only the expectation
+    # has is a table that lost its primary key or was dropped.
+    expected_key_set = {*EXPECTED_PRIMARY_KEYS, *EXPECTED_QUEUE_PRIMARY_KEYS}
+    observed_key_set = set(keys) - {alembic_version_table}
+    assert observed_key_set == expected_key_set, (
+        f"tables with a primary key that no constant here names: "
+        f"{sorted(observed_key_set - expected_key_set)}; tables named here with "
+        f"no primary key in the database: {sorted(expected_key_set - observed_key_set)}. "
+        f"A table with no primary key contributes no pg_constraint row at all, so "
+        f"the second list is how a missing key looks rather than a wrong one."
     )
+
+    # 🔴 THE VENDORED FOUR, ASSERTED SEPARATELY AND NOT SKIPPED. `0060` installs
+    # Procrastinate's own DDL verbatim, so `procrastinate_jobs_pkey` on `(id)` is
+    # the library's decision and not a violation of `NAMING_CONVENTION` — but a
+    # bump of `procrastinate_schema_3.9.0.sql` that drops or renames one is still
+    # a change to a database this repository ships, and this is where it lands.
+    for queue_table, (name, key_columns) in sorted(EXPECTED_QUEUE_PRIMARY_KEYS.items()):
+        assert keys[queue_table] == PrimaryKeyFacts(name, key_columns), (
+            f"{queue_table}'s primary key is {keys[queue_table]}, not "
+            f"{PrimaryKeyFacts(name, key_columns)}. This table is Procrastinate's; "
+            f"the vendored schema file changed, or 0060 stopped applying it verbatim."
+        )
 
     for table, expected_columns in sorted(EXPECTED_PRIMARY_KEYS.items()):
         assert keys[table].columns == expected_columns, (
@@ -1092,10 +1588,20 @@ def test_the_rules_migration_source_refuses_the_forgiving_enum_spelling() -> Non
     )
 
 
-def test_audit_logs_triggers_are_statement_level_before_and_enabled(
+def test_audit_logs_triggers_are_the_named_three_before_and_enabled(
     migrated_database: str, seam_engine: Callable[[str], Engine]
 ) -> None:
     """The STATEMENT/ROW/BEFORE/enabled facts, read from the catalog.
+
+    🔴 NAMED `..._are_statement_level_before_and_enabled` UNTIL 2026-09-05, and
+    the old name is written here so a grep for it lands. `0007` added
+    `audit_log_chain_link`, which is `FOR EACH ROW` and has to be, so the old
+    name asserted of three triggers something that is true of two. The rename is
+    the smaller half of the repair; the larger half is that statement-level is
+    now asserted of `EXPECTED_REFUSAL_TRIGGERS` by name and row-level of
+    `EXPECTED_WRITER_TRIGGERS` by name, rather than of "every trigger on this
+    table" — which was the loop that would have had to be dropped to make one
+    flat set fit.
 
     The behavioural tests below are the primary proof and this cannot replace
     them — a trigger that is statement-level, `BEFORE` and enabled but raises
@@ -1117,19 +1623,58 @@ def test_audit_logs_triggers_are_statement_level_before_and_enabled(
     finally:
         engine.dispose()
 
-    assert set(triggers) == set(EXPECTED_TRIGGERS)
+    assert set(triggers) == set(EXPECTED_TRIGGERS), (
+        f"audit_log's triggers are {sorted(triggers)}, not {sorted(EXPECTED_TRIGGERS)}. "
+        f"A new one is named in EXPECTED_REFUSAL_TRIGGERS or in "
+        f"EXPECTED_WRITER_TRIGGERS, and which of the two decides whether it is "
+        f"held to being statement-level."
+    )
+
+    # THE THREE PROPERTIES THAT HOLD FOR EVERY TRIGGER ON THIS TABLE, whatever it
+    # is for. `BEFORE` and `ENABLE ALWAYS` are not refusal-specific: a writer that
+    # fired AFTER could not fill the columns it exists to fill, and one at `'O'`
+    # would be silently off for any session in replica mode exactly as `0004`
+    # measured for the refusals.
     for name, facts in sorted(triggers.items()):
-        assert facts.is_statement_level is True, (
-            f"{name} is FOR EACH ROW. A row trigger does not fire when a "
-            f"statement matches no rows, and under Task 4's RLS a cross-tenant "
-            f"UPDATE matches exactly zero."
-        )
         assert facts.is_before is True, (
-            f"{name} is an AFTER trigger. The refusal must land before anything is written."
+            f"{name} is an AFTER trigger. A refusal must land before anything is "
+            f"written, and a writer that fills NEW.* cannot run after the row is."
         )
         assert facts.enabled == TRIGGER_ENABLED, (
             f"{name} has tgenabled={facts.enabled!r}, not {TRIGGER_ENABLED!r}. "
             f"A disabled trigger keeps its tgtype and refuses nothing."
+        )
+
+    # 🔴 STATEMENT-LEVEL IS ASSERTED OF THE REFUSALS ONLY, AND THE SPLIT IS THE
+    # POINT RATHER THAN AN EXEMPTION. `0001` chose `FOR EACH STATEMENT` because a
+    # ROW trigger does not fire when a statement matches no rows, and under
+    # `0002`'s RLS a cross-tenant `UPDATE` matches exactly zero — so a row-level
+    # append-only trigger would refuse nothing on the one path that matters.
+    # `test_audit_log_refuses_an_update_that_matches_no_rows` is the behavioural
+    # proof and this is the catalog-side diagnosis for it.
+    for name in sorted(EXPECTED_REFUSAL_TRIGGERS):
+        assert triggers[name].is_statement_level is True, (
+            f"{name} is FOR EACH ROW. A row trigger does not fire when a "
+            f"statement matches no rows, and under 0002's RLS a cross-tenant "
+            f"UPDATE matches exactly zero."
+        )
+
+    # AND THE WRITER IS ROW-LEVEL, ASSERTED POSITIVELY RATHER THAN LEFT OUT.
+    # `0007`'s `audit_chain_link` reads `NEW.tenant_id`, computes a hash over the
+    # assertion columns and assigns `NEW.prev_hash`, `NEW.row_hash` and
+    # `NEW.chain_position`. A statement trigger has no `NEW` record at all, so
+    # this one CANNOT be statement-level and a revision that "made it consistent"
+    # with the two above would produce a chain-link trigger that links nothing.
+    # What that costs is not free and is not asserted here: see
+    # `test_exact_acl_and_update_surface.py::test_the_before_row_triggers_are_exactly_the_ones_named`,
+    # where a BEFORE ROW trigger assigning `NEW.*` is weighed against the
+    # column-scoped grants `0032` introduced.
+    for name in sorted(EXPECTED_WRITER_TRIGGERS):
+        assert triggers[name].is_statement_level is False, (
+            f"{name} is FOR EACH STATEMENT. It exists to fill NEW.prev_hash, "
+            f"NEW.row_hash and NEW.chain_position, and a statement trigger has no "
+            f"NEW record to fill — so this trigger now links no rows and the hash "
+            f"chain is unwritten while the table still looks hardened."
         )
 
 
