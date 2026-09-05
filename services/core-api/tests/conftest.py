@@ -38,6 +38,7 @@ from sqlalchemy.exc import ArgumentError, SQLAlchemyError
 from testcontainers.community.postgres import PostgresContainer
 
 from titlepipe_core.app import create_app
+from titlepipe_core.db.unscoped_tables import QUEUE_INFRASTRUCTURE_TABLES
 from titlepipe_core.settings import CoreApiSettings
 from titlepipe_domain import Environment
 from titlepipe_test_support import FrozenClock, SequenceIdFactory
@@ -1510,7 +1511,39 @@ ISOLATION_UNCLEARABLE_TABLE = "audit_log"
 # makes clearing unnecessary is `ISOLATION_UNCLEARABLE_TABLE`'s and is unchanged:
 # `migrated_database` is MODULE-scoped and builds every table fresh, and the
 # row-count read-back below is what would notice the day that stops being true.
-ISOLATION_UNCLEARABLE_TABLES = frozenset({ISOLATION_UNCLEARABLE_TABLE, "golden_corrections"})
+# `reports` is the third, and it arrived at the integration merge the way
+# `retention_windows` arrived on `ISOLATION_GLOBAL_TABLES` — nobody edited this line,
+# the seed died on `reports is append-only; DELETE is refused`. `0050`'s pair is
+# `reports_are_append_only` and `reports_no_truncate`, the same shape as `0001`'s and
+# `0071`'s for the same reason: a delivered report is a record of what was delivered.
+#
+# THESE THREE ARE THE WHOLE SET AT REVISION 0080, and that is a read of the catalog
+# rather than a hope: schema `public` holds exactly three statement-level `BEFORE
+# UPDATE OR DELETE` triggers, one per table named here. The other DELETE triggers in
+# the schema — the audit writer's on `legal_holds` and `record_classifications`, and
+# Procrastinate's on `procrastinate_jobs` — are row-level and refuse nothing.
+ISOLATION_UNCLEARABLE_TABLES = frozenset(
+    {ISOLATION_UNCLEARABLE_TABLE, "golden_corrections", "reports"}
+)
+
+# 🔴 THE SEED HAS TO SAY WHO IT IS. `0007` attaches `audit_record_change` to
+# `legal_holds` and `record_classifications`, and that function REFUSES a write —
+# SQLSTATE `28000` — when `app.actor_subject` or `app.actor_seat` is unset: "an
+# unattributed change is refused rather than recorded anonymously". The seed is a
+# writer like any other and has to name an actor; it is not exempt because it is a
+# test, and making it exempt would mean weakening the refusal for everybody.
+#
+# The values are the same implausible literals `minimal_rows` uses, for the same
+# reason: a `TEST-ONLY` actor in a real audit trail is visible on sight.
+ISOLATION_ACTOR_SUBJECT_GUC = "app.actor_subject"
+ISOLATION_ACTOR_SEAT_GUC = "app.actor_seat"
+ISOLATION_ACTOR = "TEST-ONLY"
+
+# The function `0007` attaches to every audited table. DERIVED FROM, NOT COMPARED
+# WITH, `0007`'s own list: the seed needs to know which of the tables it is about
+# to write to will write a SECOND row into `audit_log` behind its back, and the
+# catalog is the only thing that knows that at the revision under test.
+ISOLATION_AUDIT_WRITER_FUNCTION = "audit_record_change"
 
 # Every table and column name the seed interpolates into SQL is checked against
 # this before it is used. The names come from `pg_class`/`pg_attribute` on the
@@ -1547,6 +1580,13 @@ ISOLATION_REGISTRY_TABLE = "tenants"
 # `db.rls_coverage.UNSCOPED_TABLES` and `test_forced_rls_and_grants.
 # EXPECTED_GLOBAL_TABLES` are the other two lists that have to agree with this
 # one, and all three now name the same two tables.
+#
+# 🔴 THE QUEUE'S FOUR TABLES ARE NOT ON THIS SET AND MUST NOT BE ADDED TO IT.
+# They are excluded by `_isolation_tables` through
+# `titlepipe_core.db.unscoped_tables.QUEUE_INFRASTRUCTURE_TABLES`, which is the
+# ONE place those names are written and which `db.rls_coverage` and
+# `migrations/env.py` read as well. See the branch that names it for why the two
+# exclusions are kept apart.
 ISOLATION_GLOBAL_TABLES: frozenset[str] = frozenset({"retention_windows", "rules"})
 
 
@@ -1668,6 +1708,20 @@ def _isolation_tables(connection: Connection) -> Mapping[str, str]:
             keyed[table] = ISOLATION_TENANT_KEY
         elif table in ISOLATION_GLOBAL_TABLES:
             continue
+        elif table in QUEUE_INFRASTRUCTURE_TABLES:
+            # A SEPARATE BRANCH FROM `ISOLATION_GLOBAL_TABLES` AND NOT AN ADDITION
+            # TO IT. Both exclude, and they exclude for reasons a reader must not
+            # have to disentangle: a name on that set is a table THIS repository
+            # decided is global, argued table by table in the comment above it. The
+            # queue's four are a third party's, installed as vendor SQL by `0060`,
+            # not modelled, and not ours to give a `tenant_id` to. Folding them in
+            # would put "we ruled this global" and "we do not own this" behind one
+            # name and let a future reader move a table between them by accident.
+            #
+            # The catalog is still asked FIRST, exactly as for the global set, so a
+            # queue table that grew a `tenant_id` — a Procrastinate upgrade could —
+            # is seeded and proved like any other tenant table rather than skipped.
+            continue
         elif table == ISOLATION_REGISTRY_TABLE:
             keyed[table] = ISOLATION_REGISTRY_KEY
         else:
@@ -1684,7 +1738,12 @@ def _isolation_tables(connection: Connection) -> Mapping[str, str]:
                 f"here AND in EXPECTED_GLOBAL_TABLES in "
                 f"tests/test_forced_rls_and_grants.py, with the reason recorded in "
                 f"the migration that creates it — as "
-                f"migrations/versions/0003_rules.py does for {sorted(ISOLATION_GLOBAL_TABLES)}."
+                f"migrations/versions/0003_rules.py does for "
+                f"{sorted(ISOLATION_GLOBAL_TABLES)}; a table this repository does "
+                f"not own and did not model belongs in "
+                f"titlepipe_core.db.unscoped_tables.QUEUE_INFRASTRUCTURE_TABLES, "
+                f"which is where the queue's "
+                f"{sorted(QUEUE_INFRASTRUCTURE_TABLES)} are."
             )
     return MappingProxyType(keyed)
 
@@ -1724,13 +1783,51 @@ def _isolation_columns(
     return MappingProxyType({table: frozenset(columns) for table, columns in found.items()})
 
 
-def _seed_isolation_rows(
-    engine: Engine,
-) -> tuple[Mapping[str, str], Mapping[str, Mapping[UUID, tuple[UUID, ...]]]]:
+# What the seed hands back. A named alias because it is spelled in four places and
+# grew a third member when `0007`'s audit trigger met this seam at the merge.
+_SeedResult = tuple[
+    Mapping[str, str],
+    Mapping[str, Mapping[UUID, tuple[UUID, ...]]],
+    frozenset[str],
+]
+
+
+def _audited_tables(connection: Connection) -> frozenset[str]:
+    """The tables whose every write puts a row in `audit_log` behind the writer's back.
+
+    `0007` attaches `audit_record_change` to `legal_holds` and
+    `record_classifications` and states, in `_attach`, that the skeleton tables are
+    deliberately NOT audited. READ rather than listed, for this seam's usual reason:
+    the seed runs against several revisions and a literal would describe one of them.
+
+    Why the seed cares. `audit_log` is one of the tables it writes, and it is the
+    only one that ALSO receives rows it did not write — one per insert into a table
+    on this set. The positive control asserts the exact id set each tenant can see,
+    so a row the seed did not account for reads as an isolation failure.
+    """
+    result = connection.execute(
+        text(
+            "SELECT DISTINCT c.relname "
+            "FROM pg_trigger t "
+            "JOIN pg_class c ON c.oid = t.tgrelid "
+            "JOIN pg_namespace n ON n.oid = c.relnamespace "
+            "JOIN pg_proc p ON p.oid = t.tgfoid "
+            "WHERE n.nspname = 'public' AND NOT t.tgisinternal "
+            "  AND p.proname = :writer"
+        ),
+        {"writer": ISOLATION_AUDIT_WRITER_FUNCTION},
+    )
+    return frozenset(str(row[0]) for row in result)
+
+
+def _seed_isolation_rows(engine: Engine) -> _SeedResult:
     """Both tenants' rows in every derived table, committed, AS THE SUPERUSER.
 
-    Returns the derived table -> key-column mapping alongside
-    table -> tenant -> the ids written for it.
+    Returns the derived table -> key-column mapping, table -> tenant -> the ids
+    that exist for it, and the set of tables whose writes `0007`'s trigger mirrors
+    into `audit_log`. The third is part of the result rather than re-derived by the
+    caller because it is what makes the second's `audit_log` entry a number anybody
+    can predict.
 
     🔴 NO TENANT GUC IS SET HERE, AND THAT IS NOT AN OMISSION. A SUPERUSER
        BYPASSES ROW-LEVEL SECURITY UNCONDITIONALLY — `FORCE` removes the
@@ -1790,6 +1887,18 @@ def _seed_isolation_rows(
     """
     seeded: dict[str, Mapping[UUID, tuple[UUID, ...]]] = {}
     with engine.begin() as connection:
+        # 🔴 THE ACTOR, BEFORE ANY WRITE. `0007`'s audit trigger refuses a change to
+        # `legal_holds` or `record_classifications` with SQLSTATE `28000` when the
+        # session has not said who is making it. Session-scoped rather than `SET
+        # LOCAL` for the same reason `migrations/env.py` sets `SET ROLE` that way:
+        # this function commits, and a `SET LOCAL` would be gone for the statements
+        # after the commit.
+        for guc in (ISOLATION_ACTOR_SUBJECT_GUC, ISOLATION_ACTOR_SEAT_GUC):
+            connection.execute(
+                text("SELECT set_config(:guc, :value, false)"),
+                {"guc": guc, "value": ISOLATION_ACTOR},
+            )
+
         keyed = _isolation_tables(connection)
 
         # PARENTS BEFORE CHILDREN ON THE WAY IN, CHILDREN BEFORE PARENTS ON THE
@@ -1801,7 +1910,13 @@ def _seed_isolation_rows(
         insert_order = seed_order(columns)
 
         for table in reversed(insert_order):
-            if table != ISOLATION_UNCLEARABLE_TABLE:
+            # `ISOLATION_UNCLEARABLE_TABLES`, the set, and not the scalar it was
+            # built from. The set was added when `0071` landed and the loop was
+            # left reading the scalar, so `golden_corrections` was still cleared —
+            # and its trigger refuses the DELETE with `0A000`, which aborts the
+            # transaction before a single INSERT and turns every isolation test
+            # into a setup ERROR. The two revisions first met at the merge.
+            if table not in ISOLATION_UNCLEARABLE_TABLES:
                 connection.execute(text(f"DELETE FROM {table}"))  # noqa: S608
 
         for table in insert_order:
@@ -1832,7 +1947,31 @@ def _seed_isolation_rows(
                 )
             seeded[table] = MappingProxyType(per_tenant)
 
+        # 🔴 `audit_log` IS RE-READ RATHER THAN TRUSTED, AND ONLY `audit_log`. Every
+        # insert above into a table on `_audited_tables` fired `0007`'s trigger and
+        # put a row here that this function did not write and has no id for. The
+        # positive control compares the id set a tenant CAN SEE against the set the
+        # seed reports, so an unaccounted row there is reported as an isolation
+        # failure on the audit trail — the most alarming possible message for the
+        # least alarming possible cause.
+        #
+        # AFTER the whole insert pass, not in the loop: a table seeded later would
+        # add rows after the read. The count this is expected to come to is asserted
+        # in `_isolation_seed_result`, so a read-back is not a licence for whatever
+        # happens to be in the table.
+        audited = _audited_tables(connection)
+        if ISOLATION_UNCLEARABLE_TABLE in seeded:
+            seeded[ISOLATION_UNCLEARABLE_TABLE] = _audit_rows_by_tenant(connection)
+
         for table, written_ids in sorted(seeded.items()):
+            if table == ISOLATION_UNCLEARABLE_TABLE:
+                # Vacuous here since the read-back above: `written_ids` for this one
+                # IS the table's contents, so `present == written` by construction.
+                # What still refuses a leftover row is the expected-count assertion
+                # in `_isolation_seed_result`, which computes what `audit_log` must
+                # hold — the seed's own rows plus one per insert into an audited
+                # table — instead of reading it.
+                continue
             count_rows = f"SELECT count(*) FROM {table}"  # noqa: S608
             present = int(connection.execute(text(count_rows)).scalar_one())
             written = sum(len(ids) for ids in written_ids.values())
@@ -1841,17 +1980,36 @@ def _seed_isolation_rows(
                     f"the isolation seed wrote {written} rows into {table} and the "
                     f"table now holds {present}. Rows this call did not write are "
                     f"rows the positive control's set comparison will fail on, "
-                    f"several tests away from the reason. {ISOLATION_UNCLEARABLE_TABLE} "
-                    f"is the table this can actually happen to: nothing can empty it."
+                    f"several tests away from the reason. "
+                    f"{sorted(ISOLATION_UNCLEARABLE_TABLES)} are the tables this can "
+                    f"actually happen to: nothing can empty them."
                 )
 
-    return keyed, MappingProxyType(seeded)
+    return keyed, MappingProxyType(seeded), audited
+
+
+def _audit_rows_by_tenant(connection: Connection) -> Mapping[UUID, tuple[UUID, ...]]:
+    """`audit_log`'s ids per tenant, as they stand. See the call site for why.
+
+    Only the two tenants the seed writes for. A third tenant's rows would be a
+    leftover the count assertion in `_isolation_seed_result` catches, and silently
+    folding them in here is what that assertion exists to stop.
+    """
+    rows = connection.execute(
+        text("SELECT tenant_id, id FROM audit_log ORDER BY tenant_id, id")
+    ).all()
+    by_tenant: dict[UUID, list[UUID]] = {tenant: [] for tenant in ISOLATION_ROW_COUNTS}
+    for tenant_value, id_value in rows:
+        tenant = UUID(str(tenant_value))
+        if tenant in by_tenant:
+            by_tenant[tenant].append(UUID(str(id_value)))
+    return MappingProxyType({tenant: tuple(ids) for tenant, ids in by_tenant.items()})
 
 
 @pytest.fixture(scope="module")
 def _isolation_seed_result(
     migrated_database: str, seam_engine: Callable[[str], Engine]
-) -> tuple[Mapping[str, str], Mapping[str, Mapping[UUID, tuple[UUID, ...]]]]:
+) -> _SeedResult:
     """The seed, run once per module, behind the two fixtures that expose it.
 
     ---------------------------------------------------------------------------
@@ -1890,7 +2048,7 @@ def _isolation_seed_result(
     """
     engine = seam_engine(migrated_database)
     try:
-        keyed, seeded = _seed_isolation_rows(engine)
+        keyed, seeded, audited = _seed_isolation_rows(engine)
     finally:
         engine.dispose()
 
@@ -1901,12 +2059,20 @@ def _isolation_seed_result(
         f"over a short one reports success for the tables it never visited."
     )
 
+    # 🔴 `audit_log` HOLDS MORE THAN THE SEED WROTE INTO IT, BY DESIGN, AND THE
+    # SURPLUS IS COUNTED RATHER THAN TOLERATED. `0007` mirrors every insert into an
+    # audited table into `audit_log`, so each tenant's audit rows are its own seeded
+    # row plus one per insert into each audited table. Multiplying by the tenant's
+    # row count is what makes the two-and-one asymmetry survive: tenant A gets two
+    # rows in each audited table and therefore two audit rows from each.
+    audited_seeded = len(audited & set(seeded))
     expected = {
         table: {
             tenant: (
                 ISOLATION_REGISTRY_ROWS
                 if keyed[table] == ISOLATION_REGISTRY_KEY
                 else ISOLATION_ROW_COUNTS[tenant]
+                * (1 + audited_seeded if table == ISOLATION_UNCLEARABLE_TABLE else 1)
             )
             for tenant in ISOLATION_ROW_COUNTS
         }
@@ -1919,27 +2085,31 @@ def _isolation_seed_result(
     assert written == expected, (
         f"the seed wrote {written}, not {expected}. Every denial in the isolation "
         f"proof would then be a statement about an empty table, and the positive "
-        f"control's expected sets would be wrong."
+        f"control's expected sets would be wrong. The audited tables are "
+        f"{sorted(audited)}, and each insert into one of them puts a further row in "
+        f"{ISOLATION_UNCLEARABLE_TABLE}."
     )
 
-    return keyed, seeded
+    return keyed, seeded, audited
 
 
 @pytest.fixture(scope="module")
 def isolation_seed(
-    _isolation_seed_result: tuple[Mapping[str, str], Mapping[str, Mapping[UUID, tuple[UUID, ...]]]],
+    _isolation_seed_result: _SeedResult,
 ) -> Mapping[str, Mapping[UUID, tuple[UUID, ...]]]:
     """table -> tenant -> its committed ids. Two rows for A and one for B.
 
     `tenants` is the exception at one row each, because its primary key IS the
-    tenant id — see `ISOLATION_REGISTRY_ROWS`.
+    tenant id — see `ISOLATION_REGISTRY_ROWS`. `audit_log` is the other, at one
+    row per insert into an audited table on top of its own — see
+    `isolation_audited_tables`, which is what lets a caller predict the number.
     """
     return _isolation_seed_result[1]
 
 
 @pytest.fixture(scope="module")
 def isolation_key_columns(
-    _isolation_seed_result: tuple[Mapping[str, str], Mapping[str, Mapping[UUID, tuple[UUID, ...]]]],
+    _isolation_seed_result: _SeedResult,
 ) -> Mapping[str, str]:
     """table -> the column its policy keys on, as the seed derived it.
 
@@ -1948,6 +2118,21 @@ def isolation_key_columns(
     that column is `id` on the registry and `tenant_id` on everything else.
     """
     return _isolation_seed_result[0]
+
+
+@pytest.fixture(scope="module")
+def isolation_audited_tables(_isolation_seed_result: _SeedResult) -> frozenset[str]:
+    """The seeded tables `0007`'s trigger mirrors into `audit_log`, from the catalog.
+
+    The positive control asserts an EXACT id set per tenant per table, and
+    `audit_log` is the one table whose row count is not the seed's row count: it
+    holds one extra row per insert into a table on this set. Exposed as a fixture
+    rather than restated as a literal in the test, because the answer is a property
+    of the revision under test and `0007`'s own docstring records that the list is
+    expected to grow — "`build-retention-audit.md` §8 REQUESTS one `_attach` call
+    per retainable table from whoever lands them".
+    """
+    return _isolation_seed_result[2]
 
 
 @pytest.fixture(scope="session")

@@ -28,6 +28,7 @@ tenants in one statement.
 
 from __future__ import annotations
 
+import re
 import uuid
 from collections.abc import Collection, Mapping
 from dataclasses import dataclass, field
@@ -36,6 +37,11 @@ from types import MappingProxyType
 from typing import Any, Final
 
 from titlepipe_core.db.models import Order
+
+# What `insert_audit_log` will interpolate as a bind parameter name, and nothing else.
+# `conftest._isolation_tables` guards catalog-derived table names the same way and for the
+# same reason: a name that reaches a SQL string has to be checked where it is interpolated.
+_BIND_PARAMETER: Final = re.compile(r"\A[a-z_][a-z0-9_]*\Z")
 
 
 # Every `NOT NULL` column `0008` adds to `orders` except the two that cannot be
@@ -189,6 +195,41 @@ def insert_order(*caller_columns: str) -> str:
     return f"INSERT INTO orders ({columns}) VALUES ({values})"  # noqa: S608
 
 
+def insert_audit_log(*, tenant: str | None = None, returning: str | None = None) -> str:
+    """One `INSERT` writing a complete `audit_log` row.
+
+    `tenant` is a bind parameter NAME, or `None` for a fresh `gen_random_uuid()` —
+    the two shapes the three raw call sites in this suite need. `returning` is the
+    caller's own `RETURNING` list, or `None` for a statement that returns nothing.
+
+    THE COLUMNS COME FROM `MINIMAL_ROWS["audit_log"]` AND ARE NOT RESPELLED HERE.
+    `audit_log` gained its `NOT NULL` columns at `0007` and three call sites were
+    still writing `INSERT INTO audit_log (tenant_id)`; a second list here would be
+    a fourth place to update the next time the table grows a column.
+
+    `0007`'s `BEFORE INSERT` trigger fills `row_hash`, `prev_hash` and
+    `chain_position`, so a complete row does not name them — see the entry itself.
+
+    🔴 `S608` IS SUPPRESSED FOR THE REASON `insert_orders_returning` GIVES, plus
+    one: `tenant` is a bind parameter name and is checked against
+    `_BIND_PARAMETER` below, so nothing that is not an identifier reaches the
+    string. The tenant VALUE stays a bind parameter.
+    """
+    if tenant is not None and not _BIND_PARAMETER.match(tenant):
+        raise AssertionError(
+            f"insert_audit_log was given {tenant!r} as a bind parameter name. It "
+            f"interpolates that name into SQL, so it has to be a plain identifier; "
+            f"the tenant VALUE belongs in the parameter dictionary."
+        )
+
+    spec = MINIMAL_ROWS["audit_log"]
+    columns = ", ".join(["tenant_id", *spec.columns])
+    tenant_value = "gen_random_uuid()" if tenant is None else f":{tenant}"
+    values = ", ".join([tenant_value, *spec.columns.values()])
+    statement = f"INSERT INTO audit_log ({columns}) VALUES ({values})"  # noqa: S608
+    return statement if returning is None else f"{statement} RETURNING {returning}"
+
+
 def a_minimal_order(tenant_id: uuid.UUID, **overrides: Any) -> Order:
     """An `Order` that satisfies every `NOT NULL` and asserts nothing else."""
     return Order(
@@ -261,15 +302,120 @@ class _MinimalRow:
 # The bind parameters every expression here may use. `:ordinal` is an int and
 # `:ordinal_text` its decimal spelling, and they are two parameters rather than
 # one cast because they are consumed by operators with different argument types
-# — `to_hex(:ordinal)` wants an integer, `'TEST-ONLY-' || :ordinal_text` wants
-# text, and `$1::text` over an integer parameter is a wire-level type mismatch
-# rather than a coercion.
+# — `to_hex(CAST(:ordinal AS integer))` wants an integer, `'TEST-ONLY-' ||
+# :ordinal_text` wants text, and `$1::text` over an integer parameter is a
+# wire-level type mismatch rather than a coercion.
+#
+# `:ordinal` reaches the server as a `smallint` while it stays under 2**15, because
+# psycopg 3 adapts a Python int by magnitude — so an expression that needs an
+# `integer` has to say so. See `packages.sha256` for the measurement.
 SEED_ORDINAL = "ordinal"
 SEED_ORDINAL_TEXT = "ordinal_text"
 SEED_TENANT = "tenant"
 
 MINIMAL_ROWS: Final[Mapping[str, _MinimalRow]] = MappingProxyType(
     {
+        # 🔴 `audit_log` IS IN THIS TABLE AND THE COMMENT BELOW USED TO SAY IT DID
+        # NOT NEED TO BE. `seed_insert`'s docstring named it, beside `tenants`, as a
+        # table the bare tenant insert is CORRECT for. That was true of `0001`'s
+        # `audit_log` and stopped being true at `0007`, which adds eight `NOT NULL`
+        # columns to it; the two revisions first met at the integration merge.
+        #
+        # `row_hash`, `prev_hash` and `chain_position` are `NOT NULL` (bar the first
+        # row's `prev_hash`) and are deliberately ABSENT here: `0007`'s `BEFORE
+        # INSERT` trigger assigns all three under an advisory lock, and its whole
+        # point is that "the application can't choose either value". Naming them
+        # would be this module writing values the database is about to overwrite,
+        # and a reader could not tell which of the two won.
+        #
+        # `action` is `'insert'` because that is what the seed is doing; `0007`'s
+        # enum has exactly three labels and there is no neutral one. `subject_table`
+        # is `text` and NOT `regclass` — `0007` says why — so it takes the
+        # implausible literal rather than a real relation name.
+        "audit_log": _MinimalRow(
+            columns={
+                "actor_subject": "'TEST-ONLY'",
+                "actor_seat": "'TEST-ONLY'",
+                "action": "'insert'",
+                "subject_table": "'TEST-ONLY'",
+                "subject_id": "gen_random_uuid()",
+            }
+        ),
+        # The two identity tables. `users` has been in `db/identity.py` since the auth
+        # seam landed and `clients` arrives with `0080`; neither had an entry here,
+        # because until the merge no tree held both the identity module and this seed.
+        #
+        # 🔴 EVERY VALUE IN `users` VARIES BY ORDINAL, AND THAT IS THE TWO UNIQUE
+        # CONSTRAINTS TALKING. `uq_users_tenant_id_email` and
+        # `uq_users_tenant_id_identity_provider_identity_subject` are the first natural
+        # keys in this schema, and the seed writes TWO rows into tenant A — a constant
+        # here is a `duplicate key value` on the second one. The email is lower case
+        # because `ck_users_email_is_lowercase` refuses anything else, and that check
+        # exists so that two spellings of one address cannot both be a seat.
+        "users": _MinimalRow(
+            columns={
+                "email": "'test-only-' || :ordinal_text || '@test-only.invalid'",
+                # `reviewer` is the least-privileged of `0020`'s six labels. A seat is
+                # not optional and there is no neutral member, so the seed picks the
+                # one that can do least rather than inventing a meaning for a row it
+                # has no opinion about.
+                "role": "'reviewer'",
+                "identity_provider": "'TEST-ONLY'",
+                "identity_subject": "'TEST-ONLY-' || :ordinal_text",
+            }
+        ),
+        # `delivery_config` and `template_ref` are nullable and are therefore ABSENT:
+        # `db/identity.Client` says an empty `{}` would be a fabricated value standing
+        # in for an absence, and a spec entry for a nullable column is exactly that.
+        "clients": _MinimalRow(
+            columns={
+                "name": "'TEST-ONLY'",
+                "delivery_method": "'TEST-ONLY'",
+                "report_shape": "'TEST-ONLY'",
+            }
+        ),
+        # `0005` and `0006`. Both are tenant-scoped, both are seeded by the isolation
+        # pass, and neither had an entry: their revisions and this module first met at
+        # the integration merge.
+        #
+        # `subject_table` is `text` in both and is deliberately the implausible literal
+        # rather than a real relation name — `0007` gives the reason for the same column
+        # on `audit_log`: it is not a `regclass`, because a `regclass` follows a rename
+        # and a record of what was classified must not.
+        "record_classifications": _MinimalRow(
+            columns={
+                # `derived_artifact` is the one label that is neither a class of record
+                # the seed would be lying about holding nor the one the table refuses:
+                # `ck_record_classifications_telemetry_is_not_stored_here` rejects
+                # `operational_telemetry` outright, and `npi_payload` on a `TEST-ONLY`
+                # row would be a claim that the seed wrote personal data.
+                "record_class": "'derived_artifact'",
+                # `safe` for the same reason, and it is the honest one: nothing this
+                # module writes is anybody's information.
+                "data_class": "'safe'",
+                "subject_table": "'TEST-ONLY'",
+                # `uq_record_classifications_tenant_id_subject_table_subject_id` makes
+                # this the table's natural key, and the seed writes two rows per tenant.
+                "subject_id": "gen_random_uuid()",
+                "jurisdiction": "'TEST-ONLY'",
+                "classified_by": "'TEST-ONLY'",
+                "classification_basis": "'TEST-ONLY'",
+            }
+        ),
+        # `released_at`, `released_by` and `release_reason` are absent, which is what
+        # makes this an OPEN hold. `ck_legal_holds_release_is_all_or_nothing` accepts
+        # zero of the three or all three, so naming one would need all three and would
+        # make the seed's minimal row a RELEASED hold — a different thing, and not the
+        # one a table's smallest acceptable row should be.
+        "legal_holds": _MinimalRow(
+            columns={
+                "subject_table": "'TEST-ONLY'",
+                "subject_id": "gen_random_uuid()",
+                "matter_reference": "'TEST-ONLY'",
+                "reason": "'TEST-ONLY'",
+                "placed_by": "'TEST-ONLY'",
+            }
+        ),
         "orders": _MinimalRow(
             columns={
                 # No foreign key: `clients` is not in this branch's chain. See
@@ -289,7 +435,20 @@ MINIMAL_ROWS: Final[Mapping[str, _MinimalRow]] = MappingProxyType(
                 # 64 lowercase hex characters, which is what
                 # `ck_packages_sha256_is_lowercase_hex` asks for and what a real
                 # digest is. `to_hex(1)` is `'1'`; the `lpad` is the rest.
-                "sha256": "lpad(to_hex(:ordinal), 64, '0')",
+                #
+                # 🔴 THE CAST IS LOAD-BEARING. psycopg 3 adapts a Python int by
+                # MAGNITUDE, so the ordinal — 1 or 2 — arrives as `smallint`, and
+                # `to_hex` has `integer` and `bigint` overloads and no `smallint`
+                # one: `function to_hex(smallint) is not unique`, MEASURED against
+                # postgres:18.4. Uncast, this expression fails for every ordinal this
+                # seed will ever pass and succeeds for none.
+                #
+                # `CAST(… AS integer)` and NOT `:ordinal::integer`: SQLAlchemy's
+                # `text()` does not read a bind parameter that is immediately
+                # followed by `::`, so the postfix spelling reaches the server with
+                # the `:ordinal` still in it and fails with `syntax error at or near
+                # ":"`. Measured in the same run, one error after the other.
+                "sha256": "lpad(to_hex(CAST(:ordinal AS integer)), 64, '0')",
                 "byte_size": "1",
                 "status": "'received'",
                 "received_at": "now()",
@@ -406,7 +565,9 @@ MINIMAL_ROWS: Final[Mapping[str, _MinimalRow]] = MappingProxyType(
                 "shape": "'TEST-ONLY'",
                 "template_version": "'0'",
                 "rendered_at": "now()",
-                "artifact_digest": "lpad(to_hex(:ordinal), 64, '0')",
+                # The cast for `packages.sha256`'s reason — psycopg sends the ordinal
+                # as `smallint` and `to_hex` has no `smallint` overload.
+                "artifact_digest": "lpad(to_hex(CAST(:ordinal AS integer)), 64, '0')",
                 "artifact_uri": "'test-only:///'",
             },
         ),
@@ -531,8 +692,9 @@ def seed_insert(table: str, key_column: str, present_columns: Collection[str]) -
     parameters.
 
     A table with no entry in `MINIMAL_ROWS` gets the bare tenant insert, which
-    is correct for `tenants` and `audit_log` and is a LOUD failure for anything
-    else, in the same `NOT NULL` shape.
+    is correct for `tenants` and is a LOUD failure for anything else, in the same
+    `NOT NULL` shape. This sentence used to name `audit_log` too; `0007` gives it
+    eight `NOT NULL` columns and it now has an entry above like any other table.
     """
     spec = MINIMAL_ROWS.get(table, _MinimalRow())
     available = frozenset(present_columns)

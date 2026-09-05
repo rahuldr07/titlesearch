@@ -72,6 +72,7 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping
 
 import pytest
+from minimal_rows import insert_audit_log
 from sqlalchemy import Engine, text
 from sqlalchemy.exc import DBAPIError
 
@@ -102,7 +103,12 @@ REFUSED_STATEMENTS = (
 # its expected answer DEPENDS ON THE ROLE: the owner and `titlepipe_app` may
 # insert, `titlepipe_worker`/`titlepipe_blind`/`titlepipe_migration` hold no
 # grant and get `42501`.
-INSERT_STATEMENT = "INSERT INTO audit_log (tenant_id) VALUES (gen_random_uuid())"
+# Through `minimal_rows` since the merge: `0007` gives `audit_log` eight `NOT NULL`
+# columns, so `INSERT INTO audit_log (tenant_id)` — a complete row when this file was
+# written against `0001`'s table — now fails with `null value in column
+# "actor_subject"` for every role, which is a NotNullViolation standing where the
+# 42501-or-success this constant exists to measure should be.
+INSERT_STATEMENT = insert_audit_log()
 
 OWNER_ROLE = "titlepipe_owner"
 
@@ -328,7 +334,7 @@ def test_the_owner_is_still_permitted_to_insert(
                 {"guc": tenant_guc, "tenant": str(tenant)},
             )
             inserted = connection.execute(
-                text("INSERT INTO audit_log (tenant_id) VALUES (:tenant) RETURNING id"),
+                text(insert_audit_log(tenant="tenant", returning="id")),
                 {"tenant": tenant},
             ).scalar_one()
             visible = connection.execute(

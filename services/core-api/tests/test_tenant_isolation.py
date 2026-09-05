@@ -163,11 +163,12 @@ the exemption exists: the SAVEPOINT trap cannot be proved without a SAVEPOINT.
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
+from types import MappingProxyType
 from typing import NamedTuple
 from uuid import UUID
 
 import pytest
-from minimal_rows import a_minimal_order
+from minimal_rows import a_minimal_order, insert_audit_log
 from sqlalchemy import Select, func, select, text
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncEngine
@@ -219,8 +220,21 @@ SET_ROLE_REFUSAL_FRAGMENT = "permission denied to set role"
 # `tenants` is in the set. It is not a tenant table — it is the registry, keyed on
 # `id` — but it is one of the seven `0002` writes a policy on, and leaving it out
 # of the proof is how it came to be read only in the deny state.
+#
+# 🔴 IT WENT FROM NINE NAMES TO TWENTY-NINE AT THE INTEGRATION MERGE, AND NOT ONE
+# OF THEM WAS ADDED BY EDITING THIS LINE FIRST. Every revision below `0080` created
+# tenant-scoped tables on a branch this file had never seen; the derivation found
+# them, this literal did not have them, and the exact-set assertion is what said so.
+# That is the set doing its job rather than the set being wrong — the alternative,
+# a derived expectation, is satisfied by whatever the derivation happens to return.
+#
+# Grouped by the revision that creates each, so a reader can check a name against a
+# migration rather than against this list.
 EXPECTED_ISOLATION_TABLES = frozenset(
     {
+        # `0001` — the skeleton, and `tenants`, which is in the set because it is
+        # one of the seven `0002` writes a policy on even though it is the registry
+        # and keyed on `id`.
         "tenants",
         "orders",
         "packages",
@@ -228,6 +242,34 @@ EXPECTED_ISOLATION_TABLES = frozenset(
         "fields",
         "field_readings",
         "audit_log",
+        # `0005`-`0006` — retention and holds. Both are audited by `0007`, which is
+        # why `audit_log` above holds more rows than the seed writes into it.
+        "record_classifications",
+        "legal_holds",
+        # `0020` and `0080` — identity. `users` is the row a provider subject
+        # resolves to; `clients` is the customer an order belongs to.
+        "users",
+        "clients",
+        # `0030`-`0032` — documents and the reading of them.
+        "documents",
+        "instruments",
+        # `0040`-`0041` — the chain and escalations.
+        "chain_links",
+        "chain_root_assertions",
+        "escalations",
+        "escalation_orders",
+        # `0050` — delivery. `reports` is append-only, like `audit_log`.
+        "reports",
+        "report_verified_checks",
+        "deliveries",
+        "delivery_receipt_steps",
+        # `0051` — intake.
+        "products",
+        "client_config_versions",
+        "client_config_lines",
+        "intake_signoffs",
+        "intake_signoff_lines",
+        "completeness_gaps",
         # `0070`-`0071`. The golden set is TENANT-SCOPED, unlike the rulebook: a
         # golden value quotes the content of one tenant's document, reached
         # through `order_id`. `migrations/versions/0070_golden_fields.py` holds
@@ -236,7 +278,11 @@ EXPECTED_ISOLATION_TABLES = frozenset(
         "golden_corrections",
     }
 )
-MINIMUM_ISOLATION_TABLES = 9
+MINIMUM_ISOLATION_TABLES = 29
+
+# The one table whose row count is not the seed's row count. See
+# `conftest.isolation_audited_tables`.
+ISOLATION_AUDIT_TABLE = "audit_log"
 
 
 @pytest.fixture
@@ -417,6 +463,79 @@ APPEND_ONLY_TABLE = "audit_log"
 # policy's message. Same ruling, second table.
 APPEND_ONLY_TABLES = frozenset({APPEND_ONLY_TABLE, "golden_corrections"})
 
+# The column `minimal_rows.insert_audit_log` writes the tenant into. Asserted against
+# the seed's own derivation in `test_2b` rather than assumed, because the statement
+# comes from one place and the key column from another.
+APPEND_ONLY_TABLE_KEY = "tenant_id"
+
+# 🔴 THE UPDATE ARMS HAVE TO SAY WHO THEY ARE, AND THAT IS THE AUDIT WRITER TALKING
+#    RATHER THAN A WORKAROUND. `0007` attaches `audit_record_change` to
+#    `legal_holds` and `record_classifications`; it refuses any change with SQLSTATE
+#    `28000` when `app.actor_subject` or `app.actor_seat` is unset, because "an
+#    unattributed change is refused rather than recorded anonymously".
+#
+#    `tenant_session` establishes the TENANT and nothing else — correctly, the tenant
+#    is the isolation boundary and the actor is not — so a session that intends to
+#    WRITE an audited table sets these itself, exactly as the real write path does.
+#    Without them `_unqualified_update_outcomes` reports `touched=None` on those two
+#    tables and the arm reads it as a broken grant.
+#
+#    They are `SET LOCAL` (the `true` argument): every session here is rolled back,
+#    and an actor that outlived the transaction would attach this file's name to
+#    whatever ran next on the pooled connection.
+ISOLATION_ACTOR_GUCS = ("app.actor_subject", "app.actor_seat")
+ISOLATION_ACTOR = "TEST-ONLY"
+
+# 🔴 A REFUSAL THAT IS NEITHER THE ACL'S NOR THE POLICY'S, AND IT IS STRONGER THAN
+#    BOTH. `0031` puts a `BEFORE UPDATE` trigger on `packages` that refuses any
+#    change to `sha256`, `byte_size` or `tenant_id` — "every stored engine read cites
+#    the digest as it was" — and a `BEFORE ROW` trigger runs before the policy's
+#    `WITH CHECK` is evaluated. So the re-tenanting arm gets `0A000` from PL/pgSQL
+#    where every other table gives `42501` from the policy.
+#
+#    THE ARM STILL REQUIRES A REFUSAL; only the code and the sentence differ, and
+#    both are asserted, because "refused somehow" is the assertion that a broken
+#    policy also satisfies. A mapping rather than a set so the MESSAGE is pinned per
+#    table: `0A000` is raised by three other things in this schema — the append-only
+#    triggers among them — and a `packages` row refused for one of those reasons
+#    would be a different fact wearing the same code.
+FEATURE_NOT_SUPPORTED_SQLSTATE = "0A000"
+KEY_COLUMN_FROZEN_BY_TRIGGER: Mapping[str, str] = MappingProxyType(
+    {"packages": "a package's identity is immutable"}
+)
+
+# 🔴 "APPEND-ONLY" IS THE WRONG QUESTION FOR THE UPDATE ARMS, AND THE MERGE IS
+#    WHAT PROVED IT. What those two arms actually need to know is whether
+#    `titlepipe_app` may UPDATE THE KEY COLUMN of a table — because that is the
+#    statement they run, `UPDATE <table> SET <key> = :target` — and "the table is
+#    append-only" was a proxy for it that happened to be exact while every
+#    non-append-only table carried a table-level `UPDATE` grant.
+#
+#    `0032` ends that. It REVOKES the table-level `UPDATE` on `fields` and grants a
+#    COLUMN-LEVEL one naming the columns the review path moves; `tenant_id` is not
+#    among them and must not be. So `fields` answers `42501 permission denied for
+#    table fields` from the ACL, exactly as `audit_log` does, while being nothing
+#    like append-only — and the arm below read that as "0002 grants that role UPDATE
+#    on this table, so this is a broken grant".
+#
+#    DERIVED FROM `has_column_privilege` AT RUN TIME and checked against the literal
+#    below, which is this file's pattern everywhere else: the derivation finds what
+#    is true of the revision under test, the literal says whether that is what
+#    anybody decided. A column-level grant that quietly lost a column shows up here
+#    as a table moving into the set.
+EXPECTED_ACL_DENIED_KEY_UPDATES = frozenset(
+    {
+        # Append-only: one verb, `INSERT`, so no UPDATE reaches any column.
+        # `0001`, `0071` and `0050` respectively.
+        "audit_log",
+        "golden_corrections",
+        "reports",
+        # NOT append-only. `0032` narrows `titlepipe_app`'s UPDATE on `fields` to a
+        # column list, and a row's tenant is not something the review path moves.
+        "fields",
+    }
+)
+
 # The fragment PostgreSQL puts in the message when the refusal is the ACL's
 # rather than the policy's. MEASURED 2026-08-06, as above. It is asserted
 # alongside the SQLSTATE because `42501` is the code for both, and a policy
@@ -466,6 +585,38 @@ class UpdateReach(NamedTuple):
     message: str
 
 
+async def _acl_denied_key_updates(dsn: str, key_columns: Mapping[str, str]) -> frozenset[str]:
+    """The tables whose KEY COLUMN this connection's role may not UPDATE.
+
+    `has_column_privilege(current_user, …)` rather than a read of `relacl` and
+    `attacl`: PostgreSQL's own answer accounts for a table-level grant, a
+    column-level grant and role membership at once, and reproducing that
+    resolution in a test is reproducing the thing being tested.
+
+    Asked as `titlepipe_app` — `dsn` is `isolation_dsn` — because the privilege
+    being asked about is that role's. `current_user` rather than a literal keeps
+    the question and the connection from disagreeing.
+    """
+    denied: set[str] = set()
+    engine = make_engine(dsn)
+    try:
+        async with engine.connect() as connection:
+            for table, key_column in sorted(key_columns.items()):
+                permitted = (
+                    await connection.execute(
+                        text(
+                            "SELECT has_column_privilege(current_user, :table, :column, 'UPDATE')"
+                        ),
+                        {"table": table, "column": key_column},
+                    )
+                ).scalar_one()
+                if not permitted:
+                    denied.add(table)
+    finally:
+        await engine.dispose()
+    return frozenset(denied)
+
+
 async def _unqualified_update_outcomes(
     dsn: str, key_columns: Mapping[str, str], writer: TenantId, target: UUID
 ) -> dict[str, UpdateReach]:
@@ -510,6 +661,11 @@ async def _unqualified_update_outcomes(
             count = f"SELECT count(*) FROM {table}"  # noqa: S608
             update = f"UPDATE {table} SET {key_column} = :target"  # noqa: S608
             async with tenant_session(sessionmaker, writer) as session:
+                for guc in ISOLATION_ACTOR_GUCS:
+                    await session.execute(
+                        text("SELECT set_config(:guc, :value, true)"),
+                        {"guc": guc, "value": ISOLATION_ACTOR},
+                    )
                 before = int((await session.execute(text(count))).scalar_one())
                 connection = await session.connection()
                 try:
@@ -756,6 +912,7 @@ async def test_1a_the_committed_tenant_leaves_the_deny_sentinel_on_the_pooled_co
 async def test_1b_the_positive_control_each_tenant_sees_its_own_rows_in_every_table(
     isolation_dsn: str,
     isolation_seed: Seed,
+    isolation_audited_tables: frozenset[str],
     isolation_tenant_b: UUID,
     isolation_tenant_a: UUID,
 ) -> None:
@@ -809,8 +966,12 @@ async def test_1b_the_positive_control_each_tenant_sees_its_own_rows_in_every_ta
       still fails the moment the policy stops filtering — which is exactly what
       the mutation above produces.
 
-    `len(seeded_b) == 1` is asserted per table because `exactly 1, not 0` is the
-    contract the seed's two-and-one asymmetry exists to make meaningful.
+    `len(seeded_b) == expected_b` is asserted per table because `exactly that many,
+    not 0` is the contract the seed's two-and-one asymmetry exists to make
+    meaningful. It is `1` everywhere except `audit_log`, where `0007`'s trigger adds
+    one row per insert into an audited table — the number comes from
+    `isolation_audited_tables`, read off the catalog, rather than from a literal
+    here that a seventh `_attach` call would silently falsify.
     """
     tenant_a = TenantId(isolation_tenant_a)
     tenant_b = TenantId(isolation_tenant_b)
@@ -842,9 +1003,16 @@ async def test_1b_the_positive_control_each_tenant_sees_its_own_rows_in_every_ta
         visible_a = seen_by_a[table]
         visible_b = seen_by_b[table]
 
-        assert len(seeded_b) == 1, (
-            f"the seed gave tenant B {len(seeded_b)} rows in {table}, not the one "
-            f"this control is written around: {sorted(seeded_b)}"
+        expected_b = 1 + (
+            len(isolation_audited_tables & set(isolation_seed))
+            if table == ISOLATION_AUDIT_TABLE
+            else 0
+        )
+        assert len(seeded_b) == expected_b, (
+            f"the seed gave tenant B {len(seeded_b)} rows in {table}, not the "
+            f"{expected_b} this control is written around: {sorted(seeded_b)}. The "
+            f"audited tables are {sorted(isolation_audited_tables)} and each insert "
+            f"into one of them writes a further {ISOLATION_AUDIT_TABLE} row."
         )
 
         assert visible_b != set(), (
@@ -1053,6 +1221,15 @@ async def test_2_a_write_carrying_another_tenants_id_is_refused_with_42501(
             f"missing INSERT grant returns the identical code: {message}"
         )
 
+    acl_denied = await _acl_denied_key_updates(isolation_dsn, isolation_key_columns)
+    assert acl_denied == EXPECTED_ACL_DENIED_KEY_UPDATES, (
+        f"titlepipe_app may not UPDATE the key column of {sorted(acl_denied)}, not "
+        f"{sorted(EXPECTED_ACL_DENIED_KEY_UPDATES)}. Both arms below branch on this "
+        f"set: a table that entered it silently would have its UPDATE refusal read "
+        f"as the policy working when it is the ACL, and one that LEFT it would have "
+        f"an ACL refusal read as a broken grant."
+    )
+
     reach = await _unqualified_update_outcomes(
         isolation_dsn, isolation_key_columns, TenantId(isolation_tenant_a), isolation_tenant_a
     )
@@ -1069,9 +1246,9 @@ async def test_2_a_write_carrying_another_tenants_id_is_refused_with_42501(
     )
 
     for table, outcome in sorted(reach.items()):
-        if table in APPEND_ONLY_TABLES:
+        if table in acl_denied:
             assert outcome.sqlstate == INSUFFICIENT_PRIVILEGE_SQLSTATE, (
-                f"{table} is granted no UPDATE, so an UPDATE by "
+                f"{table} grants this role no UPDATE on its key column, so an UPDATE by "
                 f"{isolation_tenant_a} must be refused by the ACL before the "
                 f"policy is reached. It answered {outcome.sqlstate!r} and touched "
                 f"{outcome.touched} rows: {outcome.message}"
@@ -1084,9 +1261,9 @@ async def test_2_a_write_carrying_another_tenants_id_is_refused_with_42501(
 
         assert outcome.touched is not None, (
             f"{isolation_tenant_a} could not UPDATE its own rows in {table} at "
-            f"all: {outcome.sqlstate!r} {outcome.message}. 0002 grants that role "
-            f"UPDATE on this table, so this is a broken grant rather than "
-            f"isolation working."
+            f"all: {outcome.sqlstate!r} {outcome.message}. This role holds UPDATE "
+            f"on this table's key column — `_acl_denied_key_updates` said so above — "
+            f"so this is a broken grant rather than isolation working."
         )
         assert outcome.before >= 1, (
             f"{isolation_tenant_a} saw no rows in {table} before the UPDATE, so a "
@@ -1107,7 +1284,23 @@ async def test_2_a_write_carrying_another_tenants_id_is_refused_with_42501(
         )
 
     for table, outcome in sorted(retenanted.items()):
-        expected = ACL_REFUSAL_FRAGMENT if table in APPEND_ONLY_TABLES else RLS_REFUSAL_FRAGMENT
+        frozen = KEY_COLUMN_FROZEN_BY_TRIGGER.get(table)
+        if frozen is not None:
+            assert outcome.sqlstate == FEATURE_NOT_SUPPORTED_SQLSTATE, (
+                f"{table} freezes its key column in a BEFORE UPDATE trigger, so "
+                f"re-tenanting a row must be refused with "
+                f"{FEATURE_NOT_SUPPORTED_SQLSTATE!r} before the policy is reached. "
+                f"It answered {outcome.sqlstate!r} and touched {outcome.touched} "
+                f"rows: {outcome.message}"
+            )
+            assert frozen in outcome.message, (
+                f"{table} answered {FEATURE_NOT_SUPPORTED_SQLSTATE!r} for some reason "
+                f"other than {frozen!r} — the append-only triggers raise the same "
+                f"code: {outcome.message}"
+            )
+            continue
+
+        expected = ACL_REFUSAL_FRAGMENT if table in acl_denied else RLS_REFUSAL_FRAGMENT
         assert outcome.sqlstate == INSUFFICIENT_PRIVILEGE_SQLSTATE, (
             f"{isolation_tenant_a} re-tenanted its own rows in {table} to "
             f"{isolation_tenant_b} and got {outcome.sqlstate!r} rather than "
@@ -1181,11 +1374,17 @@ async def test_2b_the_positive_write_control_audit_log_takes_a_row_keyed_to_the_
         f"about a table the seed never found"
     )
     key_column = isolation_key_columns[APPEND_ONLY_TABLE]
+    assert key_column == APPEND_ONLY_TABLE_KEY, (
+        f"the seed keys {APPEND_ONLY_TABLE} on {key_column!r}, and the statement "
+        f"below comes from `minimal_rows`, which writes {APPEND_ONLY_TABLE_KEY!r}"
+    )
 
-    # S608 is suppressed for the reason recorded at `_visible_ids_per_table`: a
-    # table name cannot be a bind parameter, and both names here come from
-    # `isolation_seed`'s catalog derivation. The VALUE is bound.
-    insert = f"INSERT INTO {APPEND_ONLY_TABLE} ({key_column}) VALUES (:tenant) RETURNING id"  # noqa: S608
+    # Through `minimal_rows` rather than `INSERT INTO audit_log (tenant_id)`: `0007`
+    # gives this table eight `NOT NULL` columns, and the bare form now fails with
+    # `23502 null value in column "actor_subject"` — a NotNullViolation standing
+    # exactly where this control's "the row was ACCEPTED" answer should be. The two
+    # revisions first met at the integration merge.
+    insert = insert_audit_log(tenant="tenant", returning="id")
 
     accepted: UUID | None = None
     refusal = ""
