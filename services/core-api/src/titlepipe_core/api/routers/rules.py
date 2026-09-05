@@ -60,15 +60,15 @@ So the permanent case is NOT converted. It propagates, `api/errors.py`'s
 `handle_unexpected` renders a 500 with `INTERNAL_ERROR`, the traceback goes to
 the log bound to the same request id, and nothing invites a retry — which is the
 honest answer for a fault in this service's own configuration. This is exactly
-the argument the next paragraph already made about `from_rows` and that the
+the argument the next paragraph already made about the mapper and that the
 `except` three lines above it did not apply to itself.
 
 `rulebook_read_failed` is logged for BOTH, carrying the class name and whether it
 was treated as retryable, because the operator's question is the same either way
 and the answer must be greppable.
 
-The catch does not extend over `RulesResponse.from_rows`. That separation is the
-design rather than tidiness: a `ValidationError` out of `from_rows` means a label
+The catch does not extend over `render_rules`. That separation is the
+design rather than tidiness: a `ValidationError` out of the mapper means a label
 reached the wire that the contract does not have — `api/schemas/rules.py`
 explains why that is caught at the boundary — and it is a defect in this service,
 not an outage in a downstream. Widening the `except` to cover it would answer 503
@@ -84,13 +84,14 @@ is gated — and the two live consumers
 `features/account/RulesPanel.tsx`, and `features/escalations/useEscalations.ts`)
 take the whole set. The ordering is
 `list_all`'s and is a wire-stability decision; nothing here re-sorts, for the
-same reason `RulesResponse.from_rows` does not.
+same reason `render_rules` does not.
 """
 
 from __future__ import annotations
 
 from fastapi import APIRouter, Request
 
+from titlepipe_core.api.mappers.rules import render_rule_history, render_rules
 from titlepipe_core.api.reads import scoped_read
 from titlepipe_core.api.schemas.rules import RuleHistoryResponse, RulesResponse
 from titlepipe_core.db import RuleRepository
@@ -120,7 +121,7 @@ async def list_rules(request: Request) -> RulesResponse:
     sixty-nine tenant-scoped reads that follow this one, so it is not the value
     anybody gets by forgetting.
 
-    **`RulesResponse.from_rows` IS OUTSIDE `scoped_read` AND THAT IS THE DESIGN.**
+    **`render_rules` IS OUTSIDE `scoped_read` AND THAT IS THE DESIGN.**
     A `ValidationError` raised here means a label reached the boundary that
     `packages/contract` does not have — a defect in this service, which
     `handle_unexpected` renders as a 500. Moving the call inside `read` would put
@@ -135,7 +136,7 @@ async def list_rules(request: Request) -> RulesResponse:
         tenant=None,
         read=lambda session: RuleRepository(session).list_all(),
     )
-    return RulesResponse.from_rows(rows)
+    return render_rules(rows)
 
 
 @router.get(
@@ -166,7 +167,7 @@ async def rule_history(request: Request, code: str) -> RuleHistoryResponse:
     names the code that was asked for and nothing else: it is client-safe by
     contract, and the code is already in the caller's own URL.
 
-    **THE RAISE IS OUTSIDE `scoped_read`, LIKE `from_rows` ABOVE.** A 404 is an
+    **THE RAISE IS OUTSIDE `scoped_read`, LIKE THE MAPPER ABOVE.** A 404 is an
     answer about the data, not a database failure, and putting it inside `read`
     would run it under that function's `except SQLAlchemyError` — which does not
     catch a `DomainError` today and would swallow this refusal into a 503 the
@@ -186,4 +187,4 @@ async def rule_history(request: Request, code: str) -> RuleHistoryResponse:
     )
     if not rows:
         raise NotFoundError(f"No rule is carried under the code {code!r}.")
-    return RuleHistoryResponse.from_rows(code, rows)
+    return render_rule_history(code, rows)

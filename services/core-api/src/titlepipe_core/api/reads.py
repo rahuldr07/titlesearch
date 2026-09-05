@@ -23,7 +23,7 @@ and what sentence a caller reads. Everything else is here.
 
 `read` returns ROWS. Mapping rows onto the wire happens in the route, after this
 returns, and that separation is the design rather than tidiness. A
-`ValidationError` out of a `from_rows` means a label reached the boundary that
+`ValidationError` out of a mapper means a label reached the boundary that
 the contract does not have: that is a defect in this service and it must reach
 `handle_unexpected` as a 500, not be dressed as a downstream outage. Accepting a
 `Callable` that both read AND serialised would put the whole path under one

@@ -56,6 +56,7 @@ import pytest
 from fastapi.testclient import TestClient
 from pydantic import SecretStr, TypeAdapter
 
+from titlepipe_core.api.mappers.rules import render_rule_history
 from titlepipe_core.api.routers import rules as rules_router
 from titlepipe_core.api.schemas.rules import RuleHistoryResponse
 from titlepipe_core.app import create_app
@@ -139,9 +140,7 @@ def _serialised() -> str:
     `indent=2` and the trailing newline are FIXTURE formatting and not wire
     formatting — `test_rules_contract_parity.py::_serialised` carries the argument.
     """
-    return (
-        RuleHistoryResponse.from_rows(HISTORY_CODE, _sample_rows()).model_dump_json(indent=2) + "\n"
-    )
+    return render_rule_history(HISTORY_CODE, _sample_rows()).model_dump_json(indent=2) + "\n"
 
 
 def _fixture_text(path: Path) -> str:
@@ -224,9 +223,11 @@ def test_the_envelope_carries_exactly_code_and_versions() -> None:
     way IN; nothing but this refuses one being added on the way out — and a count
     field is the one that would be added first, which the schema docstring rules
     against."""
-    parsed = json.loads(_fixture_text(FIXTURE))
-    assert isinstance(parsed, dict)
-    assert list(parsed.keys()) == ["code", "versions"]
+    # `_LOOSE_DOCUMENT` rather than `json.loads` + `isinstance`, for the reason
+    # given above its definition and for one more: `json.loads` is untyped, so the
+    # keys of what it returns are `Unknown` and pyright strict refuses to list
+    # them. The adapter's `dict[str, object]` is the same assertion typed.
+    assert list(_LOOSE_DOCUMENT.validate_json(_fixture_text(FIXTURE))) == ["code", "versions"]
 
 
 def test_the_echoed_code_is_the_one_every_version_carries() -> None:
@@ -242,7 +243,7 @@ def test_the_echoed_code_is_the_one_every_version_carries() -> None:
     assert [version.code for version in parsed.versions] == [HISTORY_CODE] * 3
 
 
-def test_from_rows_takes_the_code_from_the_caller_and_not_from_the_rows() -> None:
+def test_the_mapper_takes_the_code_from_the_caller_and_not_from_the_rows() -> None:
     """A row whose code differs proves which source the echo comes from.
 
     Reading it off `rows[0]` would pass every other test in this file, because
@@ -251,7 +252,7 @@ def test_from_rows_takes_the_code_from_the_caller_and_not_from_the_rows() -> Non
     """
     rows = _sample_rows()
     rows[0].code = "R-999"
-    assert RuleHistoryResponse.from_rows(HISTORY_CODE, rows).code == HISTORY_CODE
+    assert render_rule_history(HISTORY_CODE, rows).code == HISTORY_CODE
 
 
 def test_the_committed_versions_are_in_version_order() -> None:

@@ -37,6 +37,17 @@ derived from the same source has cost this repository five times.
 `endpoints.ts:621` is `z.object({ rules: z.array(Rule) })`. A bare array is a
 different document and Zod rejects it.
 
+## These are DTOs and nothing here knows what a storage row looks like
+
+🔴 `from_rows` LIVED ON BOTH ENVELOPES AND MOVED OUT ON 2026-09-05, to
+`api/mappers/rules.py`, along with this module's import of `db.models.Rule`.
+`CONVENTIONS.md` §10 makes the mapper the ONLY place a model and a DTO are
+imported together, and a classmethod here was the counter-example: it put the
+model-to-DTO step inside the wire declaration, where the two questions "what
+does the contract say" and "how do we produce it" answer to each other instead
+of to `entities.ts` and to the row. Everything the two methods argued survives,
+in the mapper, next to the code it constrains.
+
 ## `created_at` is on the row and is not on the wire
 
 `db/models.Rule` carries it; the contract's nine fields do not include it. Zod
@@ -48,13 +59,10 @@ the other direction.
 
 from __future__ import annotations
 
-from collections.abc import Iterable
 from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
-
-from titlepipe_core.db.models import Rule as RuleRow
 
 # Transcribed from `packages/contract/src/enums.ts:72-81`. See the module
 # docstring for why these are not imported from `db/models.py`.
@@ -65,9 +73,15 @@ RuleOrigin = Literal["spec", "escalation", "reconciliation", "complaint", "senio
 class RuleResponse(BaseModel):
     """One rulebook entry, in the nine fields `Rule` parses and no more.
 
-    `from_attributes` is what lets `model_validate` read a `db.models.Rule`
-    directly. It reads DECLARED fields only, so `created_at` is dropped by the
-    same mechanism that maps the rest — not by a caller remembering to omit it.
+    🔴 `from_attributes` WAS SET HERE AND IS DELIBERATELY GONE (2026-09-05).
+    It let `RuleResponse.model_validate(row)` read a `db.models.Rule` directly,
+    from anywhere — which is the thing `CONVENTIONS.md` §10 rules against, and a
+    gate rule saying "a router may not build a DTO from a model" is a lint on top
+    of an affordance that still works. Without it Pydantic refuses to read
+    attributes off an arbitrary object at all, so `api/mappers/rules.py` is the
+    only way to get from a row to this model, structurally. `created_at` is no
+    longer dropped by a declared-fields rule; it is absent because the mapper
+    writes no line for it.
 
     `id` is a `UUID` and not a `str`: the column is `UUID(as_uuid=True)`, the
     contract is `z.string()`, and Pydantic's JSON serialiser renders a UUID as its
@@ -80,7 +94,7 @@ class RuleResponse(BaseModel):
     would be a second copy of that specification, free to drift.
     """
 
-    model_config = ConfigDict(from_attributes=True, extra="forbid")
+    model_config = ConfigDict(extra="forbid")
 
     id: UUID
     code: str
@@ -105,23 +119,6 @@ class RulesResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     rules: list[RuleResponse]
-
-    @classmethod
-    def from_rows(cls, rows: Iterable[RuleRow]) -> RulesResponse:
-        """Map storage rows onto the wire, preserving the order they arrive in.
-
-        `RuleRepository.list_all` orders by `(code, version, id)` and calls that a
-        wire-stability decision rather than a domain one; this method must not
-        re-sort, or that decision moves here and the repository's docstring becomes
-        false. A `list` comprehension preserves the sequence exactly.
-
-        `model_validate` rather than field-by-field construction: the row's
-        `origin`/`status` are `Mapped[str]` and the fields above are `Literal`s, so
-        this is the one place a label that is in the database enum but not in the
-        contract's is caught — as a `ValidationError`, at the boundary, rather than
-        as a response the browser rejects.
-        """
-        return cls(rules=[RuleResponse.model_validate(row) for row in rows])
 
 
 class RuleHistoryResponse(BaseModel):
@@ -159,18 +156,3 @@ class RuleHistoryResponse(BaseModel):
 
     code: str
     versions: list[RuleResponse]
-
-    @classmethod
-    def from_rows(cls, code: str, rows: Iterable[RuleRow]) -> RuleHistoryResponse:
-        """Map one code's rows onto the wire in the order they arrive.
-
-        `code` comes from the CALLER'S PATH, not from `rows[0].code`. The two are
-        equal on every response this service can produce, and taking it from the
-        row would still be wrong: it would make the echoed value a fact about
-        whatever the query happened to return rather than an answer to what was
-        asked, and it has no value at all to return when the list is empty.
-
-        No re-sort, for `RulesResponse.from_rows`'s reason — `history_for` owns the
-        order and this method preserving it is what keeps that docstring true.
-        """
-        return cls(code=code, versions=[RuleResponse.model_validate(row) for row in rows])

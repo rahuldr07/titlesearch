@@ -2,7 +2,7 @@
 
 `tests/test_rules_contract_parity.py` proves the SHAPE: that the committed
 fixture is what today's models serialise, and that the read path
-(`RuleRepository.list_all` -> `from_rows` -> `model_dump_json`) produces those
+(`RuleRepository.list_all` -> `render_rules` -> `model_dump_json`) produces those
 exact bytes out of a real `postgres:18.4`. It stops one hop short of the wire,
 because until this task there was no route to drive. This file takes the hop.
 
@@ -310,9 +310,9 @@ def test_the_route_answers_the_committed_fixture_byte_for_byte(
 ) -> None:
     """🔴 THE HOP `test_rules_contract_parity.py` COULD NOT TAKE.
 
-    That module drives `RuleRepository.list_all` -> `from_rows` ->
+    That module drives `RuleRepository.list_all` -> `render_rules` ->
     `model_dump_json` and compares the bytes; it says so, and it says why that is
-    one hop short — the route did not exist. Everything between `from_rows` and
+    one hop short — the route did not exist. Everything between the mapper and
     the socket is asserted only here: FastAPI's `response_model` round trip, its
     own JSON encoder, and the fact that the sessionmaker the handler reaches for
     is the one the lifespan built from `app_database_url`.
