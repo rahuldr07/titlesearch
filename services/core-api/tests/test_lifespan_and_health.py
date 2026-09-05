@@ -9,6 +9,7 @@ from typing import cast
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from pydantic import SecretStr
 
 from titlepipe_core.app import create_app
 from titlepipe_core.lifespan import (
@@ -17,8 +18,63 @@ from titlepipe_core.lifespan import (
     build_resources,
     get_resources,
 )
-from titlepipe_core.settings import CoreApiSettings
+from titlepipe_core.settings import CoreApiSettings, Environment
 from titlepipe_test_support import FrozenClock, SequenceIdFactory
+
+# 🔴 THE READINESS TESTS PIN `app_database_url` THEMSELVES, AND THEY HAVE TO.
+#
+# `readiness()` reports `database_answers` IF AND ONLY IF `app_database_url` is
+# set, so the exact set of checks is a function of the configuration — and
+# `CoreApiSettings` is a pydantic-settings model, which reads
+# `TITLEPIPE_APP_DATABASE_URL` OUT OF THE PROCESS ENVIRONMENT for any field the
+# caller does not pass. `conftest.py::development_settings` is
+# `CoreApiSettings(environment=Environment.TEST)` and passes nothing, so it is
+# the ambient shell that decides.
+#
+# MEASURED 2026-09-05 on `integration/backend-2026-09`, same tree, same commit:
+#
+#   pytest tests/test_lifespan_and_health.py                      -> 12 passed
+#   TITLEPIPE_APP_DATABASE_URL=... pytest tests/test_lifespan...   ->  2 failed
+#
+# and that variable is not exotic — `.github/workflows/migration-harness.yml`
+# exports it, because core-api needs the app role's DSN to start. So the two
+# assertions below were green on a developer's shell and red on the one the
+# harness actually runs, for a reason that has nothing to do with either.
+#
+# Init keyword beats environment in pydantic-settings' source order, so passing
+# the field EXPLICITLY — including passing `None` — is what makes the claim these
+# tests make ("readiness reports exactly these checks") a statement about
+# `readiness()` rather than about the shell. Verified against
+# pydantic-settings 2.14.2: `CoreApiSettings(..., app_database_url=None)` is
+# `None` with the variable exported.
+#
+# THIS DOES NOT FIX `development_settings`. Every other test that builds an app
+# from it still inherits whatever the shell exports; that is a change to
+# `conftest.py`, which this round belongs to somebody else, and it is filed as a
+# request rather than made here.
+
+
+def _settings_without_a_database() -> CoreApiSettings:
+    """A TEST configuration whose `app_database_url` is `None` BY ASSERTION."""
+    return CoreApiSettings(environment=Environment.TEST, app_database_url=None)
+
+
+# A DSN nothing connects to, spelled the way `conftest.py::DEPLOYED_DATABASE_URL`
+# spells its own: the password is a sentence answering the question a
+# credential-shaped literal in a checked-in file would otherwise raise. No engine
+# is built from it — `readiness()` reads a stored boolean, and the test that uses
+# this never runs a lifespan.
+UNREACHED_DATABASE_URL = (
+    "postgresql+psycopg://titlepipe_app:this-dsn-never-connects@db.titlepipe.example:5432/titlepipe"
+)
+
+
+def _settings_with_a_database() -> CoreApiSettings:
+    """The same, with a database configured, so the other arm can be asserted."""
+    return CoreApiSettings(
+        environment=Environment.TEST,
+        app_database_url=SecretStr(UNREACHED_DATABASE_URL),
+    )
 
 
 def test_resources_open_and_close_exactly_once(
@@ -114,25 +170,64 @@ def test_health_reports_liveness(client: TestClient) -> None:
     assert response.json() == {"status": "ok", "service": "core-api"}
 
 
-def test_ready_reports_its_checks(client: TestClient) -> None:
-    response = client.get("/ready")
+def test_ready_reports_its_checks(frozen_clock: FrozenClock) -> None:
+    """With NO database configured, `startup_complete` is the whole set.
+
+    Its own app rather than the `client` fixture, because that fixture's settings
+    are `CoreApiSettings(environment=Environment.TEST)` and those read the
+    environment. See the comment at the top of this file.
+    """
+    settings = _settings_without_a_database()
+    assert settings.app_database_url is None
+    app = create_app(settings, clock=frozen_clock, id_factory=SequenceIdFactory())
+
+    with TestClient(app) as client:
+        response = client.get("/ready")
+
     assert response.status_code == 200
     body = response.json()
     assert body["ready"] is True
     assert body["checks"] == {"startup_complete": True}
 
 
-def test_ready_is_503_before_startup_completes(
-    development_settings: CoreApiSettings, frozen_clock: FrozenClock
+def test_ready_reports_the_database_check_once_a_database_is_configured(
+    frozen_clock: FrozenClock,
 ) -> None:
+    """The other arm of the conditional in `readiness()`, and the reason the
+    assertion above can stay an exact set rather than a floor.
+
+    Without this the tests here would say "readiness reports exactly
+    `startup_complete`" full stop, and `database_answers` — the key a platform
+    probe reads, registered when and only when `app_database_url` is set — would
+    be held by nothing at this level. It is `False` because no lifespan has run:
+    `database_answered` is a startup SNAPSHOT, so an unstarted `ServiceResources`
+    has not answered, and `ready` is `False` with it. That is the readiness a
+    replica reports between binding its port and finishing startup.
+    """
+    settings = _settings_with_a_database()
+    resources = ServiceResources(
+        settings=settings,
+        clock=frozen_clock,
+        id_factory=SequenceIdFactory(),
+        metrics=build_resources(settings).metrics,
+    )
+
+    report = resources.readiness()
+
+    assert report.checks == {"startup_complete": False, "database_answers": False}
+    assert report.ready is False
+
+
+def test_ready_is_503_before_startup_completes(frozen_clock: FrozenClock) -> None:
     """Readiness must be truthful for the dependencies that exist. A probe that
     reports healthy for something it never checked converts an outage into a
     stream of 500s the platform will not route around."""
+    settings = _settings_without_a_database()
     resources = ServiceResources(
-        settings=development_settings,
+        settings=settings,
         clock=frozen_clock,
         id_factory=SequenceIdFactory(),
-        metrics=build_resources(development_settings).metrics,
+        metrics=build_resources(settings).metrics,
     )
     report = resources.readiness()
     assert report.ready is False
