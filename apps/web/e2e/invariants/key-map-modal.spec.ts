@@ -60,7 +60,7 @@ test("the queue's keys stand down while the ? map is open", async ({ page }) => 
   await expect(page.getByTestId("key-map")).toBeVisible();
   // …and `p` must not open the pass field behind the overlay.
   await page.keyboard.press("p");
-  await expect(page.getByPlaceholder(/why are you passing/)).toHaveCount(0);
+  await expect(page.getByPlaceholder(/why are you passing/i)).toHaveCount(0);
   // Escape closes it and gives the screen its keys back.
   await page.keyboard.press("Escape");
   await expect(page.getByTestId("key-map")).toHaveCount(0);
