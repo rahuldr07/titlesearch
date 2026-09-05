@@ -155,7 +155,12 @@ POLICY_NAME = "tenant_isolation"
 # `test_the_registry_is_forced_and_isolated_on_its_own_id` is where it is
 # asserted. Folding it in here would make this set mean "not a tenant table",
 # which is a different and much weaker claim than "outside tenancy altogether".
-EXPECTED_GLOBAL_TABLES = frozenset({"rules"})
+# `retention_windows` is the "second global table" the paragraph above says
+# cannot appear without a deliberate edit to this line. This is that edit: `0005`
+# creates a statutory retention floor, and a floor is not a tenant's property, so
+# it carries no `tenant_id` to key a policy on. `db.rls_coverage.UNSCOPED_TABLES`
+# and `conftest.ISOLATION_GLOBAL_TABLES` are the other two lists saying so.
+EXPECTED_GLOBAL_TABLES = frozenset({"retention_windows", "rules"})
 
 RULES_TABLE = "rules"
 
