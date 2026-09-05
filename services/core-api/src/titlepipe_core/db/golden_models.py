@@ -60,10 +60,12 @@ from sqlalchemy.orm import Mapped, mapped_column
 # primary key a second time. That key closes a cross-tenant existence oracle
 # and its reasoning is written out once, on that class; two copies of it is
 # how the second one loses the `sort_order=-1` that puts `tenant_id` first.
-from titlepipe_core.db.models import (
-    NA_REASON,
+# The flat `db.models` module became a package at integration; these two names live in the modules
+# every sibling imports them from, so this follows that convention rather than relying on re-export.
+from titlepipe_core.db.models.base import (
     _TenantRow,  # pyright: ignore[reportPrivateUsage]  # rules-allow(any-type): package-private
 )
+from titlepipe_core.db.models.enums import NA_REASON
 
 # 🔴 EXACTLY THESE FOUR LABELS, IN THIS ORDER. `packages/contract/src/enums.ts`
 # `GoldenTag` at :70, verbatim. `migrations/versions/0070_golden_fields.py`

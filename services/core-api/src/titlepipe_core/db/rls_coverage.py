@@ -98,7 +98,24 @@ REGISTRY_KEY_COLUMN: Final = "id"
 #   a tenant's property, so a `tenant_id` would say a tenant may hold a shorter floor than the law.
 #   `0005_record_class_taxonomy` creates it; `db/models/retention.py` declares it a `_Row`. It
 #   reached this list only at integration — the first `upgrade head` over the chain failed on it.
-UNSCOPED_TABLES: Final = frozenset({"alembic_version", "retention_windows", "rules"})
+UNSCOPED_TABLES: Final = frozenset(
+    {
+        "alembic_version",
+        "retention_windows",
+        "rules",
+        # Procrastinate's own schema, vendored at 3.9.0 and applied by `0060`. These four are the
+        # queue's internal bookkeeping and carry no tenant data: a job row holds a task name and its
+        # arguments, and it is the TASK's job to scope what it then reads. Giving them a `tenant_id`
+        # would be worse than leaving them out - it would put the tenant of a job's payload in a
+        # third-party table this repository does not own and cannot keep in step across upgrades.
+        # They reach the database as vendor SQL, so they were never going to satisfy the
+        # in-the-same-migration rule the check enforces for our own tables.
+        "procrastinate_events",
+        "procrastinate_jobs",
+        "procrastinate_periodic_defers",
+        "procrastinate_workers",
+    }
+)
 
 # The deparsed predicate, whole and anchored. See the module docstring for the
 # measurement this shape comes from and for why `IGNORECASE` costs nothing.
