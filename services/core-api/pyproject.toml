@@ -45,11 +45,34 @@ dependencies = [
     # `[pool]` is the connection pool the engine will want from Task 4 on.
     "psycopg[binary,pool]>=3.3.4,<3.4",
     "alembic>=1.18.5,<1.19",
+    # THE VENDOR IS NO LONGER UNDECIDED. `docs/PRD.md` §9 was corrected to
+    # WorkOS AuthKit under ADR-0001 and the owner has since closed the question
+    # outright: WorkOS, and only WorkOS. This dependency is the answer being
+    # written down, not the question being answered by accident — the rule this
+    # file used to state ("a dependency added to an open question is how the
+    # question gets answered by accident") is satisfied because the ruling came
+    # first and the dependency second.
+    #
+    # `<11` and not `<10.4`: WorkOS ships breaking changes on the major, and the
+    # two surfaces `auth/workos_provider.py` touches — `AsyncWorkOSClient` and
+    # `user_management.load_sealed_session` — are the SDK's stable server-side
+    # session pair. What the cap excludes is 11.0.0 arriving on its release day
+    # through a plain `uv lock`, which is the same hygiene `sqlalchemy<2.1` above
+    # buys.
+    #
+    # It brings `cryptography`, `httpx` and `pyjwt` transitively, and all three
+    # are load-bearing rather than incidental: Fernet unseals the AuthKit session
+    # cookie, PyJWT verifies the access token inside it against the tenant's
+    # JWKS, and httpx is what fetches that key set. None of the three is imported
+    # by this service directly — going through the SDK is what keeps the token
+    # format WorkOS's problem instead of ours.
+    "workos>=10.3,<11",
 ]
 
-# WorkOS, PgQueuer, boto3, HTTPX and the telemetry exporters still land at the
-# gate that first needs them, so an unused dependency never reaches a
-# production image. The database three above are that gate's arrivals.
+# PgQueuer, boto3 and the telemetry exporters still land at the gate that first
+# needs them, so an unused dependency never reaches a production image. The
+# database three above and WorkOS are this gate's arrivals; HTTPX came with
+# WorkOS rather than on its own account.
 
 [dependency-groups]
 dev = [

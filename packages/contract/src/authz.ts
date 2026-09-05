@@ -76,7 +76,7 @@ export const PERMISSIONS = [
   { action: "screen.blind-status.enter", path: "/blind-status", roles: ["ops", "admin"] },
   { action: "screen.reconciliation.enter", path: "/reconciliation", roles: ["senior", "admin"] },
   // every role keeps the account door in the mock-auth phase (role switch
-  // must not lock you out); Clerk narrows this at P1
+  // must not lock you out); WorkOS narrows this at P1
   { action: "screen.account.enter", path: "/account", roles: EVERYONE },
   { action: "screen.orders-list.enter", path: "/orders-list", roles: ["ops", "senior", "admin"] },
   { action: "screen.templates.enter", path: "/templates", roles: ["engineer", "admin"] },
@@ -115,7 +115,7 @@ export const PERMISSIONS = [
   { action: "golden.confirm", roles: ["senior", "engineer", "admin"] },
   { action: "golden.demote", roles: ["senior", "engineer", "admin"] },
   // admin here is mock-phase dev convenience (the demo session is admin);
-  // under Clerk the blind protocol narrows this to the seated typist
+  // under WorkOS the blind protocol narrows this to the seated typist
   { action: "blind.submit", roles: ["typist", "admin"] },
   { action: "reconciliation.rule", roles: ["senior", "admin"] },
   { action: "routing.flip", roles: ["engineer", "admin"] },

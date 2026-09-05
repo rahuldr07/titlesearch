@@ -19,8 +19,10 @@ from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from titlepipe_core.api.errors import build_unhandled_response, register_error_handlers
+from titlepipe_core.api.mock_auth_guard import MockAuthGuardMiddleware
 from titlepipe_core.api.request_context import RequestContextMiddleware
 from titlepipe_core.api.routers import health, queue, rules
+from titlepipe_core.auth import build_auth_seam
 from titlepipe_core.lifespan import build_lifespan, build_resources
 from titlepipe_core.settings import CoreApiSettings
 from titlepipe_core.telemetry.hooks import RequestMetrics
@@ -68,14 +70,41 @@ def create_app(
     )
     app.state.resources = resources
 
+    # The authentication seam. `build_auth_seam` is the ONLY place an identity
+    # provider is constructed — see `auth/seam.py`, which names the four
+    # machines that make `x-mock-role` untrustable and the residual none of them
+    # cover. It is held on the app instance and not in a module global, so two
+    # apps in one process (a mock-enabled one and a deployed-shaped one, which
+    # is exactly what the auth tests build) do not clobber each other.
+    #
+    # NOT on `ServiceResources`, and the split is deliberate rather than
+    # incidental: everything in that dataclass is opened by the lifespan and
+    # released at shutdown, and the seam is neither — it is derived from settings
+    # and holds no connection. Putting it there would mean a seam that is `None`
+    # before startup, which is a state `require_seat` would have to have an
+    # opinion about.
+    app.state.auth = build_auth_seam(settings)
+
     # Order matters, and `add_middleware` prepends — the last one added runs
     # outermost. Reading downward, the resulting stack is:
     #
-    #     TrustedHost -> CORS -> RequestContext -> router
+    #     TrustedHost -> CORS -> RequestContext -> MockAuthGuard -> router
     #
     # CORS therefore sits outside the request-context middleware, so a rejected
     # preflight never reaches it, and the 500 that middleware builds is still
     # inside the CORS layer and still carries its correlation id.
+    #
+    # 🔴 THE GUARD IS ADDED FIRST, SO IT RUNS INNERMOST, AND IT IS ADDED
+    # UNCONDITIONALLY. Innermost because its refusal must carry the correlation
+    # id `RequestContextMiddleware` establishes and must be seen by a browser as
+    # a 401 rather than as a CORS failure. Unconditionally because that is what
+    # makes it structural: there is no configuration in which this middleware is
+    # absent — only its verdict changes — so there is no `if` for a later
+    # refactor to delete and no route that can be registered outside it.
+    app.add_middleware(
+        MockAuthGuardMiddleware,
+        mock_auth_enabled=settings.mock_auth_enabled,
+    )
     app.add_middleware(
         RequestContextMiddleware,
         id_factory=resources.id_factory,

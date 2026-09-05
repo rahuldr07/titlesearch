@@ -67,6 +67,18 @@ DEPLOYED_DATABASE_URL = (
     "postgresql+psycopg://titlepipe_app:this-dsn-never-connects@db.titlepipe.example:5432/titlepipe"
 )
 
+# WorkOS credentials NOTHING EVER AUTHENTICATES WITH, and required for the same
+# reason `DEPLOYED_DATABASE_URL` is: a deployed environment refuses to start
+# without them, so every deployed-configuration fixture carries a pair.
+#
+# They say what they are in their own text, like the DSN password above. There
+# is no format check on either value in `settings.py` — deliberately, see the
+# fields' comment — so these do not have to imitate a real credential's shape,
+# and a value that plainly cannot be one is the better literal to leave in a
+# checked-in file.
+DEPLOYED_WORKOS_API_KEY = "this-workos-key-never-authenticates"
+DEPLOYED_WORKOS_CLIENT_ID = "client_this_tenant_does_not_exist"
+
 
 @pytest.fixture
 def deployed_base_url() -> str:
@@ -115,6 +127,10 @@ def production_settings() -> CoreApiSettings:
         # built from it, and every test here that reaches a real server takes a
         # container DSN instead.
         app_database_url=SecretStr(DEPLOYED_DATABASE_URL),
+        # Required when deployed, and inert. See `DEPLOYED_WORKOS_API_KEY`: no
+        # test in this suite reaches a WorkOS tenant, and none can.
+        workos_api_key=SecretStr(DEPLOYED_WORKOS_API_KEY),
+        workos_client_id=DEPLOYED_WORKOS_CLIENT_ID,
     )
 
 
