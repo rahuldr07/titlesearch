@@ -40,11 +40,18 @@ export async function interceptApi(
 export interface ApiCall {
   method: string;
   url: string;
+  /**
+   * The request body verbatim, for the calls that carry one; `null` where
+   * there was none. A log of method and URL alone cannot tell a correction
+   * that carried a reason from one that did not — same verb, same URL, and
+   * the whole difference is in here.
+   */
+  body: string | null;
 }
 
 export async function trackApi(page: Page): Promise<void> {
   await page.addInitScript(() => {
-    const log: { method: string; url: string }[] = [];
+    const log: { method: string; url: string; body: string | null }[] = [];
     (window as unknown as { __apiLog: typeof log }).__apiLog = log;
     const orig = window.fetch.bind(window);
     window.fetch = async (input, init) => {
@@ -57,7 +64,13 @@ export async function trackApi(page: Page): Promise<void> {
       const method = (
         init?.method ?? (input instanceof Request ? input.method : "GET")
       ).toUpperCase();
-      log.push({ method, url });
+      /* Only a string body is read. A `Request`, a `FormData` or a stream
+         would each have to be cloned or consumed, and consuming it here is
+         what would break the very call being logged; this app posts JSON
+         strings (`shared/api.ts`), so anything else records as `null`
+         rather than as a body this helper invented. */
+      const body = typeof init?.body === "string" ? init.body : null;
+      log.push({ method, url, body });
       return orig(input, init);
     };
   });
