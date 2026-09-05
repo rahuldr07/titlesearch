@@ -158,7 +158,17 @@ class GoldenField(_TenantRow):
     source_citation: Mapped[str] = mapped_column(Text, nullable=False)
     established_by: Mapped[str] = mapped_column(Text, nullable=False)
     established_reason: Mapped[str] = mapped_column(Text, nullable=False)
-    revision: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
+    # BOTH a Python-side `default` and `0070`'s `server_default`, and they are
+    # the same number for two different writers. The Python one means the ORM
+    # sends `0` on INSERT and the attribute is populated without a second
+    # round trip — `GoldenRepository.record_act` reads `field.revision`
+    # immediately after establishing one, and an unpopulated attribute is a
+    # lazy load, which under asyncio is `MissingGreenlet` rather than a query.
+    # The server one is for every writer that is not the ORM: the isolation
+    # seed's raw INSERT, and any future data migration.
+    revision: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default=text("0")
+    )
 
     __table_args__ = (
         # Composite, because a single-column foreign key to a tenant-scoped

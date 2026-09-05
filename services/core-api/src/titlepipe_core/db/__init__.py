@@ -105,6 +105,7 @@ and is what actually closes the path.
 """
 
 from titlepipe_core.db.engine import make_engine, make_sessionmaker
+from titlepipe_core.db.golden import GoldenRepository
 from titlepipe_core.db.health import check_database
 from titlepipe_core.db.models import Base
 from titlepipe_core.db.repository import TenantRepository
@@ -113,6 +114,7 @@ from titlepipe_core.db.session import tenant_session
 
 __all__ = [
     "Base",
+    "GoldenRepository",
     "RuleRepository",
     "TenantRepository",
     "check_database",
