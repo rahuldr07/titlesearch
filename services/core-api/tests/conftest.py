@@ -275,8 +275,9 @@ OVERRIDE_QUERY_ALLOWLIST = frozenset({"application_name", "connect_timeout", "ss
 # accepting an explicit host as "the deliberate act", and for a named remote
 # host that holds. `localhost` is not that: it is the accident-shaped spelling,
 # the value a developer's muscle memory produces, and what runs behind it is not
-# a read. See `_scrub_migration_objects` — eight `DROP TABLE`s, a `DROP TYPE` and
-# a `DROP FUNCTION`, on every module teardown.
+# a read. See `_scrub_migration_objects` — thirty-six `DROP TABLE`s, thirty-four
+# `DROP FUNCTION`s and twenty-one `DROP TYPE`s, on every module teardown, and it
+# retries what those cannot drop the first time.
 #
 # Deliberately verbose and deliberately unlike anything a tool exports on its
 # own: it has to be a sentence someone typed on purpose. It does not begin with
@@ -589,8 +590,10 @@ def _normalise_override_dsn(url: URL) -> str:
             f"{DATABASE_URL_OVERRIDE} names the loopback host {url.host!r}, which is "
             f"the developer's own cluster in every spelling but the socket one. This "
             f"seam runs roles.sql, alembic upgrade/downgrade and — on every module "
-            f"teardown — eight DROP TABLEs, a DROP TYPE and a DROP FUNCTION against "
-            f"whatever it is pointed at. Export "
+            f"teardown — {len(MIGRATION_TABLES)} DROP TABLEs, "
+            f"{len(MIGRATION_FUNCTIONS)} DROP FUNCTIONs and "
+            f"{len(MIGRATION_ENUM_TYPES)} DROP TYPEs against whatever it is "
+            f"pointed at, retrying what will not drop. Export "
             f"{LOOPBACK_ACKNOWLEDGEMENT}=1 as well if that is genuinely what you "
             f"want: {shown}"
         )
@@ -1190,27 +1193,71 @@ ALEMBIC_VERSION_TABLE = "alembic_version"
 # `test_migration_tables_matches_the_model_metadata` is what made that edit
 # happen rather than be forgotten — it holds this literal against
 # `Base.metadata`, in both directions.
+# REVERSE CREATION ORDER, children first, which is `reversed(Base.metadata
+# .sorted_tables)` — `golden_corrections` carries a composite foreign key to
+# `golden_fields`, which carries one to `orders`, and a `DROP TABLE IF EXISTS`
+# without `CASCADE` fails on a dependent constraint. The order is an
+# OPTIMISATION rather than a correctness requirement since the scrub runs to a
+# fixed point (see `_scrub_migration_objects`); it is what keeps that fixed
+# point at two passes instead of thirty.
 MIGRATION_TABLES = (
-    # `0070`-`0072`, FIRST because the scrub drops in list order and
-    # `golden_corrections` carries a composite foreign key to `golden_fields`,
-    # which carries one to `orders`. A `DROP TABLE IF EXISTS` without `CASCADE`
-    # fails on a dependent constraint, so reverse creation order is not
-    # decoration here the way it is for the skeleton's seven.
-    "golden_corrections",
-    "golden_fields",
-    "rules",
-    "audit_log",
+    "chain_root_assertions",
     "field_readings",
+    "chain_links",
+    "instruments",
     "fields",
+    "delivery_receipt_steps",
+    "completeness_gaps",
+    "report_verified_checks",
     "pages",
+    "intake_signoff_lines",
+    "golden_corrections",
+    "documents",
+    "deliveries",
+    "reports",
     "packages",
+    "intake_signoffs",
+    "golden_fields",
+    "escalation_orders",
     "orders",
+    "client_config_lines",
+    "escalations",
+    "client_config_versions",
+    "users",
     "tenants",
+    "rules",
+    "retention_windows",
+    "record_classifications",
+    "products",
+    "legal_holds",
+    "clients",
+    "audit_log",
+    # 🔴 THE QUEUE'S FOUR, SPLATTED FROM THE ONE CONSTANT THAT NAMES THEM AND
+    # NOT RETYPED HERE. `0060` installs Procrastinate's schema into `public` as
+    # vendor SQL; the tables have no SQLAlchemy model, so `Base.metadata` cannot
+    # know about them and the drift guard below subtracts them by the same
+    # constant rather than by a second copy of the names. This whole file's
+    # recent history is lists that must agree and quietly stop agreeing; a fifth
+    # spelling of these four would be that defect committed while fixing it.
+    #
+    # They are here at all because the scrub CANNOT SKIP THEM: `DROP TYPE IF
+    # EXISTS procrastinate_job_status` raises while `procrastinate_jobs` holds a
+    # column of it, so completing `MIGRATION_ENUM_TYPES` without completing this
+    # tuple turns the cleanup of last resort into a guaranteed teardown failure.
+    # The two literals move together or not at all.
+    #
+    # `sorted` because a `frozenset`'s iteration order is not stable across
+    # interpreters, and a teardown whose SQL differs run to run is a bug waiting
+    # for a bisect. Their internal drop order is wrong in every arrangement —
+    # `procrastinate_jobs` is both a child of `procrastinate_workers` and a
+    # parent of two others — which is one of the two reasons the scrub iterates.
+    *sorted(QUEUE_INFRASTRUCTURE_TABLES),
     ALEMBIC_VERSION_TABLE,
 )
 
-# 🔴 THREE TYPES, NOT ONE. This was `MIGRATION_ENUM_TYPE = "na_reason"` until
-# `0003` added `rule_status` and `rule_origin`.
+# 🔴 TWENTY-ONE TYPES, NOT ONE. This was `MIGRATION_ENUM_TYPE = "na_reason"`
+# until `0003` added `rule_status` and `rule_origin`, and it stood at five until
+# the integration merge brought sixteen more.
 #
 # WHAT HOLDS IT: `tests/test_database_seam.py::test_migration_enum_types_matches
 # _the_live_catalog`, which reads every `typtype = 'e'` type in `public` off a
@@ -1229,18 +1276,87 @@ MIGRATION_TABLES = (
 # asserts only `migration_tables[0]` — so the one test built for the scenario was
 # blind to it, and the debris would have reached the next module as
 # `type "rule_origin" already exists`.
-MIGRATION_ENUM_TYPES = ("na_reason", "rule_status", "rule_origin", "golden_tag", "golden_act")
+#
+# AND THE GUARD IS WHAT SAID SO at the merge, rather than a `type "..." already
+# exists` in whichever module ran next. `procrastinate_job_event_type` and
+# `procrastinate_job_status` are `0060`'s, from the vendored queue schema — the
+# scrub has to drop what the DATABASE holds and not what this repository models,
+# which is exactly why the authority for this tuple is the catalog.
+MIGRATION_ENUM_TYPES = (
+    "audit_action",
+    "config_line_effect",
+    "data_class",
+    "delivery_status",
+    "field_state",
+    "gap_close_kind",
+    "gap_kind",
+    "golden_act",
+    "golden_tag",
+    "judgment_status",
+    "na_reason",
+    "package_status",
+    "page_kind",
+    "procrastinate_job_event_type",
+    "procrastinate_job_status",
+    "record_class",
+    "rule_origin",
+    "rule_provenance",
+    "rule_status",
+    "signoff_answer",
+    "user_role",
+)
 
-# EVERY function the migrations create, not one. `0001` created the only one
-# there was; `0071` adds `golden_corrections`' append-only body and `0072` the
-# ledger requirement. A function left behind by a broken downgrade is what makes
-# the NEXT upgrade die on `DuplicateFunction` — `CREATE FUNCTION` is deliberately
-# not `CREATE OR REPLACE` in all three revisions — so a scrub that knows about
-# one of three is a scrub that leaves the database unusable for the next module.
+# EVERY function the migrations create, not one. A function left behind by a
+# broken downgrade is what makes the NEXT upgrade die on `DuplicateFunction` —
+# `CREATE FUNCTION` is deliberately not `CREATE OR REPLACE` in these revisions —
+# so a scrub that knows about three of thirty-four is a scrub that leaves the
+# database unusable for the next module.
+#
+# 🔴 THIS TUPLE HELD THREE NAMES AND NOTHING HELD IT. `MIGRATION_TABLES` got a
+# drift guard against `Base.metadata`; `MIGRATION_ENUM_TYPES` got one against
+# the catalog on 2026-08-06; the third literal had none at all, and had drifted
+# to 3 of 34 by the integration merge without a single test noticing.
+# `test_migration_functions_matches_the_live_catalog` is now its sibling guard,
+# against `pg_proc`, and it holds two more properties as well — see there.
+#
+# The nineteen `procrastinate_*` entries are `0060`'s vendored queue schema. As
+# with the enum types, the scrub's subject is what the DATABASE holds, not what
+# this repository wrote.
 MIGRATION_FUNCTIONS = (
+    "audit_chain_link",
+    "audit_chain_verify",
     "audit_log_reject_mutation",
+    "audit_record_change",
+    "escalations_resolution_needs_a_live_rule",
     "golden_corrections_reject_mutation",
     "golden_fields_require_ledger",
+    "intake_signoff_lines_refuse_an_edit_after_signature",
+    "legal_hold_is_active",
+    "orders_refuse_a_config_version_move",
+    "orders_refuse_an_extraction_release_with_an_open_gate",
+    "procrastinate_cancel_job_v1",
+    "procrastinate_defer_jobs_v1",
+    "procrastinate_defer_periodic_job_v2",
+    "procrastinate_fetch_job_v2",
+    "procrastinate_finish_job_v1",
+    "procrastinate_notify_queue_abort_job_v1",
+    "procrastinate_notify_queue_job_inserted_v1",
+    "procrastinate_prune_stalled_workers_v1",
+    "procrastinate_register_worker_v1",
+    "procrastinate_retry_job_v1",
+    "procrastinate_retry_job_v2",
+    "procrastinate_trigger_abort_requested_events_procedure_v1",
+    "procrastinate_trigger_function_scheduled_events_v1",
+    "procrastinate_trigger_function_status_events_insert_v1",
+    "procrastinate_trigger_function_status_events_update_v1",
+    "procrastinate_unlink_periodic_defers_v1",
+    "procrastinate_unregister_worker_v1",
+    "procrastinate_update_heartbeat_v1",
+    "reports_reject_mutation",
+    "retention_is_disposable",
+    "retention_window",
+    "titlepipe_field_transition",
+    "titlepipe_packages_identity_is_immutable",
 )
 
 
@@ -1288,33 +1404,93 @@ def _scrub_migration_objects(admin_dsn: str) -> None:
     the first failure. A teardown that swallowed errors would turn "the database
     is dirty" into "some later, unrelated test fails strangely" — the exact
     trade this fixture's history is a record of.
+
+    ---------------------------------------------------------------------------
+    🔴 IT RUNS TO A FIXED POINT, BECAUSE NO SINGLE ORDERING OF THESE THREE LISTS
+       EXISTS. This is not defensiveness; it was measured.
+    ---------------------------------------------------------------------------
+    A linear pass assumes the dependencies between tables, functions and types
+    all point the same way. In THIS schema they do not, in four directions at
+    once — MEASURED 2026-09-05 against `head`, one pass over the completed
+    lists, 13 errors and 14 objects left standing:
+
+    * a trigger depends on its FUNCTION, so `procrastinate_jobs` has to go
+      before its seven trigger functions (`DROP FUNCTION` on one of them while
+      the table stands reports the trigger and refuses);
+    * a function depends on a TABLE when it takes or returns that table's row
+      type, so `procrastinate_fetch_job_v2` has to go before
+      `procrastinate_jobs`, and `retention_window` before `retention_windows` —
+      the exact opposite direction, on the same pair of categories;
+    * a function depends on an ENUM in its signature, so
+      `titlepipe_field_transition` has to go before `field_state` and
+      `na_reason`; and a table depends on an enum through a column, so
+      `procrastinate_jobs` has to go before `procrastinate_job_status`;
+    * `procrastinate_jobs` is a child of `procrastinate_workers` AND the parent
+      of `procrastinate_events` and `procrastinate_periodic_defers`, so no
+      arrangement of those four alone is drop-safe either.
+
+    So each pass retries only what the previous pass could not drop, and stops
+    when a pass drops nothing new. Every statement is `IF EXISTS`, so a retry of
+    something already gone is a no-op, and the loop shrinks strictly or ends:
+    it cannot spin. MEASURED on the same tree: pass 1 leaves 13, pass 2 leaves
+    none, and the happy path — where `downgrade` already removed everything — is
+    still exactly ONE pass of no-ops, because a pass with no failures is the
+    last one.
+
+    WHAT DOES NOT CHANGE is the residue being fatal. When a pass makes no
+    progress the surviving statements are the ones reported, so an ordering
+    nobody anticipated still raises by name rather than reaching the next
+    module.
+
+    `DROP FUNCTION IF EXISTS {name}` CARRIES NO ARGUMENT LIST, and the empty
+    `()` it used to carry was not decoration. `DROP FUNCTION f()` matches the
+    ZERO-ARGUMENT `f` and nothing else, so it silently no-opped on the 13 of 34
+    functions that take arguments — a `NOTICE: function ... does not exist,
+    skipping` and a clean exit while the function stood. PostgreSQL accepts a
+    bare name when it is unambiguous, and
+    `test_migration_functions_matches_the_live_catalog` is what holds that
+    "unambiguous" — it refuses an overloaded name in `public` rather than
+    letting this spelling start failing at teardown.
     """
     statements = [
         *(f"DROP TABLE IF EXISTS {table}" for table in MIGRATION_TABLES),
+        # Functions before types: a function's signature depends on the enums in
+        # it, so this order costs one pass fewer. Correctness does not rest on
+        # it — see the fixed point above.
+        *(f"DROP FUNCTION IF EXISTS {function}" for function in MIGRATION_FUNCTIONS),
         *(f"DROP TYPE IF EXISTS {enum_type}" for enum_type in MIGRATION_ENUM_TYPES),
-        *(f"DROP FUNCTION IF EXISTS {function}()" for function in MIGRATION_FUNCTIONS),
     ]
 
+    pending = statements
     failures: list[str] = []
     engine = _seam_engine(admin_dsn)
     try:
-        for statement in statements:
-            try:
-                with engine.begin() as connection:
-                    connection.execute(text(statement))
-            except SQLAlchemyError as error:
-                # The statement, not the connection: every one of these is built
-                # from constants in this file, so quoting it leaks nothing and
-                # is the only thing that says WHICH object survived.
-                failures.append(f"{statement} -> {type(error).__name__}: {error}")
+        while pending:
+            unfinished: list[str] = []
+            failures = []
+            for statement in pending:
+                try:
+                    with engine.begin() as connection:
+                        connection.execute(text(statement))
+                except SQLAlchemyError as error:
+                    unfinished.append(statement)
+                    # The statement, not the connection: every one of these is
+                    # built from constants in this file, so quoting it leaks
+                    # nothing and is the only thing that says WHICH object
+                    # survived.
+                    failures.append(f"{statement} -> {type(error).__name__}: {error}")
+            if len(unfinished) == len(pending):
+                break
+            pending = unfinished
     finally:
         engine.dispose()
 
     if failures:
         raise RuntimeError(
             "the migration scrub could not remove every object, so the database "
-            "is dirty for the next module. Each remaining statement and its "
-            "error:\n" + "\n".join(failures)
+            "is dirty for the next module. A further pass would drop nothing "
+            "new, so these are the objects that survive. Each remaining "
+            "statement and its error:\n" + "\n".join(failures)
         )
 
 
@@ -2209,6 +2385,18 @@ def migration_enum_types() -> tuple[str, ...]:
     measurement that showed the tuple going stale in silence.
     """
     return MIGRATION_ENUM_TYPES
+
+
+@pytest.fixture(scope="session")
+def migration_functions() -> tuple[str, ...]:
+    """Every function the scrub drops.
+
+    Exposed so `test_migration_functions_matches_the_live_catalog` can hold it
+    against `pg_proc`. It is the last of the three literals behind the cleanup
+    of last resort to get a guard, and it is the one that had drifted furthest
+    without one — see `MIGRATION_FUNCTIONS`.
+    """
+    return MIGRATION_FUNCTIONS
 
 
 @pytest.fixture(scope="session")

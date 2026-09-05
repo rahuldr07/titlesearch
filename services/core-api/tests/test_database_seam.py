@@ -53,6 +53,7 @@ from sqlalchemy import URL, Connection, Engine, create_engine, make_url, text
 from testcontainers.community.postgres import PostgresContainer
 
 from titlepipe_core.db.models import Base
+from titlepipe_core.db.unscoped_tables import QUEUE_INFRASTRUCTURE_TABLES
 
 # PostgreSQL encodes its version as major * 10000 + minor: 18.0 is 180000 and
 # 19.0 is 190000, so a half-open range over the pair is exactly "some 18.x".
@@ -985,9 +986,39 @@ def test_migration_tables_matches_the_model_metadata(
     `test_settings.py`, which has never opened a connection — turning "the
     scrub list drifted" into "pytest is broken" and burying the one line that
     says what actually happened.
+
+    🔴 TWO NAMED EXCEPTIONS NOW, NOT ONE, AND BOTH ARE SUBTRACTED FROM A
+    CONSTANT RATHER THAN SPELLED HERE. `alembic_version` is the first.
+    `0060` installs Procrastinate's four tables into `public` as vendor SQL with
+    no SQLAlchemy model, so `Base.metadata` cannot see them and this identity
+    cannot hold over them — while `_scrub_migration_objects` MUST drop them,
+    because `DROP TYPE IF EXISTS procrastinate_job_status` raises for as long as
+    `procrastinate_jobs` holds a column of it. Without the exception the scrub
+    could not be completed at all; with it spelled out here, this file would
+    become the FIFTH copy of those four names, and lists that must agree and
+    quietly stop agreeing are the defect this guard exists to catch. So it reads
+    `titlepipe_core.db.unscoped_tables.QUEUE_INFRASTRUCTURE_TABLES`, which is the
+    same constant `db.rls_coverage`, `migrations/env.py` and `conftest.py`'s
+    isolation seed read, and which `conftest.py` splats into `MIGRATION_TABLES`.
+
+    The identity stays exact in BOTH directions after the subtraction, and the
+    containment assertion below is what closes the direction subtracting a set
+    would otherwise open: a queue table dropped from `MIGRATION_TABLES` fails
+    here rather than being quietly forgiven by the same subtraction that lets it
+    be listed.
     """
-    assert set(migration_tables) - {alembic_version_table} == set(Base.metadata.tables)
+    assert set(migration_tables) - {alembic_version_table} - QUEUE_INFRASTRUCTURE_TABLES == set(
+        Base.metadata.tables
+    )
     assert alembic_version_table in migration_tables
+    assert set(migration_tables) >= QUEUE_INFRASTRUCTURE_TABLES, (
+        f"the scrub drops {sorted(migration_tables)} and the queue's "
+        f"{sorted(QUEUE_INFRASTRUCTURE_TABLES)} are not all in it. They have no "
+        f"model, so the assertion above cannot require them; a missing one is a "
+        f"table left standing after a FAILED downgrade, and the first symptom is "
+        f"`DROP TYPE IF EXISTS procrastinate_job_status` raising in the teardown "
+        f"of whichever module ran next."
+    )
     assert len(set(migration_tables)) == len(migration_tables), "a name is listed twice"
 
 
@@ -1312,3 +1343,107 @@ def test_migration_enum_types_matches_the_live_catalog(
         f"away from the line that is short a name."
     )
     assert len(set(migration_enum_types)) == len(migration_enum_types), "a name is listed twice"
+
+
+def test_migration_functions_matches_the_live_catalog(
+    migrated_database: str,
+    migration_functions: tuple[str, ...],
+    seam_engine: Callable[[str], Engine],
+) -> None:
+    """The drift guard for the THIRD literal, which until now had none at all.
+
+    `MIGRATION_TABLES` is held against `Base.metadata` and `MIGRATION_ENUM_TYPES`
+    against the catalog, both above. `MIGRATION_FUNCTIONS` was held by nothing,
+    and `grep` found the name in `conftest.py` and nowhere else. It had drifted
+    to **3 of 34** by the time anybody looked — the two guarded literals were at
+    9 of 32 and 5 of 21 at the same commit, so the unguarded one was not worse by
+    luck; it was worse by being unguarded, and it is the one whose residue is
+    hardest to read.
+
+    WHY THIS RESIDUE IS THE WORST OF THE THREE. `CREATE FUNCTION` is deliberately
+    NOT `CREATE OR REPLACE` in these revisions — the migrations mean to fail
+    rather than silently redefine a body somebody else wrote — so a function that
+    survives a failed downgrade kills the NEXT `upgrade head` outright with
+    `DuplicateFunction`, in a module that never touched it. A left-behind table
+    at least names itself in `DuplicateTable`; a left-behind function surfaces as
+    a revision that "stopped working".
+
+    THE CATALOG IS THE AUTHORITY, for `test_migration_enum_types_matches_the_live
+    _catalog`'s reason and one more: `Base.metadata` has no notion of a function
+    whatever, and nineteen of these thirty-four come from `0060`'s vendored queue
+    SQL, which this repository does not model and did not write. What the scrub
+    has to remove is what the DATABASE holds.
+
+    EXACT SET, BOTH DIRECTIONS, so a function a revision adds and forgets here
+    fails, and a stale name left after one is dropped fails too.
+
+    ---------------------------------------------------------------------------
+    IT ALSO HOLDS THE TWO PROPERTIES THE SCRUB'S DROP SPELLING RESTS ON, which
+    is why this test reads `prokind` and counts names rather than only comparing
+    a set of `proname`s.
+    ---------------------------------------------------------------------------
+    `_scrub_migration_objects` issues `DROP FUNCTION IF EXISTS {name}` with NO
+    argument list. That spelling is correct only while both of these hold, and
+    neither is a property a set comparison would notice:
+
+    * **no name in `public` is overloaded.** PostgreSQL accepts a bare name only
+      when it resolves to one routine; two functions sharing a name make the
+      statement fail with `function name is not unique`, at teardown, in a
+      module that did nothing wrong. A set of `proname` silently collapses the
+      pair, so the count is asked separately;
+    * **every routine is a FUNCTION and not a PROCEDURE.** `DROP FUNCTION`
+      refuses a `prokind = 'p'` routine by name, so a procedure added by a future
+      revision would be a scrub statement that raises rather than one that drops.
+
+    The empty `()` this spelling replaced is the reason both are worth asserting:
+    `DROP FUNCTION f()` matches the ZERO-ARGUMENT `f`, so it no-opped on the 13
+    of these 34 that take arguments — `NOTICE: function ... does not exist,
+    skipping`, a clean exit, and the function still standing. A drop that reports
+    success without dropping is the failure mode this whole family of literals
+    keeps producing, and it is why the guard has to be about the statement and
+    not only about the list.
+    """
+    engine = seam_engine(migrated_database)
+    try:
+        with engine.connect() as connection:
+            routines = [
+                (str(row[0]), str(row[1]))
+                for row in connection.execute(
+                    text(
+                        "SELECT p.proname, p.prokind FROM pg_proc p "
+                        "JOIN pg_namespace n ON n.oid = p.pronamespace "
+                        "WHERE n.nspname = 'public'"
+                    )
+                )
+            ]
+    finally:
+        engine.dispose()
+
+    live = {name for name, _ in routines}
+
+    assert live == set(migration_functions), (
+        f"the migrated schema holds the functions {sorted(live)} and the scrub "
+        f"drops {sorted(migration_functions)}. A function missing from that tuple "
+        f"survives a FAILED downgrade — the only path the scrub exists for — and "
+        f"because CREATE FUNCTION here is deliberately not CREATE OR REPLACE, the "
+        f"next `upgrade head` dies on DuplicateFunction in a module that never "
+        f"touched it."
+    )
+    assert len(set(migration_functions)) == len(migration_functions), "a name is listed twice"
+
+    overloaded = sorted({name for name, _ in routines if [n for n, _ in routines].count(name) > 1})
+    assert not overloaded, (
+        f"{overloaded} name more than one routine in public, and "
+        f"`DROP FUNCTION IF EXISTS <name>` — which the scrub issues without an "
+        f"argument list — refuses an ambiguous name. Either give the scrub the "
+        f"signatures or do not overload: the failure lands in the teardown of "
+        f"whichever module ran, not here."
+    )
+
+    procedures = sorted({name for name, kind in routines if kind != "f"})
+    assert not procedures, (
+        f"{procedures} are not plain functions (pg_proc.prokind <> 'f'), and the "
+        f"scrub removes routines with DROP FUNCTION, which refuses a PROCEDURE by "
+        f"name. A procedure a revision creates needs DROP PROCEDURE in "
+        f"`_scrub_migration_objects` before it can be listed in MIGRATION_FUNCTIONS."
+    )
