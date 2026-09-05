@@ -160,6 +160,23 @@ class Field(_TenantRow):
             "num_nonnulls(approved_by, approved_at) IN (0, 2)",
             name="approval_is_whole",
         ),
+        # 🔴 HALF A CITATION IS NOT A WEAKER CITATION, IT IS NONE. `0090`. The
+        # measured row was `source_page_no = 7` beside `source_document_id
+        # IS NULL` — page seven of what — and it was accepted here for as long
+        # as this table existed. `IN (0, 2)` and NOT `= 2`: both-null stays
+        # legal, because that is the uncited-but-honest row the envelope
+        # comment below exists to keep representable, and `= 2` would force the
+        # pipeline to invent a citation. The snippet and the coords are
+        # deliberately outside the pair — their absence degrades a reader's
+        # experience, a page reference's absence changes whether the value is
+        # CITED (`api/schemas/provenance.py` states the same split for the wire).
+        #
+        # This TIGHTENS `unreadable_cites_a_page` above: a page is nameable only
+        # inside a document, so `PRESENT_UNREADABLE` now needs both halves.
+        sa.CheckConstraint(
+            "num_nonnulls(source_document_id, source_page_no) IN (0, 2)",
+            name="citation_is_whole",
+        ),
         sa.CheckConstraint(
             "source_page_no IS NULL OR source_page_no >= 1",
             name="source_page_no_starts_at_one",
