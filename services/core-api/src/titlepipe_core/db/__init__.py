@@ -32,10 +32,19 @@ resolved to nothing.
 `models.py` holds `Base`, the seven skeleton tables and `Rule`. `engine.py` holds
 `make_engine`, the pool's `checkin` listener and `make_sessionmaker` — the
 CONNECTION-lifetime half of the tenant seam — and `session.py` holds
-`tenant_session`, the only scoped way to open a session. `repository.py` holds
-the base every later repository is built on, plus the unscoped-session refusal
-both of them make; `rules.py` holds `RuleRepository`, the one global table's.
-`health.py` holds `check_database`, the one statement `/ready` runs.
+`tenant_session`, the only scoped way to open a session. `repositories/base.py`
+holds the base every later repository is built on, plus the unscoped-session
+refusal both of them make; `repositories/rules.py` holds `RuleRepository`, the
+one global table's. `health.py` holds `check_database`, the one statement
+`/ready` runs.
+
+🔴 BOTH REPOSITORY MODULES MOVED INTO `repositories/` ON 2026-09-05, and the
+directory is the point. `CONVENTIONS.md` §10's first machine-enforceable rule is
+that `api/routers/**` may not import `db/repositories` — a rule about a path, which
+needs the path to exist. As a flat `repository.py` beside `models.py` and
+`session.py` the layer was a naming convention; the gate could only have keyed on
+a filename. No caller's import line changed: both names are re-exported here, and
+nothing outside `db/` ever spelled the module path.
 
 🔴 `RuleRepository` WAS IN `repository.py` AND MOVED OUT ON 2026-08-06, the second
 split in this package forced by rule 6 of `scripts/check_backend_rules.py` — that
@@ -61,7 +70,7 @@ split out and needed it — a private name read across modules is a pyright stri
 error and the gate bans the ignore — but crossing a module boundary INSIDE this
 package is not the same as being part of its public surface.
 
-`RuleRepository` does NOT extend `TenantRepository`, and `repository.py` argues
+`RuleRepository` does NOT extend `TenantRepository`, and `repositories/base.py` argues
 why — including why the plan's stated reason for the same conclusion is false.
 Both are exported because both are constructed by callers outside this package;
 the pair being visible together is also the cheapest way for a reader to notice
@@ -107,8 +116,8 @@ and is what actually closes the path.
 from titlepipe_core.db.engine import make_engine, make_sessionmaker
 from titlepipe_core.db.health import check_database
 from titlepipe_core.db.models import Base
-from titlepipe_core.db.repository import TenantRepository
-from titlepipe_core.db.rules import RuleRepository
+from titlepipe_core.db.repositories.base import TenantRepository
+from titlepipe_core.db.repositories.rules import RuleRepository
 from titlepipe_core.db.session import tenant_session
 
 __all__ = [

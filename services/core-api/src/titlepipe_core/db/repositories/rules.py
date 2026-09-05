@@ -1,6 +1,6 @@
 """`RuleRepository` — the rulebook, which is the one table outside tenancy.
 
-🔴 IT LIVED IN `repository.py` UNTIL THAT FILE HIT 416 LINES, sixteen over
+🔴 IT LIVED IN `base.py` (then `db/repository.py`) UNTIL THAT FILE HIT 416 LINES, over
 `scripts/check_backend_rules.py`'s rule-6 cap, and the cheap way out was a
 `rules-allow-file(file-length)` on the module that owns the tenancy check. That is
 the same trade `engine.py` was split out of `session.py` to avoid on 2026-08-06,
@@ -20,7 +20,7 @@ consequence as an argument rather than choosing one.
 
 ## The reader who wondered why this is not a subclass
 
-`repository.py` argues that at length — including why the plan's stated reason for
+`base.py` argues that at length — including why the plan's stated reason for
 the same conclusion is false, and the two readings of the injection that tests it.
 The short of it: `rules` carries no tenancy at all, the base adds no predicate, so
 the objection to inheriting is about what the type CLAIMS rather than about what
@@ -36,12 +36,12 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from titlepipe_core.db.models import Rule
-from titlepipe_core.db.repository import refuse_unscoped_session
+from titlepipe_core.db.repositories.base import refuse_unscoped_session
 
 # For a repository over a GLOBAL table. `tenant` may genuinely be `None` here, and
 # saying so is the point: `GET /api/rules` has no principal, so a message that
 # read "name a tenant" would send its caller to invent one. It is the caller's
-# sentence and lives with the caller; `repository.py` holds the tenant one and the
+# sentence and lives with the caller; `base.py` holds the tenant one and the
 # shared stem, and the comment above that stem records the rendering that was
 # wrong for one of its two callers.
 _GLOBAL_TABLE_CONSEQUENCE = (
