@@ -163,6 +163,23 @@ class WorkerSettings(BaseServiceSettings):
     heartbeat_interval_seconds: float = Field(default=10.0, gt=0, le=300)
     stalled_worker_timeout_seconds: float = Field(default=30.0, gt=0, le=3600)
 
+    # How many times the stall sweep will hand the same job back to the queue
+    # before giving up on it and marking it failed.
+    #
+    # PLAN §6 sets the number: "cap 2 retries, 3rd is poison". It states it about
+    # transport failures, and a stall is not one — but the bound is needed here
+    # for a sharper reason. A job that KILLS ITS WORKER is stalled by definition,
+    # so an uncapped sweep hands it to the next worker, which also dies, forever;
+    # the queue's only visible symptom is workers restarting, and the job that
+    # causes it never appears in `failed` because it never finishes. The cap is
+    # what turns that into one row somebody can look at.
+    #
+    # `ge=0` is meaningful and is the strictest setting, not a degenerate one: it
+    # means a stalled job is failed on first discovery and never re-run — the
+    # right posture for a queue of paid, non-idempotent calls until the content
+    # idempotency key from PLAN §6 exists to make a re-run free.
+    max_stall_retries: int = Field(default=2, ge=0, le=10)
+
     @field_validator("queues", mode="before")
     @classmethod
     def _accept_a_comma_separated_list(cls, value: object) -> object:
