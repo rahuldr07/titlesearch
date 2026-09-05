@@ -1,4 +1,4 @@
-import type { Role } from "@titlepipe/contract";
+import { SEAT_IDENTITIES, type Role } from "@titlepipe/contract";
 import type { DemoAccount } from "./signedIn";
 
 /**
@@ -9,11 +9,16 @@ import type { DemoAccount } from "./signedIn";
  * does not hold. `seat` carries the design's own words beside the contract
  * role; `role` is what reaches the wire. Addresses are `example.com` —
  * RFC 2606 reserves it so a demo fixture cannot name a real mailbox.
+ *
+ * The NAMES are read from the contract's `SEAT_IDENTITIES` rather than typed
+ * here, because that table is what the mock stamps on a golden correction, an
+ * audit row and a countersign. Typing them twice is how a screen comes to say
+ * you signed in as one person while the permanent record names another.
  */
 export const DEMO_ACCOUNTS: readonly DemoAccount[] = [
   {
     id: "okafor",
-    name: "D. Okafor",
+    name: SEAT_IDENTITIES.reviewer,
     email: "d.okafor@example.com",
     role: "reviewer",
     seat: "Examiner",
@@ -21,7 +26,7 @@ export const DEMO_ACCOUNTS: readonly DemoAccount[] = [
   },
   {
     id: "menon",
-    name: "R. Menon",
+    name: SEAT_IDENTITIES.senior,
     email: "r.menon@example.com",
     role: "senior",
     seat: "QC",
@@ -29,7 +34,7 @@ export const DEMO_ACCOUNTS: readonly DemoAccount[] = [
   },
   {
     id: "abara",
-    name: "T. Abara",
+    name: SEAT_IDENTITIES.typist,
     email: "t.abara@example.com",
     role: "typist",
     seat: "Blind capture",
@@ -37,7 +42,7 @@ export const DEMO_ACCOUNTS: readonly DemoAccount[] = [
   },
   {
     id: "vance",
-    name: "L. Vance",
+    name: SEAT_IDENTITIES.admin,
     email: "l.vance@example.com",
     role: "admin",
     seat: "Administrator",

@@ -30,17 +30,20 @@ interface SignedInState {
 }
 
 /**
- * The initial value is the mock server's own default: the mock treats a
- * missing `x-mock-role` as the dev-default admin session, so booting
- * signed-out would make the client disagree with the server about whether
- * the reader exists. It also keeps deep links working across reloads —
- * nothing persists, so a client-only session would evaporate and `?field=`
- * would land on the sign-in screen. The sign-in screen is reached by
- * signing out. With real auth the default becomes "no session" and this
- * value goes with the rest of the file.
+ * The initial value matches `shared/session.ts`'s dev-default role, and the
+ * two must not drift: the mock no longer has a default of its own — a request
+ * with no `x-mock-role` is refused, not admitted as admin — so what this store
+ * and that one agree on is the only session the app boots with. It also keeps
+ * deep links working across reloads: nothing persists, so a client-only
+ * session would evaporate and `?field=` would land on the sign-in screen. The
+ * sign-in screen is reached by signing out. With real auth the default becomes
+ * "no session" and this value goes with the rest of the file.
+ *
+ * Found by ROLE, not by name — the name is `SEAT_IDENTITIES`' to decide, and
+ * a literal here would be a second place to change it.
  */
 const DEV_DEFAULT: DemoAccount | undefined = DEMO_ACCOUNTS.find(
-  (a) => a.name === "L. Vance",
+  (a) => a.role === "admin",
 );
 
 export const useSignedIn = create<SignedInState>((set) => ({

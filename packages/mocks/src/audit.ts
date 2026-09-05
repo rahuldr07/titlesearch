@@ -1,3 +1,4 @@
+import { seatOf } from "./guard.js";
 import type { AuditEntry } from "@titlepipe/contract";
 
 /**
@@ -85,10 +86,14 @@ export function appendAudit(
 }
 
 /**
- * The acting identity for an audit row — the `x-mock-actor` header where the
- * caller sent one (the same convention the countersign handler reads), else
- * the demo session's default seat.
+ * The acting identity for an audit row, resolved from the credential.
+ *
+ * It used to read `x-mock-actor` — a free-text header — so an audit ledger,
+ * whose entire job is saying who did a thing, recorded whatever name the
+ * caller typed into it. Every writer here runs after `guard`, so the seat is
+ * present; `"unknown"` is the shape of a row nobody can produce rather than a
+ * default anybody can claim, and it is not a name any seat holds.
  */
 export function auditActor(request: Request): string {
-  return request.headers.get("x-mock-actor") ?? "L. Vance";
+  return seatOf(request)?.actor ?? "unknown";
 }

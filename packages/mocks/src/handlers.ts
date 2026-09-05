@@ -11,7 +11,7 @@ import {
   resetDesignStores,
   slaFor,
 } from "./design.js";
-import { guard, err } from "./guard.js";
+import { guard, guardAs, err, MOCK_ROLE_HEADER } from "./guard.js";
 import { resetSettingsStores, settingsHandlers } from "./settings.js";
 import { resetTemplateStores, templateHandlers } from "./templates.js";
 import { appendAudit, auditActor, auditStore, resetAuditStore } from "./audit.js";
@@ -1421,14 +1421,17 @@ export const handlers = [
   /**
    * Golden correction — permanently logged, on the record. Refused without
    * source_citation + reason (contract-enforced). Tag upgrades to `ruled`; the
-   * prior value survives in corrected_from forever. The signer is derived from
-   * the authenticated identity (x-mock-actor stands in for the session/JWT
-   * identity claim), NEVER a client-supplied body field — a browser must not
-   * decide who signed a change to ground truth.
+   * prior value survives in corrected_from forever.
+   *
+   * The signer comes out of `guardAs` — resolved from the credential the gate
+   * just checked, never from the body and never from a second header the
+   * caller fills in. The golden set is the sole carrier of the accuracy
+   * programme since the blind deferral, so a ledger whose signature the caller
+   * chooses is a ledger with no signature at all.
    */
   http.post("/api/golden/corrections", async ({ request }) => {
-    const denied = guard(request, "golden.correct");
-    if (denied) return denied;
+    const gate = guardAs(request, "golden.correct");
+    if (gate.denied) return gate.denied;
     const parsed = GoldenCorrectionRequest.safeParse(await request.json());
     if (!parsed.success) return err(parsed.error.message, 422);
     const gf = goldenStore.find((g) => g.id === parsed.data.golden_field_id);
@@ -1437,7 +1440,7 @@ export const handlers = [
     gf.value = parsed.data.corrected_value;
     gf.tag = "ruled";
     gf.source_citation = parsed.data.source_citation;
-    gf.corrected_by = request.headers.get("x-mock-actor") ?? "unknown";
+    gf.corrected_by = gate.seat.actor;
     gf.corrected_at = new Date().toISOString();
     gf.correction_reason = parsed.data.reason;
     return HttpResponse.json(ok, { status: 201 });
@@ -1450,15 +1453,15 @@ export const handlers = [
    * permanent. One action per field: a field already acted on 409s.
    */
   http.post("/api/golden/:id/confirm", async ({ params, request }) => {
-    const denied = guard(request, "golden.confirm");
-    if (denied) return denied;
+    const gate = guardAs(request, "golden.confirm");
+    if (gate.denied) return gate.denied;
     const parsed = GoldenAffirmRequest.safeParse(await request.json());
     if (!parsed.success) return err(parsed.error.message, 422);
     const gf = goldenStore.find((g) => g.id === params["id"]);
     if (!gf) return err("no such golden field", 404);
     if (gf.corrected_at !== null) return err("seed already resolved", 409);
     gf.tag = "ruled";
-    gf.corrected_by = request.headers.get("x-mock-actor") ?? "unknown";
+    gf.corrected_by = gate.seat.actor;
     gf.corrected_at = new Date().toISOString();
     gf.correction_reason = parsed.data.reason;
     return HttpResponse.json(ok, { status: 201 });
@@ -1467,18 +1470,18 @@ export const handlers = [
   /**
    * Demote seed to suspect — the document is ambiguous; neither value can be
    * confirmed (a diagnosis, PRD §12). VALUE unchanged; tag → `suspect`.
-   * Signed (server-derived actor) + reasoned, permanent. One action per field.
+   * Signed by the gate's seat + reasoned, permanent. One action per field.
    */
   http.post("/api/golden/:id/demote", async ({ params, request }) => {
-    const denied = guard(request, "golden.demote");
-    if (denied) return denied;
+    const gate = guardAs(request, "golden.demote");
+    if (gate.denied) return gate.denied;
     const parsed = GoldenAffirmRequest.safeParse(await request.json());
     if (!parsed.success) return err(parsed.error.message, 422);
     const gf = goldenStore.find((g) => g.id === params["id"]);
     if (!gf) return err("no such golden field", 404);
     if (gf.corrected_at !== null) return err("seed already resolved", 409);
     gf.tag = "suspect";
-    gf.corrected_by = request.headers.get("x-mock-actor") ?? "unknown";
+    gf.corrected_by = gate.seat.actor;
     gf.corrected_at = new Date().toISOString();
     gf.correction_reason = parsed.data.reason;
     return HttpResponse.json(ok, { status: 201 });
@@ -1575,12 +1578,16 @@ export const handlers = [
    * other worlds. At P1 the role comes from the Clerk claim, same shape.
    */
   http.get("/api/me/permissions", ({ request }) => {
-    const raw = request.headers.get("x-mock-role");
-    // missing header = the dev-default admin session; a PRESENT-but-unknown
-    // role is refused — forged garbage must never yield the widest world
-    if (raw !== null && !isRole(raw)) return err("unknown role", 400);
-    const role = raw !== null && isRole(raw) ? raw : "admin";
-    return HttpResponse.json({ role, rules: rulesFor(role) });
+    const raw = request.headers.get(MOCK_ROLE_HEADER);
+    // No credential is no projection. This used to hand a header-less caller
+    // the admin role and all 44 of its grants — the widest world in the table,
+    // given to whoever asked for it least specifically.
+    if (raw === null) return err("refused: no session", 401);
+    // A PRESENT-but-unknown role is refused too — forged garbage must never
+    // yield the widest world either. 400 rather than 403: what is wrong is the
+    // credential's shape, not the seat's grants.
+    if (!isRole(raw)) return err("unknown role", 400);
+    return HttpResponse.json({ role: raw, rules: rulesFor(raw) });
   }),
 
   http.get("/api/rules", () => HttpResponse.json({ rules: ruleStore })),

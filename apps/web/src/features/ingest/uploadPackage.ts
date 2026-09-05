@@ -3,6 +3,7 @@ import {
   IngestRejection,
   QuarantineResponse,
 } from "@titlepipe/contract";
+import { mockAuthHeaders } from "../../shared/api";
 
 /**
  * The two calls that cannot go through `shared/api.ts` — both are multipart,
@@ -33,7 +34,19 @@ function messageOf(body: unknown, status: number, path: string): string {
 }
 
 async function postForm(path: string, form: FormData): Promise<unknown> {
-  const response = await fetch(path, { method: "POST", body: form });
+  /*
+   * The seat travels with the multipart POST too. This call used to send no
+   * credential at all and still succeeded, because the mock read a missing
+   * `x-mock-role` as the dev-default admin — so the one screen that creates
+   * orders was, on the wire, an anonymous caller being handed the widest role
+   * in the table. No `content-type`: the browser has to set the multipart
+   * boundary itself, and naming it here would corrupt the body.
+   */
+  const response = await fetch(path, {
+    method: "POST",
+    headers: mockAuthHeaders(),
+    body: form,
+  });
   const body: unknown = await response.json().catch(() => null);
   if (response.status === 400) {
     const rejection = IngestRejection.safeParse(body);

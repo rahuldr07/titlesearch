@@ -11,22 +11,23 @@ import { isRole, type Role } from "@titlepipe/contract";
  */
 interface SessionState {
   role: Role;
-  /**
-   * The signer's display name, read-only from the session — never a client
-   * field, so who signed a golden correction is not typeable. It has no
-   * setter of its own and travels with the role: `actAs` takes both, so
-   * switching seats cannot leave the previous examiner's name on the next
-   * signature.
-   */
-  actor: string;
-  actAs: (seat: { role: Role; actor: string }) => void;
+  actAs: (role: Role) => void;
 }
 
+/*
+ * The store holds the ROLE and nothing else. It used to carry the signer's
+ * display name too, which the fetch layer sent as `x-mock-actor` and the mock
+ * stamped onto the golden ledger — so the name on a permanent correction was
+ * a string the browser handed over. The name now lives in the contract's
+ * `SEAT_IDENTITIES` and is resolved server-side from the role; there is no
+ * wire field naming a person, which is what makes the signature one.
+ */
 export const useSession = create<SessionState>((set) => ({
-  // The mock server treats a missing header as the dev-default admin session.
+  // Matches `signedIn.ts`'s dev-default seat. The mock no longer has a default
+  // of its own — a request with no role header is refused, not admitted as
+  // admin — so this value is the only thing standing between boot and a 401.
   role: "admin",
-  actor: "L. Vance",
-  actAs: ({ role, actor }) => set({ role, actor }),
+  actAs: (role) => set({ role }),
 }));
 
 /**
@@ -37,13 +38,4 @@ export const useSession = create<SessionState>((set) => ({
 export function currentRole(): Role {
   const { role } = useSession.getState();
   return isRole(role) ? role : "admin";
-}
-
-/**
- * The signer, for the fetch layer — same dev-only caveat as the role above.
- * The mock reads `x-mock-actor` so the append-only golden log is signed with
- * the same name the correction screen showed.
- */
-export function currentActor(): string {
-  return useSession.getState().actor;
 }

@@ -1,4 +1,4 @@
-import { currentActor, currentRole } from "./session";
+import { currentRole } from "./session";
 
 /**
  * A validator, described structurally rather than by importing Zod's types.
@@ -50,6 +50,30 @@ async function readError(response: Response): Promise<string> {
   return `${response.status} ${response.statusText}`.trim();
 }
 
+/**
+ * Every mock-auth header this browser sends, minted in ONE place.
+ *
+ * The set matters as much as the value. core-api refuses a request carrying
+ * any member of its own `MOCK_AUTH_HEADERS` (services/core-api →
+ * api/mock_auth_guard.py) wherever mock auth is off, and that set holds
+ * exactly `x-mock-role`. While the browser sent a second `x-mock-actor`
+ * header, a request carrying only that one walked past the guard with a 200
+ * against a production configuration — harmless only because nothing read it.
+ * The gap would have opened at the ADR-0001 cutover, when `x-mock-role` is
+ * dropped and a header nobody remembers is not dropped with it.
+ *
+ * So: one function, one header, and `mock-auth-parity.test.ts` fails if this
+ * set and core-api's refusal set ever stop being the same set. Adding a
+ * header here without adding it there is the bug, and it is now a red test
+ * rather than a thing to notice.
+ *
+ * `uploadPackage.ts` calls this too — a multipart POST is a mutation, and it
+ * needs a seat exactly as much as a JSON one does.
+ */
+export function mockAuthHeaders(): Record<string, string> {
+  return { "x-mock-role": currentRole() };
+}
+
 async function request<T>(
   path: string,
   schema: Validator<T>,
@@ -59,14 +83,7 @@ async function request<T>(
     ...init,
     headers: {
       "content-type": "application/json",
-      // Dev-only: packages/mocks reads this in place of the session claim so
-      // the authz specs can prove the server refuses. It goes when the real
-      // API lands — see shared/session.ts.
-      "x-mock-role": currentRole(),
-      // Dev-only, same cutover. The mock signs the golden log with this
-      // rather than letting the client post a name in the body — a signature
-      // the client can type is not a signature.
-      "x-mock-actor": currentActor(),
+      ...mockAuthHeaders(),
       ...init?.headers,
     },
   });

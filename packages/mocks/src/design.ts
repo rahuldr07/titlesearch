@@ -17,7 +17,7 @@ import type {
   CountersignsResponse,
 } from "@titlepipe/contract";
 import { demoOrders, demoOrderRows, markOrderReleased, clearReleasedOverlay, refOf, demoDeliveries, demoFields, demoTimelines, resetDemoTimelines } from "./data.js";
-import { guard } from "./guard.js";
+import { guard, guardAs } from "./guard.js";
 import { appendAudit, auditActor } from "./audit.js";
 import { TEMPLATE_VERSION } from "./templates.js";
 
@@ -793,14 +793,16 @@ export const designHandlers = [
   }),
 
   /*
-   * A second read must come from a different examiner. The acting examiner
-   * is the authenticated identity: `x-mock-actor` stands in for the
-   * session/JWT claim, the same convention `handlers.ts` uses to sign
-   * golden corrections — never the typed signature, which is a client field.
+   * A second read must come from a different examiner. The acting examiner is
+   * the authenticated identity, resolved from the credential by `guardAs` —
+   * the same convention `handlers.ts` uses to sign golden corrections, and
+   * never the typed signature, which is a client field. A name the caller
+   * could type is a name the caller could type twice, which would make the
+   * different-examiner rule a formality the first examiner can satisfy alone.
    */
   http.post("/api/fields/:id/countersign", async ({ params, request }) => {
-    const denied = guard(request, "field.countersign");
-    if (denied) return denied;
+    const gate = guardAs(request, "field.countersign");
+    if (gate.denied) return gate.denied;
     const body = (await request.json()) as { signature?: string };
     if (!body?.signature) {
       return HttpResponse.json({ error: "a countersign is refused without a signature" }, { status: 422 });
@@ -824,10 +826,12 @@ export const designHandlers = [
         { status: 409 },
       );
     }
-    // An unidentified actor cannot PROVE a second pair of eyes, so a missing
-    // identity refuses exactly as the ruling examiner does.
-    const actor = request.headers.get("x-mock-actor");
-    if (actor === null || actor === row.ruled_by) {
+    // The gate has already refused an unidentified caller, so what remains is
+    // the rule itself: the seat that ruled cannot be the seat that reads it
+    // back. `admin` ruled these rows in the seed, so an admin countersigning
+    // its own ruling is refused here and a senior is not.
+    const actor = gate.seat.actor;
+    if (actor === row.ruled_by) {
       return HttpResponse.json(
         { error: "a second read must come from a different examiner than the one who ruled" },
         { status: 409 },
