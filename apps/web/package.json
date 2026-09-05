@@ -16,6 +16,8 @@
     "storybook": "storybook dev -p 6007",
     "build-storybook": "storybook build",
     "check:rules": "node scripts/check-rules.mjs",
+    "reference:unbundle": "node scripts/reference-app.mjs",
+    "reference:parity": "node scripts/pixel-parity.mjs",
     "knip": "knip",
     "size": "size-limit"
   },
