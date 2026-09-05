@@ -3,7 +3,7 @@ service serves.
 
 It is first because it is the one read in the system that needs no principal.
 The rulebook is GLOBAL: `migrations/versions/0003_rules.py` states the ruling and
-`db/rules.py` carries its consequences, and a table with no `tenant_id` and no
+`db/repositories/rules.py` carries its consequences, and a table with no `tenant_id` and no
 policy is a table whose contents do not depend on who is asking. So this endpoint
 can be built, proved and pointed at a browser before identity exists at all,
 which is the whole reason the vertical slice starts here.
@@ -77,7 +77,7 @@ attempt.
 
 ## No query parameters, no pagination, no filtering
 
-RULED: every status, unfiltered, in the repository's order. `db/rules.py::list_all`
+RULED: every status, unfiltered, in the repository's order. `db/repositories/rules.py::list_all`
 carries the reason — a `pending` rule is VISIBLE to everyone and only its EFFECT
 is gated — and the two live consumers
 (`apps/web/src/shared/accountQueries.ts`'s `rules` descriptor, rendered by

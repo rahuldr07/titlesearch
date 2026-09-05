@@ -90,7 +90,7 @@ def encode_cursor(sort_key: str, id_: UUID) -> str:
     """Freeze one scan position into a token the caller hands back.
 
     BOTH members, always. `sort_key` alone is not a position because sort keys
-    are not unique — `db/rules.py` measured what a non-unique order does to a
+    are not unique — `db/repositories/rules.py` measured what a non-unique order does to a
     response under an `UPDATE` — so a cursor on the key alone re-serves or skips
     the rows that tie on it. `id` is the primary key's last column and is what
     makes the position TOTAL, which is the same argument `RuleRepository.list_all`

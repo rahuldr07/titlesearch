@@ -89,7 +89,7 @@ def _sample_rows() -> list[Rule]:
     at import time is state shared by every test in the session.
 
     The three carry three DIFFERENT statuses, and `pending` is present on purpose.
-    `db/rules.py::history_for` rules that nothing filters on read — an engineer
+    `db/repositories/rules.py::history_for` rules that nothing filters on read — an engineer
     confirming a pending version is exactly the caller who needs to see it beside
     the version it supersedes — and a fixture of three `live` rows would score full
     marks against a `history_for` that filtered them out.
@@ -266,7 +266,7 @@ def test_the_committed_versions_are_in_version_order() -> None:
     AS IF IT DID. Every row in this file is a model instance built in Python, so a
     list arrives in the order it was constructed whatever the query would have
     done — MEASURED by deleting `.order_by(Rule.version, Rule.id)` from
-    `db/rules.py::history_for`, which left all twelve tests in this file green. Two
+    `db/repositories/rules.py::history_for`, which left all twelve tests in this file green. Two
     other mutations to the same endpoint were caught here (serving an empty history
     instead of refusing; echoing the code off `rows[0]`), which is what made the
     survivor worth chasing rather than shrugging at.

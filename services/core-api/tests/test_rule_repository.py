@@ -44,7 +44,7 @@ writes them in an order matching no sort key — all three of which exist for
 grow three parameters that exist for one caller. Sharing them becomes
 right when a second caller wants the same rows; `01-WHAT-HAPPENED.md` §3.5's rule
 is about a REASON living in two places, and the reason here — the owner's
-visibility ruling — is stated once, in `db/rules.py::RuleRepository.list_all`,
+visibility ruling — is stated once, in `db/repositories/rules.py::RuleRepository.list_all`,
 and cited rather than restated below.
 """
 
@@ -99,7 +99,7 @@ TENANT_TWO = TenantId(UUID("22222222-2222-2222-2222-222222222222"))
 #   makes the `version` key observable;
 # * TWO ROWS SHARING BOTH CODE AND VERSION (`R13` v1 twice), which is what makes
 #   the `id` key observable. It is legal on today's schema — see
-#   `db/rules.py::RuleRepository.list_all` for the OPEN ITEM about
+#   `db/repositories/rules.py::RuleRepository.list_all` for the OPEN ITEM about
 #   `UNIQUE (code, version)`, which is a domain question Plan 05 owns and which
 #   this file deliberately does not pre-empt. The ordering has to be total on the
 #   schema that exists;
@@ -515,7 +515,7 @@ async def test_the_rulebook_comes_back_in_a_total_order(
     body built from one is reproducible only by luck — and Task 3's contract-parity
     fixture and Task 4's response both need the same bytes twice. The ordering is a
     WIRE-STABILITY decision, argued where it is made
-    (`db/rules.py::RuleRepository.list_all`) and not restated here.
+    (`db/repositories/rules.py::RuleRepository.list_all`) and not restated here.
 
     ---------------------------------------------------------------------------
     🔴 THIS TEST ASSERTED `ORDER BY code` AND COULD NOT HAVE CAUGHT THE DEFECT IT
@@ -872,7 +872,7 @@ async def test_a_code_the_rulebook_does_not_carry_comes_back_empty_and_not_as_an
 ) -> None:
     """The repository's half of the 404, which is that it does not make one.
 
-    `db/rules.py::history_for` rules that whether "no rows" means a missing
+    `db/repositories/rules.py::history_for` rules that whether "no rows" means a missing
     RESOURCE or an empty COLLECTION is a question about a URL, and that `db/`
     cannot see one — so it answers with an empty sequence and
     `api/routers/rules.py` decides. This holds the layer boundary from below:
