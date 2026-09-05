@@ -1,8 +1,15 @@
 """The tenant-scoped `users` table and the `user_role` type
 
 Revision ID: 0020
-Revises: 0004
+Revises: 0008
 Create Date: 2026-09-04
+
+LINEARIZED AT INTEGRATION, 2026-09-05: `down_revision` was `0004` — the head as this file's
+author found it, per CONVENTIONS §8 — and is now `0008`. `0008` is the last revision of the `0005`-`0008` run that precedes this range. This file
+states that nothing in it depends on `0005`-`0019`; it creates one type and one table and
+references no other table.
+The prose below is the author's and describes the branch as written; this line is the read of
+the chain that `alembic upgrade head` actually walks.
 
 ---------------------------------------------------------------------------
 🔴 THE ASSUMED PARENT IS `0004`, AND IT IS AN ASSUMPTION RATHER THAN A READ.
@@ -86,7 +93,7 @@ from alembic import op
 from sqlalchemy.dialects import postgresql
 
 revision: str = "0020"
-down_revision: str | None = "0004"
+down_revision: str | None = "0008"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
