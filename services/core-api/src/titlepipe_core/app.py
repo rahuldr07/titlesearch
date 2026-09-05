@@ -20,7 +20,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from titlepipe_core.api.errors import build_unhandled_response, register_error_handlers
 from titlepipe_core.api.request_context import RequestContextMiddleware
-from titlepipe_core.api.routers import health, rules
+from titlepipe_core.api.routers import health, queue, rules
 from titlepipe_core.lifespan import build_lifespan, build_resources
 from titlepipe_core.settings import CoreApiSettings
 from titlepipe_core.telemetry.hooks import RequestMetrics
@@ -105,5 +105,12 @@ def create_app(
     # be mapped; the order is not load-bearing for FastAPI, but reading it the
     # other way round invites somebody to assume it is.
     app.include_router(rules.router)
+    # The first router built in `CONVENTIONS.md` §10's four layers rather than
+    # retrofitted onto them. It shares `rules`' `/api` prefix and answers 401 on
+    # every request today — `api/routers/queue.py` records why that is the true
+    # answer rather than a placeholder, and why the route is registered while it
+    # cannot succeed: the WIRE is what core-api owes at this path under ADR-0001,
+    # and a schema no OpenAPI document mentions is not a wire.
+    app.include_router(queue.router)
 
     return app
