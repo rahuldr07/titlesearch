@@ -350,6 +350,50 @@ def _release(table: str) -> None:
     op.execute(f"ALTER TABLE {table} DISABLE ROW LEVEL SECURITY")
 
 
+def _enable_always(table: str, trigger: str) -> None:
+    """`ENABLE ALWAYS`, and then read `pg_trigger.tgenabled` back to prove it.
+
+    🔴 `'O'` IS NOT A WEAKER `'A'`, IT IS A TRIGGER THAT CAN BE OFF FOR A WHOLE
+    SESSION. `0004` establishes the rule and the measurement behind it: a per-role
+    `session_replication_role = 'replica'` default is applied at CONNECT and never
+    checked again, so a trigger left at the `'O'` (origin) default is silently
+    inert for every statement that session runs. A refusal trigger that can be
+    turned off is the false-assurance shape CONVENTIONS §9 names — the catalog
+    reads clean, the constraint reads enforced, and it is not.
+
+    The read-back is `0004`'s and `0007`'s discipline, for the same reason both
+    give: `ALTER TABLE ... ENABLE ALWAYS TRIGGER` succeeds whatever `tgenabled`
+    ends up as, and the point of the statement is a catalog VALUE. `'A'` is
+    `ENABLE ALWAYS`; `'O'` is the default a silently-ineffective statement leaves.
+
+    Spelled out here rather than imported, for the frozen-snapshot reason every
+    other helper in this file is repeated for: a migration is a snapshot of one
+    revision, and a shared helper lets a later edit rewrite what this one did.
+    """
+    op.execute(f"ALTER TABLE {table} ENABLE ALWAYS TRIGGER {trigger}")
+
+    enabled = (
+        op.get_bind()
+        .execute(
+            sa.text(
+                "SELECT t.tgenabled FROM pg_trigger t "
+                "JOIN pg_class c ON c.oid = t.tgrelid "
+                "WHERE c.relname = :table AND t.tgname = :trigger"
+            ),
+            {"table": table, "trigger": trigger},
+        )
+        .scalar_one_or_none()
+    )
+    if enabled != "A":
+        raise RuntimeError(
+            f"{trigger} on {table} was asked for ENABLE ALWAYS and pg_trigger."
+            f"tgenabled reads {enabled!r} rather than 'A'. A trigger left at 'O' "
+            f"does not fire for a session whose session_replication_role is "
+            f"'replica', which a per-role default can set at CONNECT where no "
+            f"in-session privilege check applies (see revision 0004)."
+        )
+
+
 def _create_triggers() -> None:
     """The three machines that a `CHECK` constraint structurally cannot be.
 
@@ -498,7 +542,7 @@ def _create_triggers() -> None:
             RETURN NULL;
         END;
         $$
-        """  # noqa: S608
+        """
     )
     op.execute(
         f"""
@@ -551,7 +595,7 @@ def _create_triggers() -> None:
             RETURN NULL;
         END;
         $$
-        """  # noqa: S608
+        """
     )
     op.execute(
         f"""
@@ -560,6 +604,10 @@ def _create_triggers() -> None:
         FOR EACH ROW EXECUTE FUNCTION {LINE_FREEZE_FUNCTION}()
         """
     )
+
+    _enable_always("orders", FREEZE_TRIGGER)
+    _enable_always("orders", GATE_TRIGGER)
+    _enable_always("intake_signoff_lines", LINE_FREEZE_TRIGGER)
 
 
 def upgrade() -> None:
