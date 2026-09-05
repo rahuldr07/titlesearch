@@ -180,6 +180,60 @@ class WorkerSettings(BaseServiceSettings):
     # idempotency key from PLAN §6 exists to make a re-run free.
     max_stall_retries: int = Field(default=2, ge=0, le=10)
 
+    @property
+    def libpq_database_url(self) -> str:
+        """The DSN in the form psycopg's pool accepts, or a refusal.
+
+        🔴 THE TWO SPELLINGS ARE NOT INTERCHANGEABLE AND THE FAILURE IS AT
+        CONNECT TIME. core-api's DSN is SQLAlchemy's — `postgresql+psycopg://` —
+        because SQLAlchemy reads the `+driver` suffix to pick a dialect. The
+        queue does not go through SQLAlchemy: procrastinate hands the string to
+        `psycopg_pool.AsyncConnectionPool`, which passes it to libpq, and libpq
+        rejects `postgresql+psycopg` as an unrecognised scheme.
+
+        An operator copying the app's DSN into the worker's variable is the
+        obvious way to reach that, so both spellings are accepted here and the
+        suffix is stripped. `_the_dsn_names_postgres` refuses anything that is
+        not PostgreSQL at STARTUP, so this property never has to.
+
+        Raises rather than returning `None` for an unset DSN: the only callers
+        are `queue.make_app` and the `run` command, and both run after the
+        deployed-environment refusal has already had its say. A `None` here would
+        be a second, quieter way to reach a worker with no database.
+        """
+        if self.database_url is None:
+            raise RuntimeError(
+                "database_url is not set; there is no queue to connect to. "
+                "Deployed environments refuse this configuration at startup — "
+                "reaching here means a local run asked for the work loop with "
+                "no TITLEPIPE_WORKER_DATABASE_URL."
+            )
+        raw = self.database_url.get_secret_value()
+        scheme, separator, rest = raw.partition("://")
+        return f"{scheme.partition('+')[0]}{separator}{rest}"
+
+    @field_validator("database_url")
+    @classmethod
+    def _the_dsn_names_postgres(cls, value: SecretStr | None) -> SecretStr | None:
+        """Refuse a DSN whose scheme is not PostgreSQL, at startup.
+
+        The queue is Postgres-native by decision, not by accident: the whole
+        reason for this library over a broker is that a job is deferred in the
+        same transaction as the row that justifies it. A DSN naming anything else
+        is a configuration error whose natural report is a connection failure
+        minutes later, inside a pool, in a process that already said its
+        configuration was valid.
+        """
+        if value is None:
+            return None
+        scheme = value.get_secret_value().partition("://")[0].partition("+")[0].lower()
+        if scheme not in ("postgresql", "postgres"):
+            raise ValueError(
+                f"database_url names scheme {scheme!r}; the queue is PostgreSQL-native "
+                f"and there is no other backend for it"
+            )
+        return value
+
     @field_validator("queues", mode="before")
     @classmethod
     def _accept_a_comma_separated_list(cls, value: object) -> object:

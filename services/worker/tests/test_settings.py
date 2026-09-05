@@ -293,3 +293,49 @@ def test_a_stall_timeout_below_twice_the_heartbeat_is_refused() -> None:
     defaults = WorkerSettings(environment=Environment.DEVELOPMENT)
     assert defaults.heartbeat_interval_seconds == 10.0
     assert defaults.stalled_worker_timeout_seconds == 30.0
+
+
+def test_the_sqlalchemy_dsn_is_reshaped_for_libpq() -> None:
+    """Both spellings are accepted; libpq only understands one of them.
+
+    core-api's DSN carries SQLAlchemy's `+driver` suffix because SQLAlchemy reads
+    it to pick a dialect. The queue does not go through SQLAlchemy — procrastinate
+    hands the string to `psycopg_pool.AsyncConnectionPool` and libpq rejects
+    `postgresql+psycopg` as an unrecognised scheme. An operator copying the app's
+    DSN into the worker's variable is the obvious way to reach that, and the
+    failure would be at connect time in a process that already reported its
+    configuration valid.
+    """
+    for given in (
+        "postgresql+psycopg://titlepipe_worker:secret@db.internal:5432/titlepipe",
+        "postgresql://titlepipe_worker:secret@db.internal:5432/titlepipe",
+    ):
+        settings = WorkerSettings(
+            environment=Environment.DEVELOPMENT, database_url=SecretStr(given)
+        )
+        assert settings.libpq_database_url == (
+            "postgresql://titlepipe_worker:secret@db.internal:5432/titlepipe"
+        )
+
+
+def test_a_dsn_that_is_not_postgres_is_refused_at_startup() -> None:
+    """The queue is Postgres-native by decision: the whole reason for this library
+    over a broker is that a job is deferred in the same transaction as the row
+    that justifies it. Anything else is a configuration error whose natural report
+    would be a connection failure minutes later, inside a pool."""
+    with pytest.raises(ValidationError) as refusal:
+        WorkerSettings(
+            environment=Environment.DEVELOPMENT,
+            database_url=SecretStr("mysql://titlepipe_worker:secret@db.internal/titlepipe"),
+        )
+    assert "PostgreSQL-native" in str(refusal.value)
+
+
+def test_asking_for_the_dsn_when_none_is_set_refuses_rather_than_returning_none() -> None:
+    """A `None` here would be a second, quieter route to a worker with no
+    database — the first one being refused by `additional_unsafe_for_deployment`.
+    The only callers run after that refusal has had its say."""
+    settings = WorkerSettings(environment=Environment.DEVELOPMENT)
+    with pytest.raises(RuntimeError) as refusal:
+        _ = settings.libpq_database_url
+    assert "no queue to connect to" in str(refusal.value)
