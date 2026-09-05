@@ -249,7 +249,7 @@ def upgrade() -> None:
             RETURN NULL;
         END;
         $$
-        """  # noqa: S608
+        """
     )
 
     op.execute(

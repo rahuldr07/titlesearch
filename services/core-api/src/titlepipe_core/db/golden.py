@@ -69,6 +69,7 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from titlepipe_core.db.golden_models import GoldenCorrection, GoldenField
+
 # `db/repository.py` became `db/repositories/` at integration; TenantRepository lives in its base
 # module, which is where every other repository imports it from.
 from titlepipe_core.db.repositories.base import TenantRepository

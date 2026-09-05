@@ -61,6 +61,7 @@ from sqlalchemy.engine import Connection
 from titlepipe_core.db.engine import DENY_SENTINEL_OPTIONS
 from titlepipe_core.db.models import Base
 from titlepipe_core.db.rls_coverage import assert_rls_coverage
+from titlepipe_core.db.unscoped_tables import QUEUE_INFRASTRUCTURE_TABLES
 
 # `roles.sql` creates it; `tests/test_roles.py` proves nothing else can become
 # it. Spelled here rather than imported from `conftest.py`, which is test-only
@@ -151,6 +152,56 @@ if config.config_file_name is not None and config.cmd_opts is not None:
 # carries the naming convention, so a constraint Alembic creates gets the same
 # name the model would have given it.
 target_metadata = Base.metadata
+
+
+def _include_name(name: str | None, type_: str, _parent_names: dict[str, str | None]) -> bool:
+    """Which reflected names autogenerate is allowed to see. Only the queue is hidden.
+
+    ---------------------------------------------------------------------------
+    🔴 THE FOUR PROCRASTINATE TABLES ARE IN THE DATABASE AND MUST NOT BE IN
+       `Base.metadata`, AND WITHOUT THIS HOOK THAT IS A PERMANENT `alembic check`
+       FAILURE.
+    ---------------------------------------------------------------------------
+    `0060` installs `migrations/sql/procrastinate_schema_3.9.0.sql` verbatim —
+    four tables, three types, eighteen functions. They are the library's, not
+    ours, and modelling them would fork the DDL and the functions that read it.
+    Autogenerate compares the live schema against the metadata and reports
+    anything present in one and absent from the other, so unhidden it emits
+    `remove_table` for all four plus `remove_index` for their eight indexes:
+    MEASURED against postgres:18.4 on this chain, thirteen operations, every one
+    of them an instruction to DROP the queue.
+
+    `include_name` and NOT `include_object`, and the difference is the eight
+    indexes. `include_name` is consulted DURING reflection, so returning `False`
+    for a table means the table is never reflected and its indexes, constraints
+    and sequences never enter the comparison at all. `include_object` is
+    consulted after reflection, per object, so it needs a second clause for
+    indexes that reaches through `object.table` to find the parent — the same
+    decision spelled twice, in a place where getting the second one wrong shows
+    up as a `DROP INDEX` on a vendor table.
+
+    NOT DERIVED FROM THE TABLE COMMENT `0060` WRITES. `0060` proposes
+    `comment LIKE 'QUEUE-INFRASTRUCTURE:%'` as the exemption's source, which is
+    the right instinct for a check that describes and the wrong one for a check
+    that refuses: `COMMENT ON TABLE` is available to every table owner, so a
+    table could hide itself from schema drift detection with no diff anybody
+    reviews. `db/unscoped_tables.py` carries that argument and the names.
+
+    THE ONE NAME SET, SHARED WITH THE RLS COVERAGE CHECK. A second list here
+    would be free to drift from `UNSCOPED_TABLES`, and the drift direction that
+    matters is silent: a queue table hidden from `alembic check` but not from the
+    coverage check fails a migration, and hidden from the coverage check but not
+    from `alembic check` produces a spurious `remove_table` nobody can act on.
+
+    `type_` is checked rather than assumed: Alembic calls this for schemas and
+    indexes too, and a bare name comparison would hide an index that happened to
+    share a table's name. The third argument is Alembic's, passed positionally and
+    unread here — leading underscore so `ruff`'s ARG001 is satisfied without a
+    `noqa` this file would then have to keep true.
+    """
+    if type_ == "table":
+        return name not in QUEUE_INFRASTRUCTURE_TABLES
+    return True
 
 
 def _database_url() -> str:
@@ -311,7 +362,11 @@ def run_migrations_online() -> None:
             connection.execute(text(f"SET ROLE {OWNER_ROLE}"))
             connection.commit()  # see the module docstring — Alembic will not commit otherwise
 
-            context.configure(connection=connection, target_metadata=target_metadata)
+            context.configure(
+                connection=connection,
+                target_metadata=target_metadata,
+                include_name=_include_name,
+            )
 
             with context.begin_transaction():
                 context.run_migrations()

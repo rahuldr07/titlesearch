@@ -67,6 +67,13 @@ from typing import Final, NamedTuple
 from sqlalchemy import Connection, text
 from sqlalchemy.ext.asyncio import AsyncConnection
 
+# `UNSCOPED_TABLES` and the reasons for each name live in `unscoped_tables.py`, where
+# `migrations/env.py` and two test-side enumerations read the same list rather than each
+# keeping their own. It is imported rather than respelled, and importing it here re-exports it,
+# so `db.rls_coverage.UNSCOPED_TABLES` — the name every existing caller and comment uses — still
+# resolves to exactly this list.
+from titlepipe_core.db.unscoped_tables import UNSCOPED_TABLES
+
 # The schema this system owns. Spelled once; a second schema is a decision, not a
 # configuration value, and would need its own line here and a reason beside it.
 SCHEMA: Final = "public"
@@ -85,37 +92,6 @@ TENANT_GUC: Final = "app.current_tenant"
 TENANT_KEY_COLUMN: Final = "tenant_id"
 REGISTRY_TABLE: Final = "tenants"
 REGISTRY_KEY_COLUMN: Final = "id"
-
-# 🔴 THE ALLOWLIST. Every name here must NOT be isolated, and needs its reason in this comment and
-# not in a commit message. Adding one is a reviewer-visible diff that has to argue the table has no
-# tenant in it; `exempt_table_is_tenant_scoped` stops the list being used the other way round.
-#
-# `alembic_version` — Alembic's bookkeeping. An `id`-keyed policy on it locks Alembic out of its own
-#   migration state; there is no tenant in it.
-# `rules` — global by CONVENTIONS §1: the rulebook is the same for every tenant, its repository is a
-#   SIBLING of the tenant-scoped ones, and a `tenant_id` would make the rulebook per-tenant.
-# `retention_windows` — global for the same reason and one more: a statutory retention floor is not
-#   a tenant's property, so a `tenant_id` would say a tenant may hold a shorter floor than the law.
-#   `0005_record_class_taxonomy` creates it; `db/models/retention.py` declares it a `_Row`. It
-#   reached this list only at integration — the first `upgrade head` over the chain failed on it.
-UNSCOPED_TABLES: Final = frozenset(
-    {
-        "alembic_version",
-        "retention_windows",
-        "rules",
-        # Procrastinate's own schema, vendored at 3.9.0 and applied by `0060`. These four are the
-        # queue's internal bookkeeping and carry no tenant data: a job row holds a task name and its
-        # arguments, and it is the TASK's job to scope what it then reads. Giving them a `tenant_id`
-        # would be worse than leaving them out - it would put the tenant of a job's payload in a
-        # third-party table this repository does not own and cannot keep in step across upgrades.
-        # They reach the database as vendor SQL, so they were never going to satisfy the
-        # in-the-same-migration rule the check enforces for our own tables.
-        "procrastinate_events",
-        "procrastinate_jobs",
-        "procrastinate_periodic_defers",
-        "procrastinate_workers",
-    }
-)
 
 # The deparsed predicate, whole and anchored. See the module docstring for the
 # measurement this shape comes from and for why `IGNORECASE` costs nothing.
@@ -158,7 +134,7 @@ class RlsCoverageError(RuntimeError):
             f"on {tables} table(s) in schema {SCHEMA}:\n{lines}\n"
             f"Every table must have ENABLE, FORCE and exactly one tenant-scoping "
             f"policy in the migration that creates it, or be named in "
-            f"titlepipe_core.db.rls_coverage.UNSCOPED_TABLES with a reason."
+            f"titlepipe_core.db.unscoped_tables.UNSCOPED_TABLES with a reason."
         )
 
 

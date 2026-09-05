@@ -190,4 +190,14 @@ __all__ = [
 # reports a spurious `remove_table`. The module stays outside this package because its author put it
 # there; the import is the side effect, and the `as` spelling is what stops the checkers calling it
 # unused.
-from titlepipe_core.db import golden_models as golden_models  # noqa: E402,F401
+from titlepipe_core.db import golden_models as golden_models
+
+# Registering the identity tables on `Base.metadata`, for the reason stated directly above for the
+# golden set. `db/identity.py` maps `users` and `clients` onto this same `Base` — deliberately, so
+# that there is ONE registry — but nothing in this package imported it, so `Base.metadata` held
+# neither table unless some other import path happened to pull the module in first. That is exactly
+# the failure mode the golden note describes, and it was live: `alembic check` from the CLI reported
+# `remove_table users` (the table is in every migrated database and in no metadata), while the same
+# check under pytest — where `titlepipe_core.app` drags identity in — reported `add_table clients`
+# instead. Two answers to one question, decided by import order. This line makes it one.
+from titlepipe_core.db import identity as identity
