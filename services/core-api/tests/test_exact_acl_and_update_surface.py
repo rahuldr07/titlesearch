@@ -878,11 +878,13 @@ def test_no_table_carries_both_a_column_grant_and_a_before_row_trigger(
 
     # THE POSITIVE CONTROL ON THE READ ITSELF, which the conjunction needs more
     # than the old empty-set assertion did: it is satisfied by an empty
-    # intersection, and two empty catalogs intersect emptily. Twenty-THREE
-    # triggers and seventeen column grants, MEASURED at head 2026-09-05 — the
-    # twenty-third is `0100`'s `audit_log_bind_actor`.
-    assert len(triggers) == 23, (
-        f"the trigger read returned {len(triggers)} rows, not 23 — wrong schema "
+    # intersection, and two empty catalogs intersect emptily. Twenty-SEVEN
+    # triggers and seventeen column grants, MEASURED at head 2026-09-05. The four
+    # added since twenty-two are `0100`'s `audit_log_bind_actor`, `0101`'s
+    # `golden_fields_no_delete` and `golden_fields_no_truncate`, and `0102`'s two
+    # signer triggers — only the first is BEFORE ROW and in the census above.
+    assert len(triggers) == 27, (
+        f"the trigger read returned {len(triggers)} rows, not 27 — wrong schema "
         f"name, or `tgisinternal` inverted. The collision assertion above passes "
         f"trivially on an empty read."
     )

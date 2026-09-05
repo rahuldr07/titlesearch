@@ -1333,6 +1333,11 @@ MIGRATION_FUNCTIONS = (
     "audit_record_change",
     "escalations_resolution_needs_a_live_rule",
     "golden_corrections_reject_mutation",
+    # `0102`. One function for both signed columns, dispatched by `TG_ARGV[0]`.
+    "golden_signer_is_a_person",
+    # `0101`. DELETE and TRUNCATE on `golden_fields`, which `0072`'s AFTER UPDATE
+    # trigger could not see.
+    "golden_fields_reject_removal",
     "golden_fields_require_ledger",
     "intake_signoff_lines_refuse_an_edit_after_signature",
     "legal_hold_is_active",
@@ -1724,8 +1729,12 @@ ISOLATION_UNCLEARABLE_TABLE = "audit_log"
 # UPDATE OR DELETE` triggers, one per table named here. The other DELETE triggers in
 # the schema — the audit writer's on `legal_holds` and `record_classifications`, and
 # Procrastinate's on `procrastinate_jobs` — are row-level and refuse nothing.
+# `golden_fields` joined this set at `0101`, and the reason is the same one the
+# other three are here for: it now refuses `DELETE` and `TRUNCATE` to every role
+# including the superuser, because an `AFTER UPDATE` trigger cannot see a DELETE
+# and DELETE + re-INSERT was the way around `0072`'s seven immutable columns.
 ISOLATION_UNCLEARABLE_TABLES = frozenset(
-    {ISOLATION_UNCLEARABLE_TABLE, "golden_corrections", "reports"}
+    {ISOLATION_UNCLEARABLE_TABLE, "golden_corrections", "golden_fields", "reports"}
 )
 
 # 🔴 THE SEED HAS TO SAY WHO IT IS. `0007` attaches `audit_record_change` to

@@ -677,14 +677,22 @@ MINIMAL_ROWS: Final[Mapping[str, _MinimalRow]] = MappingProxyType(
         # least: it is where a golden seed comes from before anybody has ruled on
         # it, and it is the one `tag_before` the `confirm` below can legally
         # follow.
+        # 🔴 `established_by` AND `signed_by` ARE SIGNATURES AND `0102` RESOLVES
+        # THEM. Both are looked up in `users` for the row's own tenant and refused
+        # `28000` unless exactly one ACTIVE row carries that `identity_subject`,
+        # so `'TEST-ONLY'` stopped being a legal signer. `SEED_ACTOR_SUBJECT` is
+        # the ordinal-1 seat every seeded tenant has — the same one `audit_log`'s
+        # actor columns name — and `requires` is what puts `users` first, since no
+        # foreign key on either table says so.
         "golden_fields": _MinimalRow(
             parents={"order_id": "orders"},
+            requires=frozenset({"users"}),
             columns={
                 "path": "'test.only.' || :ordinal_text",
                 "value": "'TEST-ONLY-' || :ordinal_text",
                 "tag": "'delivered_report'",
                 "source_citation": "'TEST-ONLY'",
-                "established_by": "'TEST-ONLY'",
+                "established_by": f"'{SEED_ACTOR_SUBJECT}'",
                 "established_reason": "'TEST-ONLY'",
             },
         ),
@@ -703,9 +711,10 @@ MINIMAL_ROWS: Final[Mapping[str, _MinimalRow]] = MappingProxyType(
         # is not exercised here. `tests/test_golden_set.py` is what drives it.
         "golden_corrections": _MinimalRow(
             parents={"golden_field_id": "golden_fields"},
+            requires=frozenset({"users"}),
             columns={
                 "act": "'confirm'",
-                "signed_by": "'TEST-ONLY'",
+                "signed_by": f"'{SEED_ACTOR_SUBJECT}'",
                 "reason": "'TEST-ONLY'",
                 "source_citation": "'TEST-ONLY'",
                 "tag_before": "'delivered_report'",

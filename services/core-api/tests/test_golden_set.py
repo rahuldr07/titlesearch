@@ -86,6 +86,13 @@ GOLDEN_ACT_LITERALS = ("correct", "confirm", "demote")
 
 CHECK_VIOLATION_SQLSTATE = "23514"
 FEATURE_NOT_SUPPORTED_SQLSTATE = "0A000"
+
+# `invalid_authorization_specification` — `0100`'s `resolve_actor` and `0102`'s
+# signer check both raise it by name for "this identity does not resolve to an
+# active seat". Asserted specifically rather than "something raised": a CHECK
+# constraint answers `23514` and a bad enum label `22P02`, and either would read
+# as proof that the signer check works.
+NO_ACTOR_SQLSTATE = "28000"
 FOREIGN_KEY_VIOLATION_SQLSTATE = "23503"
 UNIQUE_VIOLATION_SQLSTATE = "23505"
 
@@ -181,12 +188,45 @@ INSERT_LEDGER = """
          :value_after, CAST(:na_reason_after AS na_reason), :revision_after)
 """
 
+# The two halves of the DELETE + re-INSERT transplant `0101` closes. Literal
+# table names rather than f-strings, like every other statement in this module:
+# ruff reads an interpolated identifier as an injection site whatever is being
+# interpolated, and a constant that has to carry a suppression is a constant
+# people stop reading.
+DELETE_GOLDEN = "DELETE FROM golden_fields WHERE id = :id"
+
+REINSERT_TRANSPLANTED = """
+    INSERT INTO golden_fields
+        (tenant_id, id, order_id, path, value, tag,
+         source_citation, established_by, established_reason)
+    VALUES
+        (:tenant, :id, :order_id, 'test.only.transplanted', 'Lot 9',
+         CAST('delivered_report' AS golden_tag), :citation, :signer, :reason)
+"""
+
 MOVE_GOLDEN = """
     UPDATE golden_fields
        SET value = :value, tag = CAST(:tag AS golden_tag),
            source_citation = :citation, revision = :revision
      WHERE tenant_id = :tenant AND id = :id
 """
+
+
+# 🔴 THE SIGNER HAS TO BE A PERSON AS OF `0102`. `golden_fields.established_by`
+# and `golden_corrections.signed_by` are resolved against `users` in the row's
+# tenant and refused `28000` unless exactly one ACTIVE row carries that
+# `identity_subject`. `'TEST-ONLY reviewer'` was a free-text signature and is now
+# a subject that has to exist, so the fixture writes the person. The literal is
+# unchanged, which keeps every parameter dictionary in this module reading the
+# same way and keeps the value implausible on sight.
+SIGNER = "TEST-ONLY reviewer"
+
+SIGNER_SEED = (
+    "INSERT INTO users "
+    "(tenant_id, email, role, identity_provider, identity_subject) "
+    "VALUES (:tenant, :email, 'reviewer', 'TEST-ONLY', :signer) "
+    "ON CONFLICT DO NOTHING"
+)
 
 
 def _golden_parameters(**overrides: object) -> dict[str, object]:
@@ -203,7 +243,7 @@ def _golden_parameters(**overrides: object) -> dict[str, object]:
         "na_reason": None,
         "tag": "delivered_report",
         "citation": "delivered report v1, page 3",
-        "signer": "TEST-ONLY reviewer",
+        "signer": SIGNER,
         "reason": "seeded from the delivered report",
     }
     parameters.update(overrides)
@@ -216,7 +256,7 @@ def _ledger_parameters(**overrides: object) -> dict[str, object]:
         "tenant": TENANT,
         "golden_field_id": None,
         "act": "confirm",
-        "signed_by": "TEST-ONLY reviewer",
+        "signed_by": SIGNER,
         "reason": "the seed matches the deed",
         "citation": "delivered report v1, page 3",
         "tag_before": "delivered_report",
@@ -250,6 +290,21 @@ def golden_engine(migrated_database: str, seam_engine: Callable[[str], Engine]) 
                 text(insert_orders_returning("id", "one", "two")),
                 {"one": TENANT, "two": OTHER_TENANT},
             )
+            # One seat per tenant, committed with the orders and for the same
+            # reason: `0102` resolves the signer per row, and the cross-tenant
+            # test needs the OTHER tenant to have a seat of its own so that its
+            # refusal is about the ORDER and not about a missing person.
+            for tenant in (TENANT, OTHER_TENANT):
+                connection.execute(
+                    text(SIGNER_SEED),
+                    {
+                        "tenant": tenant,
+                        # Lower-case: `ck_users_email_is_lowercase` refuses
+                        # anything else.
+                        "email": f"test-only-{tenant}@test-only.invalid",
+                        "signer": SIGNER,
+                    },
+                )
         yield engine
     finally:
         engine.dispose()
@@ -660,17 +715,30 @@ def test_the_correction_ledger_refuses_update_delete_and_truncate(
     )
 
 
-def test_the_three_golden_triggers_are_enabled_always(golden_engine: Engine) -> None:
-    """`tgenabled = 'A'` on all three, which is what `0004` had to add later.
+def test_the_golden_triggers_are_enabled_always(golden_engine: Engine) -> None:
+    """`tgenabled = 'A'` on all five, which is what `0004` had to add later.
 
     `'O'` is the `CREATE TRIGGER` default and does not fire under
     `session_replication_role = 'replica'` — `0004` measured a `DELETE 1` with no
-    refusal at all on `audit_log`'s pair at `'O'`. These three are created at
-    `'A'` and never spend a revision without it.
+    refusal at all on `audit_log`'s pair at `'O'`. These are created at `'A'` and
+    never spend a revision without it.
 
-    `'D'` (disabled, fires never) and `'R'` (replica only) are the other ways this
-    goes wrong, and both leave `tgtype` intact, so only a read of this column
-    catches them.
+    `'D'` (disabled, fires never) and `'R'` (replica only) are the other ways
+    this goes wrong, and both leave `tgtype` intact, so only a read of this
+    column catches them.
+
+    🔴 AND THERE IS A FOURTH WAY THIS GOES WRONG THAT THIS TEST CANNOT SEE, WHICH
+    IS WHY ITS OLD NAME WAS A PROMISE IT DID NOT KEEP. `CREATE OR REPLACE
+    FUNCTION golden_fields_require_ledger() ... BEGIN RETURN NULL; END` removes
+    `0072`'s entire guarantee and leaves `tgenabled` at `'A'`, `tgtype` at `17`
+    and `proname` unchanged — every character this query reads is identical
+    afterwards. `tests/test_trigger_function_bodies.py` is the machine for that
+    case; this one is now explicitly the CATALOG half and says so in its name and
+    here, rather than reading as the whole story.
+
+    Five and no longer three: `0101` adds `golden_fields_no_delete` and
+    `golden_fields_no_truncate`, and `0102` adds the two signer triggers. The set
+    is exact in both directions, so a sixth arrives as a diff somebody reads.
     """
     with golden_engine.connect() as connection:
         rows = connection.execute(
@@ -688,7 +756,11 @@ def test_the_three_golden_triggers_are_enabled_always(golden_engine: Engine) -> 
     assert states == {
         "golden_corrections_append_only": "A",
         "golden_corrections_no_truncate": "A",
+        "golden_corrections_signer_is_a_person": "A",
         "golden_fields_ledger_required": "A",
+        "golden_fields_no_delete": "A",
+        "golden_fields_no_truncate": "A",
+        "golden_fields_signer_is_a_person": "A",
     }, f"the golden triggers are not all ALWAYS-enabled: {states}"
 
 
@@ -932,4 +1004,270 @@ def test_the_immutable_columns_are_refused(
     )
     assert f"{GOLDEN_TABLE}.{column} is immutable" in str(error), (
         f"the refusal did not name {column}: {error}"
+    )
+
+
+# --- 6. the ways around the immutable columns, closed ------------------------
+
+
+@pytest.mark.parametrize(
+    ("verb", "statement"),
+    [
+        ("DELETE", DELETE_GOLDEN),
+        # A zero-MATCH delete, which is the case a `FOR EACH ROW` trigger is
+        # SILENT for. `0001` records the same reasoning for `audit_log`: a
+        # statement that removes nothing and raises nothing is indistinguishable
+        # at the client from a refusal that did not happen.
+        ("DELETE matching nothing", "DELETE FROM golden_fields WHERE false"),
+        ("TRUNCATE", "TRUNCATE golden_fields CASCADE"),
+    ],
+)
+def test_a_golden_field_cannot_be_removed(verb: str, statement: str, golden_engine: Engine) -> None:
+    """🔴 THE WAY AROUND `0072`, WHICH HELD SEVEN COLUMNS AGAINST *UPDATE* ONLY.
+
+    `0072`'s trigger is `AFTER UPDATE`, and an `AFTER UPDATE` trigger cannot see
+    a DELETE. Measured before `0101`: delete the row, insert it again with the
+    same `id` and the same `created_at` and a different `order_id`, and all seven
+    "immutable" columns have moved without any UPDATE running — and without the
+    ledger being consulted, because a fresh row starts at `revision = 0` and
+    revision 0 IS the establishment.
+
+    `golden_engine` is the CONTAINER SUPERUSER, which is the strongest identity
+    available to this suite. The refusal is a trigger and applies to it as
+    readily as to `titlepipe_app`, which holds no `DELETE` grant anyway — so
+    running this as the superuser is what distinguishes "the trigger refuses"
+    from "the ACL refuses", and only the first is `0101`'s claim.
+    """
+    golden_field_id = _establish(golden_engine)
+
+    error = _refuses(golden_engine, statement, {"id": golden_field_id})
+    assert _sqlstate(error) == FEATURE_NOT_SUPPORTED_SQLSTATE, (
+        f"{verb} on {GOLDEN_TABLE} returned {_sqlstate(error)!r} rather than "
+        f"{FEATURE_NOT_SUPPORTED_SQLSTATE!r}. A code of None means it SUCCEEDED, "
+        f"and a succeeding DELETE is the whole bypass: {error}"
+    )
+    assert "is not deletable" in str(error), (
+        f"{FEATURE_NOT_SUPPORTED_SQLSTATE} came from something other than "
+        f"{GOLDEN_TABLE}'s removal trigger: {error}"
+    )
+
+
+def test_the_delete_and_reinsert_transplant_is_refused_at_the_delete(
+    golden_engine: Engine,
+) -> None:
+    """The exploit as one transaction, from the top, ending where it should.
+
+    The parametrised test above proves DELETE is refused. This one proves the
+    SEQUENCE the finding actually used is stopped, which is a different claim: a
+    reader who only saw a `DELETE` refusal could reasonably ask whether the
+    transplant had some other route into the same state.
+
+    The second half — re-inserting the same `id` with a re-pointed `order_id` —
+    is deliberately still written out, and is unreachable. If a later revision
+    ever relaxes the DELETE refusal, this test fails on the DELETE line rather
+    than passing quietly with the exploit's tail never exercised.
+    """
+    golden_field_id = _establish(golden_engine)
+    with golden_engine.connect() as connection:
+        other_order = _order_id(connection, OTHER_TENANT)
+
+    error = _refuses(golden_engine, DELETE_GOLDEN, {"id": golden_field_id})
+
+    assert _sqlstate(error) == FEATURE_NOT_SUPPORTED_SQLSTATE, (
+        f"the transplant's DELETE was not refused: {_sqlstate(error)!r} {error}"
+    )
+    assert "is not deletable" in str(error), error
+
+    # THE SECOND HALF, WRITTEN OUT AND NEVER RUN. `REINSERT_TRANSPLANTED` is the
+    # statement the finding used once the row was gone: the same `id`, the OTHER
+    # tenant's `order_id`, and a fresh `revision` of 0 so that no ledger row is
+    # required. It is a module constant rather than a comment so a reader can see
+    # exactly what is prevented, and the assertion above is what keeps it
+    # unreachable — a DELETE that stops being refused fails at the step that has
+    # to hold rather than somewhere downstream of a state this suite could then
+    # no longer construct.
+    assert ":order_id" in REINSERT_TRANSPLANTED, (
+        "the documented second half of the transplant no longer re-points "
+        "order_id, so it is no longer the exploit this test is about"
+    )
+    assert other_order != golden_field_id, "the other tenant's order is a distinct row"
+
+
+# --- 7. a signature names a person -------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "signer",
+    [
+        # 🔴 THE EXACT STRING FROM THE FINDING. One INSERT..SELECT as
+        # `titlepipe_app` moved a 0.20-confidence reading out of `field_readings`
+        # into the golden set under this name, tagged `agreed`, cited to the
+        # engine's own OCR snippet — every constraint satisfied, all 41 golden
+        # tests green — and a correctly written leaderboard then reported those
+        # readers as 100.0% accurate against truth they had written themselves.
+        "accuracy-backfill",
+        # The shapes the same defect arrives in when somebody is being tidier
+        # about it. None is a person; each passes `established_by_is_signed` and
+        # `established_by_is_not_an_engine`.
+        "ops-team",
+        "svc_golden_importer",
+        "migration 0070 backfill",
+    ],
+)
+def test_a_golden_field_cannot_be_signed_by_something_that_is_not_a_person(
+    signer: str, golden_engine: Engine
+) -> None:
+    """`0070`'s two checks asked the wrong question; `0102` asks the right one.
+
+    `established_by_is_signed` refuses `''` and `'unknown'`.
+    `established_by_is_not_an_engine` refuses the `engine:` namespace. Both were
+    satisfied by `'accuracy-backfill'`, because neither asks whether there is a
+    person here at all.
+
+    The refusal is `28000` and not `23514`, and the difference is the mechanism
+    rather than a preference: this is not a shape a CHECK constraint can express.
+    It is a lookup against another table, in the row's own tenant, filtered by
+    `deactivated_at` — and `0100` already had the function for it.
+    """
+    with golden_engine.connect() as connection:
+        order_id = _order_id(connection, TENANT)
+
+    error = _refuses(
+        golden_engine, INSERT_GOLDEN, _golden_parameters(order_id=order_id, signer=signer)
+    )
+    assert _sqlstate(error) == NO_ACTOR_SQLSTATE, (
+        f"a golden field signed {signer!r} was refused with {_sqlstate(error)!r} "
+        f"rather than {NO_ACTOR_SQLSTATE!r}. A code of None means it was "
+        f"ACCEPTED, which is the promotion this test exists for: {error}"
+    )
+    assert "is not an active seat of this tenant" in str(error), (
+        f"the refusal came from something other than the signer check: {error}"
+    )
+
+
+def test_a_correction_cannot_be_signed_by_something_that_is_not_a_person(
+    golden_engine: Engine,
+) -> None:
+    """The ledger half, because `0072` makes the ledger the ONLY way a value moves.
+
+    A signer check on `golden_fields` alone would leave the whole correction path
+    signable by a job name: `0072` requires a `golden_corrections` row to
+    authorise every UPDATE, and that row carries its own `signed_by`. Closing one
+    and not the other would move the defect rather than fix it.
+    """
+    golden_field_id = _establish(golden_engine)
+
+    error = _refuses(
+        golden_engine,
+        INSERT_LEDGER,
+        _ledger_parameters(golden_field_id=golden_field_id, signed_by="accuracy-backfill"),
+    )
+    assert _sqlstate(error) == NO_ACTOR_SQLSTATE, (
+        f"a correction signed 'accuracy-backfill' returned {_sqlstate(error)!r}: {error}"
+    )
+    assert "is not an active seat of this tenant" in str(error), error
+
+
+def test_a_deactivated_signer_cannot_establish(golden_engine: Engine) -> None:
+    """A retired seat is still a row, and `0102` reads `deactivated_at`.
+
+    `0020` grants no `DELETE` on `users` and says why — "a deleted user row is a
+    record that an audit row then names nobody for" — so the row for somebody who
+    left is permanent. A check that asked only "does this subject exist" would
+    let a departed employee go on establishing ground truth forever.
+    """
+    departed = "TEST-ONLY departed"
+    with golden_engine.begin() as connection:
+        order_id = _order_id(connection, TENANT)
+        connection.execute(
+            text(SIGNER_SEED),
+            {
+                "tenant": TENANT,
+                "email": "test-only-departed@test-only.invalid",
+                "signer": departed,
+            },
+        )
+        connection.execute(
+            text(
+                "UPDATE users SET deactivated_at = now() "
+                "WHERE tenant_id = :tenant AND identity_subject = :signer"
+            ),
+            {"tenant": TENANT, "signer": departed},
+        )
+
+    error = _refuses(
+        golden_engine, INSERT_GOLDEN, _golden_parameters(order_id=order_id, signer=departed)
+    )
+    assert _sqlstate(error) == NO_ACTOR_SQLSTATE, (
+        f"a deactivated seat established a golden field: {_sqlstate(error)!r} {error}"
+    )
+
+
+def test_a_signer_from_another_tenant_cannot_establish_here(golden_engine: Engine) -> None:
+    """Tenancy, on the signature itself.
+
+    The `users` row exists and is active — in the OTHER tenant. `0102` resolves
+    against `NEW.tenant_id`, so a real, current colleague of another customer is
+    not a signer here, and the refusal is the same one a fictional name gets.
+    """
+    outsider = "TEST-ONLY outsider"
+    with golden_engine.begin() as connection:
+        order_id = _order_id(connection, TENANT)
+        connection.execute(
+            text(SIGNER_SEED),
+            {
+                "tenant": OTHER_TENANT,
+                "email": "test-only-outsider@test-only.invalid",
+                "signer": outsider,
+            },
+        )
+
+    error = _refuses(
+        golden_engine, INSERT_GOLDEN, _golden_parameters(order_id=order_id, signer=outsider)
+    )
+    assert _sqlstate(error) == NO_ACTOR_SQLSTATE, (
+        f"another tenant's seat established a golden field here: {_sqlstate(error)!r} {error}"
+    )
+
+
+def test_a_named_person_can_still_promote_an_engine_reading(golden_engine: Engine) -> None:
+    """🔴 THIS TEST PASSES WHEN THE PROMOTION SUCCEEDS, AND THAT IS DELIBERATE.
+
+    `0102`'s docstring says what it does and does not buy, and this is the second
+    half as a machine. A real, active, seat-holding person can still take an
+    engine's 0.20-confidence reading, cite the engine's own OCR snippet, and
+    establish it as ground truth under their own name.
+
+    What `0102` changed is that the record then names somebody who can be asked,
+    instead of a job that cannot. It is a smaller property than "engine output
+    cannot become ground truth" and this suite will not report the larger one.
+
+    WHEN THIS GOES RED, READ WHAT CHANGED. Red means a citation is now anchored
+    to a document rather than to a string — page id plus bounding box, verified
+    against `pages` — which is the thing that would actually close it. Then
+    delete this test and correct `0102`'s docstring, which currently says the
+    opposite.
+    """
+    with golden_engine.connect() as connection:
+        order_id = _order_id(connection, TENANT)
+
+    with golden_engine.connect() as connection:
+        established = connection.execute(
+            text(INSERT_GOLDEN),
+            _golden_parameters(
+                order_id=order_id,
+                tag="agreed",
+                # The engine's own output, in both the value and the citation.
+                value="Lot 7, Block 2",
+                citation="reader_a OCR snippet, confidence 0.20",
+            ),
+        ).scalar_one()
+        connection.rollback()
+
+    assert established is not None, (
+        "a signed promotion of an engine reading was REFUSED, so this residual "
+        "has been closed since the test was written. Read what changed before "
+        "editing anything: if source_citation is now anchored to a page and a "
+        "bounding box, delete this test and correct 0102's docstring. Do not "
+        "'fix' this test to match."
     )
