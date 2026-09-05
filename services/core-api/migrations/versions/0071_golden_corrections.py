@@ -139,6 +139,9 @@ TRIGGER_ALWAYS = "A"
 ENGINE_SUBJECT_NAMESPACE = "engine:"
 UNSIGNED_SENTINEL = "unknown"
 
+# CHECK constraints are named by their rule alone — `0070`'s note records what
+# a fully-spelled name comes out of the database as, and why.
+
 POLICY_NAME = "tenant_isolation"
 TENANT_GUC = "app.current_tenant"
 
@@ -239,46 +242,42 @@ def upgrade() -> None:
         ),
         sa.CheckConstraint(
             _whole_truth("value_before", "na_reason_before"),
-            name="ck_golden_corrections_before_is_a_whole_truth",
+            name="before_is_a_whole_truth",
         ),
         sa.CheckConstraint(
             _whole_truth("value_after", "na_reason_after"),
-            name="ck_golden_corrections_after_is_a_whole_truth",
+            name="after_is_a_whole_truth",
         ),
         sa.CheckConstraint(
             f"length(btrim(signed_by)) > 0 AND lower(btrim(signed_by)) <> '{UNSIGNED_SENTINEL}'",
-            name="ck_golden_corrections_signed_by_is_signed",
+            name="signed_by_is_signed",
         ),
         sa.CheckConstraint(
             f"lower(btrim(signed_by)) NOT LIKE '{ENGINE_SUBJECT_NAMESPACE}%'",
-            name="ck_golden_corrections_signed_by_is_not_an_engine",
+            name="signed_by_is_not_an_engine",
         ),
-        sa.CheckConstraint(
-            "length(btrim(reason)) > 0", name="ck_golden_corrections_reason_is_not_blank"
-        ),
+        sa.CheckConstraint("length(btrim(reason)) > 0", name="reason_is_not_blank"),
         sa.CheckConstraint(
             "length(btrim(source_citation)) > 0",
-            name="ck_golden_corrections_citation_is_not_blank",
+            name="citation_is_not_blank",
         ),
         sa.CheckConstraint(
             f"act = 'correct' OR ({_truth_is_unmoved()})",
-            name="ck_golden_corrections_affirmation_leaves_the_value_alone",
+            name="affirmation_leaves_the_value_alone",
         ),
         sa.CheckConstraint(
             f"act <> 'correct' OR NOT ({_truth_is_unmoved()})",
-            name="ck_golden_corrections_correction_moves_the_value",
+            name="correction_moves_the_value",
         ),
         sa.CheckConstraint(
             "act <> 'confirm' OR tag_after = 'ruled'",
-            name="ck_golden_corrections_confirm_lands_on_ruled",
+            name="confirm_lands_on_ruled",
         ),
         sa.CheckConstraint(
             "act <> 'demote' OR tag_after = 'suspect'",
-            name="ck_golden_corrections_demote_lands_on_suspect",
+            name="demote_lands_on_suspect",
         ),
-        sa.CheckConstraint(
-            "revision_after > 0", name="ck_golden_corrections_revision_after_is_positive"
-        ),
+        sa.CheckConstraint("revision_after > 0", name="revision_after_is_positive"),
     )
 
     # `0072`'s trigger reads this table by `(tenant_id, golden_field_id)` on

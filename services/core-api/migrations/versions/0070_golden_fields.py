@@ -180,6 +180,22 @@ ENGINE_SUBJECT_NAMESPACE = "engine:"
 # by name, lower-cased and trimmed, so the fallback cannot land here.
 UNSIGNED_SENTINEL = "unknown"
 
+# 🔴 CHECK CONSTRAINTS ARE NAMED BY THEIR RULE ALONE, NOT BY `ck_<table>_<rule>`.
+#
+# `models.NAMING_CONVENTION`'s `ck` pattern is `ck_%(table_name)s_%(constraint
+# _name)s`, and a naming convention containing `%(constraint_name)s` is applied
+# to a constraint that ALREADY HAS a name — the given name becomes the
+# `constraint_name` component. Alembic hands `op.create_table` the target
+# metadata's convention, so a fully-spelled `name="ck_golden_fields_..."` here
+# came out of the database as
+# `ck_golden_fields_ck_golden_fields_established_by_is_not_4a03` — doubled, then
+# truncated at PostgreSQL's 63-character `NAMEDATALEN` with a hash suffix.
+# MEASURED on this tree, which is how it was found: the refusal tests assert the
+# constraint NAME and reported the mangled one.
+#
+# So each `name=` below is the rule and nothing else, and the full spelling in
+# the comments and in `tests/test_golden_set.py` is what the convention builds.
+
 POLICY_NAME = "tenant_isolation"
 TENANT_GUC = "app.current_tenant"
 
@@ -307,24 +323,16 @@ def upgrade() -> None:
         sa.UniqueConstraint(
             "tenant_id", "order_id", "path", name="uq_golden_fields_tenant_id_order_id_path"
         ),
-        sa.CheckConstraint(
-            "num_nonnulls(value, na_reason) = 1", name="ck_golden_fields_value_xor_na_reason"
-        ),
-        sa.CheckConstraint(_not_blank("path"), name="ck_golden_fields_path_is_not_blank"),
-        sa.CheckConstraint(
-            _not_blank("source_citation"), name="ck_golden_fields_citation_is_not_blank"
-        ),
-        sa.CheckConstraint(
-            _not_blank("established_reason"), name="ck_golden_fields_reason_is_not_blank"
-        ),
-        sa.CheckConstraint(
-            _signer_is_present("established_by"), name="ck_golden_fields_established_by_is_signed"
-        ),
+        sa.CheckConstraint("num_nonnulls(value, na_reason) = 1", name="value_xor_na_reason"),
+        sa.CheckConstraint(_not_blank("path"), name="path_is_not_blank"),
+        sa.CheckConstraint(_not_blank("source_citation"), name="citation_is_not_blank"),
+        sa.CheckConstraint(_not_blank("established_reason"), name="reason_is_not_blank"),
+        sa.CheckConstraint(_signer_is_present("established_by"), name="established_by_is_signed"),
         sa.CheckConstraint(
             _signer_is_not_an_engine("established_by"),
-            name="ck_golden_fields_established_by_is_not_an_engine",
+            name="established_by_is_not_an_engine",
         ),
-        sa.CheckConstraint("revision >= 0", name="ck_golden_fields_revision_is_not_negative"),
+        sa.CheckConstraint("revision >= 0", name="revision_is_not_negative"),
     )
 
     # ENABLE, then FORCE, then the policy — `0002::_isolate`'s order and its

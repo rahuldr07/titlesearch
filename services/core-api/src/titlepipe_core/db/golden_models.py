@@ -103,6 +103,11 @@ ENGINE_SUBJECT_NAMESPACE: Final = "engine:"
 UNSIGNED_SENTINEL: Final = "unknown"
 
 
+# CHECK constraints are named by their RULE alone. `models.NAMING_CONVENTION`'s
+# `ck` pattern contains `%(constraint_name)s`, so a convention is applied to a
+# constraint that already has a name and a fully-spelled one comes out doubled
+# and truncated — `migrations/versions/0070_golden_fields.py` records the
+# measurement. The full spelling is `ck_<table>_<rule>`.
 class GoldenField(_TenantRow):
     """One human-established truth: a value for one path on one order.
 
@@ -168,26 +173,20 @@ class GoldenField(_TenantRow):
         UniqueConstraint(
             "tenant_id", "order_id", "path", name="uq_golden_fields_tenant_id_order_id_path"
         ),
-        CheckConstraint(
-            "num_nonnulls(value, na_reason) = 1", name="ck_golden_fields_value_xor_na_reason"
-        ),
-        CheckConstraint("length(btrim(path)) > 0", name="ck_golden_fields_path_is_not_blank"),
-        CheckConstraint(
-            "length(btrim(source_citation)) > 0", name="ck_golden_fields_citation_is_not_blank"
-        ),
-        CheckConstraint(
-            "length(btrim(established_reason)) > 0", name="ck_golden_fields_reason_is_not_blank"
-        ),
+        CheckConstraint("num_nonnulls(value, na_reason) = 1", name="value_xor_na_reason"),
+        CheckConstraint("length(btrim(path)) > 0", name="path_is_not_blank"),
+        CheckConstraint("length(btrim(source_citation)) > 0", name="citation_is_not_blank"),
+        CheckConstraint("length(btrim(established_reason)) > 0", name="reason_is_not_blank"),
         CheckConstraint(
             "length(btrim(established_by)) > 0 AND "
             f"lower(btrim(established_by)) <> '{UNSIGNED_SENTINEL}'",
-            name="ck_golden_fields_established_by_is_signed",
+            name="established_by_is_signed",
         ),
         CheckConstraint(
             f"lower(btrim(established_by)) NOT LIKE '{ENGINE_SUBJECT_NAMESPACE}%'",
-            name="ck_golden_fields_established_by_is_not_an_engine",
+            name="established_by_is_not_an_engine",
         ),
-        CheckConstraint("revision >= 0", name="ck_golden_fields_revision_is_not_negative"),
+        CheckConstraint("revision >= 0", name="revision_is_not_negative"),
     )
 
 
@@ -246,46 +245,42 @@ class GoldenCorrection(_TenantRow):
         ),
         CheckConstraint(
             "num_nonnulls(value_before, na_reason_before) = 1",
-            name="ck_golden_corrections_before_is_a_whole_truth",
+            name="before_is_a_whole_truth",
         ),
         CheckConstraint(
             "num_nonnulls(value_after, na_reason_after) = 1",
-            name="ck_golden_corrections_after_is_a_whole_truth",
+            name="after_is_a_whole_truth",
         ),
         CheckConstraint(
             f"length(btrim(signed_by)) > 0 AND lower(btrim(signed_by)) <> '{UNSIGNED_SENTINEL}'",
-            name="ck_golden_corrections_signed_by_is_signed",
+            name="signed_by_is_signed",
         ),
         CheckConstraint(
             f"lower(btrim(signed_by)) NOT LIKE '{ENGINE_SUBJECT_NAMESPACE}%'",
-            name="ck_golden_corrections_signed_by_is_not_an_engine",
+            name="signed_by_is_not_an_engine",
         ),
-        CheckConstraint(
-            "length(btrim(reason)) > 0", name="ck_golden_corrections_reason_is_not_blank"
-        ),
+        CheckConstraint("length(btrim(reason)) > 0", name="reason_is_not_blank"),
         CheckConstraint(
             "length(btrim(source_citation)) > 0",
-            name="ck_golden_corrections_citation_is_not_blank",
+            name="citation_is_not_blank",
         ),
         CheckConstraint(
             "act = 'correct' OR (value_before IS NOT DISTINCT FROM value_after "
             "AND na_reason_before IS NOT DISTINCT FROM na_reason_after)",
-            name="ck_golden_corrections_affirmation_leaves_the_value_alone",
+            name="affirmation_leaves_the_value_alone",
         ),
         CheckConstraint(
             "act <> 'correct' OR NOT (value_before IS NOT DISTINCT FROM value_after "
             "AND na_reason_before IS NOT DISTINCT FROM na_reason_after)",
-            name="ck_golden_corrections_correction_moves_the_value",
+            name="correction_moves_the_value",
         ),
         CheckConstraint(
             "act <> 'confirm' OR tag_after = 'ruled'",
-            name="ck_golden_corrections_confirm_lands_on_ruled",
+            name="confirm_lands_on_ruled",
         ),
         CheckConstraint(
             "act <> 'demote' OR tag_after = 'suspect'",
-            name="ck_golden_corrections_demote_lands_on_suspect",
+            name="demote_lands_on_suspect",
         ),
-        CheckConstraint(
-            "revision_after > 0", name="ck_golden_corrections_revision_after_is_positive"
-        ),
+        CheckConstraint("revision_after > 0", name="revision_after_is_positive"),
     )
