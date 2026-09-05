@@ -1,8 +1,15 @@
 """`instruments`, the DERIVED `chain_links` over them, and the human stop
 
 Revision ID: 0040
-Revises: 0008
+Revises: 0032
 Create Date: 2026-09-04
+
+LINEARIZED AT INTEGRATION, 2026-09-05: `down_revision` was `0008` — the head as this file's
+author found it, per CONVENTIONS §8 — and is now `0032`. `0032` is the head after Meenakshi's range. `instruments` and `chain_links` reference
+`orders` (`0001`, columns from `0008`) and `documents` (`0030`) — both are behind this
+point in the linear chain, which `0008` alone would not have guaranteed.
+The prose below is the author's and describes the branch as written; this line is the read of
+the chain that `alembic upgrade head` actually walks.
 
 ## Assumed parent
 
@@ -153,7 +160,7 @@ from alembic import op
 from sqlalchemy.dialects import postgresql
 
 revision: str = "0040"
-down_revision: str | None = "0008"
+down_revision: str | None = "0032"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
