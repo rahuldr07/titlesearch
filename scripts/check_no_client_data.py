@@ -436,6 +436,12 @@ LARGE_TEXT_BYTES = 512 * 1024
 # covered without an edit here.
 LOCKFILE_NAMES = re.compile(r"(^|[.\-])lock\.(json|ya?ml|toml)$|\.lock$", re.IGNORECASE)
 
+# A header row and its data rows are lines, not documents. Past this a line is
+# not a table row, and `csv.reader` refuses to parse a field longer than 128 KB
+# anyway — it raises rather than returning, which turned a 512 KB single-line
+# `.json` into a traceback instead of a verdict.
+MAX_ROW_CHARS = 64 * 1024
+
 # The extract rule reads whole files, so the read is bounded. Nothing tracked is
 # close to this, and a text file past it is refused by the size rule anyway.
 MAX_TEXT_BYTES = 4 * 1024 * 1024
@@ -463,11 +469,14 @@ def tabular_identity_header(text: str) -> str | None:
     to test at all — searching the whole file for `grantor` would fire on this
     repository's own vocabulary on almost every page.
     """
-    lines = [line for line in text.split("\n") if line.strip()][:200]
+    lines = [line for line in text.split("\n") if line.strip() and len(line) <= MAX_ROW_CHARS][:200]
     if not lines:
         return None
     for delimiter in DELIMITERS:
-        rows = list(csv.reader(lines, delimiter=delimiter))
+        try:
+            rows = list(csv.reader(lines, delimiter=delimiter))
+        except csv.Error:
+            continue  # not a table in this dialect; the other rules still apply
         header = [field.strip().casefold().replace(" ", "_").replace("-", "_") for field in rows[0]]
         if len(header) < 3:
             continue
