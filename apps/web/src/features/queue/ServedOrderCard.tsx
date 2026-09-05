@@ -27,6 +27,19 @@ import { PassReason } from "./PassReason";
  * `secondary`: two bordered buttons side by side read as a choice between
  * equals, which this is not.
  *
+ * Start review is `lg`, and the size is part of the same statement. RECIPES
+ * reserves `lg` for "the one action a decision screen leads with", and
+ * `SpotlightOrder` already spends it on this exact act — launching the
+ * workstation on the order the server chose — with the measured reason: at
+ * `md` the primary and the control beside it are both 13px, and the primary
+ * reads only as "the coloured one". The prototype agrees from its own side:
+ * its lead CTA measures 40px tall at 16px/600 against the 13px of the button
+ * next to it (docs/frontend/PIXEL-PARITY-queue.md, row "primary action").
+ * Height is the one axis where nothing here matches: `lg` is 44px, `md` is
+ * 38px, the prototype is 40px, and RECIPES says 38. That is an open kit-level
+ * question in docs/HANDOFF-frontend-2026-09-03.md, not a number to invent on
+ * one screen.
+ *
  * ══ WHY THE REASON REPLACES THE BUTTONS RATHER THAN APPEARING BELOW ════════
  *
  * While the reason is open, Start review must not be one Enter away: Enter
@@ -55,7 +68,7 @@ export function ServedOrderCard(props: {
           />
         ) : (
           <div className="flex items-center gap-6">
-            <Button variant="primary" onPress={props.onStartReview}>
+            <Button variant="primary" size="lg" onPress={props.onStartReview}>
               Start review <Kbd muted>Enter</Kbd>
             </Button>
             <Button variant="ghost" onPress={props.onOpenPass}>
