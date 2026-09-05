@@ -107,7 +107,28 @@ def id_factory() -> SequenceIdFactory:
 
 @pytest.fixture
 def development_settings() -> CoreApiSettings:
-    return CoreApiSettings(environment=Environment.TEST)
+    """The default configuration under test: TEST environment, NO database.
+
+    🔴 `app_database_url=None` IS PASSED, AND PASSING IT IS THE POINT.
+    `CoreApiSettings` is a pydantic-settings model, so every field the caller
+    omits is read from `TITLEPIPE_*` in the shell. This fixture used to pass
+    `environment` alone, which made "no database is configured" a statement
+    about the developer's shell rather than about the fixture — and
+    `.github/workflows/migration-harness.yml` exports
+    `TITLEPIPE_APP_DATABASE_URL`, because core-api cannot start without the app
+    role's DSN. MEASURED on one commit: `tests/test_lifespan_and_health.py`
+    was 12 passed on a bare shell and 2 failed with that variable exported,
+    because `ServiceResources.readiness()` registers `database_answers` when
+    and only when `app_database_url` is set.
+
+    An init keyword beats the environment in pydantic-settings' source order
+    (verified against 2.14.2), so this pins the answer. Every test that reaches
+    a real server takes `app_dsn` or `migration_dsn` from the container
+    instead; a test that wants a database-backed configuration builds one and
+    says so, as `test_ready_reports_the_database_check_once_a_database_is
+    _configured` does.
+    """
+    return CoreApiSettings(environment=Environment.TEST, app_database_url=None)
 
 
 @pytest.fixture
