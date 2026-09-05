@@ -14,7 +14,7 @@ third — would encode a relationship nobody has established, and the failure wo
 surface as a delivered document that cannot be reproduced.
 
 **v1 AND v2 ARE BOTH RETAINED PERMANENTLY, AS THE DEFECT RECORD.** The plan's §1
-requires it of a reissue. The machine is `0009`'s `reports_are_append_only`
+requires it of a reissue. The machine is `0050`'s `reports_are_append_only`
 trigger, `BEFORE UPDATE OR DELETE ... FOR EACH STATEMENT`, modelled on
 `audit_log`'s and STATEMENT-level for that trigger's reason: under `FORCE ROW
 LEVEL SECURITY` a cross-tenant `UPDATE` matches zero rows, and a row trigger does
