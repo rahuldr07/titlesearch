@@ -86,19 +86,19 @@ TENANT_KEY_COLUMN: Final = "tenant_id"
 REGISTRY_TABLE: Final = "tenants"
 REGISTRY_KEY_COLUMN: Final = "id"
 
-# 🔴 THE ALLOWLIST. Every name here must NOT be isolated, and needs its reason in
-# this comment rather than in a commit message.
+# 🔴 THE ALLOWLIST. Every name here must NOT be isolated, and needs its reason in this comment and
+# not in a commit message. Adding one is a reviewer-visible diff that has to argue the table has no
+# tenant in it; `exempt_table_is_tenant_scoped` stops the list being used the other way round.
 #
-# `alembic_version` — Alembic's bookkeeping. An `id`-keyed policy on it locks
-#   Alembic out of its own migration state; there is no tenant in it.
-# `rules` — global by CONVENTIONS §1. The rulebook is the same for every tenant,
-#   its repository is a SIBLING of the tenant-scoped ones rather than a subclass,
-#   and a `tenant_id` on it would be a per-tenant rulebook nobody asked for.
-#
-# Adding a name here is a reviewer-visible diff that has to argue the table has
-# no tenant in it. `exempt_table_is_tenant_scoped` is what stops the list being
-# used the other way, to silence a table that does.
-UNSCOPED_TABLES: Final = frozenset({"alembic_version", "rules"})
+# `alembic_version` — Alembic's bookkeeping. An `id`-keyed policy on it locks Alembic out of its own
+#   migration state; there is no tenant in it.
+# `rules` — global by CONVENTIONS §1: the rulebook is the same for every tenant, its repository is a
+#   SIBLING of the tenant-scoped ones, and a `tenant_id` would make the rulebook per-tenant.
+# `retention_windows` — global for the same reason and one more: a statutory retention floor is not
+#   a tenant's property, so a `tenant_id` would say a tenant may hold a shorter floor than the law.
+#   `0005_record_class_taxonomy` creates it; `db/models/retention.py` declares it a `_Row`. It
+#   reached this list only at integration — the first `upgrade head` over the chain failed on it.
+UNSCOPED_TABLES: Final = frozenset({"alembic_version", "retention_windows", "rules"})
 
 # The deparsed predicate, whole and anchored. See the module docstring for the
 # measurement this shape comes from and for why `IGNORECASE` costs nothing.
