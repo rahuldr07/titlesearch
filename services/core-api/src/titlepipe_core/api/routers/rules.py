@@ -91,10 +91,13 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Request
 
+from titlepipe_core.api.dependencies import SessionFactory
 from titlepipe_core.api.mappers.rules import render_rule_history, render_rules
-from titlepipe_core.api.reads import scoped_read
 from titlepipe_core.api.schemas.rules import RuleHistoryResponse, RulesResponse
 from titlepipe_core.db import RuleRepository
+from titlepipe_core.db.reads import scoped_read
+from titlepipe_core.lifespan import get_resources
+from titlepipe_core.services.rule_service import RuleService
 from titlepipe_domain import NotFoundError
 
 # `/api` here rather than on each route, and `/health` and `/ready` are NOT under
@@ -111,32 +114,24 @@ _UNAVAILABLE_MESSAGE = "The rulebook is temporarily unavailable. Try again short
 
 
 @router.get("/rules", response_model=RulesResponse, summary="The whole rulebook")
-async def list_rules(request: Request) -> RulesResponse:
-    """Every rule, every status, in `RuleRepository.list_all`'s order.
+async def list_rules(session_factory: SessionFactory) -> RulesResponse:
+    """Every rule, every status, in the order the service returns them.
 
-    `tenant=None` is passed EXPLICITLY and is not a default. `api/reads.py`
-    records why the parameter has none: `None` here means the session runs at the
-    DENY floor and reads the one table that floor does not cover, and it is the
-    right argument for a global table — but it is the wrong argument for the
-    sixty-nine tenant-scoped reads that follow this one, so it is not the value
-    anybody gets by forgetting.
+    Two statements, and neither of them is a decision. Which rules, in what
+    order, under which tenant, and what a caller reads when the database is not
+    there are all `RuleService.list_rules`'s; how a row becomes the wire is
+    `api/mappers/rules.py`'s. What is left here is the route.
 
-    **`render_rules` IS OUTSIDE `scoped_read` AND THAT IS THE DESIGN.**
-    A `ValidationError` raised here means a label reached the boundary that
-    `packages/contract` does not have — a defect in this service, which
-    `handle_unexpected` renders as a 500. Moving the call inside `read` would put
-    it under that function's `except SQLAlchemyError`, which does not catch a
-    `ValidationError` today, and would become wrong the moment anyone widened it.
-    `api/schemas/rules.py` explains why the boundary catch belongs where it is.
+    **THE MAPPER CALL IS OUTSIDE THE SERVICE AND THAT IS THE DESIGN.** A
+    `ValidationError` raised by `render_rules` means a label reached the boundary
+    that `packages/contract` does not have — a defect in this service, which
+    `handle_unexpected` renders as a 500. Rendering inside the service would put
+    it under `scoped_read`'s `except SQLAlchemyError`: that clause does not catch
+    a `ValidationError` today and would dress a defect as a downstream outage the
+    moment anyone widened it. `db/reads.py` argues the same separation from the
+    other end.
     """
-    rows = await scoped_read(
-        request,
-        resource="rulebook",
-        unavailable_message=_UNAVAILABLE_MESSAGE,
-        tenant=None,
-        read=lambda session: RuleRepository(session).list_all(),
-    )
-    return render_rules(rows)
+    return render_rules(await RuleService(session_factory).list_rules())
 
 
 @router.get(
@@ -179,7 +174,7 @@ async def rule_history(request: Request, code: str) -> RuleHistoryResponse:
     cover.
     """
     rows = await scoped_read(
-        request,
+        get_resources(request.app).sessionmaker,
         resource="rulebook",
         unavailable_message=_UNAVAILABLE_MESSAGE,
         tenant=None,

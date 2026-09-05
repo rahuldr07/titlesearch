@@ -1,8 +1,28 @@
-"""`scoped_read` — the one place a product route acquires a session and decides
+"""`scoped_read` — the one place a use case opens a scoped session and decides
 what a database failure means.
 
+🔴 THIS WAS `api/reads.py` AND MOVED HERE ON 2026-09-05, WITH ITS FIRST
+ARGUMENT CHANGED FROM A `Request` TO A SESSIONMAKER. CONVENTIONS.md §10 puts the
+use case in `services/` and forbids that layer `fastapi`, and a service cannot
+call a function that wants a `Request` — so the question was not where the file
+should sit but what the `Request` was ever for. It was for one attribute:
+`get_resources(request.app).sessionmaker`. That is application wiring, and the
+handler layer already has a name for it (`api/dependencies.py`).
+
+What is left after taking it out is a function that opens a tenant-scoped
+session and translates driver failures. Both halves are database concerns:
+
+* it is not `services/`, which owns use cases and would then own SQLAlchemy's
+  exception taxonomy, and putting it in ONE service's module would make the next
+  service import a sibling service to read a row;
+* it is not `db/repositories/`, which is for repositories — this holds no table,
+  issues no statement and is the thing a repository is HANDED a session by;
+* it is `db/`, beside `session.py` and `engine.py`, which are the other two
+  halves of the same seam. `engine.py` owns the connection's lifetime,
+  `session.py` owns the scope, and this owns one read inside it.
+
 Every block below was INLINE IN `api/routers/rules.py`, the one product route
-that exists. PLAN.md §8 rules that the `GET /api/rules` machinery generalises to
+that existed when it was written. PLAN.md §8 rules that the `GET /api/rules` machinery generalises to
 the other sixty-nine endpoints, and a block copied sixty-nine times is
 sixty-nine chances to get one of these four things wrong:
 
@@ -16,8 +36,10 @@ sixty-nine chances to get one of these four things wrong:
 * build a sessionmaker in the route, which opens a pool per request and holds a
   credential the lifespan never releases.
 
-The route keeps the two decisions that ARE its own: which tenant it runs under,
-and what sentence a caller reads. Everything else is here.
+The CALLER keeps the two decisions that are its own: which tenant it runs under,
+and what sentence a caller reads. Since 2026-09-05 that caller is a service and
+not a route — both are domain answers and neither changes if the transport does.
+Everything else is here.
 
 ## The serialisation call is deliberately NOT inside this function
 
@@ -45,8 +67,9 @@ reasoning for `tenant_guc_value`, which is the function on the other end of it.
 nothing. The session is at the DENY floor. What there is no spelling for here is
 "unscoped": `tenant_session` is the only thing in this tree that moves the
 connection-level default, so a read that wanted to skip it would have to not call
-this function at all — and `tests/test_api_layer_discipline.py` is what notices
-a router that opened its own session.
+this function at all — and `scripts/check_backend_rules.py`'s `layer-router-db`
+rule is what notices a router reaching for one, since a router that wanted its
+own session would have to import this package to get there.
 
 Giving `tenant` a default of `None` would make the global case the one you get by
 forgetting, on a surface where sixty-nine of seventy reads are tenant-scoped.
@@ -58,12 +81,10 @@ from collections.abc import Awaitable, Callable
 
 from sqlalchemy.exc import InterfaceError, OperationalError, SQLAlchemyError
 from sqlalchemy.exc import TimeoutError as SQLAlchemyTimeoutError
-from sqlalchemy.ext.asyncio import AsyncSession
-from starlette.requests import Request
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from structlog.typing import FilteringBoundLogger
 
-from titlepipe_core.db import tenant_session
-from titlepipe_core.lifespan import get_resources
+from titlepipe_core.db.session import tenant_session
 from titlepipe_core.telemetry.logging import get_logger
 from titlepipe_domain import DependencyUnavailableError, TenantId
 
@@ -99,7 +120,7 @@ def _log() -> FilteringBoundLogger:
 
 
 async def scoped_read[T](
-    request: Request,
+    sessionmaker: async_sessionmaker[AsyncSession] | None,
     *,
     resource: str,
     unavailable_message: str,
@@ -132,8 +153,6 @@ async def scoped_read[T](
     sets `expire_on_commit=False`; `tests/test_tenant_session.py` pins that and it
     is not re-proved here.
     """
-    resources = get_resources(request.app)
-    sessionmaker = resources.sessionmaker
     if sessionmaker is None:
         _log().error(f"{resource}_read_unconfigured")
         raise DependencyUnavailableError(unavailable_message)
