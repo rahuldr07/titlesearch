@@ -15,6 +15,7 @@ import { expect, test } from "@playwright/test";
  */
 const ROUTES = [
   "/",
+  "/queue",
   "/orders-list",
   "/orders",
   "/ingest",
