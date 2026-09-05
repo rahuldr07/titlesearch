@@ -87,22 +87,37 @@ about a database, so it is asserted by
 `test_the_identity_sequence_needs_no_grant`, which inserts a worker row as
 `titlepipe_worker` with nothing granted on that sequence.
 
-## Why the SQL is executed through `exec_driver_sql` and not `op.execute(text(...))`
+## 🔴 WHY THE SCHEMA GOES THROUGH THE RAW DBAPI CURSOR AND NOT THROUGH SQLALCHEMY
 
-The vendored file contains four `RAISE ... (job id: %)` messages. Under psycopg's
-`pyformat` paramstyle a `%` in a statement executed WITH a parameter collection is
-a format placeholder, and the library's own `SchemaManager.apply_schema` doubles
-every `%` for exactly that reason before handing the text to a parameterised
-execute.
+The vendored file contains four `RAISE ... (job id: %)` messages inside PL/pgSQL
+function bodies, and under psycopg's `pyformat` paramstyle a `%` is a placeholder.
 
-Doubling them here would put `%%` into a production error message. The narrower
-fix is to take the path where no parameters exist at all: SQLAlchemy routes a
-statement with no bound parameters through `Dialect.do_execute_no_params`, which
-calls `cursor.execute(statement)` with the parameter argument OMITTED, and psycopg
-performs no interpolation when it is not given one. `op.execute(sa.text(...))`
-would also work today — there is no bare `:name` in the file to be mistaken for a
-bind parameter — but it is the wrong guarantee to rely on, because it depends on
-the vendored SQL never acquiring one.
+MEASURED against SQLAlchemy 2.0 / psycopg 3, both obvious spellings fail:
+
+    op.execute(sa.text(schema_sql))          -> psycopg.ProgrammingError:
+    op.get_bind().exec_driver_sql(schema_sql)   only '%s', '%b', '%t' are allowed
+                                                as placeholders, got '%)'
+
+An earlier version of this file claimed `exec_driver_sql` was safe because a
+statement with no bound parameters routes through `Dialect.do_execute_no_params`.
+It does not: SQLAlchemy still hands psycopg an (empty) parameter collection, and
+`PostgresQuery.convert` parses for placeholders whenever `vars is not None` — an
+empty tuple is not None.
+
+**Doubling the `%` is what the library itself does, and it would be WRONG here.**
+`SchemaManager.apply_schema` calls `.replace("%", "%%")` before a PARAMETERISED
+execute, where psycopg's own interpolation pass turns `%%` back into `%` before
+the text reaches the server. With no interpolation pass the doubling survives into
+the stored function body — and PL/pgSQL reads `%%` as a literal percent sign, so
+`RAISE '... (job id: %%)', job_id` is not a cosmetic wart but a function that
+raises `too many parameters specified for RAISE`, discovered the first time a job
+fails.
+
+So the text is handed to the DBAPI cursor with the parameter argument OMITTED,
+which is the one path where `vars is None` and no parsing happens. It is the same
+connection and the same transaction — `Connection.connection` is the DBAPI
+connection SQLAlchemy is already holding — so this is not a second session and
+rolls back with the rest of the migration.
 
 ## Ordering
 
@@ -241,20 +256,32 @@ def _comment_infrastructure_tables() -> None:
         )
 
 
-def _queue_function_signatures() -> list[str]:
-    """Every `procrastinate_*` function in `public`, as `name(argtypes)`.
+def _queue_functions() -> list[tuple[int, str]]:
+    """Every `procrastinate_*` function in `public`, as `(oid, signature)`.
 
     Read from `pg_proc` rather than listed here. Eighteen signatures maintained
     by hand is eighteen chances to mistype `timestamp with time zone`, and the
     consequence of a typo would be a `downgrade` that leaves functions behind
     while reporting success. `pg_get_function_identity_arguments` gives the exact
-    text `DROP FUNCTION` and `has_function_privilege` both accept.
+    text `GRANT` and `DROP FUNCTION` accept.
+
+    🔴 THE OID IS CARRIED ALONGSIDE IT BECAUSE THE SIGNATURE IS NOT INTERCHANGEABLE
+    WITH IT. `pg_get_function_identity_arguments` includes argument NAMES, which
+    `GRANT` and `DROP FUNCTION` accept and `has_function_privilege(text)` does
+    not — MEASURED, it parses its second argument as a type list and answers
+
+        ERROR: syntax error at or near "bigint"
+        CONTEXT: invalid type name "job_id bigint"
+
+    on `procrastinate_cancel_job_v1(job_id bigint, abort boolean, ...)`. The oid
+    overload has no such ambiguity, so the read-back uses it and the DDL uses the
+    text.
     """
     rows = (
         op.get_bind()
         .execute(
             sa.text(
-                "SELECT p.proname || '(' || "
+                "SELECT p.oid, p.proname || '(' || "
                 "pg_get_function_identity_arguments(p.oid) || ')' AS signature "
                 "FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace "
                 "WHERE n.nspname = 'public' AND p.proname LIKE 'procrastinate\\_%' "
@@ -263,7 +290,7 @@ def _queue_function_signatures() -> list[str]:
         )
         .all()
     )
-    return [str(row[0]) for row in rows]
+    return [(int(row[0]), str(row[1])) for row in rows]
 
 
 def _sequence_grantees() -> dict[str, tuple[str, ...]]:
@@ -284,7 +311,7 @@ def _sequence_grantees() -> dict[str, tuple[str, ...]]:
     return {sequence: tuple(roles) for sequence, roles in grantees.items()}
 
 
-def _require_privileges(signatures: list[str]) -> None:
+def _require_privileges(functions: list[tuple[int, str]]) -> None:
     """Read every privilege back, and refuse the migration if one is missing.
 
     ---------------------------------------------------------------------------
@@ -333,11 +360,11 @@ def _require_privileges(signatures: list[str]) -> None:
             if not held:
                 missing.append(f"USAGE ON SEQUENCE {sequence} TO {role}")
 
-    for signature in signatures:
+    for oid, signature in functions:
         for role in GRANTED_ROLES:
             held = bind.execute(
-                sa.text("SELECT has_function_privilege(:role, :signature, 'EXECUTE')"),
-                {"role": role, "signature": signature},
+                sa.text("SELECT has_function_privilege(:role, :oid, 'EXECUTE')"),
+                {"role": role, "oid": oid},
             ).scalar_one()
             if not held:
                 missing.append(f"EXECUTE ON FUNCTION {signature} TO {role}")
@@ -358,9 +385,12 @@ def _require_privileges(signatures: list[str]) -> None:
 
 
 def upgrade() -> None:
-    # `exec_driver_sql` with no parameters, so psycopg is handed no parameter
-    # collection and does not read `%` as a placeholder. See the header.
-    op.get_bind().exec_driver_sql(SCHEMA_SQL_PATH.read_text(encoding="utf-8"))
+    # The raw DBAPI cursor, with the parameter argument omitted — the one path on
+    # which psycopg does not read `%` as a placeholder. Same connection, same
+    # transaction. See the header for the two spellings that were measured to
+    # fail and for why doubling the `%` would corrupt the function bodies.
+    with op.get_bind().connection.cursor() as cursor:
+        cursor.execute(SCHEMA_SQL_PATH.read_text(encoding="utf-8"))
 
     _comment_infrastructure_tables()
 
@@ -374,22 +404,22 @@ def upgrade() -> None:
         # `INSERT ... RETURNING`.
         op.execute(f"GRANT USAGE ON SEQUENCE {sequence} TO {', '.join(roles)}")
 
-    signatures = _queue_function_signatures()
-    if not signatures:
+    functions = _queue_functions()
+    if not functions:
         raise RuntimeError(
             f"revision {revision} executed {SCHEMA_SQL_PATH.name} and found no "
             f"procrastinate_* functions in schema public afterwards. The file is "
             f"expected to create eighteen; a run that creates none has executed "
             f"something other than the vendored schema."
         )
-    for signature in signatures:
+    for _oid, signature in functions:
         op.execute(f"GRANT EXECUTE ON FUNCTION {signature} TO {', '.join(GRANTED_ROLES)}")
 
     op.execute(f"GRANT USAGE ON TYPE procrastinate_job_to_defer_v1 TO {', '.join(GRANTED_ROLES)}")
     op.execute(f"GRANT USAGE ON TYPE procrastinate_job_status TO {', '.join(GRANTED_ROLES)}")
     op.execute(f"GRANT USAGE ON TYPE procrastinate_job_event_type TO {', '.join(GRANTED_ROLES)}")
 
-    _require_privileges(signatures)
+    _require_privileges(functions)
 
 
 def downgrade() -> None:
@@ -403,11 +433,26 @@ def downgrade() -> None:
     `pg_proc`, `pg_class` and `pg_type` means this function removes what is
     actually there.
 
-    `CASCADE` on the tables, and only on the tables. It reaches the indexes, the
-    triggers, the `bigserial` sequences and the foreign keys between the four —
-    all of which belong to this revision. It does NOT reach the functions or the
-    types, which is why those are dropped explicitly afterwards, in that order:
-    a type cannot be dropped while a function still names it in its signature.
+    🔴 THE CATALOG IS READ TWICE, AND THAT IS WHAT MAKES THE ORDER WORK. These
+    objects are mutually entangled, and both single-pass orders fail — MEASURED
+    against postgres:18.4:
+
+    * functions first: `DROP FUNCTION procrastinate_notify_queue_abort_job_v1()`
+      -> `trigger procrastinate_jobs_notify_queue_job_aborted_v1 on table
+      procrastinate_jobs depends on function ...`;
+    * tables first, with the function list read up front: `DROP TABLE
+      procrastinate_jobs CASCADE` silently takes `procrastinate_fetch_job_v2`
+      with it, because that function is declared `RETURNS procrastinate_jobs`, and
+      the later `DROP FUNCTION` then raises `function
+      procrastinate_fetch_job_v2(character varying[], bigint) does not exist`.
+
+    So: drop the tables first, then read the catalog AGAIN and drop whatever
+    functions survived. `DROP TABLE ... CASCADE` is exactly the right instrument
+    for the first pass — it reaches the triggers, the indexes, the `bigserial`
+    sequences, the foreign keys between the four and the two functions typed on a
+    table row — and the second read is what stops the second pass from naming
+    something the first pass already removed. Types go last: an enum cannot be
+    dropped while a column has it.
 
     No `IF EXISTS`, for the reason `0001` gives for `checkfirst=False`: an object
     that is already gone at downgrade time means something else removed it, and
@@ -422,7 +467,6 @@ def downgrade() -> None:
     """
     bind = op.get_bind()
 
-    signatures = _queue_function_signatures()
     tables = [
         str(row[0])
         for row in bind.execute(
@@ -434,33 +478,7 @@ def downgrade() -> None:
             )
         ).all()
     ]
-    types = [
-        str(row[0])
-        for row in bind.execute(
-            sa.text(
-                # The two enums and the one standalone composite type, and NOT
-                # the four row types that share their tables' names. Every table
-                # has a `pg_type` row of `typtype = 'c'` pointing at it, and that
-                # row disappears with the table — naming it in a `DROP TYPE`
-                # would raise `procrastinate_jobs is a table's row type`. A
-                # standalone `CREATE TYPE ... AS (...)` also gets a `pg_class`
-                # entry, so `typrelid = 0` is not the discriminator; `relkind`
-                # is, and it is `c` for a free composite type and `r` for a
-                # table. Array types are `typtype = 'b'` and are dropped with
-                # their element type.
-                "SELECT t.typname FROM pg_type t "
-                "JOIN pg_namespace n ON n.oid = t.typnamespace "
-                "LEFT JOIN pg_class c ON c.oid = t.typrelid "
-                "WHERE n.nspname = 'public' "
-                "AND t.typname LIKE 'procrastinate\\_%' "
-                "AND t.typtype IN ('e', 'c') "
-                "AND (c.oid IS NULL OR c.relkind = 'c') "
-                "ORDER BY t.typname"
-            )
-        ).all()
-    ]
-
-    if not tables and not signatures:
+    if not tables and not _queue_functions():
         raise RuntimeError(
             f"revision {revision} has nothing to downgrade: schema public holds "
             f"no procrastinate_* tables and no procrastinate_* functions. "
@@ -469,7 +487,28 @@ def downgrade() -> None:
 
     for table in tables:
         op.execute(f"DROP TABLE {table} CASCADE")
-    for signature in signatures:
+
+    # The second read. Anything typed on a table row type went with the tables
+    # above; naming it here would raise.
+    for _oid, signature in _queue_functions():
         op.execute(f"DROP FUNCTION {signature}")
-    for type_name in types:
-        op.execute(f"DROP TYPE {type_name}")
+
+    for type_name in bind.execute(
+        sa.text(
+            # The two enums and the one standalone composite type, and NOT the
+            # row types of the tables — those went with the tables. A standalone
+            # `CREATE TYPE ... AS (...)` also gets a `pg_class` entry, so
+            # `typrelid = 0` is not the discriminator; `relkind` is, and it is
+            # `c` for a free composite type and `r` for a table. Array types are
+            # `typtype = 'b'` and are dropped with their element type.
+            "SELECT t.typname FROM pg_type t "
+            "JOIN pg_namespace n ON n.oid = t.typnamespace "
+            "LEFT JOIN pg_class c ON c.oid = t.typrelid "
+            "WHERE n.nspname = 'public' "
+            "AND t.typname LIKE 'procrastinate\\_%' "
+            "AND t.typtype IN ('e', 'c') "
+            "AND (c.oid IS NULL OR c.relkind = 'c') "
+            "ORDER BY t.typname"
+        )
+    ).all():
+        op.execute(f"DROP TYPE {type_name[0]}")
