@@ -106,6 +106,10 @@ identity provider PLAN.md §8 step 3 schedules and that does not exist yet. Unti
 then the honest reading of `audit_log.actor_subject` is "an actor the
 application asserted, which the database confirmed is a real active seat of this
 tenant" — not "the actor".
+
+RELINKED AT INTEGRATION, 2026-09-05: `down_revision` was `0080` - the head this file's author
+found - and is now `0090`, Meenakshi's citation constraint, which landed in parallel. The author
+stated none of 0100-0102 depends on 0090+; the placement is for a single head, not a dependency.
 """
 
 from collections.abc import Sequence
@@ -115,7 +119,7 @@ from alembic import op
 from sqlalchemy.dialects import postgresql
 
 revision: str = "0100"
-down_revision: str | None = "0080"
+down_revision: str | None = "0090"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
