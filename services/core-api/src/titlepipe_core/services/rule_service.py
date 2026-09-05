@@ -49,6 +49,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from titlepipe_core.db.models import Rule
 from titlepipe_core.db.reads import scoped_read
 from titlepipe_core.db.repositories.rules import RuleRepository
+from titlepipe_domain import NotFoundError
 
 _RESOURCE = "rulebook"
 _UNAVAILABLE_MESSAGE = "The rulebook is temporarily unavailable. Try again shortly."
@@ -87,3 +88,49 @@ class RuleService:
             tenant=None,
             read=lambda session: RuleRepository(session).list_all(),
         )
+
+    async def rule_history(self, code: str) -> Sequence[Rule]:
+        """One code's versions, oldest first, every status.
+
+        **THE 404 IS DECIDED HERE AND NOWHERE BELOW.**
+        `RuleRepository.history_for` returns an empty sequence for a code it does
+        not know and refuses to call that an error, because whether "no rows" is
+        a missing RESOURCE or an empty COLLECTION is a question about the URL and
+        `db/` cannot see one. It is not a question about the URL's SYNTAX either,
+        which is why the answer is not the router's: `/api/rules/{code}` names
+        one rule, and a code the rulebook has never carried is not a rule with no
+        versions. Serving `{"code": "R99", "versions": []}` with a 200 would tell
+        a caller checking whether a rule exists that it does, and there is no
+        other read that would correct them.
+
+        Contrast `list_rules`, whose empty answer is a 200 and is right to be:
+        that URL names the collection itself, which exists and happens to be
+        empty.
+
+        `NotFoundError` and not a status code. This layer may not import
+        `fastapi` and does not know what 404 is; `api/errors.py` maps the refusal
+        onto the one envelope, with a `NOT_FOUND` code the caller can branch on.
+        The message names the code that was asked for and nothing else: it is
+        client-safe by contract, and the code is already in the caller's own URL.
+
+        **THE REFUSAL IS OUTSIDE `scoped_read`.** A 404 is an answer about the
+        data, not a database failure, and raising it inside `read` would run it
+        under that function's `except SQLAlchemyError` — which does not catch a
+        `DomainError` today and would swallow this refusal into a 503 the first
+        time anyone widened it. The check needs the rows and nothing else, so it
+        costs nothing to make after the session has closed.
+
+        `tenant=None` for `list_rules`'s reason: the rulebook is global and the
+        session sits at the DENY floor, reading the one table that floor does not
+        cover.
+        """
+        rows = await scoped_read(
+            self._session_factory,
+            resource=_RESOURCE,
+            unavailable_message=_UNAVAILABLE_MESSAGE,
+            tenant=None,
+            read=lambda session: RuleRepository(session).history_for(code),
+        )
+        if not rows:
+            raise NotFoundError(f"No rule is carried under the code {code!r}.")
+        return rows

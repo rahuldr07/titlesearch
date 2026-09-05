@@ -89,16 +89,12 @@ same reason `render_rules` does not.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter
 
 from titlepipe_core.api.dependencies import SessionFactory
 from titlepipe_core.api.mappers.rules import render_rule_history, render_rules
 from titlepipe_core.api.schemas.rules import RuleHistoryResponse, RulesResponse
-from titlepipe_core.db import RuleRepository
-from titlepipe_core.db.reads import scoped_read
-from titlepipe_core.lifespan import get_resources
 from titlepipe_core.services.rule_service import RuleService
-from titlepipe_domain import NotFoundError
 
 # `/api` here rather than on each route, and `/health` and `/ready` are NOT under
 # it — `api/routers/health.py` records why: they are platform surface, this is
@@ -139,47 +135,19 @@ async def list_rules(session_factory: SessionFactory) -> RulesResponse:
     response_model=RuleHistoryResponse,
     summary="Every version carried under one rule code",
 )
-async def rule_history(request: Request, code: str) -> RuleHistoryResponse:
+async def rule_history(session_factory: SessionFactory, code: str) -> RuleHistoryResponse:
     """One code's versions, oldest first, every status.
 
-    **THE 404 IS DECIDED HERE AND NOWHERE BELOW.** `RuleRepository.history_for`
-    returns an empty sequence for a code it does not know and refuses to call that
-    an error, because whether "no rows" is a missing RESOURCE or an empty
-    COLLECTION is a question about the URL, and `db/` cannot see one. The answer
-    for this URL is that it is missing: `/api/rules/{code}` names one rule, and a
-    code the rulebook has never carried is not a rule with no versions. Serving
-    `{"code": "R99", "versions": []}` with a 200 would tell a caller checking
-    whether a rule exists that it does, and there is no other read that would
-    correct them.
+    `code` reaches the mapper from the PATH and not from a row, which is the one
+    thing this route decides that the service does not: the echoed member is an
+    answer to what was asked. `api/mappers/rules.py` says why that matters even
+    though the two are provably equal on every response this service can serve.
 
-    Contrast `GET /api/rules`, which serves `{"rules": []}` with a 200 for an
-    empty rulebook and is right to: that URL names the collection itself, which
-    exists and happens to be empty.
-
-    `NotFoundError` and not `HTTPException` — banned in this file by
-    `scripts/check_backend_rules.py` rule 4 — so the refusal renders through the
-    one envelope with a `NOT_FOUND` code the caller can branch on. The message
-    names the code that was asked for and nothing else: it is client-safe by
-    contract, and the code is already in the caller's own URL.
-
-    **THE RAISE IS OUTSIDE `scoped_read`, LIKE THE MAPPER ABOVE.** A 404 is an
-    answer about the data, not a database failure, and putting it inside `read`
-    would run it under that function's `except SQLAlchemyError` — which does not
-    catch a `DomainError` today and would swallow this refusal into a 503 the
-    first time anyone widened it. The empty check needs the rows and nothing else,
-    so it costs nothing to do it after the session has closed.
-
-    `tenant=None` for `list_rules`'s reason: the rulebook is global, and the
-    session sits at the DENY floor reading the one table that floor does not
-    cover.
+    The 404 for a code the rulebook has never carried is
+    `RuleService.rule_history`'s ruling and is argued there — whether an empty
+    result is a missing resource or an empty collection is a question about the
+    domain, not about HTTP, and the only thing this layer contributes is that
+    `api/errors.py` renders the refusal as one.
     """
-    rows = await scoped_read(
-        get_resources(request.app).sessionmaker,
-        resource="rulebook",
-        unavailable_message=_UNAVAILABLE_MESSAGE,
-        tenant=None,
-        read=lambda session: RuleRepository(session).history_for(code),
-    )
-    if not rows:
-        raise NotFoundError(f"No rule is carried under the code {code!r}.")
+    rows = await RuleService(session_factory).rule_history(code)
     return render_rule_history(code, rows)
