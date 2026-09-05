@@ -10,10 +10,16 @@ from __future__ import annotations
 from decimal import Decimal
 
 import pytest
-from pydantic import ValidationError
+from pydantic import SecretStr, ValidationError
 
 from titlepipe_domain import Environment, LogRenderer, ServiceName
-from titlepipe_worker.settings import ENV_PREFIX, WorkerSettings
+from titlepipe_worker.settings import ENV_PREFIX, QUEUE_MAINTENANCE, WorkerSettings
+
+# A syntactically real DSN for the tests that need a deployed-shaped settings
+# object. Nothing connects to it; `titlepipe_worker` is the role revision 0060
+# grants the queue to, and spelling the right role here keeps the fixture from
+# quietly documenting the wrong one.
+DEPLOYED_DSN = "postgresql+psycopg://titlepipe_worker:secret@db.internal:5432/titlepipe"
 
 
 @pytest.fixture(autouse=True)
@@ -146,12 +152,24 @@ def test_an_unknown_variable_is_refused() -> None:
 
 
 def test_renderer_follows_the_environment_when_unset() -> None:
+    """The production half carries a DSN, and it is not decoration.
+
+    `additional_unsafe_for_deployment` refuses a deployed worker with no
+    `database_url` — a process that starts, reports a valid configuration and
+    consumes nothing. This test is about the renderer, so it satisfies that
+    refusal rather than working around it; a deployed settings object without a
+    DSN is not a thing that can exist, and a test that built one would be
+    asserting the renderer of a configuration the service rejects.
+    """
     assert (
         WorkerSettings(environment=Environment.DEVELOPMENT).effective_log_renderer
         is LogRenderer.CONSOLE
     )
     assert (
-        WorkerSettings(environment=Environment.PRODUCTION).effective_log_renderer
+        WorkerSettings(
+            environment=Environment.PRODUCTION,
+            database_url=SecretStr(DEPLOYED_DSN),
+        ).effective_log_renderer
         is LogRenderer.JSON
     )
 
@@ -171,3 +189,107 @@ def test_settings_read_the_worker_prefix(monkeypatch: pytest.MonkeyPatch) -> Non
 
     settings = WorkerSettings.from_environment()
     assert settings.max_concurrent_jobs == 7
+
+
+# --- the queue fields -------------------------------------------------------
+#
+# Four claims the module docstring and the field comments make, each asserted
+# against the model rather than trusted. Three of them are refusals, and a
+# refusal that is only described is a refusal nobody has run.
+
+
+def test_the_queue_dsn_is_optional_locally_and_refused_when_deployed() -> None:
+    """A deployed worker with no DSN starts, validates, and consumes nothing.
+
+    That is the exact failure `command_run` was written to refuse to imitate —
+    a process that looks healthy on every dashboard while doing no work — so
+    the configuration that produces it is refused before the process gets that
+    far. Locally the `None` is load-bearing: `check` has to be runnable in CI
+    and in a container probe with no database anywhere near it.
+    """
+    assert WorkerSettings(environment=Environment.DEVELOPMENT).database_url is None
+
+    with pytest.raises(ValidationError) as refusal:
+        WorkerSettings(environment=Environment.PRODUCTION)
+    assert "database_url is not set" in str(refusal.value)
+
+    deployed = WorkerSettings(
+        environment=Environment.PRODUCTION, database_url=SecretStr(DEPLOYED_DSN)
+    )
+    assert deployed.database_url is not None
+    assert deployed.database_url.get_secret_value() == DEPLOYED_DSN
+
+
+def test_the_dsn_does_not_appear_in_the_models_repr() -> None:
+    """`SecretStr`, because a DSN carries the worker role's password.
+
+    The module's opening rule is that settings objects are never logged, and
+    this is the half of it the type system can enforce: a plain `str` would put
+    the credential into every `repr` of the model, which is what any traceback
+    formatter reaches for first.
+    """
+    settings = WorkerSettings(
+        environment=Environment.PRODUCTION, database_url=SecretStr(DEPLOYED_DSN)
+    )
+    assert "secret" not in repr(settings)
+    assert "titlepipe_worker" not in repr(settings)
+
+
+def test_queues_are_read_as_a_comma_separated_list(monkeypatch: pytest.MonkeyPatch) -> None:
+    """`NoDecode` plus the before-validator, asserted from the environment.
+
+    MEASURED against pydantic-settings 2.14 while writing this: WITHOUT
+    `NoDecode` on the annotation, `EnvSettingsSource` JSON-decodes a tuple-typed
+    field before any validator on the model runs, and `local,cloud` raises
+    `SettingsError: error parsing value for field "queues"` out of `json.loads`
+    — an error that names neither the field's syntax nor JSON. This test goes
+    through the environment, not through `__init__`, because that decoding is a
+    property of the SOURCE and a direct construction never reaches it.
+    """
+    monkeypatch.setenv(f"{ENV_PREFIX}ENVIRONMENT", "development")
+    monkeypatch.setenv(f"{ENV_PREFIX}QUEUES", " local , cloud ")
+    assert WorkerSettings.from_environment().queues == ("local", "cloud")
+
+
+def test_the_default_queue_is_the_one_a_task_is_registered_on() -> None:
+    """The default must name a queue something actually writes to.
+
+    A default naming a pool that no task is registered on would give a worker
+    that starts, listens, and never receives anything — indistinguishable from
+    a healthy idle one. `QUEUE_MAINTENANCE` is where the sweep task lives.
+    """
+    assert WorkerSettings(environment=Environment.DEVELOPMENT).queues == (QUEUE_MAINTENANCE,)
+
+
+def test_an_empty_queue_list_is_refused(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Empty means "every queue" to procrastinate, which is the one value an
+    operator must not reach by accident: it puts GPU work and cloud work through
+    one bounded pool and silently undoes the split PLAN §6 requires."""
+    monkeypatch.setenv(f"{ENV_PREFIX}ENVIRONMENT", "development")
+    monkeypatch.setenv(f"{ENV_PREFIX}QUEUES", "")
+    with pytest.raises(ValidationError):
+        WorkerSettings.from_environment()
+
+
+def test_a_stall_timeout_below_twice_the_heartbeat_is_refused() -> None:
+    """The refusal is against duplicate execution, not against a late alert.
+
+    A worker is judged stalled by the age of its heartbeat row. With the timeout
+    at or below the interval, a healthy worker is stale for part of every cycle,
+    so the sweep moves its in-flight job back to `todo` while the original is
+    still running it. Here a job is a paid provider call against a client
+    document: it is billed twice and writes two readings for one page.
+    """
+    with pytest.raises(ValidationError) as refusal:
+        WorkerSettings(
+            environment=Environment.DEVELOPMENT,
+            heartbeat_interval_seconds=20.0,
+            stalled_worker_timeout_seconds=30.0,
+        )
+    assert "below twice heartbeat_interval_seconds" in str(refusal.value)
+
+    # The defaults are procrastinate's own, and they are three times over, not
+    # two. The floor is a floor.
+    defaults = WorkerSettings(environment=Environment.DEVELOPMENT)
+    assert defaults.heartbeat_interval_seconds == 10.0
+    assert defaults.stalled_worker_timeout_seconds == 30.0

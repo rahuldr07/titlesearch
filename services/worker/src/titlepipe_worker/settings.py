@@ -55,11 +55,11 @@ which asserts the numbers rather than trusting this docstring.
 from __future__ import annotations
 
 from decimal import Decimal
-from typing import Self
+from typing import Annotated, Self
 from urllib.parse import urlsplit
 
-from pydantic import Field, model_validator
-from pydantic_settings import SettingsConfigDict
+from pydantic import Field, SecretStr, field_validator, model_validator
+from pydantic_settings import NoDecode, SettingsConfigDict
 
 from titlepipe_domain import ServiceName
 from titlepipe_service_kit import BaseServiceSettings
@@ -73,6 +73,22 @@ INTERNAL_HOST_NAMES = ("gotenberg", "localhost", "127.0.0.1")
 # there is no settings object to read the environment off, and the logging that
 # reports the failure still has to be configured for the right one.
 ENV_PREFIX = "TITLEPIPE_WORKER_"
+
+# The one queue that exists today. Named here rather than spelled at each use so
+# that the task declaration in `tasks.py`, the settings default below and the
+# tests all read the same string.
+#
+# PLAN §6 requires TWO concurrency pools rather than one queue — local/GPU work
+# (one slot on the current hardware) and cloud work (I/O-bound, wide, rate-limit
+# bounded) — because treating them as one starves the GPU or hammers a rate
+# limit. That split is a DEPLOYMENT shape, not a code one: procrastinate bounds
+# concurrency per worker PROCESS, so two pools are two containers off the same
+# image with different `TITLEPIPE_WORKER_QUEUES` and different
+# `TITLEPIPE_WORKER_MAX_CONCURRENT_JOBS`. The `queues` field below is the seam
+# that makes it a configuration change when the pipeline lands. The pool names
+# are NOT declared here yet, because no task is registered on either and a queue
+# nothing writes to is a name, not a pool.
+QUEUE_MAINTENANCE = "maintenance"
 
 
 class WorkerSettings(BaseServiceSettings):
@@ -107,6 +123,70 @@ class WorkerSettings(BaseServiceSettings):
     gotenberg_url: str = "http://gotenberg:3000"
     gotenberg_timeout_seconds: float = Field(default=120.0, gt=0, le=900)
 
+    # --- the queue --------------------------------------------------------
+    # The DSN the work loop connects with, as `titlepipe_worker`.
+    #
+    # 🔴 IT IS `TITLEPIPE_WORKER_DATABASE_URL` AND IS THE THIRD NAME IN A SET OF
+    # THREE THAT ARE NOT INTERCHANGEABLE. `TITLEPIPE_DATABASE_URL` is the
+    # MIGRATION role's, read by `migrations/env.py`; `TITLEPIPE_APP_DATABASE_URL`
+    # is core-api's request path. `.env.example` has reserved this name since
+    # before there was a worker to read it. Pointing this at the app role would
+    # not fail cleanly — `titlepipe_app` holds no privilege on any
+    # `procrastinate_*` object (revision 0060 grants it SELECT and INSERT on two
+    # tables and nothing else), so the worker would start, register, and fail its
+    # first fetch with a permission error on a function it never named.
+    #
+    # `SecretStr` because a DSN carries a password, and this module's opening
+    # rule is that settings objects are never logged.
+    #
+    # Optional outside a deployed environment and refused inside one, which is
+    # the shape `core-api`'s `app_database_url` already has and for the reason it
+    # records: a deployed worker with no DSN is a process that starts, reports a
+    # valid configuration, and does nothing — the failure this service's `run`
+    # command was written to refuse to imitate.
+    database_url: SecretStr | None = None
+
+    # Which queues this PROCESS consumes. See `QUEUE_MAINTENANCE` above for why
+    # this is a list and not a constant.
+    #
+    # An empty tuple would mean "every queue" to procrastinate, which is the one
+    # value an operator must not be able to reach by accident: it would put GPU
+    # work and cloud work through one bounded pool, silently undoing the split
+    # this field exists to make possible. `min_length=1` is the machine.
+    queues: Annotated[tuple[str, ...], NoDecode] = Field(default=(QUEUE_MAINTENANCE,), min_length=1)
+
+    # How often a running worker updates its heartbeat row, and how long a
+    # heartbeat may be stale before another worker treats that worker's in-flight
+    # jobs as lost. Procrastinate's own defaults, restated here because the sweep
+    # task reads the second one and a bound a task depends on belongs in
+    # validated configuration rather than in a call site.
+    heartbeat_interval_seconds: float = Field(default=10.0, gt=0, le=300)
+    stalled_worker_timeout_seconds: float = Field(default=30.0, gt=0, le=3600)
+
+    @field_validator("queues", mode="before")
+    @classmethod
+    def _accept_a_comma_separated_list(cls, value: object) -> object:
+        """`TITLEPIPE_WORKER_QUEUES=local,cloud`, which is what an operator writes.
+
+        pydantic-settings treats a tuple-typed field as COMPLEX and JSON-decodes
+        it inside `EnvSettingsSource`, before any validator on this class runs.
+        MEASURED against pydantic-settings 2.14: a plain `local,cloud` never
+        reaches a `mode="before"` validator at all — it raises
+        `SettingsError: error parsing value for field "queues"` out of
+        `json.loads`, naming neither the field's real syntax nor JSON.
+
+        `NoDecode` on the annotation is the supported way to turn that decoding
+        off, and it is what makes this validator the thing that parses the value
+        rather than a step after something else already refused it. The cost is
+        that a JSON array is no longer accepted here — deliberately, because two
+        accepted spellings for one field is two things to get right and the
+        comma-separated one is the one that survives quoting through compose, a
+        systemd unit and a Kubernetes manifest.
+        """
+        if isinstance(value, str):
+            return tuple(part.strip() for part in value.split(",") if part.strip())
+        return value
+
     @model_validator(mode="after")
     def _per_order_ceiling_fits_inside_the_daily_one(self) -> Self:
         """A per-order ceiling above the daily ceiling is not a bound at all."""
@@ -139,3 +219,44 @@ class WorkerSettings(BaseServiceSettings):
                 "client documents over the internet"
             )
         return self
+
+    @model_validator(mode="after")
+    def _a_worker_is_declared_stalled_after_several_missed_heartbeats(self) -> Self:
+        """The stall timeout must be at least twice the heartbeat interval.
+
+        THE FAILURE THIS REFUSES IS DUPLICATE EXECUTION, NOT A LATE ALERT. A
+        worker is judged stalled by the age of its heartbeat row. Set the timeout
+        at or below the interval and a perfectly healthy worker is stale for part
+        of every cycle — so the sweep task moves its in-flight job back to `todo`
+        while the original worker is still running it, and the job runs twice. In
+        this system a job is a paid provider call against a client document, so
+        "runs twice" is billed twice and writes two readings for one page.
+
+        Twice the interval is the floor, not the recommendation; procrastinate's
+        own defaults are three times (10s and 30s) and are the defaults above.
+        """
+        floor = self.heartbeat_interval_seconds * 2
+        if self.stalled_worker_timeout_seconds < floor:
+            raise ValueError(
+                f"stalled_worker_timeout_seconds ({self.stalled_worker_timeout_seconds}) "
+                f"is below twice heartbeat_interval_seconds "
+                f"({self.heartbeat_interval_seconds}); a live worker would be judged "
+                f"stalled between beats and its running job would be retried while it "
+                f"is still running"
+            )
+        return self
+
+    def additional_unsafe_for_deployment(self) -> list[str]:
+        """This class's own deployed-environment refusals.
+
+        Deliberately no `super()` call — `_collect_deployment_refusals` walks the
+        MRO and calls every definition it finds, so chaining would report the
+        base clauses twice.
+        """
+        if self.database_url is None:
+            return [
+                "database_url is not set; the worker would start, report a valid "
+                "configuration and consume no queue, which is the failure the run "
+                "command exists to refuse"
+            ]
+        return []

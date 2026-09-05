@@ -9,6 +9,17 @@ dependencies = [
     "pydantic==2.13.*",
     "pydantic-settings==2.14.*",
     "structlog>=26.1,<27",
+    # The queue. Postgres-native and transactional, so a job is deferred in the
+    # same transaction as the row that justifies it and the audit trigger sees
+    # one atomic change — the property a separate broker cannot offer at any
+    # price. Pinned to an exact minor because `migrations/versions/0060_*.py`
+    # installs THIS library's shipped schema and refuses to run against a
+    # version it was not written for; see that file's `SCHEMA_SOURCE_VERSION`.
+    "procrastinate==3.9.*",
+    # Procrastinate brings `psycopg[pool]`; `[binary]` is what supplies the
+    # libpq wheel, exactly as core-api declares it. Without it a worker image
+    # needs a system libpq to import its own connector.
+    "psycopg[binary,pool]>=3.2,<4",
 ]
 
 # ONE worker, not two. `extraction-svc` and `render-svc` were two uv projects,
@@ -35,6 +46,14 @@ dev = [
     "pytest==9.1.*",
     "pytest-asyncio==1.4.*",
     "pytest-cov==7.*",
+    # The queue's proof runs against a real PostgreSQL, not a double. Every
+    # claim this gate makes — that the schema installs, that the grants are the
+    # ones written down, that a deferred job is visible to the worker's role and
+    # to nobody else's — is a claim about a database, and a fake cannot refuse
+    # the way a database refuses. Same declaration core-api already carries, for
+    # the same reason; the `[postgres]` extra is empty and the driver comes from
+    # `psycopg[binary]` above.
+    "testcontainers[postgres]>=4.15.0,<5.0",
     "titlepipe-test-support",
 ]
 
