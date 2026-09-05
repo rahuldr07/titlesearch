@@ -65,6 +65,7 @@ import uuid
 from collections.abc import Callable, Iterator, Mapping
 
 import pytest
+from minimal_rows import insert_orders_returning
 from sqlalchemy import Connection, Engine, text
 from sqlalchemy.exc import DBAPIError
 
@@ -242,10 +243,13 @@ def golden_engine(migrated_database: str, seam_engine: Callable[[str], Engine]) 
     engine = seam_engine(migrated_database)
     try:
         with engine.begin() as connection:
-            for tenant in (TENANT, OTHER_TENANT):
-                connection.execute(
-                    text("INSERT INTO orders (tenant_id) VALUES (:tenant)"), {"tenant": tenant}
-                )
+            # `minimal_rows` and not `INSERT INTO orders (tenant_id)`: `0008` gave
+            # `orders` six more `NOT NULL` columns after this file was written, and
+            # the merged chain is the first tree that holds both revisions.
+            connection.execute(
+                text(insert_orders_returning("id", "one", "two")),
+                {"one": TENANT, "two": OTHER_TENANT},
+            )
         yield engine
     finally:
         engine.dispose()

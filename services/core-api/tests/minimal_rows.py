@@ -72,7 +72,46 @@ _ORDER_SQL_COLUMNS = (
 # `arrived_at` is `now()` in SQL and a Python `datetime` through the ORM, for the
 # reason the two spellings exist at all: one is a server expression the statement
 # evaluates, the other is a bound parameter, and neither is available to the other.
-_ORDER_SQL_ROW = "gen_random_uuid(), 'TEST-ONLY', 'TEST-ONLY', 'ZZ', 'TEST-ONLY', 'received', now()"
+#
+# 🔴 `external_ref` VARIES PER ROW HERE FOR THE REASON `_minimal_order_required`
+# GIVES FOR VARYING IT THROUGH THE ORM, and the SQL half used to be the literal
+# `'TEST-ONLY'` because its only caller wrote one row per TENANT and could not
+# collide. `uq_orders_tenant_id_external_ref` is the table's natural key, so two
+# minimal orders in ONE tenant is a `duplicate key value` — MEASURED on this tree
+# the moment `test_order_queue_repository` started seeding three orders for one
+# tenant through this module. `gen_random_uuid()` rather than an ordinal because
+# there is no counter a SQL literal can carry across separate statements.
+_ORDER_EXTERNAL_REF = "'TEST-ONLY-' || gen_random_uuid()"
+
+# Column name -> the expression that fills it, for every `NOT NULL` column of
+# `orders` a caller has no opinion about. A MAPPING and not two parallel strings:
+# `insert_order` has to subtract the columns its caller is supplying, and
+# subtracting from a comma-joined string is the kind of thing that works until a
+# column name is a prefix of another one.
+_ORDER_SQL_VALUES: Final[Mapping[str, str]] = MappingProxyType(
+    {
+        "tenant_id": "",  # never defaulted; every caller supplies it. See `insert_order`.
+        "client_id": "gen_random_uuid()",
+        "external_ref": _ORDER_EXTERNAL_REF,
+        "jurisdiction": "'TEST-ONLY'",
+        "state_code": "'ZZ'",
+        "county": "'TEST-ONLY'",
+        "status": "'received'",
+        "arrived_at": "now()",
+    }
+)
+
+# The columns a caller MAY name and this module never fills. `0001` gives both a
+# server default — `gen_random_uuid()` and `now()` — so the honest way to leave
+# them alone is to leave them OUT of the statement entirely and let the server
+# answer; a literal here would be this module competing with the schema for the
+# same question. A test that cares which id a row has, or when it arrived
+# relative to another row, names them and supplies both.
+_ORDER_SQL_SERVER_FILLED: Final[Collection[str]] = frozenset({"id", "created_at"})
+
+_ORDER_SQL_ROW = ", ".join(
+    expression for column, expression in _ORDER_SQL_VALUES.items() if column != "tenant_id"
+)
 
 
 def insert_orders_returning(returning: str, *tenant_placeholders: str) -> str:
@@ -92,6 +131,62 @@ def insert_orders_returning(returning: str, *tenant_placeholders: str) -> str:
     """
     rows = ", ".join(f"(:{name}, {_ORDER_SQL_ROW})" for name in tenant_placeholders)
     return f"INSERT INTO orders ({_ORDER_SQL_COLUMNS}) VALUES {rows} RETURNING {returning}"  # noqa: S608
+
+
+def insert_order(*caller_columns: str) -> str:
+    """One `INSERT` writing ONE complete order, with the caller filling `caller_columns`.
+
+    Each name in `caller_columns` becomes both a column and a bind parameter of
+    the same name; every other `NOT NULL` column of `orders` is filled from this
+    module, and the two columns with a server default are left out unless named.
+    `insert_order("id", "tenant_id", "created_at")` is a statement whose caller
+    decides the three columns its assertions are about and does not have to know
+    that `0008` gave the table six more.
+
+    SEPARATE FROM `insert_orders_returning` RATHER THAN A PARAMETER ON IT, because
+    the two differ in the part that is hard to get right: that one writes one row
+    per TENANT in a single statement and names its own `RETURNING` list, this one
+    writes one row and returns nothing. Folding them together produced a signature
+    where `insert_order("id")` and `insert_orders_returning("id")` differ in what
+    `"id"` MEANS — a column here, a `RETURNING` list there — which is exactly the
+    confusion a test author reading one call site cannot see.
+
+    🔴 `S608` IS SUPPRESSED FOR THE SAME CHECKABLE REASON AS ABOVE, WITH ONE MORE
+    CLAUSE. Every expression interpolated is a literal in `_ORDER_SQL_VALUES`; the
+    caller supplies only column NAMES, and those are checked against that mapping
+    below, so a name that is not a column of `orders` raises here rather than
+    reaching the server. The VALUES stay bind parameters and never touch this
+    string.
+    """
+    known = set(_ORDER_SQL_VALUES) | set(_ORDER_SQL_SERVER_FILLED)
+    unknown = [name for name in caller_columns if name not in known]
+    if unknown:
+        raise AssertionError(
+            f"insert_order was asked to let the caller fill {unknown}, which "
+            f"`minimal_rows` does not know as a column of `orders`. It knows "
+            f"{sorted(known)}; a column outside that set is either a typo or a "
+            f"schema change this module has not been told about."
+        )
+    if "tenant_id" not in caller_columns:
+        raise AssertionError(
+            "insert_order requires the caller to supply `tenant_id`. There is no "
+            "honest default for it: a row's tenant is the one thing this module "
+            "cannot invent, and `FORCE ROW LEVEL SECURITY` would make a wrong "
+            "guess invisible rather than an error."
+        )
+
+    filled = {
+        column: f":{column}" if column in caller_columns else expression
+        for column, expression in _ORDER_SQL_VALUES.items()
+    }
+    # Server-filled columns appear in the statement only when the caller named
+    # one; unnamed, they are absent and the column's own default applies.
+    filled.update(
+        {column: f":{column}" for column in _ORDER_SQL_SERVER_FILLED if column in caller_columns}
+    )
+    columns = ", ".join(filled)
+    values = ", ".join(filled.values())
+    return f"INSERT INTO orders ({columns}) VALUES ({values})"  # noqa: S608
 
 
 def a_minimal_order(tenant_id: uuid.UUID, **overrides: Any) -> Order:

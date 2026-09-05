@@ -41,6 +41,7 @@ from collections.abc import Callable
 from uuid import UUID
 
 import pytest
+from minimal_rows import insert_orders_returning
 from sqlalchemy import Engine, select, text
 from sqlalchemy.exc import DBAPIError
 
@@ -82,7 +83,11 @@ def seeded_order(migrated_database: str, seam_engine: Callable[[str], Engine]) -
             order_id = UUID(
                 str(
                     connection.execute(
-                        text("INSERT INTO orders (tenant_id) VALUES (:tenant) RETURNING id"),
+                        # `minimal_rows` and not `INSERT INTO orders (tenant_id)`:
+                        # `0008` gave `orders` six more `NOT NULL` columns after
+                        # this file was written, and the merged chain is the first
+                        # tree where both revisions are present.
+                        text(insert_orders_returning("id", "tenant")),
                         {"tenant": TENANT},
                     ).scalar_one()
                 )

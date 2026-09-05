@@ -58,6 +58,7 @@ from typing import Final, NamedTuple
 from uuid import UUID
 
 import pytest
+from minimal_rows import insert_order
 from sqlalchemy import Engine, text
 from sqlalchemy.ext.asyncio import create_async_engine
 
@@ -157,11 +158,12 @@ def seeded_queue(migrated_database: str, seam_engine: Callable[[str], Engine]) -
             connection.execute(text("DELETE FROM orders"))
             for row_id, tenant, created_at in SEED_ROWS:
                 connection.execute(
-                    text(
-                        "INSERT INTO orders (id, tenant_id, created_at) "
-                        "VALUES (:id, :tenant, :created_at)"
-                    ),
-                    {"id": row_id, "tenant": tenant, "created_at": created_at},
+                    # The three columns this module asserts on are named; the six
+                    # `NOT NULL` columns `0008` added after this file was written
+                    # come from `minimal_rows`, which is the one place that knows
+                    # what a complete order is.
+                    text(insert_order("id", "tenant_id", "created_at")),
+                    {"id": row_id, "tenant_id": tenant, "created_at": created_at},
                 )
         with engine.connect() as connection:
             present = connection.execute(text("SELECT tenant_id, id FROM orders")).all()
