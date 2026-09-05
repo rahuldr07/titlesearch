@@ -193,7 +193,9 @@ test("the server refuses an exclude on a non-judgments path", async ({ page }) =
     const post = (id: string) =>
       fetch(`/api/fields/${id}/exclude`, {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        // A reviewer, the seat that actually works this screen — the path rule
+        // under test is refused for the path, not for the caller.
+        headers: { "content-type": "application/json", "x-mock-role": "reviewer" },
         body: JSON.stringify({ reason: "a different M. Quenby entirely" }),
       }).then(async (r) => ({ status: r.status, body: await r.text() }));
     return { zip: await post("fld_zip"), judgment: await post("fld_j1atty") };

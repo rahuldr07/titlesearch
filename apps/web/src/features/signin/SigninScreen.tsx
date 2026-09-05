@@ -29,9 +29,14 @@ export function SigninScreen() {
      * sends as `x-mock-role`, which the mock server reads to decide the
      * permission projection. Setting only the first would sign you in as
      * somebody whose doors were still the previous role's.
+     *
+     * The role is all that travels. The name is not sent and cannot be:
+     * `SEAT_IDENTITIES` resolves it from the role on the server side, and
+     * `seat-roster.test.ts` holds this row's name to the same table, so the
+     * seat this screen names is the seat the ledger records.
      */
     setAccount(account);
-    actAs({ role: account.role, actor: account.name });
+    actAs(account.role);
     void navigate({ to: "/" });
   }
 

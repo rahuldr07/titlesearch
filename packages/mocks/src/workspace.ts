@@ -18,7 +18,8 @@ import type {
   StageKind,
   StagePhase,
 } from "@titlepipe/contract";
-import { UpdatePreferencesRequest } from "@titlepipe/contract";
+import { UpdatePreferencesRequest, type Role } from "@titlepipe/contract";
+import { err, seatOf } from "./guard.js";
 import {
   PACKAGE_PAGES,
   PACKAGE_PAGES_RELEVANT,
@@ -968,10 +969,15 @@ export function completenessFor(orderId: string): OrderCompletenessResponse {
 
 // ---- handlers ----------------------------------------------------------------
 
-/** The mock's JWT role claim; a missing header is the dev-default admin session. */
-function roleOf(request: Request): string {
-  const raw = request.headers.get("x-mock-role");
-  return raw === null ? "admin" : raw;
+/**
+ * The mock's JWT role claim. A MISSING header used to read as `admin` here
+ * too, so a caller who identified themselves as nobody got the widest
+ * lifecycle board — the same inversion FX-27 named on the permissions
+ * projection, in read form. `seatOf` refuses it now; the caller is a `Role`
+ * or there is no answer.
+ */
+function seatRole(request: Request): Role | null {
+  return seatOf(request)?.role ?? null;
 }
 
 export const workspaceHandlers = [
@@ -979,7 +985,14 @@ export const workspaceHandlers = [
     HttpResponse.json({ config_version: "cfg-2026.07-3", frozen: true, products, lines } satisfies ConfigResponse),
   ),
   http.get("/api/clients", () => HttpResponse.json({ clients, effective } satisfies ClientsResponse)),
-  http.get("/api/lifecycle", ({ request }) => HttpResponse.json(lifecycleFor(roleOf(request)))),
+  http.get("/api/lifecycle", ({ request }) => {
+    const role = seatRole(request);
+    // A board is scoped to a seat: a reviewer sees their own orders and the
+    // unassigned pile, everyone else sees the lot. Without a seat there is no
+    // scope to apply, and the widest board is the wrong thing to reach for.
+    if (role === null) return err("refused: no session", 401);
+    return HttpResponse.json(lifecycleFor(role));
+  }),
   http.get("/api/people", () => HttpResponse.json(people)),
   http.get("/api/me/profile", () => HttpResponse.json(profile)),
 

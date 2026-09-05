@@ -7,6 +7,7 @@ export * from "./enums.js";
 export * from "./entities.js";
 export * from "./endpoints.js";
 export * from "./authz.js";
+export * from "./seats.js";
 export * from "./workspace.js";
 export * from "./intake.js";
 export * from "./design.js";

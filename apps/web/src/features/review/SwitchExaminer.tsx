@@ -7,9 +7,9 @@ import { useSession } from "../../shared/session";
  * The "Switch user" affordance — a preview control, not a gate: the
  * countersign action stays live whoever is signed in, since the
  * different-examiner rule is the server's 409. Dev-only, same cutover as
- * `x-mock-role`. It does not set the signer — `session.actor` has no setter
- * on purpose, so the second reader's name is the one typed into the
- * signature field.
+ * `x-mock-role`. It does not set the signer and has no way to: switching
+ * seats switches the ROLE, and the server resolves the name from that. The
+ * typed signature stays a client field the ledger does not read.
  */
 export function SwitchExaminer() {
   const signIn = useSignedIn((state) => state.signIn);
@@ -25,7 +25,7 @@ export function SwitchExaminer() {
       data-testid="countersign-switch-user"
       onPress={() => {
         signIn(qc);
-        actAs({ role: qc.role, actor: qc.name });
+        actAs(qc.role);
       }}
     >
       Switch user: {qc.name} ({qc.seat})

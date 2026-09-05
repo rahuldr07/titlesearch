@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from "vitest";
 import { mockServer } from "@titlepipe/mocks/node";
+import { SEAT_IDENTITIES, type Role } from "@titlepipe/contract";
 
 /**
  * Regression gates over the mock backend's own state machines — the handlers
@@ -15,10 +16,26 @@ async function getJson<T>(path: string): Promise<T> {
   return (await res.json()) as T;
 }
 
-function post(path: string, body?: unknown, headers?: Record<string, string>): Promise<Response> {
+/**
+ * Every mutation names the seat it acts as. These calls used to send no
+ * credential at all and passed, because the mock read a missing `x-mock-role`
+ * as admin — so a suite meant to pin the server's gates was, on every line,
+ * exercising the one caller the gate did not apply to. `as` is required for
+ * that reason: an omitted seat is a 401 now, not a silent promotion.
+ */
+function post(
+  path: string,
+  body?: unknown,
+  as?: Role,
+  headers?: Record<string, string>,
+): Promise<Response> {
   return fetch(url(path), {
     method: "POST",
-    headers: { "content-type": "application/json", ...headers },
+    headers: {
+      "content-type": "application/json",
+      ...(as === undefined ? {} : { "x-mock-role": as }),
+      ...headers,
+    },
     body: JSON.stringify(body ?? {}),
   });
 }
@@ -72,12 +89,12 @@ describe("orders search scoped terms", () => {
 
 describe("delivery retry is the transit act on a bounced transmission only", () => {
   test("an unsigned reissue draft is refused — retry may not transmit around the signature", async () => {
-    const reissued = await post("/api/deliveries/del_1/reissue", { reason: "A value in the delivered report requires correction or updating" });
+    const reissued = await post("/api/deliveries/del_1/reissue", { reason: "A value in the delivered report requires correction or updating" }, "ops");
     expect(reissued.status).toBe(200);
     const { deliveries } = await getJson<Deliveries>("/api/deliveries");
     const draft = deliveries.find((d) => d.status === "draft");
     expect(draft).toBeDefined();
-    const retried = await post(`/api/deliveries/${draft?.id ?? ""}/retry`);
+    const retried = await post(`/api/deliveries/${draft?.id ?? ""}/retry`, undefined, "ops");
     expect(retried.status).toBe(409);
     // The draft is still a draft — nothing transmitted.
     const after = await getJson<Deliveries>("/api/deliveries");
@@ -86,13 +103,13 @@ describe("delivery retry is the transit act on a bounced transmission only", () 
 
   test("an already-transmitted or acknowledged delivery is refused", async () => {
     for (const id of ["del_3", "del_1"]) {
-      const res = await post(`/api/deliveries/${id}/retry`);
+      const res = await post(`/api/deliveries/${id}/retry`, undefined, "ops");
       expect(res.status).toBe(409);
     }
   });
 
   test("a failed_transit delivery retries, and the unacknowledged ack step keeps done:false and its null instant", async () => {
-    const res = await post("/api/deliveries/del_2/retry");
+    const res = await post("/api/deliveries/del_2/retry", undefined, "ops");
     expect(res.status).toBe(200);
     const { deliveries } = await getJson<Deliveries>("/api/deliveries");
     const d = deliveries.find((x) => x.id === "del_2");
@@ -115,16 +132,18 @@ describe("demo reset restores every mutable store to its seed", () => {
     expect(seedTemplate.version).toBe("v2.1");
 
     // Mutate one store of each module.
-    await post("/api/deliveries/del_2/retry");
-    await post("/api/deliveries/del_1/reissue", { reason: "reissue for the reset test" });
+    await post("/api/deliveries/del_2/retry", undefined, "ops");
+    await post("/api/deliveries/del_1/reissue", { reason: "reissue for the reset test" }, "ops");
     for (const f of ["fld_jgmt_hit", "fld_mtg_amount", "fld_legal_desc"]) {
-      const signed = await post(`/api/fields/${f}/countersign`, { signature: "R. Menon" }, { "x-mock-actor": "R. Menon (QC)" });
+      // The QC seat, not a typed name: `senior` resolves to an examiner who is
+      // not the `admin` who ruled these rows, which is what the 409 checks.
+      const signed = await post(`/api/fields/${f}/countersign`, { signature: SEAT_IDENTITIES.senior }, "senior");
       expect(signed.status).toBe(200);
     }
-    await post("/api/orders/ord_demo_14/release", { signature: "L. Vance" });
+    await post("/api/orders/ord_demo_14/release", { signature: SEAT_IDENTITIES.ops }, "ops");
     await fetch(url("/api/templates/tpl_or_to_v2"), {
       method: "PATCH",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", "x-mock-role": "engineer" },
       body: JSON.stringify({ wording: { header: "edited {{order_number}}" } }),
     });
 

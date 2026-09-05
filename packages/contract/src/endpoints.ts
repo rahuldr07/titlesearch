@@ -260,10 +260,21 @@ export type ResolveEscalationRequest = z.infer<typeof ResolveEscalationRequest>;
 
 /**
  * POST /api/golden/corrections — source + reason, permanently logged and
- * signed. The signer is derived server-side from the authenticated session,
- * never declared by the client — a browser must not decide who signed a change
- * to ground truth (that would be forgeable). The request carries the evidence
- * (value + citation + reason); the server stamps the actor.
+ * signed. The request carries the EVIDENCE (value + citation + reason); the
+ * server stamps the actor.
+ *
+ * The signer is derived server-side from the credential and never declared by
+ * the client — a browser must not decide who signed a change to ground truth.
+ * This sentence stood here while the mock read the signer off `x-mock-actor`,
+ * a free-text header the browser filled in, which made it a description of an
+ * intention rather than of the code. What holds it up now is that there is no
+ * wire input naming a person at all: `packages/mocks/src/guard.ts` resolves
+ * the identity from the role through the contract's `SEAT_IDENTITIES`, and
+ * hands it to the handler only as the RESULT of the authorization check.
+ *
+ * The property to preserve at the ADR-0001 cutover is that one, not the
+ * mechanism: whatever core-api reads the session from, it must not be a field
+ * the caller can set. `mock-auth.test.ts` fails if the mock regains one.
  */
 export const GoldenCorrectionRequest = z.object({
   golden_field_id: z.string(),
@@ -278,8 +289,9 @@ export type GoldenCorrectionRequest = z.infer<typeof GoldenCorrectionRequest>;
  * permanent, signed, and reasoned:
  *   POST /api/golden/{id}/confirm — the seed is right; tag upgrades to `ruled`.
  *   POST /api/golden/{id}/demote — the document is ambiguous; tag → `suspect`.
- * Refused without a reason; signed by the server-derived session identity —
- * a client-declared signer would be forgeable.
+ * Refused without a reason; signed by the seat the gate authorized, on the
+ * same terms as the correction above — a client-declared signer would be
+ * forgeable, so no request field and no header names one.
  */
 export const GoldenAffirmRequest = z.object({
   reason: z.string().min(1),
@@ -586,6 +598,13 @@ export type OrderTimelineResponse = z.infer<typeof OrderTimelineResponse>;
  * holder lists redacted — other roles' capabilities are unrepresented, not
  * hidden (a typist's payload does not mention other worlds). At P1 the role
  * comes from the Clerk claim; the shape does not change.
+ *
+ * A caller with no credential gets no projection — 401, not a default seat.
+ * The mock used to answer a header-less request with the admin role and all
+ * of its grants, which made the widest world in the table the reward for
+ * asking least specifically. `role` is a required enum member here precisely
+ * so there is no shape in which this endpoint describes a caller it has not
+ * identified.
  */
 export const GrantedPermissionSchema = z.object({
   action: z.string(),
