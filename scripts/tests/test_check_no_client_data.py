@@ -428,3 +428,42 @@ def test_the_guard_does_not_refuse_its_own_sources() -> None:
     """
     for name in ("scripts/check_no_client_data.py", "scripts/tests/test_check_no_client_data.py"):
         assert violation_for(Path(name)) is None, name
+
+
+def test_a_large_unrecognised_binary_is_refused(tmp_path: Path) -> None:
+    """The backstop for the container format that has no signature here.
+
+    The payload has no forbidden extension, no magic bytes on the list, and is
+    too large to scan as text — so before this rule it passed every axis. `.bin`
+    is not a sized text extension either, which is what made it a hole rather
+    than a duplicate of the size rule.
+    """
+    payload = b"\x89\x01\x02\x03" + bytes(range(256)) * 2100  # ~512 KB, not text
+    assert len(payload) > LARGE_TEXT_BYTES
+    reason = violation_for(_write(tmp_path, "bundle.bin", payload))
+    assert reason is not None
+    assert "binary format nothing here recognises" in reason
+
+
+def test_a_large_text_file_is_not_a_large_binary(tmp_path: Path) -> None:
+    """`docs/frontend/design-2026-08/reference-app.html` is 1.2 MB of tracked
+    HTML and the largest file in the tree. Being large is not the rule; being
+    large and unreadable is."""
+    big_text = "<div>the design export</div>\n" * 50_000
+    assert len(big_text) > LARGE_TEXT_BYTES
+    assert violation_for(_write(tmp_path, "reference-app.html", big_text)) is None
+
+
+def test_a_utf8_character_across_the_read_boundary_is_not_binariness(
+    tmp_path: Path,
+) -> None:
+    """The head is a fixed-size read, so a multi-byte character can straddle
+    its end. A truncated one is not evidence of anything."""
+    # One ASCII byte first, so the two-byte characters land on odd offsets and
+    # byte 511 is the FIRST half of one. Without the leading "a" they pair up
+    # evenly, the 512-byte read decodes cleanly, and this test cannot fail —
+    # which is exactly how it was written the first time.
+    straddling = "a" + "é" * 400_000
+    with pytest.raises(UnicodeDecodeError):
+        straddling.encode("utf-8")[:512].decode("utf-8")
+    assert violation_for(_write(tmp_path, "notes.md", straddling)) is None

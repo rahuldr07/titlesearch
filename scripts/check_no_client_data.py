@@ -447,6 +447,24 @@ MAX_ROW_CHARS = 64 * 1024
 MAX_TEXT_BYTES = 4 * 1024 * 1024
 
 
+def looks_binary(head: bytes) -> bool:
+    """Whether `head` is the start of something that is not text.
+
+    The last few bytes are retried without, because a UTF-8 character can
+    straddle the end of a fixed-size read and a truncated one is not evidence
+    of anything.
+    """
+    if b"\x00" in head:
+        return True
+    for trim in (0, 1, 2, 3):
+        try:
+            head[: len(head) - trim].decode("utf-8")
+        except UnicodeDecodeError:
+            continue
+        return False
+    return True
+
+
 def _as_text(raw: bytes) -> str | None:
     """`raw` as text, or `None` if it is not text at all."""
     if b"\x00" in raw:
@@ -628,8 +646,25 @@ def _content_violation(path: Path) -> str | None:
             f"size, not source (limit {LARGE_TEXT_BYTES // 1024} KB)"
         )
 
+    # Half a megabyte of a format nothing here recognises. Every container
+    # client data actually arrives in has a signature above, so this is the
+    # backstop for the one that does not — and it is not hypothetical that it
+    # is needed: `check-added-large-files --maxkb=512` covers a file being
+    # ADDED through the hook and covers nothing on the CI whole-tree run, which
+    # is where an unrecognised bundle would sit.
+    #
+    # Text is exempt, which is what keeps the two ~1 MB design exports in
+    # `docs/frontend/design-2026-08/` — the largest tracked files there are —
+    # out of this. Being large and unreadable is the rule; being large is not.
+    if size > LARGE_TEXT_BYTES and looks_binary(head):
+        return (
+            f"{size // 1024} KB of a binary format nothing here recognises. "
+            "Client data at volume is binary, and a bundle this size is not "
+            "source whatever it turns out to be."
+        )
+
     if size > MAX_TEXT_BYTES:
-        return None  # binary of an unknown shape; the size rule above owns it
+        return None  # too large to scan as text, and it read as text above
     try:
         text = _as_text(path.read_bytes())
     except OSError:
