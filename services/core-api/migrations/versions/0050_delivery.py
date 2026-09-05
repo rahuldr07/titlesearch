@@ -1,8 +1,14 @@
 """`reports`, their stored assurance sentences, `deliveries` and the receipt
 
 Revision ID: 0050
-Revises: 0008
+Revises: 0041
 Create Date: 2026-09-04
+
+LINEARIZED AT INTEGRATION, 2026-09-05: `down_revision` was `0008` — the head as this file's
+author found it, per CONVENTIONS §8 — and is now `0041`. `0041` is the head after Ramanujan's range. This file references `orders` (`0001`, columns
+from `0008`) and `rules` (`0003`); both are behind this point.
+The prose below is the author's and describes the branch as written; this line is the read of
+the chain that `alembic upgrade head` actually walks.
 
 Four tables, one enum type and one append-only trigger — everything
 `titlepipe_core.db.models.delivery` declares, in the revision that creates the
@@ -92,7 +98,7 @@ from alembic import op
 from sqlalchemy.dialects import postgresql
 
 revision: str = "0050"
-down_revision: str | None = "0008"
+down_revision: str | None = "0041"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
