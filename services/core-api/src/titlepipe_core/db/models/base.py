@@ -301,6 +301,27 @@ class AuditLog(_TenantRow):
     )
     actor_subject: Mapped[str] = mapped_column(Text, nullable=False)
     actor_seat: Mapped[str] = mapped_column(Text, nullable=False)
+    # 🔴 SERVER-ASSIGNED, NOT APPLICATION-SUPPLIED. `0100`'s
+    # `audit_log_bind_actor` runs `BEFORE INSERT` and OVERWRITES both, so a value
+    # sent from here is discarded rather than honoured. They are mapped anyway
+    # because `alembic check` compares the model to the catalog and an unmapped
+    # column is a diff; a caller that sets them is writing something the database
+    # is about to replace, which is the same relationship `row_hash` and
+    # `chain_position` already have with `audit_chain_link`.
+    #
+    # `actor_user_id` is the resolver's answer — the `users` row the declared
+    # subject and seat actually name in this tenant. `actor_principal` is
+    # `session_user`, the login role, which a `SET ROLE` cannot move.
+    #
+    # NO `ForeignKey` TO `users`, AND THE ABSENCE IS A DECISION. An audit row
+    # outlives the seat it names: `users` is retired by writing `deactivated_at`
+    # today, but a real deletion (by the owner, or by a later retention rule)
+    # would take the audit row with it under `CASCADE` or refuse the deletion
+    # under `RESTRICT`, and neither is what a permanent record wants. The
+    # resolver guarantees the row EXISTED and was active at write time; that is
+    # the claim the column makes.
+    actor_user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    actor_principal: Mapped[str] = mapped_column(Text, nullable=False)
     action: Mapped[str] = mapped_column(AUDIT_ACTION, nullable=False)
     subject_table: Mapped[str] = mapped_column(Text, nullable=False)
     subject_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)

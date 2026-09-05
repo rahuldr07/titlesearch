@@ -53,7 +53,7 @@ import uuid
 from datetime import datetime
 from typing import Final
 
-from sqlalchemy import CheckConstraint, DateTime, Text, UniqueConstraint, text
+from sqlalchemy import CheckConstraint, DateTime, Index, Text, UniqueConstraint, text
 from sqlalchemy.dialects.postgresql import ENUM, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -184,6 +184,19 @@ class User(_IdentityRow):
     __tablename__ = "users"
 
     __table_args__ = (
+        # 🔴 NOT UNIQUE, AND `0100` IS WHY IT EXISTS AT ALL. That revision's
+        # `resolve_actor` looks a seat up by `(tenant_id, identity_subject)` on
+        # every insert into `audit_log`, and the unique constraint below leads
+        # `(tenant_id, identity_provider, identity_subject)` — the provider sits
+        # between the two columns the resolver has, so that index cannot serve
+        # the lookup and a per-row trigger would fall back to a sequential scan.
+        #
+        # Uniqueness is deliberately NOT claimed here: two providers may mint the
+        # same subject within one tenant and the schema permits it. `resolve_actor`
+        # REFUSES that case with a message that says so, which a unique index
+        # would pre-empt with `23505` at the wrong moment — on the `users` insert
+        # rather than on the write whose actor is ambiguous.
+        Index("ix_users_tenant_id_identity_subject", "tenant_id", "identity_subject"),
         UniqueConstraint("tenant_id", "email", name="uq_users_tenant_id_email"),
         UniqueConstraint(
             "tenant_id",

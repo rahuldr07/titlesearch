@@ -55,6 +55,16 @@ from titlepipe_domain import TenantId
 # means something.
 TENANT = UUID("11111111-1111-1111-1111-111111111111")
 
+# The signature every row in this module carries. A literal that reads as a
+# person because `0102` requires one: it resolves against `users.identity_subject`
+# and a job name is refused. The `seeded_order` fixture writes the row.
+SIGNER = "TEST-ONLY reviewer"
+
+# A SECOND person, because one test files two acts and the ledger reads better
+# when a demote is not signed by whoever confirmed. Both are seeded by
+# `seeded_order`; `0102` refuses either if it is not an active seat.
+SECOND_SIGNER = "TEST-ONLY senior"
+
 FEATURE_NOT_SUPPORTED_SQLSTATE = "0A000"
 
 
@@ -92,6 +102,35 @@ def seeded_order(migrated_database: str, seam_engine: Callable[[str], Engine]) -
                     ).scalar_one()
                 )
             )
+            # 🔴 AND THE SIGNER, WHO IS NOW A PERSON. `0102` resolves
+            # `golden_fields.established_by` and `golden_corrections.signed_by`
+            # against `users` in the row's tenant and refuses `28000` unless
+            # exactly one ACTIVE row carries that `identity_subject`. Committed
+            # alongside the order for the same reason the order is: every test
+            # below opens its own session and needs both parents visible.
+            connection.execute(
+                text(
+                    "INSERT INTO users "
+                    "(tenant_id, email, role, identity_provider, identity_subject) "
+                    "VALUES (:tenant, :email, CAST(:role AS user_role), 'TEST-ONLY', :signer) "
+                    "ON CONFLICT DO NOTHING"
+                ),
+                [
+                    {
+                        "tenant": TENANT,
+                        # Lower-case: `ck_users_email_is_lowercase` refuses
+                        # anything else, and the subject is folded into the
+                        # address so two seats cannot collide on
+                        # `uq_users_tenant_id_email`.
+                        "email": (
+                            f"test-only-{signer.replace(' ', '-').lower()}@test-only.invalid"
+                        ),
+                        "signer": signer,
+                        "role": role,
+                    }
+                    for signer, role in ((SIGNER, "reviewer"), (SECOND_SIGNER, "senior"))
+                ],
+            )
     finally:
         engine.dispose()
     return order_id
@@ -114,7 +153,7 @@ async def _establish(repository: GoldenRepository, order_id: UUID, path: str) ->
         na_reason=None,
         tag="delivered_report",
         source_citation="delivered report v1, page 3",
-        established_by="TEST-ONLY reviewer",
+        established_by=SIGNER,
         established_reason="seeded from the delivered report",
     )
 
@@ -181,7 +220,7 @@ async def test_a_correction_moves_the_value_and_leaves_a_permanent_ledger_row(
             await repository.record_act(
                 field,
                 act="correct",
-                signed_by="TEST-ONLY reviewer",
+                signed_by=SIGNER,
                 reason="the deed reads Lot 8",
                 source_citation="deed book 44, page 12",
                 value="Lot 8, Block 2",
@@ -244,7 +283,7 @@ async def test_a_second_act_advances_the_revision_rather_than_repeating_it(
             await repository.record_act(
                 field,
                 act="correct",
-                signed_by="TEST-ONLY reviewer",
+                signed_by=SIGNER,
                 reason="the deed reads Lot 8",
                 source_citation="deed book 44, page 12",
                 value="Lot 8, Block 2",
@@ -254,7 +293,7 @@ async def test_a_second_act_advances_the_revision_rather_than_repeating_it(
             await repository.record_act(
                 field,
                 act="demote",
-                signed_by="TEST-ONLY senior",
+                signed_by=SECOND_SIGNER,
                 reason="the page is water damaged and the lot number is a guess",
                 source_citation="deed book 44, page 12",
                 value="Lot 8, Block 2",

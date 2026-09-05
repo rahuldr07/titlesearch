@@ -195,6 +195,43 @@ def insert_order(*caller_columns: str) -> str:
     return f"INSERT INTO orders ({columns}) VALUES ({values})"  # noqa: S608
 
 
+def insert_actor(tenant: str) -> str:
+    """The `users` row `insert_audit_log`'s actor columns resolve to, for one tenant.
+
+    `0100` binds `audit_log.actor_user_id` in a `BEFORE INSERT` trigger by
+    looking `(tenant_id, actor_subject, actor_seat)` up in `users`, and refuses
+    `28000` when it finds no ACTIVE match. So an audit row for a tenant that has
+    no seats is no longer writable, which is the correct behaviour and which
+    every fixture that invents a tenant now has to satisfy.
+
+    `ON CONFLICT DO NOTHING` so a caller can be idempotent about it without
+    knowing whether an earlier statement in its transaction already wrote the
+    row. The email varies by tenant because `uq_users_tenant_id_email` is
+    tenant-prefixed and a constant would collide only across tenants — which it
+    does not — but a caller writing two tenants in one transaction reads more
+    easily when the rows are visibly different.
+
+    🔴 `S608` IS SUPPRESSED FOR `insert_audit_log`'s REASON: `tenant` is a bind
+    parameter NAME checked against `_BIND_PARAMETER`, and every other value in
+    the statement is a literal in this module.
+    """
+    if not _BIND_PARAMETER.match(tenant):
+        raise AssertionError(
+            f"insert_actor was given {tenant!r} as a bind parameter name. It "
+            f"interpolates that name into SQL, so it has to be a plain identifier; "
+            f"the tenant VALUE belongs in the parameter dictionary."
+        )
+    statement = (
+        f"INSERT INTO users "  # noqa: S608
+        f"(tenant_id, email, role, identity_provider, identity_subject) "
+        f"VALUES (:{tenant}, "
+        f"'test-only-' || :{tenant} || '@test-only.invalid', "
+        f"'{SEED_ACTOR_SEAT}', 'TEST-ONLY', '{SEED_ACTOR_SUBJECT}') "
+        f"ON CONFLICT DO NOTHING"
+    )
+    return statement
+
+
 def insert_audit_log(*, tenant: str | None = None, returning: str | None = None) -> str:
     """One `INSERT` writing a complete `audit_log` row.
 
@@ -293,10 +330,20 @@ class _MinimalRow:
     EXPRESSION evaluated by the server, not to a value: `now()` and
     `gen_random_uuid()` have no Python equivalent that survives being bound, and
     the two ordinal placeholders below are bound rather than interpolated.
+
+    `requires` is an ORDERING EDGE WITH NO COLUMN BEHIND IT, and it exists
+    because `0100` created the first dependency in this schema that no foreign
+    key expresses. `audit_log_bind_actor` resolves `actor_subject` against
+    `users` on every insert, and the audit writer puts a row into `audit_log`
+    behind any write to an audited table — so `users` has to be seeded first,
+    for tables that reference it in no column at all. `parents` cannot say that:
+    it only produces an edge for a column the insert actually writes, which is
+    the correct rule for a foreign key and the wrong one for a trigger.
     """
 
     parents: Mapping[str, str] = field(default_factory=lambda: MappingProxyType({}))
     columns: Mapping[str, str] = field(default_factory=lambda: MappingProxyType({}))
+    requires: frozenset[str] = frozenset()
 
 
 # The bind parameters every expression here may use. `:ordinal` is an int and
@@ -309,6 +356,14 @@ class _MinimalRow:
 # `:ordinal` reaches the server as a `smallint` while it stays under 2**15, because
 # psycopg 3 adapts a Python int by magnitude — so an expression that needs an
 # `integer` has to say so. See `packages.sha256` for the measurement.
+# 🔴 THE SEAT `audit_log`'s ACTOR COLUMNS RESOLVE TO, AS OF `0100`. That revision
+# refuses an audit row whose `(tenant_id, actor_subject, actor_seat)` does not
+# name an ACTIVE `users` row, so a fabricated tenant no longer has an audit
+# trail available to it until it has a seat. `insert_actor` writes that seat, and
+# every call site that invents a tenant has to call it first.
+SEED_ACTOR_SUBJECT = "TEST-ONLY-1"
+SEED_ACTOR_SEAT = "reviewer"
+
 SEED_ORDINAL = "ordinal"
 SEED_ORDINAL_TEXT = "ordinal_text"
 SEED_TENANT = "tenant"
@@ -332,14 +387,31 @@ MINIMAL_ROWS: Final[Mapping[str, _MinimalRow]] = MappingProxyType(
         # enum has exactly three labels and there is no neutral one. `subject_table`
         # is `text` and NOT `regclass` — `0007` says why — so it takes the
         # implausible literal rather than a real relation name.
+        # `actor_user_id` and `actor_principal` are `NOT NULL` as of `0100` and
+        # are deliberately ABSENT here, for the reason `row_hash` is: the
+        # `BEFORE INSERT` trigger `audit_log_bind_actor` ASSIGNS both, and naming
+        # them would be this module writing values the database is about to
+        # overwrite.
+        #
+        # 🔴 `actor_subject` IS NO LONGER AN ARBITRARY LITERAL AND `actor_seat`
+        # IS NO LONGER `'TEST-ONLY'`. `0100` resolves the pair against `users` in
+        # the same tenant and refuses `28000` unless it names an ACTIVE row whose
+        # `role` IS the declared seat. The `users` spec below writes
+        # `identity_subject = 'TEST-ONLY-' || :ordinal_text` with `role`
+        # `'reviewer'`, and ORDINAL 1 is the one every seeded tenant has — tenant A
+        # takes two rows per table and tenant B one, so `'TEST-ONLY-2'` would
+        # resolve in A and refuse in B. A literal rather than the ordinal
+        # expression, so that `insert_audit_log` stays a statement with one bind
+        # parameter. Still implausible on sight, which is what the literal is for.
         "audit_log": _MinimalRow(
+            requires=frozenset({"users"}),
             columns={
-                "actor_subject": "'TEST-ONLY'",
-                "actor_seat": "'TEST-ONLY'",
+                "actor_subject": f"'{SEED_ACTOR_SUBJECT}'",
+                "actor_seat": f"'{SEED_ACTOR_SEAT}'",
                 "action": "'insert'",
                 "subject_table": "'TEST-ONLY'",
                 "subject_id": "gen_random_uuid()",
-            }
+            },
         ),
         # The two identity tables. `users` has been in `db/identity.py` since the auth
         # seam landed and `clients` arrives with `0080`; neither had an entry here,
@@ -382,7 +454,11 @@ MINIMAL_ROWS: Final[Mapping[str, _MinimalRow]] = MappingProxyType(
         # rather than a real relation name — `0007` gives the reason for the same column
         # on `audit_log`: it is not a `regclass`, because a `regclass` follows a rename
         # and a record of what was classified must not.
+        # `requires` `users`: `0007` attaches `audit_record_change` here, and
+        # as of `0100` the audit row it writes resolves its actor against
+        # `users`. The dependency is real and no column on this table shows it.
         "record_classifications": _MinimalRow(
+            requires=frozenset({"users"}),
             columns={
                 # `derived_artifact` is the one label that is neither a class of record
                 # the seed would be lying about holding nor the one the table refuses:
@@ -400,21 +476,25 @@ MINIMAL_ROWS: Final[Mapping[str, _MinimalRow]] = MappingProxyType(
                 "jurisdiction": "'TEST-ONLY'",
                 "classified_by": "'TEST-ONLY'",
                 "classification_basis": "'TEST-ONLY'",
-            }
+            },
         ),
         # `released_at`, `released_by` and `release_reason` are absent, which is what
         # makes this an OPEN hold. `ck_legal_holds_release_is_all_or_nothing` accepts
         # zero of the three or all three, so naming one would need all three and would
         # make the seed's minimal row a RELEASED hold — a different thing, and not the
         # one a table's smallest acceptable row should be.
+        # `requires` `users`: `0007` attaches `audit_record_change` here, and
+        # as of `0100` the audit row it writes resolves its actor against
+        # `users`. The dependency is real and no column on this table shows it.
         "legal_holds": _MinimalRow(
+            requires=frozenset({"users"}),
             columns={
                 "subject_table": "'TEST-ONLY'",
                 "subject_id": "gen_random_uuid()",
                 "matter_reference": "'TEST-ONLY'",
                 "reason": "'TEST-ONLY'",
                 "placed_by": "'TEST-ONLY'",
-            }
+            },
         ),
         "orders": _MinimalRow(
             columns={
@@ -597,14 +677,22 @@ MINIMAL_ROWS: Final[Mapping[str, _MinimalRow]] = MappingProxyType(
         # least: it is where a golden seed comes from before anybody has ruled on
         # it, and it is the one `tag_before` the `confirm` below can legally
         # follow.
+        # 🔴 `established_by` AND `signed_by` ARE SIGNATURES AND `0102` RESOLVES
+        # THEM. Both are looked up in `users` for the row's own tenant and refused
+        # `28000` unless exactly one ACTIVE row carries that `identity_subject`,
+        # so `'TEST-ONLY'` stopped being a legal signer. `SEED_ACTOR_SUBJECT` is
+        # the ordinal-1 seat every seeded tenant has — the same one `audit_log`'s
+        # actor columns name — and `requires` is what puts `users` first, since no
+        # foreign key on either table says so.
         "golden_fields": _MinimalRow(
             parents={"order_id": "orders"},
+            requires=frozenset({"users"}),
             columns={
                 "path": "'test.only.' || :ordinal_text",
                 "value": "'TEST-ONLY-' || :ordinal_text",
                 "tag": "'delivered_report'",
                 "source_citation": "'TEST-ONLY'",
-                "established_by": "'TEST-ONLY'",
+                "established_by": f"'{SEED_ACTOR_SUBJECT}'",
                 "established_reason": "'TEST-ONLY'",
             },
         ),
@@ -623,9 +711,10 @@ MINIMAL_ROWS: Final[Mapping[str, _MinimalRow]] = MappingProxyType(
         # is not exercised here. `tests/test_golden_set.py` is what drives it.
         "golden_corrections": _MinimalRow(
             parents={"golden_field_id": "golden_fields"},
+            requires=frozenset({"users"}),
             columns={
                 "act": "'confirm'",
-                "signed_by": "'TEST-ONLY'",
+                "signed_by": f"'{SEED_ACTOR_SUBJECT}'",
                 "reason": "'TEST-ONLY'",
                 "source_citation": "'TEST-ONLY'",
                 "tag_before": "'delivered_report'",
@@ -739,6 +828,15 @@ def seed_order(columns_by_table: Mapping[str, Collection[str]]) -> tuple[str, ..
             parent
             for column, parent in MINIMAL_ROWS.get(table, _MinimalRow()).parents.items()
             if parent in present and column in columns_by_table[table]
+        }
+        # `requires` is unioned in WITHOUT the column filter the line above
+        # applies, and the asymmetry is the point: a foreign-key edge that this
+        # revision has no column for is not an ordering constraint, and a trigger
+        # edge is one whether or not any column mentions it.
+        | {
+            required
+            for required in MINIMAL_ROWS.get(table, _MinimalRow()).requires
+            if required in present
         }
         for table in present
     }

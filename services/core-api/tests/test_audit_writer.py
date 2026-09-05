@@ -102,7 +102,14 @@ ACTOR_SEAT_GUC = "app.actor_seat"
 TENANT_GUC = "app.current_tenant"
 
 ACTOR_SUBJECT = "reviewer@titlepipe.example"
-ACTOR_SEAT = "senior_examiner"
+
+# 🔴 `"senior"` AND NOT `"senior_examiner"`, WHICH IS A REAL CHANGE AND NOT A
+# TIDY-UP. `0100` resolves `(tenant_id, actor_subject, actor_seat)` against
+# `users` and compares the declared seat to `users.role`, whose type is `0020`'s
+# `user_role` enum — six labels, and `senior_examiner` is not one of them. A
+# plausible-looking string that no seat can ever equal was exactly the kind of
+# value that used to reach `audit_log.actor_seat` unchallenged.
+ACTOR_SEAT = "senior"
 
 # The two tables `0007` attaches the writer to. A LITERAL, deliberately, and the
 # assertion in `test_exactly_these_tables_are_audited` compares it against the
@@ -187,6 +194,18 @@ def _as_app(connection: Connection, tenant: UUID) -> None:
     `0005`/`0006`'s `tenant_isolation` policy on the write AND `0007`'s writer
     needs the actor pair to let the write happen at all. A test that wants one
     of them missing sets them by hand with `_declare`.
+
+    🔴 AND THE SEAT ITSELF, WHICH IS NEW AND IS THE POINT OF `0100`. Declaring an
+    actor is no longer enough to write an audit row: `audit_log_bind_actor`
+    resolves the pair against `users` in the row's tenant and refuses `28000`
+    unless it names an ACTIVE row holding that exact seat. So a request context
+    that used to be three `set_config` calls is now three `set_config` calls and
+    a person who exists. `ON CONFLICT DO NOTHING` because several tests reuse a
+    tenant across statements in one connection.
+
+    The insert is AFTER `_declare`, and the order is load-bearing: `users` is
+    under `FORCE ROW LEVEL SECURITY`, so a row written before the tenant GUC is
+    established is refused by `tenant_isolation`'s `WITH CHECK`.
     """
     _declare(
         connection,
@@ -194,6 +213,23 @@ def _as_app(connection: Connection, tenant: UUID) -> None:
             TENANT_GUC: str(tenant),
             ACTOR_SUBJECT_GUC: ACTOR_SUBJECT,
             ACTOR_SEAT_GUC: ACTOR_SEAT,
+        },
+    )
+    connection.execute(
+        text(
+            "INSERT INTO users ("
+            "  tenant_id, email, role, identity_provider, identity_subject"
+            ") VALUES ("
+            "  :tenant, :email, :seat, 'test-fixture', :subject"
+            ") ON CONFLICT DO NOTHING"
+        ),
+        {
+            "tenant": tenant,
+            # Lower-case because `ck_users_email_is_lowercase` refuses anything
+            # else, and derived from the subject so the two cannot drift apart.
+            "email": ACTOR_SUBJECT.lower(),
+            "seat": ACTOR_SEAT,
+            "subject": ACTOR_SUBJECT,
         },
     )
 

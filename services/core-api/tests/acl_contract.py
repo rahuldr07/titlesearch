@@ -261,6 +261,10 @@ QUEUE_ROUTINES = (
 # allowed to decide.
 APP_ROUTINES = (
     "audit_chain_verify",
+    # `0100`. Granted so a caller can resolve a seat BEFORE attempting the write
+    # whose audit row would otherwise refuse it; `audit_log_bind_actor` calls it
+    # from a trigger and needs no grant of its own to do so.
+    "resolve_actor",
     "legal_hold_is_active",
     "retention_is_disposable",
     "retention_window",

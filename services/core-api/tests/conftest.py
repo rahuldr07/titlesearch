@@ -1325,10 +1325,19 @@ MIGRATION_ENUM_TYPES = (
 MIGRATION_FUNCTIONS = (
     "audit_chain_link",
     "audit_chain_verify",
+    # `0100`. The binder resolves the actor on every insert into `audit_log`; the
+    # resolver is the lookup it calls and is also granted to `titlepipe_app` so a
+    # caller can fail early rather than at the write.
+    "audit_log_bind_actor",
     "audit_log_reject_mutation",
     "audit_record_change",
     "escalations_resolution_needs_a_live_rule",
     "golden_corrections_reject_mutation",
+    # `0102`. One function for both signed columns, dispatched by `TG_ARGV[0]`.
+    "golden_signer_is_a_person",
+    # `0101`. DELETE and TRUNCATE on `golden_fields`, which `0072`'s AFTER UPDATE
+    # trigger could not see.
+    "golden_fields_reject_removal",
     "golden_fields_require_ledger",
     "intake_signoff_lines_refuse_an_edit_after_signature",
     "legal_hold_is_active",
@@ -1353,6 +1362,7 @@ MIGRATION_FUNCTIONS = (
     "procrastinate_unregister_worker_v1",
     "procrastinate_update_heartbeat_v1",
     "reports_reject_mutation",
+    "resolve_actor",
     "retention_is_disposable",
     "retention_window",
     "titlepipe_field_transition",
@@ -1719,8 +1729,12 @@ ISOLATION_UNCLEARABLE_TABLE = "audit_log"
 # UPDATE OR DELETE` triggers, one per table named here. The other DELETE triggers in
 # the schema — the audit writer's on `legal_holds` and `record_classifications`, and
 # Procrastinate's on `procrastinate_jobs` — are row-level and refuse nothing.
+# `golden_fields` joined this set at `0101`, and the reason is the same one the
+# other three are here for: it now refuses `DELETE` and `TRUNCATE` to every role
+# including the superuser, because an `AFTER UPDATE` trigger cannot see a DELETE
+# and DELETE + re-INSERT was the way around `0072`'s seven immutable columns.
 ISOLATION_UNCLEARABLE_TABLES = frozenset(
-    {ISOLATION_UNCLEARABLE_TABLE, "golden_corrections", "reports"}
+    {ISOLATION_UNCLEARABLE_TABLE, "golden_corrections", "golden_fields", "reports"}
 )
 
 # 🔴 THE SEED HAS TO SAY WHO IT IS. `0007` attaches `audit_record_change` to
@@ -1734,7 +1748,17 @@ ISOLATION_UNCLEARABLE_TABLES = frozenset(
 # reason: a `TEST-ONLY` actor in a real audit trail is visible on sight.
 ISOLATION_ACTOR_SUBJECT_GUC = "app.actor_subject"
 ISOLATION_ACTOR_SEAT_GUC = "app.actor_seat"
-ISOLATION_ACTOR = "TEST-ONLY"
+
+# 🔴 THESE TWO ARE NO LONGER FREE LITERALS. `0100` resolves the pair against
+# `users` in the tenant of the row being written and refuses `28000` unless it
+# names an ACTIVE row whose `role` IS the declared seat. `minimal_rows` seeds
+# `identity_subject = 'TEST-ONLY-' || :ordinal_text` with `role = 'reviewer'` in
+# EVERY seeded tenant, and ordinal 1 is the one every tenant has — tenant A gets
+# two rows per table and tenant B one, so `'TEST-ONLY-2'` would resolve in A and
+# refuse in B. Still implausible on sight, which is what the literal was for.
+ISOLATION_ACTOR_SUBJECT = "TEST-ONLY-1"
+ISOLATION_ACTOR_SEAT = "reviewer"
+ISOLATION_ACTOR = ISOLATION_ACTOR_SUBJECT
 
 # The function `0007` attaches to every audited table. DERIVED FROM, NOT COMPARED
 # WITH, `0007`'s own list: the seed needs to know which of the tables it is about
@@ -2090,10 +2114,13 @@ def _seed_isolation_rows(engine: Engine) -> _SeedResult:
         # LOCAL` for the same reason `migrations/env.py` sets `SET ROLE` that way:
         # this function commits, and a `SET LOCAL` would be gone for the statements
         # after the commit.
-        for guc in (ISOLATION_ACTOR_SUBJECT_GUC, ISOLATION_ACTOR_SEAT_GUC):
+        for guc, value in (
+            (ISOLATION_ACTOR_SUBJECT_GUC, ISOLATION_ACTOR_SUBJECT),
+            (ISOLATION_ACTOR_SEAT_GUC, ISOLATION_ACTOR_SEAT),
+        ):
             connection.execute(
                 text("SELECT set_config(:guc, :value, false)"),
-                {"guc": guc, "value": ISOLATION_ACTOR},
+                {"guc": guc, "value": value},
             )
 
         keyed = _isolation_tables(connection)
