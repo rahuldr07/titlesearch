@@ -29,10 +29,9 @@ import argparse
 import os
 from typing import Final
 
-from pydantic import ValidationError
-
 from titlepipe_domain import Environment, LogRenderer
 from titlepipe_service_kit import configure_logging, get_logger
+from titlepipe_service_kit.settings_errors import SettingsValidationError
 from titlepipe_worker.context import CONTEXT_KEY, WorkerContext
 from titlepipe_worker.queue import make_app
 from titlepipe_worker.settings import ENV_PREFIX, WorkerSettings
@@ -57,11 +56,17 @@ SERVICE_NAME: Final = "worker"
 # Both would have been reported as `invalid_fields: [""]`, which names nothing
 # while looking like it named something.
 #
-# The message is deliberately still not logged. Both messages quote the value
-# that failed, and one of those values is a URL that can carry credentials in
-# its userinfo, so echoing it here would undo the whole reason this command
-# reports field names instead of values.
-CROSS_FIELD_RULE: Final = "<cross-field rule>"
+# 🔴 THE MESSAGE IS STILL DELIBERATELY NOT LOGGED, and that ruling now has a
+# second reader. Both cross-field messages quote the value that failed, and one
+# of those values is a URL that can carry credentials in its userinfo, so
+# echoing it here would undo the whole reason this command reports field names
+# instead of values. `SettingsValidationError` carries `problems` — the field
+# names WITH those messages — and this command reads `invalid_fields` instead,
+# which is derived from the schema and never from a value.
+#
+# The constant itself now lives in `titlepipe_service_kit.settings_errors` as
+# CROSS_FIELD_RULE: `redacted_settings_error` needed the same name for the
+# same empty-`loc` reason, and this file is where the reason was worked out.
 
 # The logger is acquired inside each command, after `configure_logging`, never
 # as a module-level singleton. structlog caches a bound logger on first use, so
@@ -81,7 +86,13 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def load_settings() -> WorkerSettings:
-    """Read and validate configuration. Raises `ValidationError` if unusable."""
+    """Read and validate configuration.
+
+    Raises `SettingsValidationError` if unusable — not `ValidationError`.
+    `from_environment` converts it at the boundary so that an UNCAUGHT settings
+    failure cannot print the raw pre-validation environment, which pydantic
+    appends to its own exception as `input_value=`.
+    """
     return WorkerSettings.from_environment()
 
 
@@ -126,7 +137,7 @@ def _load_and_configure_logging() -> WorkerSettings | None:
     """
     try:
         settings = load_settings()
-    except ValidationError as exc:
+    except SettingsValidationError as exc:
         environment = environment_for_failed_configuration()
         configure_logging(
             renderer=LogRenderer.JSON if environment.is_deployed else LogRenderer.CONSOLE,
@@ -135,15 +146,9 @@ def _load_and_configure_logging() -> WorkerSettings | None:
         get_logger(__name__).error(
             "configuration_invalid",
             service_name=SERVICE_NAME,
-            error_count=exc.error_count(),
-            invalid_fields=sorted(
-                {
-                    ".".join(str(part) for part in error["loc"])
-                    if error["loc"]
-                    else CROSS_FIELD_RULE
-                    for error in exc.errors()
-                }
-            ),
+            error_count=len(exc.problems),
+            # `invalid_fields`, never `problems`: see CROSS_FIELD_RULE above.
+            invalid_fields=sorted(set(exc.invalid_fields)),
         )
         return None
 

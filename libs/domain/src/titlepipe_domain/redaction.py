@@ -158,13 +158,24 @@ SAFE_KEY_EXCEPTIONS: Final[frozenset[str]] = frozenset(
         "content_type",
         "document_count",
         "page_count",
-        # Work identity, not a person. Both contain `name` and were therefore
-        # redacted in every environment despite being on the allowlist below —
-        # the two tables are maintained separately and had contradicted each
-        # other unnoticed. `test_every_allowlisted_diagnostic_actually_survives`
-        # now covers the whole table rather than a hand-picked sample.
+        # Work identity, not a person. All three contain `name` and were
+        # therefore redacted in every environment — the two tables are
+        # maintained separately and had contradicted each other unnoticed.
+        #
+        # 🔴 `task_name` WAS THE ONE THIS PAIR DID NOT COVER, and it is the one
+        # the worker actually emits: `stalled_job_retried` and
+        # `stalled_job_abandoned`, the two lines an operator gets when the queue
+        # is losing work, could not say WHAT work was lost.
+        # `test_every_allowlisted_diagnostic_actually_survives` did not catch it
+        # and structurally could not: it iterates this file's own tables, and a
+        # field missing from both of them is invisible to a test that only walks
+        # them. What catches it is
+        # `services/worker/tests/test_emitted_log_fields.py`, which parses the
+        # worker's source for the fields it really passes to a logger and
+        # asserts over those.
         "job_name",
         "queue_name",
+        "task_name",
     }
 )
 
@@ -213,6 +224,10 @@ SAFE_DIAGNOSTIC_KEYS: Final[frozenset[str]] = frozenset(
         # work identity, not work content
         "job_name",
         "queue_name",
+        # Both tables, and it needs both: the blocklist above and this allowlist
+        # are ANDed, so excepting `task_name` from the blocklist alone would
+        # leave it dropped in exactly the environment an operator reads.
+        "task_name",
         "attempt",
         "renderer",
         # configuration echoed at startup; all bounded, none client-derived

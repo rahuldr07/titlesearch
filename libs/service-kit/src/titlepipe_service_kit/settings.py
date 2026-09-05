@@ -21,6 +21,11 @@ at class-definition time: importing such a subclass raises. **That is the
 machine.** It is not a comment asking people not to, and it is asserted by
 `tests/test_settings_base.py::test_a_subclass_cannot_replace_the_deployed_refusal`.
 
+A second seal, on `__pydantic_init_subclass__`, holds `hide_input_in_errors`
+True — the one word that stops a failed validation from printing the raw
+environment dict, DSN password included. See `settings_errors.py`; asserted by
+`tests/test_settings_base.py::test_a_subclass_cannot_unhide_the_raw_input`.
+
 What is NOT sealed, and is not claimed to be: a subclass can still declare a
 field this base has never heard of and forget to check it. Nothing here can know
 about a knob it was never told about. Each service's own settings test is what
@@ -33,10 +38,14 @@ import base64
 import binascii
 from typing import Final, Self, Unpack
 
-from pydantic import ConfigDict, Field, SecretStr, model_validator
+from pydantic import ConfigDict, Field, SecretStr, ValidationError, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from titlepipe_domain import Environment, LogRenderer, ServiceName
+from titlepipe_service_kit.settings_errors import (
+    HIDE_INPUT_IN_ERRORS,
+    redacted_settings_error,
+)
 
 # The names `__init_subclass__` refuses to see redefined below them. Written
 # once, here, so the guard and the things it guards cannot drift apart by a typo.
@@ -101,6 +110,9 @@ class BaseServiceSettings(BaseSettings):
         env_file=None,
         extra="forbid",
         frozen=True,
+        # See `settings_errors.py`. Without it a failed validation prints the
+        # raw pre-validation environment dict, secrets included.
+        hide_input_in_errors=True,
     )
 
     # No default. A forgotten variable must not silently mean "development":
@@ -145,8 +157,23 @@ class BaseServiceSettings(BaseSettings):
         `No parameter named "_env_file"` on top of the missing-argument report.
         `model_validate({})` type-checks but is not the same call: the settings
         sources run from `__init__`, so it would read no environment at all.
+
+        ## Why the failure is caught and re-raised
+
+        This is the boot boundary: the caller is a service factory or a CLI,
+        and whatever comes out of here reaches stderr as a traceback before any
+        logging — and therefore any redaction — has been configured. A
+        `ValidationError` renders the raw input dict it was given, so it is
+        rebuilt here as field names and reasons with `redacted_settings_error`.
+
+        `from None`, not `from exc`: chaining would print the original beneath
+        the replacement under "The above exception was the direct cause", which
+        is the whole leak again one line lower down.
         """
-        return cls()  # pyright: ignore[reportCallIssue]  # rules-allow(any-type): pyright synthesises `__init__` from the fields, so the deliberately default-less `environment` reads as a missing argument; pydantic-settings supplies it from the environment at runtime
+        try:
+            return cls()  # pyright: ignore[reportCallIssue]  # rules-allow(any-type): pyright synthesises `__init__` from the fields, so the deliberately default-less `environment` reads as a missing argument; pydantic-settings supplies it from the environment at runtime
+        except ValidationError as exc:
+            raise redacted_settings_error(cls.__name__, exc) from None
 
     def additional_unsafe_for_deployment(self) -> list[str]:
         """Reasons THIS class adds. Never the inherited ones, and never `super()`.
@@ -229,6 +256,33 @@ class BaseServiceSettings(BaseSettings):
                 "which pydantic would resolve in place of the base validator rather than "
                 f"alongside it. Override {REFUSAL_HOOK!r} instead; every definition of it "
                 "along the MRO is collected, so it cannot remove an inherited refusal."
+            )
+
+    @classmethod
+    def __pydantic_init_subclass__(cls, **kwargs: object) -> None:
+        """Refuse a subclass that turns input-hiding back off.
+
+        A subclass declares its own `model_config` — every service does, for the
+        `env_prefix` — and pydantic MERGES it over the parent's. One
+        `hide_input_in_errors=False` in that dict, or one copy-pasted
+        `SettingsConfigDict` that simply forgets the key while a future pydantic
+        default flips, restores the leak silently and in one word.
+
+        This runs on `__pydantic_init_subclass__` rather than
+        `__init_subclass__` beside the validator seal, and the difference is
+        load-bearing: `model_config` is not merged yet when `__init_subclass__`
+        fires, so the check there would read the parent's value and pass on a
+        subclass that had just overridden it. Here the model is fully built and
+        `cls.model_config` is the effective configuration.
+        """
+        super().__pydantic_init_subclass__(**kwargs)
+        if cls.model_config.get(HIDE_INPUT_IN_ERRORS) is not True:
+            raise TypeError(
+                f"{cls.__name__} sets {HIDE_INPUT_IN_ERRORS}="
+                f"{cls.model_config.get(HIDE_INPUT_IN_ERRORS)!r}. It must stay True: "
+                "pydantic appends the raw pre-validation input to a ValidationError, "
+                "and a settings failure is the one place that input is the whole "
+                "environment — DSNs, API keys and seal passwords included."
             )
 
 

@@ -13,6 +13,15 @@ docs is an incident during an audit.
 
 Settings objects are never logged. `SecretStr` keeps a secret out of `repr`,
 and nothing here dumps the model.
+
+🔴 A FAILED VALIDATION HERE USED TO PRINT THE ENVIRONMENT IT WAS VALIDATING —
+a five-character `cookie_seal_password` published the app DSN password beside it
+as `input_value={'environment': 'producti...esql://u:PrOdPw123@h/d'}`. Both
+halves of the answer are in `titlepipe_service_kit.settings_errors`, which
+records the whole account: `hide_input_in_errors` in the config below, and
+`redacted_settings_error` at the `from_environment` boundary. This class is
+outside the sealed `BaseServiceSettings` hierarchy, so `tests/test_settings.py`
+is the only thing holding both in place.
 """
 
 from __future__ import annotations
@@ -21,53 +30,27 @@ import base64
 import binascii
 from typing import Self
 
-from pydantic import Field, SecretStr, model_validator
+from pydantic import Field, SecretStr, ValidationError, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from titlepipe_domain import Environment, LogRenderer, ServiceName
 
-# A cookie-seal password is a FERNET KEY: 32 random bytes, urlsafe-base64
-# encoded, which is 44 characters including the single '=' pad. Enforced here so
-# the failure lands at startup rather than at first login.
+# 🔴 IMPORTED, NOT REDECLARED. These four were a verbatim copy of the
+# `titlepipe_service_kit.settings` originals — the same constants, the same
+# 44-vs-32 lesson written out twice — and a copy of a rule is a place the rule
+# can quietly stop being true, which is the argument that package exists on.
+# The full account of why the length is checked against the DECODED byte count,
+# and why the placeholder is a structurally valid Fernet key, lives there.
 #
-# THIS WAS 32 AND IT WAS WRONG — the byte count, not the encoded length. Every
-# real WorkOS credential is 44 characters, so the check would have rejected the
-# genuine article and accepted nothing that works. It was never caught because
-# the placeholder default was itself 32 characters, so the validator agreed with
-# the bug: the only value ever tested was the one that should have failed.
-#
-# The length is checked against the DECODED byte count rather than trusting 44,
-# because 44 characters of the wrong alphabet is not a key. `base64` is stdlib,
-# so this stays honest without pulling `cryptography` in at Gate 1 — the
-# constructive `Fernet(secret)` check belongs at the gate that adds WorkOS, and
-# is noted in BUILD-PLAN §5.1.
-SEAL_KEY_BYTES = 32
-SEAL_PASSWORD_LENGTH = 44
-
-# Values that exist to make a fresh checkout run. Any of them in a deployed
-# environment means a real secret was never supplied.
-#
-# This one is a STRUCTURALLY VALID Fernet key that decodes to the readable
-# sentence "development-only-seal-password!!" — obviously a placeholder to a
-# human, and it passes the same validator a real key does. The previous value
-# was that sentence UNENCODED: 32 characters, i.e. the byte count rather than
-# the encoded length. It agreed with the old off-by-12 check and hid it, which
-# is why nothing failed until a real credential was tried.
-#
-# It is listed in PLACEHOLDER_SECRETS below, so a deployed environment still
-# refuses to start with it — which is the point of naming it.
-DEVELOPMENT_SEAL_PASSWORD = "ZGV2ZWxvcG1lbnQtb25seS1zZWFsLXBhc3N3b3JkISE="  # noqa: S105
-
-PLACEHOLDER_SECRETS = frozenset(
-    {
-        "",
-        "change-me",
-        "changeme",
-        "secret",
-        "placeholder",
-        DEVELOPMENT_SEAL_PASSWORD,
-    }
+# `blind-svc` keeps its own pair: its seal is 32 characters and its placeholder
+# is a different value, so importing these there would be wrong, not tidier.
+from titlepipe_service_kit.settings import (
+    DEVELOPMENT_SEAL_PASSWORD,
+    PLACEHOLDER_SECRETS,
+    SEAL_KEY_BYTES,
+    SEAL_PASSWORD_LENGTH,
 )
+from titlepipe_service_kit.settings_errors import redacted_settings_error
 
 
 class CoreApiSettings(BaseSettings):
@@ -78,6 +61,9 @@ class CoreApiSettings(BaseSettings):
         env_file=None,  # the platform supplies the environment; no implicit .env
         extra="forbid",
         frozen=True,
+        # See the module docstring. Without it a failed validation prints the
+        # raw pre-validation environment dict, secrets included.
+        hide_input_in_errors=True,
     )
 
     # No default. A forgotten variable must not silently mean "development":
@@ -250,8 +236,22 @@ class CoreApiSettings(BaseSettings):
         `No parameter named "_env_file"` on top of the missing-argument report.
         `model_validate({})` type-checks but is not the same call: the settings
         sources run from `__init__`, so it would read no environment at all.
+
+        ## Why the failure is caught and re-raised
+
+        This is the boot boundary: `create_app` calls it before
+        `configure_logging`, so whatever comes out reaches stderr as a traceback
+        with no redaction running. A `ValidationError` renders the raw input
+        dict it was given, so it is rebuilt here as field names and reasons.
+
+        `from None`, not `from exc`: chaining would print the original beneath
+        the replacement under "The above exception was the direct cause", which
+        is the same leak one line lower down.
         """
-        return cls()  # pyright: ignore[reportCallIssue]  # rules-allow(any-type): pyright synthesises `__init__` from the fields, so the deliberately default-less `environment` reads as a missing argument; pydantic-settings supplies it from the environment at runtime
+        try:
+            return cls()  # pyright: ignore[reportCallIssue]  # rules-allow(any-type): pyright synthesises `__init__` from the fields, so the deliberately default-less `environment` reads as a missing argument; pydantic-settings supplies it from the environment at runtime
+        except ValidationError as exc:
+            raise redacted_settings_error(cls.__name__, exc) from None
 
     @model_validator(mode="after")
     def _seal_password_is_a_fernet_key(self) -> Self:

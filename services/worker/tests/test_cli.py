@@ -13,8 +13,8 @@ import pytest
 import structlog
 
 from titlepipe_domain import Environment
+from titlepipe_service_kit.settings_errors import CROSS_FIELD_RULE
 from titlepipe_worker.cli import (
-    CROSS_FIELD_RULE,
     EXIT_INVALID_CONFIGURATION,
     EXIT_OK,
     build_parser,

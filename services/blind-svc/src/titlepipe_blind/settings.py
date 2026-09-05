@@ -12,16 +12,34 @@ The two extra refusals are deliberate:
   than holding a credential it must never have.
 - **No shared object store.** The blind storage credential must point at the
   blind-input location, not at the extraction or reports areas.
+
+🔴 A FAILED VALIDATION HERE USED TO PRINT THE ENVIRONMENT IT WAS VALIDATING.
+pydantic appends `input_value=` to a `ValidationError`: the RAW pre-validation
+dict, head-and-tail truncated. `SecretStr` is no defence — the wrapping happens
+after validation, and that dict is what arrived before it — and neither is a
+careful validator, because the leak is not in any message a validator wrote. A
+five-character `cookie_seal_password` tripping the seal check published the app
+DSN password sitting beside it in the truncation window:
+
+    input_value={'environment': 'producti...esql://u:PrOdPw123@h/d'}
+
+`create_app` builds settings before `configure_logging`, so that string reaches
+stderr as an uncaught traceback with the redaction pipeline not yet running —
+`scrub_credentials` matches that DSN exactly and never gets the chance. Both
+halves of the answer live in `titlepipe_service_kit.settings_errors`:
+`hide_input_in_errors` in the config below, and `redacted_settings_error` at the
+`from_environment` boundary.
 """
 
 from __future__ import annotations
 
 from typing import Self
 
-from pydantic import Field, SecretStr, model_validator
+from pydantic import Field, SecretStr, ValidationError, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from titlepipe_domain import Environment, LogRenderer, ServiceName
+from titlepipe_service_kit.settings_errors import redacted_settings_error
 
 SEAL_PASSWORD_LENGTH = 32
 
@@ -47,6 +65,9 @@ class BlindApiSettings(BaseSettings):
         env_file=None,
         extra="forbid",
         frozen=True,
+        # See the module docstring. Without it a failed validation prints the
+        # raw pre-validation environment dict, secrets included.
+        hide_input_in_errors=True,
     )
 
     # No default. A forgotten variable must not silently mean "development":
@@ -114,8 +135,22 @@ class BlindApiSettings(BaseSettings):
         `No parameter named "_env_file"` on top of the missing-argument report.
         `model_validate({})` type-checks but is not the same call: the settings
         sources run from `__init__`, so it would read no environment at all.
+
+        ## Why the failure is caught and re-raised
+
+        This is the boot boundary: `create_app` calls it before
+        `configure_logging`, so whatever comes out reaches stderr as a traceback
+        with no redaction running. A `ValidationError` renders the raw input
+        dict it was given, so it is rebuilt here as field names and reasons.
+
+        `from None`, not `from exc`: chaining would print the original beneath
+        the replacement under "The above exception was the direct cause", which
+        is the same leak one line lower down.
         """
-        return cls()  # pyright: ignore[reportCallIssue]  # rules-allow(any-type): pyright synthesises `__init__` from the fields, so the deliberately default-less `environment` reads as a missing argument; pydantic-settings supplies it from the environment at runtime
+        try:
+            return cls()  # pyright: ignore[reportCallIssue]  # rules-allow(any-type): pyright synthesises `__init__` from the fields, so the deliberately default-less `environment` reads as a missing argument; pydantic-settings supplies it from the environment at runtime
+        except ValidationError as exc:
+            raise redacted_settings_error(cls.__name__, exc) from None
 
     @model_validator(mode="after")
     def _seal_password_is_the_right_length(self) -> Self:

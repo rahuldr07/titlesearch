@@ -9,9 +9,11 @@ extending cannot become replacing.
 
 from __future__ import annotations
 
+import traceback
+
 import pytest
-from pydantic import SecretStr, ValidationError
-from pydantic_settings import SettingsConfigDict
+from pydantic import SecretStr, ValidationError, model_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from titlepipe_domain import Environment, LogRenderer, ServiceName
 from titlepipe_service_kit.settings import (
@@ -19,6 +21,11 @@ from titlepipe_service_kit.settings import (
     SEALED_VALIDATOR,
     BaseHttpServiceSettings,
     BaseServiceSettings,
+)
+from titlepipe_service_kit.settings_errors import (
+    HIDE_INPUT_IN_ERRORS,
+    SettingsValidationError,
+    redacted_settings_error,
 )
 
 
@@ -124,7 +131,10 @@ def test_from_environment_reads_the_prefix(monkeypatch: pytest.MonkeyPatch) -> N
 
 
 def test_a_missing_environment_is_a_startup_failure() -> None:
-    with pytest.raises(ValidationError):
+    """`SettingsValidationError`, not `ValidationError` — see the redaction
+    tests below for why `from_environment` no longer lets pydantic's own
+    exception out."""
+    with pytest.raises(SettingsValidationError):
         ExampleSettings.from_environment()
 
 
@@ -191,3 +201,202 @@ def test_the_sealed_names_are_validators_that_actually_exist() -> None:
     protecting nothing."""
     assert hasattr(BaseServiceSettings, SEALED_VALIDATOR)
     assert hasattr(BaseHttpServiceSettings, SEAL_VALIDATOR)
+
+
+# --- the boot failure that must not print what it was validating -----------
+#
+# All three of these were watched fail before they were trusted. Deleting
+# `hide_input_in_errors=True` from `BaseServiceSettings.model_config` reds the
+# subclass seal and the direct-construction test; replacing the
+# `redacted_settings_error` call in `from_environment` with a bare `raise` reds
+# the boundary test with `PrOdPw123` present in the traceback.
+
+# A password short enough to survive pydantic's head-and-tail truncation of the
+# input dict, which is what made this leak reachable rather than theoretical.
+LEAKABLE_SECRET = "PrOdPw123"
+
+
+class SecretBearingSettings(BaseServiceSettings):
+    """Shaped like a real service: a DSN field beside an unrelated refusal.
+
+    The leak needs two things in one model — a secret, and something else to
+    fail on — because the secret's own validator is not what published it.
+    """
+
+    model_config = SettingsConfigDict(env_prefix="TITLEPIPE_SECRETEXAMPLE_")
+
+    service_name: ServiceName = ServiceName.WORKER
+    database_url: SecretStr | None = None
+    risky_knob: bool = False
+
+    def additional_unsafe_for_deployment(self) -> list[str]:
+        return ["the risky knob is on"] if self.risky_knob else []
+
+
+def test_a_failed_boot_names_the_field_and_never_the_value(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The proven leak, asserted over the string an operator actually sees.
+
+    `format_exception` and not `str(exc)`, because the leak was on stderr as an
+    uncaught traceback: a chained original would carry the input dict even when
+    the replacement does not, which is why `from_environment` raises
+    `from None`.
+    """
+    monkeypatch.setenv("TITLEPIPE_SECRETEXAMPLE_ENVIRONMENT", "production")
+    monkeypatch.setenv("TITLEPIPE_SECRETEXAMPLE_RISKY_KNOB", "true")
+    monkeypatch.setenv(
+        "TITLEPIPE_SECRETEXAMPLE_DATABASE_URL",
+        f"postgresql://u:{LEAKABLE_SECRET}@h/d",
+    )
+
+    with pytest.raises(SettingsValidationError) as caught:
+        SecretBearingSettings.from_environment()
+
+    rendered = "".join(traceback.format_exception(caught.value))
+    assert LEAKABLE_SECRET not in rendered, (
+        "the boot traceback published the DSN password it was validating"
+    )
+    # The failure still has to be actionable, or redaction has traded one
+    # unusable boot for another.
+    assert "the risky knob is on" in str(caught.value)
+    assert caught.value.model_name == "SecretBearingSettings"
+
+
+class UnhiddenProbe(BaseSettings):
+    """Deliberately NOT a `BaseServiceSettings`, and deliberately unconfigured.
+
+    `hide_input_in_errors` defaults to False in pydantic, so this class is the
+    unfixed shape: it is the control that proves the leak is real, which is
+    what lets the assertion beside it mean something. A test that only checked
+    the fixed class would pass identically if `redacted_settings_error` were
+    replaced by `str(exc)` tomorrow, because the OTHER mechanism would still be
+    hiding the value.
+    """
+
+    model_config = SettingsConfigDict(env_prefix="TITLEPIPE_UNHIDDENPROBE_")
+
+    database_url: SecretStr | None = None
+    risky_knob: bool = False
+
+    @model_validator(mode="after")
+    def _always_refuses(self) -> UnhiddenProbe:
+        raise ValueError("unsafe configuration for production: the risky knob is on")
+
+
+def test_the_boundary_redaction_works_on_an_error_that_does_leak() -> None:
+    """Mechanism 2 on its own, against a model that has no mechanism 1.
+
+    The first assertion is the control. If pydantic ever stops appending the
+    input — or if this probe stops being shaped like the real failure — this
+    test fails LOUDLY rather than passing vacuously, which is the failure mode
+    a redaction test is most prone to.
+    """
+    with pytest.raises(ValidationError) as raw:
+        UnhiddenProbe(database_url=f"postgresql://u:{LEAKABLE_SECRET}@h/d")  # pyright: ignore[reportArgumentType]
+
+    assert LEAKABLE_SECRET in str(raw.value), (
+        "the control no longer leaks, so the assertion below proves nothing"
+    )
+
+    redacted = redacted_settings_error("UnhiddenProbe", raw.value)
+    assert LEAKABLE_SECRET not in str(redacted)
+    # `exc.errors()` carries `input` whatever `hide_input_in_errors` says, so
+    # `include_input=False` is the argument doing the work here.
+    assert not any(LEAKABLE_SECRET in problem for problem in redacted.problems)
+    assert "the risky knob is on" in str(redacted)
+
+
+def test_the_errors_list_carries_no_input_either(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The same property through the real boundary rather than the helper."""
+    monkeypatch.setenv("TITLEPIPE_SECRETEXAMPLE_ENVIRONMENT", "production")
+    monkeypatch.setenv("TITLEPIPE_SECRETEXAMPLE_RISKY_KNOB", "true")
+    monkeypatch.setenv(
+        "TITLEPIPE_SECRETEXAMPLE_DATABASE_URL",
+        f"postgresql://u:{LEAKABLE_SECRET}@h/d",
+    )
+
+    with pytest.raises(SettingsValidationError) as caught:
+        SecretBearingSettings.from_environment()
+
+    assert not any(LEAKABLE_SECRET in problem for problem in caught.value.problems)
+
+
+def test_a_direct_construction_renders_no_input_at_all() -> None:
+    """`from_environment` is not the only way in.
+
+    Every test in this repo builds settings by calling the class, and that path
+    never reaches the boundary catch — `hide_input_in_errors` is the only thing
+    covering it.
+
+    THE ASSERTION IS ON `input_value=`, NOT ON THE SECRET, and the difference is
+    the whole point. pydantic truncates the input dict to a head and a tail, so
+    whether any particular secret is visible depends on where it happens to sit
+    among the other fields: with the flag removed, this same construction still
+    hides `PrOdPw123` behind the ellipsis purely by luck of field order. A test
+    asserting the secret's absence would therefore pass on a broken build.
+    `input_value=` is the marker pydantic emits whenever it renders input at
+    all, so its absence is the property that is actually being bought, and it
+    goes red the moment the flag does.
+    """
+    with pytest.raises(ValidationError) as caught:
+        SecretBearingSettings(  # pyright: ignore[reportCallIssue]
+            environment=Environment.PRODUCTION,
+            risky_knob=True,
+            # A raw string, not a `SecretStr`: that is what an environment
+            # variable supplies, and the input dict pydantic renders is the
+            # pre-validation one, so a `SecretStr` here would mask the value
+            # before the mechanism under test ever ran.
+            database_url=f"postgresql://u:{LEAKABLE_SECRET}@h/d",  # pyright: ignore[reportArgumentType]
+        )
+
+    rendered = str(caught.value)
+    assert "input_value=" not in rendered, (
+        "pydantic is rendering the pre-validation input; a secret in the "
+        "visible half of the truncation window would be published"
+    )
+    assert LEAKABLE_SECRET not in rendered
+    assert "the risky knob is on" in rendered
+
+
+def test_the_unconfigured_control_really_does_render_its_input() -> None:
+    """Anchors the assertion above: without the flag, `input_value=` appears.
+
+    `UnhiddenProbe` carries pydantic's default configuration, so this is what
+    every settings class in this repo looked like before the flag was added.
+    """
+    with pytest.raises(ValidationError) as caught:
+        UnhiddenProbe(database_url=f"postgresql://u:{LEAKABLE_SECRET}@h/d")  # pyright: ignore[reportArgumentType]
+
+    assert "input_value=" in str(caught.value)
+
+
+def test_a_subclass_cannot_unhide_the_raw_input() -> None:
+    """The one word that restores the leak, refused at class definition.
+
+    Every service subclass declares its own `model_config` for its
+    `env_prefix`, and pydantic merges that dict over the parent's — so a single
+    `hide_input_in_errors=False` in it, or a future pydantic whose default
+    changes under a config that never mentions the key, is all it takes.
+    """
+    with pytest.raises(TypeError, match=HIDE_INPUT_IN_ERRORS):
+        # `type()` for the same reason as the validator-seal tests above: a
+        # `class` statement at module level would raise at COLLECTION time and
+        # take the whole file down instead of failing this one test.
+        type(
+            "Unhidden",
+            (BaseServiceSettings,),
+            {
+                "model_config": SettingsConfigDict(
+                    env_prefix="TITLEPIPE_UNHIDDEN_", hide_input_in_errors=False
+                ),
+                "__annotations__": {"service_name": ServiceName},
+                "service_name": ServiceName.WORKER,
+            },
+        )
+
+
+def test_the_shipped_settings_classes_all_hide_the_input() -> None:
+    """The seal above only fires on a subclass. These are the classes."""
+    for klass in (BaseServiceSettings, BaseHttpServiceSettings, ExampleSettings):
+        assert klass.model_config.get(HIDE_INPUT_IN_ERRORS) is True, klass.__name__
