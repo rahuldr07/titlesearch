@@ -11,7 +11,7 @@ import {
   resetDesignStores,
   slaFor,
 } from "./design.js";
-import { guard, guardAs, err, MOCK_ROLE_HEADER } from "./guard.js";
+import { guard, guardAs, seatOf, err, MOCK_ROLE_HEADER } from "./guard.js";
 import { resetSettingsStores, settingsHandlers } from "./settings.js";
 import { resetTemplateStores, templateHandlers } from "./templates.js";
 import { appendAudit, auditActor, auditStore, resetAuditStore } from "./audit.js";
@@ -616,12 +616,15 @@ export const handlers = [
 
   /**
    * READ ONLY. No band row carries a way to take the work — see `bandRow`.
-   * The x-mock-role header is the mock's JWT role claim, the same convention
-   * `guard` reads below; a missing header is the dev-default admin session.
+   * The credential is the same one `guard` reads, resolved the same way: a
+   * reviewer's bands are narrower than a senior's, so a caller with no seat
+   * has no bands rather than the widest ones. A missing header read as `admin`
+   * here as well until FX-27.
    */
   http.get("/api/queue/bands", ({ request }) => {
-    const raw = request.headers.get("x-mock-role");
-    return HttpResponse.json(queueBandsFor(raw === null ? "admin" : raw));
+    const seat = seatOf(request);
+    if (seat === null) return err("refused: no session", 401);
+    return HttpResponse.json(queueBandsFor(seat.role));
   }),
 
   /**

@@ -143,6 +143,24 @@ describe("a request with no credential is refused, never promoted", () => {
     expect(await res.text()).not.toContain("admin");
   });
 
+  test("no seat-scoped read answers a header-less caller with the widest view", async () => {
+    /*
+     * The projection was not the only read that resolved a missing header to
+     * admin. Both of these narrow by seat — a reviewer's lifecycle board shows
+     * their own orders and the unassigned pile, a reviewer's queue has three
+     * bands where a senior's has four — so answering an unidentified caller
+     * meant answering with the widest one. Each pair below proves the read is
+     * genuinely seat-scoped, so the 401 is withholding something real.
+     */
+    for (const path of ["/api/me/permissions", "/api/lifecycle", "/api/queue/bands"]) {
+      expect((await fetch(url(path))).status, path).toBe(401);
+      const seated = await fetch(url(path), { headers: { [MOCK_ROLE_HEADER]: "reviewer" } });
+      expect(seated.status, path).toBe(200);
+      const wider = await fetch(url(path), { headers: { [MOCK_ROLE_HEADER]: "admin" } });
+      expect(await seated.text(), path).not.toBe(await wider.text());
+    }
+  });
+
   test("a real seat still gets exactly its own projection", async () => {
     const res = await fetch(url("/api/me/permissions"), {
       headers: { [MOCK_ROLE_HEADER]: "typist" },
