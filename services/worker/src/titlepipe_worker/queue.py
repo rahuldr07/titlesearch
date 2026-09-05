@@ -40,6 +40,7 @@ from __future__ import annotations
 from typing import Final
 
 from procrastinate import App, PsycopgConnector
+from procrastinate.jobs import JobDeferrer
 
 from titlepipe_worker.settings import WorkerSettings
 from titlepipe_worker.tasks import register_jobs
@@ -61,12 +62,14 @@ def make_connector(settings: WorkerSettings) -> PsycopgConnector:
         # with no log line. Failing the fetch is recoverable; a silent hang is
         # the shape this service refuses everywhere else.
         timeout=30.0,
-        # The pool is opened by `App.open_async`, not by the constructor.
-        # Procrastinate passes this through to `AsyncConnectionPool`, whose
-        # default would otherwise open connections from `__init__` — at import
-        # time for anyone who builds an app at module scope, which is exactly
-        # what §6 forbids.
-        open=False,
+        # 🔴 NO `open=False` HERE, and it is worth saying why, because passing it
+        # looks correct. `AsyncConnectionPool` would indeed open connections from
+        # its constructor by default — which for anyone building an app at module
+        # scope means connecting at import time, exactly what CONVENTIONS §6
+        # forbids — but procrastinate already passes `open=False` to the pool
+        # factory itself. Passing it again is `TypeError: got multiple values for
+        # keyword argument 'open'` at the first `open_async`, MEASURED. The
+        # property is the library's to hold and it holds it.
     )
 
 
@@ -84,3 +87,21 @@ def make_app(settings: WorkerSettings) -> App:
     app = App(connector=make_connector(settings))
     register_jobs(app)
     return app
+
+
+def deferrer(app: App, task_name: str) -> JobDeferrer:
+    """A handle for putting one job on the queue, addressed BY NAME.
+
+    This is how a producer defers without importing the task. core-api will need
+    exactly this — it creates the row that justifies the work and defers in the
+    same transaction — and it must not have to depend on this package to do it.
+
+    🔴 `allow_unknown=False` IS THE POINT OF THE WRAPPER. `configure_task`
+    defaults it to True, and with True a misspelled task name is accepted: the
+    defer succeeds, a row lands in `procrastinate_jobs`, and no worker ever
+    claims it because no worker registers that name. The queue then reports a job
+    waiting rather than a mistake, and it waits forever. `False` turns the same
+    typo into an exception at the defer, in the caller's own transaction, which
+    rolls back with it.
+    """
+    return app.configure_task(name=task_name, allow_unknown=False)
