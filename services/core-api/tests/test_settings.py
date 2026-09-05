@@ -8,6 +8,7 @@ still pass if only one of the seven checks survived a refactor.
 from __future__ import annotations
 
 import base64
+import traceback
 
 import pytest
 from pydantic import SecretStr, ValidationError
@@ -17,6 +18,10 @@ from titlepipe_core.settings import (
     CoreApiSettings,
 )
 from titlepipe_domain import Environment, LogRenderer
+from titlepipe_service_kit.settings_errors import (
+    HIDE_INPUT_IN_ERRORS,
+    SettingsValidationError,
+)
 
 # A valid Fernet key: urlsafe-base64 of 32 bytes, 44 characters. Not "a 32
 # character string" — that distinction is the bug these tests now pin.
@@ -294,3 +299,86 @@ def test_unknown_configuration_keys_are_rejected() -> None:
     leaving the safe default in place."""
     with pytest.raises(ValidationError):
         CoreApiSettings(environment=Environment.DEVELOPMENT, dbeug=True)  # pyright: ignore[reportCallIssue]
+
+
+# --- the boot failure that must not print what it was validating -----------
+#
+# `CoreApiSettings` does NOT inherit `BaseServiceSettings`, so the
+# `__pydantic_init_subclass__` seal that holds `hide_input_in_errors` True on
+# the shared base does not reach this class. These three are the whole machine
+# for it, and each was watched fail:
+#
+#   - a bare `raise` at the `from_environment` boundary reds the first;
+#   - deleting `hide_input_in_errors=True` reds the other two;
+#   - doing BOTH reds the first on its leak assertion specifically, with
+#     `PrOdPw123` present in the formatted traceback. That last one matters:
+#     with either mechanism still in place the leak assertion cannot fail, and
+#     an assertion that cannot fail proves nothing about the property it names.
+
+# Short enough to survive pydantic's head-and-tail truncation of the input
+# dict, which is what made the leak reachable rather than theoretical.
+LEAKABLE_DSN_PASSWORD = "PrOdPw123"
+
+
+def test_a_failed_boot_never_prints_the_dsn_password(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The reproduction, asserted over what an operator actually sees.
+
+    Every variable below is a first-deploy configuration except the seal
+    password, which is five characters — an UNRELATED refusal to the DSN, and
+    that is the point: pydantic appended the whole pre-validation dict to the
+    error, so the field that failed had nothing to do with the field that
+    leaked.
+
+    `format_exception` and not `str(exc)`, because the leak reached stderr as
+    an uncaught traceback: a chained original would carry the input dict even
+    when the replacement does not, which is why the boundary raises
+    `from None`.
+    """
+    for name, value in (
+        ("ENVIRONMENT", "production"),
+        ("COOKIE_SEAL_PASSWORD", "short"),
+        ("APP_DATABASE_URL", f"postgresql://u:{LEAKABLE_DSN_PASSWORD}@h/d"),
+        ("ALLOWED_HOSTS", '["app.titlepipe.example"]'),
+        ("HOST", "0.0.0.0"),
+        ("DOCS_ENABLED", "false"),
+        ("SAME_ORIGIN_DEPLOYMENT", "true"),
+        ("WORKOS_API_KEY", WORKOS_API_KEY),
+        ("WORKOS_CLIENT_ID", WORKOS_CLIENT_ID),
+    ):
+        monkeypatch.setenv(f"TITLEPIPE_{name}", value)
+
+    with pytest.raises(SettingsValidationError) as caught:
+        CoreApiSettings.from_environment()
+
+    rendered = "".join(traceback.format_exception(caught.value))
+    assert LEAKABLE_DSN_PASSWORD not in rendered, (
+        "the boot traceback published the DSN password it was validating"
+    )
+    # Redaction must not have traded one unusable boot for another.
+    assert "cookie_seal_password" in rendered
+
+
+def test_a_direct_construction_renders_no_input_at_all() -> None:
+    """`from_environment` is not the only way in — every test here calls the
+    class, and that path never reaches the boundary catch.
+
+    THE ASSERTION IS ON `input_value=`, NOT ON A SECRET. pydantic truncates the
+    input dict to a head and a tail, so whether any particular value is visible
+    depends on where it happens to sit among the other fields; a
+    secret-absence assertion here would pass on a build with the flag removed,
+    purely by luck of field order. `input_value=` is what pydantic emits
+    whenever it renders input at all.
+    """
+    with pytest.raises(ValidationError) as caught:
+        deployed(cookie_seal_password=SecretStr("short"))
+
+    assert "input_value=" not in str(caught.value)
+
+
+def test_the_model_hides_its_input() -> None:
+    """The config key itself, because nothing else in this service asserts it.
+
+    `CoreApiSettings` is outside the sealed hierarchy, so this is the only
+    thing standing between a copy-pasted `SettingsConfigDict` and the leak.
+    """
+    assert CoreApiSettings.model_config.get(HIDE_INPUT_IN_ERRORS) is True
