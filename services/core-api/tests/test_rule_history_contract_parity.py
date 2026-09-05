@@ -26,11 +26,15 @@ cross-fixture test below is how that stays true.
 
 ## The 404
 
-The refusal is the router's decision and is tested as one, through a `scoped_read`
-that returns no rows rather than through a database that holds none. The database
-is not the subject: `RuleRepository.history_for` returning `[]` for an unknown code
-is `test_rule_repository.py`'s to prove, and what is unproven without this file is
-that the route turns that `[]` into a 404 carrying the flat envelope — the shape
+The refusal is `RuleService.rule_history`'s decision — not the router's, and that
+distinction is CONVENTIONS.md §10's, not a detail: whether no rows is a missing
+resource or an empty collection is a question about the domain, so the service
+raises `NotFoundError` and never names a status. It is tested through a
+`scoped_read` that returns no rows rather than through a database that holds none.
+The database is not the subject: `RuleRepository.history_for` returning `[]` for an
+unknown code is `test_rule_repository.py`'s to prove, and what is unproven without
+this file is that the SERVICE turns that `[]` into a `NotFoundError` and that
+`api/errors.py` renders it as a 404 carrying the flat envelope — the shape
 `apps/web/src/shared/api.ts::readError` can actually render.
 
 ## What this file CANNOT hold, measured rather than assumed
@@ -57,10 +61,10 @@ from fastapi.testclient import TestClient
 from pydantic import SecretStr, TypeAdapter
 
 from titlepipe_core.api.mappers.rules import render_rule_history
-from titlepipe_core.api.routers import rules as rules_router
 from titlepipe_core.api.schemas.rules import RuleHistoryResponse
 from titlepipe_core.app import create_app
 from titlepipe_core.db.models import Rule
+from titlepipe_core.services import rule_service
 from titlepipe_core.settings import CoreApiSettings
 from titlepipe_domain import Environment
 
@@ -327,12 +331,20 @@ def test_the_fixture_parses_back_into_the_models_with_nothing_left_over() -> Non
 def _app_with_read(rows: Sequence[Rule]) -> TestClient:
     """An app whose `scoped_read` answers `rows` without touching a database.
 
-    The substitution is at `api.routers.rules.scoped_read` — the name the route
-    resolves — so everything the route itself does is real: the path parameter, the
-    empty check, the raise, and the whole error-handler chain the app installs.
-    What is replaced is only the session acquisition, which
-    `tests/test_rules_endpoint.py` covers against a real engine and which would
-    otherwise make this a database test of a routing decision.
+    The substitution is at `services.rule_service.scoped_read` — the name that
+    module resolves — and it MOVED THERE WITH THE READ. It used to sit on
+    `api.routers.rules`; CONVENTIONS.md §10 put session acquisition under the
+    service, and a `monkeypatch.setattr` against a name a module no longer binds
+    raises `AttributeError` rather than passing vacuously, so this file could not
+    have been left pointing at the old one.
+
+    What that substitution buys is unchanged: everything ABOVE the session is
+    real. The path parameter, `RuleService.rule_history`'s empty check and raise,
+    `render_rule_history`, `response_model` re-validation and the whole
+    error-handler chain the app installs all run. What is replaced is only the
+    session acquisition, which `tests/test_rules_endpoint.py` covers against a
+    real engine and which would otherwise make this a database test of a routing
+    decision.
     """
     settings = CoreApiSettings(
         environment=Environment.TEST,
@@ -354,7 +366,7 @@ def stub_scoped_read(monkeypatch: pytest.MonkeyPatch) -> Callable[[Sequence[Rule
         ) -> Sequence[Rule]:
             return rows
 
-        monkeypatch.setattr(rules_router, "scoped_read", _scoped_read)
+        monkeypatch.setattr(rule_service, "scoped_read", _scoped_read)
         return _app_with_read(rows)
 
     return install
