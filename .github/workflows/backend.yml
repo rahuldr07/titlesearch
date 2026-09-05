@@ -153,11 +153,20 @@ jobs:
         if: ${{ !cancelled() }}
         run: uv run --with pytest python -m pytest -q scripts/tests
 
-      # Belt and braces: the guard is also run directly over every tracked
-      # file, so it holds even if the hook wiring is changed.
+      # Belt and braces: the guard is also run directly over the whole checkout,
+      # so it holds even if the hook wiring is changed.
+      #
+      # This was `git ls-files -z | xargs -0 python scripts/check_no_client_data.py`
+      # and the pipeline was the wrong shape twice over. It named only TRACKED
+      # files, so a bundle sitting in the checkout unstaged was never passed to
+      # the guard and so was never refused; and the step exits on xargs' status,
+      # so a `git ls-files` that failed would have left this reporting success
+      # with nothing checked. `--tree` is one process — tracked files plus
+      # untracked files git does not ignore — and the step's exit status is the
+      # guard's own.
       - name: Client-data guard over the whole tree
         if: ${{ !cancelled() }}
-        run: git ls-files -z | xargs -0 python scripts/check_no_client_data.py
+        run: python scripts/check_no_client_data.py --tree
 
       - name: Markdown links resolve
         if: ${{ !cancelled() }}
