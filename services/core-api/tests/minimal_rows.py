@@ -332,6 +332,53 @@ MINIMAL_ROWS: Final[Mapping[str, _MinimalRow]] = MappingProxyType(
                 "is_done": "false",
             },
         ),
+        # The golden set (`0070`-`0072`). `value` IS IN THE SPEC EVEN THOUGH THE
+        # COLUMN IS NULLABLE, which `seed_insert` warns is the one entry shape
+        # that can be lost to a typo — `ck_golden_fields_value_xor_na_reason`
+        # requires exactly one of `value` and `na_reason`, so a row with neither
+        # is refused and a misspelling here fails as a CHECK violation rather
+        # than being silently skipped. `delivered_report` is the tag that asserts
+        # least: it is where a golden seed comes from before anybody has ruled on
+        # it, and it is the one `tag_before` the `confirm` below can legally
+        # follow.
+        "golden_fields": _MinimalRow(
+            parents={"order_id": "orders"},
+            columns={
+                "path": "'test.only.' || :ordinal_text",
+                "value": "'TEST-ONLY-' || :ordinal_text",
+                "tag": "'delivered_report'",
+                "source_citation": "'TEST-ONLY'",
+                "established_by": "'TEST-ONLY'",
+                "established_reason": "'TEST-ONLY'",
+            },
+        ),
+        # `confirm` and not `correct`, because a `correct` row must MOVE the
+        # value (`ck_golden_corrections_correction_moves_the_value`) and a seed
+        # has no second value to move it to. `tag_after` is `'ruled'` because
+        # `ck_golden_corrections_confirm_lands_on_ruled` says a confirm lands
+        # there; `value_before` and `value_after` are the same expression because
+        # `ck_golden_corrections_affirmation_leaves_the_value_alone` says an
+        # affirmation does not touch the value.
+        #
+        # `revision_after` is `:ordinal` — 1-based and per tenant, so it is
+        # positive as `ck_golden_corrections_revision_after_is_positive` requires
+        # and distinct per row. It does NOT correspond to any UPDATE: the seed
+        # writes ledger rows and never moves a golden value, so `0072`'s trigger
+        # is not exercised here. `tests/test_golden_set.py` is what drives it.
+        "golden_corrections": _MinimalRow(
+            parents={"golden_field_id": "golden_fields"},
+            columns={
+                "act": "'confirm'",
+                "signed_by": "'TEST-ONLY'",
+                "reason": "'TEST-ONLY'",
+                "source_citation": "'TEST-ONLY'",
+                "tag_before": "'delivered_report'",
+                "tag_after": "'ruled'",
+                "value_before": "'TEST-ONLY-' || :ordinal_text",
+                "value_after": "'TEST-ONLY-' || :ordinal_text",
+                "revision_after": ":ordinal",
+            },
+        ),
         "report_verified_checks": _MinimalRow(
             parents={"report_id": "reports"},
             columns={"ordinal": ":ordinal", "sentence": "'TEST-ONLY'"},

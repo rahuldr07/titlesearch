@@ -1169,6 +1169,13 @@ ALEMBIC_VERSION_TABLE = "alembic_version"
 # happen rather than be forgotten — it holds this literal against
 # `Base.metadata`, in both directions.
 MIGRATION_TABLES = (
+    # `0070`-`0072`, FIRST because the scrub drops in list order and
+    # `golden_corrections` carries a composite foreign key to `golden_fields`,
+    # which carries one to `orders`. A `DROP TABLE IF EXISTS` without `CASCADE`
+    # fails on a dependent constraint, so reverse creation order is not
+    # decoration here the way it is for the skeleton's seven.
+    "golden_corrections",
+    "golden_fields",
     "rules",
     "audit_log",
     "field_readings",
@@ -1200,8 +1207,19 @@ MIGRATION_TABLES = (
 # asserts only `migration_tables[0]` — so the one test built for the scenario was
 # blind to it, and the debris would have reached the next module as
 # `type "rule_origin" already exists`.
-MIGRATION_ENUM_TYPES = ("na_reason", "rule_status", "rule_origin")
-MIGRATION_FUNCTION = "audit_log_reject_mutation"
+MIGRATION_ENUM_TYPES = ("na_reason", "rule_status", "rule_origin", "golden_tag", "golden_act")
+
+# EVERY function the migrations create, not one. `0001` created the only one
+# there was; `0071` adds `golden_corrections`' append-only body and `0072` the
+# ledger requirement. A function left behind by a broken downgrade is what makes
+# the NEXT upgrade die on `DuplicateFunction` — `CREATE FUNCTION` is deliberately
+# not `CREATE OR REPLACE` in all three revisions — so a scrub that knows about
+# one of three is a scrub that leaves the database unusable for the next module.
+MIGRATION_FUNCTIONS = (
+    "audit_log_reject_mutation",
+    "golden_corrections_reject_mutation",
+    "golden_fields_require_ledger",
+)
 
 
 def _alembic_config(dsn: str) -> Config:
@@ -1252,7 +1270,7 @@ def _scrub_migration_objects(admin_dsn: str) -> None:
     statements = [
         *(f"DROP TABLE IF EXISTS {table}" for table in MIGRATION_TABLES),
         *(f"DROP TYPE IF EXISTS {enum_type}" for enum_type in MIGRATION_ENUM_TYPES),
-        f"DROP FUNCTION IF EXISTS {MIGRATION_FUNCTION}()",
+        *(f"DROP FUNCTION IF EXISTS {function}()" for function in MIGRATION_FUNCTIONS),
     ]
 
     failures: list[str] = []
@@ -1481,6 +1499,18 @@ MINIMUM_ISOLATION_TABLES = 7
 # just wrote — which is the only thing that would notice the day the argument
 # stops being true.
 ISOLATION_UNCLEARABLE_TABLE = "audit_log"
+
+# 🔴 `audit_log` IS NO LONGER THE ONLY ONE. `0071`'s `golden_corrections` carries
+# the same trigger pair for the same reason — a correction to ground truth is
+# permanent — so `DELETE FROM golden_corrections` is refused with `0A000` and
+# would abort the seed's clearing pass before it reached a single INSERT.
+#
+# A frozenset rather than a second scalar, because the next append-only table
+# should be one word here and not a second `!=` somewhere. The argument that
+# makes clearing unnecessary is `ISOLATION_UNCLEARABLE_TABLE`'s and is unchanged:
+# `migrated_database` is MODULE-scoped and builds every table fresh, and the
+# row-count read-back below is what would notice the day that stops being true.
+ISOLATION_UNCLEARABLE_TABLES = frozenset({ISOLATION_UNCLEARABLE_TABLE, "golden_corrections"})
 
 # Every table and column name the seed interpolates into SQL is checked against
 # this before it is used. The names come from `pg_class`/`pg_attribute` on the

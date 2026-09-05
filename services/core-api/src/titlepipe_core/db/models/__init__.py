@@ -182,3 +182,12 @@ __all__ = [
     "Rule",
     "Tenant",
 ]
+
+# Registering the golden set on `Base.metadata`, for the same reason the retention module is
+# registered above: `migrations/env.py` builds `target_metadata` from `Base.metadata`, so a mapped
+# class in a module nothing imports is absent from it — and `alembic check` then finds
+# `golden_fields` and `golden_corrections` in the database, no table for them in the metadata, and
+# reports a spurious `remove_table`. The module stays outside this package because its author put it
+# there; the import is the side effect, and the `as` spelling is what stops the checkers calling it
+# unused.
+from titlepipe_core.db import golden_models as golden_models  # noqa: E402,F401

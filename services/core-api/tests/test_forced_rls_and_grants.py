@@ -113,13 +113,30 @@ from sqlalchemy.exc import DBAPIError
 # pins nothing — the same reason `test_schema_migration.py` spells the four
 # `na_reason` labels as a literal. These six are the contract; `tenants` is the
 # registry and is asserted separately, on `id`.
-EXPECTED_TENANT_TABLES = frozenset(
+REVISION_0002_TENANT_TABLES = frozenset(
     {"orders", "packages", "pages", "fields", "field_readings", "audit_log"}
 )
 
+# `0070`-`0071`, in their own constant for `test_schema_migration.py`'s stated
+# reason — a reader should see which revision put each name here — and for a
+# sharper one: `test_downgrading_only_0002_removes_every_policy_grant_and_force`
+# stops at `0001`, where these two tables DO NOT EXIST, so it iterates the set
+# above rather than the union and a `_table_privileges` read of a dropped
+# relation is `UndefinedTable` rather than a failure about policies.
+#
+# They are tenant tables rather than global ones, which is the opposite of
+# `rules`. PLAN §1 calls the golden set "cross-customer by nature" in the
+# argument against a database per tenant;
+# `migrations/versions/0070_golden_fields.py` records why that does not make the
+# ROWS global — a golden value quotes one tenant's document, and reading across
+# tenants is a role rather than a missing column.
+GOLDEN_TENANT_TABLES = frozenset({"golden_fields", "golden_corrections"})
+
+EXPECTED_TENANT_TABLES = REVISION_0002_TENANT_TABLES | GOLDEN_TENANT_TABLES
+
 # The floor, as its own literal beside the set it is a floor for. See the module
 # docstring for which failure each of the two catches.
-MINIMUM_TENANT_TABLES = 6
+MINIMUM_TENANT_TABLES = 8
 
 REGISTRY_TABLE = "tenants"
 POLICY_NAME = "tenant_isolation"
@@ -248,6 +265,12 @@ REFUSED_VERBS = ("DELETE", "TRUNCATE")
 # _update` holds it from its own side; this constant is what keeps the derived
 # loop below from contradicting it.
 APPEND_ONLY_TABLE = "audit_log"
+
+# 🔴 `audit_log` IS NO LONGER THE ONLY ONE. `0071`'s `golden_corrections` carries
+# the identical trigger pair for the identical reason — a correction to ground
+# truth is permanent — and therefore the identical two-verb grant. A frozenset
+# rather than a second scalar, so the next append-only table is one word here.
+APPEND_ONLY_TABLES = frozenset({APPEND_ONLY_TABLE, "golden_corrections"})
 APPEND_ONLY_GRANTED_VERBS = ("SELECT", "INSERT")
 
 # 🔴 `rules` IS THE ONE TABLE AT A SINGLE VERB, AND THE NARROWNESS IS A PLAN 02
@@ -294,7 +317,7 @@ def _expected_grants(table: str) -> tuple[Sequence[str], Sequence[str]]:
     trigger refuses UPDATE whatever the ACL says; `rules` is at one because this
     plan ships a read.
     """
-    if table == APPEND_ONLY_TABLE:
+    if table in APPEND_ONLY_TABLES:
         granted: Sequence[str] = APPEND_ONLY_GRANTED_VERBS
     elif table == RULES_TABLE:
         granted = RULES_GRANTED_VERBS
@@ -1238,7 +1261,7 @@ def test_every_tenant_table_is_forced_isolated_and_reachable_by_the_app(
     assert derived == set(EXPECTED_TENANT_TABLES), (
         f"the tenant tables are {sorted(derived)}, not "
         f"{sorted(EXPECTED_TENANT_TABLES)}. A count of "
-        f"{MINIMUM_TENANT_TABLES} is satisfied by six decoys just as readily."
+        f"{MINIMUM_TENANT_TABLES} is satisfied by that many decoys just as readily."
     )
 
     for table in sorted(derived):
@@ -1728,16 +1751,21 @@ def test_downgrading_only_0002_removes_every_policy_grant_and_force(
             with engine.connect() as connection:
                 security = _row_security(connection)
                 policies = _policies(connection)
+                # `REVISION_0002_TENANT_TABLES` and not `EXPECTED_TENANT_TABLES`:
+                # this test stands at `0001`, where `0070`-`0072`'s tables have
+                # been dropped, and reading a privilege on a relation that does
+                # not exist is `UndefinedTable`. `0002`'s downgrade is what is
+                # under test, so `0002`'s tables are the right set.
                 privileges = {
                     table: _table_privileges(connection, app_role, table)
-                    for table in [*EXPECTED_TENANT_TABLES, REGISTRY_TABLE]
+                    for table in [*REVISION_0002_TENANT_TABLES, REGISTRY_TABLE]
                 }
         finally:
             engine.dispose()
 
         assert policies == {}, f"0002's downgrade left policies behind: {sorted(policies)}"
 
-        for table in sorted({*EXPECTED_TENANT_TABLES, REGISTRY_TABLE}):
+        for table in sorted({*REVISION_0002_TENANT_TABLES, REGISTRY_TABLE}):
             assert security[table] == (False, False), (
                 f"{table} is still {security[table]} after downgrading 0002. DISABLE "
                 f"does not clear relforcerowsecurity; both statements are needed."

@@ -78,6 +78,22 @@ EXACT_NON_OWNER_ACL = frozenset(
         f"relation:audit_log:INSERT:{APP_ROLE}",
         # `0003`: the rulebook is read-only to the app.
         f"relation:rules:SELECT:{APP_ROLE}",
+        # `0070`: the golden set is writable, and `UPDATE` is what a correction
+        # needs. The grant is not what makes it narrow — `0072`'s trigger refuses
+        # any UPDATE that no `golden_corrections` row signs, whatever the ACL
+        # says. NO `DELETE`: ground truth is not removed by the application, and
+        # `0070`'s docstring records that this is an ACL rather than a trigger
+        # and why (retention belongs to another card).
+        f"relation:golden_fields:SELECT:{APP_ROLE}",
+        f"relation:golden_fields:INSERT:{APP_ROLE}",
+        f"relation:golden_fields:UPDATE:{APP_ROLE}",
+        # `0071`: the correction ledger is append-only, so it gets `audit_log`'s
+        # treatment exactly — SELECT and INSERT, and no UPDATE. Granting UPDATE
+        # would change no behaviour, because the triggers refuse it whatever the
+        # ACL says, and would MISSTATE THE INTENT on the one table this system
+        # promises never to edit in place.
+        f"relation:golden_corrections:SELECT:{APP_ROLE}",
+        f"relation:golden_corrections:INSERT:{APP_ROLE}",
         # `roles.sql` (~line 284): `GRANT USAGE ON SCHEMA public TO
         # titlepipe_owner, titlepipe_app, titlepipe_worker`. The owner's entry is
         # dropped by the owner filter; the other two are here. THE WORKER HOLDS
