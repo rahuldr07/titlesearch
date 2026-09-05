@@ -236,6 +236,30 @@ def test_the_error_names_every_faulting_table_and_not_just_the_first() -> None:
 # The live half. Every one of these breaks the migrated schema on purpose.
 # ---------------------------------------------------------------------------
 
+# 🔴 THE PROBE TABLES ARE NAMED OUT OF THE DOMAIN'S REACH, AND THAT IS THE WHOLE
+# POINT OF THE PREFIX.
+#
+# These four names used to be `escalations`, `complaints`, `deliveries` and
+# `reconciliations` — chosen BECAUSE they read like the next table somebody would
+# land, which is precisely what makes them unusable. MEASURED 2026-09-05 on
+# `integration/backend-2026-09`: `0050_delivery` created `deliveries` and the
+# escalation revision created `escalations`, and both live tests died in
+# `_temporary_table` on `DuplicateTable: relation "..." already exists` before
+# reaching a single assertion. Not a leak, not a fixture that failed to clean up —
+# the SCHEMA GREW THE NAME. `complaints` and `reconciliations` were the same
+# landmine one merge from going off.
+#
+# The two tests that broke are the two that prove `audit_rls_coverage` goes red;
+# a check whose own red-proof cannot run is back to being an unproven claim, so
+# the name has to be one no migration will ever take. `rls_coverage_probe__` is
+# that, and `_temporary_table` refuses to build over an existing relation so the
+# day the rule is broken says so in one line instead of a driver error.
+PROBE_PREFIX = "rls_coverage_probe__"
+PROBE_UNISOLATED = f"{PROBE_PREFIX}unisolated"
+PROBE_NO_TENANT_COLUMN = f"{PROBE_PREFIX}no_tenant_column"
+PROBE_OPEN_POLICY = f"{PROBE_PREFIX}open_policy"
+PROBE_JOINED_POLICY = f"{PROBE_PREFIX}joined_policy"
+
 
 @contextlib.contextmanager
 def _temporary_table(connection: Connection, ddl: str, name: str) -> Generator[None]:
@@ -244,7 +268,24 @@ def _temporary_table(connection: Connection, ddl: str, name: str) -> Generator[N
     The drop is in a `finally` and is not `IF EXISTS`: a table that has already
     gone means something else dropped it, and that is worth an error rather than
     a shrug — the reason `0001` gives for `checkfirst=False`.
+
+    THE PRECONDITION IS NOT BELT AND BRACES. `CREATE TABLE` over a name the
+    schema already owns raises `DuplicateTable` from inside psycopg, four frames
+    below the test, and says nothing about which of the three possible causes it
+    is — a leaked probe, two tests sharing a name, or a migration that took the
+    name. This distinguishes them: `to_regclass` answering non-NULL here, with
+    `PROBE_PREFIX` in force, can only be the third. It also stops the `finally`
+    from `DROP`ping a real table, which is the failure mode that would turn a
+    naming collision into a wrecked schema for every module after this one.
     """
+    existing = connection.execute(text("SELECT to_regclass(:name)"), {"name": name}).scalar()
+    assert existing is None, (
+        f"{name} already exists in the migrated schema, so this probe cannot create it. "
+        f"Every probe name carries {PROBE_PREFIX!r} precisely so that no migration can "
+        f"take one; a relation under that prefix means either a probe leaked out of a "
+        f"previous run or something now creates the name for real. Do not rename the "
+        f"probe to dodge it until you know which."
+    )
     connection.execute(text(f"SET ROLE {'titlepipe_owner'}"))
     connection.execute(text(ddl))
     connection.commit()
@@ -270,28 +311,32 @@ def test_the_migrated_schema_passes_its_own_coverage_check(
 def test_a_new_tenant_table_with_no_policy_turns_the_check_red(
     migrated_database: str, seam_engine: Callable[[str], Engine]
 ) -> None:
-    """🔴 THE PROOF. A table shaped exactly like the ones a worker is landing this
-    week — real `tenant_id`, composite primary key, correct naming — and no RLS.
+    """🔴 THE PROOF. A table SHAPED exactly like the ones a worker is landing this
+    week — real `tenant_id`, composite primary key — and no RLS.
 
     Before this module existed the whole suite stayed green on this schema, and
     `tests/test_forced_rls_and_grants.py` would have reported it as a set
     mismatch whose obvious fix is to add the name to `EXPECTED_TENANT_TABLES`.
+
+    The SHAPE is the fixture; the NAME deliberately is not. This test was
+    `escalations` until `integration/backend-2026-09` landed a real `escalations`
+    table and it stopped running at all. See `PROBE_PREFIX`.
     """
     ddl = (
-        "CREATE TABLE escalations ("
+        f"CREATE TABLE {PROBE_UNISOLATED} ("
         "  tenant_id uuid NOT NULL,"
         "  id uuid NOT NULL,"
-        "  CONSTRAINT pk_escalations PRIMARY KEY (tenant_id, id))"
+        f"  CONSTRAINT pk_{PROBE_UNISOLATED} PRIMARY KEY (tenant_id, id))"
     )
     with seam_engine(migrated_database).connect() as connection:
-        with _temporary_table(connection, ddl, "escalations"):
+        with _temporary_table(connection, ddl, PROBE_UNISOLATED):
             faults = audit_rls_coverage(connection)
             assert {(f.table, f.fault) for f in faults} == {
-                ("escalations", "row_level_security_not_enabled"),
-                ("escalations", "row_level_security_not_forced"),
-                ("escalations", "no_policy"),
+                (PROBE_UNISOLATED, "row_level_security_not_enabled"),
+                (PROBE_UNISOLATED, "row_level_security_not_forced"),
+                (PROBE_UNISOLATED, "no_policy"),
             }
-            with pytest.raises(RlsCoverageError, match="escalations"):
+            with pytest.raises(RlsCoverageError, match=PROBE_UNISOLATED):
                 assert_rls_coverage(connection)
         assert audit_rls_coverage(connection) == ()
 
@@ -305,12 +350,16 @@ def test_a_table_missing_the_tenant_column_entirely_is_still_seen(
     column, so this table is invisible to it: it is not a tenant table by that
     definition and not a named global either. Here it is a fault.
     """
-    ddl = "CREATE TABLE complaints (id uuid NOT NULL, CONSTRAINT pk_complaints PRIMARY KEY (id))"
+    ddl = (
+        f"CREATE TABLE {PROBE_NO_TENANT_COLUMN} ("
+        "  id uuid NOT NULL,"
+        f"  CONSTRAINT pk_{PROBE_NO_TENANT_COLUMN} PRIMARY KEY (id))"
+    )
     with seam_engine(migrated_database).connect() as connection:
-        with _temporary_table(connection, ddl, "complaints"):
+        with _temporary_table(connection, ddl, PROBE_NO_TENANT_COLUMN):
             faults = {(f.table, f.fault) for f in audit_rls_coverage(connection)}
-        assert ("complaints", "no_tenant_column") in faults
-        assert ("complaints", "no_policy") in faults
+        assert (PROBE_NO_TENANT_COLUMN, "no_tenant_column") in faults
+        assert (PROBE_NO_TENANT_COLUMN, "no_policy") in faults
 
 
 def test_a_policy_that_merely_exists_turns_the_check_red(
@@ -320,19 +369,21 @@ def test_a_policy_that_merely_exists_turns_the_check_red(
     readable by every established session. This is the failure a check that
     counted policies reports as healthy."""
     ddl = (
-        "CREATE TABLE deliveries ("
+        f"CREATE TABLE {PROBE_OPEN_POLICY} ("
         "  tenant_id uuid NOT NULL,"
         "  id uuid NOT NULL,"
-        "  CONSTRAINT pk_deliveries PRIMARY KEY (tenant_id, id))"
+        f"  CONSTRAINT pk_{PROBE_OPEN_POLICY} PRIMARY KEY (tenant_id, id))"
     )
     with seam_engine(migrated_database).connect() as connection:
-        with _temporary_table(connection, ddl, "deliveries"):
-            connection.execute(text("ALTER TABLE deliveries ENABLE ROW LEVEL SECURITY"))
-            connection.execute(text("ALTER TABLE deliveries FORCE ROW LEVEL SECURITY"))
-            connection.execute(text("CREATE POLICY tenant_isolation ON deliveries USING (true)"))
+        with _temporary_table(connection, ddl, PROBE_OPEN_POLICY):
+            connection.execute(text(f"ALTER TABLE {PROBE_OPEN_POLICY} ENABLE ROW LEVEL SECURITY"))
+            connection.execute(text(f"ALTER TABLE {PROBE_OPEN_POLICY} FORCE ROW LEVEL SECURITY"))
+            connection.execute(
+                text(f"CREATE POLICY tenant_isolation ON {PROBE_OPEN_POLICY} USING (true)")
+            )
             connection.commit()
             faults = {(f.table, f.fault) for f in audit_rls_coverage(connection)}
-        assert faults == {("deliveries", "no_policy_scoping_by_tenant")}
+        assert faults == {(PROBE_OPEN_POLICY, "no_policy_scoping_by_tenant")}
 
 
 def test_a_policy_that_joins_another_relation_turns_the_check_red(
@@ -345,25 +396,34 @@ def test_a_policy_that_joins_another_relation_turns_the_check_red(
     whole-predicate match is the machine, and this is it running.
     """
     ddl = (
-        "CREATE TABLE reconciliations ("
+        f"CREATE TABLE {PROBE_JOINED_POLICY} ("
         "  tenant_id uuid NOT NULL,"
         "  id uuid NOT NULL,"
         "  order_id uuid,"
-        "  CONSTRAINT pk_reconciliations PRIMARY KEY (tenant_id, id))"
+        f"  CONSTRAINT pk_{PROBE_JOINED_POLICY} PRIMARY KEY (tenant_id, id))"
     )
     with seam_engine(migrated_database).connect() as connection:
-        with _temporary_table(connection, ddl, "reconciliations"):
-            connection.execute(text("ALTER TABLE reconciliations ENABLE ROW LEVEL SECURITY"))
-            connection.execute(text("ALTER TABLE reconciliations FORCE ROW LEVEL SECURITY"))
+        with _temporary_table(connection, ddl, PROBE_JOINED_POLICY):
+            connection.execute(text(f"ALTER TABLE {PROBE_JOINED_POLICY} ENABLE ROW LEVEL SECURITY"))
+            connection.execute(text(f"ALTER TABLE {PROBE_JOINED_POLICY} FORCE ROW LEVEL SECURITY"))
             connection.execute(
+                # S608 wants the statement checked for untrusted input, for the
+                # reason `test_forced_rls_and_grants.py` records at its own
+                # suppression: a relation name cannot be a bind parameter in any
+                # dialect. The only name interpolated is `PROBE_JOINED_POLICY`,
+                # a literal at the top of this file; nothing here comes from the
+                # database, the environment or a fixture. `orders` is spelled out
+                # because the policy has to join a REAL table to be the failure
+                # PLAN §5 rule 5 describes.
                 text(
-                    "CREATE POLICY tenant_isolation ON reconciliations USING ("
-                    "  EXISTS (SELECT 1 FROM orders o WHERE o.id = reconciliations.order_id))"
+                    f"CREATE POLICY tenant_isolation ON {PROBE_JOINED_POLICY} USING ("  # noqa: S608
+                    f"  EXISTS (SELECT 1 FROM orders o "
+                    f"WHERE o.id = {PROBE_JOINED_POLICY}.order_id))"
                 )
             )
             connection.commit()
             faults = {(f.table, f.fault) for f in audit_rls_coverage(connection)}
-        assert faults == {("reconciliations", "no_policy_scoping_by_tenant")}
+        assert faults == {(PROBE_JOINED_POLICY, "no_policy_scoping_by_tenant")}
 
 
 def test_a_second_policy_on_a_correctly_isolated_table_turns_the_check_red(
