@@ -124,6 +124,10 @@ rolls back with the rest of the migration.
 The schema first, then the grants, then the read-back. The read-back is last
 because it is the only statement here whose failure is informative: everything
 before it either succeeds or raises with PostgreSQL's own message.
+
+RELINKED AT INTEGRATION, 2026-09-05: `down_revision` was `0004` - the head as this file's
+author found it, per CONVENTIONS section 8 - and is now `0051`, the last revision of the domain chain. The queue schema references no domain table; it is
+placed after the domain so that one head exists, not because it depends on it.
 """
 
 from __future__ import annotations
@@ -135,7 +139,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "0060"
-down_revision: str | None = "0004"
+down_revision: str | None = "0051"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

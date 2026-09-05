@@ -120,6 +120,10 @@ underscore — and every constraint already in this schema is spelled that way.
 CONVENTIONS §3 writes `ck_<table>__<rule>` with two. The live convention wins
 because `alembic check` and `tests/test_schema_migration.py` compare against it;
 the divergence is written down here so it reads as a decision.
+
+RELINKED AT INTEGRATION, 2026-09-05: `down_revision` was `0004` - the head as this file's
+author found it, per CONVENTIONS section 8 - and is now `0060`, the queue revision, which is the head of the chain as integrated. `golden_fields` references
+`orders`, which exists from `0001`; the placement after `0060` is for a single head, not a dependency.
 """
 
 from __future__ import annotations
@@ -133,7 +137,7 @@ from alembic import op
 from sqlalchemy.dialects import postgresql
 
 revision: str = "0070"
-down_revision: str | None = "0004"
+down_revision: str | None = "0060"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
