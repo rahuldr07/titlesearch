@@ -52,7 +52,9 @@ from acl_contract import (
     COLUMN_ACL_QUERY,
     CONNECT_TIME_STATE_QUERY,
     DEFAULT_ACL_QUERY,
+    FIELDS_UPDATABLE_COLUMNS,
     acl_divergence,
+    column_grant_divergence,
     connect_time_state,
 )
 from sqlalchemy import Engine, text
@@ -124,38 +126,45 @@ def test_no_mapped_column_carries_onupdate_and_no_mapper_declares_version_id_col
 # ---------------------------------------------------------------------------
 # (ii) THE GRANTED COLUMN SET vs THE APP'S MUTATED COLUMN SET
 # ---------------------------------------------------------------------------
-def test_no_column_level_grant_exists_anywhere_in_public(
+def test_the_column_level_grants_are_exactly_0032s_narrowing_of_fields(
     migrated_database: str, seam_engine: Callable[[str], Engine]
 ) -> None:
-    """🔴 `pg_attribute.attacl` IS READ BY NOTHING IN THIS REPOSITORY.
+    """🔴 `pg_attribute.attacl` IS READ BY THIS TEST AND BY ALMOST NOTHING ELSE.
 
-    `test_forced_rls_and_grants.py::_table_grantees` explodes `pg_class.relacl`
-    (that file, ~line 547) and `_table_privileges` calls `has_table_privilege`
-    (~line 490). NEITHER can see a column grant:
+    NAMED `test_no_column_level_grant_exists_anywhere_in_public` UNTIL 2026-09-05
+    — the old name is here so a grep for it lands — and it asserted the EMPTY SET,
+    because the contract was table-level grants only. `0032` changed that contract
+    on purpose and this test went red naming all seventeen entries, which is the
+    closed-world comparison working rather than a stale literal.
 
-    * `relacl` is untouched by `GRANT UPDATE (tenant_id) ON pages TO
-      titlepipe_blind` — the privilege lands in `pg_attribute.attacl` for that
-      one column;
-    * `has_table_privilege` answers about the TABLE. It returns FALSE for a role
-      holding only a column grant, so the "worker holds nothing" loop
-      (~line 1473) stays green while the worker can rewrite `tenant_id`.
+    WHAT `0032` DID, AND WHY IT IS A NARROWING RATHER THAN A GRANT.
+    `_narrow_the_update_grant` issues `REVOKE UPDATE ON fields FROM titlepipe_app`
+    and then `GRANT UPDATE (<seventeen columns>) ON fields`. The revoke has to be
+    table-wide and has to come FIRST, because a column grant is ADDED to a table
+    grant rather than shadowing it — granting the columns without revoking the
+    table would leave `state` writable and the state machine decorative. Net
+    effect: the app lost the ability to write `id`, `created_at`, `tenant_id`,
+    `order_id`, `path` and `state`, and kept the seventeen a correction touches.
 
-    That combination is the whole exploit: `tenant_id` is the column every
-    `tenant_isolation` policy keys on, `0002` writes no `WITH CHECK` (so the
-    read predicate is reused), and a role that can re-tenant a row can then read
-    it. The stray column grant is the smallest change that achieves it and the
-    only one no current assertion looks at.
+    WHY THE ASSERTION IS STILL A CLOSED SET AND NOT "these seventeen are present".
+    The reasons the empty set was right have not changed, only its value:
 
-    THE ASSERTION IS "NONE ANYWHERE", not "none for these roles on these
-    columns". The contract is table-level grants only, so the correct expected
-    value is the empty set, and a new column grant of any shape has to be
-    deliberately excepted here rather than quietly permitted.
+    * `relacl` is untouched by a column grant — `test_forced_rls_and_grants.py
+      ::_table_grantees` explodes `relacl` and sees nothing;
+    * `has_table_privilege` answers about the TABLE and returns FALSE for a role
+      holding only a column grant, so that file's "the worker holds nothing" loop
+      stays green while the worker rewrites a column.
 
-    The granted column set is thus EMPTY, and the app's mutated column set is
-    bounded separately by the test above (the ORM never widens a target list) —
-    together those two are "the granted column set equals the app's mutated
-    column set" in the only form the two catalogs can express it while `0002`
-    grants at table granularity.
+    So a column grant this literal does not name is a privilege no other assertion
+    in this repository can see, whatever its value happens to be. `GRANT UPDATE
+    (tenant_id) ON pages TO titlepipe_blind` — the shape this docstring has always
+    been about, and the smallest change that defeats `tenant_isolation`, because
+    `0002` writes no `WITH CHECK` and a role that can re-tenant a row can then read
+    it — fails here, and now fails naming itself rather than being lost among
+    seventeen expected lines.
+
+    BOTH DIRECTIONS. A missing entry is not cosmetic either: the app takes 42501
+    on a correction, from a line that appears in no handler.
     """
     engine = seam_engine(migrated_database)
     try:
@@ -164,11 +173,31 @@ def test_no_column_level_grant_exists_anywhere_in_public(
     finally:
         engine.dispose()
 
-    found = sorted(f"{row[2]} on {row[0]}.{row[1]} to {row[3]}" for row in column_acls)
-    assert found == [], (
-        "column-level grants exist, and NOTHING else in this suite reads "
-        "pg_attribute.attacl — relacl is unchanged by them and "
-        "has_table_privilege reports FALSE for a role holding one:\n  " + "\n  ".join(found)
+    unexpected, missing = column_grant_divergence(
+        [(str(row[0]), str(row[1]), str(row[2]), str(row[3])) for row in column_acls]
+    )
+
+    assert not unexpected, (
+        "column-level grants exist that the contract does not name, and NOTHING "
+        "else in this suite reads pg_attribute.attacl — relacl is unchanged by "
+        "them and has_table_privilege reports FALSE for a role holding one:\n  "
+        + "\n  ".join(unexpected)
+    )
+    assert not missing, (
+        "0032's narrowed UPDATE grant on fields is incomplete. The app takes "
+        "42501 writing these columns, from a line in no handler:\n  " + "\n  ".join(missing)
+    )
+
+    # THE POSITIVE CONTROL, because both assertions above are satisfied by a query
+    # that returned nothing at all — wrong schema name, an `attacl IS NOT NULL`
+    # that stopped matching — and an empty catalog is EXACTLY the state this test
+    # used to assert. Seventeen, MEASURED at head 2026-09-05.
+    assert len(column_acls) == len(FIELDS_UPDATABLE_COLUMNS), (
+        f"the column-ACL read returned {len(column_acls)} rows, not "
+        f"{len(FIELDS_UPDATABLE_COLUMNS)}. Zero here would satisfy both assertions "
+        f"above and would mean 0032's narrowing did not land — which restores a "
+        f"table-wide UPDATE only if somebody also re-granted it, and otherwise "
+        f"means the app cannot correct a field at all."
     )
 
 
@@ -340,66 +369,71 @@ def test_no_connect_time_setting_exists_for_this_database_or_any_titlepipe_role(
 # either. Both blind spots are the same blind spot, and this is the catalog read
 # that closes it.
 #
-# THE CENSUS OF SERVER-SIDE WRITES, taken by reading every file under
-# `migrations/versions/` (2026-09-02):
+# THE CENSUS OF SERVER-SIDE WRITES. RE-TAKEN 2026-09-05 against a database at
+# head on `integration/backend-2026-09`, and TWO OF THE FOUR LINES BELOW CHANGED
+# FROM "none" TO A NAMED SET. Read those two before editing anything here.
 #
-# * COLUMN DEFAULTS — `0001::_identity_columns` (lines 129, 135) and its near-copy
-#   `0003::_identity_columns` (lines 163, 169) give every table an
-#   `id DEFAULT gen_random_uuid()` and a `created_at DEFAULT now()` — sixteen
-#   over the first eight tables, and `0070`'s two golden tables carry the same
-#   pair, which is twenty. RE-TAKEN 2026-09-05.
-#
-#   🔴 `golden_fields.revision DEFAULT 0` IS THE TWENTY-FIRST AND IS THE FIRST
-#   DEFAULT IN THIS SCHEMA THAT IS NOT AN IDENTITY COLUMN. It costs a narrow
-#   grant exactly what the other twenty cost — nothing, for the reason two
-#   paragraphs down: a column DEFAULT is INSERT-only and PostgreSQL does not
-#   require INSERT privilege on a column the statement did not name. It is not
-#   a fabricated value to satisfy a `NOT NULL` (CONVENTIONS §4): revision 0 IS
-#   the establishment, and every number above it is a correction that `0072`'s
-#   trigger requires a signed ledger row for.
-# * GENERATED COLUMNS — none. No revision writes `Computed(...)` or
+# * COLUMN DEFAULTS — sixty-two identity defaults, one `id DEFAULT
+#   gen_random_uuid()` and one `created_at DEFAULT now()` on each of the
+#   thirty-one tables this repository creates, plus THREE non-identity defaults
+#   and ELEVEN belonging to the vendored queue schema. The three are named in
+#   `EXPECTED_NON_IDENTITY_DEFAULTS` with the ruling behind each; all three are
+#   INSERT-only, which is what makes them free.
+# * GENERATED COLUMNS — still none. No revision writes `Computed(...)` or
 #   `GENERATED ... AS`.
-# * IDENTITY COLUMNS — none. `0002` says so in a comment at line 348 while
-#   explaining why it grants no sequence privilege: "the primary key defaults to
-#   `gen_random_uuid()` and nothing here is `serial` or `IDENTITY`".
-# * TRIGGERS — five, RE-TAKEN 2026-09-05. `audit_log`'s two, created by
-#   `0001::_create_append_only_trigger` (lines 405, 412) and flipped to
-#   `ENABLE ALWAYS` by `0004`; `golden_corrections`' identical pair from `0071`,
-#   created at `ENABLE ALWAYS`. All four are `FOR EACH STATEMENT` and all four
-#   call a function whose whole body is `RAISE EXCEPTION USING ERRCODE = '0A000'`.
+# * 🔴 IDENTITY COLUMNS — ONE, AND IT IS NOT OURS. `procrastinate_workers.id` is
+#   `GENERATED ALWAYS AS IDENTITY` in `0060`'s vendored DDL. This line read "none"
+#   and cited `0002`'s comment — "the primary key defaults to `gen_random_uuid()`
+#   and nothing here is `serial` or `IDENTITY`" — as the reason `0002` grants no
+#   sequence privilege. That reasoning has been overtaken twice: `0060` adds three
+#   `bigserial` sequences AND grants USAGE on them, and the identity column is the
+#   one sequence that still needs no grant, because an identity sequence is
+#   internally dependent on its column and PostgreSQL checks no privilege for it.
+#   See `test_forced_rls_and_grants.py::test_every_sequence_is_usable_by_every_role
+#   _that_inserts_into_its_table`, which replaced the "there are no sequences"
+#   assertion with the stronger one.
+# * 🔴 TRIGGERS — TWENTY-TWO, AND FOUR OF THEM ARE `BEFORE ... FOR EACH ROW`.
+#   This line read "five, all FOR EACH STATEMENT except one AFTER ROW", and the
+#   BEFORE-ROW assertion below was an EMPTY SET held as *"a STRUCTURAL fact rather
+#   than a claim about a function body"*. It is not structural any more. See
+#   `EXPECTED_BEFORE_ROW_TRIGGERS` for what changed, what it costs, and what now
+#   holds the property in its place.
 #
-#   The fifth is `0072`'s `golden_fields_ledger_required`, which is the only
-#   `FOR EACH ROW` trigger in the schema — it compares `OLD` with `NEW`, which a
-#   statement trigger cannot. It is `AFTER`, and that is what keeps the
-#   BEFORE-ROW assertion below at the empty set as a STRUCTURAL fact rather than
-#   a claim about a function body: an `AFTER ROW` trigger's return value is
-#   discarded by PostgreSQL, so no body it could ever have can widen an UPDATE's
-#   target list. `0072`'s module docstring records why that beats a `prosrc`
-#   regex, which cannot tell a plpgsql assignment from a comparison.
-#
-# WHY THAT CENSUS MAKES THE COLUMN-GRANT QUESTION COME OUT CLEAN, and why the
-# three catalogs still need reading:
+# WHY THAT CENSUS USED TO MAKE THE COLUMN-GRANT QUESTION COME OUT CLEAN, AND WHY
+# THE ARGUMENT IS NOW A CONJUNCTION RATHER THAN A FACT:
 #
 # * a column DEFAULT is INSERT-only and, crucially, PostgreSQL does not require
 #   INSERT privilege on a column the statement did not name and the default
-#   filled. So every default in this schema costs a narrow grant nothing.
+#   filled. So every default in this schema still costs a narrow grant nothing —
+#   this half is unchanged, and it covers all seventy-six of them;
 # * a GENERATED or IDENTITY column is written by the server on every statement
 #   that touches it, and is exactly the kind of column a column-scoped grant is
-#   then measured against.
-# * a BEFORE **ROW** trigger assigning `NEW.col` is the sharp one, and the prior
-#   proof is the reason this test exists: an owner-owned `BEFORE UPDATE` trigger
-#   setting `NEW.col` fires with the INVOKER's privileges (it is not SECURITY
-#   DEFINER, and trigger functions do not switch role), so the write lands
-#   outside the caller's column grant and takes 42501 — a failure with no line in
-#   any handler. `audit_log`'s two triggers are `FOR EACH STATEMENT`, which has
-#   no `NEW` at all, so today there is no such write. THE ROW/STATEMENT
-#   DISTINCTION IS THE ENTIRE MARGIN, and `0001` chose statement-level for an
-#   unrelated reason (a row trigger does not fire when a statement matches no
-#   rows, which is the case under RLS). A revision that "fixes" that by making it
-#   `FOR EACH ROW` is one word, is defensible on its own terms, and silently
-#   moves this system into the failing case.
+#   then measured against. The one identity column is on `procrastinate_workers`,
+#   which carries no column grant and cannot: `0060` grants at table level only;
+# * 🔴 a BEFORE **ROW** trigger assigning `NEW.col` is the sharp one, and it now
+#   EXISTS. `0007`'s `audit_chain_link` assigns `NEW.prev_hash`, `NEW.row_hash`
+#   and `NEW.chain_position` on `audit_log`. It is not `SECURITY DEFINER` and a
+#   trigger function does not switch role, so those three writes happen with the
+#   INVOKER's privileges — and under a column-scoped grant the caller does not
+#   hold on them, the INSERT takes 42501 from a line in no handler, no model and
+#   no test expectation.
 #
-# So (i) stays as it is and this is added beside it: same question, catalog side.
+#   WHAT KEEPS THAT FROM BEING LIVE TODAY IS NON-OVERLAP AND NOTHING ELSE. The
+#   only column-scoped grant in the schema is `0032`'s seventeen on `fields`;
+#   `fields` has no BEFORE ROW trigger. The only BEFORE ROW trigger that assigns
+#   `NEW.*` is on `audit_log`; `audit_log`'s grants are table-wide. Two revisions
+#   from two workstreams that never saw each other, and the margin between them is
+#   that they landed on different tables.
+#
+#   So the assertion below is no longer "no BEFORE ROW trigger anywhere". It is
+#   the CONJUNCTION — no table may carry both a column-scoped grant and a BEFORE
+#   ROW trigger — which is the actual failure condition, is derivable from two
+#   catalogs, needs no claim about any function body, and goes red the day
+#   somebody narrows `audit_log`'s INSERT grant or puts a BEFORE ROW trigger on
+#   `fields`. `0072`'s docstring records why a `prosrc` regex is not an
+#   alternative: it cannot tell a plpgsql assignment from a comparison.
+#
+# So (i) stays as it is and this is beside it: same question, catalog side.
 
 # `pg_attrdef` joined back to the column it defaults, for user columns of user
 # tables in `public`. `attnum > 0` drops the system columns; `NOT attisdropped`
@@ -444,97 +478,249 @@ TRIGGER_TIMING_QUERY = """
      WHERE n.nspname = 'public' AND NOT t.tgisinternal
 """
 
-# The defaults the census above accounts for, as `<table>.<column>` ->
-# the expression PostgreSQL stores. Written out per table rather than generated
-# from a table list for `0001`'s stated reason: a loop cannot fail for a table
-# somebody forgot to put in it, and the table this would omit is the one a new
-# revision adds.
-EXPECTED_SERVER_DEFAULTS = {
-    "tenants.id": "gen_random_uuid()",
-    "tenants.created_at": "now()",
-    "orders.id": "gen_random_uuid()",
-    "orders.created_at": "now()",
-    "packages.id": "gen_random_uuid()",
-    "packages.created_at": "now()",
-    "pages.id": "gen_random_uuid()",
-    "pages.created_at": "now()",
-    "fields.id": "gen_random_uuid()",
-    "fields.created_at": "now()",
-    "field_readings.id": "gen_random_uuid()",
-    "field_readings.created_at": "now()",
-    "audit_log.id": "gen_random_uuid()",
-    "audit_log.created_at": "now()",
-    "rules.id": "gen_random_uuid()",
-    "rules.created_at": "now()",
-    "golden_fields.id": "gen_random_uuid()",
-    "golden_fields.created_at": "now()",
-    # The one non-identity default in the schema. See the census above.
+# ---------------------------------------------------------------------------
+# 🔴 SEVENTY-SIX DEFAULTS, ACCOUNTED FOR BY THREE RULES RATHER THAN BY
+#    SEVENTY-SIX NAMES.
+# ---------------------------------------------------------------------------
+# This used to be a flat mapping of twenty-one `<table>.<column>` literals, and
+# the merge would have made it seventy-six. Sixty-two of those are the identity
+# pair repeated over thirty-one tables, which is a STRUCTURAL property with a
+# revision behind it (`_identity_columns`, copied into every `create_table`), and
+# writing it out one table at a time would produce a literal a reader skims and a
+# maintainer regenerates — `test_the_whole_catalog_acl_converges_to_exactly_the
+# _named_grants` states the rule about what that does to a contract.
+#
+# So the closed-world property is kept and the shape changes: every default in
+# `public` must be accounted for by exactly one of the three rules below, and the
+# assertion is the partition, not a name list.
+#
+#   1. the identity pair, on every table this repository creates. Derived from
+#      the catalog's table list, so a thirty-second table is covered with no edit
+#      and a table MISSING either half fails;
+#   2. `EXPECTED_NON_IDENTITY_DEFAULTS` — the three that are not the identity
+#      pair. This is the literal worth having: a default that is not an identity
+#      column is where CONVENTIONS §4 gets violated, so each of the three carries
+#      the argument that it is not a fabricated value papering over a `NOT NULL`;
+#   3. `EXPECTED_QUEUE_DEFAULTS` — the vendored eleven, pinned so that bumping
+#      `procrastinate_schema_3.9.0.sql` is a diff.
+#
+# `alembic_version` carries no default and is in none of the three on purpose: it
+# is Alembic's bookkeeping and not this system's schema, so a default appearing on
+# it should fail rather than be pre-excused.
+#
+# THIS TEST WAS NAMED `..._the_sixteen_insert_only_defaults` until 2026-09-05,
+# then `..._it_declares` when `0070` made the count twenty-one. Both old names are
+# written here so a grep for either lands. A test named after a number is a test
+# renamed by every revision that adds a table, which is the third time that has
+# happened and the reason the count is now derived.
+
+IDENTITY_DEFAULTS = {"id": "gen_random_uuid()", "created_at": "now()"}
+
+# 🔴 THE THREE DEFAULTS IN THIS SCHEMA THAT ARE NOT AN IDENTITY COLUMN. Each is
+# INSERT-only, so each costs a column-scoped grant nothing, and each is here
+# because a default is the cheapest way to violate CONVENTIONS §4 — "no honest
+# default" — without anybody writing the words.
+EXPECTED_NON_IDENTITY_DEFAULTS = {
+    # `0007`. `clock_timestamp()` and NOT `now()`, and the difference is the
+    # whole point: `now()` is transaction start, so every row written by one
+    # transaction would carry an identical `occurred_at` and the audit log could
+    # not order the events inside it. A hash chain over rows that cannot be
+    # ordered is a chain over an arbitrary permutation.
+    "audit_log.occurred_at": "clock_timestamp()",
+    # `0032`. Not a fabricated value: a reading with no explicit ordinal IS the
+    # first attempt. `attempt_ordinal` is what makes a retry a second ROW rather
+    # than an edit to the first, so an ensemble that overwrote its own earlier
+    # reading would have no disagreement left to adjudicate — and defaulting it
+    # to 1 is what lets a single-attempt writer stay honest without knowing the
+    # column exists.
+    "field_readings.attempt_ordinal": "1",
+    # `0070`. Revision 0 IS the establishment, and every number above it is a
+    # correction that `0072`'s trigger requires a signed `golden_corrections` row
+    # for. A default here is the statement "this value has never been corrected",
+    # which is true of a row being established.
     "golden_fields.revision": "0",
-    "golden_corrections.id": "gen_random_uuid()",
-    "golden_corrections.created_at": "now()",
+}
+
+# `0060`'s vendored eleven, as `pg_attrdef` reports them at head. NOT reviewed as
+# decisions — they are Procrastinate's — and pinned only so a version bump is a
+# diff rather than a surprise. The three `nextval(...)` entries are the
+# `bigserial` ids whose sequences `test_forced_rls_and_grants.py` now asserts the
+# grants for; `procrastinate_workers.id` is absent because an IDENTITY column's
+# generator lives in `attidentity` and not in `pg_attrdef`.
+EXPECTED_QUEUE_DEFAULTS = {
+    "procrastinate_jobs.id": "nextval('procrastinate_jobs_id_seq'::regclass)",
+    "procrastinate_jobs.status": "'todo'::procrastinate_job_status",
+    "procrastinate_jobs.args": "'{}'::jsonb",
+    "procrastinate_jobs.attempts": "0",
+    "procrastinate_jobs.priority": "0",
+    "procrastinate_jobs.abort_requested": "false",
+    "procrastinate_events.id": "nextval('procrastinate_events_id_seq'::regclass)",
+    "procrastinate_events.at": "now()",
+    "procrastinate_periodic_defers.id": (
+        "nextval('procrastinate_periodic_defers_id_seq'::regclass)"
+    ),
+    "procrastinate_periodic_defers.periodic_id": "''::character varying",
+    "procrastinate_workers.last_heartbeat": "now()",
 }
 
 
-def test_the_migrated_schema_holds_exactly_the_insert_only_defaults_it_declares(
+def test_every_server_side_default_is_accounted_for_by_one_of_three_rules(
     migrated_database: str, seam_engine: Callable[[str], Engine]
 ) -> None:
-    """`pg_attrdef`, as a CLOSED SET, on the database `alembic upgrade head` built.
+    """`pg_attrdef`, as a PARTITION, on the database `alembic upgrade head` built.
 
-    The expected value is `id DEFAULT gen_random_uuid()` and
-    `created_at DEFAULT now()` on all eight tables and NOTHING ELSE. Both are
-    INSERT-only — a `DEFAULT` is not consulted by `UPDATE` — and PostgreSQL does
-    not demand INSERT privilege on a column the statement did not name, so
-    neither costs a column-scoped grant anything. They are pinned anyway because
-    a NEW entry in this catalog is the cheapest way to find out that a revision
-    started writing a column the ORM does not model.
+    🔴 NAMED `test_the_migrated_schema_holds_exactly_the_insert_only_defaults_it
+    _declares` UNTIL 2026-09-05, and `..._the_sixteen_insert_only_defaults` before
+    that. Both old names are here so a grep for either lands, and the second
+    rename is for the first one's reason: the merge took the count from
+    twenty-one to seventy-six, and a test whose expectation is a list of names is
+    a test somebody regenerates from the database instead of reading.
 
-    `alembic_version` carries no default and is absent from the expectation on
+    THE CLOSED-WORLD PROPERTY IS UNCHANGED. Every default in `public` must still
+    be accounted for, and an unaccounted one still fails. What changed is that
+    sixty-two of the seventy-six are the identity pair repeated over thirty-one
+    tables, and that is asserted as the RULE it is — every table this repository
+    creates has `id DEFAULT gen_random_uuid()` and `created_at DEFAULT now()`,
+    both halves, no more — rather than as sixty-two lines. A thirty-second table
+    is covered with no edit; a table missing either half fails; a table carrying a
+    THIRD default fails into `EXPECTED_NON_IDENTITY_DEFAULTS`, which is the
+    literal that is actually worth reading.
+
+    Both are INSERT-only — a `DEFAULT` is not consulted by `UPDATE` — and
+    PostgreSQL does not demand INSERT privilege on a column the statement did not
+    name, so neither costs a column-scoped grant anything. They are pinned anyway
+    because a NEW entry in this catalog is the cheapest way to find out that a
+    revision started writing a column the ORM does not model.
+
+    `alembic_version` carries no default and is in none of the three rules on
     purpose: it is Alembic's bookkeeping and not this system's schema, so a
     default appearing on it should fail here rather than be pre-excused.
-
-    MEASURED at head: exactly the set below. THIS TEST WAS NAMED
-    `..._the_sixteen_insert_only_defaults` until 2026-09-05, when `0070` made
-    the count twenty-one — a test named after a number is a test renamed by
-    every revision that adds a table, and the old name is written here so a
-    grep for it lands.
     """
     engine = seam_engine(migrated_database)
     try:
         with engine.connect() as connection:
             rows = connection.execute(text(SERVER_DEFAULT_QUERY)).all()
+            # The tables this repository creates, which is what rule 1 is about.
+            # Derived rather than imported from `test_schema_migration.py`: these
+            # two files assert different things about the same schema and a shared
+            # constant would let one file's edit silence the other's failure.
+            ours = {
+                str(row[0])
+                for row in connection.execute(
+                    text(
+                        "SELECT c.relname FROM pg_class c "
+                        "JOIN pg_namespace n ON n.oid = c.relnamespace "
+                        "WHERE n.nspname = 'public' AND c.relkind = 'r' "
+                        "  AND c.relname <> 'alembic_version' "
+                        "  AND c.relname NOT LIKE 'procrastinate\\_%'"
+                    )
+                )
+            }
     finally:
         engine.dispose()
 
     found = {f"{row[0]}.{row[1]}": str(row[2]) for row in rows}
 
-    assert found == EXPECTED_SERVER_DEFAULTS, (
-        "the set of server-side column DEFAULTs on the migrated schema is not "
-        "the one the migration census accounts for. Unexpected: "
-        f"{sorted(set(found) - set(EXPECTED_SERVER_DEFAULTS))}; missing: "
-        f"{sorted(set(EXPECTED_SERVER_DEFAULTS) - set(found))}; changed: "
-        f"{sorted(k for k in set(found) & set(EXPECTED_SERVER_DEFAULTS) if found[k] != EXPECTED_SERVER_DEFAULTS[k])}"
+    # RULE 1, BOTH DIRECTIONS. `expected_identity` is what the thirty-one tables
+    # must have; anything they have BEYOND it falls through to rules 2 and 3.
+    expected_identity = {
+        f"{table}.{column}": expression
+        for table in ours
+        for column, expression in IDENTITY_DEFAULTS.items()
+    }
+    missing_identity = sorted(name for name in expected_identity if name not in found)
+    assert missing_identity == [], (
+        f"tables this repository creates that are missing an identity default: "
+        f"{missing_identity}. Every one of them gets `id DEFAULT gen_random_uuid()` "
+        f"and `created_at DEFAULT now()` from the `_identity_columns` helper each "
+        f"revision copies, so a missing half means a table that did not use it."
+    )
+
+    wrong_identity = sorted(
+        f"{name} is {found[name]!r}, not {expected_identity[name]!r}"
+        for name in expected_identity
+        if found[name] != expected_identity[name]
+    )
+    assert wrong_identity == [], (
+        "an identity column's default is not the one every other table has:\n  "
+        + "\n  ".join(wrong_identity)
+    )
+
+    # RULES 2 AND 3, AND THE PARTITION. Everything `pg_attrdef` holds that rule 1
+    # did not claim must be named in exactly one of the two literals — so a
+    # default on a queue table that the vendored file did not have fails, and so
+    # does a fourth non-identity default on one of ours.
+    remainder = {name: value for name, value in found.items() if name not in expected_identity}
+    accounted = {**EXPECTED_NON_IDENTITY_DEFAULTS, **EXPECTED_QUEUE_DEFAULTS}
+
+    assert remainder == accounted, (
+        "the server-side defaults outside the identity pair are not the ones the "
+        "migration census accounts for. Unexpected: "
+        f"{sorted(set(remainder) - set(accounted))}; missing: "
+        f"{sorted(set(accounted) - set(remainder))}; changed: "
+        f"{sorted(f'{k}: {remainder[k]!r} not {accounted[k]!r}' for k in set(remainder) & set(accounted) if remainder[k] != accounted[k])}. "
+        "A new entry on one of this repository's tables is a value the server "
+        "writes that no model declares; on a queue table it means the vendored "
+        "schema file changed."
+    )
+
+    # THE COUNT, as a positive control on the read itself. Both comparisons above
+    # are satisfied by a query that returned nothing — wrong schema name, an
+    # `attisdropped` filter that stopped matching — and rule 1's `missing_identity`
+    # would then name all sixty-two, so this is really a control on `ours`.
+    # MEASURED 2026-09-05: thirty-one tables, seventy-six defaults.
+    assert len(ours) == 31, (
+        f"the derivation found {len(ours)} tables this repository creates, not 31. "
+        f"Rule 1 is built from that list, so a short list means identity defaults "
+        f"asserted for fewer tables than exist."
+    )
+    assert len(found) == len(expected_identity) + len(accounted), (
+        f"pg_attrdef holds {len(found)} defaults; the three rules account for "
+        f"{len(expected_identity) + len(accounted)}. The comparisons above should "
+        f"have named the difference, so this failing alone means a default was "
+        f"counted by two rules at once."
     )
 
 
-def test_no_column_in_the_migrated_schema_is_generated_or_identity(
+def test_the_only_identity_column_is_the_vendored_one_and_nothing_is_generated(
     migrated_database: str, seam_engine: Callable[[str], Engine]
 ) -> None:
     """🔴 `pg_attribute.attgenerated` AND `attidentity` ARE READ BY NOTHING ELSE HERE.
+
+    NAMED `test_no_column_in_the_migrated_schema_is_generated_or_identity` until
+    2026-09-05 — the old name is here so a grep for it lands — and it asserted the
+    empty set. `0060`'s vendored Procrastinate DDL makes
+    `procrastinate_workers.id` `GENERATED ALWAYS AS IDENTITY`, so the empty set
+    stopped being the right expectation and this test named it, which is what the
+    closed-world read is for.
 
     Unlike a DEFAULT, a GENERATED column is recomputed on every UPDATE that
     touches the row and an `IDENTITY ... GENERATED ALWAYS` column is written on
     every INSERT regardless of what the caller named. Either is a column in the
     effective target list of a statement whose SET clause never mentions it, and
-    neither appears in `models.Base.registry.mappers` in any form the guard
-    above can see — `onupdate`, `server_onupdate` and `version_id_col` are the
-    three things it checks, and `Computed()` is none of them.
+    neither appears in `models.Base.registry.mappers` in any form the guard above
+    can see — `onupdate`, `server_onupdate` and `version_id_col` are the three
+    things it checks, and `Computed()` is none of them.
 
-    `0002` (~line 348) already asserts the identity half in PROSE, as the reason
-    it grants no sequence privilege: "nothing here is `serial` or `IDENTITY`".
-    This is the same sentence, addressed to the catalog, so that the day it stops
-    being true the grant reasoning that depends on it fails too.
+    WHY THE ONE EXCEPTION COSTS NOTHING, STATED RATHER THAN ASSUMED. The hazard is
+    an identity column inside a COLUMN-SCOPED grant, where the server writes a
+    column the caller does not hold. `0060` grants the queue at TABLE level only
+    — `test_the_column_level_grants_are_exactly_0032s_narrowing_of_fields` is what
+    holds that, since the only column grants in this schema are on `fields` — so
+    nobody inserting into `procrastinate_workers` can be short a column privilege
+    for `id`. Its sequence needs no `USAGE` either, for a different reason `0060`
+    measured: an identity column's sequence is internally dependent on the column
+    and PostgreSQL checks no privilege for it.
 
-    MEASURED at head: the empty set.
+    `0002` (~line 348) asserts the identity half in PROSE, as the reason it grants
+    no sequence privilege: "nothing here is `serial` or `IDENTITY`". THAT SENTENCE
+    IS NOW FALSE OF THE SCHEMA and true only of the tables `0002` itself created.
+    `test_forced_rls_and_grants.py::test_every_sequence_is_usable_by_every_role_that
+    _inserts_into_its_table` is what replaced the reasoning that depended on it.
+
+    THE EXPECTATION IS EXACT AND NAMES THE COLUMN, not "identity columns are
+    allowed on queue tables": a second one, on a table this repository writes, has
+    to be added here deliberately.
     """
     engine = seam_engine(migrated_database)
     try:
@@ -546,82 +732,266 @@ def test_no_column_in_the_migrated_schema_is_generated_or_identity(
     found = sorted(
         f"{row[0]}.{row[1]} (attgenerated={row[2]!r}, attidentity={row[3]!r})" for row in rows
     )
-    assert found == [], (
-        "generated or identity columns exist. Each is written by the server on "
-        "statements that do not name it, so it is inside the effective target "
-        "list and outside every column-scoped grant:\n  " + "\n  ".join(found)
+    assert found == ["procrastinate_workers.id (attgenerated='', attidentity='a')"], (
+        "the generated-or-identity set is not the one the census accounts for. "
+        "Each such column is written by the server on statements that do not name "
+        "it, so it is inside the effective target list and outside every "
+        "column-scoped grant — and the one entry that is expected here is on a "
+        "vendored table that carries no column grant:\n  " + "\n  ".join(found)
     )
 
 
-def test_no_before_row_trigger_exists_that_could_write_new_dot_anything(
+# ---------------------------------------------------------------------------
+# 🔴 THE FOUR `BEFORE ... FOR EACH ROW` TRIGGERS, NAMED, AND WHICH ONE MATTERS.
+# ---------------------------------------------------------------------------
+# The assertion below used to be the EMPTY SET and its docstring called that "a
+# STRUCTURAL fact rather than a claim about a function body". It is neither now.
+# MEASURED at head 2026-09-05, four triggers are BEFORE ROW and one of them
+# assigns `NEW.*`:
+#
+# * `audit_log_chain_link` on `audit_log` (`0007`) — THE ONE. `BEFORE INSERT`,
+#   not `SECURITY DEFINER`, and its whole purpose is to assign `NEW.prev_hash`,
+#   `NEW.row_hash` and `NEW.chain_position`. It could not be `AFTER` (the return
+#   value is discarded) and could not be statement-level (there is no `NEW`), so
+#   this is forced by what a hash chain is, not chosen;
+# * `packages_identity_is_immutable` on `packages` (`0031`) — `BEFORE UPDATE`,
+#   raises when `sha256`, `byte_size` or `tenant_id` changes. Compares, does not
+#   assign;
+# * `trg_escalations_resolution_needs_a_live_rule` on `escalations` (`0041`) —
+#   `BEFORE INSERT OR UPDATE`, `SECURITY DEFINER`, refuses a resolution that
+#   cites no LIVE rule. CLAUDE.md's "escalation resolution is refused without a
+#   rule", as a database machine. Compares, does not assign;
+# * `procrastinate_trigger_delete_jobs_v1` on `procrastinate_jobs` (`0060`) —
+#   vendored, `BEFORE DELETE`, unlinks periodic defers. Not ours.
+#
+# WHY THE TEST IS NOT SIMPLY UPDATED TO THIS LIST. The property it protects is
+# that no statement writes a column outside the caller's grant: an owner-owned
+# `BEFORE ROW` trigger assigning `NEW.col` is not `SECURITY DEFINER` and a trigger
+# function does not switch role, so the write happens with the INVOKER's
+# privileges and takes 42501 from a line in no handler, no model and no test
+# expectation. A list of four names does not assert that property — it records
+# that four triggers exist.
+#
+# 🔴 AND THE PROPERTY IS NO LONGER STRUCTURALLY GUARANTEED. It holds today by
+# NON-OVERLAP: the only column-scoped grant in this schema is `0032`'s seventeen
+# on `fields`, and `fields` has no BEFORE ROW trigger; the only BEFORE ROW trigger
+# that assigns `NEW.*` is on `audit_log`, whose grants are table-wide. Two
+# revisions from two workstreams that never saw each other, and the margin between
+# them is which table each landed on. That is worth saying out loud rather than
+# recording as "still fine".
+#
+# SO THE ASSERTION BECOMES THE CONJUNCTION, which is the actual failure condition:
+# no table may carry BOTH a column-scoped grant AND a BEFORE ROW trigger. It is
+# derivable from two catalogs, needs no claim about any function body — `0072`'s
+# docstring records why a `prosrc` regex is not an alternative, since it cannot
+# tell a plpgsql assignment from a comparison — and it is CONSERVATIVE: it fails
+# for a BEFORE ROW trigger that only compares, because whether it assigns is
+# exactly the thing that cannot be read off the catalog. It goes red the day
+# somebody narrows `audit_log`'s INSERT grant to a column list, or puts a BEFORE
+# ROW trigger on `fields`.
+#
+# The enumeration below is kept BESIDE it, not instead of it, so a fifth BEFORE
+# ROW trigger is still a diff somebody reads.
+EXPECTED_BEFORE_ROW_TRIGGERS = {
+    "audit_log_chain_link on audit_log",
+    "packages_identity_is_immutable on packages",
+    "trg_escalations_resolution_needs_a_live_rule on escalations",
+    "procrastinate_trigger_delete_jobs_v1 on procrastinate_jobs",
+}
+
+
+def test_no_table_carries_both_a_column_grant_and_a_before_row_trigger(
     migrated_database: str, seam_engine: Callable[[str], Engine]
 ) -> None:
     """🔴 THE SHARP ONE: a BEFORE ROW trigger writes with the INVOKER's privileges.
 
-    A trigger function is not SECURITY DEFINER unless it says so, and a plain
+    NAMED `test_no_before_row_trigger_exists_that_could_write_new_dot_anything`
+    until 2026-09-05 — the old name is here so a grep for it lands — and it
+    asserted that no such trigger existed anywhere. Four do. See
+    `EXPECTED_BEFORE_ROW_TRIGGERS` above for which, which one assigns `NEW.*`, and
+    why the claim moved from an absence to a conjunction rather than to a list.
+
+    A trigger function is not `SECURITY DEFINER` unless it says so, and a plain
     trigger function does not switch role — so an owner-owned `BEFORE UPDATE ...
     FOR EACH ROW` trigger assigning `NEW.col` performs that write as whoever
-    issued the UPDATE. Under a column-scoped grant the caller does not hold on
-    `col`, the statement takes 42501 from a line that appears in no handler, no
-    model and no test expectation.
+    issued the statement. Under a column-scoped grant the caller does not hold on
+    `col`, it takes 42501 from a line that appears in no handler, no model and no
+    test expectation.
 
-    Two triggers exist at head, `audit_log_append_only` and
-    `audit_log_no_truncate` (`0001` lines 405/412, `ENABLE ALWAYS` since `0004`),
-    and BOTH are `FOR EACH STATEMENT`. A statement trigger has no `NEW` record at
-    all, so neither can widen a target list. That is the entire margin, and it is
-    one word wide: `0001` chose statement-level for a DIFFERENT reason — a row
-    trigger does not fire for a statement that matches no rows, which is the
-    ordinary case under `0002`'s RLS — so nothing in the repository ties the
-    row/statement choice to the privilege consequence. This does.
+    BOTH HALVES OF THAT HAZARD NOW EXIST IN THIS SCHEMA and they are on different
+    tables. `0007` put the trigger on `audit_log`; `0032` put the column grants on
+    `fields`. Neither revision could see the other. This asserts the only thing
+    that actually has to hold — that they stay apart — and it is deliberately
+    conservative about WHICH before-row triggers count: all of them, including the
+    three that only compare, because "does this function body assign `NEW`" is
+    precisely the question a catalog cannot answer.
 
-    The assertion is "no BEFORE ROW trigger ANYWHERE in public", not "these two
-    are still statement-level": a new trigger on `pages` is the change this is
-    watching for, and a loop over the tables somebody remembered would not see
-    it. `prosecdef` is reported in the failure message because a SECURITY
-    DEFINER trigger function is the one shape of BEFORE ROW trigger that does
-    NOT trip a narrow grant, and whoever reads this failure needs to know which
-    kind they are looking at before deciding.
-
-    MEASURED at head: the empty set.
+    `prosecdef` is reported in the failure message because a `SECURITY DEFINER`
+    trigger function is the one shape of BEFORE ROW trigger that does NOT trip a
+    narrow grant, and whoever reads this failure needs to know which kind they are
+    looking at before deciding.
     """
     engine = seam_engine(migrated_database)
     try:
         with engine.connect() as connection:
-            rows = connection.execute(text(TRIGGER_TIMING_QUERY)).all()
+            triggers = connection.execute(text(TRIGGER_TIMING_QUERY)).all()
+            column_grants = connection.execute(text(COLUMN_ACL_QUERY)).all()
     finally:
         engine.dispose()
 
-    before_row = sorted(
-        f"{row[1]} on {row[0]} -> {row[4]}() (BEFORE, FOR EACH ROW, "
-        f"security_definer={bool(row[5])})"
-        for row in rows
+    before_row = {
+        str(row[0]): f"{row[1]} on {row[0]} -> {row[4]}() (security_definer={bool(row[5])})"
+        for row in triggers
         if bool(row[2]) and bool(row[3])
+    }
+    narrowed = {str(row[0]) for row in column_grants}
+
+    collisions = sorted(
+        f"{before_row[table]}, and {table} carries column-scoped grants on "
+        f"{sorted({str(row[1]) for row in column_grants if str(row[0]) == table})}"
+        for table in sorted(set(before_row) & narrowed)
     )
-    assert before_row == [], (
-        "BEFORE ROW triggers exist. Each fires with the INVOKER's privileges and "
-        "any NEW.* it assigns is a column write outside the caller's grant:\n  "
-        + "\n  ".join(before_row)
+    assert collisions == [], (
+        "a table carries BOTH a column-scoped grant and a BEFORE ROW trigger. "
+        "The trigger fires with the INVOKER's privileges, so any NEW.* it assigns "
+        "is a column write outside the caller's grant and the statement takes "
+        "42501 from a line in no handler. Either the grant goes back to table "
+        "level or the trigger stops being BEFORE ROW:\n  " + "\n  ".join(collisions)
     )
 
-    # The positive control, in the same test so the negative above cannot pass by
-    # reading an empty catalog: the five triggers at head must actually be there.
-    # A query that returned nothing at all — wrong schema name, `tgisinternal`
-    # inverted — would satisfy the assertion above and prove nothing.
-    #
-    # 🔴 `golden_fields_ledger_required` IS A ROW TRIGGER AND IT IS IN THIS LIST
-    # WITHOUT WEAKENING THE ASSERTION ABOVE, because it is `AFTER`. The read
-    # above filters on `(tgtype & 1) <> 0 AND (tgtype & 2) <> 0` — row AND
-    # before — and an `AFTER ROW` trigger fails the second bit. That is not a
-    # technicality that lets it through: an `AFTER ROW` trigger's return value is
-    # DISCARDED by PostgreSQL, so it cannot assign `NEW.col` under any body it
-    # could ever be given, which is exactly the property the assertion above is
-    # protecting. `0072`'s module docstring records why `AFTER` was chosen for
-    # that reason rather than a source-level check on `prosrc`.
-    names = sorted(f"{row[1]} on {row[0]}" for row in rows)
-    assert names == [
-        "audit_log_append_only on audit_log",
-        "audit_log_no_truncate on audit_log",
-        "golden_corrections_append_only on golden_corrections",
-        "golden_corrections_no_truncate on golden_corrections",
-        "golden_fields_ledger_required on golden_fields",
-    ], f"the trigger census itself has moved, so the BEFORE-ROW read above is stale: {names}"
+    # THE ENUMERATION, BESIDE THE CONJUNCTION AND NOT INSTEAD OF IT. The assertion
+    # above is about a PAIRING; this is what makes a fifth BEFORE ROW trigger a
+    # diff a reviewer reads, whichever table it lands on.
+    named = {f"{row[1]} on {row[0]}" for row in triggers if bool(row[2]) and bool(row[3])}
+    assert named == EXPECTED_BEFORE_ROW_TRIGGERS, (
+        f"the BEFORE ROW trigger census has moved. Unexpected: "
+        f"{sorted(named - EXPECTED_BEFORE_ROW_TRIGGERS)}; gone: "
+        f"{sorted(EXPECTED_BEFORE_ROW_TRIGGERS - named)}. Each of these can assign "
+        f"NEW.* with the invoker's privileges, and the assertion above only "
+        f"catches one that shares a table with a column grant."
+    )
+
+    # THE POSITIVE CONTROL ON THE READ ITSELF, which the conjunction needs more
+    # than the old empty-set assertion did: it is satisfied by an empty
+    # intersection, and two empty catalogs intersect emptily. Twenty-two triggers
+    # and seventeen column grants, MEASURED at head 2026-09-05.
+    assert len(triggers) == 22, (
+        f"the trigger read returned {len(triggers)} rows, not 22 — wrong schema "
+        f"name, or `tgisinternal` inverted. The collision assertion above passes "
+        f"trivially on an empty read."
+    )
+    assert len(column_grants) == 17, (
+        f"the column-ACL read returned {len(column_grants)} rows, not 17. The "
+        f"collision assertion above passes trivially when this is empty, which is "
+        f"what the schema looked like before 0032."
+    )
+
+
+# 🔴 THE `SECURITY DEFINER` FUNCTIONS `PUBLIC` CAN REACH, AND WHY THE ANSWER IS
+# NOT "none". Both entries below return `trigger`, and PostgreSQL refuses a direct
+# call to a trigger function — MEASURED as `titlepipe_app`:
+# `ERROR: trigger functions can only be called as triggers`. So the grant reaches
+# a function nobody can invoke.
+#
+# That is a THINNER MARGIN than the alternative and it is the finding rather than
+# the contract: `0032` `REVOKE`s `EXECUTE ... FROM PUBLIC` on its own `SECURITY
+# DEFINER` function before granting it to the app; `0041` does not, and what saves
+# it is the return type. One of the two is a decision and the other is a
+# coincidence that happens to hold.
+#
+# Named as an exact set so that a `SECURITY DEFINER` function which is NOT a
+# trigger function cannot join them — that one really would be `PUBLIC` borrowing
+# `titlepipe_owner`, which owns every table and can `DROP POLICY`.
+SECURITY_DEFINER_REACHABLE_BY_PUBLIC = frozenset({"escalations_resolution_needs_a_live_rule"})
+
+
+def test_no_security_definer_function_is_callable_by_public(
+    migrated_database: str, seam_engine: Callable[[str], Engine]
+) -> None:
+    """🔴 THE HOLE IN THE EXACT-ACL CONTRACT, CLOSED FROM OUTSIDE IT.
+
+    `CATALOG_ACL_QUERY` reads routines with `p.proacl IS NOT NULL`, and it has to:
+    `EXECUTE` is granted to `PUBLIC` by PostgreSQL's own `acldefault`, so a
+    function nobody has granted on carries a NULL `proacl` while `PUBLIC` really
+    can execute it. Widening that query would add an entry for every function in
+    the schema whose honest description is "PostgreSQL's default", and the
+    contract would stop being a list of this repository's decisions.
+
+    THE CONSEQUENCE IS THAT THE CONTRACT CANNOT SEE ELEVEN OF THIS REPOSITORY'S
+    FUNCTIONS, and one of them is `SECURITY DEFINER`. MEASURED at head 2026-09-05:
+
+        titlepipe_field_transition          secdef, proacl set,  PUBLIC: no
+        escalations_resolution_needs_a_live_rule
+                                            secdef, proacl NULL, PUBLIC: YES
+
+    `0032` `REVOKE`s `EXECUTE ... FROM PUBLIC` before granting its `SECURITY
+    DEFINER` function to the app. `0041` does not. A `SECURITY DEFINER` function
+    runs as `titlepipe_owner`, which owns every table and can `DROP POLICY`, so
+    "who may call it" is not a formality.
+
+    WHAT STOPS IT MATTERING IS THE RETURN TYPE, WHICH IS A COINCIDENCE AND NOT A
+    DECISION: it returns `trigger`, and PostgreSQL refuses a direct call. That is
+    assertable, so it is asserted rather than left as a note.
+
+    WHY `SECURITY INVOKER` IS NOT ON TRIAL HERE. Eleven of `0060`'s vendored queue
+    functions are non-trigger and `PUBLIC`-executable —
+    `procrastinate_defer_jobs_v1`, `procrastinate_fetch_job_v2` and the rest —
+    and that is inert: none is `SECURITY DEFINER`, so each runs with the CALLER's
+    privileges and a role with no `INSERT` on `procrastinate_jobs` still cannot
+    enqueue by calling one. `0060` says so in the same words. Asserting them away
+    would mean eighteen `REVOKE`s that change no privilege, and this test would
+    then be about tidiness instead of about privilege.
+
+    So the claim is exactly: NO `SECURITY DEFINER` FUNCTION IS CALLABLE BY
+    `PUBLIC`. Borrowing the owner's identity is the only thing that makes an
+    `EXECUTE` grant a privilege escalation, and `SECURITY DEFINER` is the only way
+    to borrow it.
+    """
+    engine = seam_engine(migrated_database)
+    try:
+        with engine.connect() as connection:
+            reachable = connection.execute(
+                text(
+                    "SELECT p.proname, p.prosecdef, p.prorettype = 'trigger'::regtype "
+                    "FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace "
+                    "WHERE n.nspname = 'public' "
+                    "  AND has_function_privilege('public', p.oid, 'EXECUTE')"
+                )
+            ).all()
+    finally:
+        engine.dispose()
+
+    escalating = sorted(str(row[0]) for row in reachable if bool(row[1]) and not bool(row[2]))
+    assert escalating == [], (
+        "SECURITY DEFINER functions exist that PUBLIC can EXECUTE and that are "
+        "not trigger functions, so PUBLIC can actually call them — and they run "
+        "as titlepipe_owner, which owns every table and can DROP POLICY. A NULL "
+        "proacl is invisible to EXACT_NON_OWNER_ACL, so nothing else here sees "
+        "them. 0032 is the pattern: REVOKE EXECUTE FROM PUBLIC, then GRANT to the "
+        "one role that needs it:\n  " + "\n  ".join(escalating)
+    )
+
+    # THE EXACT SET OF SECURITY DEFINER FUNCTIONS PUBLIC CAN REACH AT ALL, trigger
+    # functions included. The assertion above tolerates one because it cannot be
+    # called; this is what keeps that tolerance from silently covering a second,
+    # and what makes `0041`'s missing REVOKE visible rather than merely harmless.
+    definer_reachable = {str(row[0]) for row in reachable if bool(row[1])}
+    assert definer_reachable == SECURITY_DEFINER_REACHABLE_BY_PUBLIC, (
+        f"the SECURITY DEFINER functions PUBLIC can reach are "
+        f"{sorted(definer_reachable)}, not "
+        f"{sorted(SECURITY_DEFINER_REACHABLE_BY_PUBLIC)}. Each is saved from "
+        f"mattering only by returning `trigger`, which is a property of the "
+        f"signature rather than a decision anybody recorded — 0032 revokes, 0041 "
+        f"does not, and this line is where that difference is visible."
+    )
+
+    # THE POSITIVE CONTROL on the read itself: an empty result satisfies both
+    # assertions above and would mean `has_function_privilege` stopped answering.
+    # `0060`'s GRANT to the worker materialises PostgreSQL's own PUBLIC default
+    # alongside it, so the eighteen queue functions alone put PUBLIC on this list.
+    assert len(reachable) >= 18, (
+        f"only {len(reachable)} functions are PUBLIC-executable. 0060's eighteen "
+        f"queue functions carry a materialised PUBLIC entry on their own, so a "
+        f"number below that means the read is broken and both assertions above "
+        f"passed on nothing."
+    )
