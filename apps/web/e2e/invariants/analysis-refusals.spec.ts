@@ -195,7 +195,11 @@ test("a seat change is refused without an evidence link", async ({ page }) => {
     (c) =>
       fetch("/api/engines/routing", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        // The engineer seat on purpose: the refusal under test is the missing
+        // evidence link, so the request has to get PAST the role gate to
+        // reach it. Sent header-less this asserted 422 while receiving one
+        // from the dev-default admin, which is a different refusal.
+        headers: { "content-type": "application/json", "x-mock-role": "engineer" },
         body: JSON.stringify({
           jurisdiction: c["jurisdiction"],
           section: c["section"],

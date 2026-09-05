@@ -60,7 +60,10 @@ test("bug-5 mock semantics hold: same value 200/200, different value 409", async
     const post = (value: string) =>
       fetch("/api/fields/fld_zip/confirm", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        // The bug-5 semantics under test are the field's, not the seat's, so
+        // the caller is a reviewer rather than whatever a header-less request
+        // used to be promoted to.
+        headers: { "content-type": "application/json", "x-mock-role": "reviewer" },
         body: JSON.stringify({ value }),
       }).then((r) => r.status);
     const first = await post("30296");
