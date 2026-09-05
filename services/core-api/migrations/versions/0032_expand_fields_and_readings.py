@@ -315,7 +315,7 @@ def _create_transition_function() -> None:
             END IF;
         END;
         $$
-        """  # noqa: S608
+        """
     )
     op.execute(f"REVOKE EXECUTE ON FUNCTION {TRANSITION_FUNCTION}({_TRANSITION_ARGS}) FROM PUBLIC")
     op.execute(
