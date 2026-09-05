@@ -16,7 +16,6 @@ from titlepipe_domain import Environment
 from titlepipe_worker.cli import (
     CROSS_FIELD_RULE,
     EXIT_INVALID_CONFIGURATION,
-    EXIT_NOT_IMPLEMENTED,
     EXIT_OK,
     build_parser,
     environment_for_failed_configuration,
@@ -234,11 +233,43 @@ def test_a_production_configuration_failure_is_redacted_and_shippable(
     assert "not-a-number" not in captured
 
 
-def test_run_refuses_until_the_queue_exists(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A worker that starts, finds nothing and loops quietly looks healthy on
-    every dashboard while doing nothing."""
-    apply(monkeypatch, VALID_ENVIRONMENT)
-    assert main(["run"]) == EXIT_NOT_IMPLEMENTED
+def test_run_refuses_when_there_is_no_queue_to_consume(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The refusal survived the queue landing; only its exit code changed.
+
+    A worker that starts, finds nothing and loops quietly looks healthy on every
+    dashboard while doing nothing — that has not stopped being true. What
+    changed is that "no queue" is now a CONFIGURATION failure rather than an
+    unimplemented feature, so it exits 2 rather than the retired 3, and the
+    record names the variable an operator has to set.
+
+    `VALID_ENVIRONMENT` deliberately carries no DSN: this is the local shape, and
+    a deployed one never reaches here because `WorkerSettings` refuses it
+    outright.
+    """
+    apply(monkeypatch, {**VALID_ENVIRONMENT, f"{ENV_PREFIX}LOG_RENDERER": "json"})
+    assert main(["run"]) == EXIT_INVALID_CONFIGURATION
+
+    record = json.loads(capsys.readouterr().out.strip().splitlines()[-1])
+    assert record["event"] == "queue_not_configured"
+    assert f"{ENV_PREFIX}DATABASE_URL" in record["detail"]
+
+
+def test_run_does_not_report_the_configuration_twice(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """`run` shares the loading step with `check`; it does not CALL `check`.
+
+    The version that called it emitted `configuration_valid` with the check
+    command's field list and then a second record with the queue's — one
+    resolved configuration, reported twice, in two shapes, for anyone reading
+    the log of a starting worker to reconcile.
+    """
+    apply(monkeypatch, {**VALID_ENVIRONMENT, f"{ENV_PREFIX}LOG_RENDERER": "json"})
+    main(["run"])
+    events = [json.loads(line)["event"] for line in capsys.readouterr().out.strip().splitlines()]
+    assert "configuration_valid" not in events
 
 
 def test_run_reports_the_configuration_failure_first(monkeypatch: pytest.MonkeyPatch) -> None:
