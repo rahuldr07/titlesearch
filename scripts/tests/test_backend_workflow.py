@@ -118,8 +118,8 @@ ON THE TOKEN RULE, STATED PRECISELY BECAUSE IT IS THE ONE THAT IS NOT A YES/NO
 READ OF A KEY. The requirement is that the gate be INVOKED rather than mentioned,
 and "the line starts with the needle" is NOT available as a spelling of it — no
 real gate line does. MEASURED: the workflow runs `python
-scripts/check_backend_rules.py` and `git ls-files -z | xargs -0 python
-scripts/check_no_client_data.py`, and the needle is in the middle of both. So the
+scripts/check_backend_rules.py` and `git ls-files -z '*.md' | xargs -0 python
+scripts/check_doc_links.py`, and the needle is in the middle of both. So the
 rule is positional in the TOKEN stream instead: `shlex` splits the line, the
 tokens are cut at `|`, `&&`, `||`, `;` and `&` into commands, and a command whose
 first token is `echo`, `printf`, `:`, `true` or `false` cannot satisfy anything.
@@ -234,8 +234,12 @@ CANCELLED_GUARD = "!cancelled()"
 # Where one shell command ends and the next begins. `_invocations` cuts the token
 # stream here so that "the first token" is the command word of the command the
 # needle is actually in, rather than of whatever started the line — the needle in
-# `git ls-files -z | xargs -0 python scripts/check_no_client_data.py` belongs to
+# `git ls-files -z '*.md' | xargs -0 python scripts/check_doc_links.py` belongs to
 # the `xargs` command, not to `git`.
+#
+# The client-data guard used to be the example here. It is `python
+# scripts/check_no_client_data.py --tree` now — one process, so its exit status
+# is the step's — and the doc-links gate is the piped shape that remains.
 SEGMENT_SEPARATORS = frozenset({"|", "||", "&&", ";", "&"})
 
 # Command words that cannot run a gate however they are spelled. A step that
