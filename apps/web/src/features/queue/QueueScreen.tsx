@@ -1,8 +1,7 @@
-import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useCallback, useMemo, useState } from "react";
 import type { Order } from "@titlepipe/contract";
-import { get } from "../../shared/api";
+import { useRead } from "../../app/useRead";
 import { queueNext } from "../../shared/queries";
 import { useChords } from "../../shared/chords";
 import { ServedOrderCard } from "./ServedOrderCard";
@@ -56,10 +55,15 @@ export function QueueScreen() {
    */
   const [passedRef, setPassedRef] = useState<string | null>(null);
 
-  const served = useQuery({
-    queryKey: queueNext.key,
-    queryFn: () => get(queueNext.path, queueNext.schema),
-  });
+  /* The descriptor through `useRead`, not a hand-spelled key and fetcher.
+     `shared/queries.ts` owns one spelling of this path and this cache key,
+     and a second copy is a second cache the moment either drifts — which it
+     does silently, as a refetch and a stale order, never as an error. This
+     read in particular is shared with the rail (`RailSection` asks the same
+     question to decide which order its stage rows belong to), so the two
+     landing in one cache entry is what stops the rail and the screen naming
+     different orders. */
+  const served = useRead(queueNext);
 
   const order: Order | null = served.data?.order ?? null;
 
