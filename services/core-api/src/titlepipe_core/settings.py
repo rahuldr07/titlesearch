@@ -108,8 +108,41 @@ class CoreApiSettings(BaseSettings):
     allowed_hosts: tuple[str, ...] = ()
 
     # --- session ----------------------------------------------------------
+    # 🔴 THIS IS THE WORKOS COOKIE PASSWORD, and there is deliberately no
+    # `workos_cookie_password` below. `auth/workos_provider.py` passes THIS
+    # value to `load_sealed_session`: the AuthKit session cookie is a Fernet
+    # box, and `_seal_password_is_a_fernet_key` already validates it as a Fernet
+    # key. A second field would be two names for one credential, drifting apart
+    # on the first rotation.
     cookie_seal_password: SecretStr = SecretStr(DEVELOPMENT_SEAL_PASSWORD)
     mock_auth_enabled: bool = False
+
+    # --- identity provider (WorkOS AuthKit) -------------------------------
+    # 🔴 WORKOS, AND ONLY WORKOS. `auth/seam.build_auth_seam` reads these to
+    # decide whether this process has a real identity provider; nothing else in
+    # the service reads them, so the seam stays the one construction point.
+    #
+    # NEITHER IS FORMAT-CHECKED, AND THAT IS THE LESSON THIS FILE ALREADY PAID
+    # FOR. A real client id begins `client_` and a real key `sk_test_` /
+    # `sk_live_` today, and a validator asserting that would be the 32-vs-44
+    # seal-length bug again: a rule about a vendor's credential format, written
+    # from a placeholder, that rejects the genuine article the day the vendor
+    # changes it. Presence and non-blankness are what this file can know;
+    # WorkOS rejects a malformed key on the first call.
+    #
+    # `SecretStr` on the key, plain `str` on the client id, matching what each
+    # is: the key is a bearer credential and belongs out of every `repr`; the
+    # client id is public — the browser sends it in the AuthKit authorization
+    # URL — and hiding it would only make a log line less useful.
+    workos_api_key: SecretStr | None = None
+    workos_client_id: str | None = None
+
+    # The cookie AuthKit seals the session into. `wos-session` is the SDK's
+    # default and it is CONFIGURABLE at WorkOS, which is why this is a field
+    # rather than a constant in the adapter: a deployment that renamed the
+    # cookie against a service that hardcoded the default authenticates nobody,
+    # silently — every request simply looks signed-out.
+    workos_session_cookie_name: str = "wos-session"
 
     # --- database ---------------------------------------------------------
     # The DSN the REQUEST PATH connects with. Read by `lifespan.py`, which builds
@@ -181,6 +214,20 @@ class CoreApiSettings(BaseSettings):
         return LogRenderer.JSON if self.environment.is_deployed else LogRenderer.CONSOLE
 
     @property
+    def workos_configured(self) -> bool:
+        """Whether this process has the credentials to talk to a WorkOS tenant.
+
+        `_workos_is_configured_or_absent` makes the two fields all-or-nothing,
+        so this reads one of them and the other cannot disagree.
+
+        `auth/seam.build_auth_seam` is the only caller. It is a property here
+        rather than a check spelled inline there so that "configured" has one
+        definition — adding a third required WorkOS value later is an edit to
+        this property and the validator below, and the seam does not change.
+        """
+        return self.workos_client_id is not None
+
+    @property
     def openapi_url(self) -> str | None:
         """`None` disables the schema route entirely."""
         return "/openapi.json" if self.docs_enabled else None
@@ -237,6 +284,50 @@ class CoreApiSettings(BaseSettings):
         return self
 
     @model_validator(mode="after")
+    def _workos_is_configured_or_absent(self) -> Self:
+        """Both WorkOS values or neither, and neither of them blank. Everywhere.
+
+        NOT ENVIRONMENT-GATED, unlike every other rule here. A half-set pair is
+        a mistake in development too, and its symptom is indistinguishable from
+        working software: `build_auth_seam` reads `workos_configured`, sees one
+        value missing, builds no adapter, and every request answers "Not signed
+        in." — which an operator who just pasted a key in reads as a bad key.
+
+        Blank is refused separately from absent: `TITLEPIPE_WORKOS_CLIENT_ID=`,
+        or a secret that resolved to nothing, is present-and-empty. pydantic
+        reads it as `""` rather than `None`, so without this the pair looks
+        complete and the SDK is constructed around nothing.
+        """
+        key = self.workos_api_key.get_secret_value() if self.workos_api_key is not None else None
+        client_id = self.workos_client_id
+
+        blank = [
+            name
+            for name, value in (("workos_api_key", key), ("workos_client_id", client_id))
+            if value is not None and value.strip() == ""
+        ]
+        if blank:
+            raise ValueError(
+                f"{', '.join(blank)} is set but blank; unset the variable to run "
+                "without an identity provider, or supply the real value"
+            )
+
+        if (key is None) != (client_id is None):
+            missing = "workos_api_key" if key is None else "workos_client_id"
+            raise ValueError(
+                f"WorkOS is half-configured: {missing} is not set. Both values are "
+                "required together, because a service with one of them builds no "
+                "identity provider and answers every request as signed-out"
+            )
+
+        if self.workos_session_cookie_name.strip() == "":
+            raise ValueError(
+                "workos_session_cookie_name must be a cookie name; it is what the "
+                "sealed AuthKit session is read from"
+            )
+        return self
+
+    @model_validator(mode="after")
     def _deployed_environments_refuse_unsafe_configuration(self) -> Self:
         if not self.environment.is_deployed:
             return self
@@ -266,6 +357,23 @@ class CoreApiSettings(BaseSettings):
             )
         if self.cookie_seal_password.get_secret_value() in PLACEHOLDER_SECRETS:
             unsafe.append("cookie_seal_password is a placeholder")
+        if not self.workos_configured:
+            # 🔴 WHAT MAKES THE WORKOS ADAPTER MANDATORY WHERE IT MATTERS.
+            # Without this a deployed service starts with an EMPTY provider
+            # registry — `auth/provider.py`'s fail-closed state, which refuses
+            # everyone and is therefore safe. Safe is not the bar: a staging box
+            # that refuses every sign-in looks exactly like a WorkOS outage, an
+            # expired key, or a browser sending no cookie, and all three get
+            # debugged before anyone suspects an unset variable.
+            unsafe.append(
+                "WorkOS is not configured; set workos_api_key and workos_client_id, "
+                "or the service would start with no identity provider and refuse "
+                "every sign-in"
+            )
+        elif self.workos_api_key is not None and (
+            self.workos_api_key.get_secret_value() in PLACEHOLDER_SECRETS
+        ):
+            unsafe.append("workos_api_key is a placeholder")
         if self.app_database_url is None:
             # The one refusal here whose absence is invisible at RUNTIME rather
             # than merely dangerous. Every other knob in this list produces a
