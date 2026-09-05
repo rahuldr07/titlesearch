@@ -52,7 +52,7 @@ class Package(_TenantRow):
     over those events becomes "the package" — additive, and the digests already
     stored stay true. If it had been built mutable, nothing stored would be.
 
-    **THE MACHINE:** `0005`'s `packages_identity_is_immutable` trigger, `BEFORE
+    **THE MACHINE:** `0031`'s `packages_identity_is_immutable` trigger, `BEFORE
     UPDATE ... FOR EACH ROW`, refusing any statement that CHANGES `sha256`,
     `byte_size` or `tenant_id`. `FOR EACH ROW` and not `FOR EACH STATEMENT` here,
     which is the opposite of `audit_log`'s choice and for the opposite reason:
@@ -60,9 +60,16 @@ class Package(_TenantRow):
     it cannot be a row trigger; this refuses only a CHANGE, which needs `OLD` and
     `NEW` and therefore must be.
 
-    **EXACTLY ONE ACCEPTED PACKAGE PER ORDER**, per §1 — enforced by `0005`'s
-    partial unique index `uq_packages_one_accepted_per_order`, not by a status
-    check anywhere. A second acceptance is a unique violation at write time.
+    **EXACTLY ONE ACCEPTED PACKAGE PER ORDER**, per §1 — enforced by the partial
+    unique index `uq_packages_one_accepted_per_order` declared below and created
+    by `0031`, not by a status check anywhere. A second acceptance is a unique
+    violation at write time.
+
+    🔴 BOTH MACHINES WERE ATTRIBUTED TO `0005` UNTIL 2026-09-04 AND `0005` IS
+    NOT THAT REVISION. It is `record_class_taxonomy`; `0006` is `legal_holds` and
+    `0007` is the audit writer. Neither the trigger nor the index existed in any
+    revision on any branch — the numbers were assumed when this file was written
+    and the range was allocated to another worker. Both now exist, in `0031`.
     """
 
     __tablename__ = "packages"
@@ -98,6 +105,24 @@ class Package(_TenantRow):
         sa.CheckConstraint(
             "status <> 'quarantined' OR quarantine_note IS NOT NULL",
             name="quarantine_states_why",
+        ),
+        # EXACTLY ONE ACCEPTED PACKAGE PER ORDER — see the class docstring. An
+        # INDEX and not a `CheckConstraint` because a check sees one row and this
+        # is a statement about the set; PARTIAL because `received`, `quarantined`
+        # and `superseded` may repeat freely on one order, and a total unique key
+        # over `(tenant_id, order_id, status)` would refuse the second `received`
+        # package a re-upload legitimately produces.
+        #
+        # Declared HERE and not only in the migration because `alembic check`
+        # compares indexes: one the catalog has and this metadata does not is
+        # drift reported at every revision from `0031` on, with no edit that
+        # resolves it.
+        sa.Index(
+            "uq_packages_one_accepted_per_order",
+            "tenant_id",
+            "order_id",
+            unique=True,
+            postgresql_where=sa.text("status = 'accepted'"),
         ),
     )
 
