@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { interceptApi } from "../helpers/net";
+import { apiLog, interceptApi, trackApi } from "../helpers/net";
 
 /**
  * Never weaken an assertion — a test that cannot pass against the new
@@ -50,8 +50,27 @@ test("A≠B disagreement leads: chip on the row, both readings in the panel", as
   await expect(page.getByText("llmwhisperer-hq").first()).toBeVisible();
 });
 
+/*
+ * ---------------------------------------------------------------------------
+ * THERE ARE TWO WAYS TO CORRECT A FIELD, AND THEY ARE NOT THE SAME MACHINE.
+ * ---------------------------------------------------------------------------
+ *
+ * PATH A — select a row, press `e`. Opens `DecisionEditor`, which asks
+ *   `holdFor()` (`editorHold.ts`) whether the submit may go, and holds it for a
+ *   missing reason, an empty value, or a value equal to the machine read.
+ *
+ * PATH B — DOUBLE-CLICK a row. Opens `InlineEdit`, a value box and nothing
+ *   else. It never calls `holdFor`, and there is no reason to give it: the
+ *   surface has no reason field. Enter posts to the same `/correct` endpoint.
+ *
+ * Only Path A was ever driven by a test. The invariant below it was green and
+ * proved nothing about Path B, which is the more permissive of the two.
+ * `PATH A` / `PATH B` in the titles is not decoration — it is which machine the
+ * test is standing in front of.
+ */
+
 // Rule: a correction is refused without its reason.
-test("correction without a reason never submits", async ({ page }) => {
+test("PATH A (`e`) — correction without a reason never submits", async ({ page }) => {
   await go(page);
   await page.getByTestId("row-mortgages.1.lender").click();
   await page.keyboard.press("e");
@@ -66,8 +85,113 @@ test("correction without a reason never submits", async ({ page }) => {
   ).toHaveCount(0);
 });
 
+/**
+ * PATH B, DRIVEN — and it is driven by a real double-click, so the test cannot
+ * quietly become a Path A test: no `e`, no keyboard at all until the value is
+ * typed into the surface the two clicks opened.
+ *
+ * 🔴 WHAT THIS TEST PINS IS A DEFECT, RECORDED — not a rule being kept.
+ *
+ * The owner ruled on 2026-09-05 that the correction reason is not to be
+ * captured on this path for now, so no reason affordance was added and
+ * `CorrectFieldRequest.reason` stays optional. That ruling is about the
+ * product. It is not a reason for the wire to go unwatched: the assertion on
+ * the POST body below is the ONLY machine in this repository that can see what
+ * Path B actually files, and `expect(sent.reason).toBeUndefined()` is what
+ * makes the gap machine-checked instead of prose.
+ *
+ * WHEN THE REASON IS CAPTURED, THIS TEST GOES RED. That is the point and it is
+ * the correct outcome: flip the assertion to require the reason. Deleting it
+ * would return this path to the state the card was raised about.
+ *
+ * A body assertion, not a call count: Path A and Path B post the same verb to
+ * the same URL, so counting calls cannot tell them apart, and only the body
+ * distinguishes a correction carrying a reason from one that does not.
+ *
+ * `correction-reason.test.ts` is the other half and neither replaces the other:
+ * that one greps `useEditAsk.ts` for the word `reason` and trips when the
+ * contract is re-tightened. It never runs the app. This one runs the app and
+ * reads the wire, so it also sees a reason that is built but dropped, or one
+ * path quietly rerouted through the other.
+ */
+test("PATH B (double-click) — files a correction from a surface with no reason field", async ({
+  page,
+}) => {
+  await trackApi(page);
+  await go(page);
+
+  const row = page.getByTestId("row-mortgages.1.lender");
+  await row.dblclick();
+
+  // The surface Path B opens: `InlineEdit`, keyed by path so there is no doubt
+  // which row is under edit.
+  const editor = page.getByTestId("inline-edit-mortgages.1.lender");
+  await expect(editor).toBeVisible();
+  // …and it is NOT the Path A editor. `edit-reason` is the reason box Path A
+  // gates on; its absence here is the whole asymmetry, asserted rather than
+  // described.
+  await expect(page.getByTestId("edit-reason")).toHaveCount(0);
+  await expect(page.getByTestId("edit-value")).toHaveCount(0);
+
+  const value = editor.getByTestId("inline-value");
+  await expect(value).toBeFocused();
+  await value.fill("SOUTHSTONE MORTGAGE LLC");
+  await value.press("Enter");
+
+  // The server's state renders, so the correction was really filed. Read off
+  // `data-field-state`, which IS the server's `state` — the glyph beside it is
+  // this screen's rendering of that state and not a second source.
+  await expect(
+    page.getByTestId("row-mortgages.1.lender").getByTestId("row-mark"),
+  ).toHaveAttribute("data-field-state", "corrected");
+
+  // What went over the wire. One POST, and its body is the record.
+  const posts = (await apiLog(page)).filter(
+    (c) => c.method === "POST" && c.url.includes("/correct"),
+  );
+  expect(posts).toHaveLength(1);
+  const sent = JSON.parse(posts[0]?.body ?? "null") as {
+    value?: unknown;
+    reason?: unknown;
+  };
+  expect(sent.value).toBe("SOUTHSTONE MORTGAGE LLC");
+  // 🔴 The recorded gap. Flip to `expect(sent.reason).toEqual(expect.any(String))`
+  // the day the reason is captured — see the block above this test.
+  expect(sent.reason).toBeUndefined();
+});
+
+/**
+ * PATH B REACHES ROWS THE QUEUE DOES NOT OFFER.
+ *
+ * `FieldQueue` hangs `onDoubleClick` on EVERY row wrapper, and `beginEdit`
+ * (`WorkstationScreen.tsx`) raises the editor without consulting `canSelect`.
+ * Single click is gated — `onSelect` runs `canSelect(field)` first — and J/K
+ * walk queued fields only, which `J/K walk the queued fields only` above
+ * proves. Double-click is gated by nothing.
+ *
+ * `owner.property_address` is `auto_confirmed`: the pipeline read it, no human
+ * was ever asked about it, and it is not in the queue.
+ *
+ * 🔴 THIS TEST ALSO PINS A DEFECT RATHER THAN A RULE, for the same reason as
+ * the one above: the behaviour is unruled, and an unwatched wire is how it
+ * stays unruled. If the double-click is gated to the queue, this goes red and
+ * the assertion should become `toHaveCount(0)`.
+ */
+test("PATH B (double-click) — opens a write surface on an auto-confirmed row", async ({
+  page,
+}) => {
+  await go(page);
+  const row = page.getByTestId("row-owner.property_address");
+  // Not in the queue: a single click does not even select it.
+  await row.click();
+  await expect(page.getByTestId("sel-label")).toHaveText("OWNER ZIP");
+  // The second gesture is not gated by the first.
+  await row.dblclick();
+  await expect(page.getByTestId("inline-edit-owner.property_address")).toHaveCount(1);
+});
+
 // Rule: the server's returned state is what renders — never an optimistic local mutation.
-test("correction with value + reason submits and renders the server's state", async ({
+test("PATH A (`e`) — correction with value + reason submits and renders the server's state", async ({
   page,
 }) => {
   await go(page);

@@ -1,5 +1,6 @@
 import type { JSX } from "react";
 import { OverviewScreen } from "../../features/overview/OverviewScreen";
+import { QueueScreen } from "../../features/queue/QueueScreen";
 import { OrdersListScreen } from "../../features/ordersList/OrdersListScreen";
 import { IngestScreen } from "../../features/ingest/IngestScreen";
 import { EscalationsScreen } from "../../features/escalations/EscalationsScreen";
@@ -18,6 +19,7 @@ import { BlindSeatScreen } from "../../features/blind/BlindSeatScreen";
  */
 export const BUILT_SCREENS: Readonly<Record<string, () => JSX.Element>> = {
   "/": OverviewScreen,
+  "/queue": QueueScreen,
   "/orders-list": OrdersListScreen,
   "/ingest": IngestScreen,
   "/escalations": EscalationsScreen,

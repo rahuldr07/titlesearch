@@ -17,6 +17,7 @@ import { describeAxeForRoutes } from "../helpers/axe";
  */
 const ROUTES = [
   "/",
+  "/queue",
   "/orders-list",
   "/orders",
   "/ingest",

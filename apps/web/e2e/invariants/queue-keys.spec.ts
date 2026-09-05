@@ -37,7 +37,7 @@ test("Enter on the pass button opens the reason, never review", async ({ page })
   await expect(page.getByTestId("order-ref")).toBeVisible();
   await page.getByRole("button", { name: /Pass/ }).focus();
   await page.keyboard.press("Enter");
-  await expect(page.getByPlaceholder(/why are you passing/)).toBeVisible();
+  await expect(page.getByPlaceholder(/why are you passing/i)).toBeVisible();
   await expect(page).toHaveURL(/\/queue$/);
 });
 
@@ -50,5 +50,5 @@ test("p while a control holds focus is the control's key, not the pass shortcut"
   await expect(page.getByTestId("order-ref")).toBeVisible();
   await page.getByTestId("rail-toggle").focus();
   await page.keyboard.press("p");
-  await expect(page.getByPlaceholder(/why are you passing/)).toHaveCount(0);
+  await expect(page.getByPlaceholder(/why are you passing/i)).toHaveCount(0);
 });

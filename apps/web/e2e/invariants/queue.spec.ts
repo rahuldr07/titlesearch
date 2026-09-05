@@ -34,7 +34,7 @@ test("pass without a reason is refused; esc keeps the order", async ({ page }) =
   await page.goto("/queue");
   await expect(page.getByTestId("order-ref")).toHaveText("4176034-1");
   await page.keyboard.press("p");
-  const input = page.getByPlaceholder(/why are you passing/);
+  const input = page.getByPlaceholder(/why are you passing/i);
   await expect(input).toBeFocused();
   await input.press("Enter"); // empty — must not submit
   await expect(page.getByTestId("passed-note")).toHaveCount(0);
@@ -48,7 +48,7 @@ test("pass with a reason records and advances to the next order", async ({ page 
   await page.goto("/queue");
   await expect(page.getByTestId("order-ref")).toHaveText("4176034-1");
   await page.keyboard.press("p");
-  const input = page.getByPlaceholder(/why are you passing/);
+  const input = page.getByPlaceholder(/why are you passing/i);
   await input.fill("never done a Cobb Co. tax card");
   await input.press("Enter");
   await expect(page.getByTestId("passed-note")).toContainText("passed 4176034-1");

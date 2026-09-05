@@ -28,6 +28,7 @@ const ORDER_PATH = /^\/orders\/([^/]+)/;
 /** The design's per-screen gloss, keyed by door path. Prose, not wire data. */
 const SCREEN_HINT: Readonly<Record<string, string>> = {
   "/": "Pipeline stages and what is waiting on you",
+  "/queue": "The next order the server has for you — one at a time",
   "/orders-list": "Every order — search, filter and pages",
   "/orders": "This order's hub: stages, gaps and history",
   "/ingest": "Drop a package and record the sign-off",

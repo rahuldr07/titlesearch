@@ -50,7 +50,16 @@ test("the ? map traps focus — Tab never lands behind the scrim", async ({ page
 });
 
 test("the queue's keys stand down while the ? map is open", async ({ page }) => {
-  await page.goto("/orders/ord_demo_1");
+  /*
+   * Back on /queue, which is this test's own subject. It was repointed at
+   * `/orders/ord_demo_1` while the queue screen did not exist, and that left
+   * it internally contradictory rather than merely relocated: line 59 still
+   * asserts the URL is `/queue$` and the last line still asserts Enter lands
+   * on the served order's review — both queue claims, neither reachable from
+   * an order route. Every assertion below is the one that was harvested; only
+   * the door it stands in front of has moved back.
+   */
+  await page.goto("/queue");
   await expect(page.getByTestId("order-ref")).toBeVisible();
   await page.keyboard.press("?");
   await expect(page.getByTestId("key-map")).toBeVisible();
@@ -60,7 +69,7 @@ test("the queue's keys stand down while the ? map is open", async ({ page }) => 
   await expect(page.getByTestId("key-map")).toBeVisible();
   // …and `p` must not open the pass field behind the overlay.
   await page.keyboard.press("p");
-  await expect(page.getByPlaceholder(/why are you passing/)).toHaveCount(0);
+  await expect(page.getByPlaceholder(/why are you passing/i)).toHaveCount(0);
   // Escape closes it and gives the screen its keys back.
   await page.keyboard.press("Escape");
   await expect(page.getByTestId("key-map")).toHaveCount(0);
