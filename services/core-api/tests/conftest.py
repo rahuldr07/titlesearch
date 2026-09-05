@@ -1492,7 +1492,16 @@ ISOLATION_REGISTRY_TABLE = "tenants"
 # This set does NOT decide anything on its own. `_isolation_tables` honours a name
 # here only while the CATALOG agrees the table has no `tenant_id`, so the
 # exemption expires by itself the moment the table becomes tenant-scoped.
-ISOLATION_GLOBAL_TABLES: frozenset[str] = frozenset({"rules"})
+#
+# `retention_windows` is the second one the comment above predicted, and it
+# arrived at integration rather than by anyone editing this line: `0005` creates
+# a statutory retention floor, which is not a tenant's property — Tex. Ins. Code
+# does not apply differently to one customer. `_isolation_tables` raised by name
+# rather than guessing, which is the behaviour that paragraph asks for.
+# `db.rls_coverage.UNSCOPED_TABLES` and `test_forced_rls_and_grants.
+# EXPECTED_GLOBAL_TABLES` are the other two lists that have to agree with this
+# one, and all three now name the same two tables.
+ISOLATION_GLOBAL_TABLES: frozenset[str] = frozenset({"retention_windows", "rules"})
 
 
 def _isolation_tables(connection: Connection) -> Mapping[str, str]:
