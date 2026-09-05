@@ -19,6 +19,8 @@
 # --- what the images actually need -------------------------------------------
 !libs/domain/pyproject.toml
 !libs/domain/src/
+!libs/service-kit/pyproject.toml
+!libs/service-kit/src/
 !libs/test-support/pyproject.toml
 !libs/test-support/src/
 
@@ -30,13 +32,9 @@
 !services/blind-svc/uv.lock
 !services/blind-svc/src/
 
-!services/extraction-svc/pyproject.toml
-!services/extraction-svc/uv.lock
-!services/extraction-svc/src/
-
-!services/render-svc/pyproject.toml
-!services/render-svc/uv.lock
-!services/render-svc/src/
+!services/worker/pyproject.toml
+!services/worker/uv.lock
+!services/worker/src/
 
 # --- re-excluded even inside the allowed paths --------------------------------
 # The `!` rules above are directory-wide, so anything that could hide under

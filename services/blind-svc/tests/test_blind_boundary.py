@@ -43,16 +43,20 @@ def route_paths(app: FastAPI) -> set[str]:
 
 
 # Packages whose presence in this process would mean the boundary is gone.
+#
+# `titlepipe_extraction` and `titlepipe_render` were retired into a single
+# `titlepipe_worker`. The name here follows the package rather than being
+# dropped: this list is the assertion, and a list naming only things that no
+# longer exist passes vacuously while forbidding nothing.
 FORBIDDEN_PACKAGES = frozenset(
     {
         "titlepipe_core",
-        "titlepipe_extraction",
-        "titlepipe_render",
+        "titlepipe_worker",
     }
 )
 
 
-def test_the_blind_package_does_not_import_core_or_the_workers() -> None:
+def test_the_blind_package_does_not_import_core_or_the_worker() -> None:
     """Import every module, then inspect `sys.modules` — a lazy import inside a
     function body would survive a static scan of the import blocks."""
     before = set(sys.modules)

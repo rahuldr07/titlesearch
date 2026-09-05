@@ -28,14 +28,14 @@ PROJECTS = (
     "scripts",
     "libs/domain",
     "libs/test-support",
+    "libs/service-kit",
     "services/core-api",
     "services/blind-svc",
-    "services/extraction-svc",
-    "services/render-svc",
+    "services/worker",
 )
 
 # First-party path packages: no index, no hashes, audited in their own right.
-LOCAL_PACKAGES = ("titlepipe-domain", "titlepipe-test-support")
+LOCAL_PACKAGES = ("titlepipe-domain", "titlepipe-service-kit", "titlepipe-test-support")
 
 PIP_AUDIT_VERSION = "pip-audit==2.*"
 

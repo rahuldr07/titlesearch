@@ -41,12 +41,19 @@ class Environment(StrEnum):
 
 
 class ServiceName(StrEnum):
-    """The deployable units. One process per container, one name each."""
+    """The deployable units. One process per container, one name each.
+
+    This enum is the *deployable* list, not a list of the kinds of work the
+    system does. `WORKER` is one member because extraction and rendering ship
+    in one container and one process; when the work loop lands, which kind of
+    job is running is a field on the log record, not a different service name.
+    A second worker name here would claim a second deployment that does not
+    exist, and `service_name` is what a log shipper routes on.
+    """
 
     CORE_API = "core-api"
     BLIND_API = "blind-api"
-    EXTRACTION_WORKER = "extraction-worker"
-    RENDER_WORKER = "render-worker"
+    WORKER = "worker"
 
 
 class LogRenderer(StrEnum):

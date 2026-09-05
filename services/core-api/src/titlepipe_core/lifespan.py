@@ -41,9 +41,9 @@ from structlog.typing import FilteringBoundLogger
 
 from titlepipe_core.db import check_database, make_engine, make_sessionmaker
 from titlepipe_core.settings import CoreApiSettings
-from titlepipe_core.telemetry.hooks import NullRequestMetrics, RequestMetrics
 from titlepipe_core.telemetry.logging import get_logger
 from titlepipe_domain import Clock, IdFactory, SystemClock, Uuid4IdFactory
+from titlepipe_service_kit.telemetry.hooks import NullRequestMetrics, RequestMetrics
 
 # The readiness key the database answers under. Named rather than spelled at the
 # two places that produce and consume it, because `/ready`'s body is read by a

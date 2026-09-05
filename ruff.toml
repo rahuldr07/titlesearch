@@ -11,9 +11,9 @@ src = [
     "scripts",
     "services/core-api/src",
     "services/blind-svc/src",
-    "services/extraction-svc/src",
-    "services/render-svc/src",
+    "services/worker/src",
     "libs/domain/src",
+    "libs/service-kit/src",
     "libs/test-support/src",
 ]
 
@@ -76,6 +76,18 @@ ignore = [
 # one place is what keeps upgrade() and downgrade() from drifting apart.
 "services/*/migrations/versions/*.py" = [
     "S608",    # DDL built from module constants, never from input
+]
+
+# Every `titlepipe_*` distribution in this repository is ours, whichever project
+# is being linted. Without this, isort resolves first-party by looking for the
+# module under the project being linted, so `titlepipe_service_kit` sorted into
+# the third-party block in one service and the first-party block in another —
+# the same import in two groups depending on which directory ruff was run from.
+[lint.isort]
+known-first-party = [
+    "titlepipe_domain",
+    "titlepipe_service_kit",
+    "titlepipe_test_support",
 ]
 
 [lint.flake8-tidy-imports]

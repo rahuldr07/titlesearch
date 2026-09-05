@@ -20,8 +20,8 @@ from titlepipe_blind.api.errors import CODE_INTERNAL_ERROR, GENERIC_INTERNAL_MES
 from titlepipe_blind.api.request_context import REQUEST_ID_HEADER
 from titlepipe_blind.app import create_app
 from titlepipe_blind.settings import DEVELOPMENT_SEAL_PASSWORD, BlindApiSettings
-from titlepipe_blind.telemetry.logging import configure_logging, get_logger
 from titlepipe_domain import Environment, LogRenderer, RefusalError
+from titlepipe_service_kit.telemetry.logging import configure_logging, get_logger
 from titlepipe_test_support import FrozenClock, SequenceIdFactory
 
 GOOD_SECRET = "a-real-32-character-seal-secret!"

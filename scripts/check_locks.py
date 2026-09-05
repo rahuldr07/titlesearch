@@ -20,10 +20,10 @@ PROJECTS = (
     "scripts",
     "libs/domain",
     "libs/test-support",
+    "libs/service-kit",
     "services/core-api",
     "services/blind-svc",
-    "services/extraction-svc",
-    "services/render-svc",
+    "services/worker",
 )
 
 

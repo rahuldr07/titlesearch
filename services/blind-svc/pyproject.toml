@@ -5,6 +5,7 @@ description = "TitlePipe Blind API — blind assignment and entry capture only."
 requires-python = ">=3.13,<3.14"
 dependencies = [
     "titlepipe-domain",
+    "titlepipe-service-kit",
     "fastapi==0.139.*",
     "uvicorn[standard]==0.51.*",
     "pydantic==2.13.*",
@@ -12,9 +13,11 @@ dependencies = [
     "structlog>=26.1,<27",
 ]
 
-# This service must never depend on titlepipe-core-api, titlepipe-extraction-svc
-# or titlepipe-render-svc. Its isolation is topological — separate deployment,
-# separate database, separate object-store credentials — and a shared package
+# This service must never depend on titlepipe-core-api or titlepipe-worker.
+# (`titlepipe-extraction-svc` and `titlepipe-render-svc` are the two shells that
+# collapsed into the worker; the prohibition follows the package, it is not
+# lifted.) Its isolation is topological — separate deployment, separate
+# database, separate object-store credentials — and a shared package
 # would be the first crack in it. tests/test_blind_boundary.py enforces this;
 # this comment named a tests/test_boundaries.py that has never existed.
 
@@ -38,6 +41,7 @@ packages = ["src/titlepipe_blind"]
 
 [tool.uv.sources]
 titlepipe-domain = { path = "../../libs/domain", editable = true }
+titlepipe-service-kit = { path = "../../libs/service-kit", editable = true }
 titlepipe-test-support = { path = "../../libs/test-support", editable = true }
 
 [tool.pytest.ini_options]

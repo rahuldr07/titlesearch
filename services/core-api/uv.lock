@@ -738,6 +738,7 @@ dependencies = [
     { name = "sqlalchemy", extra = ["asyncio"] },
     { name = "structlog" },
     { name = "titlepipe-domain" },
+    { name = "titlepipe-service-kit" },
     { name = "uvicorn", extra = ["standard"] },
     { name = "workos" },
 ]
@@ -764,6 +765,7 @@ requires-dist = [
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0.51,<2.1" },
     { name = "structlog", specifier = ">=26.1,<27" },
     { name = "titlepipe-domain", editable = "../../libs/domain" },
+    { name = "titlepipe-service-kit", editable = "../../libs/service-kit" },
     { name = "uvicorn", extras = ["standard"], specifier = "==0.51.*" },
     { name = "workos", specifier = ">=10.3,<11" },
 ]
@@ -786,6 +788,33 @@ version = "0.1.0"
 source = { editable = "../../libs/domain" }
 
 [package.metadata]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "pyright", specifier = "==1.1.*" },
+    { name = "pytest", specifier = "==9.1.*" },
+    { name = "pytest-cov", specifier = "==7.*" },
+    { name = "ruff", specifier = "==0.15.*" },
+]
+
+[[package]]
+name = "titlepipe-service-kit"
+version = "0.1.0"
+source = { editable = "../../libs/service-kit" }
+dependencies = [
+    { name = "pydantic" },
+    { name = "pydantic-settings" },
+    { name = "structlog" },
+    { name = "titlepipe-domain" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "pydantic", specifier = "==2.13.*" },
+    { name = "pydantic-settings", specifier = "==2.14.*" },
+    { name = "structlog", specifier = ">=26.1,<27" },
+    { name = "titlepipe-domain", editable = "../../libs/domain" },
+]
 
 [package.metadata.requires-dev]
 dev = [

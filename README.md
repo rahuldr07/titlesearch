@@ -28,7 +28,7 @@ authoritative vs. historical record vs. superseded.
 |---|---|
 | `apps/web/` | The frontend (React 19 · Vite 8 · TS strict · Tailwind v4), package `@titlepipe/web`. The only app; `apps/web-v2` was the rebuild's scratch copy and was deleted once its work landed here. |
 | `packages/` | pnpm workspace source: `contract` (Zod 4 wire schemas), `mocks` (MSW — the backend until FastAPI routes land), `ui-tokens`. **Not** county packages — those never enter VCS. |
-| `services/` | Python 3.13 services, one uv project each: `core-api` (FastAPI, ADR-0001), `blind-svc`, `extraction-svc`, `render-svc`. |
+| `services/` | Python 3.13 services, one uv project each: `core-api` (FastAPI, ADR-0001), `blind-svc`, `worker`. |
 | `libs/` | Shared Python: `domain` (tenant canon), `test-support`. |
 | `scripts/` | Repo-wide gates: client-data guard, backend structural rules, lock and dependency audits. |
 | `infra/` | Compose, containers, observability contract. |
