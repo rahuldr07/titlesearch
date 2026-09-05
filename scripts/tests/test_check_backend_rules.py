@@ -1714,3 +1714,213 @@ def test_a_directory_named_like_a_module_is_reported_without_taking_the_run_down
     assert "could not be read" in output
     assert scanned_count(output) == 2
     assert f"{inner}:1" in output
+
+
+# --- CONVENTIONS.md §10, the layering (rules 8-11) --------------------------
+#
+# 🔴 THESE RULES WERE ADDED AFTER THE CODE ALREADY SATISFIED THEM, which §10
+# instructs in as many words: the gate runs in pre-commit, so a gate that fails
+# blocks every subsequent commit including the ones fixing it. Refactor first,
+# gate last. What is measured below is the other half of that order — that the
+# rules go RED on a tree that breaks them, because a rule adopted against a
+# conforming tree is otherwise indistinguishable from a rule that never fires.
+
+ROUTER = "services/svc/src/pkg/api/routers/orders.py"
+SERVICE = "services/svc/src/pkg/services/order_service.py"
+REPOSITORY = "services/svc/src/pkg/db/repositories/orders.py"
+
+
+@pytest.mark.parametrize(
+    ("rule_id", "relative", "source"),
+    [
+        # 8 — the two §10 names …
+        (
+            "layer-router-storage",
+            ROUTER,
+            "from pkg.db.models import Order\n",
+        ),
+        (
+            "layer-router-storage",
+            ROUTER,
+            "from pkg.db.repositories.orders import OrderRepository\n",
+        ),
+        # … and the re-export the two names alone would miss, which is why the
+        # rule is written against `db/` whole. `db/__init__.py` exports
+        # `RuleRepository` today and every caller in the tree uses that
+        # spelling, so it is the one a router would reach for.
+        (
+            "layer-router-storage",
+            ROUTER,
+            "from pkg.db import RuleRepository\n",
+        ),
+        # `import a.b.c` is the same import with the other syntax.
+        (
+            "layer-router-storage",
+            ROUTER,
+            "import pkg.db.repositories.orders\n",
+        ),
+        # Inside a function body. `ast.walk` does not care where the node sits,
+        # and hole 7b says so; this is what makes that claim a measurement.
+        (
+            "layer-router-storage",
+            ROUTER,
+            "def handler():\n    from pkg.db.models import Order\n\n    return Order\n",
+        ),
+        # 9 — `fastapi`, and `starlette` because `fastapi` re-exports from it.
+        ("layer-service-http", SERVICE, "from fastapi import Depends\n"),
+        ("layer-service-http", SERVICE, "import fastapi\n"),
+        ("layer-service-http", SERVICE, "from starlette.responses import JSONResponse\n"),
+        # 10 — a repository reaching up into the HTTP layer.
+        ("layer-repository-api", REPOSITORY, "from pkg.api.schemas.orders import OrderResponse\n"),
+        ("layer-repository-api", REPOSITORY, "import pkg.api.errors\n"),
+        # 11 — constructed, and constructed through the classmethod.
+        (
+            "layer-router-dto",
+            ROUTER,
+            "from pkg.api.schemas.orders import OrderResponse\n"
+            "\n"
+            "\n"
+            "def handler():\n"
+            '    return OrderResponse(id="1")\n',
+        ),
+        (
+            "layer-router-dto",
+            ROUTER,
+            "from pkg.api.schemas.orders import OrderResponse\n"
+            "\n"
+            "\n"
+            "def handler():\n"
+            '    return OrderResponse.model_validate({"id": "1"})\n',
+        ),
+        # An `as` alias is the same construction with a shorter name — the
+        # reason `_imported_names` exists for the banned-name rules.
+        (
+            "layer-router-dto",
+            ROUTER,
+            "from pkg.api.schemas.orders import OrderResponse as R\n"
+            "\n"
+            "\n"
+            "def handler():\n"
+            '    return R(id="1")\n',
+        ),
+    ],
+)
+def test_a_layering_rule_fires_and_names_the_file(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], rule_id: str, relative: str, source: str
+) -> None:
+    written = write(tmp_path, relative, source)
+    code, output = run(tmp_path, capsys)
+    assert code != 0, output
+    assert written in output
+    assert f"[{rule_id}]" in output
+
+
+@pytest.mark.parametrize(
+    ("relative", "source"),
+    [
+        # THE SHAPE THE REAL ROUTERS HAVE, and the one that must not fire. A
+        # route DECLARES its wire twice — once in `response_model=` and once in
+        # the return annotation — and both are references rather than calls. A
+        # rule that flagged them would flag every correct route in the tree,
+        # which is how a gate gets switched off.
+        (
+            ROUTER,
+            "from fastapi import APIRouter\n"
+            "\n"
+            "from pkg.api.mappers.orders import render_orders\n"
+            "from pkg.api.schemas.orders import OrderResponse\n"
+            "from pkg.services.order_service import OrderService\n"
+            "\n"
+            'router = APIRouter(prefix="/api")\n'
+            "\n"
+            "\n"
+            '@router.get("/orders", response_model=OrderResponse)\n'
+            "async def read_orders(factory: object) -> OrderResponse:\n"
+            "    return render_orders(await OrderService(factory).list_orders())\n",
+        ),
+        # A router calling its own local helper that happens to share a name
+        # shape with a DTO. Nothing was imported from `api/schemas`, so nothing
+        # is bound and nothing fires.
+        (
+            ROUTER,
+            "class OrderResponse:\n    pass\n\n\ndef handler():\n    return OrderResponse()\n",
+        ),
+        # A SERVICE importing a repository and a model. That is the arrow §10
+        # draws, not a violation of it, and rule 9 must not reach it.
+        (
+            SERVICE,
+            "from pkg.db.models import Order\n"
+            "from pkg.db.repositories.orders import OrderRepository\n",
+        ),
+        # A REPOSITORY importing a model and its own base. Same point from the
+        # bottom of the stack.
+        (
+            REPOSITORY,
+            "from pkg.db.models import Order\nfrom pkg.db.repositories.base import Base\n",
+        ),
+        # `db/` OUTSIDE `repositories/` importing from `api/` is not rule 10's
+        # business: the rule is about the repository layer, and `db/reads.py`
+        # is not in it. (It imports nothing from `api/` today; what this pins is
+        # that the rule is scoped to a directory rather than to the word `db`.)
+        (
+            "services/svc/src/pkg/db/reads.py",
+            "from pkg.api.errors import handle\n",
+        ),
+        # A module named like a layer but at the wrong depth. `_module_path`
+        # anchors on components below the distribution package, so this is a
+        # file called `services.py`, not the services layer.
+        (
+            "services/svc/src/pkg/notapi/routers/orders.py",
+            "from pkg.db.models import Order\n",
+        ),
+    ],
+)
+def test_the_layering_rules_leave_the_correct_shapes_alone(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], relative: str, source: str
+) -> None:
+    """The false-positive half, which is the half that decides whether a gate
+    survives. Every source here is either what the tree already contains or the
+    arrow §10 actually draws."""
+    write(tmp_path, relative, source)
+    code, output = run(tmp_path, capsys)
+    assert code == 0, output
+    assert scanned_count(output) == 1
+
+
+def test_a_layering_rule_can_be_argued_with_on_one_line_like_any_other(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The exemption machinery reaches these rules too, and that is deliberate.
+
+    A layering rule that could not be exempted would be the one rule in this
+    file somebody has to edit the SCRIPT to get past, and an edit to the script
+    is how a rule stops applying to everything at once. One line, with a reason
+    over twelve characters, is the shape of an argument.
+    """
+    write(
+        tmp_path,
+        ROUTER,
+        "from pkg.db.models import Order  "
+        "# rules-allow(layer-router-storage): this router is being deleted in the next commit\n",
+    )
+    code, output = run(tmp_path, capsys)
+    assert code == 0, output
+    assert scanned_count(output) == 1
+
+
+def test_a_relative_import_is_not_guessed_at(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """`from . import x` yields no components and therefore matches no rule.
+
+    `_import_prefixes` says why: a relative import cannot be resolved without
+    knowing the importing module's own package, and guessing would either miss
+    real imports or invent ones. Nothing in this tree writes them. This test is
+    the record that the answer is "no components", not "matched nothing by
+    accident" — so a package that starts writing them fails here, loudly, rather
+    than being silently unchecked.
+    """
+    write(tmp_path, ROUTER, "from ..db.models import Order\n")
+    code, output = run(tmp_path, capsys)
+    assert code == 0, output
+    assert scanned_count(output) == 1

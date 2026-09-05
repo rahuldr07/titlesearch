@@ -1,0 +1,233 @@
+{
+  "development": [
+    {
+      "case": "validation",
+      "status": 422,
+      "body": {
+        "error": "The submitted order is missing a county.",
+        "code": "VALIDATION_FAILED",
+        "request_id": "req-000001",
+        "details": {}
+      }
+    },
+    {
+      "case": "refusal",
+      "status": 422,
+      "body": {
+        "error": "Resolution requires an existing or drafted rule.",
+        "code": "REFUSED",
+        "request_id": "req-000002",
+        "details": {
+          "required": "rule_id"
+        }
+      }
+    },
+    {
+      "case": "unauthenticated",
+      "status": 401,
+      "body": {
+        "error": "Sign in to continue.",
+        "code": "UNAUTHENTICATED",
+        "request_id": "req-000003",
+        "details": {}
+      }
+    },
+    {
+      "case": "permission",
+      "status": 403,
+      "body": {
+        "error": "This seat cannot countersign its own review.",
+        "code": "PERMISSION_DENIED",
+        "request_id": "req-000004",
+        "details": {}
+      }
+    },
+    {
+      "case": "not_found",
+      "status": 404,
+      "body": {
+        "error": "No such order.",
+        "code": "NOT_FOUND",
+        "request_id": "req-000005",
+        "details": {}
+      }
+    },
+    {
+      "case": "conflict",
+      "status": 409,
+      "body": {
+        "error": "This field was already confirmed with a different value.",
+        "code": "CONFLICT",
+        "request_id": "req-000006",
+        "details": {}
+      }
+    },
+    {
+      "case": "dependency",
+      "status": 503,
+      "body": {
+        "error": "The rulebook is temporarily unavailable.",
+        "code": "DEPENDENCY_UNAVAILABLE",
+        "request_id": "req-000007",
+        "details": {}
+      }
+    },
+    {
+      "case": "route_missing",
+      "status": 404,
+      "body": {
+        "error": "Not Found",
+        "code": "NOT_FOUND",
+        "request_id": "req-000008",
+        "details": {}
+      }
+    },
+    {
+      "case": "schema_failure",
+      "status": 422,
+      "body": {
+        "error": "The request did not match the expected schema.",
+        "code": "VALIDATION_FAILED",
+        "request_id": "req-000009",
+        "details": {
+          "errors": [
+            {
+              "type": "missing",
+              "loc": [
+                "body",
+                "reason"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "case": "unhandled",
+      "status": 500,
+      "body": {
+        "error": "An unexpected error occurred. Quote the request id when reporting it.",
+        "code": "INTERNAL_ERROR",
+        "request_id": "req-000010",
+        "details": {
+          "exception": "RuntimeError",
+          "developer_message": "connection string postgres://user:hunter2@db/titlepipe"
+        }
+      }
+    }
+  ],
+  "deployed": [
+    {
+      "case": "validation",
+      "status": 422,
+      "body": {
+        "error": "The submitted order is missing a county.",
+        "code": "VALIDATION_FAILED",
+        "request_id": "req-000001",
+        "details": {}
+      }
+    },
+    {
+      "case": "refusal",
+      "status": 422,
+      "body": {
+        "error": "Resolution requires an existing or drafted rule.",
+        "code": "REFUSED",
+        "request_id": "req-000002",
+        "details": {
+          "required": "rule_id"
+        }
+      }
+    },
+    {
+      "case": "unauthenticated",
+      "status": 401,
+      "body": {
+        "error": "Sign in to continue.",
+        "code": "UNAUTHENTICATED",
+        "request_id": "req-000003",
+        "details": {}
+      }
+    },
+    {
+      "case": "permission",
+      "status": 403,
+      "body": {
+        "error": "This seat cannot countersign its own review.",
+        "code": "PERMISSION_DENIED",
+        "request_id": "req-000004",
+        "details": {}
+      }
+    },
+    {
+      "case": "not_found",
+      "status": 404,
+      "body": {
+        "error": "No such order.",
+        "code": "NOT_FOUND",
+        "request_id": "req-000005",
+        "details": {}
+      }
+    },
+    {
+      "case": "conflict",
+      "status": 409,
+      "body": {
+        "error": "This field was already confirmed with a different value.",
+        "code": "CONFLICT",
+        "request_id": "req-000006",
+        "details": {}
+      }
+    },
+    {
+      "case": "dependency",
+      "status": 503,
+      "body": {
+        "error": "The rulebook is temporarily unavailable.",
+        "code": "DEPENDENCY_UNAVAILABLE",
+        "request_id": "req-000007",
+        "details": {}
+      }
+    },
+    {
+      "case": "route_missing",
+      "status": 404,
+      "body": {
+        "error": "Not Found",
+        "code": "NOT_FOUND",
+        "request_id": "req-000008",
+        "details": {}
+      }
+    },
+    {
+      "case": "schema_failure",
+      "status": 422,
+      "body": {
+        "error": "The request did not match the expected schema.",
+        "code": "VALIDATION_FAILED",
+        "request_id": "req-000009",
+        "details": {
+          "errors": [
+            {
+              "type": "missing",
+              "loc": [
+                "body",
+                "reason"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "case": "unhandled",
+      "status": 500,
+      "body": {
+        "error": "An unexpected error occurred. Quote the request id when reporting it.",
+        "code": "INTERNAL_ERROR",
+        "request_id": "req-000010",
+        "details": {}
+      }
+    }
+  ]
+}

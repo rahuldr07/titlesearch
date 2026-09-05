@@ -2,7 +2,7 @@
 
 `tests/test_rules_contract_parity.py` proves the SHAPE: that the committed
 fixture is what today's models serialise, and that the read path
-(`RuleRepository.list_all` -> `from_rows` -> `model_dump_json`) produces those
+(`RuleRepository.list_all` -> `render_rules` -> `model_dump_json`) produces those
 exact bytes out of a real `postgres:18.4`. It stops one hop short of the wire,
 because until this task there was no route to drive. This file takes the hop.
 
@@ -127,7 +127,7 @@ SEEDED_RULES: Final = 5
 # — is still made with `json.loads` on both sides, where no narrowing is needed
 # because nothing is indexed.
 _DOCUMENT: Final = TypeAdapter(dict[str, list[dict[str, object]]])
-_ENVELOPE: Final = TypeAdapter(dict[str, dict[str, object]])
+_ENVELOPE: Final = TypeAdapter(dict[str, object])
 _LOG_RECORD: Final = TypeAdapter(list[dict[str, object]])
 
 
@@ -310,9 +310,9 @@ def test_the_route_answers_the_committed_fixture_byte_for_byte(
 ) -> None:
     """🔴 THE HOP `test_rules_contract_parity.py` COULD NOT TAKE.
 
-    That module drives `RuleRepository.list_all` -> `from_rows` ->
+    That module drives `RuleRepository.list_all` -> `render_rules` ->
     `model_dump_json` and compares the bytes; it says so, and it says why that is
-    one hop short — the route did not exist. Everything between `from_rows` and
+    one hop short — the route did not exist. Everything between the mapper and
     the socket is asserted only here: FastAPI's `response_model` round trip, its
     own JSON encoder, and the fact that the sessionmaker the handler reaches for
     is the one the lifespan built from `app_database_url`.
@@ -441,8 +441,8 @@ def test_a_role_that_may_not_read_rules_is_a_permanent_fault_not_a_retryable_one
 
     # Permanent, so it does NOT invite a retry.
     assert response.status_code == 500, response.text
-    assert response.json()["error"]["code"] == "INTERNAL_ERROR"
-    assert response.json()["error"]["code"] != DEPENDENCY_UNAVAILABLE
+    assert response.json()["code"] == "INTERNAL_ERROR"
+    assert response.json()["code"] != DEPENDENCY_UNAVAILABLE
 
     # WHICH failure this was, from the route's own log line. Without this the
     # test cannot tell a live grant refusal from a connection that never opened.
@@ -672,11 +672,18 @@ def _assert_unavailable_envelope(response: Response) -> None:
     assert response.status_code == 503, response.text
     assert response.headers["content-type"].startswith("application/json")
 
-    error = _ENVELOPE.validate_json(response.content)["error"]
+    error = _ENVELOPE.validate_json(response.content)
 
-    assert set(error) == {"code", "message", "request_id", "details"}
+    assert set(error) == {"error", "code", "request_id", "details"}
     assert error["code"] == DEPENDENCY_UNAVAILABLE
     assert error["details"] == {}
+    # The browser keeps `body.error` only while it is a non-empty string
+    # (`apps/web/src/shared/api.ts::readError`); anything else renders as the
+    # bare status line. Asserting the type here is what makes the set-equality
+    # above about the wire the client reads rather than about key spelling.
+    sentence = error["error"]
+    assert isinstance(sentence, str), error
+    assert sentence, error
 
     # The header and the envelope must agree. A hand-written 503 could carry one
     # or the other; only the real middleware pair produces the same id in both.

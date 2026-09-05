@@ -16,7 +16,7 @@ is only ever checked against itself.
 
 ## Most of this file is in-memory, and the LAST test is not — deliberately
 
-`RulesResponse.from_rows` takes any iterable, so the sample below is built as
+`render_rules` takes any iterable, so the sample below is built as
 transient instances and every shape assertion runs without Docker. That is fast and
 it is also NOT ENOUGH, because three things a transient instance cannot exhibit are
 exactly the three the wire depends on:
@@ -40,7 +40,7 @@ exactly the three the wire depends on:
 
 So `test_the_real_read_path_serialises_to_the_committed_fixture` seeds these five
 rows into a real `postgres:18.4` and drives the whole path —
-`RuleRepository.list_all` -> `from_rows` -> `model_dump_json` — to the same bytes.
+`RuleRepository.list_all` -> `render_rules` -> `model_dump_json` — to the same bytes.
 That upgrades the fixture from evidence about a hand-built sample to evidence about
 the read path `GET /api/rules` will use. It does not duplicate
 `tests/test_rule_repository.py`, which proves globality and the `id` tiebreak; this
@@ -74,7 +74,8 @@ import pytest
 from pydantic import ValidationError
 from sqlalchemy import Engine, text
 
-from titlepipe_core.api.schemas.rules import RuleOrigin, RuleResponse, RulesResponse, RuleStatus
+from titlepipe_core.api.mappers.rules import render_rule, render_rules
+from titlepipe_core.api.schemas.rules import RuleOrigin, RulesResponse, RuleStatus
 from titlepipe_core.db import RuleRepository, make_engine, make_sessionmaker, tenant_session
 from titlepipe_core.db.models import RULE_ORIGIN_LABELS, RULE_STATUS_LABELS, Rule
 
@@ -212,7 +213,7 @@ def _serialised() -> str:
     key set, the key ORDER, the values and the null spellings — everything a reader
     of the committed file would otherwise have to take on trust.
     """
-    return RulesResponse.from_rows(_sample_rows()).model_dump_json(indent=2) + "\n"
+    return render_rules(_sample_rows()).model_dump_json(indent=2) + "\n"
 
 
 def _fixture_text() -> str:
@@ -331,7 +332,7 @@ async def test_the_real_read_path_serialises_to_the_committed_fixture(
 
     * `origin` and `status` come back from PostgreSQL `ENUM` columns. A driver
       returning anything the `Literal` does not accept raises `ValidationError`
-      inside `from_rows`, and a driver returning a different SPELLING changes the
+      inside the mapper, and a driver returning a different SPELLING changes the
       bytes;
     * `id` comes back from `UUID(as_uuid=True)`. The fixture's canonical lowercase
       form is what `uuid.UUID` serialises to; a `str` or an upper-case rendering
@@ -341,13 +342,13 @@ async def test_the_real_read_path_serialises_to_the_committed_fixture(
       the read happens inside the block regardless — an expired attribute read here
       raises `MissingGreenlet`, which is not a failure mode a hand-built sample has.
 
-    AND IT COVERS `list_all`'s ORDERING, THOUGH NOT `from_rows`'s.
+    AND IT COVERS `list_all`'s ORDERING, THOUGH NOT `render_rules`'s.
     `SEED_WRITE_ORDER` writes the rows in an order matching no sort key, so a
     `list_all` that lost its `order_by` returns the heap — and these bytes change.
 
-    🔴 IT DOES NOT SUBSUME `test_from_rows_preserves_arrival_order`, AND A FIRST
+    🔴 IT DOES NOT SUBSUME `test_the_mapper_preserves_arrival_order`, AND A FIRST
        VERSION OF THIS PARAGRAPH CLAIMED IT DID. MEASURED 2026-08-06 with
-       `from_rows` replaced by `sorted(..., key=lambda r: r.code)`: that test failed
+       the mapper's comprehension replaced by `sorted(..., key=lambda r: r.code)`: that test failed
        and THIS ONE PASSED. Python's `sorted` is stable, `list_all` had already
        ordered by `(code, version, id)`, and re-sorting by a PREFIX of a key the
        rows are already in is a no-op. The two tests catch different faults —
@@ -364,7 +365,7 @@ async def test_the_real_read_path_serialises_to_the_committed_fixture(
         sessionmaker = make_sessionmaker(engine)
         async with tenant_session(sessionmaker, None) as session:
             rows = await RuleRepository(session).list_all()
-            body = RulesResponse.from_rows(rows).model_dump_json(indent=2) + "\n"
+            body = render_rules(rows).model_dump_json(indent=2) + "\n"
     finally:
         await engine.dispose()
 
@@ -400,25 +401,25 @@ async def test_the_real_read_path_serialises_to_the_committed_fixture(
     )
 
 
-def test_from_rows_preserves_arrival_order_rather_than_imposing_one() -> None:
-    """`from_rows` MUST NOT re-sort, and the fixture alone cannot say so.
+def test_the_mapper_preserves_arrival_order_rather_than_imposing_one() -> None:
+    """`render_rules` MUST NOT re-sort, and the fixture alone cannot say so.
 
-    🔴 MEASURED at review, 2026-08-06: replacing the comprehension in `from_rows`
+    🔴 MEASURED at review, 2026-08-06: replacing the comprehension in the mapper
        with `sorted(..., key=lambda row: row.code)` left this module at 7 passed.
     The sample is already in `(code, version, id)` order, so the byte comparison
     cannot tell "preserved what it was given" from "re-sorted by the repository's own
-    key" — the exact substitution `from_rows`'s docstring warns against.
+    key" — the exact substitution the mapper's docstring warns against.
 
     Reversed input is what makes the difference observable. `RuleRepository.list_all`
-    calls the ordering a WIRE-STABILITY decision and owns it; the day `from_rows`
+    calls the ordering a WIRE-STABILITY decision and owns it; the day `render_rules`
     imposes one too, that docstring becomes false and the two disagree silently.
     """
     reversed_sample = list(reversed(_sample_rows()))
-    emitted = RulesResponse.from_rows(reversed_sample)
+    emitted = render_rules(reversed_sample)
 
     assert [(rule.code, rule.version) for rule in emitted.rules] == [
         (row.code, row.version) for row in reversed_sample
-    ], "from_rows re-ordered its input; the ordering belongs to RuleRepository.list_all"
+    ], "the mapper re-ordered its input; the ordering belongs to RuleRepository.list_all"
 
     # The control: the assertion above is only meaningful if the reversed sequence
     # actually differs from the sorted one. It does — but a sample that happened to
@@ -498,7 +499,7 @@ def test_created_at_is_on_the_row_and_never_reaches_the_wire() -> None:
     row = _sample_rows()[0]
     assert row.created_at == SEEDED_CREATED_AT
 
-    dumped = RuleResponse.model_validate(row).model_dump()
+    dumped = render_rule(row).model_dump()
     assert "created_at" not in dumped
     assert tuple(dumped) == CONTRACT_FIELDS
 
@@ -516,12 +517,12 @@ def test_a_null_column_reaches_the_wire_as_a_present_key_holding_null() -> None:
     """
     absent, present = _sample_rows()[1], _sample_rows()[0]
 
-    emitted = json.loads(RuleResponse.model_validate(absent).model_dump_json())
+    emitted = json.loads(render_rule(absent).model_dump_json())
     for name in NULLABLE_FIELDS:
         assert name in emitted, f"{name} was omitted rather than emitted as null"
         assert emitted[name] is None
 
-    carried = json.loads(RuleResponse.model_validate(present).model_dump_json())
+    carried = json.loads(render_rule(present).model_dump_json())
     assert carried["jurisdiction_scope"] == "FL"
     assert carried["confirmed_by"] == "eng_ada"
     assert carried["source_doc_ref"] == "PRD §7"
@@ -540,7 +541,7 @@ def test_the_fixture_parses_back_into_the_models_with_nothing_left_over() -> Non
 
 
 def test_a_label_outside_the_contract_is_refused_at_the_boundary() -> None:
-    """`from_rows` VALIDATES; it does not copy.
+    """`render_rules` VALIDATES; it does not copy.
 
     The row's `origin` is `Mapped[str]` and the field is a `Literal`, so a label
     that exists in the database enum but not in the contract's — the shape a future
@@ -551,4 +552,4 @@ def test_a_label_outside_the_contract_is_refused_at_the_boundary() -> None:
     row.origin = "underwriter"
 
     with pytest.raises(ValidationError, match="origin"):
-        RulesResponse.from_rows([row])
+        render_rules([row])

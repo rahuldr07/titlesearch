@@ -3,7 +3,7 @@ service serves.
 
 It is first because it is the one read in the system that needs no principal.
 The rulebook is GLOBAL: `migrations/versions/0003_rules.py` states the ruling and
-`db/rules.py` carries its consequences, and a table with no `tenant_id` and no
+`db/repositories/rules.py` carries its consequences, and a table with no `tenant_id` and no
 policy is a table whose contents do not depend on who is asking. So this endpoint
 can be built, proved and pointed at a browser before identity exists at all,
 which is the whole reason the vertical slice starts here.
@@ -32,11 +32,13 @@ above is about.
 
 `HTTPException` IS BANNED IN THIS FILE and everywhere else under `src/` except
 `api/errors.py` — `scripts/check_backend_rules.py` rule 4. What is raised is a
-`DomainError`, which `api/errors.py` maps to a status through `status_for` and
-renders through `envelope`, so the caller gets the same
-`{"error": {code, message, request_id, details}}` shape as every other failure
-in this service and can branch on a `code` that does not move when the wording
-does.
+`DomainError`, which `api/error_envelope.py` maps to a status through
+`status_for` and renders through `envelope`, so the caller gets the same
+`{"error": ..., "code": ..., "request_id": ..., "details": {}}` shape as every
+other failure in this service and can branch on a `code` that does not move when
+the wording does. `error` IS THE SENTENCE AND IS NOT AN OBJECT — the browser
+keeps it only if it is a non-empty string, and that module carries the
+measurement.
 
 ### Retryable and permanent are different answers, and the split is `_RETRYABLE`
 
@@ -58,15 +60,15 @@ So the permanent case is NOT converted. It propagates, `api/errors.py`'s
 `handle_unexpected` renders a 500 with `INTERNAL_ERROR`, the traceback goes to
 the log bound to the same request id, and nothing invites a retry — which is the
 honest answer for a fault in this service's own configuration. This is exactly
-the argument the next paragraph already made about `from_rows` and that the
+the argument the next paragraph already made about the mapper and that the
 `except` three lines above it did not apply to itself.
 
 `rulebook_read_failed` is logged for BOTH, carrying the class name and whether it
 was treated as retryable, because the operator's question is the same either way
 and the answer must be greppable.
 
-The catch does not extend over `RulesResponse.from_rows`. That separation is the
-design rather than tidiness: a `ValidationError` out of `from_rows` means a label
+The catch does not extend over `render_rules`. That separation is the
+design rather than tidiness: a `ValidationError` out of the mapper means a label
 reached the wire that the contract does not have — `api/schemas/rules.py`
 explains why that is caught at the boundary — and it is a defect in this service,
 not an outage in a downstream. Widening the `except` to cover it would answer 503
@@ -75,28 +77,24 @@ attempt.
 
 ## No query parameters, no pagination, no filtering
 
-RULED: every status, unfiltered, in the repository's order. `db/rules.py::list_all`
+RULED: every status, unfiltered, in the repository's order. `db/repositories/rules.py::list_all`
 carries the reason — a `pending` rule is VISIBLE to everyone and only its EFFECT
 is gated — and the two live consumers
 (`apps/web/src/shared/accountQueries.ts`'s `rules` descriptor, rendered by
 `features/account/RulesPanel.tsx`, and `features/escalations/useEscalations.ts`)
 take the whole set. The ordering is
 `list_all`'s and is a wire-stability decision; nothing here re-sorts, for the
-same reason `RulesResponse.from_rows` does not.
+same reason `render_rules` does not.
 """
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Request
-from sqlalchemy.exc import InterfaceError, OperationalError, SQLAlchemyError
-from sqlalchemy.exc import TimeoutError as SQLAlchemyTimeoutError
-from structlog.typing import FilteringBoundLogger
+from fastapi import APIRouter
 
-from titlepipe_core.api.schemas.rules import RulesResponse
-from titlepipe_core.db import RuleRepository, tenant_session
-from titlepipe_core.lifespan import get_resources
-from titlepipe_core.telemetry.logging import get_logger
-from titlepipe_domain import DependencyUnavailableError
+from titlepipe_core.api.dependencies import SessionFactory
+from titlepipe_core.api.mappers.rules import render_rule_history, render_rules
+from titlepipe_core.api.schemas.rules import RuleHistoryResponse, RulesResponse
+from titlepipe_core.services.rule_service import RuleService
 
 # `/api` here rather than on each route, and `/health` and `/ready` are NOT under
 # it — `api/routers/health.py` records why: they are platform surface, this is
@@ -110,79 +108,46 @@ router = APIRouter(prefix="/api", tags=["rules"])
 # they can retry on.
 _UNAVAILABLE_MESSAGE = "The rulebook is temporarily unavailable. Try again shortly."
 
-# The database failures a retry can fix. Everything else `SQLAlchemyError` covers
-# is a fault in this service's own configuration and propagates to a 500 — see
-# the "Retryable and permanent" section above.
-#
-# An ALLOWLIST, not a denylist, and the direction matters. A new SQLAlchemy error
-# class this file has never heard of is more likely to be a defect than an
-# outage, and the failure mode of guessing wrong in this direction is a 500 in a
-# log an operator reads — where guessing wrong in the other is a caller retrying
-# forever against a permanent fault, which is the defect this list exists to
-# close.
-#
-# `SQLAlchemyTimeoutError` is SQLAlchemy's, NOT the builtin: it is what
-# `QueuePool` raises when no connection becomes free inside `pool_timeout`,
-# which is load shedding and is exactly retryable. It is imported under an alias
-# because the unaliased name shadows the builtin that `lifespan.probe_database`
-# catches from `asyncio.timeout`, and two different `TimeoutError`s in one
-# package is how somebody eventually catches the wrong one.
-_RETRYABLE: tuple[type[SQLAlchemyError], ...] = (
-    OperationalError,
-    InterfaceError,
-    SQLAlchemyTimeoutError,
-)
-
-
-def _log() -> FilteringBoundLogger:
-    """Acquired at call time, never bound at import — the same rule `errors.py`
-    and `lifespan.py` state, and for the same reason: a module-level logger pins
-    whatever logging configuration was active first, and two apps in one process
-    must each log under their own settings."""
-    return get_logger(__name__)
-
 
 @router.get("/rules", response_model=RulesResponse, summary="The whole rulebook")
-async def list_rules(request: Request) -> RulesResponse:
-    """Every rule, every status, in `RuleRepository.list_all`'s order.
+async def list_rules(session_factory: SessionFactory) -> RulesResponse:
+    """Every rule, every status, in the order the service returns them.
 
-    The sessionmaker comes off the app's resources rather than being built here.
-    A route that built its own engine would open a pool per request and would
-    hold a credential the lifespan never released — `lifespan.py`'s opening is
-    about precisely that.
+    Two statements, and neither of them is a decision. Which rules, in what
+    order, under which tenant, and what a caller reads when the database is not
+    there are all `RuleService.list_rules`'s; how a row becomes the wire is
+    `api/mappers/rules.py`'s. What is left here is the route.
 
-    An absent sessionmaker means no `app_database_url` was configured, and it is
-    answered with the same failure as a database that will not talk. The two are
-    different to an OPERATOR and identical to a CALLER: in both cases the
-    rulebook cannot be read now and a retry is the reasonable next move. The log
-    lines below distinguish them, which is where the difference belongs.
+    **THE MAPPER CALL IS OUTSIDE THE SERVICE AND THAT IS THE DESIGN.** A
+    `ValidationError` raised by `render_rules` means a label reached the boundary
+    that `packages/contract` does not have — a defect in this service, which
+    `handle_unexpected` renders as a 500. Rendering inside the service would put
+    it under `scoped_read`'s `except SQLAlchemyError`: that clause does not catch
+    a `ValidationError` today and would dress a defect as a downstream outage the
+    moment anyone widened it. `db/reads.py` argues the same separation from the
+    other end.
     """
-    resources = get_resources(request.app)
-    sessionmaker = resources.sessionmaker
-    if sessionmaker is None:
-        _log().error("rulebook_read_unconfigured")
-        raise DependencyUnavailableError(_UNAVAILABLE_MESSAGE)
+    return render_rules(await RuleService(session_factory).list_rules())
 
-    try:
-        async with tenant_session(sessionmaker, None) as session:
-            rows = await RuleRepository(session).list_all()
-    except SQLAlchemyError as error:
-        retryable = isinstance(error, _RETRYABLE)
-        # Logged for BOTH outcomes, and the `retryable` field is what makes the
-        # two greppable apart. It is also what a narrowed `except` loses: an
-        # `except OperationalError` would let a `ProgrammingError` past this
-        # line entirely, so the permission denial that reaches the 500 would
-        # arrive with no `rulebook_read_failed` beside it naming the table.
-        _log().error("rulebook_read_failed", error_name=type(error).__name__, retryable=retryable)
-        if not retryable:
-            # NOT converted. A permanent fault must not be answered with a
-            # status that invites a retry — `handle_unexpected` renders the 500
-            # and puts the traceback in the log under this request id.
-            raise
-        raise DependencyUnavailableError(_UNAVAILABLE_MESSAGE) from error
 
-    # Outside the `except`, and outside the session block. `make_sessionmaker`
-    # sets `expire_on_commit=False`, so the rows stay readable after
-    # `tenant_session` commits and closes; `tests/test_tenant_session.py` pins
-    # that and it is not re-proved here.
-    return RulesResponse.from_rows(rows)
+@router.get(
+    "/rules/{code}",
+    response_model=RuleHistoryResponse,
+    summary="Every version carried under one rule code",
+)
+async def rule_history(session_factory: SessionFactory, code: str) -> RuleHistoryResponse:
+    """One code's versions, oldest first, every status.
+
+    `code` reaches the mapper from the PATH and not from a row, which is the one
+    thing this route decides that the service does not: the echoed member is an
+    answer to what was asked. `api/mappers/rules.py` says why that matters even
+    though the two are provably equal on every response this service can serve.
+
+    The 404 for a code the rulebook has never carried is
+    `RuleService.rule_history`'s ruling and is argued there — whether an empty
+    result is a missing resource or an empty collection is a question about the
+    domain, not about HTTP, and the only thing this layer contributes is that
+    `api/errors.py` renders the refusal as one.
+    """
+    rows = await RuleService(session_factory).rule_history(code)
+    return render_rule_history(code, rows)

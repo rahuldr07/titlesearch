@@ -192,6 +192,55 @@ the day `scripts/` came into scope.
 name a rule** — every scanned file. An exemption without a reason is a deletion
 with extra steps.
 
+**8-11. THE LAYERING.** `CONVENTIONS.md` §10, owner ruling 2026-09-05, binding
+on every endpoint including the ~68 not yet built. `routers -> services ->
+repositories -> models`, with `mappers` rendering model -> DTO, and nothing
+pointing back up. The four rules the ruling asks for by name:
+
+**8. `layer-router-storage`** — a file under `api/routers/` may not import from
+`db/`. §10 names `db/models` and `db/repositories`; **THIS IS DELIBERATELY
+WIDER, AND THE WIDTH IS THE POINT.** `db/__init__.py` re-exports
+`RuleRepository`, so a rule naming the two subpackages walks straight past
+`from titlepipe_core.db import RuleRepository`, which is the spelling every
+existing caller uses and the one a router would reach for. Nothing under `db/`
+is a router's business at any depth: it calls a service.
+
+**9. `layer-service-http`** — a file under `services/` may not import `fastapi`
+or `starlette`. §10's words are "may not import `fastapi` or raise
+`HTTPException`", and **THE SECOND HALF IS ALREADY ENFORCED BY RULE 4** —
+`http-exception` bans the name everywhere except each package's own
+`api/errors.py`, so re-implementing it here would be a second rule to keep true.
+`starlette` is added because `fastapi` re-exports from it and a service reaching
+for `starlette.responses` has made the identical mistake with a different import
+line. What this leaves is a service that RAISES `DomainError` and knows no
+status code, which is what makes the same refusal read the same when the use
+case is called by a worker or a test rather than by a route.
+
+**10. `layer-repository-api`** — a file under `db/repositories/` may not import
+from `api/`. A repository returns MODELS. One that imports a schema has either
+started returning DTOs or started deciding what an empty result means, and both
+are decisions that belong to a layer that can see a URL.
+
+**11. `layer-router-dto`** — a file under `api/routers/` may not CALL a name it
+imported from `api/schemas/`. §10's rule is "a router function may not
+construct a response DTO directly from a model"; this script has no type
+resolution, so it cannot see that a value is a model — holes 3, 4 and 7 record
+that limit. What it CAN see is that the DTO was constructed in the router at
+all, and under §10 that is already the violation: rendering is the mapper's, and
+a router that builds its own response is one where the mapping is invisible
+whatever it was built from. So the enforceable rule is stricter than the ruled
+one in the safe direction.
+
+REFERENCES ARE NOT CALLS, and that is what keeps the rule usable: `-> RulesResponse`
+and `response_model=RulesResponse` are how a FastAPI route DECLARES its wire and
+both are ordinary. `RulesResponse(...)` and `RulesResponse.model_validate(...)`
+are constructions. Only the second pair is flagged.
+
+**The second line of defence, which is the one that cannot be exempted:** no
+response model in this tree sets `from_attributes`, so
+`RuleResponse.model_validate(row)` does not work from a router even if somebody
+writes it. `api/mappers/__init__.py` records that. This rule is the lint on top.
+
 ## Why this parses instead of grepping
 
 A substring search for `text(` matches `scrub_text(` — which
@@ -361,7 +410,31 @@ The first two are the "assembled name" family above under another name. The
 third is not detectable at all without types: the gate cannot know what `out`
 is, and a rule that guessed would flag every legitimate `.write` in the tree.
 
-**7. An `AsyncSession` obtained without naming a tenant — DECLINED 2026-08-06,
+**7b. The layering rules read IMPORT LINES and one call shape, so the family of
+evasions holes 3 and 4 describe applies to them too.** `importlib.import_module(
+"titlepipe_core.db.repositories.rules")` in a router is invisible here, as is a
+schema class received as a parameter and called through the parameter's name.
+Two narrower ones are worth naming because they are what a tired person writes
+rather than what an adversary does:
+
+* `from titlepipe_core.api import schemas` in a router, then
+  `schemas.rules.RulesResponse(...)`. The root name bound is `schemas`, from a
+  module whose path is `api`, so rule 11's set does not hold it. Not closed,
+  because binding every name imported from `api/` in a router would flag
+  `api/dependencies` and `api/mappers`, which are exactly what a router SHOULD
+  import — and a rule that fires on the correct code is one that gets switched
+  off. The tree uses the direct spelling in both routers.
+* a router importing `db/` inside a function body rather than at module level.
+  `ast.walk` reaches it — the scan does not care where an `ImportFrom` node sits
+  — so this one IS closed, and it is written here only because the reader who
+  wonders will otherwise go and check.
+
+**7c. Nothing enforces the arrow between `services/` and `api/`.** §10's four
+rules do not include "a service may not import from `api/`", and this file
+implements the ruled four rather than five. Such an import is a defect by the
+dependency rule and is left to review, like holes 1 and 6.
+
+**8. An `AsyncSession` obtained without naming a tenant — DECLINED 2026-08-06,
 and recorded here so the analysis is not re-derived.** An `unscoped-session`
 rule was proposed: `titlepipe_core.db.__all__` exports `make_sessionmaker`, and
 calling the `async_sessionmaker` it returns yields a session with no
@@ -550,6 +623,13 @@ RULES: Final[dict[str, str]] = {
     "http-response": "only api/ decides what a result looks like over HTTP",
     "print": "stdout bypasses the redaction processor",
     "file-length": f"over {MAX_FILE_LINES} lines stops being reviewable",
+    # CONVENTIONS.md §10, owner ruling 2026-09-05. Each message says what the
+    # layer should have done instead, because "layering violation" tells the
+    # person who has to fix it nothing they did not already know.
+    "layer-router-storage": "a router calls a service; storage is two layers below it",
+    "layer-service-http": "a service raises DomainError and knows no status code",
+    "layer-repository-api": "a repository returns models and cannot see a URL",
+    "layer-router-dto": "rendering is the mapper's; a router returns what one built",
 }
 
 # Rule ids the *line* form can never grant, because the violation they suppress
@@ -724,6 +804,82 @@ EXEMPT_ATTRIBUTE_NAMES: Final = frozenset(
 # checker off; none of them is visible to the AST, which is why they are
 # matched against comment text. `pyright: strict` is deliberately absent —
 # it tightens, and this rule is about loosening without a record.
+# ---------------------------------------------------------------------------
+# CONVENTIONS.md §10 — the layering. Rules 8-11; see the module docstring.
+# ---------------------------------------------------------------------------
+#
+# Each key is a PACKAGE PATH BELOW THE DISTRIBUTION PACKAGE, matched as a
+# component prefix by `_module_path` — the same anchoring `_path_exemption`
+# uses and for the same reason it was moved to: a substring test hands
+# `api/routers`' rules to `notapi/routers` and misses nothing that matters.
+#
+# The longest matching prefix wins, so a future `api/routers/internal/` inherits
+# the router rules without being listed.
+LAYER_DIRECTORIES: Final[tuple[tuple[str, ...], ...]] = (
+    ("api", "routers"),
+    ("services",),
+    ("db", "repositories"),
+)
+
+# layer -> the import prefixes it may not reach for, and the shape of the
+# sentence the violation carries.
+#
+# The prefixes are matched against the imported module's components WITH ITS
+# FIRST ONE DROPPED when the import is intra-distribution — `titlepipe_core.db`
+# is `("db",)`, `titlepipe_blind.api.routers` is `("api", "routers")` — so one
+# table serves every distribution package without naming any of them. A
+# single-component import like `fastapi` is matched whole, which is what lets
+# rule 9 name a third-party package in the same table as rule 8 names a local
+# one; `_import_prefixes` returns both spellings and either may match.
+FORBIDDEN_IMPORTS: Final[dict[tuple[str, ...], tuple[tuple[str, str, str], ...]]] = {
+    ("api", "routers"): (
+        (
+            "db",
+            "layer-router-storage",
+            "a router may not import from `db/` — it calls a service, which calls a repository. "
+            "Wider than CONVENTIONS.md §10's `db/models` + `db/repositories` on purpose: "
+            "`db/__init__.py` re-exports `RuleRepository`, so naming the two subpackages would "
+            "walk past `from titlepipe_core.db import RuleRepository`",
+        ),
+    ),
+    ("services",): (
+        (
+            "fastapi",
+            "layer-service-http",
+            "a service may not import `fastapi`. It raises `DomainError` and names no status "
+            "code; `api/errors.py` owns that mapping, which is what makes the same refusal read "
+            "the same when the use case is called by a worker or a test rather than by a route",
+        ),
+        (
+            "starlette",
+            "layer-service-http",
+            "a service may not import `starlette` either. `fastapi` re-exports from it, so "
+            "`starlette.responses` is the same layering mistake with a different import line",
+        ),
+    ),
+    ("db", "repositories"): (
+        (
+            "api",
+            "layer-repository-api",
+            "a repository may not import from `api/`. It returns MODELS; one that imports a "
+            "schema has either started returning DTOs or started deciding what an empty result "
+            "means, and both belong to a layer that can see a URL",
+        ),
+    ),
+}
+
+# The package whose exported names a router may REFERENCE and may not CALL.
+# Rule 11; the module docstring argues why the enforceable rule is "constructed
+# in the router at all" rather than "constructed from a model".
+DTO_PACKAGE: Final = ("api", "schemas")
+
+DTO_CONSTRUCTION_MESSAGE: Final = (
+    "a router may not construct a response DTO — `{name}` came from `api/schemas/` and is called "
+    "here. Declaring it (`-> {name}`, `response_model={name}`) is the route's job; BUILDING it is "
+    "`api/mappers/`'s, which is the only place a model and a DTO are imported together"
+)
+
+
 _TYPE_IGNORE = re.compile(r"type:\s*ignore")
 _PYRIGHT_IGNORE = re.compile(r"pyright:\s*ignore")
 _PYRIGHT_MODE_DOWNGRADE = re.compile(r"pyright:\s*(?:basic|standard)\b")
@@ -1120,6 +1276,152 @@ def _deferred_call_violations(tree: ast.Module, report: Callable[[str, int, str]
             report(value.attr, value.lineno, "bound here and called as a function below")
 
 
+def _layer_of(relative: str) -> tuple[str, ...] | None:
+    """Which of `LAYER_DIRECTORIES` this file sits in, longest prefix first.
+
+    `services/core-api/src/titlepipe_core/api/routers/rules.py` ->
+    `("api", "routers")`. `None` for everything else, which is most of the tree:
+    these four rules are about three directories and say nothing about the rest.
+
+    Longest first so that a hypothetical `("api", "routers", "internal")` entry
+    would win over `("api", "routers")` rather than depending on table order.
+    """
+    module = _module_path(relative)
+    matches = [layer for layer in LAYER_DIRECTORIES if module[: len(layer)] == layer]
+    return max(matches, key=len) if matches else None
+
+
+def _import_prefixes(node: ast.Import | ast.ImportFrom) -> list[tuple[tuple[str, ...], int]]:
+    """Every module path an import statement pulls in, with the line to report.
+
+    Returns the components TWICE for an intra-distribution import: once whole
+    (`("titlepipe_core", "db", "models")`) and once with the leading
+    distribution package dropped (`("db", "models")`). Either may match a
+    `FORBIDDEN_IMPORTS` prefix, which is what lets one table name both a local
+    package (`db`, reached only by the second spelling) and a third-party one
+    (`fastapi`, reached only by the first) without listing every distribution
+    package in the repository.
+
+    `from a.b import c` yields `a.b` AND `a.b.c`, because `c` may be a submodule
+    rather than a name in `a.b` — `from titlepipe_core.db import repositories`
+    imports a package and must be caught by a rule about `db/repositories`.
+
+    A RELATIVE import (`from . import x`, `node.level > 0`) yields nothing. Its
+    components cannot be resolved without knowing the importing module's own
+    package, and guessing would either miss real imports or invent ones. Nothing
+    in this tree writes them; a package that starts to would need this function
+    to learn about `relative`, and that is a change worth noticing rather than
+    a silent partial answer.
+    """
+    found: list[tuple[tuple[str, ...], int]] = []
+
+    def add(dotted: str, line: int) -> None:
+        parts = tuple(dotted.split("."))
+        found.append((parts, line))
+        if len(parts) > 1:
+            found.append((parts[1:], line))
+
+    if isinstance(node, ast.Import):
+        for alias in node.names:
+            add(alias.name, alias.lineno)
+        return found
+
+    if node.level > 0 or node.module is None:
+        return found
+    for alias in node.names:
+        add(f"{node.module}.{alias.name}", alias.lineno)
+    add(node.module, node.lineno)
+    return found
+
+
+def _dto_names_bound(tree: ast.Module) -> frozenset[str]:
+    """Names this file binds by importing them from `api/schemas/`.
+
+    Both the imported name and any `as` alias, because
+    `from …api.schemas.rules import RulesResponse as R` followed by `R(...)` is
+    the same construction with a shorter name — the identical reason
+    `_imported_names` exists for the banned-name rules.
+
+    A module imported as a MODULE (`from titlepipe_core.api import schemas`) is
+    deliberately not bound; known hole 7b records why, and that binding every
+    name a router imports from `api/` would flag `api/dependencies` and
+    `api/mappers`, which are what a router is supposed to import.
+    """
+    bound: set[str] = set()
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.ImportFrom) or node.level > 0 or node.module is None:
+            continue
+        parts = tuple(node.module.split("."))
+        if parts[: len(DTO_PACKAGE)] != DTO_PACKAGE and parts[1 : 1 + len(DTO_PACKAGE)] != (
+            DTO_PACKAGE
+        ):
+            continue
+        for alias in node.names:
+            bound.add(alias.asname or alias.name)
+    return frozenset(bound)
+
+
+def _call_root_name(node: ast.Call) -> str | None:
+    """The plain name a call's function is rooted in, or `None`.
+
+    `RulesResponse(...)` -> `"RulesResponse"`.
+    `RulesResponse.model_validate(...)` -> `"RulesResponse"`, because the second
+    is the same construction reached through a classmethod and a rule that saw
+    only the first would be one `model_validate` away from useless.
+    `render_rules(...)` -> `"render_rules"`, which no rule holds.
+    """
+    spelling = _dotted_spelling(node.func)
+    return spelling[0] if spelling else None
+
+
+def _layer_violations(tree: ast.Module, relative: str) -> list[Violation]:
+    """CONVENTIONS.md §10's four rules, for a file that sits in one of its layers.
+
+    Returns `[]` for every file outside `api/routers/`, `services/` and
+    `db/repositories/` — which is most of the tree, and is the correct answer:
+    §10 rules on the arrows between four layers and says nothing about
+    `settings.py`.
+
+    `_path_exemption` is NOT consulted. Its two carve-outs are about raw SQL and
+    about `api/errors.py`, and neither has anything to say about these rules;
+    a `rules-allow` is still available per line or per file, which is where an
+    argument that a layering rule is wrong in one place belongs.
+    """
+    layer = _layer_of(relative)
+    if layer is None:
+        return []
+
+    found: list[Violation] = []
+
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Import | ast.ImportFrom):
+            continue
+        for prefix, rule_id, message in FORBIDDEN_IMPORTS.get(layer, ()):
+            target = (prefix,)
+            for components, line in _import_prefixes(node):
+                if components[: len(target)] == target:
+                    found.append(Violation(relative, line, rule_id, message))
+                    break
+
+    if layer == ("api", "routers"):
+        dto_names = _dto_names_bound(tree)
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            root = _call_root_name(node)
+            if root is not None and root in dto_names:
+                found.append(
+                    Violation(
+                        relative,
+                        node.lineno,
+                        "layer-router-dto",
+                        DTO_CONSTRUCTION_MESSAGE.format(name=root),
+                    )
+                )
+
+    return found
+
+
 def _name_violations(tree: ast.Module, relative: str) -> list[Violation]:
     """Every banned name the parsed file actually uses, with the shape it used.
 
@@ -1236,6 +1538,16 @@ def scan_source(source: str, relative: str) -> list[Violation]:
     violations.extend(
         violation
         for violation in _name_violations(tree, relative)
+        if not suppressed(violation.rule_id, violation.line)
+    )
+
+    # §10's layering, a separate pass because it is a different question: the
+    # name rules ask "does this file use a banned thing", these ask "may a file
+    # HERE reach for a thing THERE". Same exemption machinery, so a layering
+    # rule can be argued with on one line like any other.
+    violations.extend(
+        violation
+        for violation in _layer_violations(tree, relative)
         if not suppressed(violation.rule_id, violation.line)
     )
 

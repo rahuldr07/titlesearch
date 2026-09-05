@@ -1,6 +1,6 @@
 """`RuleRepository` — the rulebook, which is the one table outside tenancy.
 
-🔴 IT LIVED IN `repository.py` UNTIL THAT FILE HIT 416 LINES, sixteen over
+🔴 IT LIVED IN `base.py` (then `db/repository.py`) UNTIL THAT FILE HIT 416 LINES, over
 `scripts/check_backend_rules.py`'s rule-6 cap, and the cheap way out was a
 `rules-allow-file(file-length)` on the module that owns the tenancy check. That is
 the same trade `engine.py` was split out of `session.py` to avoid on 2026-08-06,
@@ -20,7 +20,7 @@ consequence as an argument rather than choosing one.
 
 ## The reader who wondered why this is not a subclass
 
-`repository.py` argues that at length — including why the plan's stated reason for
+`base.py` argues that at length — including why the plan's stated reason for
 the same conclusion is false, and the two readings of the injection that tests it.
 The short of it: `rules` carries no tenancy at all, the base adds no predicate, so
 the objection to inheriting is about what the type CLAIMS rather than about what
@@ -36,12 +36,12 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from titlepipe_core.db.models import Rule
-from titlepipe_core.db.repository import refuse_unscoped_session
+from titlepipe_core.db.repositories.base import refuse_unscoped_session
 
 # For a repository over a GLOBAL table. `tenant` may genuinely be `None` here, and
 # saying so is the point: `GET /api/rules` has no principal, so a message that
 # read "name a tenant" would send its caller to invent one. It is the caller's
-# sentence and lives with the caller; `repository.py` holds the tenant one and the
+# sentence and lives with the caller; `base.py` holds the tenant one and the
 # shared stem, and the comment above that stem records the rendering that was
 # wrong for one of its two callers.
 _GLOBAL_TABLE_CONSEQUENCE = (
@@ -191,4 +191,37 @@ class RuleRepository:
         asserts the returned rows are in the SCOPED session's identity map.
         """
         rules = await self._session.scalars(select(Rule).order_by(Rule.code, Rule.version, Rule.id))
+        return rules.all()
+
+    async def history_for(self, code: str) -> Sequence[Rule]:
+        """Every version carried under one rule code, oldest first.
+
+        A SIBLING of `list_all` rather than a filter parameter on it. `list_all`'s
+        docstring rules that it filters nothing and that filtering is the caller's;
+        adding an optional `code=` to it would make the unfiltered read a default
+        rather than a decision, and the two have different orders on purpose.
+
+        **THE ORDER IS `(version, id)` AND NOT `list_all`'S `(code, version, id)`.**
+        Every row here already shares a `code`, so leading with it sorts on a
+        constant — harmless, but it states a tiebreak that cannot break anything
+        and hides that `version` is the one a reader of this response cares about.
+        `id` still comes last and for the same reason `list_all` gives: `version`
+        is not unique on today's schema (there is no `UNIQUE (code, version)` —
+        that is `list_all`'s open item for Plan 05), so `id` is what makes the
+        order TOTAL, and an unordered read moves a merely-updated row to the end.
+
+        **AN UNKNOWN CODE COMES BACK EMPTY AND IS NOT AN ERROR HERE.** Whether "no
+        rows" means 404 or an empty history is a decision about a RESOURCE, and a
+        repository does not know it is being read over HTTP — `db/` raising
+        `NotFoundError` would put an HTTP-shaped judgement one layer below the
+        only layer allowed to make one. `api/routers/rules.py` decides, and says
+        why there.
+
+        No `status` filter, for `list_all`'s reason: a `pending` version is
+        VISIBLE, and the engineer confirming one is precisely the caller who needs
+        to see it beside the version it supersedes.
+        """
+        rules = await self._session.scalars(
+            select(Rule).where(Rule.code == code).order_by(Rule.version, Rule.id)
+        )
         return rules.all()

@@ -42,7 +42,7 @@ def test_the_id_is_returned_on_an_error_response(client: TestClient) -> None:
     response = client.get("/does-not-exist")
     assert response.status_code == 404
     assert response.headers[REQUEST_ID_HEADER]
-    assert response.json()["error"]["request_id"] == response.headers[REQUEST_ID_HEADER]
+    assert response.json()["request_id"] == response.headers[REQUEST_ID_HEADER]
 
 
 @pytest.mark.parametrize(
