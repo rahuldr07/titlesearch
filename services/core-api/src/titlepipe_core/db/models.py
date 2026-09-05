@@ -371,3 +371,22 @@ class Rule(_Row):
     version: Mapped[int] = mapped_column(Integer, nullable=False)
     confirmed_by: Mapped[str | None] = mapped_column(Text, nullable=True)
     source_doc_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+# 🔴 AN IMPORT AT THE BOTTOM OF A MODULE, AND IT IS LOAD BEARING RATHER THAN
+# UNTIDY. `migrations/env.py` builds `target_metadata` from `Base.metadata` and
+# imports `Base` FROM THIS MODULE AND NOTHING ELSE, so a mapped class in a
+# sibling module that nothing imports is absent from that metadata — and
+# `alembic check` then finds `golden_fields` and `golden_corrections` in the
+# database, no table for them in the metadata, and reports a spurious
+# `remove_table`: a green chain, a red check, and the reason three files away.
+#
+# It is a separate module because `scripts/check_backend_rules.py` caps a file
+# under `src/` at 400 lines and this one is near it. The BOTTOM position is what
+# makes the cycle resolve: `Base`, `NA_REASON` and `_TenantRow` are all defined
+# above, so the sibling finds them on the partially-initialised module.
+#
+# The redundant `as golden_models` is the explicit re-export spelling, and it is
+# what stops both checkers reporting an unused import: the import IS the side
+# effect, and there is nothing here to "use".
+from titlepipe_core.db import golden_models as golden_models  # noqa: E402

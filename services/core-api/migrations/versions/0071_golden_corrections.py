@@ -166,6 +166,17 @@ def _identity_columns() -> tuple[sa.Column[UUID], sa.Column[datetime]]:
     )
 
 
+def _enum_column(name: str, enum: postgresql.ENUM, *, nullable: bool) -> sa.Column[str]:
+    """One enum column, annotated `Column[str]` — see `0070::_enum_column`.
+
+    The annotation is an assertion rather than a checked narrowing;
+    `0001::_na_reason_column` holds the measurement. Without it,
+    `op.create_table` reports `reportUnknownArgumentType` for every enum column
+    below.
+    """
+    return sa.Column(name, enum, nullable=nullable)
+
+
 def _whole_truth(value_column: str, na_reason_column: str) -> str:
     """Exactly one of a value and a reason for its absence — `0070`'s XOR.
 
@@ -197,19 +208,19 @@ def upgrade() -> None:
         *_identity_columns(),
         sa.Column("tenant_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("golden_field_id", postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column("act", GOLDEN_ACT, nullable=False),
+        _enum_column("act", GOLDEN_ACT, nullable=False),
         # The three the refusal rule names. All `NOT NULL`, all CHECKed non-blank
         # — `NOT NULL` alone accepts `''`, which is exactly what a form sends
         # when a required field was made optional upstream.
         sa.Column("signed_by", sa.Text(), nullable=False),
         sa.Column("reason", sa.Text(), nullable=False),
         sa.Column("source_citation", sa.Text(), nullable=False),
-        sa.Column("tag_before", GOLDEN_TAG, nullable=False),
-        sa.Column("tag_after", GOLDEN_TAG, nullable=False),
+        _enum_column("tag_before", GOLDEN_TAG, nullable=False),
+        _enum_column("tag_after", GOLDEN_TAG, nullable=False),
         sa.Column("value_before", sa.Text(), nullable=True),
-        sa.Column("na_reason_before", NA_REASON, nullable=True),
+        _enum_column("na_reason_before", NA_REASON, nullable=True),
         sa.Column("value_after", sa.Text(), nullable=True),
-        sa.Column("na_reason_after", NA_REASON, nullable=True),
+        _enum_column("na_reason_after", NA_REASON, nullable=True),
         # The revision of `golden_fields` this act produces. `> 0` because
         # revision 0 is the establishment, which is not an act on an existing
         # truth and has no ledger row.

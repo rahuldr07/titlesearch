@@ -210,6 +210,21 @@ def _identity_columns() -> tuple[sa.Column[UUID], sa.Column[datetime]]:
     )
 
 
+def _enum_column(name: str, enum: postgresql.ENUM, *, nullable: bool) -> sa.Column[str]:
+    """One enum column, annotated `Column[str]` for pyright's benefit.
+
+    THE ANNOTATION IS AN ASSERTION BY THE AUTHOR, NOT A NARROWING THE CHECKER
+    VERIFIED, and `0001::_na_reason_column` holds the measurement:
+    `postgresql.ENUM` carries no type argument in SQLAlchemy's annotations, so
+    the expression infers `Column[Unknown]` and `Column[complex]` type-checks
+    exactly as happily as `Column[str]`. What makes `str` the right one is that
+    the identical column spelled with the generic `sa.Enum` infers `Column[str]`,
+    and that these columns hold one of a fixed set of label strings and nothing
+    else. Without it, `op.create_table` reports `reportUnknownArgumentType`.
+    """
+    return sa.Column(name, enum, nullable=nullable)
+
+
 def _not_blank(column: str) -> str:
     """`length(btrim(<column>)) > 0` — a column whose emptiness is not a state.
 
@@ -255,8 +270,8 @@ def upgrade() -> None:
         # NULLABLE, and paired with `na_reason` by the XOR check below. Exactly
         # one of the two is present in every row.
         sa.Column("value", sa.Text(), nullable=True),
-        sa.Column("na_reason", NA_REASON, nullable=True),
-        sa.Column("tag", GOLDEN_TAG, nullable=False),
+        _enum_column("na_reason", NA_REASON, nullable=True),
+        _enum_column("tag", GOLDEN_TAG, nullable=False),
         # 🔴 `NOT NULL`, WHICH DIVERGES FROM THE WIRE ON PURPOSE.
         # `packages/contract/src/entities.ts::GoldenField.source_citation` is
         # `z.string().nullable()`. A truth nobody can trace to a document is not
