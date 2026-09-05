@@ -13,6 +13,7 @@ import pytest
 from pydantic import SecretStr, ValidationError
 
 from titlepipe_domain import Environment, LogRenderer, ServiceName
+from titlepipe_service_kit.settings_errors import SettingsValidationError
 from titlepipe_worker.settings import ENV_PREFIX, QUEUE_MAINTENANCE, WorkerSettings
 
 # A syntactically real DSN for the tests that need a deployed-shaped settings
@@ -176,7 +177,7 @@ def test_renderer_follows_the_environment_when_unset() -> None:
 
 def test_the_environment_has_no_default() -> None:
     """A forgotten variable must not silently mean development."""
-    with pytest.raises(ValidationError):
+    with pytest.raises(SettingsValidationError):
         WorkerSettings.from_environment()
 
 
@@ -267,7 +268,7 @@ def test_an_empty_queue_list_is_refused(monkeypatch: pytest.MonkeyPatch) -> None
     one bounded pool and silently undoes the split PLAN §6 requires."""
     monkeypatch.setenv(f"{ENV_PREFIX}ENVIRONMENT", "development")
     monkeypatch.setenv(f"{ENV_PREFIX}QUEUES", "")
-    with pytest.raises(ValidationError):
+    with pytest.raises(SettingsValidationError):
         WorkerSettings.from_environment()
 
 

@@ -46,22 +46,51 @@ from pydantic import ValidationError
 HIDE_INPUT_IN_ERRORS: Final = "hide_input_in_errors"
 
 
+# What a validation error that belongs to no single field is called. A
+# `model_validator(mode="after")` raising `ValueError` reaches pydantic with an
+# EMPTY `loc`, so joining it produces the empty string — a name that names
+# nothing while looking like it named something. The spelling is the worker
+# CLI's, which found this first and had its own copy.
+CROSS_FIELD_RULE: Final = "<cross-field rule>"
+
+
 class SettingsValidationError(ValueError):
-    """A settings failure carrying field names and reasons, never values.
+    """A settings failure carrying field names and reasons, never the input.
 
     A `ValueError`, because that is what `pydantic_settings.SettingsError`
     already is and what a caller distinguishing "bad configuration" from
     "broken code" is written against.
 
-    `problems` is `loc: msg` per failed field. The `msg` half is written by the
-    validator that refused, and **a validator must not interpolate a value into
-    it** — the ones here interpolate `len(secret)` and never `secret`, which is
-    the convention this class depends on and cannot itself enforce.
+    Two views, and callers pick by how much they trust their own validators:
+
+    * `invalid_fields` — the `loc` of each failure, `CROSS_FIELD_RULE` where
+      there is none. Derived from the schema, never from a value, so it is safe
+      to log anywhere.
+    * `problems` — `field: msg`, and `str(self)` is built from these. The `msg`
+      half is written by the validator that refused, so it is only as safe as
+      that validator: the ones in this package interpolate `len(secret)` and
+      never `secret`, but **the worker's two cross-field rules deliberately
+      quote the value that failed, and one of those values is a URL that can
+      carry credentials in its userinfo**. `services/worker/cli.py` therefore
+      logs `invalid_fields` and never the message, and that is not belt-and-
+      braces — it is the only correct reading for that service.
+
+    So this class does not claim its message is safe to log. It claims the
+    PRE-VALIDATION INPUT is gone from it, which is the leak it was written for;
+    what a validator chooses to put in its own message is that validator's
+    property, and `invalid_fields` is here so a caller that cannot vouch for
+    them has something to report instead.
     """
 
-    def __init__(self, model_name: str, problems: tuple[str, ...]) -> None:
+    def __init__(
+        self,
+        model_name: str,
+        problems: tuple[str, ...],
+        invalid_fields: tuple[str, ...],
+    ) -> None:
         self.model_name = model_name
         self.problems = problems
+        self.invalid_fields = invalid_fields
         count = len(problems)
         super().__init__(
             f"{model_name} is misconfigured ({count} "
@@ -78,8 +107,12 @@ def redacted_settings_error(model_name: str, exc: ValidationError) -> SettingsVa
     `ctx` carries the original `ValueError` object for a `value_error`, which
     would put the same message in twice.
     """
-    problems = tuple(
-        f"{'.'.join(str(part) for part in error['loc']) or model_name}: {error['msg']}"
-        for error in exc.errors(include_url=False, include_context=False, include_input=False)
+    errors = exc.errors(include_url=False, include_context=False, include_input=False)
+    fields = tuple(
+        ".".join(str(part) for part in error["loc"]) if error["loc"] else CROSS_FIELD_RULE
+        for error in errors
     )
-    return SettingsValidationError(model_name, problems)
+    problems = tuple(
+        f"{field}: {error['msg']}" for field, error in zip(fields, errors, strict=True)
+    )
+    return SettingsValidationError(model_name, problems, fields)

@@ -226,6 +226,20 @@ def test_every_allowlisted_diagnostic_actually_survives(key: str) -> None:
     allowlisted as work identity, both contain `name`, neither was excepted,
     and both rendered `[redacted]` in every environment. The previous version
     of this test named seven keys by hand and none of them was the broken pair.
+
+    🔴 WHAT THIS CANNOT SEE, AND THE COMMENT BESIDE `job_name` USED TO IMPLY IT
+    COULD: it iterates `SAFE_DIAGNOSTIC_KEYS`. A field in NEITHER table is not
+    in the parametrisation, so there is nothing here to fail. `task_name` — the
+    field the worker actually emits on `stalled_job_retried` and
+    `stalled_job_abandoned` — was in neither, was scrubbed everywhere, and this
+    test passed through the whole of it. Verified, not assumed: with
+    `task_name` removed from both tables again, `libs/domain` reports 134
+    passed.
+
+    A test over the tables can only ever confirm the tables. What covers a
+    field that is emitted and classified nowhere is
+    `services/worker/tests/test_emitted_log_fields.py`, which parses the source
+    for the fields really passed to a logger and asserts over those.
     """
     assert redact_mapping({key: "value"})[key] == "value", (
         f"{key} is on the allowlist but the blocklist drops it in development"

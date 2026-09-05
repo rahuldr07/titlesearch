@@ -19,6 +19,7 @@ note at the bottom of `pyproject.toml` and `tests/test_import_boundary.py`.
 
 from titlepipe_service_kit.settings import BaseHttpServiceSettings, BaseServiceSettings
 from titlepipe_service_kit.settings_errors import (
+    CROSS_FIELD_RULE,
     SettingsValidationError,
     redacted_settings_error,
 )
@@ -30,6 +31,7 @@ from titlepipe_service_kit.telemetry.logging import (
 )
 
 __all__ = [
+    "CROSS_FIELD_RULE",
     "BaseHttpServiceSettings",
     "BaseServiceSettings",
     "NullRequestMetrics",
