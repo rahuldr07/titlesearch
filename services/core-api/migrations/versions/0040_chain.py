@@ -25,34 +25,27 @@ Nothing in this revision depends on any table, type or function created between
 and it creates everything else it touches — with one stated exception, below.
 
 ---------------------------------------------------------------------------
-🔴 THE ONE THING THIS REVISION DEFERS: `instruments.document_id`'s FOREIGN KEY.
+🔴 WHAT THIS REVISION DEFERRED, AND WHAT CLOSED IT: `instruments.document_id`'s
+   FOREIGN KEY.
 ---------------------------------------------------------------------------
 `models/chain.py` declares `tenant_fk(column="document_id",
-target_table="documents")`. `documents` is another worker's module in this same
-fan-out and does not exist in this chain, so the constraint cannot be created
-here — `relation "documents" does not exist` would take the whole run down,
-including the two tables after it.
+target_table="documents")`. When this file was written, `documents` was another
+worker's module in the same fan-out and did not exist in this chain, so the
+constraint could not be created here — `relation "documents" does not exist`
+would have taken the whole run down, including the two tables after it. The
+column was added anyway, for the trade `0008` measured on `orders.product_id`: a
+missing FOREIGN KEY is one diff on a drift check that was red anyway while 23
+tables were still landing, and a missing COLUMN breaks the mapper outright.
 
-**THE COLUMN IS ADDED ANYWAY, AND LEAVING IT OUT IS THE WORSE OF THE TWO
-CHOICES.** `0008` measured this exact trade for `orders.product_id`: `alembic
-check` compares `Base.metadata` against the live catalog and fails on any column
-the models have and the database does not, and every ORM `INSERT` names all of a
-mapped table's columns and gets `column "document_id" of relation "instruments"
-does not exist`. A missing FOREIGN KEY is one diff on a check that is red anyway
-while 23 tables are still landing; a missing COLUMN breaks the mapper.
-
-**THE ONE-LINE REMEDY, so that integration does not have to re-derive it:**
-
-    op.create_foreign_key(
-        "fk_instruments_tenant_id_document_id_documents",
-        "instruments", "documents",
-        ["tenant_id", "document_id"], ["tenant_id", "id"],
-    )
-
-in any revision ordered after both this one and whichever creates `documents`.
-Until it lands, `instruments.document_id` is an unchecked uuid — it is NULLABLE
-by design (see below), so nothing is forced to populate it in the meantime, and
-the residual is named in the build report rather than left to be discovered.
+**IT IS NO LONGER DEFERRED.** On the linearized chain this revision's parent is
+`0032`, so `0030_create_documents` is behind it and the constraint is created
+below with the same `_tenant_fk` helper every other reference in this file uses —
+in the `create_table` that creates the column, which is where CONVENTIONS §1
+wants it. The alternative, a follow-up revision holding one `create_foreign_key`,
+would have left the table and its reference in two places for no gain now that
+the ordering is settled. `alembic check` was the machine that reported the gap:
+`Detected added foreign key (tenant_id, document_id)(tenant_id, id) on table
+instruments`, meaning the model declared it and the database did not have it.
 
 ## Why `instruments` is a table at all, and separate from `documents`
 
@@ -382,9 +375,9 @@ def upgrade() -> None:
         _tenant_column(),
         sa.Column("order_id", postgresql.UUID(as_uuid=True), nullable=False),
         # 🔴 NULLABLE, AND THE NULL IS THE POINT: an instrument known only from
-        # an index line has no paper in the package. Its composite FOREIGN KEY
-        # to `documents` is the one thing this revision defers — see the module
-        # docstring for why, and for the one-line remedy.
+        # an index line has no paper in the package. The column is nullable and
+        # its composite FOREIGN KEY is real — a null names no document, and a
+        # non-null one names a document in this tenant or the write fails.
         sa.Column("document_id", postgresql.UUID(as_uuid=True), nullable=True),
         sa.Column("label", sa.Text(), nullable=False),
         # `Text` and not an enum: the instrument vocabulary is
@@ -399,6 +392,10 @@ def upgrade() -> None:
         _enum_column("judgment_status", JUDGMENT_STATUS, nullable=True),
         _tenant_primary_key(),
         _tenant_fk("order_id", "orders"),
+        # Deferred when this file was written because `documents` was not in the
+        # chain; created here on the integrated chain, where `0030` is behind
+        # this revision. See the module docstring.
+        _tenant_fk("document_id", "documents"),
         # A recording DATE with no recording REFERENCE is a date attributed to a
         # record nobody can look up — the shape principle 6 refuses. The converse
         # is ordinary: an index line often names book and page and no date.
