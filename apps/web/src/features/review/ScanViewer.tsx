@@ -105,18 +105,26 @@ export function ScanViewer(props: {
           citeZoom={props.citeZoom}
           onCiteZoom={props.onCiteZoom}
         />
-        <CitedRegionNote
-          box={props.box}
-          citedPage={props.page}
-          shown={shown}
-          zoomed={props.citeZoom && box !== null}
-        />
         <InstrumentIndex
           instruments={props.instruments}
           shown={shown}
           onGo={setShown}
         />
       </ScrollArea>
+      {/*
+        A ROW OF THE PANE, not part of the scrolled document: the sentence
+        says what the sheet above it is showing, so it has to be on screen
+        whenever the sheet is. Inside the scroller it sat under a 396px paper
+        column and happened to be visible; a raster is taller than the
+        viewport and pushed it out of sight, which left a citation drawn with
+        nothing saying what it was. Its own `shrink-0` was always for this.
+      */}
+      <CitedRegionNote
+        box={props.box}
+        citedPage={props.page}
+        shown={shown}
+        zoomed={props.citeZoom && box !== null}
+      />
       <CoverageSpine
         total={props.total}
         described={props.described}

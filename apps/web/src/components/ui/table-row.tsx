@@ -1,6 +1,6 @@
 import { cx } from "./cx";
-import { ALIGN_CLASS, type TableColumn } from "./tableColumns";
-import { ROW_HEIGHT } from "./rowHeight";
+import { ALIGN_CLASS, type TableColumn } from "./table-columns";
+import { ROW_HEIGHT } from "./row-height";
 
 /**
  * The header row and the data row; table.tsx is the mechanism, this is the

@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Ack, PassOrderResponse } from "@titlepipe/contract";
 import { post } from "../../shared/api";
 import { orderFields, orderTimeline } from "../../shared/queries";
+import { countersigns } from "../../shared/countersignQueries";
 
 /**
  * The five review mutations, shaped by one rule: the server's message
@@ -29,6 +30,12 @@ export function useReviewWrites(orderId: string) {
        server records. A re-read, never an optimistic append: the trail
        moves only when the server says it has. */
     void client.invalidateQueries({ queryKey: orderTimeline(orderId).key });
+    /* A ruling on a T1 field is what OPENS its second-read row — the ledger
+       carries rulings, not queued fields, so it has one more row after this
+       act than before it. Without this the panel goes on saying "no T1
+       second read is outstanding" for the cache's lifetime while the gate it
+       reports on is the one holding the release. */
+    void client.invalidateQueries({ queryKey: countersigns(orderId).key });
   }, [client, orderId]);
 
   /**

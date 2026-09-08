@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor } from "storybook/test";
 
 import { ComboBox, Option } from "./combobox";
-import { onPanel } from "./kitGround";
+import { onPanel } from "./kit-ground";
 
 const meta = {
   title: "ui/ComboBox",

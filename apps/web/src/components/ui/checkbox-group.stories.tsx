@@ -3,7 +3,7 @@ import { expect } from "storybook/test";
 import { CheckboxGroup } from "./checkbox-group";
 import { Checkbox } from "./checkbox";
 import { FieldSet, FieldLegend } from "./field-set";
-import { onPanel } from "./kitGround";
+import { onPanel } from "./kit-ground";
 
 /**
  * The group exists so several boxes are one answer with one accessible name.

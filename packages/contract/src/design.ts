@@ -143,7 +143,19 @@ export const Artifact = z.object({
   media_type: z.string(),
   bytes: z.number().int(),
   sha256: z.string(),
-  href: z.string(),
+  /**
+   * Where the file can be fetched, or NULL when this server holds the record
+   * of the artifact but not its bytes.
+   *
+   * It was a plain string, and the fixture deliveries filled it with
+   * `/api/artifacts/{id}` — an endpoint that exists in no handler and on no
+   * disk. Following it is a top-level navigation, which no service worker
+   * answers, so the address fell through to the SPA and a reviewer pressing
+   * "View" on a certified deliverable was shown *"Nothing lives at this
+   * address"*. A digest without a file is an ordinary state on a demo server
+   * and the screen can say so; a link to a door that does not exist is not.
+   */
+  href: z.string().nullable(),
 });
 export type Artifact = z.infer<typeof Artifact>;
 
@@ -197,6 +209,18 @@ export const CountersignsResponse = z.object({
       countersigned_by: z.string().nullable(),
     }),
   ),
+  /**
+   * T1 fields on this order that NOBODY HAS RULED YET, counted by the server.
+   *
+   * A row in `required` opens with a ruling, so before the first one the list
+   * is empty — and an empty list on an order carrying eleven ruinous-exposure
+   * fields is not "nothing is ruinous here", which is what the screen said
+   * when it had only the list to read. The two answers need different words
+   * and the browser may not tell them apart by counting `rule_refs` itself:
+   * the T1 classification and the census are both the server's. Gate g4
+   * quotes this same figure.
+   */
+  unruled: z.number().int(),
 });
 export type CountersignsResponse = z.infer<typeof CountersignsResponse>;
 

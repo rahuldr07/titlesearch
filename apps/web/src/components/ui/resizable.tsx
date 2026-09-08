@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { Group, Panel, Separator } from "react-resizable-panels";
 
 import { cx } from "./cx";
-import { chordWidget } from "./overlaySurface";
+import { chordWidget } from "./overlay-surface";
 
 /**
  * The examination workstation split (drag divider, 38–74%). The band is

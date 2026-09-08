@@ -48,7 +48,7 @@ export {
    mark, or the mark drifts. */
 export { Select, Option, type SelectProps, type OptionProps } from "./select";
 export { ComboBox, type ComboBoxProps } from "./combobox";
-export { CommandPalette, type CommandPaletteProps } from "./commandPalette";
+export { CommandPalette, type CommandPaletteProps } from "./command-palette";
 export {
   Command,
   CommandInput,
@@ -60,8 +60,8 @@ export {
    own row rendering, and a caller-supplied <tr> is exactly what stops it
    virtualizing. A screen supplies columns. */
 export { Table, type TableProps } from "./table";
-export { statusColumn, type ColumnAlign, type RowStatus, type TableColumn } from "./tableColumns";
-export { DataCell } from "./dataCell";
+export { statusColumn, type ColumnAlign, type RowStatus, type TableColumn } from "./table-columns";
+export { DataCell } from "./data-cell";
 
 /* ── overlays ─────────────────────────────────────────────────────────────── */
 export { Dialog, DialogBody, DialogFooter, DialogTrigger, type DialogProps } from "./dialog";
@@ -106,7 +106,8 @@ export { Avatar, AvatarLabel, type AvatarProps } from "./avatar";
 export { Spinner, type SpinnerProps } from "./spinner";
 export { ScrollArea, type ScrollAreaProps } from "./scroll-area";
 export { Split, SplitPanel, SplitHandle, type SplitProps, type SplitPanelProps } from "./resizable";
-export { DECISION_MIN, DECISION_MAX } from "./splitBand";
+export { DECISION_MIN, DECISION_MAX } from "./split-band";
 /* The rail column. */
 export * from "./sidebar";
+export { sidebarDoorClass } from "./sidebar-chrome";
 export { useSidebar, SIDEBAR_KEY } from "./sidebar-context";

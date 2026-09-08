@@ -8,7 +8,7 @@ import {
 
 import { cx } from "./cx";
 import { disabledAttributes, type Disablement } from "./disabled";
-import { BlockedHint } from "./blockedHint";
+import { BlockedHint } from "./blocked-hint";
 
 /**
  * One size: 20×36 on the 2px base, 16px thumb, 2px inset — the travel of

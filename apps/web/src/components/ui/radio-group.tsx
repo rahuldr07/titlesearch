@@ -8,7 +8,7 @@ import {
 
 import { cx } from "./cx";
 import { disabledAttributes, type Disablement } from "./disabled";
-import { BlockedHint } from "./blockedHint";
+import { BlockedHint } from "./blocked-hint";
 
 /**
  * `disabledBecause` exists on both the group and the item — a group-level

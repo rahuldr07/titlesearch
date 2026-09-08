@@ -123,3 +123,94 @@ def test_main_reports_every_violation_not_just_the_first(
 
 def test_a_clean_changeset_passes() -> None:
     assert main(["services/core-api/app.py", "packages/contract/src/index.ts"]) == 0
+
+
+# ---------------------------------------------------------------------------
+# The fixture rule. A real package is committed as an EMPTY SHAPE and filled
+# in locally; the populated file is NPI in a public repository, and neither
+# the extension rule nor the directory rule can see it. These run against a
+# temporary tree because the rule reads the file's content.
+# ---------------------------------------------------------------------------
+
+EMPTY_SHAPE = (
+    '{"sha256": "d43e", "slug": "x", "job": "web_1", "source": {"pages": 101}, '
+    '"engines": [], "pages": [], "instruments": [], "fields": [], '
+    '"composition": {"blocks": []}, "timeline": []}'
+)
+
+
+def _write(root: Path, relative: str, text: str) -> Path:
+    target = root / relative
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(text, encoding="utf-8")
+    return Path(relative)
+
+
+@pytest.mark.parametrize(
+    "relative",
+    [
+        "packages/mocks/src/realPackage.json",
+        "packages/mocks/src/bundles/final-package-lincoln-mo.json",
+    ],
+)
+def test_the_empty_shape_of_a_package_fixture_is_admitted(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, relative: str
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    assert violation_for(_write(tmp_path, relative, EMPTY_SHAPE)) is None
+
+
+@pytest.mark.parametrize(
+    ("member", "populated"),
+    [
+        ("fields", '"fields": [{"path": "vesting.grantor", "value": "A REAL NAME"}]'),
+        ("pages", '"pages": [{"n": 1, "lines": ["412 SAMPLE ST"]}]'),
+        ("composition.blocks", '"composition": {"blocks": [{"id": "rb1", "values": []}]}'),
+    ],
+)
+def test_a_populated_package_fixture_is_refused_by_content(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, member: str, populated: str
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    text = EMPTY_SHAPE.replace(
+        {
+            "fields": '"fields": []',
+            "pages": '"pages": []',
+            "composition.blocks": '"composition": {"blocks": []}',
+        }[member],
+        populated,
+    )
+    reason = violation_for(_write(tmp_path, "packages/mocks/src/bundles/real.json", text))
+    assert reason is not None
+    assert member in reason
+    assert "empty shape" in reason
+
+
+def test_the_fixture_rule_is_scoped_to_the_fixture_paths(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A JSON file elsewhere with a non-empty `fields` list is ordinary source."""
+    monkeypatch.chdir(tmp_path)
+    populated = EMPTY_SHAPE.replace('"fields": []', '"fields": [{"x": 1}]')
+    assert violation_for(_write(tmp_path, "packages/mocks/src/other.json", populated)) is None
+    assert (
+        violation_for(_write(tmp_path, "packages/mocks/src/bundles/notes.txt", populated)) is None
+    )
+
+
+def test_an_unreadable_package_fixture_is_refused(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    assert (
+        violation_for(_write(tmp_path, "packages/mocks/src/realPackage.json", "{not json"))
+        is not None
+    )
+    assert violation_for(_write(tmp_path, "packages/mocks/src/realPackage.json", "[]")) is not None
+
+
+def test_a_missing_package_fixture_is_not_a_violation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    assert violation_for(Path("packages/mocks/src/bundles/deleted.json")) is None

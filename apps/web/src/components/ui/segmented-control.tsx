@@ -7,8 +7,8 @@ import {
 } from "react-aria-components";
 import { cx } from "./cx";
 import { disabledAttributes, type Disablement } from "./disabled";
-import { BlockedHint } from "./blockedHint";
-import { chordWidget } from "./overlaySurface";
+import { BlockedHint } from "./blocked-hint";
+import { chordWidget } from "./overlay-surface";
 
 /**
  * A segmented control is a filter, not navigation — the whole distinction

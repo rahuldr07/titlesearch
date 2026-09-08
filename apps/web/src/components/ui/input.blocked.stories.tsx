@@ -3,7 +3,7 @@ import { expect, userEvent } from "storybook/test";
 
 import { Input } from "./input";
 import { Textarea } from "./textarea";
-import { onPanel } from "./kitGround";
+import { onPanel } from "./kit-ground";
 
 /**
  * The rendered-behaviour half of disabled.test.ts: react-aria's Input and

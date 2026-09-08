@@ -17,9 +17,9 @@ import {
   SidebarGroup,
   SidebarGroupLabel,
   SidebarMenu,
-  SidebarMenuLink,
   SidebarMenuLabel,
 } from "../../components/ui";
+import { SidebarMenuLink } from "./SidebarMenuLink";
 
 /** One section of the rail — a rubric and the doors under it. */
 

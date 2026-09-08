@@ -1,7 +1,13 @@
 import { fileURLToPath, URL } from "node:url";
-import { createReadStream, existsSync } from "node:fs";
-import { basename, join } from "node:path";
-import { defineConfig, loadEnv, type PluginOption, type Rollup } from "vite";
+import { createReadStream, statSync } from "node:fs";
+import { join } from "node:path";
+import {
+  defineConfig,
+  loadEnv,
+  type Connect,
+  type PluginOption,
+  type Rollup,
+} from "vite";
 import react, { reactCompilerPreset } from "@vitejs/plugin-react";
 import babel from "@rolldown/plugin-babel";
 import tailwindcss from "@tailwindcss/vite";
@@ -103,42 +109,96 @@ function pdfMustStayLazy(): PluginOption {
  */
 
 /**
- * Serves the package page rasters in dev, from an absolute path OUTSIDE the
- * working tree — county packages never enter VCS (CONTEXT §19). Point
- * `TITLEPIPE_SCAN_DIR` at an OCR run directory holding `page_0001.png` …;
- * with nothing set it serves nothing and the sheet falls back to the text
- * render. Dev only: there is no production story for reading a developer's
- * filesystem, and `apply: "serve"` is what says so.
+ * Serves package page rasters and PDFs in dev, from absolute paths OUTSIDE the
+ * working tree — county packages never enter VCS (CONTEXT §19). With nothing
+ * set it serves nothing and the sheet falls back to the text render. Dev only:
+ * there is no production story for reading a developer's filesystem, and
+ * `apply: "serve"` is what says so. `vite preview` resolves its config under
+ * that same command (dist/node/chunks/node.js:35791), so the Playwright server
+ * — a production build behind preview — gets the identical handler through
+ * `configurePreviewServer` when the variables are exported. That is a
+ * developer's box or CI serving a developer's files; it is still not a
+ * production story.
+ *
+ * One package, the original form:
+ *   TITLEPIPE_SCAN_DIR=<run>    /scan/page_NNNN.png → <run>/page_NNNN.png
+ *   TITLEPIPE_SCAN_PDF=<file>   /scan/package.pdf   → <file>
+ *
+ * Many packages, keyed by the OCR job's directory name:
+ *   TITLEPIPE_SCAN_ROOT=<runs>  /scan/<job>/page_NNNN.png   → <runs>/<job>/page_NNNN.png
+ *                               /scan/<job>/package.pdf     → <runs>/<job>/source.pdf
+ *   TITLEPIPE_REPORT_DIR=<dir>  /scan/<job>/report-v<N>.pdf → <dir>/<job>/report-v<N>.pdf
+ *
+ * `<job>` is one segment of `[A-Za-z0-9_-]` and nothing else: no dot, so no
+ * `..`; no slash, so no depth; and the URL is never decoded, so `%2e%2e` is
+ * refused as the literal it is. The filename must be one of the three shapes
+ * above. Every other URL under `/scan` is answered 404 HERE rather than passed
+ * on: the namespace is this plugin's, and passing on hands Vite's SPA fallback
+ * — `index.html`, status 200 — back for a path that was just refused.
  */
 function scanRasters(): PluginOption {
   const dir = process.env["TITLEPIPE_SCAN_DIR"] ?? "";
   const pdf = process.env["TITLEPIPE_SCAN_PDF"] ?? "";
+  const root = process.env["TITLEPIPE_SCAN_ROOT"] ?? "";
+  const reports = process.env["TITLEPIPE_REPORT_DIR"] ?? "";
+  const configured = dir !== "" || pdf !== "" || root !== "" || reports !== "";
+
+  const JOB = /^[A-Za-z0-9_-]+$/;
+  const PAGE = /^page_\d{4}\.png$/;
+  const REPORT = /^report-v\d+\.pdf$/;
+
+  /**
+   * The file a URL names, or null when it is not a shape this serves. Each
+   * form is gated on ITS variable being set: `join("", job, name)` is a path
+   * relative to the working directory, which is inside the working tree —
+   * exactly the place this must never read from.
+   */
+  const fileFor = (url: string): string | null => {
+    // Connect has already stripped the `/scan` mount: `/name` or `/job/name`.
+    const path = url.split("?")[0] ?? "";
+    const segments = path.split("/").filter((s) => s !== "");
+    if (segments.length === 1) {
+      const [name = ""] = segments;
+      if (PAGE.test(name) && dir !== "") return join(dir, name);
+      if (name === "package.pdf" && pdf !== "") return pdf;
+      return null;
+    }
+    if (segments.length === 2) {
+      const [job = "", name = ""] = segments;
+      if (!JOB.test(job)) return null;
+      if (PAGE.test(name) && root !== "") return join(root, job, name);
+      if (name === "package.pdf" && root !== "") return join(root, job, "source.pdf");
+      if (REPORT.test(name) && reports !== "") return join(reports, job, name);
+    }
+    return null;
+  };
+
+  const serve: Connect.NextHandleFunction = (req, res) => {
+    const file = fileFor(req.url ?? "");
+    // A regular file, not merely an existing path: streaming a directory
+    // raises on the read stream, and an unhandled error there takes the
+    // server down with it.
+    if (file === null || statSync(file, { throwIfNoEntry: false })?.isFile() !== true) {
+      res.statusCode = 404;
+      res.end();
+      return;
+    }
+    res.setHeader(
+      "Content-Type",
+      file.endsWith(".pdf") ? "application/pdf" : "image/png",
+    );
+    res.setHeader("Cache-Control", "max-age=3600");
+    createReadStream(file).pipe(res);
+  };
+
   return {
     name: "titlepipe:scan-rasters",
     apply: "serve",
     configureServer(server) {
-      if (dir === "" && pdf === "") return;
-      server.middlewares.use("/scan", (req, res, next) => {
-        const name = basename((req.url ?? "").split("?")[0] ?? "");
-        const png = /^page_\d{4}\.png$/.test(name);
-        // The package itself, when `TITLEPIPE_SCAN_PDF` names one. Same rule
-        // as the rasters: an absolute path outside the working tree, and only
-        // this one filename is ever answered.
-        const isPdf = name === "package.pdf" && pdf !== "";
-        if (!png && !isPdf) {
-          next();
-          return;
-        }
-        const file = isPdf ? pdf : join(dir, name);
-        if (!existsSync(file)) {
-          res.statusCode = 404;
-          res.end();
-          return;
-        }
-        res.setHeader("Content-Type", isPdf ? "application/pdf" : "image/png");
-        res.setHeader("Cache-Control", "max-age=3600");
-        createReadStream(file).pipe(res);
-      });
+      if (configured) server.middlewares.use("/scan", serve);
+    },
+    configurePreviewServer(server) {
+      if (configured) server.middlewares.use("/scan", serve);
     },
   };
 }

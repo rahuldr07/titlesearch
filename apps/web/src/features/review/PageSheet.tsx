@@ -74,7 +74,25 @@ export function PageSheet(props: {
           el.style.setProperty("--tp-zoom-cx", `${String(cx100)}%`);
           el.style.setProperty("--tp-zoom-cy", `${String(cy100)}%`);
         }}
-        className={cx("w-198 shrink-0 tp-zoom-cite", zoomed && "tp-zoom-cite-on")}
+        /*
+         * The paper column is 198 — the measure a typeset page is set to. A
+         * RASTER is not typeset: it is a photograph of a county page, and
+         * held to the same column it renders at 396px, at which a dense
+         * recorded instrument is unreadable and a one-line citation box is
+         * about six pixels tall. It gets 260 (520px) instead.
+         *
+         * A LENGTH, not `w-full`: the magnifier above is CSS `zoom` on the
+         * ancestor, and `zoom` scales the containing block too, so a
+         * percentage width resolves against the shrunken box and cancels the
+         * magnification exactly — measured, 200% rendered the sheet 17.2px
+         * where Fit rendered 18.3px. A fixed length multiplies, which is what
+         * Fit/150/200 and the double-click cite-zoom all rely on.
+         */
+        className={cx(
+          "shrink-0 tp-zoom-cite",
+          raster === null ? "w-198" : "w-260",
+          zoomed && "tp-zoom-cite-on",
+        )}
       >
         {raster === null ? (
           <PaperSheet

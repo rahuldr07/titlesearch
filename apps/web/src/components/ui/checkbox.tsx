@@ -8,7 +8,7 @@ import {
 
 import { cx } from "./cx";
 import { disabledAttributes, type Disablement } from "./disabled";
-import { BlockedHint } from "./blockedHint";
+import { BlockedHint } from "./blocked-hint";
 
 /**
  * The drawn square is 16px and WCAG 2.2 §2.5.8 wants 24, so the after:-inset

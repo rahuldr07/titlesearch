@@ -1,5 +1,5 @@
 import type { Artifact, DeliveryWithReport } from "@titlepipe/contract";
-import { Card, CardBody, CardHeader, LinkButton } from "../../components/ui";
+import { Button, Card, CardBody, CardHeader, LinkButton } from "../../components/ui";
 import { useRead } from "../../app/useRead";
 import { QueryState } from "../../entities/state/QueryState";
 import { artifacts } from "../../shared/artifactQueries";
@@ -112,9 +112,35 @@ function ArtifactRow({
         </span>
       </span>
 
-      <LinkButton href={artifact.href} size="sm" className="shrink-0">
-        View
-      </LinkButton>
+      {/*
+        The door, when the server has one. `href: null` means this server holds
+        the artifact's record and not its bytes — a real state on a demo
+        server, and the button says so in place rather than pointing at an
+        address that answers with the application's own not-found screen.
+        `disabledBecause`, never `isDisabled`: a blocked control states its
+        reason, and the type refuses the shortcut.
+      */}
+      {artifact.href === null ? (
+        <Button
+          variant="secondary"
+          size="sm"
+          className="shrink-0"
+          data-testid={`artifact-nofile-${artifact.id}`}
+          disabledBecause="This server holds the digest of this artifact, not the file. Nothing was rendered for it."
+          onPress={() => undefined}
+        >
+          View
+        </Button>
+      ) : (
+        <LinkButton
+          href={artifact.href}
+          size="sm"
+          className="shrink-0"
+          data-testid={`artifact-view-${artifact.id}`}
+        >
+          View
+        </LinkButton>
+      )}
     </div>
   );
 }

@@ -8,7 +8,7 @@ This is the cheap structural guard. It is deliberately blunt: it refuses the
 file *types* that carry client data anywhere in the tree rather than trying to
 judge whether a particular PDF is safe.
 
-## Two rules, applied independently
+## Three rules, applied independently
 
 **Extension rule** — a `.pdf`, `.docx`, `.seed`, `.sqlite` and so on is refused
 **anywhere**, with no directory exemptions.
@@ -16,8 +16,15 @@ judge whether a particular PDF is safe.
 **Directory rule** — a path under `uploads/`, `inbox/` or `county-packages/` is
 refused whatever it contains.
 
-They are separate because `packages/` needs an exemption from exactly one of
-them. It is the pnpm workspace directory holding `contract`, `ui` and `mocks`
+**Fixture rule** — a package fixture (`packages/mocks/src/realPackage.json`,
+`packages/mocks/src/bundles/*.json`) is refused when any of its content arrays
+is non-empty. These files are committed as an empty shape and populated
+locally from a real county package; the populated file is NPI and this
+repository is public. Neither rule above can see it: it is `.json`, and it
+sits under `packages/`.
+
+The first two are separate because `packages/` needs an exemption from exactly
+one of them. It is the pnpm workspace directory holding `contract`, `ui` and `mocks`
 source — tracked on purpose — and it collides by name with the old prototype's
 upload directory. So `packages/` is exempt from the **directory** rule only.
 
@@ -30,8 +37,10 @@ upload directory. So `packages/` is exempt from the **directory** rule only.
 from __future__ import annotations
 
 import hashlib
+import json
 import sys
 from pathlib import Path
+from typing import cast
 
 # Extensions that carry client documents or a golden-set database. Refused
 # everywhere, including inside exempt directories.
@@ -90,6 +99,62 @@ DIRECTORY_RULE_EXEMPT_PREFIXES = ("packages/",)
 # Not source, and not ours to police.
 SKIPPED_PREFIXES = ("node_modules/", ".git/")
 
+# Package FIXTURES — the third rule, and the one the other two cannot see.
+#
+# A real county package is committed as an EMPTY SHAPE (`realPackage.json`,
+# `bundles/*.json`): the identifying metadata and every content array empty.
+# A generator fills the same path locally with the package's pages, fields
+# and composition — named people, their addresses, the judgments entered
+# against them — and that populated file must never be committed, because
+# this repository is public. The extension rule cannot tell the two apart
+# (both are `.json`) and the directory rule exempts `packages/` on purpose,
+# so the discipline was "leave it uncommitted", held by a sentence in a
+# handoff note and defeated by one `git add -A`. This rule reads the file:
+# a tracked fixture at one of these paths with ANY content array non-empty
+# is refused. A synthetic sample that must stay populated is admitted the
+# way everything else is — by hash, in ALLOWLIST, with the reason.
+PACKAGE_FIXTURE_PATHS = ("packages/mocks/src/realPackage.json",)
+PACKAGE_FIXTURE_DIR_PREFIXES = ("packages/mocks/src/bundles/",)
+# The members that carry the package's content. `composition` is nested.
+PACKAGE_CONTENT_MEMBERS = ("pages", "instruments", "fields", "timeline")
+
+
+def _package_fixture_violation(path: Path, relative: str) -> str | None:
+    """Refuse a populated package fixture; admit the empty shape."""
+    is_fixture = relative in PACKAGE_FIXTURE_PATHS or (
+        relative.startswith(PACKAGE_FIXTURE_DIR_PREFIXES) and path.suffix.lower() == ".json"
+    )
+    if not is_fixture or not path.exists():
+        return None
+    try:
+        parsed: object = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as error:
+        return f"package fixture is not readable JSON ({error}); a fixture is an empty shape or nothing"
+    if not isinstance(parsed, dict):
+        return "package fixture is not an object; a fixture is an empty shape or nothing"
+    # `json.loads` types its result as Any; the guard reasons over `object`
+    # members and narrows each one by hand, so pyright's strict mode sees no
+    # Unknown flow past this line.
+    shape = cast("dict[str, object]", parsed)
+    populated = [
+        member
+        for member in PACKAGE_CONTENT_MEMBERS
+        if isinstance(shape.get(member), list) and len(cast("list[object]", shape[member])) > 0
+    ]
+    composition = shape.get("composition")
+    if isinstance(composition, dict):
+        blocks = cast("dict[str, object]", composition).get("blocks")
+        if isinstance(blocks, list) and len(cast("list[object]", blocks)) > 0:
+            populated.append("composition.blocks")
+    if populated:
+        return (
+            f"populated package fixture ({', '.join(populated)} non-empty) — a real package's "
+            "content is NPI and this repository is public. Commit only the empty shape "
+            "(the generator's --empty output); leave the populated file uncommitted."
+        )
+    return None
+
+
 # Individual paths permitted despite matching.
 #
 # Pinned by SHA-256, not by path. An allowlisted *path* is a hole: the file at
@@ -97,6 +162,16 @@ SKIPPED_PREFIXES = ("node_modules/", ".git/")
 # on the strength of a decision made about different bytes. The hash means an
 # approved archive stays approved and a swapped one is refused.
 ALLOWLIST: dict[str, tuple[str, str]] = {
+    # The one package fixture that is populated ON PURPOSE: a synthetic bundle
+    # the mock's registry tests upload under an in-test digest. Read in full
+    # and grepped against the real packages' identifiers — every party,
+    # street, instrument, book/page and case number is invented. Re-inspect
+    # before updating the hash: a regenerated file at this path produced from
+    # a real package would look almost identical and would not be safe.
+    "packages/mocks/src/bundles/sample-package.json": (
+        "f2cf9fc0c2bdd0c8ba01495f669effa162f6115cee64054df32b7b68947cba60",
+        "synthetic sample bundle; invented parties, addresses and recording data only",
+    ),
     "docs/archive/Title report review tool.zip": (
         "baf71d954f1a55a1594a008e39b393f4479c9dcb5cb2c654c4d33f01854c6bda",
         "design screens only; inspected and verified to contain no client documents",
@@ -174,6 +249,12 @@ def violation_for(path: Path) -> str | None:
     # Extension rule — no exemptions.
     if path.suffix.lower() in FORBIDDEN_SUFFIXES:
         return f"{path.suffix} files may contain client documents or golden data"
+
+    # Fixture rule — a populated package fixture is client data whatever its
+    # extension. Tested BEFORE the `packages/` exemption below, which is what
+    # would otherwise wave it through.
+    if (fixture := _package_fixture_violation(path, relative)) is not None:
+        return fixture
 
     # Directory rule — `packages/` is the pnpm workspace, not county packages.
     if relative.startswith(DIRECTORY_RULE_EXEMPT_PREFIXES):

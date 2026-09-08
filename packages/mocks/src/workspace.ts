@@ -26,18 +26,20 @@ import {
   PRODUCT_NAME,
   demoFields,
   demoOrderRow,
-  demoOrders,
+  demoOrderRows,
   demoPages,
 } from "./data.js";
 import type { DemoOrderRow, DemoStageId } from "./data.js";
+import { STAND_IN, hydratedOrder } from "./packages.js";
 
 /**
  * The workspace, intake, and admin resources. Reads only, except
  * preferences — the writes are state transitions the server owns.
  *
- * Every order-shaped answer here is a projection of `demoOrders` (data.ts):
- * the board, the sign-off, the pipeline, and the gate all read the same row,
- * so they cannot disagree about an order's state or page count.
+ * Every order-shaped answer here is a projection of `demoOrderRows()`
+ * (data.ts) — the seed set plus what this session created: the board, the
+ * sign-off, the pipeline, and the gate all read the same row, so they
+ * cannot disagree about an order's state or page count.
  *
  * Persons and places stay obviously synthetic ("Sample Client — Riverbend
  * Title"): a fixture that reads like a real file is a fixture somebody
@@ -59,6 +61,11 @@ const products: ConfigResponse["products"] = [
   { id: "p_y40", code: "40 Year", full: PRODUCT_NAME, sub: "Full search · 40 years back", period: "40 years back", derivation: "y", retired: false },
   { id: "p_y60", code: "60 Year", full: "60-Year Search", sub: "Full search · 60 years back", period: "60 years back", derivation: "y", retired: false },
 ];
+
+/** One product by id — the name and period a created order prints. Undefined, never invented. */
+export function productFor(id: string): ConfigResponse["products"][number] | undefined {
+  return products.find((p) => p.id === id);
+}
 
 // ---- the product's thirteen sign-off lines -----------------------------------
 
@@ -392,9 +399,10 @@ function lifecycleCard(row: DemoOrderRow): LifecycleOrder {
  */
 export function lifecycleFor(role: string): LifecycleResponse {
   const senior = role !== "reviewer";
+  const rows = demoOrderRows();
   const visible = senior
-    ? demoOrders
-    : demoOrders.filter((row) => row.mine || row.stage === "unassigned");
+    ? rows
+    : rows.filter((row) => row.mine || row.stage === "unassigned");
   const censusOnly = (id: DemoStageId): number => (id === "gate" ? CENSUS_ONLY_IN_GATE : 0);
   const haltIds = OV_DEF.filter((stage) => stage.kind === "halt").map((stage) => stage.id);
 
@@ -402,11 +410,11 @@ export function lifecycleFor(role: string): LifecycleResponse {
     scope_note: senior
       ? "You are seeing every order in the shop."
       : "Scoped to your orders plus anything unclaimed — the same gate as the queue. A senior sees all of them.",
-    total: demoOrders.length + CENSUS_ONLY_IN_GATE,
+    total: rows.length + CENSUS_ONLY_IN_GATE,
     halted:
-      demoOrders.filter((row) => haltIds.includes(row.stage)).length + CENSUS_ONLY_IN_GATE,
-    moving: demoOrders.filter((row) => row.stage === "machine").length,
-    failed: demoOrders.filter((row) => row.failed).length,
+      rows.filter((row) => haltIds.includes(row.stage)).length + CENSUS_ONLY_IN_GATE,
+    moving: rows.filter((row) => row.stage === "machine").length,
+    failed: rows.filter((row) => row.failed).length,
     /*
      * The four stat cards. Labels and notes are authored here because the
      * server owns product copy; values come off the same table as every
@@ -423,24 +431,24 @@ export function lifecycleFor(role: string): LifecycleResponse {
     active: {
       label: "Total Active Queue",
       value:
-        demoOrders.filter((row) => row.stage !== "delivered").length + CENSUS_ONLY_IN_GATE,
+        rows.filter((row) => row.stage !== "delivered").length + CENSUS_ONLY_IN_GATE,
       note: "Open work, sorted by deadline",
     },
     in_review: {
       label: "In Examination Review",
-      value: demoOrders.filter((row) => row.stage === "review").length,
+      value: rows.filter((row) => row.stage === "review").length,
       note: "Dual-engine values ready for human call",
     },
     queries_and_gaps: {
       label: "Open Queries & Gaps",
       value:
-        demoOrders.filter((row) => row.stage === "gate" || row.stage === "escalated").length +
+        rows.filter((row) => row.stage === "gate" || row.stage === "escalated").length +
         CENSUS_ONLY_IN_GATE,
       note: "Awaiting QC or county portal records",
     },
     delivered_recent: {
       label: "Delivered This Week",
-      value: demoOrders.filter((row) => row.delivered_at !== null).length,
+      value: rows.filter((row) => row.delivered_at !== null).length,
       note: "Signed and sealed by an examiner",
     },
     stages: OV_DEF.map((stage) => ({
@@ -449,7 +457,7 @@ export function lifecycleFor(role: string): LifecycleResponse {
       sub: stage.sub,
       waiting_on: stage.on,
       kind: stage.kind,
-      count: demoOrders.filter((row) => row.stage === stage.id).length + censusOnly(stage.id),
+      count: rows.filter((row) => row.stage === stage.id).length + censusOnly(stage.id),
       orders: visible.filter((row) => row.stage === stage.id).map(lifecycleCard),
     })),
   };
@@ -568,6 +576,10 @@ const NO_COMMENT =
  */
 function isSigned(row: DemoOrderRow | undefined): boolean {
   if (row === undefined || row.pages === null) return false;
+  // A hydrated order's package was read without the thirteen lines ever
+  // being answered — the generator ran on the file, not on a sign-off. Its
+  // stage says extraction happened; it does not say anyone signed.
+  if (hydratedOrder(row.id) !== undefined) return false;
   return row.stage !== "unassigned" && row.stage !== "intake";
 }
 
@@ -652,7 +664,11 @@ export function pipelineFor(orderId: string): OrderPipelineResponse {
    * rather than a borrowed number.
    */
   const doc = demoPages[orderId];
-  const orderFields = demoFields.filter((f) => f.order_id === orderId);
+  /* A hydrated order's fields are the live store's (packages.ts) — the same
+     objects `/fields` serves, so a ruling moves the counts here too. */
+  const rec = hydratedOrder(orderId);
+  const orderFields = rec?.fields ?? demoFields.filter((f) => f.order_id === orderId);
+  const relevant = rec?.bundle.pipeline.pages_relevant ?? PACKAGE_PAGES_RELEVANT;
   const fieldCount = orderFields.length;
   const flaggedCount = orderFields.filter((f) => f.state === "needs_review").length;
   const clearedCount = orderFields.filter((f) => f.state === "auto_confirmed").length;
@@ -664,10 +680,13 @@ export function pipelineFor(orderId: string): OrderPipelineResponse {
      the fields, not the stage, so the two endpoints tell one story. */
   const extracted = doc !== undefined && fieldCount > 0;
 
-  /* The dark terminal's lines — static demo telemetry, served only once
+  /* The dark terminal's lines — the bundle's own where it recorded them,
+     else static demo telemetry composed from the counts, served only once
      extraction has actually run for this order. */
   const runLog =
-    extracted
+    rec !== undefined && rec.bundle.pipeline.run_log.length > 0
+      ? rec.bundle.pipeline.run_log.map((line) => ({ ...line }))
+      : extracted
       ? [
           { time: "09:26:04", text: `Ingestion started · UUID ${orderId}`, warn: false, strong: false },
           { time: "09:26:11", text: `Pages split at 300 DPI · ${String(pages)} pages structured`, warn: false, strong: false },
@@ -684,7 +703,9 @@ export function pipelineFor(orderId: string): OrderPipelineResponse {
   /* The hub's "Deterministic Verification Checks" — sentences only the
      pipeline can assert, so they ride its response. Empty until it has run. */
   const verifiedChecks =
-    extracted
+    rec !== undefined
+      ? [...rec.bundle.pipeline.verified_checks]
+      : extracted
       ? [
           "Legal description on p8 matches the tax parcel on p2",
           "Every value on the draft points at a verifiable page and line citation",
@@ -709,21 +730,28 @@ export function pipelineFor(orderId: string): OrderPipelineResponse {
      * live order's package is described page by page (`demoPages`), so a
      * per-order relevant count would be a number nobody could cite.
      */
-    pages_relevant: PACKAGE_PAGES_RELEVANT,
-    classifier_note: `The classifier found nothing the report needs on the other pages. You review ${PACKAGE_PAGES_RELEVANT}.`,
+    pages_relevant: relevant,
+    classifier_note:
+      rec?.bundle.pipeline.classifier_note ??
+      `The classifier found nothing the report needs on the other pages. You review ${relevant}.`,
     /** Server state. `stage === "gate"` is the halt; the screen never infers it. */
     gate_halted: stage === "gate" && signed,
     /* The meta strip's cells, the ETA chip, the terminal, and the hub's
-       verified checks. All server-authored strings. */
-    package_name: readable && row !== undefined ? `${row.order_ref}_package.pdf` : null,
-    volume_label: readable ? `${String(pages)} Scanned Raster Pages` : null,
-    eta_label: running
-      ? "Extracting…"
-      : gatePassed || extracted
-        ? "Dual-Engine Extraction Complete"
-        : readable
-          ? "Awaiting the completeness gate"
-          : "Awaiting a readable package",
+       verified checks. All server-authored strings — the bundle's for a
+       hydrated order. */
+    package_name:
+      rec?.bundle.pipeline.package_name ??
+      (readable && row !== undefined ? `${row.order_ref}_package.pdf` : null),
+    volume_label: rec?.bundle.pipeline.volume_label ?? (readable ? `${String(pages)} Scanned Raster Pages` : null),
+    eta_label:
+      rec?.bundle.pipeline.eta_label ??
+      (running
+        ? "Extracting…"
+        : gatePassed || extracted
+          ? "Dual-Engine Extraction Complete"
+          : readable
+            ? "Awaiting the completeness gate"
+            : "Awaiting a readable package"),
     run_log: runLog,
     verified_checks: verifiedChecks,
     stages: [
@@ -741,11 +769,11 @@ export function pipelineFor(orderId: string): OrderPipelineResponse {
         id: "classify",
         label: "Classify & segment",
         detail: readable
-          ? `Two independent readers · ${PACKAGE_PAGES_RELEVANT} pages carried forward`
+          ? `Two independent readers · ${relevant} pages carried forward`
           : "Waits until the package can be read at all.",
         owner: "LLM agent",
         phase: readable ? "done" : "waiting",
-        count: readable ? `${String(PACKAGE_PAGES_RELEVANT)} of ${String(pages)} pages` : null,
+        count: readable ? `${String(relevant)} of ${String(pages)} pages` : null,
       },
       {
         id: BADGED_STAGE_ID,
@@ -762,11 +790,16 @@ export function pipelineFor(orderId: string): OrderPipelineResponse {
       {
         id: "gate",
         label: "Completeness gate — checks the package against your sign-off",
-        detail: gatePassed
-          ? "Passed — the package supports every claim."
-          : signed
-            ? "Halted — the package contradicts your intake claims."
-            : "Waits until the sign-off is signed — there is nothing to check yet.",
+        /* A hydrated order reached extraction with no sign-off to check
+           against: the gate did not run, and the row says so rather than
+           claiming the package supported claims nobody made. */
+        detail: rec !== undefined
+          ? STAND_IN.completeness
+          : gatePassed
+            ? "Passed — the package supports every claim."
+            : signed
+              ? "Halted — the package contradicts your intake claims."
+              : "Waits until the sign-off is signed — there is nothing to check yet.",
         owner: "Automated",
         phase: gatePassed ? "done" : signed ? "halted" : "waiting",
         count: null,

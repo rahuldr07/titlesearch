@@ -1,16 +1,38 @@
 import { http, HttpResponse } from "msw";
-import { resetWorkspaceStores, workspaceHandlers } from "./workspace.js";
+import { productFor, resetWorkspaceStores, workspaceHandlers } from "./workspace.js";
 import {
   CLERK_STAMP,
   CLIENT_NAME,
   TEMPLATE_VERSION,
   assignedFor,
   designHandlers,
+  countersignAllOpen,
+  fileCountersignRow,
+  fileCountersignRows,
   openCountersignCount,
   quarantineBody,
   resetDesignStores,
   slaFor,
 } from "./design.js";
+import {
+  acceptHydratedOrder,
+  duplicateOf,
+  isOpen,
+  hydrateOrder,
+  hydratedOrder,
+  hydratedOrderIds,
+  notePdfHeader,
+  pdfHeaderOk,
+  t1RowFor,
+  knownPackage,
+  noSourceCount,
+  quarantineForBundle,
+  recordDigest,
+  resetHydration,
+  bestSeedBundle,
+  sha256Of,
+  syncHydratedStamp,
+} from "./packages.js";
 import { guard, err } from "./guard.js";
 import { resetSettingsStores, settingsHandlers } from "./settings.js";
 import { resetTemplateStores, templateHandlers } from "./templates.js";
@@ -57,12 +79,12 @@ import {
   demoGolden,
   demoOrderEntity,
   demoOrderRow,
-  demoOrders,
   demoOrderRows,
   addCreatedOrder,
   clearCreatedOrders,
   demoPages,
   demoQueue,
+  overlayOrderRow,
   demoRules,
   demoTimelines,
   type DemoOrderRow,
@@ -288,12 +310,108 @@ const timelineHandler = http.get("/api/orders/:id/timeline", ({ params }) => {
   });
 });
 
+/**
+ * A first examiner's ruling on a T1 field opens the second-read ledger row
+ * for it. Hydrated orders only: the demo's ledger is seeded data.
+ */
+function fileT1Ruling(field: Field, actor: string): void {
+  if (hydratedOrder(field.order_id) === undefined) return;
+  const row = t1RowFor(field, actor);
+  if (row !== null) fileCountersignRow(field.order_id, row);
+}
+
 /** Field store: deep-copied once per page session, then mutated by handlers. */
 const fieldStore: Field[] = [...demoFields, ...realFields].map((f) => ({
   ...f,
   rule_refs: [...f.rule_refs],
   readings: f.readings?.map((r) => ({ ...r })),
 }));
+
+/** The completed exemplar's id and the two examiners who worked it. */
+const DONE_ORDER_ID = "ord_done_1";
+const DONE_EXAMINER = "D. Okafor";
+const DONE_SECOND_READER = "R. Menon (QC)";
+
+
+/**
+ * ONE ORDER WHOSE EXAMINATION IS FINISHED, standing in the shop beside the
+ * ones that are not — so the completed workstation can be opened and read
+ * without walking a queue first.
+ *
+ * It is built by DOING THE WORK, not by declaring the outcome: the package is
+ * hydrated through `hydrateOrder`, then every queued field is settled the way
+ * the confirm and correct routes settle one (a value confirmed, a typed
+ * absence corrected with its reason), each T1 ruling opens its ledger row
+ * through the same `fileT1Ruling`, and the second read is filed by the other
+ * examiner under the endpoint's own different-examiner rule. Nothing here
+ * writes a state the server could not have produced.
+ *
+ * It stops SHORT OF RELEASE, deliberately, and that is not incompleteness:
+ * `ord_demo_5` is the seeded order that is already delivered, and the release
+ * is the one conscious act the product requires of a human. This order is the
+ * examination finished — every gate the workstation owns answered, the sheet
+ * cleared, the signature still to give.
+ *
+ * THE RICHEST PACKAGE THIS CHECKOUT HOLDS. A completed exemplar exists to be
+ * read, and the real county package — 112 fields over 101 pages, judgments,
+ * T1 exposure, typed absences — is worth reading in a way a three-page
+ * synthetic one is not. But that bundle is populated locally and never
+ * committed (public repo, NPI), so `bestSeedBundle` falls back to the
+ * synthetic sample: this order then still exists in a clean checkout and in
+ * CI, smaller, with the same shape and the same tests over it.
+ *
+ * It is SEEDED, not uploaded, so it stays out of the de-duplication ledger.
+ * It keeps the package's own digest wherever a digest is shown — the
+ * quarantine, the enclosed artifact — because that IS the digest of those
+ * bytes; what it does not do is claim somebody presented them at the door
+ * this session, which would refuse the first real upload of the package as a
+ * duplicate of a row the user never filed.
+ */
+function seedCompletedOrder(): void {
+  const { bundle } = bestSeedBundle();
+  const at = "2026-09-01T09:15:00.000Z";
+  hydrateOrder(
+    DONE_ORDER_ID,
+    bundle,
+    {
+      client_id: "cli_riverbend",
+      // The shop's own numbering, and free of every ref in `data.ts`. Not
+      // "SAMPLE-…": which bundle is behind this order depends on the
+      // checkout, and a ref that says "sample" is a lie in the one that
+      // matters — the local tree, where it is the county package.
+      external_ref: "4176061-8",
+      product: "Current Owner Search",
+      period: "Current owner · from the vesting deed forward",
+    },
+    { fields: fieldStore, countersign: fileCountersignRows },
+    at,
+    true,
+  );
+  acceptHydratedOrder(DONE_ORDER_ID, DONE_EXAMINER, at);
+
+  for (const field of fieldStore) {
+    if (field.order_id !== DONE_ORDER_ID || !isOpen(field.state)) continue;
+    /* The two acts the routes offer: an absence is CORRECTED with its typed
+       reason, everything else is CONFIRMED at the value the readers gave. */
+    field.state = field.na_reason === null ? "confirmed" : "corrected";
+    field.approved_by = DONE_EXAMINER;
+    field.approved_at = at;
+    fileT1Ruling(field, DONE_EXAMINER);
+  }
+  countersignAllOpen(DONE_ORDER_ID, DONE_SECOND_READER);
+  syncHydratedStamp(DONE_ORDER_ID, openCountersignCount(DONE_ORDER_ID));
+  /*
+   * The row reads the way the shop's OTHER cleared order reads (`4176028-5`,
+   * `data.ts`): in flight rather than in the pick band, and stamped with what
+   * is now true of it. `syncHydratedStamp` has already set the settled tone
+   * and "Release signature"; the label is the last thing still saying only
+   * which engines read it, which stopped being the headline when the last
+   * gate closed.
+   */
+  overlayOrderRow(DONE_ORDER_ID, { band: "in_flight", stamp_label: "Cleared for release" });
+}
+
+seedCompletedOrder();
 
 /*
  * FIXTURE CONFLICT, unresolved — for the owner, not for this file to guess.
@@ -456,8 +574,6 @@ const reconStore: Reconciliation[] = seedRecon();
 
 const ok: Ack = { ok: true };
 
-/** sha256 stand-in for the mock: file name + byte size. */
-const seenPackages = new Map<string, string>();
 let createdOrders = 0;
 
 /**
@@ -479,7 +595,8 @@ export const handlers = [
    * the intake ledger but never writes it — only a signed create registers
    * a digest, so a scan abandoned at the door leaves no order to collide
    * with. A digest already on the books comes back with the de-dup step
-   * failed and `resolved: null`.
+   * failed and `resolved: null`. The digest is the file's real SHA-256; a
+   * digest the package registry knows answers from that bundle.
    */
   http.post("/api/intake/quarantine", async ({ request }) => {
     const denied = guard(request, "order.create");
@@ -496,8 +613,13 @@ export const handlers = [
         { status: 400 },
       );
     }
-    const sha = `${pkg.name}:${pkg.size}`;
-    return HttpResponse.json(quarantineBody(null, seenPackages.get(sha) ?? null));
+    const sha = await sha256Of(pkg);
+    notePdfHeader(sha, await pdfHeaderOk(pkg));
+    const dup = duplicateOf(sha);
+    const bundle = knownPackage(sha);
+    return HttpResponse.json(
+      bundle === undefined ? quarantineBody(null, dup, sha) : quarantineForBundle(bundle, null, sha, dup, await pdfHeaderOk(pkg)),
+    );
   }),
 
   /**
@@ -531,15 +653,41 @@ export const handlers = [
       );
     }
     const file = pkg as File;
-    const sha = `${file.name}:${file.size}`;
-    const dup = seenPackages.get(sha);
-    if (dup !== undefined) {
+    const sha = await sha256Of(file);
+    notePdfHeader(sha, await pdfHeaderOk(file));
+    const dup = duplicateOf(sha);
+    if (dup !== null) {
       return err(
         `duplicate package (sha256 match) — byte-identical to ${dup}`,
         409,
       );
     }
     createdOrders += 1;
+    const bundle = knownPackage(sha);
+    if (bundle !== undefined) {
+      /*
+       * A KNOWN PACKAGE. The registry holds what the pipeline read off these
+       * exact bytes, so the order is filed with its pages, fields, ledger
+       * and timeline in place (packages.ts) and every per-order read answers
+       * from the stores. Jurisdiction and page count are the bundle's — read
+       * off the package, as the gateway resolved them at the door.
+       */
+      const productId = String(form.get("product"));
+      const product = productFor(productId);
+      const row = hydrateOrder(
+        `ord_new_${createdOrders}`,
+        bundle,
+        {
+          client_id: String(form.get("client_id")),
+          external_ref: String(form.get("external_ref")),
+          product: product?.full ?? productId,
+          period: product?.period ?? "Period not resolved — the product is not in the config",
+        },
+        { fields: fieldStore, countersign: fileCountersignRows },
+        new Date().toISOString(),
+      );
+      return HttpResponse.json({ order: demoOrderEntity(row) }, { status: 201 });
+    }
     const order = {
       id: `ord_new_${createdOrders}`,
       client_id: String(form.get("client_id")),
@@ -560,7 +708,7 @@ export const handlers = [
       accepted_at: null,
       delivered_at: null,
     };
-    seenPackages.set(sha, order.external_ref);
+    recordDigest(order.id, sha, order.external_ref);
     /*
      * REGISTER IT. Minting an id, returning it and storing it nowhere meant
      * intake finished, navigated to `/orders/ord_new_1`, and the server
@@ -602,14 +750,43 @@ export const handlers = [
     return HttpResponse.json({ order }, { status: 201 });
   }),
 
-  /** Explicit accept — a named person signs for the package. Never auto. */
-  http.post("/api/orders/:id/accept", ({ request }) => {
-    return guard(request, "order.accept") ?? HttpResponse.json(ok);
+  /**
+   * Explicit accept — a named person signs for the package. Never auto. On
+   * a hydrated order the act is recorded: the row's instant and a timeline
+   * event under the signer's name.
+   */
+  http.post("/api/orders/:id/accept", ({ params, request }) => {
+    const denied = guard(request, "order.accept");
+    if (denied) return denied;
+    acceptHydratedOrder(String(params["id"]), auditActor(request), new Date().toISOString());
+    return HttpResponse.json(ok);
   }),
 
+  /*
+   * A hydrated order is the caller's own and sits in review, so it heads
+   * the queue ahead of the seed list — newest first, and off it once
+   * delivered. Still server-ordered: the head advances on a recorded pass.
+   */
   http.get("/api/queue/next", () => {
+    const live = [
+      ...hydratedOrderIds().flatMap((id) => {
+        const row = demoOrderRow(id);
+        if (row === undefined || row.stage === "delivered") return [];
+        /*
+         * An order with nothing open is not the next piece of WORK. The
+         * completed exemplar is hydrated like any other and would otherwise
+         * sit at the head of the hand-over, so "next" would answer an order
+         * whose queue is empty — and this endpoint is the only hand-over
+         * there is, so it has to name something to do. It stays in the bands
+         * and in every list; it is just not what you are handed.
+         */
+        if (fieldStore.some((f) => f.order_id === id && isOpen(f.state))) return [demoOrderEntity(row)];
+        return openCountersignCount(id) > 0 ? [demoOrderEntity(row)] : [];
+      }),
+      ...queue,
+    ];
     const body: QueueNextResponse = {
-      order: queue[queueHead % queue.length] ?? null,
+      order: live[queueHead % live.length] ?? null,
     };
     return HttpResponse.json(body);
   }),
@@ -679,13 +856,7 @@ export const handlers = [
         fields: fields.length,
         auto_confirmed: fields.filter((f) => f.state === "auto_confirmed").length,
         needs_review: fields.filter((f) => f.state === "needs_review").length,
-        no_source: fields.filter(
-          (f) =>
-            f.value !== null &&
-            f.source_doc_id === null &&
-            f.source_page === null &&
-            (f.readings ?? []).length === 0,
-        ).length,
+        no_source: noSourceCount(fields),
         decisions: settled.length + queued.length,
         settled: settled.length,
         queue_rest: Math.max(settled.length + queued.length - 1, 0),
@@ -737,6 +908,8 @@ export const handlers = [
     field.state = "confirmed";
     field.approved_by = "L. Vance";
     field.approved_at = new Date().toISOString();
+    fileT1Ruling(field, "L. Vance");
+    syncHydratedStamp(field.order_id, openCountersignCount(field.order_id));
     return HttpResponse.json(ok);
   }),
 
@@ -757,6 +930,8 @@ export const handlers = [
     field.na_reason = na.success ? na.data : null;
     field.approved_by = "L. Vance";
     field.approved_at = new Date().toISOString();
+    fileT1Ruling(field, "L. Vance");
+    syncHydratedStamp(field.order_id, openCountersignCount(field.order_id));
     return HttpResponse.json(ok);
   }),
 
@@ -797,6 +972,7 @@ export const handlers = [
     const field = fieldStore.find((f) => f.id === params["id"]);
     if (!field) return err("no such field", 404);
     field.state = "escalated";
+    syncHydratedStamp(field.order_id, openCountersignCount(field.order_id));
     return HttpResponse.json(ok);
   }),
 
@@ -1516,7 +1692,7 @@ export const handlers = [
   http.get("/api/rail", () => {
     const open = escalationStore.filter((e) => e.resolution === null).length;
     const body: RailBadgesResponse = {
-      orders_total: demoOrders.length,
+      orders_total: demoOrderRows().length,
       qc: open === 0 ? null : `${open} QC`,
       template_version: TEMPLATE_VERSION,
     };
@@ -1556,7 +1732,10 @@ export const handlers = [
     draftCount = 0;
     complaintCount = 0;
     createdOrders = 0;
-    seenPackages.clear();
+    // Hydrated orders: their pages, the digest ledger and the registry of
+    // what was filed; their rows, fields, countersigns, timelines, seals and
+    // deliveries go with the stores above and below.
+    resetHydration();
     clearCreatedOrders();
     // The sibling modules' stores: deliveries + seals + countersigns +
     // appended timeline events (design.ts), template wording drafts,
@@ -1566,6 +1745,11 @@ export const handlers = [
     resetSettingsStores();
     resetWorkspaceStores();
     resetAuditStore();
+    // Re-worked, not restored: the completed exemplar is built by settling
+    // fields and filing second reads, so it has to be rebuilt AFTER the
+    // stores it writes into have been re-seeded, or the reset would leave
+    // the shop without the one order whose examination is finished.
+    seedCompletedOrder();
     return HttpResponse.json(ok);
   }),
 

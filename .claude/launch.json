@@ -4,7 +4,21 @@
     {
       "name": "@titlepipe/web",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--filter", "@titlepipe/web", "dev"],
+      "runtimeArgs": [
+        "--filter",
+        "@titlepipe/web",
+        "dev"
+      ],
+      "port": 5174
+    },
+    {
+      "name": "@titlepipe/web · real packages (rasters + reports)",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "--filter",
+        "@titlepipe/web",
+        "dev:real"
+      ],
       "port": 5174
     }
   ]

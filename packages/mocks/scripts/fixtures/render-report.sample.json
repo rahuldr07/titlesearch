@@ -1,0 +1,68 @@
+{
+  "slug": "sample-lincoln-mo",
+  "source": { "filename": "final_package.pdf", "pages": 101 },
+  "context": {
+    "order_ref": "SMP-4401-2",
+    "client": "First American",
+    "product": "Current Owner",
+    "period_label": null,
+    "place": "18 Willow Bend Rd, Troy MO 63379 · Lincoln County, MO",
+    "jurisdiction_label": "Lincoln County, MO"
+  },
+  "composition": {
+    "template_version": "v4.2",
+    "blocks": [
+      {
+        "id": "rb1",
+        "numeral": "I",
+        "title": "Header information",
+        "values": [
+          { "label": "Order number", "value": "SMP-4401-2", "pending": false, "field_id": "fld_sample_1" },
+          { "label": "Vendor", "value": "66805", "pending": false, "field_id": "fld_sample_2" },
+          { "label": "Search date", "value": "— not stated in the package", "pending": false, "field_id": null },
+          { "label": "Effective date", "value": "— not stated in the package", "pending": false, "field_id": null }
+        ],
+        "field_count": 4,
+        "cited": 2
+      },
+      {
+        "id": "rb2",
+        "numeral": "II",
+        "title": "Current vesting deed information",
+        "values": [
+          { "label": "Deed type", "value": "General Warranty Deed", "pending": false, "field_id": "fld_sample_3" },
+          { "label": "Grantor", "value": "Marjorie A. Kessler, a single person", "pending": false, "field_id": "fld_sample_4" },
+          { "label": "Grantee", "value": "Daniel R. Okafor and Priya Okafor", "pending": false, "field_id": "fld_sample_5" },
+          { "label": "Grantee vesting", "value": "husband and wife, as tenants by the entirety", "pending": false, "field_id": "fld_sample_6" },
+          { "label": "Dated", "value": "03/14/2019", "pending": false, "field_id": "fld_sample_7" },
+          { "label": "Recorded", "value": "03/19/2019", "pending": false, "field_id": "fld_sample_8" },
+          { "label": "Book / page", "value": "— not found in the package", "pending": false, "field_id": null },
+          { "label": "Instrument no.", "value": "2019-001873", "pending": false, "field_id": "fld_sample_9" },
+          { "label": "Consideration", "value": "$186,500.00", "pending": false, "field_id": "fld_sample_10" }
+        ],
+        "field_count": 9,
+        "cited": 8
+      },
+      {
+        "id": "rb3",
+        "numeral": "III",
+        "title": "Deed of trust",
+        "values": [
+          { "label": "1 · Mortgagor", "value": "Daniel R. Okafor and Priya Okafor", "pending": false, "field_id": "fld_sample_11" },
+          { "label": "1 · Mortgagee", "value": "Mortgage Electronic Registration Systems, Inc., as nominee for Flat Branch Mortgage, Inc.", "pending": false, "field_id": "fld_sample_12" },
+          { "label": "1 · Trustee", "value": "Lincoln County Abstract & Title Co.", "pending": false, "field_id": "fld_sample_13" },
+          { "label": "1 · Dated", "value": "03/14/2019", "pending": false, "field_id": "fld_sample_14" },
+          { "label": "1 · Recorded", "value": "03/19/2019", "pending": false, "field_id": "fld_sample_15" },
+          { "label": "1 · Instrument no.", "value": "2019-001874", "pending": false, "field_id": "fld_sample_16" },
+          { "label": "1 · Amount", "value": "$149,200.00", "pending": false, "field_id": "fld_sample_17" },
+          { "label": "1 · Open-ended", "value": "No", "pending": false, "field_id": "fld_sample_18" },
+          { "label": "1 · MERS MIN", "value": "100051700012345678", "pending": false, "field_id": "fld_sample_19" }
+        ],
+        "field_count": 9,
+        "cited": 9
+      }
+    ]
+  },
+  "release": { "signature": "L. Vance", "released_at": "2026-09-03T12:00:00Z", "version": 1 },
+  "provenance": { "engines": ["dots-mocr", "mineru", "unlimited-ocr"], "job": "web_sample_000000" }
+}

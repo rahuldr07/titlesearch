@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Progress, ProgressLabel, ProgressValue } from "./progress";
-import { onPanel } from "./kitGround";
+import { onPanel } from "./kit-ground";
 
 /**
  * The bar, which is not the one the screens use. Every story here is a

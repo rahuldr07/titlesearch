@@ -4,7 +4,7 @@ import {
 } from "react-aria-components";
 
 import { disabledAttributes, type Disablement } from "./disabled";
-import { collectionItem, markGutter } from "./overlaySurface";
+import { collectionItem, markGutter } from "./overlay-surface";
 
 /**
  * An option. Selection is drawn with a ✓ mark and weight, never colour alone.

@@ -1,9 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Split, SplitHandle, SplitPanel } from "./resizable";
-import { DECISION_MAX, DECISION_MIN } from "./splitBand";
+import { DECISION_MAX, DECISION_MIN } from "./split-band";
 import { ScrollArea } from "./scroll-area";
-import { onPanel } from "./kitGround";
-import { Frame, Decision, Evidence } from "./splitStoryData";
+import { onPanel } from "./kit-ground";
+import { Frame, Decision, Evidence } from "./split-story-data";
 
 /**
  * The workstation split, as geometry: the band at both ends and at rest,
