@@ -36,6 +36,7 @@ from datetime import UTC, datetime
 from types import MappingProxyType
 from typing import Any, Final
 
+from titlepipe_core.db.identity import Client
 from titlepipe_core.db.models import Order
 
 # What `insert_audit_log` will interpolate as a bind parameter name, and nothing else.
@@ -45,17 +46,20 @@ _BIND_PARAMETER: Final = re.compile(r"\A[a-z_][a-z0-9_]*\Z")
 
 
 # Every `NOT NULL` column `0008` adds to `orders` except the two that cannot be
-# constants. `client_id` varies per call because it is a uuid the caller may want
-# to match against; `external_ref` varies because `uq_orders_tenant_id
-# _external_ref` makes it the table's natural key, and two `a_minimal_order`
-# rows in ONE tenant is an ordinary thing for a seam test to want. A fixed
-# string here was a `duplicate key value violates unique constraint
+# constants. `external_ref` varies because `uq_orders_tenant_id_external_ref`
+# makes it the table's natural key, and two `a_minimal_order` rows in ONE tenant
+# is an ordinary thing for a seam test to want. A fixed string here was a
+# `duplicate key value violates unique constraint
 # "uq_orders_tenant_id_external_ref"` in `test_4_a_savepoint_rolled_back_leaves
 # _the_tenant_established`, MEASURED on this tree — and it was reached only
 # once the isolation seed started writing complete rows, because before that
 # nothing else in the suite wrote a second order into one tenant.
+#
+# `client_id` IS NO LONGER HERE AND IS NO LONGER A FRESH `uuid4()`. `0110` gives
+# it `fk_orders_tenant_id_client_id_clients`, so an invented id is `23503` and
+# not a row. It is a required argument of `a_minimal_order` instead — see there.
 def _minimal_order_required() -> dict[str, Any]:
-    """Built per call, because one of the five values must not repeat."""
+    """Built per call, because one of the four values must not repeat."""
     return {
         "external_ref": f"TEST-ONLY-{uuid.uuid4()}",
         "jurisdiction": "TEST-ONLY",
@@ -97,7 +101,10 @@ _ORDER_EXTERNAL_REF = "'TEST-ONLY-' || gen_random_uuid()"
 _ORDER_SQL_VALUES: Final[Mapping[str, str]] = MappingProxyType(
     {
         "tenant_id": "",  # never defaulted; every caller supplies it. See `insert_order`.
-        "client_id": "gen_random_uuid()",
+        # Not an expression: the id comes out of `_CLIENT_CTE_NAME`, which is the
+        # only place a client id this statement may use exists. `_order_row`
+        # substitutes it, so this entry carries the COLUMN and not a value.
+        "client_id": "",
         "external_ref": _ORDER_EXTERNAL_REF,
         "jurisdiction": "'TEST-ONLY'",
         "state_code": "'ZZ'",
@@ -115,9 +122,56 @@ _ORDER_SQL_VALUES: Final[Mapping[str, str]] = MappingProxyType(
 # relative to another row, names them and supplies both.
 _ORDER_SQL_SERVER_FILLED: Final[Collection[str]] = frozenset({"id", "created_at"})
 
-_ORDER_SQL_ROW = ", ".join(
-    expression for column, expression in _ORDER_SQL_VALUES.items() if column != "tenant_id"
-)
+# 🔴 EVERY RAW-SQL ORDER NOW WRITES ITS OWN CLIENT FIRST, IN ONE STATEMENT.
+# `0110` gives `orders.client_id` a composite foreign key, so the
+# `gen_random_uuid()` that used to fill it is `23503` and not a row. A separate
+# INSERT would not do: three call sites run inside a `tenant_session` that
+# commits once on exit, and two of them write TWO TENANTS' rows in one statement,
+# where a preceding statement would have to know both tenants and their order.
+#
+# A data-modifying CTE keeps it one statement and keeps each order's client in
+# the SAME TENANT structurally — the outer INSERT takes both columns from the
+# same CTE row, so there is no expression anywhere that could pair them wrongly.
+#
+# `RETURNING tenant_id, id` and not just `id`: `insert_orders_returning` writes
+# one order per named tenant and reads the pair back, so the outer statement
+# selects the tenant from the CTE rather than repeating the bind parameter.
+_CLIENT_CTE_NAME = "minimal_client"
+_CLIENT_CTE_COLUMNS = "tenant_id, name, delivery_method, report_shape"
+_CLIENT_CTE_ROW = "'TEST-ONLY', 'TEST-ONLY', 'TEST-ONLY'"
+
+
+def _client_cte(*tenant_placeholders: str) -> str:
+    """One `clients` row per named tenant bind parameter, as a CTE.
+
+    `S608` is suppressed on the same checkable claim `insert_orders_returning`
+    states below and does not restate: every fragment interpolated is a literal
+    defined in this module, `tenant_placeholders` are bind parameter NAMES, and
+    the tenant VALUES stay bind parameters and never touch this string.
+    """
+    rows = ", ".join(f"(:{name}, {_CLIENT_CTE_ROW})" for name in tenant_placeholders)
+    return (
+        f"WITH {_CLIENT_CTE_NAME} AS ("  # noqa: S608
+        f"INSERT INTO clients ({_CLIENT_CTE_COLUMNS}) VALUES {rows} "
+        f"RETURNING tenant_id, id)"
+    )
+
+
+def _order_row(tenant_expression: str) -> str:
+    """`_ORDER_SQL_VALUES` as a SELECT list, with the two CTE-sourced columns filled.
+
+    `tenant_expression` is `{_CLIENT_CTE_NAME}.tenant_id` where the statement
+    writes one order per client, and `:name` where the caller pins it. The
+    client id is never a parameter — it is always the CTE's, which is what makes
+    "the order and its client share a tenant" structural here rather than a
+    convention two call sites have to remember.
+    """
+    filled = {
+        **_ORDER_SQL_VALUES,
+        "tenant_id": tenant_expression,
+        "client_id": f"{_CLIENT_CTE_NAME}.id",
+    }
+    return ", ".join(filled.values())
 
 
 def insert_orders_returning(returning: str, *tenant_placeholders: str) -> str:
@@ -135,8 +189,12 @@ def insert_orders_returning(returning: str, *tenant_placeholders: str) -> str:
     travel through — stay bind parameters and never touch this string. Moving the
     construction here is what makes that one claim to review instead of three.
     """
-    rows = ", ".join(f"(:{name}, {_ORDER_SQL_ROW})" for name in tenant_placeholders)
-    return f"INSERT INTO orders ({_ORDER_SQL_COLUMNS}) VALUES {rows} RETURNING {returning}"  # noqa: S608
+    return (
+        f"{_client_cte(*tenant_placeholders)} "  # noqa: S608
+        f"INSERT INTO orders ({_ORDER_SQL_COLUMNS}) "
+        f"SELECT {_order_row(f'{_CLIENT_CTE_NAME}.tenant_id')} FROM {_CLIENT_CTE_NAME} "
+        f"RETURNING {returning}"
+    )
 
 
 def insert_order(*caller_columns: str) -> str:
@@ -173,6 +231,14 @@ def insert_order(*caller_columns: str) -> str:
             f"{sorted(known)}; a column outside that set is either a typo or a "
             f"schema change this module has not been told about."
         )
+    if "client_id" in caller_columns:
+        raise AssertionError(
+            "insert_order does not let the caller fill `client_id`. The statement "
+            "writes the client itself, in a CTE, so that the order and its client "
+            "share a tenant structurally (`0110`); a caller-supplied id would "
+            "leave that CTE row unreferenced and the pairing unchecked. A test "
+            "that needs a specific client writes it and uses `a_minimal_order`."
+        )
     if "tenant_id" not in caller_columns:
         raise AssertionError(
             "insert_order requires the caller to supply `tenant_id`. There is no "
@@ -181,9 +247,14 @@ def insert_order(*caller_columns: str) -> str:
             "guess invisible rather than an error."
         )
 
+    defaults = {
+        **_ORDER_SQL_VALUES,
+        "tenant_id": ":tenant_id",
+        "client_id": f"{_CLIENT_CTE_NAME}.id",
+    }
     filled = {
         column: f":{column}" if column in caller_columns else expression
-        for column, expression in _ORDER_SQL_VALUES.items()
+        for column, expression in defaults.items()
     }
     # Server-filled columns appear in the statement only when the caller named
     # one; unnamed, they are absent and the column's own default applies.
@@ -192,7 +263,10 @@ def insert_order(*caller_columns: str) -> str:
     )
     columns = ", ".join(filled)
     values = ", ".join(filled.values())
-    return f"INSERT INTO orders ({columns}) VALUES ({values})"  # noqa: S608
+    return (
+        f"{_client_cte('tenant_id')} "  # noqa: S608
+        f"INSERT INTO orders ({columns}) SELECT {values} FROM {_CLIENT_CTE_NAME}"
+    )
 
 
 def insert_actor(tenant: str) -> str:
@@ -284,6 +358,52 @@ def a_minimal_order(tenant_id: uuid.UUID, **overrides: Any) -> Order:
         **_minimal_order_required(),
     }
     return Order(tenant_id=tenant_id, **{**defaults, **overrides})
+
+
+def a_minimal_client(tenant_id: uuid.UUID, **overrides: Any) -> Client:
+    """A `Client` that satisfies every `NOT NULL` and asserts nothing else.
+
+    THE ID IS ASSIGNED HERE RATHER THAN LEFT TO `gen_random_uuid()`, and that is
+    what makes this usable: `a_minimal_order` needs the id BEFORE either row is
+    flushed, and a server default is not readable until it is. `CONVENTIONS.md`
+    §2 wants application-generated ids in any case.
+
+    `delivery_config` and `template_ref` stay absent because they are nullable
+    and `db/identity.Client` says an empty `{}` would be a fabricated value
+    standing in for an absence.
+    """
+    return Client(
+        tenant_id=tenant_id,
+        id=uuid.uuid4(),
+        name="TEST-ONLY",
+        delivery_method="TEST-ONLY",
+        report_shape="TEST-ONLY",
+        **overrides,
+    )
+
+
+def a_minimal_order(tenant_id: uuid.UUID, *, client_id: uuid.UUID, **overrides: Any) -> Order:
+    """An `Order` that satisfies every `NOT NULL` and asserts nothing else.
+
+    🔴 `client_id` IS REQUIRED AND KEYWORD-ONLY, AND THE FRICTION IS THE POINT.
+    `0110` gives the column `fk_orders_tenant_id_client_id_clients`, so the
+    `uuid4()` this function used to invent is now `23503` rather than a row — and
+    a DEFAULT here would just move the invention one layer down, where the next
+    reader would not see it. Callers write `a_minimal_client` first and pass its
+    id, which is also what makes the pair legible at the call site.
+
+    A caller testing a REFUSAL may pass an id no client holds: the tenant
+    policy's `WITH CHECK` is evaluated before the constraint's AFTER trigger, so
+    a cross-tenant insert still comes back `42501` from the policy rather than
+    `23503` from the key. `test_tenant_isolation.py`'s write-side proof depends
+    on that ordering.
+    """
+    return Order(
+        tenant_id=tenant_id,
+        client_id=client_id,
+        arrived_at=datetime.now(UTC),
+        **{**_minimal_order_required(), **overrides},
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -505,18 +625,21 @@ MINIMAL_ROWS: Final[Mapping[str, _MinimalRow]] = MappingProxyType(
                 "placed_by": "'TEST-ONLY'",
             },
         ),
+        # `client_id` MOVED FROM `columns` TO `parents` AT `0110`, and that is the
+        # whole shape of that revision seen from the seed: it was
+        # `gen_random_uuid()` — an id belonging to nobody — and it is now the Nth
+        # client of this tenant. `parents` is also what puts `clients` ahead of
+        # `orders` in `seed_order`, which no alphabetical order would.
         "orders": _MinimalRow(
+            parents={"client_id": "clients"},
             columns={
-                # No foreign key: `clients` is not in this branch's chain. See
-                # `0008`'s note on `client_id`.
-                "client_id": "gen_random_uuid()",
                 "external_ref": "'TEST-ONLY-' || :ordinal_text",
                 "jurisdiction": "'TEST-ONLY'",
                 "state_code": "'ZZ'",
                 "county": "'TEST-ONLY'",
                 "status": "'received'",
                 "arrived_at": "now()",
-            }
+            },
         ),
         "packages": _MinimalRow(
             parents={"order_id": "orders"},
@@ -608,9 +731,8 @@ MINIMAL_ROWS: Final[Mapping[str, _MinimalRow]] = MappingProxyType(
             }
         ),
         "client_config_versions": _MinimalRow(
-            parents={"product_id": "products"},
+            parents={"client_id": "clients", "product_id": "products"},
             columns={
-                "client_id": "gen_random_uuid()",
                 "version": ":ordinal",
                 # `ck_client_config_versions_current_means_published` would then
                 # demand a `published_at`, and an unpublished draft is the

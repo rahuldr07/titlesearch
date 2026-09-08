@@ -8,12 +8,16 @@ module imports; given its own, the direction of every reference in the package
 stays legible — `orders.py` names `products` and `client_config_versions`, and
 everything else names `orders`.
 
-**THE FOREIGN KEYS POINT AT `intake.py`, WHICH IS THE LAYER BUILT UNDER
-ASSUMPTION.** `product_id` and `frozen_config_version_id` reference tables whose
-existence god ruled in ahead of the owner's answer. Both columns are NULLABLE,
-and that is what keeps the assumption reversible: dropping the intake layer means
-dropping two constraints and two columns that no row is required to populate,
-not unpicking a NOT NULL that every order depends on.
+**TWO OF THE THREE FOREIGN KEYS POINT AT `intake.py`, WHICH IS THE LAYER BUILT
+UNDER ASSUMPTION.** `product_id` and `frozen_config_version_id` reference tables
+whose existence god ruled in ahead of the owner's answer. Both columns are
+NULLABLE, and that is what keeps the assumption reversible: dropping the intake
+layer means dropping two constraints and two columns that no row is required to
+populate, not unpicking a NOT NULL that every order depends on.
+
+The third, `client_id`, points at `identity.py`'s `clients` and is `NOT NULL` —
+it is not reversible in that sense and is not meant to be. `0110` adds it; the
+class docstring says what it closes.
 """
 
 from __future__ import annotations
@@ -33,15 +37,25 @@ from titlepipe_core.db.models.relations import tenant_fk
 class Order(_TenantRow):
     """One title search job — the root almost everything else hangs from.
 
-    `client_id` IS NOT AN ISOLATION BOUNDARY AND CARRIES NO FOREIGN KEY YET.
-    The plan's §1 settles the first half: a client is the title company's own
-    customer, every staff role sees every client's orders, and `tenant_id` is the
-    boundary. The second half is a build-order fact, not a design one — `clients`
-    is another worker's table and does not exist on this branch, so the composite
-    `(tenant_id, client_id)` reference is REQUESTED in the build report rather
-    than written here against a table that is not there. Until it lands, nothing
-    stops an order naming a client id that was never issued: that is an UNPROVEN
-    RESIDUAL and is listed as one.
+    `client_id` IS NOT AN ISOLATION BOUNDARY — `tenant_id` is. A client is the
+    title company's own customer and every staff role sees every client's orders
+    (plan §1), so nothing here narrows what a session may read.
+
+    🔴 IT IS NOW A COMPOSITE FOREIGN KEY, AND THE THING THAT CLOSES IS NOT "an
+    order naming a client that does not exist". `clients` holds
+    `delivery_method`, `delivery_config` and `template_ref` — the DESTINATION a
+    report is transmitted to. Unconstrained, an order in tenant A could hold
+    tenant B's real client id, and any resolve that reached `clients` without
+    repeating the tenant predicate would address one shop's deliverable to
+    another shop's customer. RLS filters that join today; the foreign key makes
+    the row unwritable, which holds for `titlepipe_owner`, for a migration and
+    with row-level security off. `relations.tenant_fk` carries the reasoning.
+
+    **THE RESIDUAL THAT STAYS:** the constraint binds `client_id` to a client in
+    the SAME tenant. It says nothing about whether that client is the right one
+    for this order — no rule in this schema relates a client to a jurisdiction, a
+    product or a config version, and inventing one here would be a rule nobody
+    has made.
 
     `status` IS `text` AND NOT AN ENUM, DELIBERATELY. `packages/contract/src/
     enums.ts:96` declares `OrderStatus = z.string()` with the comment that the
@@ -57,6 +71,7 @@ class Order(_TenantRow):
 
     __tablename__ = "orders"
     __table_args__ = (
+        tenant_fk(column="client_id", target_table="clients"),
         tenant_fk(column="product_id", target_table="products"),
         tenant_fk(
             column="frozen_config_version_id",

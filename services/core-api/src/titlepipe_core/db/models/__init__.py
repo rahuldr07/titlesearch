@@ -108,6 +108,7 @@ from titlepipe_core.db.models.intake import (
     IntakeSignoffLine,
     Product,
 )
+from titlepipe_core.db.models.jsonb import MAX_JSONB_BYTES, bounded_jsonb_object
 from titlepipe_core.db.models.orders import Order
 from titlepipe_core.db.models.packages import Package, Page
 from titlepipe_core.db.models.retention import LegalHold, RecordClassification, RetentionWindow
@@ -132,6 +133,7 @@ __all__ = [
     "JUDGMENT_PATH_PREFIX",
     "JUDGMENT_STATUS",
     "JUDGMENT_STATUS_LABELS",
+    "MAX_JSONB_BYTES",
     "NAMING_CONVENTION",
     "NA_REASON",
     "NA_REASON_LABELS",
@@ -181,6 +183,7 @@ __all__ = [
     "RetentionWindow",
     "Rule",
     "Tenant",
+    "bounded_jsonb_object",
 ]
 
 # Registering the golden set on `Base.metadata`, for the same reason the retention module is

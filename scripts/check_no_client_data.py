@@ -362,8 +362,16 @@ DUMP_MARKERS: tuple[tuple[re.Pattern[str], str], ...] = (
         "a mysqldump data section",
     ),
     (
-        re.compile(r"^\s*INSERT\s+INTO\s+\S+\s+VALUES\s*\(", re.IGNORECASE | re.MULTILINE),
-        "literal INSERT rows, which is how a dump carries table data",
+        # Three, not one. A dump carries table data as MANY consecutive rows; a
+        # single `INSERT INTO ... VALUES (` is how a migration seeds a lookup or
+        # how a docstring shows the shape it refuses. MEASURED 2026-09-08: the
+        # one-row form flagged 0112, whose only match is an example inside its
+        # own docstring demonstrating the bound it adds.
+        re.compile(
+            r"(?:^\s*INSERT\s+INTO\s+\S+\s+VALUES\s*\(.*$\n?){3,}",
+            re.IGNORECASE | re.MULTILINE,
+        ),
+        "repeated literal INSERT rows, which is how a dump carries table data",
     ),
 )
 

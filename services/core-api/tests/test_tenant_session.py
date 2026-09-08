@@ -131,7 +131,7 @@ from uuid import UUID, uuid4
 import pytest
 from alembic import command
 from alembic.config import Config
-from minimal_rows import a_minimal_order, insert_orders_returning
+from minimal_rows import a_minimal_client, a_minimal_order, insert_orders_returning
 from sqlalchemy import Connection, Engine, Select, create_engine, event, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import QueuePool
@@ -605,9 +605,15 @@ async def test_a_row_written_in_one_tenant_session_is_readable_from_the_next(
         sessionmaker = make_sessionmaker(engine)
 
         async with tenant_session(sessionmaker, TENANT_ONE) as session:
-            # NO FLUSH, AND NO `TenantRepository.add` — see the docstring. This
-            # line queues an INSERT that only the block's own commit can send.
-            session.add(a_minimal_order(TENANT_ONE, id=written_id))
+            # NO FLUSH, AND NO `TenantRepository.add` — see the docstring. These
+            # two lines queue INSERTs that only the block's own commit can send.
+            # The client is queued FIRST because `0110` makes it the order's
+            # parent; SQLAlchemy's unit of work sorts by mapper dependency and
+            # there is no relationship here to sort by, so insertion order is
+            # what decides it.
+            client = a_minimal_client(TENANT_ONE)
+            session.add(client)
+            session.add(a_minimal_order(TENANT_ONE, client_id=client.id, id=written_id))
 
         async with tenant_session(sessionmaker, TENANT_ONE) as session:
             found = await TenantRepository(session, Order).get(written_id)
@@ -654,7 +660,9 @@ async def _write_then_fail(sessionmaker: async_sessionmaker[AsyncSession], order
     "the row is absent afterwards" would be true because it was never sent.
     """
     async with tenant_session(sessionmaker, TENANT_ONE) as session:
-        session.add(a_minimal_order(TENANT_ONE, id=order_id))
+        client = a_minimal_client(TENANT_ONE)
+        session.add(client)
+        session.add(a_minimal_order(TENANT_ONE, client_id=client.id, id=order_id))
         await session.flush()
         raise _DeliberateFailure(order_id)
 
@@ -1195,7 +1203,9 @@ async def test_the_repository_reads_and_writes_through_the_scoped_session(
         sessionmaker = make_sessionmaker(engine)
         async with tenant_session(sessionmaker, TENANT_ONE) as session:
             orders = TenantRepository(session, Order)
-            written = a_minimal_order(TENANT_ONE)
+            client = a_minimal_client(TENANT_ONE)
+            session.add(client)
+            written = a_minimal_order(TENANT_ONE, client_id=client.id)
             await orders.add(written)
             written_id = written.id
 

@@ -57,7 +57,7 @@ from sqlalchemy import CheckConstraint, DateTime, Index, Text, UniqueConstraint,
 from sqlalchemy.dialects.postgresql import ENUM, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from titlepipe_core.db.models import Base
+from titlepipe_core.db.models import Base, bounded_jsonb_object
 
 __all__ = [
     "USER_ROLE",
@@ -255,15 +255,20 @@ class Client(_IdentityRow):
     `docs/PRD.md` §7's row verbatim: `clients(id, tenant_id, name,
     delivery_method, delivery_config, report_shape, template_ref)`.
 
-    **`client_id` COLUMNS ALREADY EXIST WITH NO FOREIGN KEY POINTING HERE.** The
-    domain schema carries `client_id` on `client_config_versions` and on `orders`
-    and neither declares an FK, because this table did not exist. The FK is a
-    composite `(tenant_id, client_id)` one — `CONVENTIONS.md` §1: a single-column
-    FK to a tenant-scoped table is a defect, since it would let a row in tenant A
-    reference a row in tenant B and no policy would see it. It is NOT declared
-    from this side: the referencing tables belong to the domain schema, and a
-    migration that reached across to add constraints to them would be this
-    revision editing tables it does not create.
+    **TWO `client_id` COLUMNS POINT HERE, AND `0110` IS WHAT MAKES THEM
+    REFERENCES.** `db/models/orders.Order` and
+    `db/models/intake.ClientConfigVersion` each carry a composite
+    `(tenant_id, client_id) REFERENCES clients (tenant_id, id)` —
+    `CONVENTIONS.md` §1: a single-column FK to a tenant-scoped table is a defect,
+    because it would let a row in tenant A reference a row in tenant B and no
+    policy would see it. Neither is declared from THIS side: the referencing
+    tables belong to the domain schema, and `relations.tenant_fk` is where the
+    reasoning lives.
+
+    🔴 THE COLUMNS BELOW ARE WHY THAT CONSTRAINT IS NOT BOOKKEEPING.
+    `delivery_method`, `delivery_config` and `template_ref` are the DESTINATION a
+    rendered report is transmitted to, so an order naming another tenant's client
+    is one shop's deliverable addressed to another shop's customer.
 
     **`delivery_method` AND `report_shape` ARE `text` AND NOT ENUMS, AND THAT IS
     CITED RATHER THAN LAZY.** `packages/contract/src/entities.ts:283` types
@@ -280,6 +285,12 @@ class Client(_IdentityRow):
     """
 
     __tablename__ = "clients"
+
+    # `0112`. The delivery DESTINATION is the one jsonb column in this schema
+    # with a live consumer, and until that revision it accepted an array, a
+    # string, a number and the JSON `null` as readily as an object, at any size.
+    # See `db/models/jsonb.bounded_jsonb_object`.
+    __table_args__ = (bounded_jsonb_object("delivery_config", nullable=True),)
 
     name: Mapped[str] = mapped_column(Text, nullable=False)
     delivery_method: Mapped[str] = mapped_column(Text, nullable=False)
