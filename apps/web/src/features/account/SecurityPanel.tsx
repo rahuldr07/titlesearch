@@ -2,7 +2,7 @@ import { useRead } from "../../app/useRead";
 import { meProfile } from "../../shared/accountQueries";
 import { Badge, Card } from "../../components/ui";
 import { ContractGap } from "../../entities/contract/ContractGap";
-import { PanelFrame } from "./AccountPanel";
+import { PanelFrame } from "./PanelFrame";
 import { QueryState } from "../../entities/state/QueryState";
 
 /**

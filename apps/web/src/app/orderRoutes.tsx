@@ -2,9 +2,9 @@ import { createRoute } from "@tanstack/react-router";
 import { rootRoute } from "./rootRoute";
 import { orderSearch } from "./orderSearch";
 import { OrderRoute } from "./chrome/OrderRoute";
-import { WorkstationScreen } from "../features/review/WorkstationScreen";
-import { ReleaseScreen } from "../features/release/ReleaseScreen";
-import { ExtractionView } from "../features/extraction/ExtractionView";
+import { WorkstationScreen } from "../features/review";
+import { ReleaseScreen } from "../features/release";
+import { ExtractionView } from "../features/extraction";
 
 /**
  * The order-scoped routes — hand-written because their params buy a

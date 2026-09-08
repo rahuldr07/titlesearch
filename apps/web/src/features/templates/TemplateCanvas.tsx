@@ -3,9 +3,10 @@ import { Button, Segment, SegmentedControl } from "../../components/ui";
 import { ExportSpecDialog } from "./ExportSpecDialog";
 import { TemplateSheet } from "./TemplateSheet";
 import { TemplateDiff } from "./TemplateDiff";
-import { useSaveTemplate } from "./useTemplates";
+import { useSaveTemplate, type NaSimMode } from "./useTemplates";
 import { NaSimBar } from "./NaSimBar";
-import type { NaSimMode, TemplateView } from "./TemplatesScreen";
+
+export type TemplateView = "sheet" | "diff" | "json";
 
 /**
  * The centre column — toolbar, NA simulation bar, and the three views

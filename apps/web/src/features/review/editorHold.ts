@@ -1,5 +1,6 @@
 import type { NaReason } from "@titlepipe/contract";
-import type { EditorMode } from "./DecisionEditor";
+
+export type EditorMode = "correct" | "escalate" | "absence" | null;
 
 /**
  * Why a submit is held, as a sentence — the refusal rules of this screen in

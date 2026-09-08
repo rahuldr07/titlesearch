@@ -1,5 +1,6 @@
 import { Button, Dialog, DialogBody, DialogFooter, Kbd } from "../../components/ui";
-import { CHORD_SECTIONS, chordsIn, type ChordSection } from "../../app/keyboard/keymap";
+import { CHORD_SECTIONS, chordsIn } from "../../app/keyboard/keymap";
+import type { ChordSection } from "../../app/keyboard/chordSpec";
 import { useOverlayOpen, useOverlays } from "../../app/keyboard/overlays";
 
 /**

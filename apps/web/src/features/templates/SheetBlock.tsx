@@ -1,7 +1,6 @@
 import type { TemplateSheetBlock } from "@titlepipe/contract";
 import { cx } from "../../components/ui";
-import { NA_MODES, interpolate } from "./useTemplates";
-import type { NaSimMode } from "./TemplatesScreen";
+import { NA_MODES, interpolate, type NaSimMode } from "./useTemplates";
 
 /**
  * One live-sheet block. Clickable (selects the block for the inspector);

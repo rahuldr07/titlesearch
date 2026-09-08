@@ -1,7 +1,7 @@
 import { useRead } from "../../app/useRead";
 import { audit } from "../../shared/accountQueries";
 import { Card } from "../../components/ui";
-import { PanelFrame } from "./AccountPanel";
+import { PanelFrame } from "./PanelFrame";
 import { QueryState } from "../../entities/state/QueryState";
 
 /**

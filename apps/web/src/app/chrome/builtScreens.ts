@@ -1,12 +1,12 @@
 import type { JSX } from "react";
-import { OverviewScreen } from "../../features/overview/OverviewScreen";
-import { QueueScreen } from "../../features/queue/QueueScreen";
-import { OrdersListScreen } from "../../features/ordersList/OrdersListScreen";
-import { IngestScreen } from "../../features/ingest/IngestScreen";
-import { EscalationsScreen } from "../../features/escalations/EscalationsScreen";
-import { TemplatesScreen } from "../../features/templates/TemplatesScreen";
-import { JurisdictionScreen } from "../../features/jurisdiction/JurisdictionScreen";
-import { BlindSeatScreen } from "../../features/blind/BlindSeatScreen";
+import { OverviewScreen } from "../../features/overview";
+import { QueueScreen } from "../../features/queue";
+import { OrdersListScreen } from "../../features/ordersList";
+import { IngestScreen } from "../../features/ingest";
+import { EscalationsScreen } from "../../features/escalations";
+import { TemplatesScreen } from "../../features/templates";
+import { JurisdictionScreen } from "../../features/jurisdiction";
+import { BlindSeatScreen } from "../../features/blind";
 
 /**
  * The flat doors that have a screen. `unbuiltScreens.ts` stays the complete

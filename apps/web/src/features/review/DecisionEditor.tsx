@@ -2,9 +2,7 @@ import { useState } from "react";
 import type { NaReason } from "@titlepipe/contract";
 import { Button, InnerPanel, Label, Textarea } from "../../components/ui";
 import { AbsencePicker } from "./AbsencePicker";
-import { REASON_LABEL, SUBMIT_LABEL, holdFor } from "./editorHold";
-
-export type EditorMode = "correct" | "escalate" | "absence" | null;
+import { REASON_LABEL, SUBMIT_LABEL, holdFor, type EditorMode } from "./editorHold";
 
 /**
  * The three editors, one refusal shape: a correction is refused without its

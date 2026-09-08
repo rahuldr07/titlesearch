@@ -1,5 +1,5 @@
 import { Button } from "../../components/ui";
-import type { EditorMode } from "./DecisionEditor";
+import type { EditorMode } from "./editorHold";
 
 /**
  * Four acts on the open decision: Confirm · Correct · Declare an absence ·

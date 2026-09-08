@@ -1,5 +1,6 @@
 import { useNavigate } from "@tanstack/react-router";
-import { useSignedIn, type DemoAccount } from "../../app/session/signedIn";
+import { useSignedIn } from "../../app/session/signedIn";
+import type { DemoAccount } from "../../app/session/demoAccounts";
 import { useSession } from "../../shared/session";
 import { DEMO_ACCOUNTS } from "../../app/session/demoAccounts";
 import { AccountRow } from "./AccountRow";

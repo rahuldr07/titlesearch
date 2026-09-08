@@ -1,0 +1,1 @@
+export { BlindSeatScreen } from "./BlindSeatScreen";

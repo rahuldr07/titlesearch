@@ -8,11 +8,13 @@ import { ScreenBoundary } from "./chrome/ScreenBoundary";
 import { NotFound } from "./chrome/Unbuilt";
 import { GlobalKeys } from "./keyboard/GlobalKeys";
 import { CommandPalette } from "./keyboard/CommandPalette";
-import { ShortcutsOverlay } from "../features/overlays/ShortcutsOverlay";
-import { NaGuideOverlay } from "../features/overlays/NaGuideOverlay";
-import { OrderHistoryOverlay } from "../features/overlays/OrderHistoryOverlay";
+import {
+  ShortcutsOverlay,
+  NaGuideOverlay,
+  OrderHistoryOverlay,
+} from "../features/overlays";
 import { isCaptureSeat } from "./chrome/captureSeat";
-import { SigninScreen } from "../features/signin/SigninScreen";
+import { SigninScreen } from "../features/signin";
 
 /**
  * The frame. One viewport tall, and it never scrolls: `styles.css` roots
