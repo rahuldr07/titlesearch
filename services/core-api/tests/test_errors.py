@@ -14,13 +14,6 @@ from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 from pydantic import BaseModel, field_validator
 
-from titlepipe_core.api.error_envelope import (
-    CODE_INTERNAL_ERROR,
-    GENERIC_HTTP_MESSAGE,
-    GENERIC_INTERNAL_MESSAGE,
-    sanitise_validation_errors,
-    status_for,
-)
 from titlepipe_core.app import create_app
 from titlepipe_core.settings import CoreApiSettings
 from titlepipe_domain import (
@@ -34,6 +27,13 @@ from titlepipe_domain import (
     RefusalError,
     UnauthenticatedError,
     ValidationError,
+)
+from titlepipe_http_kit.error_contract import (
+    CODE_INTERNAL_ERROR,
+    GENERIC_HTTP_MESSAGE,
+    GENERIC_INTERNAL_MESSAGE,
+    sanitise_validation_errors,
+    status_for,
 )
 from titlepipe_test_support import FrozenClock, SequenceIdFactory
 

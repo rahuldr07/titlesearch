@@ -104,7 +104,7 @@ class MockAuthGuardMiddleware:
     """Refuses any request bearing a mock-auth header, unless mock auth is on.
 
     Pure ASGI rather than `BaseHTTPMiddleware`, matching
-    `api/request_context.py`: that class runs the downstream app in a separate
+    `titlepipe_http_kit.request_context`: that class runs the downstream app in a separate
     task, and this one sits between the request-context middleware and the
     router, where a task hop would break the contextvar `envelope` reads the
     correlation id from.

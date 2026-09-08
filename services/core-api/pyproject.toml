@@ -6,6 +6,7 @@ requires-python = ">=3.13,<3.14"
 dependencies = [
     "titlepipe-domain",
     "titlepipe-service-kit",
+    "titlepipe-http-kit",
     "fastapi==0.139.*",
     "uvicorn[standard]==0.51.*",
     "pydantic==2.13.*",
@@ -99,6 +100,7 @@ packages = ["src/titlepipe_core"]
 
 [tool.uv.sources]
 titlepipe-domain = { path = "../../libs/domain", editable = true }
+titlepipe-http-kit = { path = "../../libs/http-kit", editable = true }
 titlepipe-service-kit = { path = "../../libs/service-kit", editable = true }
 titlepipe-test-support = { path = "../../libs/test-support", editable = true }
 

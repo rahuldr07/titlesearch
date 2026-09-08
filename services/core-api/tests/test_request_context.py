@@ -11,7 +11,7 @@ from fastapi.testclient import TestClient
 from starlette.responses import StreamingResponse
 from starlette.types import Message, Receive, Scope, Send
 
-from titlepipe_core.api.request_context import (
+from titlepipe_http_kit.request_context import (
     MAX_INBOUND_REQUEST_ID_LENGTH,
     REQUEST_ID_HEADER,
     RequestContextMiddleware,

@@ -60,6 +60,11 @@ FORBIDDEN_ROOTS = frozenset(
         "titlepipe_blind",
         "titlepipe_worker",
         "titlepipe_test_support",
+        # The other kit. `titlepipe_http_kit` depends on starlette by design —
+        # it is the HTTP layer this package is forbidden to hold — so an import
+        # of it here is the same web server entering the worker image by one
+        # more hop.
+        "titlepipe_http_kit",
     }
 )
 

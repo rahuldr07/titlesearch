@@ -1,0 +1,52 @@
+[project]
+name = "titlepipe-http-kit"
+version = "0.1.0"
+description = "HTTP-layer plumbing shared by the TitlePipe API services: request correlation and the error contract."
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "titlepipe-domain",
+    "starlette>=1.3,<2",
+    "structlog>=26.1,<27",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "ruff==0.15.*",
+    "pyright==1.1.*",
+    "pytest==9.1.*",
+    "pytest-cov==7.*",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/titlepipe_http_kit"]
+
+[tool.uv.sources]
+titlepipe-domain = { path = "../domain", editable = true }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --strict-markers --strict-config"
+
+[tool.pyright]
+include = ["src", "tests"]
+typeCheckingMode = "strict"
+pythonVersion = "3.13"
+reportMissingTypeStubs = false
+
+[[tool.pyright.executionEnvironments]]
+root = "tests"
+reportUnusedFunction = false
+
+# This package exists because `libs/service-kit` is FORBIDDEN a web framework —
+# its boundary test keeps a web server out of the worker image — while the two
+# API services carried 258 byte-identical lines of starlette-facing middleware
+# plus a near-identical error contract, and the duplication produced a real
+# defect (blind-svc logged a correctly-mapped 503 as unmapped for as long as its
+# copy went unfixed). This kit MAY import starlette; it may NOT import fastapi
+# (it is written against the ASGI interface, not a framework), and it may never
+# import a service or the service kit. `tests/test_import_boundary.py` refuses
+# all of that statically, in both the lazy and the TYPE_CHECKING shapes.

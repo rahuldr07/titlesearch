@@ -21,6 +21,7 @@ PROJECTS = (
     "libs/domain",
     "libs/test-support",
     "libs/service-kit",
+    "libs/http-kit",
     "services/core-api",
     "services/blind-svc",
     "services/worker",

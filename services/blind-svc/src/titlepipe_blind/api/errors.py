@@ -1,8 +1,8 @@
 """The four ASGI error handlers, and the registration that installs them.
 
-`api/error_envelope.py` is the other half — the wire shape, the code vocabulary
-and the status mapping, which are pure data and pure functions. This module is
-what puts them on a response.
+`api/error_envelope.py` holds the wire shape; the code vocabulary and the
+status mapping are `titlepipe_http_kit.error_contract`, shared with core-api.
+This module is what puts both on a response.
 
 **Internals never pass through.** An unhandled exception in a deployed
 environment yields a generic 500 with no type, message or traceback. The detail
@@ -12,7 +12,6 @@ goes to the log, bound to the same `request_id` the caller was given.
 from __future__ import annotations
 
 from collections.abc import Callable
-from http import HTTPStatus
 from typing import Final
 
 from fastapi import FastAPI
@@ -22,21 +21,19 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 from structlog.typing import FilteringBoundLogger
 
-from titlepipe_blind.api.error_envelope import (
+from titlepipe_blind.api.error_envelope import ErrorBody, ErrorEnvelope, envelope
+from titlepipe_domain import DomainError, Environment
+from titlepipe_http_kit.error_contract import (
     CODE_BAD_REQUEST,
     CODE_INTERNAL_ERROR,
     CODE_VALIDATION_FAILED,
-    GENERIC_HTTP_MESSAGE,
     GENERIC_INTERNAL_MESSAGE,
     STARLETTE_STATUS_CODES,
     UNMAPPED_STATUS,
-    ErrorBody,
-    ErrorEnvelope,
-    envelope,
     mapped_status_for,
+    publishable_detail,
     sanitise_validation_errors,
 )
-from titlepipe_domain import DomainError, Environment
 from titlepipe_service_kit.telemetry.logging import get_logger
 
 
@@ -109,59 +106,13 @@ async def handle_request_validation(request: Request, exc: Exception) -> JSONRes
     )
 
 
-def _publishable_detail(detail: object, *, status: int, deployed: bool) -> str:
-    """`exc.detail`, or the generic sentence when it cannot be shown to a caller.
-
-    🔴 THE DETAIL USED TO GO OUT VERBATIM IN EVERY ENVIRONMENT. `handle_unexpected`
-    below spends its whole body on this exact question and answers "not in a
-    deployed environment"; this handler asked it of nothing. It was DORMANT
-    rather than harmless: rule 4 of `scripts/check_backend_rules.py` bans
-    `HTTPException` outside this module, so no code in this tree can put a
-    sentence of its own there today. A ban is not a redaction — it holds for our
-    code, says nothing about a dependency's, and stops holding the day the ban is
-    exempted once. THIS SERVICE HOLDS THE CAPTURE UPLOADS, so the margin between
-    dormant and live is the one worth buying here.
-
-    A DETAIL EQUAL TO THE STATUS'S OWN REASON PHRASE IS STILL PUBLISHED, deployed
-    or not. `HTTPException(404)` defaults `detail` to `HTTPStatus(404).phrase`, so
-    "Not Found" and "Method Not Allowed" — every detail this tree can currently
-    produce — are constants of the protocol and carry nothing about this system.
-    Redacting them too was the rejected alternative: it costs every 404 its
-    sentence to protect against text that is provably not there.
-
-    RESIDUAL: this function and its caller are duplicated byte-for-byte in
-    `titlepipe_core.api.errors`, because `libs/service-kit` carries no `api`
-    module and adding one is not this branch's. Until it does, a change here is a
-    change in two files; `blind-svc/tests/test_foundation.py` here and
-    `core-api/tests/test_errors.py` there each assert it separately, which is
-    what makes the drift visible rather than the duplication safe.
-    """
-    if not isinstance(detail, str) or not detail:
-        return GENERIC_HTTP_MESSAGE
-    if not deployed or detail == _status_phrase(status):
-        return detail
-    return GENERIC_HTTP_MESSAGE
-
-
-def _status_phrase(status: int) -> str:
-    """The protocol's own sentence for this status, or `""` for one it has none for.
-
-    `""` and not `None` so the comparison above stays an equality between two
-    strings; a detail is never empty by the time it is compared.
-    """
-    try:
-        return HTTPStatus(status).phrase
-    except ValueError:
-        return ""
-
-
 async def handle_http_exception(request: Request, exc: Exception) -> JSONResponse:
     """Statuses Starlette raises itself — an unknown route, a bad method."""
     status = exc.status_code if isinstance(exc, StarletteHTTPException) else 500
     code = STARLETTE_STATUS_CODES.get(
         status, CODE_INTERNAL_ERROR if status >= 500 else CODE_BAD_REQUEST
     )
-    message = _publishable_detail(
+    message = publishable_detail(
         getattr(exc, "detail", None),
         status=status,
         deployed=_environment_of(request).is_deployed,
