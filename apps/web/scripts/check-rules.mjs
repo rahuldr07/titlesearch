@@ -13,8 +13,12 @@
  *   - Deliberate obfuscation ("local" + "Storage") is not the threat model.
  *     This gate is for accidents and habits, not for an adversary.
  *
- * Escape hatch: a line containing `rules-allow:` is skipped, and must be
- * followed by a reason — a bare marker is itself an error.
+ * Escape hatch: a `rules-allow:` marker suppresses its own line and at most
+ * ALLOW_REACH lines above it, and must be followed by a reason — a bare
+ * marker is itself an error. The reach exists because prettier explodes a
+ * marked construct and strands the marker on the closing line, below the
+ * line the violation is reported on; it is a ceiling, not a radius — a
+ * marker never reaches downward past its own line.
  *
  *   node scripts/check-rules.mjs
  */
@@ -54,6 +58,18 @@ const FIELD_VALUE_ACCESS = /\.\s*value\b|\[\s*["']value["']\s*\]/;
 const LINE_LIMIT = 250;
 /** A 2-line 1,900-character file passed the line count. Bytes catch that. */
 const CHAR_LIMIT = 8000;
+
+/*
+ * How far above its own line a `rules-allow:` marker reaches. 4 is the
+ * measured worst case after the first prettier pass (e9a0ab6): a marked
+ * construct explodes into opener, one line per property or argument, and
+ * the closer carrying the marker — tableRow's three-property style object
+ * and browser-surfaces' four-part color-mix() both close 4 lines down.
+ * A construct too big for the reach should move the marker inside itself,
+ * not widen this number: every line inside the reach is skipped for EVERY
+ * rule, so the reach is exactly the size of the blind spot.
+ */
+const ALLOW_REACH = 4;
 
 const BANNED = [
   {
@@ -232,6 +248,7 @@ for (const file of files) {
   const rel = relative(ROOT, file);
   const text = readFileSync(file, "utf8");
   const lines = text.split("\n");
+  const allowed = allowedLines(lines);
 
   /*
    * Provenance ("never emit a value you can't cite"). `Cited<T>` does not
@@ -247,7 +264,7 @@ for (const file of files) {
     lines.forEach((raw, i) => {
       const t = raw.trim();
       if (t.startsWith("//") || t.startsWith("*") || t.startsWith("/*")) return;
-      if (raw.includes("rules-allow:")) return;
+      if (allowed.has(i)) return;
       // A property being WRITTEN in an object literal (`value: "X"`) is a
       // fixture constructing a Field, not a render reading one.
       if (!FIELD_VALUE_ACCESS.test(raw)) return;
@@ -295,7 +312,7 @@ for (const file of files) {
   // `new Date("2024-03-15")` in prose, which is not a use.
   if (rel !== DATE_UTILITY && DATE_RE.test(stripComments(stripAllowed(text)))) {
     const n = lines.findIndex(
-      (l) => DATE_RE.test(l) && !l.includes("rules-allow:") && !/^\s*[/*]/.test(l),
+      (l, j) => DATE_RE.test(l) && !allowed.has(j) && !/^\s*[/*]/.test(l),
     );
     if (n >= 0) {
       add(
@@ -351,6 +368,7 @@ for (const file of files) {
       return;
     }
     if (t.startsWith("//") || inBlockComment) return;
+    if (allowed.has(i)) return;
 
     for (const b of BANNED) {
       // Scoped exemption: correct INSIDE one at-rule, an error everywhere else.
@@ -403,12 +421,28 @@ for (const file of files) {
   });
 }
 
-/** Remove `rules-allow:` lines before whole-file checks. */
+/**
+ * The 0-based line indexes a file's `rules-allow:` markers suppress: each
+ * marker's own line and ALLOW_REACH lines above it. A marker on a block-
+ * comment prose line is a mention, not a marker — same test the per-line
+ * loop applies.
+ */
+function allowedLines(lines) {
+  const out = new Set();
+  lines.forEach((raw, i) => {
+    if (!raw.includes("rules-allow:")) return;
+    const t = raw.trim();
+    if (t.startsWith("*") || t.startsWith("/*")) return;
+    for (let j = Math.max(0, i - ALLOW_REACH); j <= i; j++) out.add(j);
+  });
+  return out;
+}
+
+/** Remove marker-suppressed lines before whole-file checks. */
 function stripAllowed(text) {
-  return text
-    .split("\n")
-    .filter((l) => !l.includes("rules-allow:"))
-    .join("\n");
+  const lines = text.split("\n");
+  const allowed = allowedLines(lines);
+  return lines.filter((_, i) => !allowed.has(i)).join("\n");
 }
 
 /** Remove block and line comments — prose that quotes banned code is not a use. */
