@@ -92,10 +92,12 @@ class ClientConfigVersion(_TenantRow):
     shape exists to prevent — it changes what an order was searched under, after
     it was searched.
 
-    `client_id` CARRIES NO FOREIGN KEY YET for `orders.client_id`'s reason:
-    `clients` is another worker's table and does not exist on this branch. It is
-    a REQUEST in the build report, not a silent omission, and until it lands the
-    reference is an unproven residual.
+    `client_id` CARRIES THE COMPOSITE FOREIGN KEY `orders.client_id` carries, and
+    `0110` adds both in one revision. It matters here for a reason of this
+    table's own: a config version is what an order is SEARCHED UNDER, so a
+    version naming another tenant's client is a delta attributed to a customer
+    who never agreed it. `orders.Order`'s docstring carries the full reasoning
+    and the residual.
 
     **ONE CURRENT VERSION PER (client, product)** — the PARTIAL unique index below
     over `is_current`, not a plain unique constraint, because the whole point is
@@ -104,6 +106,7 @@ class ClientConfigVersion(_TenantRow):
 
     __tablename__ = "client_config_versions"
     __table_args__ = (
+        tenant_fk(column="client_id", target_table="clients"),
         tenant_fk(column="product_id", target_table="products"),
         sa.UniqueConstraint(
             "tenant_id",

@@ -165,10 +165,10 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping
 from types import MappingProxyType
 from typing import NamedTuple
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import pytest
-from minimal_rows import a_minimal_order, insert_audit_log
+from minimal_rows import a_minimal_client, a_minimal_order, insert_audit_log
 from sqlalchemy import Select, func, select, text
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncEngine
@@ -813,7 +813,9 @@ async def test_1_a_second_scoped_session_on_the_reused_connection_sees_nothing(
         sessionmaker = make_sessionmaker(engine)
 
         async with tenant_session(sessionmaker, tenant_a) as session:
-            session.add(a_minimal_order(isolation_tenant_a))
+            client = a_minimal_client(isolation_tenant_a)
+            session.add(client)
+            session.add(a_minimal_order(isolation_tenant_a, client_id=client.id))
             await session.flush()
             wrote_on = (await session.execute(select(func.pg_backend_pid()))).scalar_one()
             established = (await session.execute(_read_the_guc(tenant_guc))).scalar_one()
@@ -1211,7 +1213,14 @@ async def test_2_a_write_carrying_another_tenants_id_is_refused_with_42501(
     try:
         sessionmaker = make_sessionmaker(engine)
         async with tenant_session(sessionmaker, TenantId(isolation_tenant_a)) as session:
-            session.add(a_minimal_order(isolation_tenant_b))
+            # NO CLIENT ROW, AND THAT IS DELIBERATE. The id names nothing, so
+            # `0110`'s foreign key would refuse this row too — but the tenant
+            # policy's `WITH CHECK` is evaluated before the constraint's AFTER
+            # trigger, so 42501 arrives first and the assertion below is still
+            # about the policy. Writing a tenant-B client here to avoid the
+            # question would need a tenant-B session, which is the thing this
+            # test is proving cannot be had from here.
+            session.add(a_minimal_order(isolation_tenant_b, client_id=uuid4()))
             with pytest.raises(DBAPIError) as raised:
                 await session.flush()
             await session.rollback()
@@ -1644,7 +1653,9 @@ async def test_4_a_savepoint_rolled_back_leaves_the_tenant_established(
             before = set((await session.scalars(select(Order.id))).all())
 
             savepoint = await session.begin_nested()
-            session.add(a_minimal_order(isolation_tenant_a))
+            client = a_minimal_client(isolation_tenant_a)
+            session.add(client)
+            session.add(a_minimal_order(isolation_tenant_a, client_id=client.id))
             await session.flush()
             inside = set((await session.scalars(select(Order.id))).all())
             await savepoint.rollback()
