@@ -341,25 +341,6 @@ def insert_audit_log(*, tenant: str | None = None, returning: str | None = None)
     return statement if returning is None else f"{statement} RETURNING {returning}"
 
 
-def a_minimal_order(tenant_id: uuid.UUID, **overrides: Any) -> Order:
-    """An `Order` that satisfies every `NOT NULL` and asserts nothing else.
-
-    🔴 `client_id` AND `arrived_at` USED TO SIT OUTSIDE THE OVERRIDE MERGE, so a
-    caller naming either got `Order() got multiple values for keyword argument`
-    rather than the value it asked for — MEASURED the first time
-    `test_queue_endpoint` wanted a row with every column of its own choosing.
-    Every default now goes through the same dict, so `**overrides` means what the
-    signature says. `tenant_id` stays positional and is the one thing a caller
-    cannot supply twice.
-    """
-    defaults: dict[str, Any] = {
-        "client_id": uuid.uuid4(),
-        "arrived_at": datetime.now(UTC),
-        **_minimal_order_required(),
-    }
-    return Order(tenant_id=tenant_id, **{**defaults, **overrides})
-
-
 def a_minimal_client(tenant_id: uuid.UUID, **overrides: Any) -> Client:
     """A `Client` that satisfies every `NOT NULL` and asserts nothing else.
 
@@ -398,12 +379,12 @@ def a_minimal_order(tenant_id: uuid.UUID, *, client_id: uuid.UUID, **overrides: 
     `23503` from the key. `test_tenant_isolation.py`'s write-side proof depends
     on that ordering.
     """
-    return Order(
-        tenant_id=tenant_id,
-        client_id=client_id,
-        arrived_at=datetime.now(UTC),
-        **{**_minimal_order_required(), **overrides},
-    )
+    defaults: dict[str, Any] = {
+        "client_id": client_id,
+        "arrived_at": datetime.now(UTC),
+        **_minimal_order_required(),
+    }
+    return Order(tenant_id=tenant_id, **{**defaults, **overrides})
 
 
 # ---------------------------------------------------------------------------
