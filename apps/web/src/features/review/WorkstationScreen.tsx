@@ -76,6 +76,20 @@ export function WorkstationScreen(props: {
   const clearPreview = () => {
     setHover(null);
   };
+  /*
+   * DECISION (owner, 2026-09-08): double-click edits are NOT gated to the
+   * queue. `onSelect` refuses a row `canSelect` rejects and J/K walk queued
+   * fields only; this path consults neither, and grants the very selection
+   * the click refused — it is the deliberate override for correcting a field
+   * the pipeline settled (an auto_confirmed misread has no other route).
+   * Rejected alternative: `beginEdit` consulting `canSelect` the way
+   * `onSelect` does. That closes the only way onto a settled field, so the
+   * two checks disagreeing is the design, not a missed guard. The ruling
+   * covers reachability only; what the filed correction must carry is ruled
+   * separately (`editorHold.ts`, review.spec.ts PATH B). Pinned by "PATH B
+   * (double-click) — the ruled override opens a write surface on an
+   * auto-confirmed row" in e2e/invariants/review.spec.ts.
+   */
   const beginEdit = (field: { readonly path: string }) => {
     props.onSelectField(field.path);
     edit.raise(field.path);

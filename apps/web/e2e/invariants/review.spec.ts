@@ -161,23 +161,31 @@ test("PATH B (double-click) — files a correction from a surface with no reason
 });
 
 /**
- * PATH B REACHES ROWS THE QUEUE DOES NOT OFFER.
+ * PATH B REACHES ROWS THE QUEUE DOES NOT OFFER — BY RULING.
  *
  * `FieldQueue` hangs `onDoubleClick` on EVERY row wrapper, and `beginEdit`
  * (`WorkstationScreen.tsx`) raises the editor without consulting `canSelect`.
  * Single click is gated — `onSelect` runs `canSelect(field)` first — and J/K
  * walk queued fields only, which `J/K walk the queued fields only` above
- * proves. Double-click is gated by nothing.
+ * proves. Double-click alone is not.
+ *
+ * This test used to pin that asymmetry as a recorded defect. The owner ruled
+ * on 2026-09-08 that it is deliberate: double-click is the reviewer's
+ * override onto a field the pipeline settled. Gating `beginEdit` on
+ * `canSelect` the way `onSelect` is gated was considered and rejected — it
+ * would close the only route for correcting an auto-confirmed field. The
+ * decision is recorded at `beginEdit` in `WorkstationScreen.tsx`.
  *
  * `owner.property_address` is `auto_confirmed`: the pipeline read it, no human
  * was ever asked about it, and it is not in the queue.
  *
- * 🔴 THIS TEST ALSO PINS A DEFECT RATHER THAN A RULE, for the same reason as
- * the one above: the behaviour is unruled, and an unwatched wire is how it
- * stays unruled. If the double-click is gated to the queue, this goes red and
- * the assertion should become `toHaveCount(0)`.
+ * Same assertion as before; what it means has changed. If a refactor gates
+ * the double-click to the queue, this goes red — and that red is the ruled
+ * override being closed, which takes the owner, not a fixed test. The ruling
+ * covers reachability only: what a correction filed from this surface must
+ * carry is the test above's subject, ruled separately.
  */
-test("PATH B (double-click) — opens a write surface on an auto-confirmed row", async ({
+test("PATH B (double-click) — the ruled override opens a write surface on an auto-confirmed row", async ({
   page,
 }) => {
   await go(page);
