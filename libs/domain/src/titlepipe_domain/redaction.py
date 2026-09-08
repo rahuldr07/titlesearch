@@ -179,8 +179,6 @@ SAFE_KEY_EXCEPTIONS: Final[frozenset[str]] = frozenset(
     }
 )
 
-# --------------------------------------------------------------- the allowlist
-#
 # Everything above is a *blocklist*: it names what must not be logged. A
 # blocklist is the wrong default for a deployed environment, because it is only
 # ever as good as the last field someone thought of. Review demonstrated the

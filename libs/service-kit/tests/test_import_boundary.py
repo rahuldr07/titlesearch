@@ -68,12 +68,28 @@ SOURCE_FILES = sorted(PACKAGE_ROOT.rglob("*.py"))
 
 
 def imported_roots(source: str) -> set[str]:
-    """Every top-level package name imported anywhere in the source."""
+    """Every top-level package name imported anywhere in the source.
+
+    Walks the whole tree, so an import nested inside a function, a method, a
+    conditional or a `TYPE_CHECKING` block is found exactly like one at module
+    level.
+
+    A SECOND COPY, AND THE DUPLICATION IS FORCED RATHER THAN OVERLOOKED. The
+    identical function is `libs/domain/tests/test_import_boundary.py`'s. The
+    obvious home is `libs/test-support`, which already carries the sibling AST
+    scanner in `log_fields.py` — but `titlepipe-test-support` depends on
+    `titlepipe-domain`, so domain's own test suite cannot import it without a
+    cycle. Until something below domain exists to hold it, these two agree by
+    hand: this copy had already lost the two paragraphs above, which is what
+    drift looks like before it reaches the code.
+    """
     roots: set[str] = set()
     for node in ast.walk(ast.parse(source)):
         if isinstance(node, ast.Import):
             for alias in node.names:
                 roots.add(alias.name.split(".")[0])
+        # `level > 0` is a relative import: within this package, and separately
+        # banned by ruff's TID252.
         elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
             roots.add(node.module.split(".")[0])
     return roots

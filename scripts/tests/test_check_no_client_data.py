@@ -300,6 +300,55 @@ def test_an_ssn_shaped_literal_is_refused_in_any_file_type(tmp_path: Path, name:
     assert "SSN" in reason
 
 
+# The INSERT marker's threshold. It was raised from one row to three after the
+# one-row form flagged migration 0112, whose only match is an example inside its
+# own docstring. Nothing asserted either number, so the raise was a change to a
+# security control that no test could have contradicted. These four pin what it
+# now does AND what it now lets past — the second half is the point, because a
+# threshold with only its passing case pinned reads as a rule with no ceiling.
+#
+# Assembled from fragments for the reason at the top of this section: three
+# consecutive literal rows here would make the guard refuse its own tests, which
+# is the marker working.
+_INSERT_ROW = " ".join(("INSERT", "INTO", "parcel", "VALUES", "(1, 1334, 238);")) + "\n"
+_INSERT_ROW_WITH_COLUMNS = (
+    " ".join(("INSERT", "INTO", "parcel", "(id, book, page)", "VALUES", "(1, 1334, 238);")) + "\n"
+)
+
+
+def test_the_insert_marker_refuses_three_consecutive_rows(tmp_path: Path) -> None:
+    """Three literal rows with no dump header is the shape this marker exists for."""
+    target = _write(tmp_path, "seed.sql", _INSERT_ROW * 3)
+    reason = violation_for(target)
+    assert reason is not None
+    assert "INSERT" in reason
+
+
+def test_the_insert_marker_allows_two_rows(tmp_path: Path) -> None:
+    """Deliberate, and the cost of the 0112 false positive.
+
+    A migration seeding a lookup table writes one or two rows, and a docstring
+    demonstrating the shape it refuses writes one. Both were being refused.
+    """
+    assert violation_for(_write(tmp_path, "seed.sql", _INSERT_ROW * 2)) is None
+
+
+def test_the_insert_marker_does_not_see_a_column_list(tmp_path: Path) -> None:
+    """`pg_dump --column-inserts` is not matched at any count.
+
+    Recorded rather than fixed: a real `pg_dump` also writes the header this
+    guard refuses on, so this is the ceiling on a hand-written or
+    header-stripped seed. See "What this guard does NOT do".
+    """
+    assert violation_for(_write(tmp_path, "seed.sql", _INSERT_ROW_WITH_COLUMNS * 8)) is None
+
+
+def test_a_column_list_dump_is_still_refused_on_its_header(tmp_path: Path) -> None:
+    """The ceiling above is narrow, and this is what keeps it narrow."""
+    payload = "-- PostgreSQL database " + "dump\n" + _INSERT_ROW_WITH_COLUMNS * 8
+    assert violation_for(_write(tmp_path, "seed.sql", payload)) is not None
+
+
 @pytest.mark.parametrize(
     "name",
     ["golden_seed.sql", "seed.txt", "restore"],

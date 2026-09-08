@@ -30,9 +30,11 @@ the redaction pipeline that would have scrubbed that DSN is not running yet.
    rather than the error would leak again.
 
 This is a separate module from `settings.py` because that file is at its
-400-line cap, and because core-api and blind-svc — which do not yet inherit
-`BaseServiceSettings` and carry their own copies of the model — import
-`redacted_settings_error` from here without importing the base class.
+400-line cap, and because `redacted_settings_error` has to stay importable
+WITHOUT the base class. blind-svc no longer needs that — it inherits
+`BaseHttpServiceSettings` and gets `from_environment` with it — but core-api
+still declares `CoreApiSettings(BaseSettings)` and imports this function on its
+own, which is what keeps the split from being only a line-count one.
 """
 
 from __future__ import annotations

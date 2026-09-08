@@ -90,6 +90,11 @@ def imported_roots(source: str) -> set[str]:
     Walks the whole tree, so an import nested inside a function, a method, a
     conditional or a `TYPE_CHECKING` block is found exactly like one at module
     level.
+
+    Copied in `libs/service-kit/tests/test_import_boundary.py`, which records
+    why the two cannot share one: `titlepipe-test-support` — where the sibling
+    AST scanner already lives — depends on this package, so this suite importing
+    it would be a cycle.
     """
     roots: set[str] = set()
     for node in ast.walk(ast.parse(source)):

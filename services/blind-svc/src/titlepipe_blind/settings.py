@@ -54,10 +54,13 @@ from pydantic_settings import SettingsConfigDict
 from titlepipe_domain import ServiceName
 from titlepipe_service_kit.settings import BaseHttpServiceSettings
 
-# Storage prefixes this service is permitted to be pointed at. `blind-input/` is
-# the only one that exists for it; the rest belong to Core and the workers.
+# The one storage prefix this service may be pointed at. The others —
+# `quarantine`, `validated`, `pages`, `reports`, `temporary` — belong to Core
+# and the workers, and they are NOT listed here as a blocklist. A blocklist was,
+# and it was never read: the validator below refuses anything that is not this
+# exact string, which is strictly stronger and does not need editing when a
+# sixth area is added somewhere else in the system.
 ALLOWED_STORAGE_PREFIX = "blind-input"
-FORBIDDEN_STORAGE_PREFIXES = ("quarantine", "validated", "pages", "reports", "temporary")
 
 
 class BlindApiSettings(BaseHttpServiceSettings):
