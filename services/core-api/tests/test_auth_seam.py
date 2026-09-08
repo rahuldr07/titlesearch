@@ -20,6 +20,7 @@ from dataclasses import dataclass, field
 
 import pytest
 from fastapi import FastAPI
+from pydantic import SecretStr
 from starlette.testclient import TestClient
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
@@ -33,8 +34,9 @@ from titlepipe_core.auth.mock import (
     MockHeaderProvider,
     development_seats,
 )
-from titlepipe_core.auth.provider import ProviderRegistry
+from titlepipe_core.auth.provider import Credentials, ProviderRegistry
 from titlepipe_core.auth.seam import build_auth_seam
+from titlepipe_core.auth.workos_provider import WORKOS_PROVIDER_NAME
 from titlepipe_core.settings import CoreApiSettings
 from titlepipe_domain import Environment, TenantId
 
@@ -222,6 +224,145 @@ async def test_the_development_directory_seats_every_label_it_advertises() -> No
         identity = await registry.authenticate(_Credentials({MOCK_ROLE_HEADER: label}))
         assert identity is not None
         assert await directory.find_seat(identity) is not None
+
+
+# ---------------------------------------------------------------------------
+# THE OTHER HALF OF THE SEAM: THE ADAPTER A DEPLOYED CONFIGURATION GETS.
+# ---------------------------------------------------------------------------
+
+
+def test_a_production_configuration_registers_the_workos_adapter(
+    production_settings: CoreApiSettings,
+) -> None:
+    """🔴 A FULLY-VALID PRODUCTION CONFIGURATION USED TO REGISTER NOTHING.
+
+    `build_auth_seam` had no WorkOS branch, so `WorkOSAuthKitProvider` was
+    imported by nothing and a production settings object carrying both
+    credentials produced `providers=()` — the empty registry that answers `None`
+    for every request. That is precisely the state
+    `CoreApiSettings._deployed_environments_refuse_unsafe_configuration` refuses
+    to start for, so the refusal was guarding a door onto the same room.
+    """
+    seam = build_auth_seam(production_settings)
+
+    assert seam.providers.names == (WORKOS_PROVIDER_NAME,)
+
+
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        pytest.param({}, id="unconfigured"),
+        pytest.param(
+            {
+                "workos_api_key": SecretStr("this-workos-key-never-authenticates"),
+                "workos_client_id": "client_this_tenant_does_not_exist",
+            },
+            id="configured",
+        ),
+    ],
+)
+def test_the_seam_registers_workos_exactly_when_settings_says_it_is_configured(
+    overrides: dict[str, object],
+) -> None:
+    """One fact, two expressions, pinned together.
+
+    `settings.workos_configured` is the property `_deployed_environments_refuse
+    _unsafe_configuration` reads; the seam reads the two credential FIELDS,
+    because pyright cannot see through a property to the validator that makes
+    them all-or-nothing. This is the machine that stops those two from drifting
+    — the day a third required WorkOS value joins the property, a seam that did
+    not learn about it fails here.
+    """
+    settings = CoreApiSettings(environment=Environment.TEST, **overrides)  # type: ignore[arg-type]
+
+    seam = build_auth_seam(settings)
+
+    assert (WORKOS_PROVIDER_NAME in seam.providers.names) is settings.workos_configured
+
+
+def test_a_deployed_seam_still_cannot_authenticate_because_it_has_no_directory(
+    production_settings: CoreApiSettings,
+) -> None:
+    """🔴 RESIDUAL, NAMED RATHER THAN CLOSED. Wiring the adapter did not finish
+    sign-in and this test says so out loud.
+
+    Two things are still missing and neither is this file's to supply.
+    `directory.py` has no database-backed implementation, so `seats` is `None`
+    and `require_seat` refuses with `no_seat_directory_is_configured`. And
+    `workos_provider.py` reads a cookie that `GET /auth/login` and `GET
+    /auth/callback` would set — routes that live in `api/routers/` and do not
+    exist.
+
+    `can_authenticate` is the startup-time report of exactly this, which is why
+    it is asserted `False` here instead of being quietly upgraded when the
+    provider arrived.
+    """
+    seam = build_auth_seam(production_settings)
+
+    assert seam.providers.names == (WORKOS_PROVIDER_NAME,)
+    assert seam.seats is None
+    assert seam.can_authenticate is False
+
+
+def test_a_development_seam_asks_the_real_provider_before_the_mock_one() -> None:
+    """Order is a real decision once there are two, and this is the decision.
+
+    A developer holding a genuine WorkOS session must not be silently downgraded
+    to a demo seat by a stale `x-mock-role` the frontend is still sending. The
+    mock adapter answers `None` when the header is absent, so asking WorkOS
+    first costs the development path nothing.
+    """
+    seam = build_auth_seam(
+        CoreApiSettings(
+            environment=Environment.DEVELOPMENT,
+            mock_auth_enabled=True,
+            workos_api_key=SecretStr("this-workos-key-never-authenticates"),
+            workos_client_id="client_this_tenant_does_not_exist",
+        )
+    )
+
+    assert seam.providers.names == (WORKOS_PROVIDER_NAME, MOCK_PROVIDER_NAME)
+
+
+@pytest.mark.asyncio
+async def test_an_adapter_may_only_answer_in_its_own_name() -> None:
+    """The only bound on `users.identity_provider`, which is `Text`.
+
+    `db/identity.py` promises "a provider name that no registered adapter claims
+    is refused at the seam" and `ProviderRegistry.authenticate` is that promise.
+    It RAISES rather than skipping: a mismatch is an adapter bug, and an adapter
+    bug that quietly produced no session would look exactly like a person with
+    no account.
+    """
+
+    class _Liar:
+        name = "honest"
+
+        # The name has to match the protocol's, which pyright checks; the body
+        # has no use for it, which ruff checks. The `noqa` sits on the parameter.
+        async def authenticate(
+            self,
+            credentials: Credentials,  # noqa: ARG002
+        ) -> ProviderIdentity:
+            return ProviderIdentity(
+                provider="somebody-else",
+                subject="s",
+                organization="o",
+                email="a@b.test",
+            )
+
+    with pytest.raises(ValueError, match="may only answer in its own name"):
+        await ProviderRegistry([_Liar()]).authenticate(_Credentials())
+
+
+def test_two_adapters_answering_to_one_name_are_refused() -> None:
+    """Two rows admitted by different code paths would be indistinguishable in
+    `users.identity_provider`; the column would no longer say which admitted
+    them."""
+    provider = MockHeaderProvider(environment=Environment.TEST)
+
+    with pytest.raises(ValueError, match="must be unique"):
+        ProviderRegistry([provider, MockHeaderProvider(environment=Environment.TEST)])
 
 
 # ---------------------------------------------------------------------------

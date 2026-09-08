@@ -5,30 +5,48 @@
 ---------------------------------------------------------------------------
 There are no WorkOS credentials on this machine and no tenant to point at, so
 nothing here has been run against the real thing. What IS tested is everything
-this file decides on its own — which cookie it reads, what it refuses, that a
-provider role claim cannot reach a seat — because those are decisions in this
-code rather than facts about WorkOS. What is NOT tested is the part WorkOS owns:
-that a genuine sealed cookie unseals with our password, that the access token
-inside it verifies against the tenant's JWKS, and that the claims are spelled
-the way `_identity_from` reads them. **The first real sign-in is that test.**
+this file decides on its own — which cookie it reads, what it refuses, what it
+throws away, and that a JWKS failure is a 503 rather than a denial — because
+those are decisions in this code rather than facts about WorkOS.
+`tests/test_workos_provider.py` is that file; the module was at 0% coverage
+while this paragraph claimed otherwise.
+
+What is NOT tested is the part WorkOS owns: that a genuine sealed cookie unseals
+with our password, that the access token inside it verifies against the tenant's
+JWKS, and that the claims are spelled the way `_identity_from` reads them. **The
+first real sign-in is that test**, and
+`test_workos_provider.py::test_a_live_workos_tenant_is_not_configured_here`
+fails on the day that becomes possible — a residual with a machine under it
+rather than a sentence that decays unread.
 
 Read the paragraph above before trusting any sentence below it. Every "does" in
 this module is a statement about the code, not a report of an observation.
 
-## The wiring that does not exist yet, and that this adapter cannot supply
+## What is wired, and the two halves of sign-in that are not
 
-This reads a session cookie. **Nothing in this service sets one.** The AuthKit
-round trip is three steps and only the third is a provider concern:
+`seam.build_auth_seam` CONSTRUCTS this adapter whenever both WorkOS credentials
+are configured, and `settings.py` refuses to start a deployed environment
+without them. That branch did not exist while this docstring described it: a
+valid production configuration registered no provider at all.
+
+Two halves are still missing and neither is this file's to supply.
+
+**Nothing in this service sets the cookie this reads.** The AuthKit round trip
+is three steps and only the third is a provider concern:
 
 1. `GET /auth/login` → redirect to the AuthKit authorization URL;
 2. `GET /auth/callback` → exchange the code, seal the response, set the cookie;
 3. every subsequent request → read the cookie. **This file, and only this file.**
 
-Steps 1 and 2 are routes, and routes are `api/routers/`. Until they exist, a
-correctly configured deployment has an adapter that works on a cookie no browser
-has been given — so it will refuse every request, and `AuthSeam
-.can_authenticate` will say `True` while it does. That gap is real and it is
-named here rather than papered over with a docstring implying a working sign-in.
+Steps 1 and 2 are routes, and routes are `api/routers/`.
+
+**And there is no seat directory to resolve an identity against.** `directory.py`
+has no database-backed implementation, so `AuthSeam.seats` is `None` outside a
+mock configuration and `dependencies.require_seat` refuses. That is why
+`AuthSeam.can_authenticate` still answers `False` for every deployed
+configuration even now that a provider is registered, and why it says `False`
+rather than `True` — the earlier version of this paragraph predicted the
+opposite.
 
 ## Why the cookie and not a bearer token
 
@@ -52,17 +70,21 @@ carrying one would mean editing that dataclass, which is a diff a reviewer sees.
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Mapping
 from typing import Final
 
+from jwt.exceptions import PyJWKClientError
 from workos import AsyncWorkOSClient
 from workos.session import (
     AuthenticateWithSessionCookieErrorResponse,
+    AuthenticateWithSessionCookieFailureReason,
     AuthenticateWithSessionCookieSuccessResponse,
 )
 
 from titlepipe_core.auth.identity import ProviderIdentity
 from titlepipe_core.auth.provider import Credentials
 from titlepipe_core.telemetry.logging import get_logger
+from titlepipe_domain import DependencyUnavailableError
 
 __all__ = [
     "WORKOS_PROVIDER_NAME",
@@ -80,13 +102,7 @@ WORKOS_PROVIDER_NAME: Final = "workos"
 _UNVERIFIABLE_MESSAGE: Final = "Sign-in is temporarily unavailable."
 
 
-def _log() -> object:
-    """Acquired at call time. `dependencies._log`'s rule: a module-level logger
-    pins whatever logging configuration was active first."""
-    return get_logger(__name__)
-
-
-def _string_claim(claims: object, key: str) -> str | None:
+def _string_claim(claims: Mapping[str, object] | None, key: str) -> str | None:
     """One string out of the SDK's untyped user dict, or `None`.
 
     `AuthenticateWithSessionCookieSuccessResponse.user` is the WorkOS user
@@ -97,9 +113,16 @@ def _string_claim(claims: object, key: str) -> str | None:
     `None` here and the caller refuses, instead of a `TypeError` three frames
     later in `ProviderIdentity.__post_init__`.
     """
-    if not isinstance(claims, dict):
+    # `Mapping` in the ANNOTATION and an `isinstance` as well, and both are
+    # load-bearing: the SDK types this `Optional[Dict[str, Any]]`, so the
+    # annotation is the SDK's promise and the check is what happens when a real
+    # payload breaks it. Narrowing from a bare `object` was the earlier spelling
+    # and produced `dict[Unknown, Unknown]`, whose every read pyright reports;
+    # `cast` is refused by this repository's rules gate, and rightly — it would
+    # have asserted the shape rather than checked it.
+    if not isinstance(claims, Mapping):
         return None
-    value: object = claims.get(key)
+    value = claims.get(key)
     return value if isinstance(value, str) else None
 
 
@@ -154,7 +177,8 @@ class WorkOSAuthKitProvider:
         learns which credential shape is live. The log line below names which.
 
         The ONE thing it does not answer `None` to is being unable to judge at
-        all; see `DependencyUnavailableError` at the bottom.
+        all: a JWKS fetch that fails raises `DependencyUnavailableError`. See
+        `_unverifiable` below.
         """
         sealed = credentials.cookies.get(self._session_cookie_name)
         if not sealed:
@@ -177,11 +201,36 @@ class WorkOSAuthKitProvider:
         # the event loop that stalls EVERY other request in the process, not just
         # this one. The thread hop is what `provider.IdentityProvider` being
         # `async` was for.
-        outcome = await asyncio.to_thread(session.authenticate)
+        try:
+            outcome = await asyncio.to_thread(session.authenticate)
+        except PyJWKClientError as error:
+            raise self._unverifiable(error) from error
 
         if isinstance(outcome, AuthenticateWithSessionCookieErrorResponse):
             return self._refuse(outcome)
         return self._identity_from(outcome)
+
+    def _unverifiable(self, error: PyJWKClientError) -> DependencyUnavailableError:
+        """🔴 THE ONE FAILURE THAT IS NOT A REFUSAL. 503, never `None`.
+
+        `None` is "not signed in", which `dependencies.require_seat` turns into a
+        401 telling the caller to present a credential — and no credential fixes
+        a key set that will not load. A person holding a perfectly good session
+        would be told their session was bad, and a WorkOS outage would look like
+        a fleet of expired cookies. `DependencyUnavailableError` is registered at
+        503 in `api/error_envelope.py`, which is the status that says retry.
+
+        The vendor's message names infrastructure — a URL, a timeout, a TLS
+        failure — so it goes to the log line and `_UNVERIFIABLE_MESSAGE` goes to
+        the wire.
+        """
+        get_logger(__name__).error(
+            "workos_session_unverifiable",
+            provider=WORKOS_PROVIDER_NAME,
+            reason="jwks_unavailable",
+            error=str(error),
+        )
+        return DependencyUnavailableError(_UNVERIFIABLE_MESSAGE)
 
     def _refuse(self, outcome: AuthenticateWithSessionCookieErrorResponse) -> None:
         """Log which of WorkOS's failure reasons this was, and answer `None`.
@@ -197,13 +246,17 @@ class WorkOSAuthKitProvider:
         straight out of `authenticate()` and is handled where it is raised.
         """
         reason = outcome.reason
-        _logger = _log()
-        if isinstance(_logger, object):  # narrow for the structlog proxy
-            pass
         get_logger(__name__).info(
             "workos_session_refused",
             provider=WORKOS_PROVIDER_NAME,
-            reason=reason.value if hasattr(reason, "value") else str(reason),
+            # `reason` is typed `Union[enum, str]` by the SDK. `isinstance` and
+            # not `hasattr`: the `hasattr` spelling left `reason` as `str` on the
+            # else branch while still reading `.value` on the then branch, which
+            # pyright reports and which would be an `AttributeError` the day the
+            # SDK sends an unmodelled reason as a bare string.
+            reason=reason.value
+            if isinstance(reason, AuthenticateWithSessionCookieFailureReason)
+            else str(reason),
         )
         return
 
