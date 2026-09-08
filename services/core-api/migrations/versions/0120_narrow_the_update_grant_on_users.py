@@ -4,7 +4,7 @@ Revision ID: 0120
 Revises: 0102
 
 ---------------------------------------------------------------------------
-🔴 THE APP ROLE COULD REWRITE `users.role` WITHIN ITS OWN TENANT. MEASURED.
+THE APP ROLE COULD REWRITE `users.role` WITHIN ITS OWN TENANT. MEASURED.
 ---------------------------------------------------------------------------
 Against postgres:18.4 at revision `0102`, as `titlepipe_app` with the tenant GUC
 set to the row's tenant:
@@ -67,7 +67,7 @@ SIX WITHHELD, each a different refusal:
   `0032`'s reason for withholding the same column on `fields`, unchanged;
 * `id` and `created_at` — insert-only, by `0020`'s server defaults.
 
-## 🔴 RESIDUAL: THERE IS NOW NO WAY TO CHANGE A ROLE AT ALL, AND THAT IS THE
+## RESIDUAL: THERE IS NOW NO WAY TO CHANGE A ROLE AT ALL, AND THAT IS THE
    HONEST STATE RATHER THAN A GAP THIS REVISION SHOULD HAVE FILLED.
 
 Nothing in this service writes `users` today — there is no ORM model for it and
@@ -113,7 +113,7 @@ USERS_APP_UPDATABLE_COLUMNS = (
     "deactivated_at",
 )
 
-# 🔴 ASSERTED, NOT ASSUMED. `role` is named here rather than derived as "the rest
+# ASSERTED, NOT ASSUMED. `role` is named here rather than derived as "the rest
 # of the table" so that the read-back below fails loudly if a later revision ever
 # adds it back, instead of the withheld set quietly shrinking to nothing.
 USERS_APP_REFUSED_COLUMNS = (

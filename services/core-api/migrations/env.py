@@ -1,6 +1,6 @@
 """How Alembic reaches the database, and as whom.
 
-🔴 THREE HAND-OFFS FROM TASK 2, EACH MEASURED AGAINST postgres:18.4. This file
+THREE HAND-OFFS FROM TASK 2, EACH MEASURED AGAINST postgres:18.4. This file
 hits all three, and `tests/test_roles.py` already fails loudly for two of them.
 
 **1. `SET ROLE titlepipe_owner`, after connecting and before
@@ -88,7 +88,7 @@ DSN_ATTRIBUTE = "dsn"
 
 config = context.config
 
-# 🔴 `cmd_opts is not None` MEANS "THE `alembic` CONSOLE SCRIPT IS THE ENTRY
+# `cmd_opts is not None` MEANS "THE `alembic` CONSOLE SCRIPT IS THE ENTRY
 # POINT", AND CONFIGURING THE PROCESS'S LOGGING IS ONLY CORRECT THERE.
 #
 # Alembic sets `Config.cmd_opts` in exactly one place — `CommandLine.main`,
@@ -131,7 +131,7 @@ config = context.config
 # below it drives the CLI branch so the gate cannot be quietly turned into a
 # permanent `False`.
 if config.config_file_name is not None and config.cmd_opts is not None:
-    # 🔴 `disable_existing_loggers=False` IS NOT OPTIONAL, and the default is the
+    # `disable_existing_loggers=False` IS NOT OPTIONAL, and the default is the
     # other way. `logging.config.fileConfig` defaults to `True`, which DISABLES
     # every logger that already exists and is not named in the ini — permanently,
     # process-wide, with no undo. MEASURED 2026-08-05 in a process that had
@@ -160,7 +160,7 @@ def _include_name(name: str | None, type_: str, _parent_names: dict[str, str | N
     """Which reflected names autogenerate is allowed to see. Only the queue is hidden.
 
     ---------------------------------------------------------------------------
-    🔴 THE FOUR PROCRASTINATE TABLES ARE IN THE DATABASE AND MUST NOT BE IN
+    THE FOUR PROCRASTINATE TABLES ARE IN THE DATABASE AND MUST NOT BE IN
        `Base.metadata`, AND WITHOUT THIS HOOK THAT IS A PERMANENT `alembic check`
        FAILURE.
     ---------------------------------------------------------------------------
@@ -285,7 +285,7 @@ def _refuse_autocommit_blocks(migration_context: MigrationContext) -> None:
     """Make "the whole run rolls back with it", four frames down, TRUE.
 
     ---------------------------------------------------------------------------
-    🔴 THAT CLAIM WAS FALSE, AND FALSE IN THE DIRECTION THAT WEDGES THE DATABASE.
+    THAT CLAIM WAS FALSE, AND FALSE IN THE DIRECTION THAT WEDGES THE DATABASE.
     ---------------------------------------------------------------------------
     MEASURED 2026-09-08 against postgres:18.4 on this chain at `0102`, with a
     revision whose whole body was `with op.get_context().autocommit_block():
@@ -327,7 +327,7 @@ def _assert_coverage_at_head(connection: Connection) -> None:
     """`assert_rls_coverage`, but only when the run finished ON a head.
 
     ---------------------------------------------------------------------------
-    🔴 THE INVARIANT BELONGS TO HEAD, NOT TO EVERY POINT IN THE CHAIN, AND
+    THE INVARIANT BELONGS TO HEAD, NOT TO EVERY POINT IN THE CHAIN, AND
        ASSERTING IT UNCONDITIONALLY BREAKS THE CHAIN.
     ---------------------------------------------------------------------------
     MEASURED on this tree, with the assertion called unconditionally: **two
@@ -376,7 +376,7 @@ def run_migrations_online() -> None:
     # and exits. A pooled engine would hold the connection open past `dispose()`
     # on some drivers and keep a lock on `alembic_version` alive with it.
     #
-    # 🔴 `connect_args` IS THE DENY PIN, AND ALEMBIC HAS TO ASK FOR IT ITSELF.
+    # `connect_args` IS THE DENY PIN, AND ALEMBIC HAS TO ASK FOR IT ITSELF.
     # `titlepipe_core.db.engine` pins the tenant GUC at the empty-string deny
     # sentinel in `make_engine`'s `connect_args`, and its docstring used to claim
     # that pin covered "every connection" including this one. It does not, and
@@ -435,7 +435,7 @@ def run_migrations_online() -> None:
             with context.begin_transaction():
                 context.run_migrations()
 
-                # 🔴 THE COVERAGE ASSERTION, INSIDE THE MIGRATION'S OWN
+                # THE COVERAGE ASSERTION, INSIDE THE MIGRATION'S OWN
                 # TRANSACTION. PLAN §5 rule 4's migration-time half.
                 #
                 # A migration that creates a tenant-scoped table and forgets

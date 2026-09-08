@@ -9,7 +9,7 @@ All thirteen fields are transcribed. Zod strips unknown keys and REFUSES missing
 ones, so a narrowed DTO is not a smaller promise but a DIFFERENT DOCUMENT that
 `Order.nullable()` rejects outright.
 
-🔴 THIS DOCSTRING USED TO SAY TWELVE OF THE THIRTEEN HAD NO COLUMN. `0008` gave
+THIS DOCSTRING USED TO SAY TWELVE OF THE THIRTEEN HAD NO COLUMN. `0008` gave
 `orders` nine of them and two more were columns under another name;
 `api/mappers/queue.py` carries what that cost and what still stands — `product`
 is a resolution, not a column.

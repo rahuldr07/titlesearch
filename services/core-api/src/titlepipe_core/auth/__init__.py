@@ -8,7 +8,7 @@ Read in this order:
 
 - `identity.py` — `ProviderIdentity` (what a provider may assert; no role field)
   and `AuthenticatedSeat` (what a handler receives).
-- `provider.py` — 🔴 the swap boundary, and the registry that bounds
+- `provider.py` — the swap boundary, and the registry that bounds
   `users.identity_provider` by the set of installed adapters.
 - `directory.py` — identity to seat, and the database-backed half that is NOT
   built, with what blocks it.

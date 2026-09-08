@@ -23,7 +23,7 @@ the record read as if that person had made it.**
 
 Presence is not authenticity. This revision adds the missing half.
 
-## 🔴 THE BINDING IS ON `audit_log`, NOT ON `audit_record_change`
+## THE BINDING IS ON `audit_log`, NOT ON `audit_record_change`
 
 The obvious place to resolve the actor is the writer, and it is the wrong one.
 `audit_record_change` is ONE of the ways a row reaches `audit_log`; a direct
@@ -36,7 +36,7 @@ itself, which every row passes through however it arrives. `audit_record_change`
 is NOT modified by this revision — it goes on copying the GUCs into the two
 columns, and those columns are now resolved underneath it.
 
-## 🔴 `audit_log_bind_actor` MUST FIRE BEFORE `audit_log_chain_link`, AND THE NAME IS WHAT MAKES IT
+## `audit_log_bind_actor` MUST FIRE BEFORE `audit_log_chain_link`, AND THE NAME IS WHAT MAKES IT
 
 PostgreSQL fires same-timing row triggers in ALPHABETICAL ORDER OF TRIGGER NAME.
 `0007`'s chain trigger is `audit_log_chain_link` and it hashes `to_jsonb(NEW)` —
@@ -71,7 +71,7 @@ So `'accuracy-backfill'`, `'TEST-ONLY'`, a service-account label, a name from
 another tenant, and a real colleague's subject with a seat they do not hold are
 all now `28000` on the WRITE rather than a plausible line in a legal record.
 
-## 🔴 THE CEILING, STATED BECAUSE A DOCSTRING MUST NOT CLAIM MORE THAN THE MACHINE DELIVERS
+## THE CEILING, STATED BECAUSE A DOCSTRING MUST NOT CLAIM MORE THAN THE MACHINE DELIVERS
 
 **This does NOT make the actor authentic. It makes the actor REAL.**
 
@@ -142,7 +142,7 @@ NO_ACTOR_SQLSTATE = "28000"
 
 RESOLVER_FUNCTION = "resolve_actor"
 
-# 🔴 SORTS BEFORE `audit_log_chain_link`. See the module docstring; `b` < `c` is
+# SORTS BEFORE `audit_log_chain_link`. See the module docstring; `b` < `c` is
 # the whole mechanism and it is not an accident of naming.
 BINDER_FUNCTION = "audit_log_bind_actor"
 BINDER_TRIGGER = "audit_log_bind_actor"
@@ -162,7 +162,7 @@ ACTOR_SUBJECT_INDEX = "ix_users_tenant_id_identity_subject"
 def resolver_body() -> str:
     """The `resolve_actor` body, as one string, so a test can compare it to `pg_proc`.
 
-    🔴 EXPOSED AS A FUNCTION RATHER THAN INLINED, AND THAT IS THE POINT OF THE
+    EXPOSED AS A FUNCTION RATHER THAN INLINED, AND THAT IS THE POINT OF THE
     SHAPE. `tests/test_trigger_function_bodies.py` reads `prosrc` off the live
     database and compares it to what THIS module says the body is. Nothing else
     in this repository reads a function body, and a `CREATE OR REPLACE` that
@@ -279,7 +279,7 @@ def upgrade() -> None:
     op.execute(f"REVOKE EXECUTE ON FUNCTION {RESOLVER_FUNCTION}(uuid, text, text) FROM PUBLIC")
     op.execute(f"GRANT EXECUTE ON FUNCTION {RESOLVER_FUNCTION}(uuid, text, text) TO titlepipe_app")
 
-    # 🔴 `NOT NULL` WITH NO DEFAULT, WHICH IS WHAT MAKES A ROW INSERTED WITH THE
+    # `NOT NULL` WITH NO DEFAULT, WHICH IS WHAT MAKES A ROW INSERTED WITH THE
     # BINDER DISABLED IMPOSSIBLE RATHER THAN MERELY UNBOUND. `0007` uses the same
     # construction for `row_hash` and `chain_position`: the trigger fills them,
     # constraints are checked after `BEFORE` triggers run, and the column is

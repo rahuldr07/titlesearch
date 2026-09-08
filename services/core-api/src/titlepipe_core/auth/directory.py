@@ -7,7 +7,7 @@ tenant, which `users` row, which role. It is the step that keeps
 to come from somewhere, and this is the somewhere.
 
 ---------------------------------------------------------------------------
-🔴 UNPROVEN RESIDUAL — THE DATABASE-BACKED DIRECTORY DOES NOT EXIST, AND THE
+UNPROVEN RESIDUAL — THE DATABASE-BACKED DIRECTORY DOES NOT EXIST, AND THE
    THING BLOCKING IT IS A RULING RATHER THAN AN AFTERNOON.
 ---------------------------------------------------------------------------
 A real directory answers "which tenant is WorkOS organization `org_01H…`?" and

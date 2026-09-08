@@ -5,7 +5,7 @@ Revises: 0002
 Create Date: 2026-08-06
 
 ---------------------------------------------------------------------------
-🔴 `rules` IS GLOBAL. NO `tenant_id`, NO POLICY, NO ROW-LEVEL SECURITY, AND
+`rules` IS GLOBAL. NO `tenant_id`, NO POLICY, NO ROW-LEVEL SECURITY, AND
    EVERY ONE OF THOSE THREE IS THE RULING RATHER THAN AN OMISSION.
 ---------------------------------------------------------------------------
 RULED 2026-08-05 (Plan 02's tenancy human gate). The rulebook is the shop's own
@@ -124,7 +124,7 @@ branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 
-# 🔴 EXACTLY THESE LABELS, IN EXACTLY THIS ORDER. Both tuples are
+# EXACTLY THESE LABELS, IN EXACTLY THIS ORDER. Both tuples are
 # `packages/contract/src/enums.ts` verbatim — `RuleStatus` at :72, `RuleOrigin` at
 # :75-81 — and are repeated here rather than imported, for the reason the module
 # docstring gives. `enumsortorder` is what `<`, `ORDER BY` and `MIN()` on these
@@ -205,7 +205,7 @@ def upgrade() -> None:
     RULE_STATUS.create(op.get_bind(), checkfirst=False)
     RULE_ORIGIN.create(op.get_bind(), checkfirst=False)
 
-    # 🔴 NO `tenant_id` AND NO `PrimaryKeyConstraint("tenant_id", "id")`. See the
+    # NO `tenant_id` AND NO `PrimaryKeyConstraint("tenant_id", "id")`. See the
     # module docstring: this is the ruling, and `id` alone is the whole key
     # because there is no tenant to prefix it with.
     #
@@ -228,7 +228,7 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
 
-    # 🔴 `SELECT` ONLY, AND NO `ENABLE ROW LEVEL SECURITY` ANYWHERE ABOVE.
+    # `SELECT` ONLY, AND NO `ENABLE ROW LEVEL SECURITY` ANYWHERE ABOVE.
     #
     # RLS is evaluated AFTER the privilege check and never instead of it, so this
     # grant is what makes the table reachable at all; without it `titlepipe_app`
@@ -252,7 +252,7 @@ def downgrade() -> None:
     op.execute("REVOKE SELECT ON rules FROM titlepipe_app")
     op.drop_table("rules")
 
-    # 🔴 `DROP TABLE` DOES NOT DROP A TYPE. Without these two lines a fresh
+    # `DROP TABLE` DOES NOT DROP A TYPE. Without these two lines a fresh
     # upgrade still works and only the SECOND one — the one after a downgrade —
     # fails, with `type "rule_status" already exists`. Dropped in the reverse of
     # creation order, which nothing enforces today and which stays correct when a

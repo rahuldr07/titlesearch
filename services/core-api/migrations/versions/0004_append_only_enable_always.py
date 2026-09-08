@@ -5,7 +5,7 @@ Revises: 0003
 Create Date: 2026-09-02
 
 ---------------------------------------------------------------------------
-🔴 THE RULING `0001` LEFT OPEN. `tgenabled = 'O'` MEANS THE APPEND-ONLY
+THE RULING `0001` LEFT OPEN. `tgenabled = 'O'` MEANS THE APPEND-ONLY
    GUARANTEE IS OFF FOR ANY SESSION IN `session_replication_role = 'replica'`,
    AND THAT IS NOT A THEORETICAL HOLE.
 ---------------------------------------------------------------------------
@@ -32,7 +32,7 @@ both calling one `RAISE EXCEPTION USING ERRCODE = '0A000'` function:
     -- tgenabled = 'O', which is what 0001 leaves behind
     SET session_replication_role = 'replica';
     SELECT count(*) FROM probe_audit;   ->  1
-    DELETE FROM probe_audit;            ->  DELETE 1        🔴 NO REFUSAL
+    DELETE FROM probe_audit;            ->  DELETE 1        NO REFUSAL
     SELECT count(*) FROM probe_audit;   ->  0
 
     ALTER TABLE probe_audit ENABLE ALWAYS TRIGGER probe_ao;
@@ -86,7 +86,7 @@ act that leaves `tgenabled = 'D'`, which
 `tests/test_schema_migration.py::test_audit_logs_triggers_are_the_named_three
 _before_and_enabled` fails on.
 
-🔴 THAT TEST RUNS AGAINST A TESTCONTAINER, NOT AGAINST A DEPLOYED CLUSTER, so
+THAT TEST RUNS AGAINST A TESTCONTAINER, NOT AGAINST A DEPLOYED CLUSTER, so
 "fails on" is true of the suite's own database and of no other. Nothing checks
 `tgenabled` at application boot; `lifespan.py` asserts RLS coverage and stops
 there. And the disable need not be left in place: MEASURED 2026-09-08 against

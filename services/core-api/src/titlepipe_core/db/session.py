@@ -11,7 +11,7 @@ exactly the 400-line cap `scripts/check_backend_rules.py` rule 6 enforces. No
 caller's import line changed: `titlepipe_core.db` re-exports all three names as
 it did before. `engine.py`'s opening states the split and what went with it.
 
-🔴 IT IS NOT THE ONLY WAY TO OBTAIN AN `AsyncSession`, AND THIS PARAGRAPH SAID IT
+IT IS NOT THE ONLY WAY TO OBTAIN AN `AsyncSession`, AND THIS PARAGRAPH SAID IT
 WAS — "a caller cannot obtain an `AsyncSession` from this package without naming
 a tenant". `make_sessionmaker` is in `titlepipe_core.db.__all__` and an
 `async_sessionmaker` is callable. THE EXPORT STAYS, because an application builds
@@ -24,7 +24,7 @@ The tenant is not carried in a `WHERE` clause. It is carried in the session GUC
 `app.current_tenant`, which revision `0002`'s `tenant_isolation` policies read on
 all seven tables — so the scoping survives a query somebody forgot to filter.
 
-🔴 IT DOES NOT SURVIVE A QUERY SOMEBODY CONCATENATED, and an earlier version of
+IT DOES NOT SURVIVE A QUERY SOMEBODY CONCATENATED, and an earlier version of
 this paragraph claimed it did ("it survives a query nobody in this repository
 wrote"). A custom placeholder GUC carries no ACL, so `set_config` on it is
 callable by every role — `0002` records "any role can `SET` its own custom GUC"
@@ -44,7 +44,7 @@ That row belongs to the other tenant, and the session went on holding the other
 tenant's id for the rest of the transaction. There is no PostgreSQL-side fix: a
 custom GUC has no ACL to revoke, so nothing can be taken from `titlepipe_app`.
 
-🔴 IT OUTLIVED THE REQUEST TOO, AND THAT HALF IS NOW CLOSED. Neither
+IT OUTLIVED THE REQUEST TOO, AND THAT HALF IS NOW CLOSED. Neither
 `is_local=True` (which reverts at commit) nor `connect_args` (which pins at open)
 touches a value written by a NON-local `set_config`, which the sub-select above
 is free to write, so it stayed on the pooled connection for the next checkout.
@@ -74,7 +74,7 @@ applied, reported as applied — which is why the value is set from `after_begin
 an event that by definition cannot fire outside one.
 
 **2. A SAVEPOINT unwinds the GUC — AND UNDER THIS DESIGN THAT IS HARMLESS.**
-🔴 THE MECHANISM SENTENCE WAS RIGHT AND THE CONSEQUENCE DRAWN FROM IT WAS WRONG.
+THE MECHANISM SENTENCE WAS RIGHT AND THE CONSEQUENCE DRAWN FROM IT WAS WRONG.
 It read: "Roll a savepoint back and `app.current_tenant` reverts to whatever it
 held when the savepoint opened, so the next statement in the same transaction
 runs under the wrong tenant — or under none." The first clause is correct; the
@@ -89,7 +89,7 @@ second does not follow. MEASURED 2026-08-06 against postgres:18.4:
 held when the savepoint opened" **is** the tenant and the next statement runs
 under the right one.
 
-🔴 IT ALSO FIRES ON THE NESTED TRANSACTION, WHICH THIS PARAGRAPH USED TO DENY
+IT ALSO FIRES ON THE NESTED TRANSACTION, WHICH THIS PARAGRAPH USED TO DENY
 ("before a nested block can exist"). RE-MEASURED 2026-08-06 against SQLAlchemy
 2.0.51 — one `after_begin` handler, one `SELECT`, one `begin_nested()`, one more
 `SELECT`, recording `transaction.nested` each time it fired:
@@ -212,7 +212,7 @@ async def tenant_session(
 ) -> AsyncGenerator[AsyncSession]:
     """A session whose every transaction runs as `tenant`. `None` means deny.
 
-    🔴 THE RETURN ANNOTATION IS `AsyncGenerator`, NOT THE `AsyncIterator` THIS
+    THE RETURN ANNOTATION IS `AsyncGenerator`, NOT THE `AsyncIterator` THIS
     SIGNATURE WAS SPECIFIED WITH, and the change is forced. MEASURED 2026-08-05
     against pyright 1.1.411, strict:
 

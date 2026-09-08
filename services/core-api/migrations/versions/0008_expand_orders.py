@@ -14,7 +14,7 @@ The same pass folded the intake pair the author called `0014` and `0015` into th
 `0051`; the references below have been retargeted, and a design note naming `0014` means `0051`.
 
 ---------------------------------------------------------------------------
-🔴 `orders` ALREADY EXISTS. THIS IS AN `ALTER`, NOT A `CREATE`, AND THAT IS
+`orders` ALREADY EXISTS. THIS IS AN `ALTER`, NOT A `CREATE`, AND THAT IS
    WHY IT DOES NOT REPEAT THE RLS TRIPLE.
 ---------------------------------------------------------------------------
 `0001::upgrade` creates `orders` with three columns — `id`, `created_at`,
@@ -72,7 +72,7 @@ because it names only `orders`' own columns. Both its referents outlive the
 reversal, so it stays satisfiable rather than becoming a check against a column
 that is gone.
 
-🔴 THE ONE-COMMAND REVERSAL IS NO LONGER ONE COMMAND, AND `0051` STILL SAYS IT
+THE ONE-COMMAND REVERSAL IS NO LONGER ONE COMMAND, AND `0051` STILL SAYS IT
 IS. That claim was written when `0051` was this branch's head. Relinearization
 made the chain LINEAR through `0060`, `0070`, `0071`, `0072`, `0080`, `0090`,
 `0100`, `0101` and `0102`, so `alembic downgrade 0050` now unwinds all nine of
@@ -126,7 +126,7 @@ def _refuse_if_populated(table: str, columns: Sequence[str]) -> None:
     which names one column and reads like a defect in the DDL.
 
     ---------------------------------------------------------------------------
-    🔴 THIS GUARD READ THROUGH ROW-LEVEL SECURITY AND THEREFORE NEVER FIRED.
+    THIS GUARD READ THROUGH ROW-LEVEL SECURITY AND THEREFORE NEVER FIRED.
        IT COUNTED ZERO ON EVERY DATABASE, INCLUDING THE ONES IT EXISTS TO REFUSE.
     ---------------------------------------------------------------------------
     `0002` puts `FORCE ROW LEVEL SECURITY` on `orders`, and `FORCE` is precisely
@@ -211,7 +211,7 @@ _NOT_NULL_COLUMNS = (
 def upgrade() -> None:
     _refuse_if_populated("orders", _NOT_NULL_COLUMNS)
 
-    # 🔴 `client_id` CARRIES NO FOREIGN KEY, AND THAT IS A GAP RATHER THAN A
+    # `client_id` CARRIES NO FOREIGN KEY, AND THAT IS A GAP RATHER THAN A
     # DECISION. `clients` is Bobbili's table and is not in this branch's chain,
     # so `tenant_fk(column="client_id", target_table="clients")` would name a
     # relation that does not exist and the revision would not run. The composite
@@ -235,7 +235,7 @@ def upgrade() -> None:
     op.add_column("orders", sa.Column("state_code", sa.Text(), nullable=False))
     op.add_column("orders", sa.Column("county", sa.Text(), nullable=False))
 
-    # 🔴 `status` IS `text`, NOT AN ENUM, AND THAT IS DELIBERATE. The order state
+    # `status` IS `text`, NOT AN ENUM, AND THAT IS DELIBERATE. The order state
     # machine is the SERVER's (CLAUDE.md: "Server owns all state machines and
     # thresholds"), and it is not settled — `docs/PRD.md` and the review surfaces
     # disagree on the intermediate labels. CONVENTIONS §4 says an unknown enum
@@ -261,7 +261,7 @@ def upgrade() -> None:
     )
     op.add_column("orders", sa.Column("extraction_released_by", sa.Text(), nullable=True))
 
-    # 🔴 THE TWO INTAKE REFERENCES, COLUMNS ONLY. Their composite foreign keys —
+    # THE TWO INTAKE REFERENCES, COLUMNS ONLY. Their composite foreign keys —
     # `(tenant_id, product_id) REFERENCES products (tenant_id, id)` and the same
     # shape onto `client_config_versions` — are added by `0051`, with the tables
     # they point at. Until then these are two nullable uuid columns that nothing
@@ -310,7 +310,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    # 🔴 THE SHORT NAME, NOT THE RENDERED ONE, AND THE ASYMMETRY IS REAL.
+    # THE SHORT NAME, NOT THE RENDERED ONE, AND THE ASYMMETRY IS REAL.
     # `NAMING_CONVENTION["ck"]` is `ck_%(table_name)s_%(constraint_name)s`, and a
     # convention containing `%(constraint_name)s` WRAPS whatever name it is
     # given — on the drop as well as on the create. Passing the rendered name

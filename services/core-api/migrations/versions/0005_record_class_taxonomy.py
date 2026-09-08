@@ -47,12 +47,12 @@ measured field-by-field against the one real corpus package:
   ref      carries no personal data itself but RESOLVES to something that does
   safe     neither
 
-🔴 `ref` IS THE LABEL THAT GETS MISSED, and it is in the type for that reason.
+`ref` IS THE LABEL THAT GETS MISSED, and it is in the type for that reason.
 D4's evidence: `anonymise-bundle.mjs` drops the OCR `job` id explicitly because
 *"a `/scan/<job>/` href would point back at the originals"*. An opaque identifier
 is not automatically safe.
 
-🔴 **WHICH `data_class` VALUES ARE "NPI-BEARING" FOR DESTRUCTION PURPOSES IS NOT
+**WHICH `data_class` VALUES ARE "NPI-BEARING" FOR DESTRUCTION PURPOSES IS NOT
 DECIDED HERE AND NOTHING IN THIS REVISION IMPLIES AN ANSWER.** `npi` plainly is;
 `ref` plainly should be (it resolves to NPI); `pub_id` is a genuine legal question
 about data that is simultaneously personal and already public. That mapping is
@@ -117,7 +117,7 @@ branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 
-# 🔴 EXACTLY THESE LABELS, IN THIS ORDER — the five of PLAN.md §2 plus the sixth
+# EXACTLY THESE LABELS, IN THIS ORDER — the five of PLAN.md §2 plus the sixth
 # the plan requires an explicit slot for. Repeated here rather than imported from
 # `titlepipe_core.db.models`, for `0001`'s reason: a migration is a frozen
 # snapshot, and an import would let a later model edit rewrite what `0005` claims
@@ -221,7 +221,7 @@ def upgrade() -> None:
 def _create_retention_windows() -> None:
     """The statutory floor table. GLOBAL, and EMPTY.
 
-    🔴 NO `tenant_id`, NO POLICY, NO ROW-LEVEL SECURITY, and all three are the
+    NO `tenant_id`, NO POLICY, NO ROW-LEVEL SECURITY, and all three are the
     ruling rather than an omission — `0003` states the same ruling for `rules`
     and this table is its sibling. A retention floor is law. It is identical for
     every tenant in a jurisdiction and it is not a per-tenant setting; PLAN.md §2
@@ -334,7 +334,7 @@ def _create_record_classifications() -> None:
         sa.Column("classification_basis", sa.Text(), nullable=False),
         sa.PrimaryKeyConstraint("tenant_id", "id"),
         sa.UniqueConstraint("tenant_id", "subject_table", "subject_id"),
-        # 🔴 THE SLOT EXISTS IN THE TYPE AND IS REFUSED IN THIS TABLE. PLAN.md §2
+        # THE SLOT EXISTS IN THE TYPE AND IS REFUSED IN THIS TABLE. PLAN.md §2
         # requires the taxonomy to have an explicit `operational_telemetry` slot
         # so telemetry cannot default into either statutory bucket; it also
         # records that telemetry lives in a SEPARATE store with separate
@@ -393,7 +393,7 @@ def _release(table: str) -> None:
 def _create_retention_window_function() -> None:
     """`retention_window(record_class, jurisdiction)` — and it REFUSES to guess.
 
-    🔴 THIS FUNCTION IS THE ENTIRE REASON THE NUMBERS CAN WAIT. The mechanism is
+    THIS FUNCTION IS THE ENTIRE REASON THE NUMBERS CAN WAIT. The mechanism is
     complete today; the table it reads is empty; and every caller asking about a
     `(record_class, jurisdiction)` pair nobody has ruled on gets
     `55000 object_not_in_prerequisite_state` with the pair named in the message.
@@ -411,7 +411,7 @@ def _create_retention_window_function() -> None:
     owner's ruling lands. `IMMUTABLE` would license the planner to fold a call
     into a constant.
 
-    🔴 NOT `SECURITY DEFINER`. It runs with the CALLER's privileges, so a role
+    NOT `SECURITY DEFINER`. It runs with the CALLER's privileges, so a role
     with no `SELECT` on `retention_windows` gets `42501` rather than a quietly
     privileged read. `retention_windows` is global and carries no policy, so
     there is no tenant filter here to bypass either way.
@@ -473,7 +473,7 @@ def downgrade() -> None:
     op.execute("REVOKE SELECT ON retention_windows FROM titlepipe_app")
     op.drop_table("retention_windows")
 
-    # 🔴 `DROP TABLE` DOES NOT DROP A TYPE. Without these two lines a fresh
+    # `DROP TABLE` DOES NOT DROP A TYPE. Without these two lines a fresh
     # upgrade still works and only the SECOND one — the one after a downgrade —
     # fails, with `type "record_class" already exists`. Reverse of creation
     # order, which nothing enforces today and stays correct when a later

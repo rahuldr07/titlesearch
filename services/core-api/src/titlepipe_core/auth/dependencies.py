@@ -118,6 +118,6 @@ async def require_seat(request: Request) -> AuthenticatedSeat:
         )
         raise UnauthenticatedError(_REFUSAL_MESSAGE)
 
-    # 🔴 `seat.role` AND NOT ANYTHING THE REQUEST SAID. The identity that got us
+    # `seat.role` AND NOT ANYTHING THE REQUEST SAID. The identity that got us
     # here has no role field to have said it with — see `identity.py`.
     return seat

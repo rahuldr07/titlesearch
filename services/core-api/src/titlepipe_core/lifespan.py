@@ -63,7 +63,7 @@ DATABASE_CHECK: Final = "database_answers"
 # container on loopback may still be warming up, and everything slower than that
 # is not a slow database, it is an unreachable one.
 #
-# 🔴 WHAT IS PROVEN AND WHAT IS ARGUED, KEPT APART. The paragraph above used to
+# WHAT IS PROVEN AND WHAT IS ARGUED, KEPT APART. The paragraph above used to
 # read as though the blackhole scenario were covered. It is not.
 # `tests/test_database_probe.py` drives `probe_database` with a ceiling of `0.0`
 # against a HEALTHY server and asserts the `TimeoutError` arm is reached and
@@ -133,7 +133,7 @@ class ServiceResources:
         on; reporting `True` would be the lie the paragraph below exists to
         prevent.
 
-        🔴 THAT USED TO LEAVE A RESIDUAL AND THE RESIDUAL IS NOW CLOSED. It read:
+        THAT USED TO LEAVE A RESIDUAL AND THE RESIDUAL IS NOW CLOSED. It read:
         "a DEPLOYED environment that forgets the variable is ready and answers
         `GET /api/rules` with a 503." That was the whole hazard of the
         conditional — a missing DSN is NO check rather than a failed one, so
@@ -143,7 +143,7 @@ class ServiceResources:
         branch is a local or test run. The conditional stays; what changed is that
         it can no longer hide a deployed mistake.
 
-        🔴 THE DATABASE ANSWER IS A STARTUP SNAPSHOT AND NOT A LIVE PROBE, AND
+        THE DATABASE ANSWER IS A STARTUP SNAPSHOT AND NOT A LIVE PROBE, AND
         SAYING SO IS BETTER THAN LETTING A READER ASSUME OTHERWISE.
         `probe_database` runs once, in the lifespan, and `database_answered`
         holds that result until the process stops; a server that dies at 03:00

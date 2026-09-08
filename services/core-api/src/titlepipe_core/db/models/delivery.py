@@ -1,12 +1,12 @@
 """The deliverable: `reports`, their stored assurance sentences, and `deliveries`.
 
-🔴 **A REPORT IS A VERSIONED, RENDERED BINARY ARTIFACT WITH AN IDENTITY — NOT A
+**A REPORT IS A VERSIONED, RENDERED BINARY ARTIFACT WITH AN IDENTITY — NOT A
 VIEW AND NOT A QUERY RESULT.** Kaveri/D4, measuring a real report: this is the
 distinction that decides whether the schema stores a digest and a location or
 tries to reconstruct a delivered document from rows that have since changed. It
 stores the digest and the location.
 
-🔴 **THREE INDEPENDENT VERSION AXES, AND NOBODY KNOWS HOW THEY RELATE.** The same
+**THREE INDEPENDENT VERSION AXES, AND NOBODY KNOWS HOW THEY RELATE.** The same
 measurement found `shape`, `version` and a THIRD number, `template_version`, over
 one deliverable, and "how they relate is UNKNOWN from the artifact alone". They
 are three columns. Deriving one from another — or storing two and computing the
@@ -104,7 +104,7 @@ class ReportVerifiedCheck(_TenantRow):
     are stored beside it rather than reconstructed at render time from a rulebook
     that may have moved on.
 
-    🔴 **THE ASSURANCE RECORD IS ITSELF NPI-BEARING**, and that is the
+    **THE ASSURANCE RECORD IS ITSELF NPI-BEARING**, and that is the
     classification fact easiest to miss when designing report tables in
     isolation: these sentences name specific case numbers and page ranges. In the
     plan's §2 taxonomy this row is a `derived_artifact` that is ALSO
@@ -147,7 +147,7 @@ class ReportVerifiedCheck(_TenantRow):
 class Delivery(_TenantRow):
     """One transmission of one report to a client.
 
-    🔴 **`failed_transit` IS A TRANSIT STATE AND NEVER A QUALITY SIGNAL** —
+    **`failed_transit` IS A TRANSIT STATE AND NEVER A QUALITY SIGNAL** —
     confirmed in the old CONTEXT and again in the live contract
     (`entities.ts:279`). The word costs nothing; the machine is
     `ck_deliveries_delivered_at_needs_a_transmitting_status`, which makes

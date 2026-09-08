@@ -15,7 +15,7 @@ explicitly why it is served rather than derived: grouping runs of equal page
 consecutive deeds merge, and a deed spanning a differently classified page
 splits. So the boundary is stored, once, here.
 
-🔴 **`kind` IS `text` AND MUST NOT BECOME AN ENUM.** Kaveri's measurement against
+**`kind` IS `text` AND MUST NOT BECOME AN ENUM.** Kaveri's measurement against
 the one real corpus package found instrument vocabulary is JURISDICTION-SPECIFIC:
 Georgia's `FIFA` (fieri facias) appears in one sample package and Missouri's has
 none. A closed global enum would make the first Georgia package a write error on
@@ -45,7 +45,7 @@ class Document(_TenantRow):
     holds no index entry for it, an ordinary state, not a missing lookup"
     (`endpoints.ts:662-664`). Nothing derives one from the other.
 
-    ⚠️ **DOCUMENTS WITHIN A PACKAGE ARE NOT PROVEN NON-OVERLAPPING, AND THIS
+    **DOCUMENTS WITHIN A PACKAGE ARE NOT PROVEN NON-OVERLAPPING, AND THIS
     DOCSTRING WILL NOT CLAIM THEY ARE.** The correct machine is an exclusion
     constraint —
     `EXCLUDE USING gist (tenant_id WITH =, package_id WITH =, int4range(first_page_no, last_page_no, '[]') WITH &&)`

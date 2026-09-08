@@ -10,7 +10,7 @@ table, so every authorization input a handler reads came out of PostgreSQL and
 none of it came off the wire.
 
 ---------------------------------------------------------------------------
-🔴 `ProviderIdentity` HAS NO `role` FIELD, AND THE ABSENCE IS THE MECHANISM.
+`ProviderIdentity` HAS NO `role` FIELD, AND THE ABSENCE IS THE MECHANISM.
 ---------------------------------------------------------------------------
 `db/identity.py` states the property — "the role column is the authorization
 input, and it is a column and not a claim" — and cites `docs/PRD.md` §9's

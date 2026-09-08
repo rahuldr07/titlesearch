@@ -7,7 +7,7 @@ Create Date: 2026-09-05
 ASSUMED PARENT: `0071`, this worker's own previous revision.
 
 ---------------------------------------------------------------------------
-🔴 THE GAP THIS CLOSES. `0071` gives every change to ground truth a permanent,
+THE GAP THIS CLOSES. `0071` gives every change to ground truth a permanent,
    signed, cited ledger row. It does not make anybody WRITE one. Until this
    revision, `UPDATE golden_fields SET value = 'Lot 7'` was an ordinary
    statement that any holder of the `UPDATE` grant could run, and the ledger
@@ -59,7 +59,7 @@ changes no rows changes no truth, so there is nothing for it to refuse. The two
 files reach different answers from the same fact, and the fact is what to carry
 forward rather than the answer.
 
-## 🔴 `AFTER`, NOT `BEFORE`, AND THAT IS A SECURITY PROPERTY RATHER THAN A TASTE
+## `AFTER`, NOT `BEFORE`, AND THAT IS A SECURITY PROPERTY RATHER THAN A TASTE
 
 `tests/test_exact_acl_and_update_surface.py::test_no_before_row_trigger_exists
 _that_could_write_new_dot_anything` refuses a `BEFORE ... FOR EACH ROW` trigger
@@ -111,7 +111,7 @@ That residual is real and is named rather than argued away.
 Nothing here is a control against whoever administers the cluster. `ENABLE
 ALWAYS` closes the `session_replication_role = 'replica'` hole `0004` measured.
 
-🔴 THIS SENTENCE USED TO END "a superuser remains a superuser", AND THAT IS TOO
+THIS SENTENCE USED TO END "a superuser remains a superuser", AND THAT IS TOO
 GENEROUS BY ONE ROLE. The residual is `titlepipe_owner`, which is not a superuser
 and is one `SET ROLE` from `titlepipe_migration` — a LOGIN role whose DSN is in
 every deployment's environment. `ALTER TABLE` is gated on OWNERSHIP, not on a

@@ -8,7 +8,7 @@ ASSUMED PARENT: `0102`, the head this worktree found. `CONVENTIONS.md` §8 — g
 linearizes.
 
 ---------------------------------------------------------------------------
-🔴 WHAT WAS OPEN, AND IT IS NOT "AN ORDER NAMING A CLIENT THAT DOES NOT EXIST"
+WHAT WAS OPEN, AND IT IS NOT "AN ORDER NAMING A CLIENT THAT DOES NOT EXIST"
 ---------------------------------------------------------------------------
 `0008` and `0080` both record the missing constraint, and both describe it as a
 dangling reference. The demonstrated form is worse: an order in tenant A could
@@ -34,7 +34,7 @@ declared in `db/models/orders.Order` and `db/models/intake.ClientConfigVersion`
 in the same commit as this file.
 
 ---------------------------------------------------------------------------
-🔴 MEASURED 2026-09-08 AGAINST postgres:18.4: WRITTEN THE OBVIOUS WAY, THIS
+MEASURED 2026-09-08 AGAINST postgres:18.4: WRITTEN THE OBVIOUS WAY, THIS
    MIGRATION REPORTS SUCCESS AND VALIDATES NOTHING.
 ---------------------------------------------------------------------------
 `ADD CONSTRAINT ... FOREIGN KEY` validates existing rows with an ORDINARY SQL

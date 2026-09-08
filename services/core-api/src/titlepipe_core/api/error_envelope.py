@@ -19,7 +19,7 @@ Every failure leaves this service in one shape:
 
     {"error": "...", "code": "...", "request_id": "...", "details": {}}
 
-🔴 `error` IS THE SENTENCE, NOT AN OBJECT, AND THE FLATNESS IS THE CONTRACT.
+`error` IS THE SENTENCE, NOT AN OBJECT, AND THE FLATNESS IS THE CONTRACT.
 `apps/web/src/shared/api.ts::readError` reads `body.error` and keeps it only
 `if (typeof message === "string" && message.length > 0)`; anything else falls
 through to `` `${status} ${statusText}` ``. This layer used to nest the sentence
@@ -159,7 +159,7 @@ def mapped_status_for(error: DomainError) -> int | None:
     `EscalationRequiresRuleError(RefusalError)` maps to 422 without being
     registered.
 
-    🔴 THE `None` IS THE WHOLE POINT OF THIS FUNCTION EXISTING, and it exists
+    THE `None` IS THE WHOLE POINT OF THIS FUNCTION EXISTING, and it exists
     because inferring "unmapped" FROM THE NUMBER was a real defect that shipped.
     `handle_domain_error` used to read `if status >= 500` and log
     `domain_error_unmapped` — so `DependencyUnavailableError`, which is

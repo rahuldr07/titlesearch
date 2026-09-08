@@ -1,7 +1,7 @@
 """`GoldenRepository` — the ingest path for ground truth, and the ORDER it must write in.
 
 ---------------------------------------------------------------------------
-🔴 THE REFUSALS ARE NOT HERE, AND LOOKING FOR THEM HERE IS THE MISTAKE THIS
+THE REFUSALS ARE NOT HERE, AND LOOKING FOR THEM HERE IS THE MISTAKE THIS
    DOCSTRING EXISTS TO PREVENT.
 ---------------------------------------------------------------------------
 "A golden correction needs a source, a reason and a signature", "the two NA
@@ -107,7 +107,7 @@ class GoldenRepository(TenantRepository[GoldenField]):
     ) -> GoldenField:
         """One new ground truth, at revision 0.
 
-        🔴 `value` AND `na_reason` ARE BOTH REQUIRED KEYWORD ARGUMENTS WITH NO
+        `value` AND `na_reason` ARE BOTH REQUIRED KEYWORD ARGUMENTS WITH NO
         DEFAULTS, and that is the one piece of shape this method contributes.
         Exactly one of them is present in every row —
         `ck_golden_fields_value_xor_na_reason` — and a signature with
@@ -169,7 +169,7 @@ class GoldenRepository(TenantRepository[GoldenField]):
         """The ledger row, then the move it authorises — in that order, one transaction.
 
         ---------------------------------------------------------------------------
-        🔴 THE TWO `flush()` CALLS ARE THE METHOD. Everything else here is field
+        THE TWO `flush()` CALLS ARE THE METHOD. Everything else here is field
            copying.
         ---------------------------------------------------------------------------
         `0072`'s trigger fires on the UPDATE and requires a `golden_corrections`

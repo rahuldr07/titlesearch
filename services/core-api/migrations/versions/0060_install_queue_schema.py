@@ -22,7 +22,7 @@ is what refuses to let the two drift.
 Then the part the library does not ship and this repository cannot do without:
 the GRANTs, and a read-back that refuses the migration if they did not land.
 
-## 🔴 THESE FOUR TABLES ARE NOT TENANT-SCOPED, AND THAT IS A DECISION WITH A COST
+## THESE FOUR TABLES ARE NOT TENANT-SCOPED, AND THAT IS A DECISION WITH A COST
 
 `CONVENTIONS.md` §1 requires a real `tenant_id`, a composite primary key and
 RLS+FORCE+policy on every tenant-scoped table. None of that is here. The reason
@@ -63,7 +63,7 @@ first token. A coverage check can then be derived from the catalog — "a table 
 `public` with no `tenant_id` column is either commented as infrastructure or it is
 a defect" — instead of from a list that ages in a test file.
 
-## 🔴 THE SEQUENCE GRANTS, AND THE TEST IN CORE-API THAT THIS REVISION TRIPS
+## THE SEQUENCE GRANTS, AND THE TEST IN CORE-API THAT THIS REVISION TRIPS
 
 `0002` states, and `tests/test_forced_rls_and_grants.py::test_there_are_no_sequences_for_a_sequence_grant_to_reach`
 asserts, that schema `public` holds zero relations of kind `S`. That was true and
@@ -87,7 +87,7 @@ about a database, so it is asserted by
 `test_the_identity_sequence_needs_no_grant`, which inserts a worker row as
 `titlepipe_worker` with nothing granted on that sequence.
 
-## 🔴 WHY THE SCHEMA GOES THROUGH THE RAW DBAPI CURSOR AND NOT THROUGH SQLALCHEMY
+## WHY THE SCHEMA GOES THROUGH THE RAW DBAPI CURSOR AND NOT THROUGH SQLALCHEMY
 
 The vendored file contains four `RAISE ... (job id: %)` messages inside PL/pgSQL
 function bodies, and under psycopg's `pyformat` paramstyle a `%` is a placeholder.
@@ -196,7 +196,7 @@ WORKER_TABLE_GRANTS = (
     # fetch (SELECT+UPDATE), finish and retry (UPDATE), defer from inside a task
     # (INSERT), `remove_old_jobs` and `finish_job(delete_job => true)` (DELETE).
     ("procrastinate_jobs", "SELECT, INSERT, UPDATE, DELETE"),
-    # 🔴 INSERT IS NOT OPTIONAL AND IS EASY TO MISS. Nothing in the worker's code
+    # INSERT IS NOT OPTIONAL AND IS EASY TO MISS. Nothing in the worker's code
     # writes an event row: five AFTER/BEFORE triggers on `procrastinate_jobs` do,
     # and they are SECURITY INVOKER, so they run with the privileges of whoever
     # touched the job. Without INSERT here every fetch fails with
@@ -269,7 +269,7 @@ def _queue_functions() -> list[tuple[int, str]]:
     while reporting success. `pg_get_function_identity_arguments` gives the exact
     text `GRANT` and `DROP FUNCTION` accept.
 
-    🔴 THE OID IS CARRIED ALONGSIDE IT BECAUSE THE SIGNATURE IS NOT INTERCHANGEABLE
+    THE OID IS CARRIED ALONGSIDE IT BECAUSE THE SIGNATURE IS NOT INTERCHANGEABLE
     WITH IT. `pg_get_function_identity_arguments` includes argument NAMES, which
     `GRANT` and `DROP FUNCTION` accept and `has_function_privilege(text)` does
     not — MEASURED, it parses its second argument as a type list and answers
@@ -319,7 +319,7 @@ def _require_privileges(functions: list[tuple[int, str]]) -> None:
     """Read every privilege back, and refuse the migration if one is missing.
 
     ---------------------------------------------------------------------------
-    🔴 THIS IS NOT CEREMONY. A `GRANT` issued by a role that cannot give the
+    THIS IS NOT CEREMONY. A `GRANT` issued by a role that cannot give the
        privilege away is a WARNING in PostgreSQL, not an error, and neither
        `op.execute` nor `ON_ERROR_STOP` sees a warning.
     ---------------------------------------------------------------------------
@@ -437,7 +437,7 @@ def downgrade() -> None:
     `pg_proc`, `pg_class` and `pg_type` means this function removes what is
     actually there.
 
-    🔴 THE CATALOG IS READ TWICE, AND THAT IS WHAT MAKES THE ORDER WORK. These
+    THE CATALOG IS READ TWICE, AND THAT IS WHAT MAKES THE ORDER WORK. These
     objects are mutually entangled, and both single-pass orders fail — MEASURED
     against postgres:18.4:
 

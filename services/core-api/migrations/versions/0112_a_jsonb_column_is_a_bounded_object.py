@@ -7,7 +7,7 @@ Create Date: 2026-09-08
 ASSUMED PARENT: `0111`, this worker's own previous revision.
 
 ---------------------------------------------------------------------------
-🔴 FOUR `jsonb` COLUMNS, NO CHECK ON ANY OF THEM, AND NO SIZE BOUND ANYWHERE
+FOUR `jsonb` COLUMNS, NO CHECK ON ANY OF THEM, AND NO SIZE BOUND ANYWHERE
    IN THE SCHEMA. The only limit this system has is `MAX_PAGE_SIZE = 200`,
    which bounds a ROW COUNT and says nothing about what a row weighs.
 ---------------------------------------------------------------------------
@@ -67,7 +67,7 @@ coordinate object (97 bytes) and 450x a delivery config (144 bytes), and
 a page". A per-column bound would be four numbers nobody can defend individually
 and four places to update.
 
-## 🔴 WHAT THIS DOES NOT CLOSE, WITH THE ARITHMETIC
+## WHAT THIS DOES NOT CLOSE, WITH THE ARITHMETIC
 
 **A FULL PAGE OF MAXIMUM-SIZE VALUES IS STILL ~13 MB.** `MAX_PAGE_SIZE = 200`
 rows times 64 KiB is 12.8 MB of JSON in one response, which is a bound and not a
@@ -133,7 +133,7 @@ depends_on: str | Sequence[str] | None = None
 # and for why this is one number rather than four.
 MAX_JSONB_BYTES = 65536
 
-# 🔴 BARE RULE NAMES, NOT RENDERED ONES. `base.NAMING_CONVENTION`'s `ck` pattern
+# BARE RULE NAMES, NOT RENDERED ONES. `base.NAMING_CONVENTION`'s `ck` pattern
 # is `ck_%(table_name)s_%(constraint_name)s`, and alembic applies it to whatever
 # `create_check_constraint` is given — `0111` measured what a full name produces:
 # `ck_<table>_ck_<table>_…`, truncated to 63 bytes with a hash suffix, so

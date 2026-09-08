@@ -25,7 +25,7 @@ Three things land here, and the third is the one that is easy to forget:
   role cannot open the table at all, reported as zero rows because the policy
   filtered them.
 
-## 🔴 WHAT THIS REVISION DOES TO EVERY DATA MIGRATION WRITTEN AFTER IT
+## WHAT THIS REVISION DOES TO EVERY DATA MIGRATION WRITTEN AFTER IT
 
 `FORCE ROW LEVEL SECURITY` makes every tenant table invisible to
 `titlepipe_owner`, and `titlepipe_owner` is who `migrations/env.py` runs as.
@@ -155,7 +155,7 @@ TENANT_GUC = "app.current_tenant"
 #     SELECT count(*) FROM orders;      -> ERROR: relation "orders" does not exist
 #     CREATE TABLE hardened_probe (…);  -> ERROR: no schema has been selected to create in
 #
-# 🔴 THE REASON GIVEN HERE FOR KEEPING IT WAS FALSIFIED ON 2026-08-06 AND THE
+# THE REASON GIVEN HERE FOR KEEPING IT WAS FALSIFIED ON 2026-08-06 AND THE
 # LINE STAYS ANYWAY. It read: the owner "holds `CREATE` on `public` from
 # `roles.sql` and USAGE only from `PUBLIC`". The second half stopped being true
 # when `roles.sql` started granting `USAGE` explicitly —
@@ -225,7 +225,7 @@ def _require_schema_usage() -> None:
     """Read the schema privilege back, and refuse if the GRANT above did nothing.
 
     ---------------------------------------------------------------------------
-    🔴 `GRANT USAGE ON SCHEMA public` FROM THIS MIGRATION IS A NO-OP ON THE
+    `GRANT USAGE ON SCHEMA public` FROM THIS MIGRATION IS A NO-OP ON THE
        CLUSTER THIS SUITE RUNS AGAINST, AND POSTGRESQL REPORTS THAT AS A WARNING.
     ---------------------------------------------------------------------------
     Schema `public` is owned by `pg_database_owner` from PostgreSQL 15 on.
@@ -320,7 +320,7 @@ def upgrade() -> None:
     op.execute("GRANT SELECT, INSERT, UPDATE ON fields TO titlepipe_app")
     op.execute("GRANT SELECT, INSERT, UPDATE ON field_readings TO titlepipe_app")
 
-    # 🔴 `audit_log` GETS NO `UPDATE`, AND IT IS THE ONE GRANT THAT DIFFERS.
+    # `audit_log` GETS NO `UPDATE`, AND IT IS THE ONE GRANT THAT DIFFERS.
     #
     # `0001`'s `audit_log_append_only` trigger refuses UPDATE and DELETE
     # whatever the ACL says, so `GRANT UPDATE` here would change no behaviour
@@ -343,7 +343,7 @@ def upgrade() -> None:
     # tests still read `0A000` because they connect as the container superuser.
     op.execute("GRANT SELECT, INSERT ON audit_log TO titlepipe_app")
 
-    # 🔴 NO `GRANT USAGE, SELECT ON ALL SEQUENCES`. MEASURED 2026-08-05 against
+    # NO `GRANT USAGE, SELECT ON ALL SEQUENCES`. MEASURED 2026-08-05 against
     # this schema: `pg_class` holds ZERO relations of kind `S` in `public`. Every
     # primary key defaults to `gen_random_uuid()` and nothing here is `serial` or
     # `IDENTITY`, so the statement would grant nothing to nobody while reading
@@ -358,7 +358,7 @@ def downgrade() -> None:
     """Reverse of `upgrade`, with ONE deliberate asymmetry — see below.
 
     ---------------------------------------------------------------------------
-    🔴 THE SCHEMA `USAGE` GRANT IS NOT REVERSED. This is accepted, documented
+    THE SCHEMA `USAGE` GRANT IS NOT REVERSED. This is accepted, documented
        debris rather than an oversight.
     ---------------------------------------------------------------------------
     Two measured reasons, 2026-08-05 against postgres:18.4:
@@ -389,7 +389,7 @@ def downgrade() -> None:
     object-level grants either. So nothing in this repository converges them,
     and that is a stated gap rather than a covered one.
 
-    🔴 ONE CLAUSE ABOVE READS OFF A STALE ENUMERATION. `roles.sql`'s header used
+    ONE CLAUSE ABOVE READS OFF A STALE ENUMERATION. `roles.sql`'s header used
     to end its ownership list with "roles, memberships, per-role settings and
     default privileges, and claims exactly that much", and that is the sentence
     this paragraph leans on. Since 2026-08-06 that file also issues, and REFUSES

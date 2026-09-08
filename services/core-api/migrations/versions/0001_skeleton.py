@@ -18,7 +18,7 @@ Revision `0002` (Task 4) adds `ENABLE`/`FORCE ROW LEVEL SECURITY`, the
 separate revisions so that "the tables exist" and "the tables are isolated" are
 separately reversible.
 
-🔴 **THESE TABLES ARE FREELY WRITABLE BY A MIGRATION ONLY UNTIL `0002` RUNS, AND
+**THESE TABLES ARE FREELY WRITABLE BY A MIGRATION ONLY UNTIL `0002` RUNS, AND
 NOTHING ELSE IN THIS FILE SAYS SO.** Every `INSERT`, `UPDATE` and `DELETE` a
 later revision writes against them lands on a connection that is
 `titlepipe_owner` — and `0002`'s `FORCE ROW LEVEL SECURITY` is precisely the
@@ -81,7 +81,7 @@ branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 
-# 🔴 EXACTLY FOUR LABELS, IN THIS ORDER.
+# EXACTLY FOUR LABELS, IN THIS ORDER.
 #
 # Repeated here rather than imported from `titlepipe_core.db.models`, on
 # purpose: a migration is a frozen snapshot of one revision, and an import would
@@ -106,7 +106,7 @@ def _identity_columns() -> tuple[sa.Column[UUID], sa.Column[datetime]]:
     module-level list would attach every table to the first one and fail on the
     second. Hence a function, called once per table.
 
-    🔴 THE RETURN TYPE IS A HETEROGENEOUS TUPLE, NOT `list[Column[object]]`, AND
+    THE RETURN TYPE IS A HETEROGENEOUS TUPLE, NOT `list[Column[object]]`, AND
     THAT WAS A REAL BUG RATHER THAN A STYLE FIX. `Column` is INVARIANT in its
     type parameter, so `Column[UUID]` is not assignable to `Column[object]` and
     the old annotation was simply false — pyright reports it as
@@ -151,7 +151,7 @@ def _tenant_column() -> sa.Column[UUID]:
 
 
 def _tenant_primary_key() -> sa.PrimaryKeyConstraint:
-    """🔴 `PRIMARY KEY (tenant_id, id)`, NOT `PRIMARY KEY (id)`.
+    """`PRIMARY KEY (tenant_id, id)`, NOT `PRIMARY KEY (id)`.
 
     Unique enforcement runs BEFORE a policy's `WITH CHECK`, so under `0002`'s
     `ENABLE` + `FORCE ROW LEVEL SECURITY` and its `tenant_isolation` policy, a
@@ -229,7 +229,7 @@ def _na_reason_column() -> sa.Column[str]:
 
 
 def _line_coords_column() -> sa.Column[dict[str, object]]:
-    """🔴 NULLABLE, AND THE NULLABILITY IS THE POINT.
+    """NULLABLE, AND THE NULLABILITY IS THE POINT.
 
     An engine with no coordinate support declares `null` and never fabricates a
     box; Reader A is a VLM and genuinely cannot cite one. `NOT NULL` would
@@ -311,7 +311,7 @@ def _create_append_only_trigger() -> None:
     `42501 insufficient_privilege`, and no TitlePipe role is a superuser
     (`tests/test_roles.py` asserts `rolsuper` is false for all five).
 
-    🔴 THAT ARGUMENT WAS THE WHOLE ARGUMENT AND IT WAS NOT SUFFICIENT. This
+    THAT ARGUMENT WAS THE WHOLE ARGUMENT AND IT WAS NOT SUFFICIENT. This
     docstring used to conclude from the two sentences above that "the trigger is
     a complete control against every role this system connects as". It is not,
     because `SUSET` governs the in-session `SET` and says nothing about a
@@ -339,7 +339,7 @@ def _create_append_only_trigger() -> None:
     not a control against whoever administers the cluster. Nothing in a database
     can be.
 
-    🔴 "WHOEVER ADMINISTERS THE CLUSTER" IS NOT A DBA IN ANOTHER TEAM. It is
+    "WHOEVER ADMINISTERS THE CLUSTER" IS NOT A DBA IN ANOTHER TEAM. It is
     `titlepipe_owner`, one `SET ROLE` from `titlepipe_migration`, whose DSN this
     file's own `env.py` requires on every run. `ALTER TABLE audit_log DISABLE
     TRIGGER audit_log_append_only` is the whole attack and it needs OWNERSHIP,
@@ -347,7 +347,7 @@ def _create_append_only_trigger() -> None:
     the detection story; read it before restating this sentence anywhere a
     customer sees it.
 
-    🔴 `CREATE FUNCTION`, NOT `CREATE OR REPLACE`, AND THAT IS DELIBERATE. With
+    `CREATE FUNCTION`, NOT `CREATE OR REPLACE`, AND THAT IS DELIBERATE. With
     `OR REPLACE`, a `downgrade()` that forgot its `DROP FUNCTION` would leave the
     old body in place and the next `upgrade` would silently overwrite it — a
     round trip that passes while the schema is not actually being rebuilt, and a
@@ -441,7 +441,7 @@ def downgrade() -> None:
 
     op.execute(f"DROP FUNCTION {APPEND_ONLY_FUNCTION}()")
 
-    # 🔴 `DROP TABLE` DOES NOT DROP A TYPE. Without this line a fresh upgrade
+    # `DROP TABLE` DOES NOT DROP A TYPE. Without this line a fresh upgrade
     # still works and only the SECOND one — the one after a downgrade — fails,
     # with `type "na_reason" already exists`.
     NA_REASON.drop(op.get_bind(), checkfirst=False)

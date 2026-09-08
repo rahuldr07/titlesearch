@@ -77,7 +77,7 @@ async def handle_domain_error(request: Request, exc: Exception) -> JSONResponse:
         # An unmapped domain error is a gap in DOMAIN_ERROR_STATUS, not a
         # caller mistake. Say so loudly enough to be fixed.
         #
-        # 🔴 THE CONDITION WAS `if status >= 500`, WHICH IS NOT THE SAME
+        # THE CONDITION WAS `if status >= 500`, WHICH IS NOT THE SAME
         # QUESTION. `DependencyUnavailableError` is registered at 503, so every
         # correctly-mapped dependency failure logged this line claiming it was
         # unmapped — see `mapped_status_for`, which carries the measurement and
@@ -121,7 +121,7 @@ async def handle_request_validation(request: Request, exc: Exception) -> JSONRes
 def _publishable_detail(detail: object, *, status: int, deployed: bool) -> str:
     """`exc.detail`, or the generic sentence when it cannot be shown to a caller.
 
-    🔴 THE DETAIL USED TO GO OUT VERBATIM IN EVERY ENVIRONMENT. `handle_unexpected`,
+    THE DETAIL USED TO GO OUT VERBATIM IN EVERY ENVIRONMENT. `handle_unexpected`,
     in this same module, spends its whole body on this exact question and answers
     "not in a deployed environment"; this handler asked it of nothing. It was
     DORMANT rather than harmless: rule 4 of `scripts/check_backend_rules.py` bans

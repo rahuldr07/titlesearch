@@ -41,7 +41,7 @@ class Order(_TenantRow):
     title company's own customer and every staff role sees every client's orders
     (plan §1), so nothing here narrows what a session may read.
 
-    🔴 IT IS NOW A COMPOSITE FOREIGN KEY, AND THE THING THAT CLOSES IS NOT "an
+    IT IS NOW A COMPOSITE FOREIGN KEY, AND THE THING THAT CLOSES IS NOT "an
     order naming a client that does not exist". `clients` holds
     `delivery_method`, `delivery_config` and `template_ref` — the DESTINATION a
     report is transmitted to. Unconstrained, an order in tenant A could hold

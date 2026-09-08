@@ -22,7 +22,7 @@ repository is not a specialisation of a tenant one. `RuleRepository` therefore
 sits beside the base rather than under it; the consequences that are the RULEBOOK's
 are in its own docstring, and what is here is why the BASE does not want it.
 
-🔴 THE PLAN'S REASON FOR THAT IS FALSE, AND SO IS THE MECHANISM ITS INJECTION
+THE PLAN'S REASON FOR THAT IS FALSE, AND SO IS THE MECHANISM ITS INJECTION
 NAMES. `docs/superpowers/plans/backend/02-first-vertical-slice.md` Task 2 says a
 global table inheriting the base "would either carry a meaningless tenant or
 quietly filter to nothing", and asks for the inheritance to be injected on the
@@ -131,7 +131,7 @@ from titlepipe_core.db.session import TENANT_SCOPED_MARK
 # which is a message a second class can only reuse by copying it and changing one
 # word — and a copy is what stops being edited when the reason moves.
 #
-# 🔴 THE FIRST ATTEMPT AT SHARING IT SHARED THE WHOLE SENTENCE, AND THE SENTENCE
+# THE FIRST ATTEMPT AT SHARING IT SHARED THE WHOLE SENTENCE, AND THE SENTENCE
 # WAS ONLY TRUE OF ONE CALLER. Rendered for `TenantRepository` it read "A GLOBAL
 # table does not make that milder …  `tenant` may be None" — a non sequitur for a
 # tenant table, and the second clause told that caller a session established at
@@ -214,7 +214,7 @@ class TenantRepository[T: Base]:
     def __init__(self, session: AsyncSession, model: type[T]) -> None:
         """Refuse a session that did not come out of `tenant_session`.
 
-        🔴 THIS CLASS USED TO *OFFER* SCOPING RATHER THAN FORCE IT. The annotation
+        THIS CLASS USED TO *OFFER* SCOPING RATHER THAN FORCE IT. The annotation
         says `AsyncSession` and every `AsyncSession` satisfies it, including one
         called straight off an `async_sessionmaker` — which `db.__all__` exports,
         because an application builds one at startup and hands it to

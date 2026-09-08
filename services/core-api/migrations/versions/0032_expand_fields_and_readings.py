@@ -6,7 +6,7 @@ Revises: 0031
 Create Date: 2026-09-04
 
 ---------------------------------------------------------------------------
-🔴 AN `ALTER`, NOT A `CREATE`. `0001` created both tables — `fields` with
+AN `ALTER`, NOT A `CREATE`. `0001` created both tables — `fields` with
    `na_reason` and `field_readings` with `line_coords` — and `0002` isolated
    them, so the RLS triple belongs to those revisions. `0031`'s header states
    the same case at length; `0030` is what the other half looks like.
@@ -23,7 +23,7 @@ transition function takes as a parameter) and `0008` (`orders`). Kaveri's
 relinearizes.
 
 ---------------------------------------------------------------------------
-🔴 `correction_reason` — THE COLUMN THE SYSTEM ACCEPTED AND THEN DISCARDED.
+`correction_reason` — THE COLUMN THE SYSTEM ACCEPTED AND THEN DISCARDED.
 ---------------------------------------------------------------------------
 `CorrectFieldRequest.reason` is `z.string().optional()` on the wire, and the
 handler for `POST /api/fields/:id/correct` validates the body, writes `state`,
@@ -46,7 +46,7 @@ column becomes lossy silently — which is why the constraint and the transition
 function are in the same revision rather than two.
 
 ---------------------------------------------------------------------------
-🔴 THE STATE MACHINE. `fields.py` ATTRIBUTES IT TO `0006`, AND `0006` IS
+THE STATE MACHINE. `fields.py` ATTRIBUTES IT TO `0006`, AND `0006` IS
    `legal_holds`.
 ---------------------------------------------------------------------------
 `models/fields.py` and `models/enums.py` both say migration `0006` holds a
@@ -139,7 +139,7 @@ JUDGMENT_PATH_PREFIX = "judgments."
 
 TRANSITION_FUNCTION = "titlepipe_field_transition"
 
-# 🔴 EVERY COLUMN OF `fields` THAT `titlepipe_app` MAY UPDATE. `state` IS ABSENT
+# EVERY COLUMN OF `fields` THAT `titlepipe_app` MAY UPDATE. `state` IS ABSENT
 # AND THAT ABSENCE IS THE MACHINE — see the module docstring. `id`, `tenant_id`
 # and `created_at` are absent too, but as a consequence of listing the domain
 # columns rather than as a ruling: they are named in the residuals, not here.
@@ -167,7 +167,7 @@ FIELD_APP_UPDATABLE_COLUMNS = (
 def _refuse_if_populated(table: str, columns: Sequence[str]) -> None:
     """Refuse, by name, before adding a `NOT NULL` column with no default.
 
-    🔴 THE `NO FORCE` DANCE IS LOAD-BEARING AND `0031::_refuse_if_populated`
+    THE `NO FORCE` DANCE IS LOAD-BEARING AND `0031::_refuse_if_populated`
     carries the measurement: `SELECT count(*)` issued by the role a migration runs
     as returns 0 on a `FORCE ROW LEVEL SECURITY` table however many rows it holds,
     because `FORCE` is exactly the clause that removes the owner's exemption. A
@@ -198,7 +198,7 @@ def _create_transition_function() -> None:
     """The ONE granted path that moves `fields.state`.
 
     ---------------------------------------------------------------------------
-    🔴 `SECURITY DEFINER`, AND IT IS THE ONLY THING THAT MAKES THE GRANT MEAN
+    `SECURITY DEFINER`, AND IT IS THE ONLY THING THAT MAKES THE GRANT MEAN
        ANYTHING.
     ---------------------------------------------------------------------------
     A `SECURITY INVOKER` function runs as the caller, so `titlepipe_app` calling
@@ -228,7 +228,7 @@ def _create_transition_function() -> None:
     path that writes `state`.
 
     ---------------------------------------------------------------------------
-    🔴 THE `SET` LIST IS FIXED, AND THE CALLER THEREFORE PASSES THE COMPLETE
+    THE `SET` LIST IS FIXED, AND THE CALLER THEREFORE PASSES THE COMPLETE
        POST-TRANSITION VALUE OF ALL SIX COLUMNS.
     ---------------------------------------------------------------------------
     A fixed list is what stops a state writer clearing an exclusion as a side
@@ -263,7 +263,7 @@ def _create_transition_function() -> None:
     # literal, where those same quotes would terminate the string early.
     terminal = ", ".join(f"'{label}'" for label in FIELD_TERMINAL_STATES)
     terminal_prose = ", ".join(FIELD_TERMINAL_STATES)
-    # 🔴 `S608` IS SUPPRESSED, AND WHAT MAKES IT SAFE IS CHECKABLE RATHER THAN
+    # `S608` IS SUPPRESSED, AND WHAT MAKES IT SAFE IS CHECKABLE RATHER THAN
     # ASSERTED — the same standard `tests/minimal_rows.py` holds its one
     # suppression to. Every value interpolated below is a LITERAL DEFINED IN THIS
     # MODULE: `TRANSITION_FUNCTION`, `NOT_IN_PREREQUISITE_STATE`, and the two
@@ -363,7 +363,7 @@ def upgrade() -> None:
     # written except through the transition function.
     op.add_column("fields", sa.Column("state", FIELD_STATE, nullable=False))
 
-    # 🔴 THE PROVENANCE ENVELOPE, EVERY MEMBER NULLABLE, AND THE NULLABILITY IS
+    # THE PROVENANCE ENVELOPE, EVERY MEMBER NULLABLE, AND THE NULLABILITY IS
     # THE PRODUCT. A field whose `value` is non-null while these are null is the
     # exact failure shape the architecture exists to CATCH — the server routes it
     # to review. `NOT NULL` here would force the pipeline to invent a citation,
@@ -421,7 +421,7 @@ def upgrade() -> None:
         "fields",
         "state <> 'corrected' OR correction_reason IS NOT NULL",
     )
-    # 🔴 THE PREFIX IS THE LIVE SERVER GUARD'S AND THE LIVE SEED DATA CONTRADICTS
+    # THE PREFIX IS THE LIVE SERVER GUARD'S AND THE LIVE SEED DATA CONTRADICTS
     # IT. The handler refuses any exclude whose path does not start with
     # `judgments.`; the SAME file seeds field paths spelled
     # `judgments_liens.1.type`, which that guard refuses. One of the two spellings
@@ -472,7 +472,7 @@ def upgrade() -> None:
     op.add_column(
         "field_readings", sa.Column("field_id", postgresql.UUID(as_uuid=True), nullable=False)
     )
-    # 🔴 SEPARATE COLUMNS AND NOT ONE STRING. `mineru` and `mineru-pro-2604` are
+    # SEPARATE COLUMNS AND NOT ONE STRING. `mineru` and `mineru-pro-2604` are
     # the same lineage with wildly different behaviour — 12.2s/useful against
     # 47.5s/empty-on-everything — so collapsing id and version would hide the
     # entire failure inside one identifier.
@@ -489,7 +489,7 @@ def upgrade() -> None:
     op.add_column("field_readings", sa.Column("page_no", sa.Integer(), nullable=True))
     op.add_column("field_readings", sa.Column("snippet", sa.Text(), nullable=True))
     op.add_column("field_readings", sa.Column("confidence_raw", sa.Float(), nullable=True))
-    # 🔴 COST AND LATENCY ARE `NOT NULL`, WHICH IS THE ONE PLACE IN THIS SLICE
+    # COST AND LATENCY ARE `NOT NULL`, WHICH IS THE ONE PLACE IN THIS SLICE
     # WHERE A MEASUREMENT IS MANDATORY. Every adapter records cost and latency per
     # call; an engine that answered without either is an engine whose price nobody
     # can account for. `Numeric` and not a float for cost: money summed in binary
@@ -516,7 +516,7 @@ def upgrade() -> None:
         ["tenant_id", "field_id", "engine_id", "engine_version", "attempt_ordinal"],
     )
 
-    # 🔴 THE COORDINATE TRAP, MADE UNREPRESENTABLE RATHER THAN DOCUMENTED. Three
+    # THE COORDINATE TRAP, MADE UNREPRESENTABLE RATHER THAN DOCUMENTED. Three
     # coordinate spaces coexist — the PDF page (612x792pt), the rendered raster
     # (1391x1800px) and the engine's own SQUARE 1000x1000 box grid — and none of
     # them is recorded in raw engine output. The raster is not square, so mapping

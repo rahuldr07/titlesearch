@@ -1,6 +1,6 @@
 """`RuleRepository` — the rulebook, which is the one table outside tenancy.
 
-🔴 IT LIVED IN `base.py` (then `db/repository.py`) UNTIL THAT FILE HIT 416 LINES, over
+IT LIVED IN `base.py` (then `db/repository.py`) UNTIL THAT FILE HIT 416 LINES, over
 `scripts/check_backend_rules.py`'s rule-6 cap, and the cheap way out was a
 `rules-allow-file(file-length)` on the module that owns the tenancy check. That is
 the same trade `engine.py` was split out of `session.py` to avoid on 2026-08-06,
@@ -142,7 +142,7 @@ class RuleRepository:
         product decision and it replaces this line rather than being layered on it.
 
         ---------------------------------------------------------------------
-        🔴 IT WAS `ORDER BY code` ALONE, AND `code` IS NOT UNIQUE. That version of
+        IT WAS `ORDER BY code` ALONE, AND `code` IS NOT UNIQUE. That version of
            this paragraph said "`code` because it is the one column that is unique
            per rule", and rested Tasks 3 and 4 on it.
         ---------------------------------------------------------------------
@@ -171,7 +171,7 @@ class RuleRepository:
         all three. Any order is acceptable to the wire; the same order twice is not
         optional.
 
-        🔴 OPEN ITEM FOR PLAN 05, WHERE RULE WRITES LAND: should `rules` carry
+        OPEN ITEM FOR PLAN 05, WHERE RULE WRITES LAND: should `rules` carry
         `UNIQUE (code, version)`? It is probably the right schema and it is a
         DOMAIN question — whether two rows may share a code and a version is a
         rulebook rule, and this repository does not resolve one without a ruling.

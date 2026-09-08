@@ -17,7 +17,7 @@ probe exists for: a server still in recovery, a role at its connection limit for
 the next statement, a standby that accepts sessions and refuses reads. A one-row
 `SELECT` is the cheapest statement that separates them.
 
-🔴 THAT PARAGRAPH IS AN ARGUMENT, AND FOR A WHILE IT WAS THE ONLY THING HOLDING
+THAT PARAGRAPH IS AN ARGUMENT, AND FOR A WHILE IT WAS THE ONLY THING HOLDING
 THE STATEMENT UP. MEASURED: deleting the `SELECT 1` and keeping the `connect()`
 left the whole suite green, so the twelve lines above were exactly the part a
 reader could not rely on. What is pinned NOW, and by what, kept apart from what

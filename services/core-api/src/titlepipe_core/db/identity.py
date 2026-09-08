@@ -27,7 +27,7 @@ out of `information_schema` and compares the three shared columns and the primar
 key IN KEY ORDER. If `_TenantRow` changes, that test goes red here.
 
 ---------------------------------------------------------------------------
-🔴 THE ROLE COLUMN IS THE AUTHORIZATION INPUT, AND IT IS A COLUMN AND NOT A
+THE ROLE COLUMN IS THE AUTHORIZATION INPUT, AND IT IS A COLUMN AND NOT A
    CLAIM. `docs/PRD.md` §9's correction note is explicit: "PostgreSQL owns
    authorization — WorkOS's own role/permission claims are deliberately
    ignored". That sentence is the whole reason this column exists here rather
@@ -67,7 +67,7 @@ __all__ = [
     "User",
 ]
 
-# 🔴 EXACTLY THESE SIX LABELS, IN EXACTLY THIS ORDER. They are
+# EXACTLY THESE SIX LABELS, IN EXACTLY THIS ORDER. They are
 # `packages/contract/src/authz.ts`'s `ROLES` verbatim, and that array is what the
 # browser derives every door and affordance from. `docs/PRD.md` §5 names the same
 # six seats in prose — Reviewer, Senior, Ops lead, Engineer, Typist (temp),
@@ -112,7 +112,7 @@ class _IdentityRow(Base):
     `__abstract__` means SQLAlchemy maps no table for this class, so it produces
     no DDL and never appears in `Base.metadata.tables`.
 
-    🔴 `tenant_id` IS DECLARED FIRST AND IS PART OF THE PRIMARY KEY. SQLAlchemy
+    `tenant_id` IS DECLARED FIRST AND IS PART OF THE PRIMARY KEY. SQLAlchemy
     builds an implicit primary key in table-column order and, within one class,
     table-column order is declaration order — so the key comes out
     `(tenant_id, id)`. `_TenantRow` reaches the same place from a subclass, where
@@ -148,7 +148,7 @@ class User(_IdentityRow):
     """One person's seat in one tenant.
 
     ---------------------------------------------------------------------------
-    🔴 `(tenant_id, identity_provider, identity_subject)` IS UNIQUE, AND THE
+    `(tenant_id, identity_provider, identity_subject)` IS UNIQUE, AND THE
        `tenant_id` PREFIX IS LOAD-BEARING RATHER THAN TIDY.
     ---------------------------------------------------------------------------
     `db/models._TenantRow` measures the cross-tenant existence oracle a
@@ -184,7 +184,7 @@ class User(_IdentityRow):
     __tablename__ = "users"
 
     __table_args__ = (
-        # 🔴 NOT UNIQUE, AND `0100` IS WHY IT EXISTS AT ALL. That revision's
+        # NOT UNIQUE, AND `0100` IS WHY IT EXISTS AT ALL. That revision's
         # `resolve_actor` looks a seat up by `(tenant_id, identity_subject)` on
         # every insert into `audit_log`, and the unique constraint below leads
         # `(tenant_id, identity_provider, identity_subject)` — the provider sits
@@ -204,7 +204,7 @@ class User(_IdentityRow):
             "identity_subject",
             name="uq_users_tenant_id_identity_provider_identity_subject",
         ),
-        # 🔴 THE THREE CHECKS ARE THE SEAM'S PRECONDITIONS, WRITTEN WHERE THEY
+        # THE THREE CHECKS ARE THE SEAM'S PRECONDITIONS, WRITTEN WHERE THEY
         # CANNOT BE SKIPPED BY A CODE PATH.
         #
         # `email = lower(email)`: without it `Ada@x.test` and `ada@x.test` are two
@@ -265,7 +265,7 @@ class Client(_IdentityRow):
     tables belong to the domain schema, and `relations.tenant_fk` is where the
     reasoning lives.
 
-    🔴 THE COLUMNS BELOW ARE WHY THAT CONSTRAINT IS NOT BOOKKEEPING.
+    THE COLUMNS BELOW ARE WHY THAT CONSTRAINT IS NOT BOOKKEEPING.
     `delivery_method`, `delivery_config` and `template_ref` are the DESTINATION a
     rendered report is transmitted to, so an order naming another tenant's client
     is one shop's deliverable addressed to another shop's customer.

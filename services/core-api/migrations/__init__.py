@@ -10,7 +10,7 @@ sitting in `0001` — two false return annotations (`Column` is invariant, so
 been written to a checker that was never going to look at them. If you add a
 revision, `uv run pyright` covers it.
 
-**🔴 `scripts/check_backend_rules.py` DOES NOT, AND NOTHING REPLACES IT HERE.**
+**`scripts/check_backend_rules.py` DOES NOT, AND NOTHING REPLACES IT HERE.**
 The gate's scan roots are `services/*/src` and `libs/*/src`;
 `services/core-api/migrations/` is under neither, and the scanned-file count
 does not move when a revision is added. *Verified 2026-08-05: a migration
@@ -20,7 +20,7 @@ the `db/` carve-out exists for — but it means **the structural rules here are
 held by review and by pyright, not by the gate**. Stated here so nobody reads
 the gate's silence as approval.
 
-🔴 AND IT HAS NO OWNER. This paragraph used to end "Widening the scan roots
+AND IT HAS NO OWNER. This paragraph used to end "Widening the scan roots
 touches `scripts/` and belongs to Task 7." Task 7 landed — it is CI, commits
 `3a5a652` and `9ddeefc` — and it did not widen them. `SCAN_ROOT_GLOBS` is still
 `("services/*/src", "libs/*/src")` and has not been edited since the commit that

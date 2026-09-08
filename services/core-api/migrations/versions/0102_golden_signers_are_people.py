@@ -45,7 +45,7 @@ resolve to — exactly one ACTIVE `users` row in the tenant of the row being
 written — and this revision applies it to both, `AFTER INSERT OR UPDATE`, `FOR
 EACH ROW`, `ENABLE ALWAYS`.
 
-🔴 `AFTER` AND NOT `BEFORE`, WHICH WAS MEASURED RATHER THAN CHOSEN. A `BEFORE
+`AFTER` AND NOT `BEFORE`, WHICH WAS MEASURED RATHER THAN CHOSEN. A `BEFORE
 ROW` trigger runs before every CHECK constraint and before the policy's `WITH
 CHECK`, so a `BEFORE` version of this answered FIRST for rows that had nothing
 to do with signatures: `value_xor_na_reason`, `citation_is_not_blank`,
@@ -66,7 +66,7 @@ is passed the signer's OWN CURRENT SEAT read from `users`, which makes the seat
 half of that function a no-op here. That is deliberate and it is the one
 compromise in this file: see the ruling below.
 
-## 🔴 WHAT THIS DOES NOT DO, EACH ONE STATED SO IT IS NOT READ AS COVERED
+## WHAT THIS DOES NOT DO, EACH ONE STATED SO IT IS NOT READ AS COVERED
 
 **It does not restrict WHICH seat may establish ground truth.** All six of
 `0020`'s labels can sign. Whether a `typist` or a `reviewer` may establish a
@@ -92,7 +92,7 @@ page id plus bounding box, verified against `pages` — so that a golden value
 cites a place in a record rather than a string. That work sits with the citation
 constraint on `fields` and is deliberately NOT touched here.
 
-## 🔴 THE CEILING
+## THE CEILING
 
 `titlepipe_owner` can `DROP TRIGGER` and insert freely, as it can for every
 other control in this schema. The trigger's presence, its function's body and
@@ -143,7 +143,7 @@ def signer_body() -> str:
     ONE `text` column and never has to tell SQL NULL from JSON null, because both
     answers lead to the same refusal.
 
-    🔴 THE SEAT IS READ, NOT DECLARED. `resolve_actor` takes a seat and compares
+    THE SEAT IS READ, NOT DECLARED. `resolve_actor` takes a seat and compares
     it to `users.role`; here the signer's own current role is looked up and
     handed straight back to it, which makes that comparison a tautology. The
     alternative was to require the writer to declare the signer's seat in a

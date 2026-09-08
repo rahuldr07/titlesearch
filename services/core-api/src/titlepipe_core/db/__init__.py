@@ -16,7 +16,7 @@ matched by the rule. Its own module docstring is where that decision is argued:
 "a rule that flags the sentence documenting the rule is a rule that teaches
 people to stop writing the documentation."
 
-🔴 THIS PARAGRAPH USED TO SPELL THE TYPE OUT RATHER THAN NAME IT, AND CITED A
+THIS PARAGRAPH USED TO SPELL THE TYPE OUT RATHER THAN NAME IT, AND CITED A
 TEST THAT NO LONGER EXISTS. It said
 `tests/test_errors.py::test_domain_and_service_code_never_import_httpexception`
 "scans every file under `src/` for the literal string and has no notion of a
@@ -38,7 +38,7 @@ refusal both of them make; `repositories/rules.py` holds `RuleRepository`, the
 one global table's. `health.py` holds `check_database`, the one statement
 `/ready` runs.
 
-🔴 BOTH REPOSITORY MODULES MOVED INTO `repositories/` ON 2026-09-05, and the
+BOTH REPOSITORY MODULES MOVED INTO `repositories/` ON 2026-09-05, and the
 directory is the point. `CONVENTIONS.md` §10's first machine-enforceable rule is
 that `api/routers/**` may not import `db/repositories` — a rule about a path, which
 needs the path to exist. As a flat `repository.py` beside `models.py` and
@@ -46,7 +46,7 @@ needs the path to exist. As a flat `repository.py` beside `models.py` and
 a filename. No caller's import line changed: both names are re-exported here, and
 nothing outside `db/` ever spelled the module path.
 
-🔴 `RuleRepository` WAS IN `repository.py` AND MOVED OUT ON 2026-08-06, the second
+`RuleRepository` WAS IN `repository.py` AND MOVED OUT ON 2026-08-06, the second
 split in this package forced by rule 6 of `scripts/check_backend_rules.py` — that
 file had reached 416 lines and the alternative was a `rules-allow-file` on the
 module that owns the tenancy check, which is the trade `engine.py` was split out
@@ -76,7 +76,7 @@ Both are exported because both are constructed by callers outside this package;
 the pair being visible together is also the cheapest way for a reader to notice
 that the second is not a kind of the first.
 
-🔴 `make_engine` AND `make_sessionmaker` MOVED OUT OF `session.py` ON 2026-08-06
+`make_engine` AND `make_sessionmaker` MOVED OUT OF `session.py` ON 2026-08-06
 AND NO CALLER'S IMPORT LINE CHANGED, which is the whole point of re-exporting
 here. `from titlepipe_core.db import make_engine, make_sessionmaker,
 tenant_session` reads identically on both sides of the split. The move was forced
@@ -95,7 +95,7 @@ The one module that reaches past this `__init__` is `migrations/env.py`, for
 list below: this file re-exports what a caller needs in order to REACH the
 database, and one libpq connection parameter is not that.
 
-🔴 `make_sessionmaker` IS IN THAT LIST, AND IT IS AN UNSCOPED DOOR. Calling the
+`make_sessionmaker` IS IN THAT LIST, AND IT IS AN UNSCOPED DOOR. Calling the
 sessionmaker it returns gives an `AsyncSession` with no tenant listener on it, so
 "the only scoped way" above is a claim about `tenant_session` and not about the
 reachable surface of this package. The export is kept on purpose — an application

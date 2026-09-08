@@ -25,7 +25,7 @@ Nothing in this revision depends on any table, type or function created between
 and it creates everything else it touches — with one stated exception, below.
 
 ---------------------------------------------------------------------------
-🔴 WHAT THIS REVISION DEFERRED, AND WHAT CLOSED IT: `instruments.document_id`'s
+WHAT THIS REVISION DEFERRED, AND WHAT CLOSED IT: `instruments.document_id`'s
    FOREIGN KEY.
 ---------------------------------------------------------------------------
 `models/chain.py` declares `tenant_fk(column="document_id",
@@ -85,7 +85,7 @@ is `NOT NULL` for the reason `fields.correction_reason` is checked: an assertion
 that overrides a computed answer is the one place where "why" is the only thing
 auditable afterwards.
 
-🔴 **THE PARTIAL UNIQUE INDEX IS CREATED HERE, NOT IN `0007`.**
+**THE PARTIAL UNIQUE INDEX IS CREATED HERE, NOT IN `0007`.**
 `models/chain.py` said `0007`'s, and that was never possible: `0007` is Kaveri's
 and an index cannot precede the table it is on, which is this revision's.
 `uq_chain_root_assertions_one_standing_per_order` is `UNIQUE (tenant_id,
@@ -133,7 +133,7 @@ erase a tenant's chain. `titlepipe_worker` is named nowhere, as in `0002`.
 documents arrive, and `chain_root_assertions` is retracted in place — its
 `retracted_at`/`retracted_by` pair is an `UPDATE` and nothing else.
 
-⚠️ **WHAT THIS REVISION DOES NOT FIX, AND WHICH IS NOT MINE TO:**
+**WHAT THIS REVISION DOES NOT FIX, AND WHICH IS NOT MINE TO:**
 `tests/test_forced_rls_and_grants.py::EXPECTED_TENANT_TABLES` is a six-element
 frozenset compared for EQUALITY against the catalog derivation. Three new tenant
 tables land here and that assertion goes red on the exact-set line, not on any of
@@ -158,7 +158,7 @@ branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 
-# 🔴 EXACTLY THESE LABELS, IN EXACTLY THIS ORDER. `JudgmentStatus` at
+# EXACTLY THESE LABELS, IN EXACTLY THIS ORDER. `JudgmentStatus` at
 # `packages/contract/src/enums.ts:82-89`, `RuleProvenance` at `:66`. Repeated
 # here rather than imported, for the reason the module docstring gives.
 # `enumsortorder` is what `<`, `ORDER BY` and `MIN()` on these types use, so the
@@ -246,7 +246,7 @@ def _tenant_column() -> sa.Column[UUID]:
 
 
 def _tenant_primary_key() -> sa.PrimaryKeyConstraint:
-    """🔴 `PRIMARY KEY (tenant_id, id)`, NOT `PRIMARY KEY (id)`.
+    """`PRIMARY KEY (tenant_id, id)`, NOT `PRIMARY KEY (id)`.
 
     Unique enforcement runs BEFORE a policy's `WITH CHECK`, so under `ENABLE` +
     `FORCE ROW LEVEL SECURITY` a single-column `id` key answers "does this id
@@ -274,7 +274,7 @@ def _tenant_fk(
     the frozen-snapshot reason and kept structurally identical so the two emit
     the same constraint under the same naming convention.
 
-    🔴 THE COMPOSITE FORM IS NOT COSMETIC. `REFERENCES orders (id)` does not name
+    THE COMPOSITE FORM IS NOT COSMETIC. `REFERENCES orders (id)` does not name
     a key at all once the primary key is `(tenant_id, id)` — PostgreSQL rejects
     it — and the tempting fix, a unique index on `id` alone, reopens on the
     PARENT the existence oracle the composite key closed on the child. The
@@ -307,7 +307,7 @@ def _enum_column(name: str, enum: postgresql.ENUM, *, nullable: bool) -> sa.Colu
     else. Without it, `op.create_table` reports `reportUnknownArgumentType` —
     MEASURED on this file, two errors, one per enum column.
 
-    🔴 `nullable` IS A PARAMETER HERE AND IS HARDCODED `False` IN `0003`'s
+    `nullable` IS A PARAMETER HERE AND IS HARDCODED `False` IN `0003`'s
     NEAR-TWIN, because the two enum columns in this revision differ on exactly
     that and the difference is domain, not style. `chain_links.provenance` is
     `NOT NULL`: a link with no provenance tag is a link with no answer to "may
@@ -365,16 +365,14 @@ def upgrade() -> None:
     JUDGMENT_STATUS.create(op.get_bind(), checkfirst=False)
     RULE_PROVENANCE.create(op.get_bind(), checkfirst=False)
 
-    # -----------------------------------------------------------------------
     # `instruments` — a thing of record, which may or may not have arrived as
     # paper.
-    # -----------------------------------------------------------------------
     op.create_table(
         "instruments",
         *_identity_columns(),
         _tenant_column(),
         sa.Column("order_id", postgresql.UUID(as_uuid=True), nullable=False),
-        # 🔴 NULLABLE, AND THE NULL IS THE POINT: an instrument known only from
+        # NULLABLE, AND THE NULL IS THE POINT: an instrument known only from
         # an index line has no paper in the package. The column is nullable and
         # its composite FOREIGN KEY is real — a null names no document, and a
         # non-null one names a document in this tenant or the write fails.
@@ -405,9 +403,7 @@ def upgrade() -> None:
         ),
     )
 
-    # -----------------------------------------------------------------------
     # `chain_links` — the DERIVED chain, each step carrying how it was derived.
-    # -----------------------------------------------------------------------
     op.create_table(
         "chain_links",
         *_identity_columns(),
@@ -426,7 +422,7 @@ def upgrade() -> None:
         _tenant_fk("order_id", "orders"),
         _tenant_fk("instrument_id", "instruments"),
         _tenant_fk("prior_link_id", "chain_links"),
-        # 🔴 SINGLE-COLUMN, AND CORRECT. `rules` is GLOBAL — `rules (id)` is its
+        # SINGLE-COLUMN, AND CORRECT. `rules` is GLOBAL — `rules (id)` is its
         # whole primary key and there is no tenant column to pair with. See the
         # module docstring, and `0003`'s for the ruling itself.
         sa.ForeignKeyConstraint(["rule_id"], ["rules.id"]),
@@ -434,7 +430,7 @@ def upgrade() -> None:
             "tenant_id", "order_id", "ordinal", name="uq_chain_links_tenant_id_order_id_ordinal"
         ),
         sa.CheckConstraint("ordinal >= 1", name="ordinal_starts_at_one"),
-        # 🔴 THE MACHINE FOR "NEVER EMIT A VALUE YOU CANNOT CITE". A link tagged
+        # THE MACHINE FOR "NEVER EMIT A VALUE YOU CANNOT CITE". A link tagged
         # `RULED` with a null `rule_id` is a write error. `DERIVED`, `OPEN` and
         # `CONFLICT` are honest about citing nothing and are left free.
         sa.CheckConstraint(
@@ -450,9 +446,7 @@ def upgrade() -> None:
         ),
     )
 
-    # -----------------------------------------------------------------------
     # `chain_root_assertions` — a reviewer saying stop, which is not a rule.
-    # -----------------------------------------------------------------------
     op.create_table(
         "chain_root_assertions",
         *_identity_columns(),
@@ -464,7 +458,7 @@ def upgrade() -> None:
         sa.Column("chain_link_id", postgresql.UUID(as_uuid=True), nullable=True),
         sa.Column("asserted_by", sa.Text(), nullable=False),
         sa.Column("asserted_at", sa.DateTime(timezone=True), nullable=False),
-        # 🔴 `NOT NULL`. This row overrides a computed answer, and "why" is the
+        # `NOT NULL`. This row overrides a computed answer, and "why" is the
         # only thing auditable about it afterwards.
         sa.Column("reason", sa.Text(), nullable=False),
         sa.Column("retracted_at", sa.DateTime(timezone=True), nullable=True),
@@ -482,7 +476,7 @@ def upgrade() -> None:
         ),
     )
 
-    # 🔴 ONE STANDING ASSERTION PER ORDER, AND PARTIAL RATHER THAN PLAIN.
+    # ONE STANDING ASSERTION PER ORDER, AND PARTIAL RATHER THAN PLAIN.
     # `UNIQUE (tenant_id, order_id)` outright would make retraction-and-
     # reassertion impossible — the retracted row keeps occupying the key. The
     # `WHERE retracted_at IS NULL` predicate keeps the whole history and still
@@ -504,7 +498,7 @@ def upgrade() -> None:
         postgresql_where=sa.text("retracted_at IS NULL"),
     )
 
-    # 🔴 THE RLS TRIPLE AND THE GRANTS, IN THE SAME REVISION AS THE `CREATE`.
+    # THE RLS TRIPLE AND THE GRANTS, IN THE SAME REVISION AS THE `CREATE`.
     # CONVENTIONS §1. `_isolate` is not implied by the grant and the grant is not
     # implied by `_isolate`: RLS runs AFTER the privilege check, never instead of
     # it, so a table with a perfect policy and no grant is `42501 permission
@@ -537,7 +531,7 @@ def downgrade() -> None:
     for table in reversed(TABLES):
         op.drop_table(table)
 
-    # 🔴 WITHOUT THESE TWO LINES A FRESH UPGRADE STILL WORKS AND ONLY THE SECOND
+    # WITHOUT THESE TWO LINES A FRESH UPGRADE STILL WORKS AND ONLY THE SECOND
     # ONE — the one after a downgrade — fails, with `type "rule_provenance"
     # already exists`. Dropped in the reverse of creation order, which nothing
     # enforces today and which stays correct when a later revision adds a type

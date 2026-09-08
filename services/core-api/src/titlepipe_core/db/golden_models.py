@@ -15,7 +15,7 @@ database, find no table for them in the metadata, and report a spurious
 files away.
 
 ---------------------------------------------------------------------------
-🔴 WHAT THE ORM DOES **NOT** ENFORCE, SO THAT NOBODY READS THIS FILE AS THE
+WHAT THE ORM DOES **NOT** ENFORCE, SO THAT NOBODY READS THIS FILE AS THE
    PLACE THE RULES LIVE.
 ---------------------------------------------------------------------------
 Every refusal that keeps the golden set honest is a database object, and this
@@ -75,7 +75,7 @@ from titlepipe_core.db.models.base import (
 )
 from titlepipe_core.db.models.enums import NA_REASON
 
-# 🔴 EXACTLY THESE FOUR LABELS, IN THIS ORDER. `packages/contract/src/enums.ts`
+# EXACTLY THESE FOUR LABELS, IN THIS ORDER. `packages/contract/src/enums.ts`
 # `GoldenTag` at :70, verbatim. `migrations/versions/0070_golden_fields.py`
 # repeats the tuple rather than importing it, for the frozen-snapshot reason
 # `0001` gives; `tests/test_golden_set.py` asserts these as LITERALS and
@@ -92,7 +92,7 @@ GOLDEN_TAG_LABELS: Final = ("delivered_report", "ruled", "suspect", "agreed")
 GOLDEN_TAG_TYPE_NAME: Final = "golden_tag"
 GOLDEN_TAG: Final = ENUM(*GOLDEN_TAG_LABELS, name=GOLDEN_TAG_TYPE_NAME, create_type=False)
 
-# 🔴 EXACTLY THREE, AND THERE IS NO FOURTH. They are the three golden endpoints
+# EXACTLY THREE, AND THERE IS NO FOURTH. They are the three golden endpoints
 # — `POST /api/golden/corrections`, `POST /api/golden/{id}/confirm`,
 # `POST /api/golden/{id}/demote` — and nothing else. No `promote_reading`, so
 # "an engine's output became truth" is not an act this ledger can record.
@@ -122,7 +122,7 @@ class GoldenField(_TenantRow):
     """One human-established truth: a value for one path on one order.
 
     ---------------------------------------------------------------------------
-    🔴 THERE IS NO COLUMN HERE THAT COULD HOLD A MODEL OUTPUT, AND THAT IS THE
+    THERE IS NO COLUMN HERE THAT COULD HOLD A MODEL OUTPUT, AND THAT IS THE
        DESIGN RATHER THAN AN OMISSION.
     ---------------------------------------------------------------------------
     No `engine_id`, no `engine_version`, no `confidence`, no `model`. A golden
@@ -237,7 +237,7 @@ class GoldenCorrection(_TenantRow):
     As of `0111` the uniqueness is PARTIAL — exactly one row per slot supersedes
     nothing — and it is the four constraints together that keep the property.
 
-    🔴 `supersedes_correction_id` IS THE ONLY WAY OUT OF A BRICKED FIELD, AND IT
+    `supersedes_correction_id` IS THE ONLY WAY OUT OF A BRICKED FIELD, AND IT
     IS AN APPEND AND NOT A MARK. A ledger row whose before-state never matched
     occupies the only legal next revision forever: `0072` refuses every UPDATE it
     could authorise, and `0071`'s triggers refuse both the repair and the
@@ -315,7 +315,7 @@ class GoldenCorrection(_TenantRow):
             "supersedes_correction_id IS NULL OR supersedes_correction_id <> id",
             name="a_row_does_not_supersede_itself",
         ),
-        # 🔴 DECLARED HERE AND NOT ONLY IN THE MIGRATION, BECAUSE `alembic check`
+        # DECLARED HERE AND NOT ONLY IN THE MIGRATION, BECAUSE `alembic check`
         # COMPARES INDEXES — `0051`'s partial index carries the same note. A
         # `UniqueConstraint` cannot express either of these: the first is partial
         # because superseded rows STAY, and the second is not unique at all.
