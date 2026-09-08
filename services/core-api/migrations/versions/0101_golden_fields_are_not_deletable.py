@@ -76,6 +76,11 @@ this trigger fails no statement; they fail CI. That is a different trust domain
 from the one they are inside, and it is the only one available until DDL on this
 schema requires a second party — a migration-signing gate, or an owner role no
 interactive session can `SET ROLE` into.
+
+This paragraph is now the schema-wide statement in `docs/backend/TRUST-MODEL.md`,
+with the sequence driven end to end and with what CI does NOT cover: it runs
+against a testcontainer, so it catches a change that reaches the repository and
+not one made directly against a deployed cluster and then undone.
 """
 
 from collections.abc import Sequence

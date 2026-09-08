@@ -83,8 +83,24 @@ restore that replays UPDATEs or DELETEs against `audit_log`; a data-only restore
 of INSERTs is unaffected. A restore that genuinely needs it must
 `ALTER TABLE audit_log DISABLE TRIGGER` explicitly, as the owner — a deliberate
 act that leaves `tgenabled = 'D'`, which
-`tests/test_schema_migration.py::test_audit_logs_triggers_are_statement_level
+`tests/test_schema_migration.py::test_audit_logs_triggers_are_the_named_three
 _before_and_enabled` fails on.
+
+🔴 THAT TEST RUNS AGAINST A TESTCONTAINER, NOT AGAINST A DEPLOYED CLUSTER, so
+"fails on" is true of the suite's own database and of no other. Nothing checks
+`tgenabled` at application boot; `lifespan.py` asserts RLS coverage and stops
+there. And the disable need not be left in place: MEASURED 2026-09-08 against
+postgres:18.4, `DISABLE TRIGGER <name>` -> `DELETE` -> `ENABLE ALWAYS TRIGGER
+<name>` returns `tgenabled` to `'A'` with the row gone and `audit_log` empty.
+
+ONE CORRECTION WORTH CARRYING, measured in the same session: the blunt form
+`ALTER TABLE reports DISABLE TRIGGER ALL` is REFUSED — `permission denied:
+"RI_ConstraintTrigger_a_…" is a system trigger`, because `ALL` reaches the
+foreign-key triggers and those need superuser. Naming the trigger works. An
+operator who tries `ALL`, is refused, and concludes the table is protected has
+been misled in the reassuring direction.
+
+`docs/backend/TRUST-MODEL.md` is where this is written down whole.
 
 ## Why a new revision rather than an edit to `0001`
 
