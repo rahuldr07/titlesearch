@@ -19,6 +19,8 @@
 # --- what the images actually need -------------------------------------------
 !libs/domain/pyproject.toml
 !libs/domain/src/
+!libs/http-kit/pyproject.toml
+!libs/http-kit/src/
 !libs/service-kit/pyproject.toml
 !libs/service-kit/src/
 !libs/test-support/pyproject.toml
