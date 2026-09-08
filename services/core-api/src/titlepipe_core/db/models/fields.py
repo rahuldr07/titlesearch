@@ -30,6 +30,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from titlepipe_core.db.models.base import _TenantRow
 from titlepipe_core.db.models.enums import FIELD_STATE, NA_REASON
+from titlepipe_core.db.models.jsonb import bounded_jsonb_object
 from titlepipe_core.db.models.relations import tenant_fk
 
 # 🔴 THE PREFIX IS THE LIVE SERVER GUARD'S, VERBATIM, AND THE LIVE SEED DATA
@@ -127,6 +128,10 @@ class Field(_TenantRow):
             "state <> 'corrected' OR correction_reason IS NOT NULL",
             name="corrected_states_a_reason",
         ),
+        # `0112`. The column is `jsonb` and until that revision accepted an
+        # array, a string, a number and the JSON `null` as readily as an object,
+        # at any size. See `db/models/jsonb.bounded_jsonb_object`.
+        bounded_jsonb_object("source_line_coords", nullable=True),
         # R13's server restriction, from `handlers.ts:777`. `left(path, N)`
         # rather than `LIKE 'judgments.%'` because a literal `%` inside DDL text
         # is a paramstyle hazard on the way to the driver, and rather than a
@@ -269,6 +274,10 @@ class FieldReading(_TenantRow):
             "num_nonnulls(line_coords, line_coords_space) IN (0, 2)",
             name="coords_declare_their_space",
         ),
+        # `0112`, and it is the SHAPE floor rather than the coordinate model —
+        # which space a box is in stays the constraint above, and which keys it
+        # carries stays OPEN. See `db/models/jsonb.bounded_jsonb_object`.
+        bounded_jsonb_object("line_coords", nullable=True),
         sa.CheckConstraint("cost_usd >= 0", name="cost_is_not_negative"),
         sa.CheckConstraint("latency_ms >= 0", name="latency_is_not_negative"),
         sa.CheckConstraint("attempt_ordinal >= 1", name="attempt_ordinal_starts_at_one"),

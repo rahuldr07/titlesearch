@@ -57,7 +57,7 @@ from sqlalchemy import CheckConstraint, DateTime, Index, Text, UniqueConstraint,
 from sqlalchemy.dialects.postgresql import ENUM, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from titlepipe_core.db.models import Base
+from titlepipe_core.db.models import Base, bounded_jsonb_object
 
 __all__ = [
     "USER_ROLE",
@@ -285,6 +285,12 @@ class Client(_IdentityRow):
     """
 
     __tablename__ = "clients"
+
+    # `0112`. The delivery DESTINATION is the one jsonb column in this schema
+    # with a live consumer, and until that revision it accepted an array, a
+    # string, a number and the JSON `null` as readily as an object, at any size.
+    # See `db/models/jsonb.bounded_jsonb_object`.
+    __table_args__ = (bounded_jsonb_object("delivery_config", nullable=True),)
 
     name: Mapped[str] = mapped_column(Text, nullable=False)
     delivery_method: Mapped[str] = mapped_column(Text, nullable=False)
