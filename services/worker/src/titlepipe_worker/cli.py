@@ -29,7 +29,7 @@ import argparse
 import os
 from typing import Final
 
-from titlepipe_domain import Environment, LogRenderer
+from titlepipe_domain import Environment, LogRenderer, ServiceName
 from titlepipe_service_kit import configure_logging, get_logger
 from titlepipe_service_kit.settings_errors import SettingsValidationError
 from titlepipe_worker.context import CONTEXT_KEY, WorkerContext
@@ -45,28 +45,6 @@ EXIT_UNEXPECTED: Final = 70  # EX_SOFTWARE
 # no referent — and a deploy gate branching on 3 would be branching on a state
 # this binary can no longer be in. A worker that cannot run is a CONFIGURATION
 # failure and exits 2, which is a code an operator already knows how to act on.
-
-SERVICE_NAME: Final = "worker"
-
-# What `check` reports for a validation error that belongs to no single field.
-#
-# A `model_validator(mode="after")` raising `ValueError` reaches pydantic with
-# an EMPTY `loc`, so joining it produces the empty string — and the worker has
-# two such rules, the spend-ceiling ordering and the converter-internal check.
-# Both would have been reported as `invalid_fields: [""]`, which names nothing
-# while looking like it named something.
-#
-# 🔴 THE MESSAGE IS STILL DELIBERATELY NOT LOGGED, and that ruling now has a
-# second reader. Both cross-field messages quote the value that failed, and one
-# of those values is a URL that can carry credentials in its userinfo, so
-# echoing it here would undo the whole reason this command reports field names
-# instead of values. `SettingsValidationError` carries `problems` — the field
-# names WITH those messages — and this command reads `invalid_fields` instead,
-# which is derived from the schema and never from a value.
-#
-# The constant itself now lives in `titlepipe_service_kit.settings_errors` as
-# CROSS_FIELD_RULE: `redacted_settings_error` needed the same name for the
-# same empty-`loc` reason, and this file is where the reason was worked out.
 
 # The logger is acquired inside each command, after `configure_logging`, never
 # as a module-level singleton. structlog caches a bound logger on first use, so
@@ -145,9 +123,12 @@ def _load_and_configure_logging() -> WorkerSettings | None:
         )
         get_logger(__name__).error(
             "configuration_invalid",
-            service_name=SERVICE_NAME,
+            service_name=ServiceName.WORKER.value,
             error_count=len(exc.problems),
-            # `invalid_fields`, never `problems`: see CROSS_FIELD_RULE above.
+            # `invalid_fields`, never `problems`: both of this worker's
+            # cross-field rules quote the value that failed and one of those
+            # is a URL that can carry credentials. `SettingsValidationError`
+            # documents why its own message is not safe to log.
             invalid_fields=sorted(set(exc.invalid_fields)),
         )
         return None
