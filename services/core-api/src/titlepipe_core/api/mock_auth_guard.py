@@ -22,6 +22,10 @@ delete and no route that can be added outside it. It runs BEFORE routing, so
 "cannot reach a handler" is a fact about the ASGI stack rather than about what
 each handler remembers to do.
 
+`tests/test_auth_seam.py` drives both verdicts on both guarded protocols. It did
+not exist while this file claimed the property, and the coverage that measured
+92% here was the pass-through: every line of the refusal below was unexecuted.
+
 Its position in the stack is deliberate and is set in `app.py`: inside
 `RequestContextMiddleware`, so the refusal carries a correlation id and is
 greppable against the log line, and inside `CORSMiddleware`, so a browser sees
@@ -38,9 +42,9 @@ from __future__ import annotations
 
 from typing import Final
 
-from starlette.requests import Request
+from starlette.requests import HTTPConnection, Request
 from starlette.responses import JSONResponse
-from starlette.types import ASGIApp, Receive, Scope, Send
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from titlepipe_core.api.errors import envelope
 from titlepipe_core.auth.mock import MOCK_ROLE_HEADER
@@ -75,6 +79,26 @@ MOCK_AUTH_REFUSED_MESSAGE: Final = (
 # would make "am I signed in?" depend on which layer refused.
 _STATUS: Final = 401
 
+# 🔴 BOTH PROTOCOLS THAT CARRY HEADERS, AND `websocket` IS HERE BECAUSE IT WAS
+# NOT. The guard tested `scope["type"] != "http"` and passed everything else
+# through, so a websocket handler read `x-mock-role` in a configuration where
+# every HTTP route refuses it — machine 4's "cannot reach a handler" was a
+# statement about one protocol rather than about the ASGI stack. No websocket
+# route exists yet, which is why it was theory; the route that opens it will not
+# look like an auth change to its reviewer, so it is closed ahead of one.
+#
+# `lifespan` is deliberately absent: it carries no headers and refusing it would
+# refuse startup.
+_GUARDED_SCOPES: Final = frozenset({"http", "websocket"})
+
+# 1008 POLICY VIOLATION, and the close is what a websocket refusal IS: there is
+# no response to carry `envelope()` before `websocket.accept`, so the JSON body
+# the HTTP branch returns has nowhere to go. A pre-accept close is delivered to
+# the client as an HTTP 403 handshake rejection and the reason string is usually
+# dropped on the way — the client learns it was refused, not why. That is the
+# ceiling of this branch and the reason the HTTP branch is not modelled on it.
+_WEBSOCKET_CLOSE_CODE: Final = 1008
+
 
 class MockAuthGuardMiddleware:
     """Refuses any request bearing a mock-auth header, unless mock auth is on.
@@ -94,17 +118,25 @@ class MockAuthGuardMiddleware:
         self._mock_auth_enabled = mock_auth_enabled
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope["type"] != "http" or self._mock_auth_enabled:
+        if self._mock_auth_enabled or scope["type"] not in _GUARDED_SCOPES:
             await self.app(scope, receive, send)
             return
 
-        request = Request(scope)
-        # Starlette's `Headers` is case-insensitive, so `X-Mock-Role` and
-        # `x-mock-role` are the same lookup. That is the wire's rule and not a
-        # convenience: a guard that missed the capitalised spelling would be a
-        # guard an attacker walks past by holding the shift key.
-        if not any(header in request.headers for header in MOCK_AUTH_HEADERS):
+        # `HTTPConnection` and not `Request`: the latter asserts
+        # `scope["type"] == "http"` in its constructor, so reading headers
+        # through it is what confined this guard to one protocol. The base class
+        # is the header view both protocols share, and its `Headers` is
+        # case-insensitive — `X-Mock-Role` and `x-mock-role` are one lookup,
+        # which is the wire's rule and not a convenience: a guard that missed the
+        # capitalised spelling is one an attacker walks past by holding the shift
+        # key.
+        connection = HTTPConnection(scope)
+        if not any(header in connection.headers for header in MOCK_AUTH_HEADERS):
             await self.app(scope, receive, send)
+            return
+
+        if scope["type"] == "websocket":
+            await _refuse_websocket(receive, send)
             return
 
         response = JSONResponse(
@@ -112,7 +144,28 @@ class MockAuthGuardMiddleware:
             content=envelope(
                 code=UnauthenticatedError.code,
                 message=MOCK_AUTH_REFUSED_MESSAGE,
-                request=request,
+                request=Request(scope),
             ),
         )
         await response(scope, receive, send)
+
+
+async def _refuse_websocket(receive: Receive, send: Send) -> None:
+    """Close the handshake instead of accepting it.
+
+    The `receive()` is REQUIRED and is not a formality: ASGI says a server sends
+    `websocket.connect` first and an application answers `websocket.accept` or
+    `websocket.close`. Sending the close without draining the connect leaves
+    servers waiting on a message the application will never read, and Starlette's
+    `TestClient` raises rather than hanging.
+    """
+    message: Message = await receive()
+    if message["type"] != "websocket.connect":
+        return
+    await send(
+        {
+            "type": "websocket.close",
+            "code": _WEBSOCKET_CLOSE_CODE,
+            "reason": MOCK_AUTH_REFUSED_MESSAGE,
+        }
+    )

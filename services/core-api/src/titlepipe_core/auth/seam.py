@@ -33,7 +33,11 @@ or is reported as an unproven residual. This is the naming.
    client still sending the header is told, instead of being silently downgraded
    to anonymous and left to guess why its data is empty.
 
-`tests/test_auth_seam.py` drives (1) through (4).
+`tests/test_auth_seam.py` drives (2), (3) and (4). Machine (1) is driven by
+`tests/test_settings.py::test_a_deployed_environment_refuses_an_unsafe_setting`
+parametrised on `mock_auth_enabled`, and stays there rather than being restated:
+it is a property of `CoreApiSettings`, and a second copy is one that can pass
+while the first is deleted.
 
 ---------------------------------------------------------------------------
 🔴 UNPROVEN RESIDUAL — WHAT THE CHAIN ABOVE DOES NOT COVER.
