@@ -15,7 +15,12 @@ from titlepipe_blind.settings import BlindApiSettings
 from titlepipe_domain import Environment
 from titlepipe_test_support import FrozenClock, SequenceIdFactory
 
-DEPLOYED_SEAL_PASSWORD = "a-real-32-character-seal-secret!"
+# A valid Fernet key — urlsafe-base64 of 32 bytes, 44 characters. The old
+# value here was a 32-CHARACTER string, which is the decoded byte count
+# rather than the encoded length; it passed only because `BlindApiSettings`
+# carried the same error. `core-api/tests/conftest.py` holds the twin of
+# this constant and the same account.
+DEPLOYED_SEAL_PASSWORD = "YS1yZWFsLWJsaW5kLXNlYWwtc2VjcmV0LTMyYnl0ZXM="
 DEPLOYED_BASE_URL = "https://capture.titlepipe.example"  # must match allowed_hosts
 
 
