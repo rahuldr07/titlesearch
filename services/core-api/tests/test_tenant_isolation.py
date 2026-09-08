@@ -568,6 +568,14 @@ EXPECTED_ACL_DENIED_KEY_UPDATES = frozenset(
         # NOT append-only. `0032` narrows `titlepipe_app`'s UPDATE on `fields` to a
         # column list, and a row's tenant is not something the review path moves.
         "fields",
+        # NOT append-only either, and here since 2026-09-08. `0120` narrows the
+        # UPDATE on `users` to `email` and `deactivated_at`, so `tenant_id` is
+        # refused by the ACL rather than by the policy — and so is `role`, which
+        # is the reason that revision exists. The distinction this set draws
+        # matters most here: a `users` row refused by the POLICY would still be a
+        # `users` row whose `role` the app could rewrite inside its own tenant,
+        # which is what `0102` allowed.
+        "users",
     }
 )
 
