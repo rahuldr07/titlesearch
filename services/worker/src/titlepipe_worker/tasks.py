@@ -180,6 +180,9 @@ async def retry_stalled_jobs(
                 await manager.finish_job(job=job, status=Status.FAILED, delete_job=False)
             else:
                 await manager.retry_job_by_id_async(job_id=job.id, retry_at=now)
+        # `Exception` and NOT `BaseException`: `CancelledError` is a
+        # `BaseException`, and a worker shutting down mid-sweep must have its
+        # cancellation propagate rather than be counted as one bad row.
         except Exception as exc:
             unrecovered += 1
             logger.error(
