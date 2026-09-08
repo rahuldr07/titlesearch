@@ -92,6 +92,12 @@ FEATURE_NOT_SUPPORTED_SQLSTATE = "0A000"
 # constraint answers `23514` and a bad enum label `22P02`, and either would read
 # as proof that the signer check works.
 NO_ACTOR_SQLSTATE = "28000"
+
+# `insufficient_privilege` — `0121`'s seat predicate, and deliberately NOT
+# `28000`: the identity RESOLVES — a real, active person in this tenant — and
+# what is missing is the authority of the seat. A suite that could not tell the
+# two refusals apart would accept "no such person" as proof the seat rule fired.
+INSUFFICIENT_PRIVILEGE_SQLSTATE = "42501"
 FOREIGN_KEY_VIOLATION_SQLSTATE = "23503"
 UNIQUE_VIOLATION_SQLSTATE = "23505"
 
@@ -277,12 +283,18 @@ MOVE_GOLDEN = """
 # a subject that has to exist, so the fixture writes the person. The literal is
 # unchanged, which keeps every parameter dictionary in this module reading the
 # same way and keeps the value implausible on sight.
+# 🔴 THE SEAT IS `'senior'` AS OF `0121` AND THE SUBJECT STRING STILL SAYS
+# `reviewer`. A subject is a NAME, not a seat — renaming it would touch every
+# parameter dictionary in this module for zero information. The seat moved
+# because `0121` refuses ground truth from reviewer, ops and typist, and this is
+# the signer every establishment in this module signs with; `'senior'` is the
+# least-privileged seat that can still perform those acts.
 SIGNER = "TEST-ONLY reviewer"
 
 SIGNER_SEED = (
     "INSERT INTO users "
     "(tenant_id, email, role, identity_provider, identity_subject) "
-    "VALUES (:tenant, :email, 'reviewer', 'TEST-ONLY', :signer) "
+    "VALUES (:tenant, :email, 'senior', 'TEST-ONLY', :signer) "
     "ON CONFLICT DO NOTHING"
 )
 
@@ -1370,6 +1382,121 @@ def test_a_named_person_can_still_promote_an_engine_reading(golden_engine: Engin
         "bounding box, delete this test and correct 0102's docstring. Do not "
         "'fix' this test to match."
     )
+
+
+# --- 7b. which seats may sign, ruled 2026-09-08 ------------------------------
+
+# One statement for all six seats: `CAST(:role AS user_role)` where `SIGNER_SEED`
+# inlines its one role, because the test below is the only caller that varies it.
+SEAT_SEED = (
+    "INSERT INTO users "
+    "(tenant_id, email, role, identity_provider, identity_subject) "
+    "VALUES (:tenant, :email, CAST(:role AS user_role), 'TEST-ONLY', :signer) "
+    "ON CONFLICT DO NOTHING"
+)
+
+
+def _seeded_seat(engine: Engine, seat: str) -> str:
+    """One committed, active user holding `seat`, and their subject back."""
+    subject = f"TEST-ONLY seat {seat}"
+    with engine.begin() as connection:
+        connection.execute(
+            text(SEAT_SEED),
+            {
+                "tenant": TENANT,
+                "email": f"test-only-seat-{seat}@test-only.invalid",
+                "role": seat,
+                "signer": subject,
+            },
+        )
+    return subject
+
+
+@pytest.mark.parametrize(
+    ("seat", "permitted"),
+    [
+        # 🔴 SIX LITERAL CASES, NOT A LOOP OVER `0121`'s CONSTANT. A parametrize
+        # derived from the migration's own seat set would follow any edit to that
+        # set and assert whatever it found — a rule pinned by its implementation
+        # is not pinned. These six pairs are the ruling of 2026-09-08 stated
+        # independently, in `0020`'s label order, and disagreement between this
+        # list and `0121` is a red that means the RULE moved.
+        ("reviewer", False),
+        ("senior", True),
+        ("ops", False),
+        ("engineer", True),
+        ("typist", False),
+        ("admin", True),
+    ],
+)
+def test_ground_truth_is_established_only_from_the_ruled_seats(
+    seat: str, permitted: bool, golden_engine: Engine
+) -> None:
+    """`0121`: senior, engineer and admin may establish; reviewer, ops and typist may not.
+
+    All six labels appear, and both directions are asserted, deliberately: a rule
+    with only its refusing half pinned has no ceiling — nothing would notice the
+    set quietly shrinking to admin alone — and a rule with only its accepting
+    half pinned is not a rule at all.
+
+    The refusal is `42501` and not `28000`, and the distinction is the content:
+    every one of these six signers EXISTS, is ACTIVE, and is IN TENANT — `0102`'s
+    questions all answer yes. What differs is the seat's authority, which is
+    `0121`'s one predicate.
+    """
+    subject = _seeded_seat(golden_engine, seat)
+    with golden_engine.connect() as connection:
+        order_id = _order_id(connection, TENANT)
+
+    if permitted:
+        with golden_engine.connect() as connection:
+            established = connection.execute(
+                text(INSERT_GOLDEN),
+                _golden_parameters(order_id=order_id, signer=subject),
+            ).scalar_one()
+            connection.rollback()
+        assert established is not None, (
+            f"a {seat} seat was refused, and the ruling names {seat} as one of "
+            f"the three that may establish ground truth"
+        )
+        return
+
+    error = _refuses(
+        golden_engine, INSERT_GOLDEN, _golden_parameters(order_id=order_id, signer=subject)
+    )
+    assert _sqlstate(error) == INSUFFICIENT_PRIVILEGE_SQLSTATE, (
+        f"a golden field signed from the {seat} seat came back "
+        f"{_sqlstate(error)!r} rather than {INSUFFICIENT_PRIVILEGE_SQLSTATE!r}. "
+        f"None means it was ACCEPTED, which is the promotion path the ruling "
+        f"closes; 28000 means the person did not resolve, which is a different "
+        f"test passing by accident: {error}"
+    )
+    assert "senior, engineer or admin" in str(error), (
+        f"the refusal does not name the rule. An operator reading it should "
+        f"learn WHICH seats may sign, not that a constraint fired: {error}"
+    )
+
+
+def test_a_correction_is_refused_from_an_unruled_seat(golden_engine: Engine) -> None:
+    """The ledger leg of the same predicate, because one function serves both tables.
+
+    `0072` makes a `golden_corrections` row the only way a golden value moves, and
+    that row's `signed_by` goes through the same trigger function. One refused
+    seat is asserted here rather than all six again: the six-case table above
+    pins the SET, and this pins that the ledger column is BEHIND it.
+    """
+    subject = _seeded_seat(golden_engine, "reviewer")
+    golden_field_id = _establish(golden_engine)
+
+    error = _refuses(
+        golden_engine,
+        INSERT_LEDGER,
+        _ledger_parameters(golden_field_id=golden_field_id, signed_by=subject),
+    )
+    assert _sqlstate(error) == INSUFFICIENT_PRIVILEGE_SQLSTATE, (
+        f"a correction signed from the reviewer seat came back {_sqlstate(error)!r}: {error}"
+    )
+    assert "senior, engineer or admin" in str(error), error
 
 
 # --- 5. a ledger row that can never apply does not brick the field ----------

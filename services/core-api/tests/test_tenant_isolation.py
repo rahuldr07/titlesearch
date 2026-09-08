@@ -512,13 +512,15 @@ APPEND_ONLY_TABLE_KEY = "tenant_id"
 # actor_subject, actor_seat)` against `users` and refuses `28000` unless it names
 # an ACTIVE row whose `role` IS the declared seat, so `'TEST-ONLY'` in both
 # slots stopped being a legal actor. The seed writes `identity_subject =
-# 'TEST-ONLY-' || :ordinal_text` with `role = 'reviewer'` in every tenant, and
-# ordinal 1 is the one every tenant has — see `conftest.ISOLATION_ACTOR_SUBJECT`,
-# which these two mirror for the same reason every other constant in this file
-# is repeated rather than imported.
+# 'TEST-ONLY-' || :ordinal_text` with `role = 'senior'` in every tenant —
+# `senior` since `0121`, whose seat predicate refuses golden signatures from the
+# reviewer seat the seed used to hold — and ordinal 1 is the one every tenant
+# has: see `conftest.ISOLATION_ACTOR_SUBJECT`, which these two mirror for the
+# same reason every other constant in this file is repeated rather than
+# imported.
 ISOLATION_ACTOR_GUCS = (
     ("app.actor_subject", "TEST-ONLY-1"),
-    ("app.actor_seat", "reviewer"),
+    ("app.actor_seat", "senior"),
 )
 
 # 🔴 A REFUSAL THAT IS NEITHER THE ACL'S NOR THE POLICY'S, AND IT IS STRONGER THAN

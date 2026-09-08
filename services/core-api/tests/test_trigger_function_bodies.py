@@ -129,7 +129,10 @@ SOURCE_DERIVED: tuple[tuple[str, str, str], ...] = (
     ("0100_actor_identity.py", "resolver_body", "resolve_actor"),
     ("0100_actor_identity.py", "binder_body", "audit_log_bind_actor"),
     ("0101_golden_fields_are_not_deletable.py", "refusal_body", "golden_fields_reject_removal"),
-    ("0102_golden_signers_are_people.py", "signer_body", "golden_signer_is_a_person"),
+    # `0121` replaced `0102`'s body with the seat predicate, so the head schema
+    # compares against `0121`; `0102`'s own body is still pinned, as the string
+    # `0121::downgrade()` must restore — see the dedicated test below.
+    ("0121_golden_signers_hold_a_ruled_seat.py", "signer_body", "golden_signer_is_a_person"),
 )
 
 # `sha256(prosrc)` for every trigger function whose migration inlines its body.
@@ -254,6 +257,27 @@ def test_a_function_body_is_the_one_its_migration_wrote(
         f"so no other assertion in this tree would notice.\n\n"
         f"--- live ---\n{bodies[function]}\n"
         f"--- {filename} ---\n{expected}"
+    )
+
+
+def test_0121s_downgrade_restores_0102s_body_character_for_character() -> None:
+    """`0121::previous_signer_body()` against `0102::signer_body()`, exactly.
+
+    `0121` replaces the signer function and its `downgrade()` must put back the
+    predicate `0102` wrote — a downgrade that left the tightened rule in place
+    would make every intermediate revision's schema a lie. The restore string is
+    a frozen COPY in `0121`, per the tree's no-imports-between-revisions rule,
+    and a copy that nothing compares is a paste error waiting to be found in an
+    incident; this is the comparison. No database — both sides come from git.
+    """
+    restored = str(
+        _load_revision("0121_golden_signers_hold_a_ruled_seat.py").previous_signer_body()
+    )
+    original = str(_load_revision("0102_golden_signers_are_people.py").signer_body())
+    assert restored == original, (
+        "0121's previous_signer_body() is not 0102's signer_body(). Its "
+        "downgrade would install a body no revision ever defined.\n\n"
+        f"--- 0121 restores ---\n{restored}\n--- 0102 wrote ---\n{original}"
     )
 
 

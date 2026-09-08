@@ -69,12 +69,13 @@ compromise in this file: see the ruling below.
 ## WHAT THIS DOES NOT DO, EACH ONE STATED SO IT IS NOT READ AS COVERED
 
 **It does not restrict WHICH seat may establish ground truth.** All six of
-`0020`'s labels can sign. Whether a `typist` or a `reviewer` may establish a
-golden value is a product ruling in `docs/PRD.md` §5's territory, not a
-migration's to invent, and a database that picked one would be answering a
-question nobody asked. **NAMED AS OPEN**: the seat set for establishment is
-unruled, and the machine for it is one predicate in `signer_body` on the day
-somebody rules.
+`0020`'s labels can sign at this revision. Whether a `typist` or a `reviewer`
+may establish a golden value is a product ruling in `docs/PRD.md` §5's
+territory, not a migration's to invent, and a database that picked one would be
+answering a question nobody asked. **WAS NAMED OPEN HERE; RULED 2026-09-08 AND
+CLOSED BY `0121`**: the owner restricted establishment to senior, engineer and
+admin, and the machine is the one predicate in `signer_body` this paragraph
+predicted — `0121` replaces the function with it.
 
 **It does not stop a real person from promoting an engine reading.** A named,
 active, seat-holding human can still run the INSERT..SELECT above under their

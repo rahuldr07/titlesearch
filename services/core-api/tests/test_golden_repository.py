@@ -57,7 +57,10 @@ TENANT = UUID("11111111-1111-1111-1111-111111111111")
 
 # The signature every row in this module carries. A literal that reads as a
 # person because `0102` requires one: it resolves against `users.identity_subject`
-# and a job name is refused. The `seeded_order` fixture writes the row.
+# and a job name is refused. The `seeded_order` fixture writes the row — seated
+# `engineer` since `0121`, which refuses establishment from the reviewer seat
+# this subject STRING still names; the string is a name, not a seat, and every
+# call site in this module spells it, so it stays.
 SIGNER = "TEST-ONLY reviewer"
 
 # A SECOND person, because one test files two acts and the ledger reads better
@@ -128,7 +131,9 @@ def seeded_order(migrated_database: str, seam_engine: Callable[[str], Engine]) -
                         "signer": signer,
                         "role": role,
                     }
-                    for signer, role in ((SIGNER, "reviewer"), (SECOND_SIGNER, "senior"))
+                    # Two DIFFERENT ruled seats, so the two-signer ledger test
+                    # cannot pass on a single-seat accident.
+                    for signer, role in ((SIGNER, "engineer"), (SECOND_SIGNER, "senior"))
                 ],
             )
     finally:
