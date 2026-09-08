@@ -58,27 +58,31 @@ def worker_settings(dsn: str) -> WorkerSettings:
     return WorkerSettings(environment=Environment.TEST, database_url=SecretStr(dsn))
 
 
-def plant_stalled_job(dsn: str, *, attempts: int) -> int:
-    """A job in `doing` with no worker, which is what a killed worker leaves.
+def plant_job(dsn: str, *, status: str, attempts: int = 0, queueing_lock: str | None = None) -> int:
+    """One row in `procrastinate_jobs`, in a state the library has no API to produce.
 
-    `worker_id IS NULL` is the shape `procrastinate_workers` reaches when the row
-    is pruned, and `select_stalled_jobs_by_heartbeat` treats it as stalled
-    unconditionally — which is correct, since a job in `doing` belonging to no
-    worker belongs to nobody.
+    `doing` with `worker_id IS NULL` is what a killed worker leaves:
+    `procrastinate_workers` loses the row when it is pruned, and
+    `select_stalled_jobs_by_heartbeat` treats a `doing` job belonging to no
+    worker as stalled unconditionally — correctly, since it belongs to nobody.
 
-    Inserted as the container superuser rather than through the library: this is
-    a state a CRASH produces, and there is no API for crashing.
+    Inserted as the container superuser rather than through the library, because
+    this is a state a CRASH produces and there is no API for crashing.
     """
     with psycopg.connect(dsn) as connection:
         row = connection.execute(
             "INSERT INTO procrastinate_jobs "
-            "(queue_name, task_name, status, attempts, args) "
-            "VALUES (%s, %s, 'doing', %s, '{}'::jsonb) RETURNING id",
-            (PARKED_QUEUE, PARKED_TASK, attempts),
+            "(queue_name, task_name, status, attempts, queueing_lock, args) "
+            "VALUES (%s, %s, %s, %s, %s, '{}'::jsonb) RETURNING id",
+            (PARKED_QUEUE, PARKED_TASK, status, attempts, queueing_lock),
         ).fetchone()
         connection.commit()
     assert row is not None
     return int(row[0])
+
+
+def plant_stalled_job(dsn: str, *, attempts: int, queueing_lock: str | None = None) -> int:
+    return plant_job(dsn, status="doing", attempts=attempts, queueing_lock=queueing_lock)
 
 
 def job_status(dsn: str, job_id: int) -> str:
@@ -250,3 +254,118 @@ async def test_the_sweep_leaves_its_own_running_job_alone(
         )
 
     assert job_status(empty_queue, sweep) == "succeeded"
+
+
+@pytest.mark.asyncio
+async def test_the_sweep_survives_a_job_it_cannot_return_to_the_queue(
+    empty_queue: str, worker_dsn: str
+) -> None:
+    """One unrecoverable row must not cost every other stalled job its recovery.
+
+    The state below is reachable and is not exotic. `queueing_lock` is unique
+    over `todo` ONLY — `procrastinate_jobs_queueing_lock_idx_v1` in the vendored
+    schema — so deferring a second job under a lock whose first job has already
+    been claimed is ACCEPTED, and the queue then holds two live rows for one
+    lock. Returning the `doing` one to `todo` moves it into the index its twin is
+    already in: MEASURED against postgres:18.4,
+
+        UniqueViolation: duplicate key value violates unique constraint
+        "procrastinate_jobs_queueing_lock_idx_v1"
+
+    raised inside `procrastinate_retry_job_v2`.
+
+    The collider is planted FIRST so it is swept first: with the exception
+    escaping the loop, `ordinary` is never reached at all and the sweep's own job
+    ends `failed` with `stalled_job_sweep_complete` never logged.
+    """
+    settings = worker_settings(worker_dsn)
+
+    collider = plant_stalled_job(empty_queue, attempts=0, queueing_lock="one-page")
+    twin = plant_job(empty_queue, status="todo", queueing_lock="one-page")
+    ordinary = plant_stalled_job(empty_queue, attempts=0)
+
+    app = make_app(settings)
+    async with app.open_async():
+        sweep = await deferrer(app, TASK_RETRY_STALLED_JOBS).defer_async(timestamp=0)
+        await app.run_worker_async(
+            queues=list(settings.queues),
+            wait=False,
+            install_signal_handlers=False,
+            additional_context={CONTEXT_KEY: WorkerContext(settings=settings)},
+        )
+
+    assert job_status(empty_queue, ordinary) == "todo", (
+        "the sweep stopped at the row it could not recover and never reached this one"
+    )
+    assert job_status(empty_queue, sweep) == "succeeded"
+    # Left where it was. Nothing here decides between superseding it and failing
+    # it — see `retry_stalled_jobs` for why that needs a producer to exist first.
+    assert job_status(empty_queue, collider) == "doing"
+    assert job_status(empty_queue, twin) == "todo"
+
+
+def queue_depth(dsn: str) -> int:
+    with psycopg.connect(dsn) as connection:
+        row = connection.execute("SELECT count(*) FROM procrastinate_jobs").fetchone()
+    assert row is not None
+    return int(row[0])
+
+
+@pytest.mark.asyncio
+async def test_a_defer_without_a_connection_survives_the_callers_rollback(
+    empty_queue: str, worker_dsn: str
+) -> None:
+    """The DEFAULT is not the guarantee, and the difference is asserted, not assumed.
+
+    A defer with no connection goes through the connector's own pool: a second
+    session, its own transaction, committed the moment the INSERT returns. The
+    caller's `ROLLBACK` therefore takes back the row that justified the work and
+    leaves the work queued — the exact disagreement `queue.py` says the
+    Postgres-native queue was chosen to make impossible.
+
+    Pinned rather than merely described, because it is the shape a producer
+    reaches by writing the obvious thing.
+    """
+    app = make_app(worker_settings(worker_dsn))
+    async with app.open_async(), await psycopg.AsyncConnection.connect(worker_dsn) as caller:
+        await deferrer(app, TASK_RETRY_STALLED_JOBS).defer_async(timestamp=0)
+        await caller.rollback()
+
+    assert queue_depth(empty_queue) == 1
+
+
+@pytest.mark.asyncio
+async def test_a_defer_on_the_callers_connection_rolls_back_with_it(
+    empty_queue: str, worker_dsn: str
+) -> None:
+    """The guarantee `queue.py` promises, held by the machine that holds it.
+
+    `JobDeferrer` takes a `connection`, and with the caller's own connection the
+    INSERT is in the caller's transaction: invisible outside it until the caller
+    commits, and gone if the caller rolls back. That is `deferrer`'s whole reason
+    for exposing the parameter — without it there is no spelling of the promise
+    at this seam at all.
+    """
+    app = make_app(worker_settings(worker_dsn))
+    async with app.open_async(), await psycopg.AsyncConnection.connect(worker_dsn) as caller:
+        await deferrer(app, TASK_RETRY_STALLED_JOBS, connection=caller).defer_async(timestamp=0)
+        assert queue_depth(empty_queue) == 0, (
+            "the INSERT is visible outside the caller's transaction"
+        )
+        await caller.rollback()
+
+    assert queue_depth(empty_queue) == 0
+
+
+@pytest.mark.asyncio
+async def test_a_defer_on_the_callers_connection_commits_with_it(
+    empty_queue: str, worker_dsn: str
+) -> None:
+    """The other half. A guarantee that only ever discarded the job would pass
+    the rollback assertion above and be useless."""
+    app = make_app(worker_settings(worker_dsn))
+    async with app.open_async(), await psycopg.AsyncConnection.connect(worker_dsn) as caller:
+        await deferrer(app, TASK_RETRY_STALLED_JOBS, connection=caller).defer_async(timestamp=0)
+        await caller.commit()
+
+    assert queue_depth(empty_queue) == 1

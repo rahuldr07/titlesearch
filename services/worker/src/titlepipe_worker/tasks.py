@@ -104,6 +104,38 @@ async def retry_stalled_jobs(
     queue tables are the one place in this system holding cross-tenant rows (see
     revision 0060). A sweep that logged them would put every tenant's job
     arguments into one log stream on a schedule.
+
+    ## Why every job is disposed of inside its own guard
+
+    A stalled job can be UNRECOVERABLE, and the shape that produces one is
+    ordinary. `queueing_lock` is unique over `todo` alone — see `queue.py` for
+    the measurement — so a second job may be deferred under a lock whose first
+    job is already `doing`, and returning the `doing` one to `todo` then collides
+    with its twin inside `procrastinate_retry_job_v2`. MEASURED against
+    postgres:18.4 with two such rows:
+
+        UniqueViolation: duplicate key value violates unique constraint
+        "procrastinate_jobs_queueing_lock_idx_v1"
+
+    Unguarded, that exception left the loop: every LATER stalled job went
+    unswept, `stalled_job_sweep_complete` was never logged, and the cron re-ran
+    the identical failure every minute — measured across two worker processes as
+    2 errors and 0 completed sweeps. A sweep that dies on one bad row is not a
+    sweep, so the guard is per job and the count reaches the completion line.
+
+    NOT raising at the end when `unrecovered` is non-zero, deliberately. The
+    rejected alternative was to fail the sweep job: it would put a sweep that
+    recovered nine jobs out of ten on the same error surface as one that recovered
+    nothing and could not tell them apart. `stalled_job_recovery_failed` is per
+    job and is the surface.
+
+    **RESIDUAL, and there is no machine for it.** The colliding row STAYS in
+    `doing`, so it is logged rather than recovered — loud, but still stuck. The
+    disposition it wants is `superseded`, which procrastinate has no status for,
+    and choosing between "fail it" and "leave it" needs a producer whose
+    semantics say whether a shared `queueing_lock` really means the same unit of
+    work. No producer defers with a `queueing_lock` yet. What would close it: the
+    page-grained producer, and a ruling with it.
     """
     settings = worker_context(context).settings
     manager = context.app.job_manager
@@ -116,6 +148,7 @@ async def retry_stalled_jobs(
     )
     retried = 0
     abandoned = 0
+    unrecovered = 0
     now = datetime.datetime.now(tz=datetime.UTC)
 
     for job in stalled:
@@ -125,7 +158,8 @@ async def retry_stalled_jobs(
             # rather than skipping, because a `None` here would mean the row
             # shape changed, and a sweep that quietly skipped such rows would go
             # on reporting a clean sweep while losing exactly the jobs it exists
-            # to recover.
+            # to recover. Deliberately OUTSIDE the per-job guard below: that
+            # guard is for one bad row, and this is a claim about all of them.
             raise RuntimeError(
                 f"get_stalled_jobs returned a job with no id (task "
                 f"{job.task_name!r}, queue {job.queue!r})"
@@ -140,8 +174,25 @@ async def retry_stalled_jobs(
             # route that rule cannot see.
             continue
 
-        if job.attempts > settings.max_stall_retries:
-            await manager.finish_job(job=job, status=Status.FAILED, delete_job=False)
+        past_the_cap = job.attempts > settings.max_stall_retries
+        try:
+            if past_the_cap:
+                await manager.finish_job(job=job, status=Status.FAILED, delete_job=False)
+            else:
+                await manager.retry_job_by_id_async(job_id=job.id, retry_at=now)
+        except Exception as exc:
+            unrecovered += 1
+            logger.error(
+                "stalled_job_recovery_failed",
+                job_id=job.id,
+                task_name=job.task_name,
+                queue=job.queue,
+                attempts=job.attempts,
+                error_name=type(exc).__name__,
+            )
+            continue
+
+        if past_the_cap:
             abandoned += 1
             logger.error(
                 "stalled_job_abandoned",
@@ -151,17 +202,15 @@ async def retry_stalled_jobs(
                 attempts=job.attempts,
                 max_stall_retries=settings.max_stall_retries,
             )
-            continue
-
-        await manager.retry_job_by_id_async(job_id=job.id, retry_at=now)
-        retried += 1
-        logger.warning(
-            "stalled_job_retried",
-            job_id=job.id,
-            task_name=job.task_name,
-            queue=job.queue,
-            attempts=job.attempts,
-        )
+        else:
+            retried += 1
+            logger.warning(
+                "stalled_job_retried",
+                job_id=job.id,
+                task_name=job.task_name,
+                queue=job.queue,
+                attempts=job.attempts,
+            )
 
     # Logged at every tick, including the quiet ones. A sweep that only spoke up
     # when it found something would make "the sweep is running" and "the sweep
@@ -172,6 +221,7 @@ async def retry_stalled_jobs(
         stalled_found=len(stalled),
         retried=retried,
         abandoned=abandoned,
+        unrecovered=unrecovered,
         seconds_since_heartbeat=settings.stalled_worker_timeout_seconds,
     )
 

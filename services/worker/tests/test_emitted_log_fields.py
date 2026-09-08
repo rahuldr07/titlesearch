@@ -80,6 +80,12 @@ NOT_IN_THE_DEPLOYED_ALLOWLIST = frozenset(
         "retried",
         "seconds_since_heartbeat",
         "stalled_found",
+        # The count of stalled jobs the sweep could not return to the queue. It
+        # is the one field here an operator would page on, and it is redacted
+        # like its three siblings. `stalled_job_recovery_failed` carries
+        # `error_name`, which IS allowlisted, so the failure is still visible
+        # when deployed — the count of it is not.
+        "unrecovered",
     }
 )
 

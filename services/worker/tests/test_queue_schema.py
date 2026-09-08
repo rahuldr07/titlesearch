@@ -291,3 +291,41 @@ def test_the_downgrade_removes_what_the_upgrade_created(
         ).fetchone()
     assert restored is not None
     assert restored[0] == len(QUEUE_TABLES)
+
+
+def test_the_queueing_lock_is_unique_over_todo_ALONE(migrated: str) -> None:
+    """The dedupe the idempotency argument rests on covers `todo` and nothing else.
+
+    `queue.py` used to call this index "a UNIQUE INDEX over non-completed jobs".
+    It is not, and the gap is reachable: a job claimed off the queue leaves
+    `todo`, so a second defer under the same lock is ACCEPTED while the first is
+    still `doing`, and the queue holds two live rows for one idempotency key.
+
+    Asserted against `pg_indexes` rather than against the vendored file, because
+    the claim is about the database an operator ends up with. The predicate is
+    read as text and compared for the STATUS SET it names — a formatting change
+    in `pg_get_indexdef` must not read as a semantic one, and a widening must.
+
+    This is the machine that keeps `queue.py`'s corrected wording honest. Widen
+    the index in a later revision and this goes red at the words that would then
+    be understating it, which is the direction that matters.
+    """
+    with psycopg.connect(migrated) as connection:
+        row = connection.execute(
+            "SELECT indexdef FROM pg_indexes WHERE schemaname = 'public' "
+            "AND indexname = 'procrastinate_jobs_queueing_lock_idx_v1'"
+        ).fetchone()
+    assert row is not None, (
+        "procrastinate_jobs_queueing_lock_idx_v1 is gone; nothing refuses a duplicate defer"
+    )
+    definition = str(row[0])
+    named_statuses = {
+        status
+        for status in ("todo", "doing", "failed", "succeeded", "cancelled", "aborted")
+        if f"'{status}'" in definition
+    }
+    assert named_statuses == {"todo"}, (
+        f"the index predicate now covers {sorted(named_statuses)}. `queue.py` "
+        f"describes it, and `tasks.py` records a residual that assumes it; both "
+        f"have to change with it — see FX-22"
+    )
