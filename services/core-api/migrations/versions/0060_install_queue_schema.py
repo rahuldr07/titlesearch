@@ -134,9 +134,11 @@ from __future__ import annotations
 
 import pathlib
 from collections.abc import Sequence
+from typing import Protocol, cast
 
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy.engine.interfaces import DBAPICursor
 
 revision: str = "0060"
 down_revision: str | None = "0051"
@@ -234,11 +236,6 @@ GRANTED_ROLES = (WORKER_ROLE, APP_ROLE)
 def _grant_tables(role: str, grants: tuple[tuple[str, str], ...]) -> None:
     for table, verbs in grants:
         op.execute(f"GRANT {verbs} ON {table} TO {role}")
-
-
-def _revoke_tables(role: str, grants: tuple[tuple[str, str], ...]) -> None:
-    for table, verbs in reversed(grants):
-        op.execute(f"REVOKE {verbs} ON {table} FROM {role}")
 
 
 def _comment_infrastructure_tables() -> None:
@@ -386,12 +383,23 @@ def _require_privileges(functions: list[tuple[int, str]]) -> None:
         )
 
 
+class _ContextManagedCursor(DBAPICursor, Protocol):
+    # SQLAlchemy's `DBAPICursor` protocol stops at pep 249, which never made
+    # cursors context managers; psycopg's cursor is one, and these two members
+    # are the whole difference. `upgrade` casts to this rather than to
+    # `psycopg.Cursor` because psycopg types `execute` as taking
+    # `LiteralString`, which a file read at runtime can never satisfy.
+    def __enter__(self) -> DBAPICursor: ...
+    def __exit__(self, exc_type: object, exc: object, tb: object) -> None: ...
+
+
 def upgrade() -> None:
     # The raw DBAPI cursor, with the parameter argument omitted — the one path on
     # which psycopg does not read `%` as a placeholder. Same connection, same
     # transaction. See the header for the two spellings that were measured to
     # fail and for why doubling the `%` would corrupt the function bodies.
-    with op.get_bind().connection.cursor() as cursor:
+    cursor = cast("_ContextManagedCursor", op.get_bind().connection.cursor())
+    with cursor:
         cursor.execute(SCHEMA_SQL_PATH.read_text(encoding="utf-8"))
 
     _comment_infrastructure_tables()

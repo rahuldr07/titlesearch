@@ -55,6 +55,7 @@ from logging.config import fileConfig
 from typing import NoReturn
 
 from alembic import context
+from alembic.runtime.environment import NameFilterParentNames, NameFilterType
 from alembic.runtime.migration import MigrationContext
 from alembic.script import ScriptDirectory
 from sqlalchemy import engine_from_config, pool, text
@@ -156,7 +157,9 @@ if config.config_file_name is not None and config.cmd_opts is not None:
 target_metadata = Base.metadata
 
 
-def _include_name(name: str | None, type_: str, _parent_names: dict[str, str | None]) -> bool:
+def _include_name(
+    name: str | None, type_: NameFilterType, _parent_names: NameFilterParentNames
+) -> bool:
     """Which reflected names autogenerate is allowed to see. Only the queue is hidden.
 
     THE FOUR PROCRASTINATE TABLES ARE IN THE DATABASE AND MUST NOT BE IN
