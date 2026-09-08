@@ -28,6 +28,7 @@ same commit.
 | `CONTEXT.md` | AUTHORITATIVE | Domain facts and history; §11 (domain traps) is mandatory reading |
 | `PRD.md` | AUTHORITATIVE | Build document v2.1: data model, API contract, release gates |
 | `INDEX.md` | AUTHORITATIVE | This file |
+| `CONVENTIONS.md` | AUTHORITATIVE | Binding engineering conventions — tenancy, naming, migrations, layering (§10/§10a), comment discipline and reuse (§11). Adopted into the tree 2026-09-08 from the 2026-09 backend build contract, substance unchanged |
 | `ORGANIZATION-PLAN.md` | RECORD | The 2026-08-08 reorganization: findings, plan, execution state |
 | `adr/0001-core-api-fastapi.md` | AUTHORITATIVE | core-api = FastAPI. Signed 2026-08-05 with three binding amendments (WorkOS, Procrastinate, Pydantic-wire/Zod-boundary) |
 
@@ -38,6 +39,19 @@ same commit.
 | `docs/rulings_2026-07.md` | HANDOFF §3/§9, CONTEXT §9/§23, PRD §10, both Gate 0 docs | **Missing — owner to supply. Confirmed 2026-09-02 NOT recoverable from the .docx sources (`docs/rulebook-source/RECOVERY-2026-09-02.md`); all citations demoted.** Full text of R13–R24 + implementation impact. Note: `rulebook-source/Implementation_Rulebook_v1.docx` is a *different* document (the Vendor 66805 typing rulebook, its own rule numbering) and does not contain it |
 | `docs/spec.md` | CONTEXT §23, HANDOFF §9, Gate 0/1 prompt | **Missing — owner to supply.** The 18-section extraction spec with provenance tags; not reconstructable from anything tracked |
 | `docs/frontend/PLAN.md` | BRIEF §5 Phase 0 | Never existed; the harvest substituted `prompts/frontend-master-prompt.md` (BRIEF-DELTAS D-7) |
+| `hive/design/backend-2026-09/` review & audit series (six `review-*.md`, four `audit-*.md`, `adversarial-review.md`, `sentinel-patrol-02.md`) | `refactor-2026-09/REVIEW-LEDGER.md`, `refactor-2026-09/BASELINE.md` §3 | **Outside VCS by origin** — the engineering review archive. The ledger indexes every finding; BASELINE §3 reconciles them against the tree. The archive holds the full attack narratives |
+
+## docs/refactor-2026-09/ — the September refactor programme
+
+| Document | Status | Purpose |
+|---|---|---|
+| `BASELINE.md` | RECORD | What was true at `9866da7`, measured 2026-09-08; §3 reconciles every review finding against the tree |
+| `CHECKLIST.md` | AUTHORITATIVE | The open work, ordered by risk. Living |
+| `REVIEW-LEDGER.md` | AUTHORITATIVE | Every review/audit finding: files, severity as filed, resolution, verified closure. Living; rows never deleted |
+| `COMMANDS.md` | AUTHORITATIVE | The root command surface — the one home for the command table |
+| `ARCHITECTURE.md` | AUTHORITATIVE | Where new code belongs: dependency directions and the machines enforcing them |
+| `CI.md` | RECORD | What CI runs and the proof each gate can fail, measured 2026-09-08 |
+| `DEPENDENCY-MAP.md` | RECORD | Declared vs. actual edges, measured 2026-09-08 |
 
 ## docs/backend/
 

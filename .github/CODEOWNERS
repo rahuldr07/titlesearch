@@ -1,0 +1,3 @@
+# Every path has a default owner so no PR merges unreviewed. Add a
+# finer-grained row only when a real second owner exists — no invented teams.
+* @rahuldr07

@@ -19,6 +19,11 @@ Read in this order before writing code:
 3. [`docs/CONTEXT.md`](docs/CONTEXT.md) — domain facts; §11 is mandatory and not derivable from code.
 4. [`docs/PRD.md`](docs/PRD.md) — the build document: data model, API contract, release gates.
 
+Before changing code, also read [`docs/CONVENTIONS.md`](docs/CONVENTIONS.md) —
+the binding engineering conventions. §10 (handler/service/repository/mapper
+layering) and §11 (comment discipline; one fact, one home) bind every change,
+frontend included.
+
 [`docs/INDEX.md`](docs/INDEX.md) classifies every document in the tree —
 authoritative vs. historical record vs. superseded.
 
@@ -29,35 +34,41 @@ authoritative vs. historical record vs. superseded.
 | `apps/web/` | The frontend (React 19 · Vite 8 · TS strict · Tailwind v4), package `@titlepipe/web`. The only app; `apps/web-v2` was the rebuild's scratch copy and was deleted once its work landed here. |
 | `packages/` | pnpm workspace source: `contract` (Zod 4 wire schemas), `mocks` (MSW — the backend until FastAPI routes land), `ui-tokens`. **Not** county packages — those never enter VCS. |
 | `services/` | Python 3.13 services, one uv project each: `core-api` (FastAPI, ADR-0001), `blind-svc`, `worker`. |
-| `libs/` | Shared Python: `domain` (tenant canon), `test-support`. |
+| `libs/` | Shared Python: `domain` (tenant canon, redaction), `http-kit` (the HTTP layer both API services share), `service-kit` (service scaffolding: settings, logging, lifespan), `test-support`. |
 | `scripts/` | Repo-wide gates: client-data guard, backend structural rules, lock and dependency audits. |
 | `infra/` | Compose, containers, observability contract. |
 | `docs/` | All documentation — see `docs/INDEX.md`. |
 | `contract-fixtures/` | The wire fixture core-api's Pydantic models and `packages/contract`'s Zod schemas are both answerable to. Belongs to neither tree, which is why it sits at the root. |
 
+## Setup
+
+Prerequisites: Node + pnpm 10, [uv](https://docs.astral.sh/uv/) (which manages
+Python 3.13 itself), and a running Docker daemon for the integration suites
+(they start their own `postgres` testcontainer). Then:
+
+```bash
+pnpm install                                      # JS/TS workspaces
+uv sync --frozen --all-groups                     # in each services/* and libs/* project
+pnpm --filter @titlepipe/web exec playwright install chromium
+```
+
 ## Commands
 
-Frontend (repo root):
+The root command surface — format, lint, typecheck, unit/integration/e2e
+tests, architecture and dead-code gates, with per-command prerequisites — is
+one table with one home:
+[`docs/refactor-2026-09/COMMANDS.md`](docs/refactor-2026-09/COMMANDS.md).
+The short version: **`pnpm check`** is the fast development subset,
+**`pnpm verify`** is everything.
+
+Beyond that table:
 
 ```bash
-pnpm --filter @titlepipe/web dev        # Vite on :5174, MSW serves all data
-pnpm --filter @titlepipe/web build      # tsc -b + vite build
-pnpm --filter @titlepipe/web test       # Vitest
-pnpm --filter @titlepipe/web test:e2e   # Playwright
-pnpm --filter @titlepipe/web lint       # eslint
-pnpm --filter @titlepipe/web check:rules
-pnpm typecheck                  # all TS projects
+pnpm --filter @titlepipe/web dev   # Vite on :5174, MSW serves all data
 ```
 
-Backend checks (from each `services/*` or `libs/*` directory). The Python suite
-starts its own testcontainer, so these need a Docker daemon and nothing else:
-
-```bash
-uv sync --frozen --all-groups
-uv run ruff check . && uv run ruff format --check .
-uv run pyright
-uv run pytest
-```
+Inside a single Python project, the same checks run directly: `uv run ruff
+check .`, `uv run pyright`, `uv run pytest`.
 
 Backend *running*, with a real database — full runbook in
 [`docs/backend/RUNNING-LOCALLY.md`](docs/backend/RUNNING-LOCALLY.md):
@@ -73,15 +84,36 @@ Then `curl -sS http://127.0.0.1:8000/ready` and check the body carries
 `"database_answers":true` — a 200 alone is not enough, because an unset DSN
 also answers 200, carrying no database check at all.
 
-Repo-wide hygiene (run with the project interpreter — the codebase is
-Python ≥3.13):
+Repo-wide hygiene not in the command table (run with the project interpreter —
+the codebase is Python ≥3.13; `check_backend_rules.py` already runs inside
+`pnpm check:architecture`):
 
 ```bash
 python scripts/check_locks.py
 python scripts/check_no_client_data.py $(git ls-files)
-python scripts/check_backend_rules.py
 uvx pre-commit run --all-files
 ```
+
+## Contributing
+
+- Branch from `main`; keep a branch to one concern. Never commit county
+  packages, seed databases, or anything under `/data/`.
+- Before opening a PR: `pnpm check` at minimum (`pnpm verify` before merge),
+  plus `uvx pre-commit run --all-files` — the hooks enforce, among other
+  things, that every markdown link resolves (`check_doc_links.py`) and that
+  `CLAUDE.md` and `AGENTS.md` stay byte-identical (`check_agents_sync.py`), so
+  an edit to one is an edit to both.
+- The PR template's four sections are all required, and the evidence section
+  wants pasted command output — a ticked box is not evidence. For a bugfix or
+  a new refusal, show the red before the green.
+- When a document lands or changes class, update
+  [`docs/INDEX.md`](docs/INDEX.md) in the same commit (its own standing rule).
+- Review findings are tracked in
+  [`docs/refactor-2026-09/REVIEW-LEDGER.md`](docs/refactor-2026-09/REVIEW-LEDGER.md);
+  a finding closes with a named mechanism and a verified run, never with prose.
+- A failing test may be correct behavior — check the rulebook and the
+  provenance tag before "fixing" it, and never weaken an assertion to make a
+  change fit.
 
 ## Non-negotiables
 
