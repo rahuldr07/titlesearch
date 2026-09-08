@@ -30,9 +30,12 @@ PROJECTS = (
 
 def check(project: str) -> bool:
     directory = REPO_ROOT / project
+    # Same class as FX-40 in audit_dependencies.py: a name in PROJECTS that
+    # matches no project on disk is a typo or a stale entry, and "skip" here
+    # silently retired the lock check for it while staying green.
     if not (directory / "pyproject.toml").exists():
-        print(f"  skip {project} (no pyproject.toml)")
-        return True
+        print(f"  FAIL {project} (no such project: {directory / 'pyproject.toml'} missing)")
+        return False
 
     result = subprocess.run(
         ["uv", "lock", "--check"],  # noqa: S607 — uv is required tooling, resolved from PATH
