@@ -48,9 +48,15 @@ PIP_AUDIT_VERSION = "pip-audit==2.*"
 
 def audit(project: str) -> bool:
     directory = REPO_ROOT / project
+    # A name with no pyproject.toml is a typo, not a project. This returned
+    # True as a "skip" until 2026-09 (FX-40), which meant a mistyped CI matrix
+    # entry deleted the dependency audit while the job stayed green.
+    if not (directory / "pyproject.toml").exists():
+        print(f"  FAIL {project} (no such project: {directory / 'pyproject.toml'} missing)")
+        return False
     if not (directory / "uv.lock").exists():
-        print(f"  skip {project} (no uv.lock)")
-        return True
+        print(f"  FAIL {project} (pyproject.toml without uv.lock — nothing frozen to audit)")
+        return False
 
     with tempfile.TemporaryDirectory() as workspace:
         requirements = Path(workspace) / "requirements.txt"
