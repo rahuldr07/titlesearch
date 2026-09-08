@@ -24,10 +24,10 @@ from titlepipe_core.api.routers import health, queue, rules
 from titlepipe_core.auth import build_auth_seam
 from titlepipe_core.lifespan import build_lifespan, build_resources
 from titlepipe_core.settings import CoreApiSettings
-from titlepipe_core.telemetry.logging import configure_logging
 from titlepipe_domain import Clock, IdFactory
 from titlepipe_http_kit.request_context import RequestContextMiddleware
 from titlepipe_service_kit.telemetry.hooks import RequestMetrics
+from titlepipe_service_kit.telemetry.logging import configure_logging
 
 API_TITLE = "TitlePipe Core API"
 API_VERSION = "0.1.0"

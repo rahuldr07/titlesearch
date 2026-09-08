@@ -18,7 +18,8 @@ from titlepipe_core.lifespan import (
     build_resources,
     get_resources,
 )
-from titlepipe_core.settings import CoreApiSettings, Environment
+from titlepipe_core.settings import CoreApiSettings
+from titlepipe_domain import Environment
 from titlepipe_test_support import FrozenClock, SequenceIdFactory
 
 # 🔴 THE READINESS TESTS PIN `app_database_url` THEMSELVES, AND THEY HAVE TO.

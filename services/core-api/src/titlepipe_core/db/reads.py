@@ -85,8 +85,8 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from structlog.typing import FilteringBoundLogger
 
 from titlepipe_core.db.session import tenant_session
-from titlepipe_core.telemetry.logging import get_logger
 from titlepipe_domain import DependencyUnavailableError, TenantId
+from titlepipe_service_kit.telemetry.logging import get_logger
 
 # The database failures a retry can fix. Moved here verbatim from
 # `api/routers/rules.py`, where it was written, and its reasoning is unchanged:

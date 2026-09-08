@@ -29,8 +29,8 @@ from structlog.typing import FilteringBoundLogger
 
 from titlepipe_core.auth.identity import AuthenticatedSeat
 from titlepipe_core.auth.seam import AuthSeam
-from titlepipe_core.telemetry.logging import get_logger
 from titlepipe_domain import UnauthenticatedError
+from titlepipe_service_kit.telemetry.logging import get_logger
 
 __all__ = [
     "get_auth_seam",

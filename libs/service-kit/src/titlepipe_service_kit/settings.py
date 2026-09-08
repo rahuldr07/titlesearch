@@ -295,10 +295,9 @@ class BaseHttpServiceSettings(BaseServiceSettings):
     which is true of a worker, which is why this is a second class rather than
     more fields on the first.
 
-    ONE OF THE TWO HAS ARRIVED, and the past tense above would hide it.
-    `BlindApiSettings` inherits this; `CoreApiSettings` still declares
-    `BaseSettings` and still carries its own copy of every clause here, so this
-    seal covers Blind and does not cover Core. Open as FX-25.
+    Both have arrived: `BlindApiSettings` and `CoreApiSettings` inherit this,
+    each keeping only the refusals no other deployable has, so the seal now
+    covers every service that binds a port. FX-25 is closed.
 
     Nothing here imports a web framework and nothing here may. These are
     *values*: a port number, an origin list, a boolean. The server that reads

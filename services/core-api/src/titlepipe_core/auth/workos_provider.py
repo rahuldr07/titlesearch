@@ -81,8 +81,8 @@ from workos.session import (
 
 from titlepipe_core.auth.identity import ProviderIdentity
 from titlepipe_core.auth.provider import Credentials
-from titlepipe_core.telemetry.logging import get_logger
 from titlepipe_domain import DependencyUnavailableError
+from titlepipe_service_kit.telemetry.logging import get_logger
 
 __all__ = [
     "WORKOS_PROVIDER_NAME",
