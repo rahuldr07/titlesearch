@@ -181,7 +181,7 @@ WORKER_ROLE = "titlepipe_worker"
 APP_ROLE = "titlepipe_app"
 
 
-# --- the grants, table by table, with the verb list justified at each one ------
+# The grants, table by table, with the verb list justified at each one.
 #
 # Written out per role rather than generated from a matrix, for the reason `0001`
 # and `0002` both give: each object gets one reviewable line, and the two that

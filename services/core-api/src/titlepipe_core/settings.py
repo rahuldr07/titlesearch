@@ -73,7 +73,6 @@ class CoreApiSettings(BaseSettings):
     environment: Environment
     service_name: ServiceName = ServiceName.CORE_API
 
-    # --- HTTP surface -----------------------------------------------------
     host: str = "127.0.0.1"
     port: int = Field(default=8000, ge=1, le=65535)
     debug: bool = False
@@ -93,7 +92,6 @@ class CoreApiSettings(BaseSettings):
     # cache poisoning and forged absolute links.
     allowed_hosts: tuple[str, ...] = ()
 
-    # --- session ----------------------------------------------------------
     # THIS IS THE WORKOS COOKIE PASSWORD, and there is deliberately no
     # `workos_cookie_password` below. `auth/workos_provider.py` passes THIS
     # value to `load_sealed_session`: the AuthKit session cookie is a Fernet
@@ -103,7 +101,6 @@ class CoreApiSettings(BaseSettings):
     cookie_seal_password: SecretStr = SecretStr(DEVELOPMENT_SEAL_PASSWORD)
     mock_auth_enabled: bool = False
 
-    # --- identity provider (WorkOS AuthKit) -------------------------------
     # WORKOS, AND ONLY WORKOS. `auth/seam.build_auth_seam` reads these to
     # decide whether this process has a real identity provider; nothing else in
     # the service reads them, so the seam stays the one construction point.
@@ -130,7 +127,6 @@ class CoreApiSettings(BaseSettings):
     # silently — every request simply looks signed-out.
     workos_session_cookie_name: str = "wos-session"
 
-    # --- database ---------------------------------------------------------
     # The DSN the REQUEST PATH connects with. Read by `lifespan.py`, which builds
     # the engine and the sessionmaker from it when the service starts.
     #
@@ -183,7 +179,6 @@ class CoreApiSettings(BaseSettings):
     # incident during deploy, which is this module's opening rule.
     app_database_url: SecretStr | None = None
 
-    # --- observability ----------------------------------------------------
     log_level: str = "INFO"
     log_renderer: LogRenderer | None = None
     redaction_enabled: bool = True

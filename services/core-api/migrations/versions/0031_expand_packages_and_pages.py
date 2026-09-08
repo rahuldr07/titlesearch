@@ -258,7 +258,6 @@ def upgrade() -> None:
     PACKAGE_STATUS.create(op.get_bind(), checkfirst=False)
     PAGE_KIND.create(op.get_bind(), checkfirst=False)
 
-    # -- packages ----------------------------------------------------------
     op.add_column("packages", sa.Column("order_id", postgresql.UUID(as_uuid=True), nullable=False))
     op.add_column("packages", sa.Column("sha256", sa.Text(), nullable=False))
     # `BigInteger`: a county search package of several hundred megabytes is
@@ -330,7 +329,6 @@ def upgrade() -> None:
 
     _create_identity_trigger()
 
-    # -- pages -------------------------------------------------------------
     op.add_column("pages", sa.Column("package_id", postgresql.UUID(as_uuid=True), nullable=False))
     op.add_column("pages", sa.Column("page_no", sa.Integer(), nullable=False))
     # The PDF page's own dimensions, as a PAIR. The three coordinate spaces stay

@@ -345,7 +345,6 @@ def upgrade() -> None:
     # silent reuse of whatever labels the old type happened to have.
     FIELD_STATE.create(op.get_bind(), checkfirst=False)
 
-    # -- fields ------------------------------------------------------------
     op.add_column("fields", sa.Column("order_id", postgresql.UUID(as_uuid=True), nullable=False))
     op.add_column("fields", sa.Column("path", sa.Text(), nullable=False))
     op.add_column("fields", sa.Column("value", sa.Text(), nullable=True))
@@ -458,7 +457,6 @@ def upgrade() -> None:
     _create_transition_function()
     _narrow_the_update_grant()
 
-    # -- field_readings ----------------------------------------------------
     op.add_column(
         "field_readings", sa.Column("field_id", postgresql.UUID(as_uuid=True), nullable=False)
     )
