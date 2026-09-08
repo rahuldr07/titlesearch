@@ -1,9 +1,7 @@
 """`GoldenRepository` — the ingest path for ground truth, and the ORDER it must write in.
 
----------------------------------------------------------------------------
 THE REFUSALS ARE NOT HERE, AND LOOKING FOR THEM HERE IS THE MISTAKE THIS
    DOCSTRING EXISTS TO PREVENT.
----------------------------------------------------------------------------
 "A golden correction needs a source, a reason and a signature", "the two NA
 states never collapse", "an affirmation leaves the value alone", "a signer is
 never an engine and never `unknown`" — every one of those is a CHECK constraint
@@ -168,10 +166,8 @@ class GoldenRepository(TenantRepository[GoldenField]):
     ) -> GoldenCorrection:
         """The ledger row, then the move it authorises — in that order, one transaction.
 
-        ---------------------------------------------------------------------------
         THE TWO `flush()` CALLS ARE THE METHOD. Everything else here is field
            copying.
-        ---------------------------------------------------------------------------
         `0072`'s trigger fires on the UPDATE and requires a `golden_corrections`
         row matching the whole transition — tag, value and `na_reason` on both
         sides, the citation, and the revision. The ledger row must therefore have

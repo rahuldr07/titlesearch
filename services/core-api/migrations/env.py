@@ -159,11 +159,9 @@ target_metadata = Base.metadata
 def _include_name(name: str | None, type_: str, _parent_names: dict[str, str | None]) -> bool:
     """Which reflected names autogenerate is allowed to see. Only the queue is hidden.
 
-    ---------------------------------------------------------------------------
     THE FOUR PROCRASTINATE TABLES ARE IN THE DATABASE AND MUST NOT BE IN
        `Base.metadata`, AND WITHOUT THIS HOOK THAT IS A PERMANENT `alembic check`
        FAILURE.
-    ---------------------------------------------------------------------------
     `0060` installs `migrations/sql/procrastinate_schema_3.9.0.sql` verbatim —
     four tables, three types, eighteen functions. They are the library's, not
     ours, and modelling them would fork the DDL and the functions that read it.
@@ -284,9 +282,7 @@ def _refused_autocommit_block() -> NoReturn:
 def _refuse_autocommit_blocks(migration_context: MigrationContext) -> None:
     """Make "the whole run rolls back with it", four frames down, TRUE.
 
-    ---------------------------------------------------------------------------
     THAT CLAIM WAS FALSE, AND FALSE IN THE DIRECTION THAT WEDGES THE DATABASE.
-    ---------------------------------------------------------------------------
     MEASURED 2026-09-08 against postgres:18.4 on this chain at `0102`, with a
     revision whose whole body was `with op.get_context().autocommit_block():
     op.execute("CREATE TABLE leftover (tenant_id uuid NOT NULL)")`:
@@ -326,10 +322,8 @@ def _refuse_autocommit_blocks(migration_context: MigrationContext) -> None:
 def _assert_coverage_at_head(connection: Connection) -> None:
     """`assert_rls_coverage`, but only when the run finished ON a head.
 
-    ---------------------------------------------------------------------------
     THE INVARIANT BELONGS TO HEAD, NOT TO EVERY POINT IN THE CHAIN, AND
        ASSERTING IT UNCONDITIONALLY BREAKS THE CHAIN.
-    ---------------------------------------------------------------------------
     MEASURED on this tree, with the assertion called unconditionally: **two
     tests fail**, and both are correct behaviour being refused —
 

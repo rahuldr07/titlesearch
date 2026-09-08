@@ -1,15 +1,9 @@
 """`RuleRepository` — the rulebook, which is the one table outside tenancy.
 
-IT LIVED IN `base.py` (then `db/repository.py`) UNTIL THAT FILE HIT 416 LINES, over
-`scripts/check_backend_rules.py`'s rule-6 cap, and the cheap way out was a
-`rules-allow-file(file-length)` on the module that owns the tenancy check. That is
-the same trade `engine.py` was split out of `session.py` to avoid on 2026-08-06,
-recorded in both of their openings, and it is refused here for the same reason: a
-cap that is exempted on the files that grow is not a cap.
-
-**No caller's import line changed.** `titlepipe_core.db` re-exports
-`RuleRepository`, so `from titlepipe_core.db import RuleRepository` reads
-identically on both sides of the split.
+SPLIT OUT OF `base.py` rather than exempting that file from
+`scripts/check_backend_rules.py`'s rule-6 cap, which it had passed at 416 lines:
+a cap that is exempted on the files that grow is not a cap. `engine.py` records
+the same trade against `session.py`.
 
 ONE NAME CROSSES THE BOUNDARY: `repository.refuse_unscoped_session`, which is
 public for exactly this reason — the underscore came off when a second module
@@ -18,14 +12,8 @@ else moves. `_GLOBAL_TABLE_CONSEQUENCE` below is this module's own sentence abou
 its own table, and keeping it here is the point of that helper taking the
 consequence as an argument rather than choosing one.
 
-## The reader who wondered why this is not a subclass
-
-`base.py` argues that at length — including why the plan's stated reason for
-the same conclusion is false, and the two readings of the injection that tests it.
-The short of it: `rules` carries no tenancy at all, the base adds no predicate, so
-the objection to inheriting is about what the type CLAIMS rather than about what
-any query does. The class docstring below carries the consequences that are this
-table's.
+Why this is not a subclass is argued in `base.py` and, for the consequences that
+are this table's, in the class docstring below.
 """
 
 from __future__ import annotations
@@ -141,11 +129,9 @@ class RuleRepository:
         (by jurisdiction, by status, most-recently-confirmed first) that is a
         product decision and it replaces this line rather than being layered on it.
 
-        ---------------------------------------------------------------------
         IT WAS `ORDER BY code` ALONE, AND `code` IS NOT UNIQUE. That version of
            this paragraph said "`code` because it is the one column that is unique
            per rule", and rested Tasks 3 and 4 on it.
-        ---------------------------------------------------------------------
         `migrations/versions/0003_rules.py` creates this table with
         `sa.PrimaryKeyConstraint("id")` AND NOTHING ELSE — no unique constraint and
         no index on `code` — and the table carries a `version` column, so `R13 v1`
@@ -178,9 +164,6 @@ class RuleRepository:
         It is deliberately NOT added here, and this ordering does not assume it:
         the `id` tiebreak is what makes the order total on the schema that exists
         rather than on the constraint somebody might add.
-
-        A `Sequence[Rule]`, which is what `ScalarResult.all()` returns, rather
-        than a `list` copied out of it. The caller reads it and serialises it.
 
         THE READ GOES THROUGH `self._session` AND THAT IS THE POINT OF THE CLASS.
         `__init__`'s check is construction-time and cannot see this line; a method

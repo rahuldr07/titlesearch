@@ -53,10 +53,8 @@ class Field(_TenantRow):
     states are labels of the enum, and `needs_review` is never derived from
     `value IS NULL` (CLAUDE.md).
 
-    -------------------------------------------------------------------------
     `correction_reason` — THE COLUMN THAT DID NOT EXIST, AND THE WHOLE POINT
        OF THIS TABLE'S CHANGE.
-    -------------------------------------------------------------------------
     Venkat/D2 measured the live behaviour: `CorrectFieldRequest.reason` is
     `z.string().optional()` on the wire, and the handler
     (`packages/mocks/src/handlers.ts`, `POST /api/fields/:id/correct`) validates
@@ -81,9 +79,7 @@ class Field(_TenantRow):
     column becomes lossy silently, and that dependency is why the two are
     documented together rather than in two places.
 
-    -------------------------------------------------------------------------
     THE STATE MACHINE, AND WHY NO CONSTRAINT IN THIS CLASS EXPRESSES IT.
-    -------------------------------------------------------------------------
     `corrected` and `escalated` accept no successor. A `CHECK` cannot say that —
     a check sees one row, not a transition. The machine is `0006`'s
     `titlepipe_field_transition` function: ONE conditional
@@ -101,9 +97,7 @@ class Field(_TenantRow):
     insufficient_privilege` from PostgreSQL rather than a green test. The only
     granted path is the transition function.
 
-    -------------------------------------------------------------------------
     EXCLUSION IS A FLAG, NOT A STATE, AND THE PLAN PICKED THAT DELIBERATELY.
-    -------------------------------------------------------------------------
     `state` answers "is this value settled, and by whom". `excluded_reason`
     answers "does this row appear on the deliverable". Both can be true at once
     and neither implies the other: a satisfied judgment can be accurately

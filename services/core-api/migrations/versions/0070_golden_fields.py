@@ -9,13 +9,11 @@ CONVENTIONS §8 forbids guessing a `down_revision` while several workers write
 revisions at once; the chain is linearised at integration and this file is not
 rebased onto anybody else's.
 
----------------------------------------------------------------------------
 WHAT THIS TABLE IS FOR. Every accuracy number in this system currently reads
    `NO_TRUTH_YET`, because no golden set exists for either measured package.
    Cross-engine agreement is NOT a substitute — three engines agreed on a WRONG
    reading at 0.20 confidence on the worst pages of one package (PLAN §6). This
    table is the only thing that can settle which reading was right.
----------------------------------------------------------------------------
 
 ## The distinction this schema exists to make unrepresentable
 

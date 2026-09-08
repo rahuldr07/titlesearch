@@ -5,9 +5,7 @@ One function decides which identity providers this process has. Everything else
 in this package is called BY something rather than deciding anything, which is
 what makes "who can authenticate here" a question with a single answer.
 
----------------------------------------------------------------------------
 THE MACHINE THAT MAKES `x-mock-role` UNTRUSTABLE, NAMED IN ORDER.
----------------------------------------------------------------------------
 `CONVENTIONS.md` §9: every safety property names the machine that enforces it,
 or is reported as an unproven residual. This is the naming.
 
@@ -39,9 +37,7 @@ parametrised on `mock_auth_enabled`, and stays there rather than being restated:
 it is a property of `CoreApiSettings`, and a second copy is one that can pass
 while the first is deleted.
 
----------------------------------------------------------------------------
 UNPROVEN RESIDUAL — WHAT THE CHAIN ABOVE DOES NOT COVER.
----------------------------------------------------------------------------
 **The whole chain is rooted in one environment variable.** Every lock keys off
 `TITLEPIPE_ENVIRONMENT`. A production host started with
 `TITLEPIPE_ENVIRONMENT=development` and `TITLEPIPE_MOCK_AUTH_ENABLED=true` gets

@@ -6,10 +6,8 @@ Create Date: 2026-09-08
 
 ASSUMED PARENT: `0110`, this worker's own previous revision.
 
----------------------------------------------------------------------------
 THE DEFECT: ONE INSERT PERMANENTLY BRICKS A GOLDEN FIELD, AND NO ATTACKER
    IS NEEDED.
----------------------------------------------------------------------------
 `0072` moves a golden value only when a `golden_corrections` row describes
 exactly that transition at exactly `OLD.revision + 1`. `0071` makes at most one
 row exist per `(tenant, field, revision_after)` and makes the table append-only
@@ -32,9 +30,7 @@ The field is frozen at revision N forever. `titlepipe_app` has no path out and
 neither has anybody else: this is the one shape in the schema where a legal
 INSERT by an ordinary caller destroys a row's future.
 
----------------------------------------------------------------------------
 THE RULING: MARKED, NOT DELETED — AND MARKED BY A FURTHER APPEND, NOT AN UPDATE
----------------------------------------------------------------------------
 The question this revision was asked is whether a superseded row may be MARKED
 rather than deleted. It may — but a `superseded_at` column set in place would be
 an UPDATE of a ledger row, and the append-only trigger is the strongest control

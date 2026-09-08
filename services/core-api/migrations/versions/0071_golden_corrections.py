@@ -8,13 +8,11 @@ ASSUMED PARENT: `0070`, this worker's own previous revision. `0070`'s docstring
 records the assumption about the head below it, and CONVENTIONS §8 is why
 neither guesses further.
 
----------------------------------------------------------------------------
 THE REFUSAL THIS TABLE IS. A golden correction needs a SOURCE, a REASON and a
    SIGNATURE. That rule exists today as `z.string().min(1)` in a browser schema
    and as prose in `CLAUDE.md`, and a browser schema refuses nothing that does
    not go through the browser. Here it is three `NOT NULL` columns and three
    CHECK constraints, so the write fails at the server or does not happen.
----------------------------------------------------------------------------
 
 ## Why the ledger is a table and not four columns on `golden_fields`
 

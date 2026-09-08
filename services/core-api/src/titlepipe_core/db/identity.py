@@ -26,14 +26,12 @@ _identity_columns_as_a_domain_tenant_table` reads `users`, `clients` and `orders
 out of `information_schema` and compares the three shared columns and the primary
 key IN KEY ORDER. If `_TenantRow` changes, that test goes red here.
 
----------------------------------------------------------------------------
 THE ROLE COLUMN IS THE AUTHORIZATION INPUT, AND IT IS A COLUMN AND NOT A
    CLAIM. `docs/PRD.md` §9's correction note is explicit: "PostgreSQL owns
    authorization — WorkOS's own role/permission claims are deliberately
    ignored". That sentence is the whole reason this column exists here rather
    than being read off a token: a permission change takes effect on the NEXT
    REQUEST because the next request reads this row, not at token expiry.
----------------------------------------------------------------------------
 `titlepipe_core.auth` states the same property from the other side, and states
 what enforces it: `ProviderIdentity` has no role field, so no provider — real or
 mock — has anywhere to put one.
@@ -147,10 +145,8 @@ class _IdentityRow(Base):
 class User(_IdentityRow):
     """One person's seat in one tenant.
 
-    ---------------------------------------------------------------------------
     `(tenant_id, identity_provider, identity_subject)` IS UNIQUE, AND THE
        `tenant_id` PREFIX IS LOAD-BEARING RATHER THAN TIDY.
-    ---------------------------------------------------------------------------
     `db/models._TenantRow` measures the cross-tenant existence oracle a
     single-column key opens under `FORCE ROW LEVEL SECURITY`: unique enforcement
     runs BEFORE a policy's `WITH CHECK`, so an INSERT distinguishes a value held

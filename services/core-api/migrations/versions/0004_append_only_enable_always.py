@@ -4,11 +4,9 @@ Revision ID: 0004
 Revises: 0003
 Create Date: 2026-09-02
 
----------------------------------------------------------------------------
 THE RULING `0001` LEFT OPEN. `tgenabled = 'O'` MEANS THE APPEND-ONLY
    GUARANTEE IS OFF FOR ANY SESSION IN `session_replication_role = 'replica'`,
    AND THAT IS NOT A THEORETICAL HOLE.
----------------------------------------------------------------------------
 `0001::_create_append_only_trigger` states the qualification in prose — "a
 superuser can set `session_replication_role = 'replica'`, under which ordinary
 triggers do not fire, and then `DELETE` freely" — and then argues the residual

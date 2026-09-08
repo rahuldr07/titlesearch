@@ -318,11 +318,9 @@ def _sequence_grantees() -> dict[str, tuple[str, ...]]:
 def _require_privileges(functions: list[tuple[int, str]]) -> None:
     """Read every privilege back, and refuse the migration if one is missing.
 
-    ---------------------------------------------------------------------------
     THIS IS NOT CEREMONY. A `GRANT` issued by a role that cannot give the
        privilege away is a WARNING in PostgreSQL, not an error, and neither
        `op.execute` nor `ON_ERROR_STOP` sees a warning.
-    ---------------------------------------------------------------------------
     `0002` measured that exact shape on schema `public`, whose owner is
     `pg_database_owner` rather than `titlepipe_owner`, and answered it the same
     way. The objects here are created by this migration and therefore owned by

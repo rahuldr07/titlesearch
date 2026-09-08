@@ -4,10 +4,8 @@ Revision ID: 0003
 Revises: 0002
 Create Date: 2026-08-06
 
----------------------------------------------------------------------------
 `rules` IS GLOBAL. NO `tenant_id`, NO POLICY, NO ROW-LEVEL SECURITY, AND
    EVERY ONE OF THOSE THREE IS THE RULING RATHER THAN AN OMISSION.
----------------------------------------------------------------------------
 RULED 2026-08-05 (Plan 02's tenancy human gate). The rulebook is the shop's own
 body of rules, engineer-confirmed and scoped by `jurisdiction_scope` rather than
 by customer: two firms searching the same county are governed by the same rule.

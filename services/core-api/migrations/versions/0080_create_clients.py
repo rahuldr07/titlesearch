@@ -10,10 +10,8 @@ than guessed, so `CONVENTIONS.md` §8's "set `down_revision` to the head as your
 it and let god linearize" does not apply. The `0080+` range is reserved for revisions
 written after the merge.
 
----------------------------------------------------------------------------
 WHY THIS EXISTS: A MODEL WITH NO MIGRATION, WHICH IS THE ONE DRIFT
    DIRECTION NOTHING ELSE IN THIS REPOSITORY CATCHES.
----------------------------------------------------------------------------
 `db/identity.py` has mapped `Client` since the auth seam landed. No revision created
 the table, so every migrated database was missing it while every model import claimed
 it was there. The RLS coverage check enumerates the DATABASE, so it saw nothing to

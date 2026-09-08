@@ -3,9 +3,7 @@
 Revision ID: 0120
 Revises: 0102
 
----------------------------------------------------------------------------
 THE APP ROLE COULD REWRITE `users.role` WITHIN ITS OWN TENANT. MEASURED.
----------------------------------------------------------------------------
 Against postgres:18.4 at revision `0102`, as `titlepipe_app` with the tenant GUC
 set to the row's tenant:
 

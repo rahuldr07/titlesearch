@@ -1,8 +1,6 @@
 """WorkOS AuthKit, behind `provider.IdentityProvider`. One class, no callers changed.
 
----------------------------------------------------------------------------
 THIS ADAPTER HAS NEVER AUTHENTICATED ANYBODY. IT IS UNEXERCISED.
----------------------------------------------------------------------------
 There are no WorkOS credentials on this machine and no tenant to point at, so
 nothing here has been run against the real thing. What IS tested is everything
 this file decides on its own — which cookie it reads, what it refuses, what it

@@ -224,10 +224,8 @@ def _release(table: str) -> None:
 def _require_schema_usage() -> None:
     """Read the schema privilege back, and refuse if the GRANT above did nothing.
 
-    ---------------------------------------------------------------------------
     `GRANT USAGE ON SCHEMA public` FROM THIS MIGRATION IS A NO-OP ON THE
        CLUSTER THIS SUITE RUNS AGAINST, AND POSTGRESQL REPORTS THAT AS A WARNING.
-    ---------------------------------------------------------------------------
     Schema `public` is owned by `pg_database_owner` from PostgreSQL 15 on.
     `titlepipe_owner` is not the database owner and holds no grant option on the
     schema, so it cannot give the privilege away. MEASURED 2026-08-05 against
@@ -357,10 +355,8 @@ def upgrade() -> None:
 def downgrade() -> None:
     """Reverse of `upgrade`, with ONE deliberate asymmetry — see below.
 
-    ---------------------------------------------------------------------------
     THE SCHEMA `USAGE` GRANT IS NOT REVERSED. This is accepted, documented
        debris rather than an oversight.
-    ---------------------------------------------------------------------------
     Two measured reasons, 2026-08-05 against postgres:18.4:
 
     * there is nothing of this revision's own to reverse on the cluster this

@@ -15,9 +15,7 @@ the parent is STATED rather than reconciled here, and god linearizes.
 The dependency is real and not bookkeeping: the constraint names two columns
 `0032` adds to `fields`, so anything before `0032` is a `column does not exist`.
 
----------------------------------------------------------------------------
 WHY THIS EXISTS, AND WHY THE DEADLINE IS THE EXTRACTION WORKER'S FIRST ROW.
----------------------------------------------------------------------------
 A row carrying `source_page_no = 7` with `source_document_id = NULL` was written
 through real RLS at head `0080` and the database accepted it. Page seven of
 WHAT. That row is a value the system cannot cite while every column on it says

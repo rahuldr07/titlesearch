@@ -5,9 +5,7 @@ Revision ID: 0031
 Revises: 0030
 Create Date: 2026-09-04
 
----------------------------------------------------------------------------
 AN `ALTER`, NOT A `CREATE`, SO THE RLS TRIPLE IS DELIBERATELY ABSENT.
----------------------------------------------------------------------------
 `0001::upgrade` creates `packages` and `pages` with three columns each and
 `0002::_isolate` puts `ENABLE ROW LEVEL SECURITY`, `FORCE ROW LEVEL SECURITY` and
 the `tenant_isolation` policy on both. CONVENTIONS §1 requires those three in the
@@ -23,10 +21,8 @@ runs inside the migration transaction reads `pg_class.relrowsecurity`,
 column, and rolls the whole run back if any of the three is missing. Both tables
 are in its population whether or not this revision touches their policies.
 
----------------------------------------------------------------------------
 `packages.py`'s DOCSTRINGS NAME `0005` FOR TWO MACHINES, AND `0005` IS NOT
    THAT REVISION. THEY LAND HERE.
----------------------------------------------------------------------------
 `models/packages.py` says, twice, that migration `0005` carries the
 `packages_identity_is_immutable` trigger and the
 `uq_packages_one_accepted_per_order` partial unique index. Revision `0005` on
@@ -132,10 +128,8 @@ ACCEPTED_PACKAGE_INDEX = "uq_packages_one_accepted_per_order"
 def _refuse_if_populated(table: str, columns: Sequence[str]) -> None:
     """Refuse, by name, before adding a `NOT NULL` column with no default.
 
-    ---------------------------------------------------------------------------
     THE `NO FORCE` DANCE IS NOT DEFENSIVE PROGRAMMING. WITHOUT IT THIS
        FUNCTION READS 0 ON EVERY DATABASE AND REFUSES NOTHING.
-    ---------------------------------------------------------------------------
     `0002` puts `FORCE ROW LEVEL SECURITY` on both tables, and `FORCE` is
     precisely the clause that removes the table owner's exemption. `env.py`
     connects as `titlepipe_migration` and `SET ROLE`s to `titlepipe_owner`, so
@@ -176,9 +170,7 @@ def _refuse_if_populated(table: str, columns: Sequence[str]) -> None:
 def _create_identity_trigger() -> None:
     """`packages.sha256`, `byte_size` and `tenant_id` cannot be changed by an UPDATE.
 
-    ---------------------------------------------------------------------------
     WHY A TABLE-LEVEL MACHINE AND NOT A HANDLER CHECK.
-    ---------------------------------------------------------------------------
     `sha256` IS the package's identity. The engine-output spine keys on
     `(package_digest, page_no, render_params, engine_id, engine_version,
     config_digest)`, so the digest is simultaneously the dedupe key and the

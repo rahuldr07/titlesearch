@@ -11,9 +11,7 @@ references no other table.
 The prose below is the author's and describes the branch as written; this line is the read of
 the chain that `alembic upgrade head` actually walks.
 
----------------------------------------------------------------------------
 THE ASSUMED PARENT IS `0004`, AND IT IS AN ASSUMPTION RATHER THAN A READ.
----------------------------------------------------------------------------
 `CONVENTIONS.md` §8: several workers write migrations at once, so `down_revision`
 is set to the head as this tree found it — `0004_append_only_enable_always` — and
 the chain is linearized at integration rather than guessed at here. Revisions
@@ -27,10 +25,8 @@ line.
 and one table, references no other table, and its policy reads a GUC rather than
 joining. A reordering therefore changes the revision graph and not the result.
 
----------------------------------------------------------------------------
 RLS IS ENABLED, FORCED AND POLICIED IN THIS SAME MIGRATION, WHICH IS THE
    RULE AND NOT A PRECAUTION.
----------------------------------------------------------------------------
 `CONVENTIONS.md` §1: a tenant-scoped table created without all three is a defect.
 `0002` is the counter-example that makes the rule concrete — its `upgrade()` is
 seven hardcoded `_isolate` calls, so a table created later is simply not in them,

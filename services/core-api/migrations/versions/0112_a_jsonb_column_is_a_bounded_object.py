@@ -6,11 +6,9 @@ Create Date: 2026-09-08
 
 ASSUMED PARENT: `0111`, this worker's own previous revision.
 
----------------------------------------------------------------------------
 FOUR `jsonb` COLUMNS, NO CHECK ON ANY OF THEM, AND NO SIZE BOUND ANYWHERE
    IN THE SCHEMA. The only limit this system has is `MAX_PAGE_SIZE = 200`,
    which bounds a ROW COUNT and says nothing about what a row weighs.
----------------------------------------------------------------------------
 `clients.delivery_config`, `fields.source_line_coords`,
 `field_readings.line_coords` and `procrastinate_jobs.args`. `0001` names the
 first half of the gap in the column it created:

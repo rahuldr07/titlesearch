@@ -14,10 +14,8 @@ database, find no table for them in the metadata, and report a spurious
 `remove_table` — a green migration chain and a red check, with the reason three
 files away.
 
----------------------------------------------------------------------------
 WHAT THE ORM DOES **NOT** ENFORCE, SO THAT NOBODY READS THIS FILE AS THE
    PLACE THE RULES LIVE.
----------------------------------------------------------------------------
 Every refusal that keeps the golden set honest is a database object, and this
 module only DECLARES the ones SQLAlchemy can express. Specifically:
 
@@ -121,10 +119,8 @@ UNSIGNED_SENTINEL: Final = "unknown"
 class GoldenField(_TenantRow):
     """One human-established truth: a value for one path on one order.
 
-    ---------------------------------------------------------------------------
     THERE IS NO COLUMN HERE THAT COULD HOLD A MODEL OUTPUT, AND THAT IS THE
        DESIGN RATHER THAN AN OMISSION.
-    ---------------------------------------------------------------------------
     No `engine_id`, no `engine_version`, no `confidence`, no `model`. A golden
     row cannot record which engine produced it, so "promote this reading" has no
     shape — a truth gets here by a person typing it with a citation and a reason.

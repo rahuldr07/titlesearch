@@ -6,14 +6,12 @@ Create Date: 2026-09-05
 
 ASSUMED PARENT: `0071`, this worker's own previous revision.
 
----------------------------------------------------------------------------
 THE GAP THIS CLOSES. `0071` gives every change to ground truth a permanent,
    signed, cited ledger row. It does not make anybody WRITE one. Until this
    revision, `UPDATE golden_fields SET value = 'Lot 7'` was an ordinary
    statement that any holder of the `UPDATE` grant could run, and the ledger
    would simply have no row for it — a permanent record with a hole in it, and
    nothing anywhere reporting the hole.
----------------------------------------------------------------------------
 
 **THE MACHINE:** `golden_fields_require_ledger`, an `AFTER UPDATE ... FOR EACH
 ROW` trigger at `tgenabled = 'A'`, which refuses the statement unless a

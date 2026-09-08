@@ -1,15 +1,9 @@
 """`tenant_session` — the only tenant-scoped way to open a session.
 
-**Every database access in every later plan goes through `tenant_session`.** It
-is the only thing here that SCOPES a session: it names a tenant, applies it, and
-naming `None` says the work is allowed to see nothing.
-
 The CONNECTION-lifetime half of this seam — `make_engine`, the pool's `checkin`
-listener, `make_sessionmaker` and the deny sentinel a connection is opened and
-returned at — moved to `engine.py` on 2026-08-06, because this file stood at
-exactly the 400-line cap `scripts/check_backend_rules.py` rule 6 enforces. No
-caller's import line changed: `titlepipe_core.db` re-exports all three names as
-it did before. `engine.py`'s opening states the split and what went with it.
+listener, `make_sessionmaker`, the deny sentinel — is in `engine.py`, which
+states the split. `titlepipe_core.db` re-exports all three names, so no caller's
+import line distinguishes the two files.
 
 IT IS NOT THE ONLY WAY TO OBTAIN AN `AsyncSession`, AND THIS PARAGRAPH SAID IT
 WAS — "a caller cannot obtain an `AsyncSession` from this package without naming
@@ -263,10 +257,6 @@ async def tenant_session(
     sync `Session`, and `AsyncSession` is a façade over one.
 
     ## Commit on exit, rollback on anything else
-
-    The block is a unit of work. A clean exit commits; an exception propagates
-    with the transaction discarded by `close()`, which is in a `finally` and runs
-    whatever happened — including when `commit()` is what raised.
 
     THE COMMIT IS LOAD-BEARING, and the reason is Plan 01's amendment 2 to the
     Task 5 contract that Plans 02-06 read: this block COMMITS ON CLEAN EXIT. If it

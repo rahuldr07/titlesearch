@@ -164,10 +164,8 @@ class _TenantRow(_Row):
     flag stays so that dropping `tenant_id` from the key cannot silently make the
     column nullable.
 
-    ---------------------------------------------------------------------------
     `tenant_id` IS PART OF THE PRIMARY KEY, AND IT CLOSES A CROSS-TENANT
        EXISTENCE ORACLE THAT RLS CANNOT CLOSE.
-    ---------------------------------------------------------------------------
     Unique enforcement runs BEFORE a policy's `WITH CHECK`, so under
     `ENABLE` + `FORCE ROW LEVEL SECURITY` with Task 4's `tenant_isolation`
     policy, a `PRIMARY KEY (id)` answers "does this id exist in some other
@@ -237,10 +235,8 @@ class AuditLog(_TenantRow):
     triggers of `0001`/`0004` and `tests/test_audit_writer.py` holds `0007`'s
     writer.
 
-    ---------------------------------------------------------------------------
     THIS MODEL EXISTS SO `alembic check` CAN SEE THE COLUMNS. IT IS NOT AN
        INSERT SURFACE, AND NO REPOSITORY MAY BE BUILT ON IT.
-    ---------------------------------------------------------------------------
     Every column below is written by `audit_record_change()` and
     `audit_chain_link()` in migration `0007`, inside the transaction of the
     change being recorded. Application code that constructs an `AuditLog` and

@@ -4,10 +4,8 @@ Revision ID: 0051
 Revises: 0050
 Create Date: 2026-09-04
 
----------------------------------------------------------------------------
 EVERYTHING IN THIS REVISION IS BUILT UNDER ASSUMPTION, AND THE WHOLE
    REVISION IS THE UNIT OF REVERSAL.
----------------------------------------------------------------------------
 The owner has NOT answered whether TitlePipe acquires a product-and-sign-off
 layer. god ruled it in ahead of that answer, on one argument: the completeness
 gate sits IMMEDIATELY UPSTREAM of the most expensive step in the system —

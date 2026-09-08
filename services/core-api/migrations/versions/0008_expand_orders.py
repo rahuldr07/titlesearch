@@ -13,10 +13,8 @@ the chain that `alembic upgrade head` actually walks.
 The same pass folded the intake pair the author called `0014` and `0015` into the single revision
 `0051`; the references below have been retargeted, and a design note naming `0014` means `0051`.
 
----------------------------------------------------------------------------
 `orders` ALREADY EXISTS. THIS IS AN `ALTER`, NOT A `CREATE`, AND THAT IS
    WHY IT DOES NOT REPEAT THE RLS TRIPLE.
----------------------------------------------------------------------------
 `0001::upgrade` creates `orders` with three columns — `id`, `created_at`,
 `tenant_id` — and `0002::_isolate` puts `ENABLE ROW LEVEL SECURITY`, `FORCE ROW
 LEVEL SECURITY` and the `tenant_isolation` policy on it. CONVENTIONS §1 requires
@@ -125,10 +123,8 @@ def _refuse_if_populated(table: str, columns: Sequence[str]) -> None:
     column list and the remedy. The alternative is PostgreSQL's own message,
     which names one column and reads like a defect in the DDL.
 
-    ---------------------------------------------------------------------------
     THIS GUARD READ THROUGH ROW-LEVEL SECURITY AND THEREFORE NEVER FIRED.
        IT COUNTED ZERO ON EVERY DATABASE, INCLUDING THE ONES IT EXISTS TO REFUSE.
-    ---------------------------------------------------------------------------
     `0002` puts `FORCE ROW LEVEL SECURITY` on `orders`, and `FORCE` is precisely
     the clause that removes the table OWNER's exemption. `env.py` connects as
     `titlepipe_migration` and `SET ROLE`s to `titlepipe_owner`, and no migration

@@ -13,9 +13,7 @@ these are independent, and `0040` is named as the parent because a linear range
 is what god relinearizes cleanly. Other ranges are in flight in parallel and are
 not reconciled here.
 
----------------------------------------------------------------------------
 THE TWO REFUSALS THIS FILE EXISTS TO MOVE OUT OF PROSE.
----------------------------------------------------------------------------
 CLAUDE.md states both as product requirements. Until this revision they were held
 by the contract's `min(1)` and a required `rule` union, which means they held for
 the one client that parses the contract and for nothing else — not for a script,

@@ -24,10 +24,8 @@ Nothing in this revision depends on any table, type or function created between
 `0004` and `0040` by anybody. It needs `orders` (`0001`) and `rules` (`0003`),
 and it creates everything else it touches — with one stated exception, below.
 
----------------------------------------------------------------------------
 WHAT THIS REVISION DEFERRED, AND WHAT CLOSED IT: `instruments.document_id`'s
    FOREIGN KEY.
----------------------------------------------------------------------------
 `models/chain.py` declares `tenant_fk(column="document_id",
 target_table="documents")`. When this file was written, `documents` was another
 worker's module in the same fan-out and did not exist in this chain, so the

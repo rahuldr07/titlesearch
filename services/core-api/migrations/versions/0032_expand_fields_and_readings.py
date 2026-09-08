@@ -5,12 +5,10 @@ Revision ID: 0032
 Revises: 0031
 Create Date: 2026-09-04
 
----------------------------------------------------------------------------
 AN `ALTER`, NOT A `CREATE`. `0001` created both tables — `fields` with
    `na_reason` and `field_readings` with `line_coords` — and `0002` isolated
    them, so the RLS triple belongs to those revisions. `0031`'s header states
    the same case at length; `0030` is what the other half looks like.
----------------------------------------------------------------------------
 
 ## Assumed parent
 
@@ -22,9 +20,7 @@ transition function takes as a parameter) and `0008` (`orders`). Kaveri's
 `0005`-`0007` and Bobbili's `0020+` are on branches this one has never seen; god
 relinearizes.
 
----------------------------------------------------------------------------
 `correction_reason` — THE COLUMN THE SYSTEM ACCEPTED AND THEN DISCARDED.
----------------------------------------------------------------------------
 `CorrectFieldRequest.reason` is `z.string().optional()` on the wire, and the
 handler for `POST /api/fields/:id/correct` validates the body, writes `state`,
 `value` and `na_reason`, and never reads `parsed.data.reason`. A reviewer types
@@ -45,10 +41,8 @@ there is at most one correction per field. If terminality is ever relaxed this
 column becomes lossy silently — which is why the constraint and the transition
 function are in the same revision rather than two.
 
----------------------------------------------------------------------------
 THE STATE MACHINE. `fields.py` ATTRIBUTES IT TO `0006`, AND `0006` IS
    `legal_holds`.
----------------------------------------------------------------------------
 `models/fields.py` and `models/enums.py` both say migration `0006` holds a
 `titlepipe_field_transition` function and the column-level `UPDATE` grant that
 omits `state`. Revision `0006` on `agent/worker-38-kaveri` is `legal_holds`;
@@ -197,10 +191,8 @@ def _refuse_if_populated(table: str, columns: Sequence[str]) -> None:
 def _create_transition_function() -> None:
     """The ONE granted path that moves `fields.state`.
 
-    ---------------------------------------------------------------------------
     `SECURITY DEFINER`, AND IT IS THE ONLY THING THAT MAKES THE GRANT MEAN
        ANYTHING.
-    ---------------------------------------------------------------------------
     A `SECURITY INVOKER` function runs as the caller, so `titlepipe_app` calling
     it would hit the very `42501` the missing column grant produces and the
     function would be unusable by the one role that needs it. Running as
@@ -227,10 +219,8 @@ def _create_transition_function() -> None:
     the cluster — including `titlepipe_worker` and `titlepipe_blind` — the one
     path that writes `state`.
 
-    ---------------------------------------------------------------------------
     THE `SET` LIST IS FIXED, AND THE CALLER THEREFORE PASSES THE COMPLETE
        POST-TRANSITION VALUE OF ALL SIX COLUMNS.
-    ---------------------------------------------------------------------------
     A fixed list is what stops a state writer clearing an exclusion as a side
     effect: `excluded_reason`, `excluded_by` and `excluded_at` are NOT named
     below, so no transition can touch them, and `/exclude` is a separate path
