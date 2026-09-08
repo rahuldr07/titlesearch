@@ -96,6 +96,7 @@ jobs:
   hygiene:
     name: hygiene
     runs-on: ubuntu-24.04
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 
@@ -113,14 +114,12 @@ jobs:
       #
       # `uvx pre-commit run --all-files` at the end already runs all of these,
       # so the duplication is deliberate and the reason is that a single step
-      # reports a single result. Measured on this tree: pre-commit is red for
-      # trailing whitespace in `apps/web` and `design-export`, two Ruff
-      # findings in `scripts/tests`, and 81 tracked files the client-data guard
-      # refuses (77 `.png`, one `.zip`, three `.docx`) — none of it backend
-      # structure, and all of it predating this job. A steps list that stops at
-      # the first failure therefore never reaches the structural rules at all,
-      # and a violation that did arrive through pre-commit would land inside an
-      # already-red step and read as more of the same noise.
+      # reports a single result. When the hook set is red for pre-existing
+      # noise (measured 2026-09-05: trailing whitespace, Ruff findings and 81
+      # guard-refused files; re-measured 2026-09-08: all clean), a steps list
+      # that stops at the first failure never reaches the structural rules at
+      # all, and a violation that did arrive through pre-commit would land
+      # inside an already-red step and read as more of the same noise.
       #
       # `!cancelled()` is what makes each of these an independent verdict: every
       # gate runs and reports on every push, whatever the ones before it did.
@@ -139,9 +138,9 @@ jobs:
         run: python scripts/check_backend_rules.py
 
       # Per-project `uv sync --frozen` below is the authority on lock drift.
-      # This runs the same check across all seven projects at once, before any
+      # This runs the same check across all eight projects at once, before any
       # matrix job has started, so a drifted lock is one failing line here
-      # rather than six failing installs.
+      # rather than eight failing installs.
       - name: Locks are current
         if: ${{ !cancelled() }}
         run: python scripts/check_locks.py
@@ -186,6 +185,7 @@ jobs:
   project:
     name: ${{ matrix.project }}
     runs-on: ubuntu-24.04
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -213,18 +213,27 @@ jobs:
       # --frozen fails if uv.lock does not match pyproject.toml. This is the
       # lock verification step; a separate `uv lock --check` would be redundant.
       - name: Frozen install
+        id: sync
         working-directory: ${{ matrix.project }}
         run: uv sync --frozen --all-groups
 
+      # Every gate below carries the same guard: run even when an earlier gate
+      # failed (`!cancelled()`), but only if the install actually succeeded —
+      # a contributor should learn about lint AND type AND test failures from
+      # one run, while a broken environment should fail once, at the install,
+      # not five more times as noise.
       - name: Ruff check
+        if: ${{ !cancelled() && steps.sync.outcome == 'success' }}
         working-directory: ${{ matrix.project }}
         run: uv run ruff check --output-format github .
 
       - name: Ruff format
+        if: ${{ !cancelled() && steps.sync.outcome == 'success' }}
         working-directory: ${{ matrix.project }}
         run: uv run ruff format --check .
 
       - name: Pyright strict
+        if: ${{ !cancelled() && steps.sync.outcome == 'success' }}
         working-directory: ${{ matrix.project }}
         run: uv run pyright
 
@@ -254,21 +263,47 @@ jobs:
       # attributes. Those are asserted directly against `pg_catalog` by the
       # core-api suite, which is the thing that would actually catch them.
       - name: Tests
+        if: ${{ !cancelled() && steps.sync.outcome == 'success' }}
         working-directory: ${{ matrix.project }}
-        run: uv run pytest --cov --cov-report=term-missing
+        run: uv run pytest --cov --cov-report=term-missing --junitxml=pytest-junit.xml
+
+      # Reads the JUnit file pytest itself wrote — never pytest's stdout,
+      # whose custom collect line has already been mis-parsed once — and fails
+      # the job when executed (collected minus skipped) is zero. pytest exits
+      # 5 on zero *collected*, but an all-skipped run exits 0, and a suite
+      # that runs nothing while reporting green is the failure mode this whole
+      # workflow exists to prevent.
+      - name: Executed-test floor
+        if: ${{ !cancelled() && steps.sync.outcome == 'success' }}
+        run: python scripts/check_test_counts.py ${{ matrix.project }}/pytest-junit.xml "${{ matrix.project }}"
+
+      - name: Upload test report
+        if: ${{ !cancelled() && steps.sync.outcome == 'success' }}
+        uses: actions/upload-artifact@v4
+        with:
+          # Artifact names cannot contain "/", so the matrix path is flattened.
+          name: pytest-junit-${{ strategy.job-index }}
+          path: ${{ matrix.project }}/pytest-junit.xml
+          if-no-files-found: warn
 
       - name: Build distributions
+        if: ${{ !cancelled() && steps.sync.outcome == 'success' }}
         working-directory: ${{ matrix.project }}
         run: uv build
 
       # Audits the lock, not the installed environment, so the result matches
       # what the container will get. Same script a developer runs locally.
+      # Needs uv and the checkout, not the synced venv, so it is independent
+      # of the install step. A mistyped matrix entry here fails loudly since
+      # FX-40 — scripts/tests/test_audit_dependencies.py holds that open.
       - name: Audit dependencies
+        if: ${{ !cancelled() }}
         run: python scripts/audit_dependencies.py ${{ matrix.project }}
 
   containers:
     name: container / ${{ matrix.service }}
     runs-on: ubuntu-24.04
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
@@ -440,6 +475,7 @@ jobs:
   security:
     name: security
     runs-on: ubuntu-24.04
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 

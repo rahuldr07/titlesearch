@@ -8,11 +8,17 @@ name: frontend
 # (check:rules, eslint, tsc, vitest) and nothing that ran any of them. They were
 # green because one person ran them by hand, which is not enforcement — it is a
 # habit, and habits do not survive a hurried afternoon.
+#
+# The push and pull_request path lists below are written out twice rather than
+# shared through a YAML anchor. This workflow has never executed on GitHub;
+# its first run should not double as the experiment that discovers whether the
+# workflow parser's anchor support holds for this file. backend.yml makes the
+# same choice.
 
 on:
   push:
     branches: [main]
-    paths: &frontend-paths
+    paths:
       - "apps/**"
       - "packages/**"
       # The enforcement surface. Omitting these would let a change to the token
@@ -24,7 +30,17 @@ on:
       - "package.json"
       - ".github/workflows/frontend.yml"
   pull_request:
-    paths: *frontend-paths
+    paths:
+      - "apps/**"
+      - "packages/**"
+      # The enforcement surface. Omitting these would let a change to the token
+      # package, the workspace layout, or this workflow itself merge without
+      # ever running — the exact gap that left apps/** uncovered before.
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "tsconfig.base.json"
+      - "package.json"
+      - ".github/workflows/frontend.yml"
   workflow_dispatch:
 
 permissions:
@@ -36,9 +52,11 @@ concurrency:
 
 jobs:
   gates:
-    name: gates (rules · lint · types · tests)
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
+    name: gates (rules · lint · format · types · dead code · tests · size)
+    # Pinned like backend.yml: `-latest` repoints under a workflow that has
+    # never run, and the first execution should not also absorb a runner bump.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 
@@ -52,37 +70,89 @@ jobs:
           cache: pnpm
 
       - name: Install
+        id: install
         run: pnpm install --frozen-lockfile
 
-      # Ordered cheapest-first so a trivial failure reports in seconds rather
-      # than after the browser suite.
+      # Every gate below carries the same guard: run even when an earlier gate
+      # failed (`!cancelled()`), but only if the install succeeded — one push
+      # should report every failing gate at once, not one per push, while a
+      # broken install should fail exactly once. Ordering is still
+      # cheapest-first so a trivial failure reports in seconds.
       - name: Rule gate (BRIEF §6)
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: pnpm --filter @titlepipe/web check:rules
 
       - name: Lint
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: pnpm --filter @titlepipe/web lint
 
+      # The formatter as its own verdict. `pnpm format` writes; CI only ever
+      # checks — a workflow that rewrites the tree it is judging proves
+      # nothing. Measured 2026-09-08: red on 185 files that predate this step.
+      - name: Prettier check
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: pnpm --filter @titlepipe/web exec prettier --check .
+
+      # Dead-code gate. Its config (apps/web/knip.jsonc) ignores
+      # src/components/ui/** and states why: 25 unused exports and 42 unused
+      # types are inventoried in docs/refactor-2026-09/CI.md §knip and owned
+      # by a dead-code batch. Delete the ignore when that lands.
+      - name: Knip (dead code)
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: pnpm --filter @titlepipe/web knip
+
       - name: Typecheck (all workspace projects)
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: pnpm typecheck
 
       - name: Build
+        id: build
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: pnpm --filter @titlepipe/web build
+
+      # Bundle budget over the build that just ran: 320 kB brotli for the
+      # entry JS (measured 2026-09-08: 280 kB), 40 kB for the CSS (14.2 kB).
+      # Budgets live in apps/web/package.json under "size-limit".
+      - name: Size limit
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: pnpm --filter @titlepipe/web size
 
       # Installs only chromium — the browser project pins that one instance.
       - name: Install Playwright chromium
+        id: browsers
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: pnpm --filter @titlepipe/web exec playwright install --with-deps chromium
 
       # Static gates + every Storybook story as a browser test with axe at
       # `error`. This is the step that actually catches accessibility defects.
       - name: Tests (static gates + Storybook a11y)
-        run: pnpm --filter @titlepipe/web test
+        if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        run: pnpm --filter @titlepipe/web test --reporter=default --reporter=junit --outputFile=vitest-junit.xml
+
+      # Reads the JUnit file vitest itself wrote and fails when executed
+      # (collected minus skipped) is zero. A required suite that runs nothing
+      # and exits 0 must not read as green. Same gate the backend matrix runs;
+      # scripts/tests/test_check_test_counts.py shows it failing on zero-test
+      # and all-skipped reports.
+      - name: Executed-test floor
+        if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        run: python3 scripts/check_test_counts.py apps/web/vitest-junit.xml vitest
+
+      - name: Upload test report
+        if: ${{ !cancelled() && steps.browsers.outcome == 'success' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: vitest-junit
+          path: apps/web/vitest-junit.xml
+          if-no-files-found: warn
 
       - name: Storybook build
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: pnpm --filter @titlepipe/web build-storybook
 
   invariants:
     name: harvested invariants (e2e)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
@@ -99,9 +169,23 @@ jobs:
       # 111 harvested product rules. ALL ARE CURRENTLY test.skip — this job
       # passes vacuously today and says so in its own output rather than
       # letting a green tick imply coverage that does not exist. It becomes a
-      # real gate one feature at a time during BRIEF §5 Phase 5.
+      # real gate one feature at a time during BRIEF §5 Phase 5. The
+      # executed-test floor is deliberately NOT applied here: zero executed is
+      # this job's known, stated condition, and the counting step below is the
+      # honest version of it.
       - name: E2E invariants
         run: pnpm --filter @titlepipe/web test:e2e
+
+      # The config's only reporter is `list`, so there is no HTML report to
+      # collect — what survives a failure is Playwright's outputDir with
+      # per-test traces and screenshots.
+      - name: Upload Playwright output
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-output
+          path: apps/web/test-results
+          if-no-files-found: ignore
 
       - name: Report how many invariants are actually enforced
         if: always()
