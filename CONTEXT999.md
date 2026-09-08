@@ -14,7 +14,9 @@ trusting either. Nothing here is inferred; every number was produced by running 
 | Branch all work happened on | `integration/backend-2026-09` |
 | Draft PR (first CI runs live here) | #13 |
 | Integration tip at time of writing | `542862b merge agent/worker-116-security` |
-| `main` before this landing | `ddaae50` — untouched for the whole programme, deliberately |
+| `main` now | **`bc7c6de`** — landed 2026-09-08, 242 commits, fast-forward |
+| `main` before that | `ddaae50` — untouched for the whole programme, deliberately |
+| Rescued work in progress | branch `wip/naming-cleanup-2026-09-08` — see §10 |
 
 To resume on a new machine:
 
@@ -201,3 +203,31 @@ enforces it. Delete anything that restates the line below it, narrates structure
 restatement detector over the whole tree returned three hits, all banners. What remains is argument,
 not narration: the measurements, the ceilings, and the alternatives that were tried and rejected.
 **Do not take another run at that number.**
+
+---
+
+## 10. Work in progress that was rescued, and will conflict
+
+When `main` was landed, its working tree held **90 modified files and 28 untracked paths that had
+never been committed** — mostly a camelCase → kebab-case rename under
+`apps/web/src/components/ui/`, plus `apps/web/scripts/dev-real.mjs`,
+`apps/web/e2e/real-package/`, and edits to `scripts/check_no_client_data.py`.
+
+That is the "naming cleanup already underway" the programme was told to complete without undoing.
+It is **not** on the branch that landed.
+
+It was committed onto **`wip/naming-cleanup-2026-09-08`** (based on `ddaae50`) and pushed, so it
+survives the machine it was made on. The landing itself was a fast-forward and **modified nothing in
+any working tree**.
+
+**Expect real conflicts when reconciling it**, for two specific reasons:
+
+1. Every file under `components/ui` was reformatted by the first prettier pass — which had never
+   been enforced, and failed on 185 files.
+2. `scripts/check_no_client_data.py` was independently rebuilt on three axes (type, signature,
+   content) and its INSERT threshold raised from one row to three, with four tests added covering
+   both the refusing and the passing cases.
+
+So: reconcile by hand, file by file. **Do not apply it wholesale.** The rename is still worth
+finishing — kebab-case is the right target and `docs/CONVENTIONS.md` §3 covers naming — but it has to
+be redone against the landed tree rather than replayed over it.
