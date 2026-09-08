@@ -192,10 +192,11 @@ the day `scripts/` came into scope.
 name a rule** — every scanned file. An exemption without a reason is a deletion
 with extra steps.
 
-**8-11. THE LAYERING.** `CONVENTIONS.md` §10, owner ruling 2026-09-05, binding
+**8-12. THE LAYERING.** `CONVENTIONS.md` §10, owner ruling 2026-09-05, binding
 on every endpoint including the ~68 not yet built. `routers -> services ->
 repositories -> models`, with `mappers` rendering model -> DTO, and nothing
-pointing back up. The four rules the ruling asks for by name:
+pointing back up. The four rules the ruling asks for by name, and the fifth
+§10a adds:
 
 **8. `layer-router-storage`** — a file under `api/routers/` may not import from
 `db/`. §10 names `db/models` and `db/repositories`; **THIS IS DELIBERATELY
@@ -240,6 +241,26 @@ are constructions. Only the second pair is flagged.
 response model in this tree sets `from_attributes`, so
 `RuleResponse.model_validate(row)` does not work from a router even if somebody
 writes it. `api/mappers/__init__.py` records that. This rule is the lint on top.
+
+**12. `layer-service-api`** — a file under `services/` may not import from
+`api/`. `CONVENTIONS.md` §10a: §10 ruled four rules and this is the fifth it
+owed. It was found by EXECUTION, not by reading — a service that imports and
+CONSTRUCTS a wire DTO was written and this script passed it clean, because rules
+9 and 11 between them cover `services/ -> fastapi` and `api/routers/ -> DTO` and
+neither covers `services/ -> api/`.
+
+**NO VIOLATION EXISTED WHEN THIS LANDED, and that is why it could land.** §10 is
+explicit that a gate arriving before the code satisfies it blocks every
+subsequent commit including the ones fixing it, so the rule was added while
+`services/` imported only `db/`, `sqlalchemy` and `titlepipe_domain`. It is the
+DIRECTION that is the defect, not any particular name: a service holding a
+response DTO has started answering for the wire, so the same use case called by
+a worker or a test either renders HTTP shapes or takes a second path — and the
+whole point of `DomainError` is that there is one path.
+
+Wider than "may not import `api/schemas`", for `layer-router-storage`'s reason:
+`api/__init__.py` and the mapper package are equally reachable, and nothing under
+`api/` is a service's business at any depth.
 
 ## Why this parses instead of grepping
 
@@ -630,6 +651,10 @@ RULES: Final[dict[str, str]] = {
     "layer-service-http": "a service raises DomainError and knows no status code",
     "layer-repository-api": "a repository returns models and cannot see a URL",
     "layer-router-dto": "rendering is the mapper's; a router returns what one built",
+    # CONVENTIONS.md §10a. The fifth, owed since 2026-09-05 and ungated until
+    # a service that constructed a wire DTO was executed against this script
+    # and passed clean.
+    "layer-service-api": "a service owns the use case; the wire is two layers above it",
 }
 
 # Rule ids the *line* form can never grant, because the violation they suppress
@@ -855,6 +880,14 @@ FORBIDDEN_IMPORTS: Final[dict[tuple[str, ...], tuple[tuple[str, str, str], ...]]
             "layer-service-http",
             "a service may not import `starlette` either. `fastapi` re-exports from it, so "
             "`starlette.responses` is the same layering mistake with a different import line",
+        ),
+        (
+            "api",
+            "layer-service-api",
+            "a service may not import from `api/`. It owns the USE CASE and answers to callers "
+            "that have no request — a worker, a test — so a response DTO or an error handler "
+            "reached from here is the wire leaking two layers down. It returns models and raises "
+            "`DomainError`; `api/mappers/` renders",
         ),
     ),
     ("db", "repositories"): (
