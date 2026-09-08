@@ -93,6 +93,11 @@ GENERIC_INTERNAL_MESSAGE: Final = (
     "An unexpected error occurred. Quote the request id when reporting it."
 )
 
+# What a caller reads instead of an `HTTPException.detail` that cannot be shown
+# to them. `api/errors.py::_publishable_detail` decides when that is; the
+# sentence lives here beside the other one so both are read together.
+GENERIC_HTTP_MESSAGE: Final = "Request could not be served."
+
 # One place decides what a domain failure means over HTTP.
 DOMAIN_ERROR_STATUS: Final[dict[type[DomainError], int]] = {
     ValidationError: 422,

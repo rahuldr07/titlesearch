@@ -12,12 +12,16 @@ from collections.abc import AsyncGenerator
 
 import pytest
 import structlog
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 from pydantic import SecretStr, ValidationError
 from starlette.responses import StreamingResponse
 
-from titlepipe_blind.api.errors import CODE_INTERNAL_ERROR, GENERIC_INTERNAL_MESSAGE
+from titlepipe_blind.api.errors import (
+    CODE_INTERNAL_ERROR,
+    GENERIC_HTTP_MESSAGE,
+    GENERIC_INTERNAL_MESSAGE,
+)
 from titlepipe_blind.api.request_context import REQUEST_ID_HEADER
 from titlepipe_blind.app import create_app
 from titlepipe_blind.settings import DEVELOPMENT_SEAL_PASSWORD, BlindApiSettings
@@ -231,3 +235,75 @@ def test_a_direct_construction_renders_no_input_at_all() -> None:
 
 def test_the_model_hides_its_input() -> None:
     assert BlindApiSettings.model_config.get(HIDE_INPUT_IN_ERRORS) is True
+
+
+# The blind service's half of `core-api/tests/test_errors.py`'s three
+# `_publishable_detail` tests. `api/errors.py` in each service carries the
+# function byte-for-byte, because `libs/service-kit` has no `api` module yet;
+# these are what make the two copies observably the same rather than assumed to
+# be. A change to one that is not made to the other reds here.
+_AUTHORED_DETAIL = "capture 41c9 was sealed for a different typist"
+
+
+def _app_answering_with(
+    status: int, detail: str, settings: BlindApiSettings, clock: FrozenClock
+) -> FastAPI:
+    app = create_app(settings, clock=clock, id_factory=SequenceIdFactory())
+
+    @app.get("/detail")
+    async def _detail() -> None:
+        raise HTTPException(status_code=status, detail=detail)
+
+    return app
+
+
+def test_an_authored_http_detail_is_not_published_in_production(
+    production_settings: BlindApiSettings, frozen_clock: FrozenClock
+) -> None:
+    """🔴 THE DETAIL USED TO REACH THE TYPIST VERBATIM, IN EVERY ENVIRONMENT.
+
+    This service is the one holding the capture uploads, so the margin between a
+    dormant leak and a live one is worth less here than anywhere: the ban on
+    `HTTPException` outside `api/errors.py` is our code's discipline and says
+    nothing about a dependency that raises one.
+    """
+    app = _app_answering_with(403, _AUTHORED_DETAIL, production_settings, frozen_clock)
+
+    with TestClient(app, base_url="https://capture.titlepipe.example") as client:
+        response = client.get("/detail")
+
+    assert response.status_code == 403, "redacting the sentence must not change the status"
+    assert response.json()["error"]["message"] == GENERIC_HTTP_MESSAGE, (
+        f"the authored detail reached a production caller: {response.json()['error']!r}"
+    )
+    assert "41c9" not in response.text, "the detail is in the body under some other key"
+
+
+def test_the_same_detail_is_published_outside_a_deployed_environment(
+    development_settings: BlindApiSettings, frozen_clock: FrozenClock
+) -> None:
+    """A blank error wastes an afternoon and there is no real NPI in development."""
+    app = _app_answering_with(403, _AUTHORED_DETAIL, development_settings, frozen_clock)
+
+    with TestClient(app) as client:
+        response = client.get("/detail")
+
+    assert response.json()["error"]["message"] == _AUTHORED_DETAIL, (
+        f"a developer got {response.json()['error']!r} instead of the detail"
+    )
+
+
+def test_an_unroutable_url_still_says_not_found_in_production(
+    production_settings: BlindApiSettings, frozen_clock: FrozenClock
+) -> None:
+    """Starlette's own default detail is the status phrase and stays published."""
+    app = create_app(production_settings, clock=frozen_clock, id_factory=SequenceIdFactory())
+
+    with TestClient(app, base_url="https://capture.titlepipe.example") as client:
+        response = client.get("/no-such-route")
+
+    assert response.status_code == 404
+    assert response.json()["error"]["message"] == "Not Found", (
+        f"an unrouted URL now answers {response.json()['error']!r}. That is the one detail every "
+        f"deployment produces, and it is the protocol's own word."
+    )
