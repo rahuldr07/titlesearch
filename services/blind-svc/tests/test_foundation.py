@@ -26,7 +26,13 @@ from titlepipe_blind.api.errors import (
 from titlepipe_blind.api.request_context import REQUEST_ID_HEADER
 from titlepipe_blind.app import create_app
 from titlepipe_blind.settings import BlindApiSettings
-from titlepipe_domain import Environment, LogRenderer, RefusalError
+from titlepipe_domain import (
+    DependencyUnavailableError,
+    DomainError,
+    Environment,
+    LogRenderer,
+    RefusalError,
+)
 from titlepipe_service_kit.settings import DEVELOPMENT_SEAL_PASSWORD
 from titlepipe_service_kit.settings_errors import (
     HIDE_INPUT_IN_ERRORS,
@@ -378,4 +384,69 @@ def test_an_unroutable_url_still_says_not_found_in_production(
     assert response.json()["error"]["message"] == "Not Found", (
         f"an unrouted URL now answers {response.json()['error']!r}. That is the one detail every "
         f"deployment produces, and it is the protocol's own word."
+    )
+
+
+def test_only_a_genuinely_unmapped_error_is_logged_as_unmapped(
+    frozen_clock: FrozenClock, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A defect this service inherited with its copy of core-api's error layer.
+
+    `handle_domain_error` read `if status >= 500` and logged
+    `domain_error_unmapped`, whose own comment says "a gap in
+    `DOMAIN_ERROR_STATUS`". `DependencyUnavailableError: 503` IS in that dict,
+    so a correctly-mapped dependency failure logged an ERROR claiming it was
+    not. core-api measured this on its own byte-identical copy and fixed it
+    there; this copy kept it, and stayed quiet only because nothing here raises
+    a registered 5xx yet. That is the whole argument for these two modules
+    having one home rather than two.
+
+    BOTH ARMS, AND THE SECOND IS NOT OPTIONAL. Deleting the log entirely passes
+    a test that only checks the 503 is quiet, and deleting the log is the
+    obvious wrong fix: the loud line for a real gap is the thing worth keeping.
+    So a registered 503 must be SILENT and an unregistered subclass must SHOUT.
+
+    `LogRenderer.JSON` is pinned rather than defaulted — the console renderer
+    would also contain the event name, and this must not depend on which is in
+    force.
+    """
+
+    class UnregisteredFailureError(DomainError):
+        """Directly under `DomainError`, so the MRO walk finds no entry at all.
+
+        A `RefusalError` subclass would resolve to 422 through its parent, which
+        is a different behaviour and not what this asserts.
+        """
+
+        code = "UNREGISTERED_FAILURE"
+
+    settings = BlindApiSettings(environment=Environment.TEST, log_renderer=LogRenderer.JSON)
+    app = create_app(settings, clock=frozen_clock, id_factory=SequenceIdFactory())
+
+    @app.get("/registered-503")
+    async def _registered() -> None:
+        raise DependencyUnavailableError("A dependency is temporarily unavailable.")
+
+    @app.get("/unregistered")
+    async def _unregistered() -> None:
+        raise UnregisteredFailureError("Nothing maps this.")
+
+    with TestClient(app) as client:
+        registered = client.get("/registered-503")
+        quiet = capsys.readouterr().out
+        unregistered = client.get("/unregistered")
+        shouted = capsys.readouterr().out
+
+    assert registered.status_code == 503
+    assert registered.json()["error"]["code"] == "DEPENDENCY_UNAVAILABLE"
+    assert "domain_error_unmapped" not in quiet, (
+        "a status registered in DOMAIN_ERROR_STATUS was reported as unmapped; "
+        "the condition is asking about the number rather than about the lookup"
+    )
+
+    assert unregistered.status_code == 500
+    assert unregistered.json()["error"]["code"] == "UNREGISTERED_FAILURE"
+    assert "domain_error_unmapped" in shouted, (
+        "a DomainError with no entry in DOMAIN_ERROR_STATUS must be reported "
+        "loudly; deleting the log is not the fix for the false positive"
     )
