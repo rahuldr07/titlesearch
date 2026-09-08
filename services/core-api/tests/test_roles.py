@@ -2908,3 +2908,123 @@ def test_the_owner_cannot_create_without_the_schema_grant(
             connection.rollback()
     finally:
         engine.dispose()
+
+
+def test_no_titlepipe_role_can_create_a_schema_to_hide_a_table_in(
+    roles_applied: str,
+    role_passwords: Mapping[str, str],
+    apply_roles_sql: Callable[[str, Mapping[str, str]], subprocess.CompletedProcess[str]],
+    owner_role: str,
+    managed_roles: tuple[str, ...],
+) -> None:
+    """🔴 `CREATE ON DATABASE` — absent by DEFAULT until 2026-09-08, asserted now.
+
+    `roles.sql`'s header has said since Task 2 that the owner holds `CREATE ON
+    SCHEMA public` and no `CREATE ON DATABASE`. That sentence was true, and it
+    was true only because PostgreSQL's default `datacl` grants `CREATE` to the
+    database owner and nobody else — nothing in the file revoked it and nothing
+    asserted it, so a single `GRANT` restored it with no test anywhere going red.
+
+    WHAT THE GRANT BUYS, MEASURED 2026-09-08 against postgres:18.4 on the 0102
+    chain: a revision doing `CREATE SCHEMA sidecar; CREATE TABLE sidecar.secrets
+    (tenant_id uuid, body text)` plus the two grants the app role needs migrated
+    GREEN, `assert_rls_coverage` returned no faults, and `titlepipe_app` pinned
+    to one tenant read BOTH tenants' rows out of it. `db/rls_coverage.py` now
+    censuses every schema, so that table is a fault today. This is the privilege
+    that made it reachable, and the two are deliberately independent: neither
+    end has to hold alone.
+
+    The state is read back through `has_database_privilege`, which answers about
+    the EFFECTIVE privilege, so an explicit grant and a grant to `PUBLIC` both
+    count. Every role is asked separately because membership does NOT count:
+    `titlepipe_migration` holds `titlepipe_owner` `WITH INHERIT FALSE`, so the
+    owner holding `CREATE` answers FALSE for the migration role while `SET ROLE
+    titlepipe_owner` — which `env.py` does on every run — reaches it anyway.
+    """
+    admin = create_engine(roles_applied)
+    # The container's database, not `postgres`: `GRANT ... ON DATABASE` names it
+    # and a wrong name grants somewhere nothing here reads back.
+    database = make_url(roles_applied).database
+
+    def creators() -> set[str]:
+        with admin.connect() as connection:
+            return {
+                str(row[0])
+                for row in connection.execute(
+                    text(
+                        "SELECT rolname FROM pg_roles WHERE rolname LIKE 'titlepipe\\_%' "
+                        "AND has_database_privilege(rolname, current_database(), 'CREATE')"
+                    )
+                ).all()
+            }
+
+    try:
+        assert creators() == set(), "a titlepipe role can create a schema on the migrated cluster"
+
+        # Route 1: an explicit grant on the role that migrations become.
+        with admin.begin() as connection:
+            connection.execute(text(f"GRANT CREATE ON DATABASE {database} TO {owner_role}"))
+        assert creators() == {owner_role}
+        assert apply_roles_sql(roles_applied, role_passwords).returncode == 0
+        assert creators() == set(), "roles.sql did not converge an explicit CREATE ON DATABASE"
+
+        # Route 2: `PUBLIC`, which is not a titlepipe name and reaches all five.
+        with admin.begin() as connection:
+            connection.execute(text(f"GRANT CREATE ON DATABASE {database} TO PUBLIC"))
+        # `managed_roles` is the four LOGIN roles; `PUBLIC` reaches the owner too,
+        # which is the whole reason `PUBLIC` is in the file's revoke predicate
+        # despite not being a `titlepipe_%` name.
+        assert creators() == {*managed_roles, owner_role}
+        assert apply_roles_sql(roles_applied, role_passwords).returncode == 0
+        assert creators() == set(), "roles.sql did not converge CREATE ON DATABASE held by PUBLIC"
+    finally:
+        with admin.begin() as connection:
+            connection.execute(text(f"REVOKE CREATE ON DATABASE {database} FROM PUBLIC"))
+            connection.execute(text(f"REVOKE CREATE ON DATABASE {database} FROM {owner_role}"))
+        admin.dispose()
+
+
+def test_roles_sql_refuses_a_database_a_titlepipe_role_owns(
+    roles_applied: str,
+    role_passwords: Mapping[str, str],
+    apply_roles_sql: Callable[[str, Mapping[str, str]], subprocess.CompletedProcess[str]],
+    owner_role: str,
+) -> None:
+    """🔴 The third route to `CREATE ON DATABASE`, and the one that is a REFUSAL
+    rather than a convergence.
+
+    A database's owner holds `CREATE` on it with NO `datacl` entry, so there is
+    nothing for `roles.sql`'s `aclexplode`-driven `REVOKE` to be generated from.
+    MEASURED 2026-09-08 against postgres:18.4 on a `CREATE DATABASE … OWNER
+    titlepipe_owner`: `datacl` NULL, `has_database_privilege` TRUE, and an
+    explicit `REVOKE` by hand DOES work — and then, as `titlepipe_migration`,
+    `SET ROLE titlepipe_owner; GRANT CREATE ON DATABASE … TO titlepipe_owner`
+    puts it straight back, because the owner of a database holds grant option on
+    it. Converging this one would be a revoke the next `alembic upgrade` can
+    undo without asking anybody, which is why the file refuses instead.
+
+    `CREATE DATABASE` cannot run inside a transaction block, so this connects
+    with `AUTOCOMMIT` rather than through `begin()`.
+    """
+    admin = create_engine(roles_applied)
+    owned = "roles_sql_owned_probe"
+    try:
+        with admin.connect().execution_options(isolation_level="AUTOCOMMIT") as connection:
+            connection.execute(text(f"CREATE DATABASE {owned} OWNER {owner_role}"))
+        try:
+            # `render_as_string(hide_password=False)`, not `str()`: SQLAlchemy's
+            # `URL.__str__` replaces the password with `***`, and psql then fails
+            # authentication instead of reaching the refusal this asserts.
+            owned_dsn = (
+                make_url(roles_applied).set(database=owned).render_as_string(hide_password=False)
+            )
+            result = apply_roles_sql(owned_dsn, role_passwords)
+            assert result.returncode != 0, "roles.sql finished on a database a titlepipe role owns"
+            assert "refusing to finish" in result.stderr
+            assert owner_role in result.stderr
+            assert "no titlepipe role should own it" in result.stderr
+        finally:
+            with admin.connect().execution_options(isolation_level="AUTOCOMMIT") as connection:
+                connection.execute(text(f"DROP DATABASE {owned}"))
+    finally:
+        admin.dispose()
