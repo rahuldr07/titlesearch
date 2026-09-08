@@ -80,8 +80,15 @@ _SEPARATOR: Final = "\x1f"
 
 # Chosen so a page fits one screen's worth of rows with room to scroll, and
 # bounded so a caller cannot ask for the unbounded array this module exists to
-# remove. Both are wire contract: a request over the maximum is refused, not
-# silently clamped, for the same reason a bad cursor is refused.
+# remove. Both are wire contract: a request over the maximum is to be refused,
+# not silently clamped, for the same reason a bad cursor is refused.
+#
+# NOT YET ENFORCED ANYWHERE. No endpoint pages, so nothing reads either constant
+# and no request has ever been refused for exceeding one. They are declared
+# rather than applied — and `MAX_PAGE_SIZE` is nonetheless load-bearing as a
+# CITED PREMISE: `0112_a_jsonb_column_is_a_bounded_object.py` computes its
+# residual response ceiling as 200 rows times 64 KiB, so this number is the one
+# that arithmetic rests on. Changing it changes that migration's stated bound.
 DEFAULT_PAGE_SIZE: Final = 50
 MAX_PAGE_SIZE: Final = 200
 
@@ -163,9 +170,13 @@ class Census(BaseModel):
     nine orders is correctly shown four rows under a count of nine.
 
     Subclasses add the members a particular collection censuses. This base exists
-    so the `int | None` discipline is inherited rather than re-decided, and
-    `tests/test_api_layer_discipline.py` asserts no census member carries a
-    default.
+    so the `int | None` discipline is inherited rather than re-decided.
+
+    RESIDUAL: NOTHING ASSERTS THAT DISCIPLINE. This docstring cited
+    `tests/test_api_layer_discipline.py` for it; no such file has ever existed,
+    and no subclass exists either, so a later census member carrying `= None`
+    would be refused by nothing. Write that test with the first census endpoint,
+    against the model that actually gets served.
     """
 
     model_config = ConfigDict(extra="forbid")

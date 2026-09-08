@@ -20,11 +20,13 @@ MEASURED against pyright 1.1.411. The alternatives were a banned
 `# pyright: ignore` (`scripts/check_backend_rules.py` refuses one without a
 `rules-allow`) or renaming a symbol in a module this revision does not own.
 
-A restated convention is a convention that can drift, so it is not left to
-reading: `tests/test_identity_schema.py::test_the_identity_tables_carry_the_same
-_identity_columns_as_a_domain_tenant_table` reads `users`, `clients` and `orders`
-out of `information_schema` and compares the three shared columns and the primary
-key IN KEY ORDER. If `_TenantRow` changes, that test goes red here.
+RESIDUAL: NOTHING COMPARES THE RESTATEMENT TO WHAT IT RESTATES. This paragraph
+cited `tests/test_identity_schema.py::test_the_identity_tables_carry_the_same_
+identity_columns_as_a_domain_tenant_table` for that comparison; no such file has
+ever existed, so an edit to `_TenantRow` leaves these two tables behind in
+silence. What would close it is that test, reading `users`, `clients` and
+`orders` out of `information_schema` and comparing the three shared columns and
+the primary key IN KEY ORDER.
 
 THE ROLE COLUMN IS THE AUTHORIZATION INPUT, AND IT IS A COLUMN AND NOT A
    CLAIM. `docs/PRD.md` §9's correction note is explicit: "PostgreSQL owns
@@ -89,10 +91,14 @@ __all__ = [
 # importing it, exactly as `0001` repeats `NA_REASON_LABELS` and `0003` repeats
 # the rulebook's: a migration is a frozen snapshot of one revision, and an import
 # would let a later edit here silently rewrite what `0020` claims to have
-# created. The two are held together via the LIVE CATALOG — see
-# `tests/test_identity_schema.py`, which asserts this tuple against literals AND
-# against `pg_enum`'s labels in `enumsortorder`, because those two legs catch
-# different mutations.
+# created.
+#
+# RESIDUAL: NOTHING HOLDS THE TWO COPIES TOGETHER. This comment claimed the live
+# catalog did, via `tests/test_identity_schema.py`, which does not exist; no test
+# imports this tuple at all. `test_schema_migration.py::_enum_labels` is the leg
+# that covers `na_reason`, `rule_status` and `rule_origin` against `pg_enum` in
+# `enumsortorder`, and `user_role` is simply not among them. Adding it there,
+# plus a literal assertion, is what closes this.
 USER_ROLE_LABELS: Final = ("reviewer", "senior", "ops", "engineer", "typist", "admin")
 
 USER_ROLE_TYPE_NAME: Final = "user_role"
