@@ -4,6 +4,7 @@ Read before writing code, in this order:
 1. `docs/HANDOFF.md` — most current state (2026-07-17). **Supersedes the others where they conflict** (e.g., frontend is React 19/Vite v2 per HANDOFF §5, not vanilla .dc.html; services layout per HANDOFF §4).
 2. `docs/CONTEXT.md` — domain facts and history. §11 (domain traps) is mandatory; none of it is derivable from code or screens.
 3. `docs/PRD.md` — build document: data model, API contract, release gates.
+4. `docs/CONVENTIONS.md` — binding engineering conventions. §10 (layering) and §11 (comment discipline; one fact, one home) apply to every change.
 
 ## Hard rules (violations are design defects, not style)
 
