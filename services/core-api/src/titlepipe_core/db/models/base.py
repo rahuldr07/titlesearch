@@ -8,10 +8,8 @@ to every one of them). Nothing else. **A TABLE THAT DESCRIBES TITLE SEARCH LIVES
 IN A DOMAIN MODULE**, and there is a mechanical reason for the rule beyond taste:
 this module is imported by every other model module, so anything added here is
 imported by all of them, and a domain table placed here would be reachable from
-modules that have no business knowing it exists. `orders.py`, `packages.py`,
-`fields.py`, `documents.py`, `chain.py`, `intake.py`, `escalations.py`,
-`delivery.py` and `rulebook.py` import FROM here and never the other way, which
-is what keeps the import graph a tree.
+modules that have no business knowing it exists. Every domain module imports
+FROM here and none the other way, which is what keeps the import graph a tree.
 
 **`rules` IS THE ONE TABLE IN THIS PACKAGE DELIBERATELY NOT A `_TenantRow`.** It
 lives in `rulebook.py`, and saying so here is the point: every statement below
