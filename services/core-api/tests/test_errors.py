@@ -10,12 +10,13 @@ from collections.abc import Iterator
 
 import pytest
 import structlog
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 from pydantic import BaseModel, field_validator
 
 from titlepipe_core.api.error_envelope import (
     CODE_INTERNAL_ERROR,
+    GENERIC_HTTP_MESSAGE,
     GENERIC_INTERNAL_MESSAGE,
     sanitise_validation_errors,
     status_for,
@@ -434,3 +435,122 @@ def test_a_forged_host_header_is_refused(
 
     with TestClient(app, base_url=deployed_base_url) as client:
         assert client.get("/health").status_code == 200
+
+
+# `HTTPException` is raised by the routes below and NOWHERE ELSE in this tree —
+# `scripts/check_backend_rules.py`'s `http-exception` rule bans it outside
+# `api/errors.py`. That ban is what made this leak dormant; these tests are what
+# make it closed. A test module is outside the gate's scan roots, which is why
+# the ban can be exercised here without an exemption.
+_AUTHORED_DETAIL = "order 41c9 belongs to tenant 8f22, not to the caller's"
+
+
+def _app_answering_with(
+    status: int, detail: str, settings: CoreApiSettings, clock: FrozenClock
+) -> FastAPI:
+    app = create_app(settings, clock=clock, id_factory=SequenceIdFactory())
+
+    @app.get("/detail")
+    async def _detail() -> None:
+        raise HTTPException(status_code=status, detail=detail)
+
+    return app
+
+
+def test_an_authored_http_detail_is_not_published_in_production(
+    production_settings: CoreApiSettings, deployed_base_url: str, frozen_clock: FrozenClock
+) -> None:
+    """🔴 THE DETAIL USED TO REACH THE CALLER VERBATIM, IN EVERY ENVIRONMENT.
+
+    `handle_http_exception` had no environment gate at all while
+    `handle_unexpected`, in the same module, spent its whole body on the same
+    question. Dormant, because `HTTPException` is banned outside `api/errors.py`
+    — but a ban is not a redaction, and it says nothing about a dependency that
+    raises one.
+
+    The status is preserved and only the SENTENCE is replaced: a 403 that became
+    a 500 would be this handler lying about what happened in order to say less.
+    """
+    app = _app_answering_with(403, _AUTHORED_DETAIL, production_settings, frozen_clock)
+
+    with TestClient(app, base_url=deployed_base_url) as client:
+        response = client.get("/detail")
+
+    assert response.status_code == 403, (
+        f"the status changed to {response.status_code}. Redacting the sentence must not change "
+        f"what the caller is told HAPPENED — only what they are told about it."
+    )
+    assert response.json()["error"] == GENERIC_HTTP_MESSAGE, (
+        f"the authored detail reached a production caller: {response.json()['error']!r}. "
+        f"Nothing in this tree can put a sentence there today, which is exactly why the leak "
+        f"survived review; the gate is the fix, not the ban."
+    )
+    assert "8f22" not in response.text, "the detail is in the body under some other key"
+
+
+def test_the_same_detail_is_published_outside_a_deployed_environment(
+    development_settings: CoreApiSettings, frozen_clock: FrozenClock
+) -> None:
+    """`build_unhandled_response`'s reason, applied to the same question.
+
+    There is no real NPI in a development environment and a blank error wastes an
+    afternoon. This is the assertion that stops the fix above from being "redact
+    everywhere", which would be cheaper to write and worse to work with.
+    """
+    app = _app_answering_with(403, _AUTHORED_DETAIL, development_settings, frozen_clock)
+
+    with TestClient(app) as client:
+        response = client.get("/detail")
+
+    assert response.json()["error"] == _AUTHORED_DETAIL, (
+        f"a developer got {response.json()['error']!r} instead of the detail. The environment "
+        f"gate is meant to redact in deployed environments, not in every one."
+    )
+
+
+@pytest.mark.parametrize(("status", "phrase"), [(404, "Not Found"), (405, "Method Not Allowed")])
+def test_the_frameworks_own_reason_phrase_still_reaches_a_production_caller(
+    production_settings: CoreApiSettings,
+    deployed_base_url: str,
+    frozen_clock: FrozenClock,
+    status: int,
+    phrase: str,
+) -> None:
+    """Starlette's default detail is `HTTPStatus(status).phrase` and is published.
+
+    It is a constant of the protocol: it carries nothing about this system, and
+    it is every detail this tree can currently produce. Redacting it too was the
+    rejected alternative — it costs every 404 its sentence to protect against
+    text that is provably not there.
+    """
+    app = _app_answering_with(status, phrase, production_settings, frozen_clock)
+
+    with TestClient(app, base_url=deployed_base_url) as client:
+        response = client.get("/detail")
+
+    assert response.json()["error"] == phrase, (
+        f"a {status} came back {response.json()['error']!r} rather than {phrase!r}. The redaction "
+        f"has widened past authored text and is now eating the protocol's own sentence."
+    )
+
+
+def test_an_unroutable_url_still_says_not_found_in_production(
+    production_settings: CoreApiSettings, deployed_base_url: str, frozen_clock: FrozenClock
+) -> None:
+    """The real path, not a planted route: Starlette's own 404 through the app.
+
+    The test above raises the exception itself, which proves the FUNCTION. This
+    proves the WIRING — that the redaction sits where Starlette's router actually
+    reaches, and that the ordinary 404 a browser gets is unchanged.
+    """
+    app = create_app(production_settings, clock=frozen_clock, id_factory=SequenceIdFactory())
+
+    with TestClient(app, base_url=deployed_base_url) as client:
+        response = client.get("/no-such-route")
+
+    assert response.status_code == 404
+    assert response.json()["error"] == "Not Found", (
+        f"an unrouted URL now answers {response.json()['error']!r}. That is the one detail every "
+        f"deployment produces, and it is the protocol's own word."
+    )
+    assert response.json()["code"] == "NOT_FOUND"

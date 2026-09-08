@@ -28,6 +28,7 @@ same `request_id` the caller was given.
 from __future__ import annotations
 
 from collections.abc import Callable
+from http import HTTPStatus
 from typing import Final
 
 from fastapi import FastAPI
@@ -72,6 +73,10 @@ CODE_INTERNAL_ERROR: Final = "INTERNAL_ERROR"
 GENERIC_INTERNAL_MESSAGE: Final = (
     "An unexpected error occurred. Quote the request id when reporting it."
 )
+
+# What a caller reads instead of an `HTTPException.detail` that cannot be shown
+# to them. `_publishable_detail` decides when that is.
+GENERIC_HTTP_MESSAGE: Final = "Request could not be served."
 
 # One place decides what a domain failure means over HTTP.
 DOMAIN_ERROR_STATUS: Final[dict[type[DomainError], int]] = {
@@ -258,14 +263,63 @@ async def handle_request_validation(request: Request, exc: Exception) -> JSONRes
     )
 
 
+def _publishable_detail(detail: object, *, status: int, deployed: bool) -> str:
+    """`exc.detail`, or the generic sentence when it cannot be shown to a caller.
+
+    🔴 THE DETAIL USED TO GO OUT VERBATIM IN EVERY ENVIRONMENT. `handle_unexpected`
+    below spends its whole body on this exact question and answers "not in a
+    deployed environment"; this handler asked it of nothing. It was DORMANT
+    rather than harmless: rule 4 of `scripts/check_backend_rules.py` bans
+    `HTTPException` outside this module, so no code in this tree can put a
+    sentence of its own there today. A ban is not a redaction — it holds for our
+    code, says nothing about a dependency's, and stops holding the day the ban is
+    exempted once. THIS SERVICE HOLDS THE CAPTURE UPLOADS, so the margin between
+    dormant and live is the one worth buying here.
+
+    A DETAIL EQUAL TO THE STATUS'S OWN REASON PHRASE IS STILL PUBLISHED, deployed
+    or not. `HTTPException(404)` defaults `detail` to `HTTPStatus(404).phrase`, so
+    "Not Found" and "Method Not Allowed" — every detail this tree can currently
+    produce — are constants of the protocol and carry nothing about this system.
+    Redacting them too was the rejected alternative: it costs every 404 its
+    sentence to protect against text that is provably not there.
+
+    RESIDUAL: this function and its caller are duplicated byte-for-byte in
+    `titlepipe_core.api.errors`, because `libs/service-kit` carries no `api`
+    module and adding one is not this branch's. Until it does, a change here is a
+    change in two files; `blind-svc/tests/test_foundation.py` here and
+    `core-api/tests/test_errors.py` there each assert it separately, which is
+    what makes the drift visible rather than the duplication safe.
+    """
+    if not isinstance(detail, str) or not detail:
+        return GENERIC_HTTP_MESSAGE
+    if not deployed or detail == _status_phrase(status):
+        return detail
+    return GENERIC_HTTP_MESSAGE
+
+
+def _status_phrase(status: int) -> str:
+    """The protocol's own sentence for this status, or `""` for one it has none for.
+
+    `""` and not `None` so the comparison above stays an equality between two
+    strings; a detail is never empty by the time it is compared.
+    """
+    try:
+        return HTTPStatus(status).phrase
+    except ValueError:
+        return ""
+
+
 async def handle_http_exception(request: Request, exc: Exception) -> JSONResponse:
     """Statuses Starlette raises itself — an unknown route, a bad method."""
     status = exc.status_code if isinstance(exc, StarletteHTTPException) else 500
     code = _HTTP_STATUS_CODES.get(
         status, CODE_INTERNAL_ERROR if status >= 500 else CODE_BAD_REQUEST
     )
-    detail: object = getattr(exc, "detail", None)
-    message = detail if isinstance(detail, str) and detail else "Request could not be served."
+    message = _publishable_detail(
+        getattr(exc, "detail", None),
+        status=status,
+        deployed=_environment_of(request).is_deployed,
+    )
     return JSONResponse(
         status_code=status,
         content=envelope(code=code, message=message, request=request),

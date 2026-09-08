@@ -1716,7 +1716,7 @@ def test_a_directory_named_like_a_module_is_reported_without_taking_the_run_down
     assert f"{inner}:1" in output
 
 
-# --- CONVENTIONS.md §10, the layering (rules 8-11) --------------------------
+# --- CONVENTIONS.md §10 + §10a, the layering (rules 8-12) -------------------
 #
 # 🔴 THESE RULES WERE ADDED AFTER THE CODE ALREADY SATISFIED THEM, which §10
 # instructs in as many words: the gate runs in pre-commit, so a gate that fails
@@ -1803,6 +1803,28 @@ REPOSITORY = "services/svc/src/pkg/db/repositories/orders.py"
             "def handler():\n"
             '    return R(id="1")\n',
         ),
+        # 12 — §10a's fifth rule, and the shape that found it missing: a service
+        # that imports a wire DTO and CONSTRUCTS one. Rule 9 does not see it
+        # (no `fastapi`) and rule 11 does not (not a router), which is exactly
+        # how it passed clean when Tenali executed it.
+        (
+            "layer-service-api",
+            SERVICE,
+            "from pkg.api.schemas.orders import OrderResponse\n"
+            "\n"
+            "\n"
+            "def use_case():\n"
+            '    return OrderResponse(id="1")\n',
+        ),
+        # The import alone, with nothing constructed. The DIRECTION is the
+        # defect; a service that can see the wire has already started answering
+        # for it, whether or not this file is the one that builds the object.
+        ("layer-service-api", SERVICE, "from pkg.api.schemas.orders import OrderResponse\n"),
+        # `api/errors.py` and `api/mappers/` are equally reachable and equally
+        # not a service's, which is why the rule names `api/` whole rather than
+        # `api/schemas`.
+        ("layer-service-api", SERVICE, "from pkg.api.errors import handle\n"),
+        ("layer-service-api", SERVICE, "import pkg.api.mappers.orders\n"),
     ],
 )
 def test_a_layering_rule_fires_and_names_the_file(
@@ -1846,11 +1868,27 @@ def test_a_layering_rule_fires_and_names_the_file(
             "class OrderResponse:\n    pass\n\n\ndef handler():\n    return OrderResponse()\n",
         ),
         # A SERVICE importing a repository and a model. That is the arrow §10
-        # draws, not a violation of it, and rule 9 must not reach it.
+        # draws, not a violation of it, and rules 9 and 12 must not reach it.
         (
             SERVICE,
             "from pkg.db.models import Order\n"
             "from pkg.db.repositories.orders import OrderRepository\n",
+        ),
+        # A SERVICE importing the domain errors it raises. `titlepipe_domain` is
+        # a distribution of its own, so its components are matched whole and
+        # never get their first one dropped — the shape rule 12 would catch if
+        # the prefix matching were sloppy about which package it is looking at.
+        (
+            SERVICE,
+            "from titlepipe_domain import DomainError, NotFoundError\n",
+        ),
+        # A MAPPER importing a service's return type. `api/mappers/` is the one
+        # place a model and a DTO meet, so it reads what the service returned;
+        # rule 12 is about `services/ -> api/` and this is the other direction.
+        (
+            "services/svc/src/pkg/api/mappers/orders.py",
+            "from pkg.api.schemas.orders import OrderResponse\n"
+            "from pkg.services.order_service import Handover\n",
         ),
         # A REPOSITORY importing a model and its own base. Same point from the
         # bottom of the stack.

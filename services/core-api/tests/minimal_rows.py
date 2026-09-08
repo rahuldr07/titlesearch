@@ -268,13 +268,22 @@ def insert_audit_log(*, tenant: str | None = None, returning: str | None = None)
 
 
 def a_minimal_order(tenant_id: uuid.UUID, **overrides: Any) -> Order:
-    """An `Order` that satisfies every `NOT NULL` and asserts nothing else."""
-    return Order(
-        tenant_id=tenant_id,
-        client_id=uuid.uuid4(),
-        arrived_at=datetime.now(UTC),
-        **{**_minimal_order_required(), **overrides},
-    )
+    """An `Order` that satisfies every `NOT NULL` and asserts nothing else.
+
+    🔴 `client_id` AND `arrived_at` USED TO SIT OUTSIDE THE OVERRIDE MERGE, so a
+    caller naming either got `Order() got multiple values for keyword argument`
+    rather than the value it asked for — MEASURED the first time
+    `test_queue_endpoint` wanted a row with every column of its own choosing.
+    Every default now goes through the same dict, so `**overrides` means what the
+    signature says. `tenant_id` stays positional and is the one thing a caller
+    cannot supply twice.
+    """
+    defaults: dict[str, Any] = {
+        "client_id": uuid.uuid4(),
+        "arrived_at": datetime.now(UTC),
+        **_minimal_order_required(),
+    }
+    return Order(tenant_id=tenant_id, **{**defaults, **overrides})
 
 
 # ---------------------------------------------------------------------------
