@@ -26,8 +26,6 @@ is the only thing holding both in place.
 
 from __future__ import annotations
 
-import base64
-import binascii
 from typing import Self
 
 from pydantic import Field, SecretStr, ValidationError, model_validator
@@ -47,8 +45,6 @@ from titlepipe_domain import Environment, LogRenderer, ServiceName
 from titlepipe_service_kit.settings import (
     DEVELOPMENT_SEAL_PASSWORD,
     PLACEHOLDER_SECRETS,
-    SEAL_KEY_BYTES,
-    SEAL_PASSWORD_LENGTH,
 )
 from titlepipe_service_kit.settings_errors import redacted_settings_error
 
@@ -247,36 +243,6 @@ class CoreApiSettings(BaseSettings):
             return cls()  # pyright: ignore[reportCallIssue]  # rules-allow(any-type): pyright synthesises `__init__` from the fields, so the deliberately default-less `environment` reads as a missing argument; pydantic-settings supplies it from the environment at runtime
         except ValidationError as exc:
             raise redacted_settings_error(cls.__name__, exc) from None
-
-    @model_validator(mode="after")
-    def _seal_password_is_a_fernet_key(self) -> Self:
-        """
-        A Fernet key, checked by DECODING it — not by counting characters.
-
-        The length is the cheap half; the alphabet is the half that catches a
-        truncated paste or a base64 (not urlsafe) variant, both of which are 44
-        characters and neither of which WorkOS will accept.
-        """
-        secret = self.cookie_seal_password.get_secret_value()
-        if len(secret) != SEAL_PASSWORD_LENGTH:
-            raise ValueError(
-                f"cookie_seal_password must be a {SEAL_PASSWORD_LENGTH}-character "
-                f"Fernet key (urlsafe-base64 of {SEAL_KEY_BYTES} bytes); "
-                f"got {len(secret)} characters"
-            )
-        try:
-            decoded = base64.urlsafe_b64decode(secret)
-        except (binascii.Error, ValueError) as exc:
-            raise ValueError(
-                "cookie_seal_password is not valid urlsafe-base64; it must be a "
-                "Fernet key, e.g. Fernet.generate_key().decode()"
-            ) from exc
-        if len(decoded) != SEAL_KEY_BYTES:
-            raise ValueError(
-                f"cookie_seal_password must decode to exactly {SEAL_KEY_BYTES} "
-                f"bytes; got {len(decoded)}"
-            )
-        return self
 
     @model_validator(mode="after")
     def _workos_is_configured_or_absent(self) -> Self:
