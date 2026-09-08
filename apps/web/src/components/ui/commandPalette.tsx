@@ -27,4 +27,3 @@ export function CommandPalette({ title, isOpen, onOpenChange, children }: Comman
     </Dialog>
   );
 }
-

@@ -20,18 +20,22 @@
 #    Git already guarantees the only thing that matters, which is what is
 #    stored.
 #
-# 3. Unified-diff context lines are byte-sensitive evidence. The Gate 0 closure
-#    patch is excluded from whitespace rewriting and is instead proved by an
-#    actual `git apply --check` plus the fresh 177-test reproduction.
+# 3. Captured output is byte-sensitive evidence and is excluded from whitespace
+#    rewriting. Unified-diff context lines carry leading spaces the patch will
+#    not apply without, so the Gate 0 closure patch is proved by an actual
+#    `git apply --check` plus the fresh 177-test reproduction instead. The
+#    bench captures are `psql` output, where the trailing run on a QUERY PLAN
+#    header is psql's own column padding — stripping it makes a re-run diff
+#    against the recorded measurement in a way that is pure noise.
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:
       - id: trailing-whitespace
-        exclude: '(\.lock$|^scripts/gate0/gate0-closure\.patch$)'
+        exclude: '(\.lock$|^scripts/gate0/gate0-closure\.patch$|^docs/superpowers/plans/backend/proposals/bench/)'
       - id: end-of-file-fixer
-        exclude: '\.lock$'
+        exclude: '(\.lock$|^docs/superpowers/plans/backend/proposals/bench/)'
       - id: check-yaml
       - id: check-toml
       - id: check-json

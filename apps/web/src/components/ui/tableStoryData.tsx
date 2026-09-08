@@ -50,4 +50,3 @@ export const columns: readonly TableColumn<Order>[] = [
     cell: (r) => r.examiner,
   },
 ];
-
