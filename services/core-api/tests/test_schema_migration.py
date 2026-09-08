@@ -500,6 +500,11 @@ EXPECTED_COLUMNS: dict[str, frozenset[str]] = {
         "value_after",
         "na_reason_after",
         "revision_after",
+        # `0111`. NULL on an original claim; on a recovery it names the ledger
+        # row whose before-state never matched and which therefore occupied the
+        # slot forever. A mark that is an APPEND, because the ledger's
+        # append-only triggers refuse an UPDATE to anybody, superuser included.
+        "supersedes_correction_id",
     },
 }
 

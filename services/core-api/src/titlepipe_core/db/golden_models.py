@@ -51,7 +51,15 @@ from __future__ import annotations
 import uuid
 from typing import Final
 
-from sqlalchemy import CheckConstraint, ForeignKeyConstraint, Integer, Text, UniqueConstraint, text
+from sqlalchemy import (
+    CheckConstraint,
+    ForeignKeyConstraint,
+    Index,
+    Integer,
+    Text,
+    UniqueConstraint,
+    text,
+)
 from sqlalchemy.dialects.postgresql import ENUM, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -226,6 +234,20 @@ class GoldenCorrection(_TenantRow):
     **`revision_after` IS UNIQUE PER FIELD**, and with `0072`'s trigger that is
     what makes a signature unrepeatable: one ledger row authorises exactly one
     transition, so a value cannot be walked A -> B -> A -> B on two signatures.
+    As of `0111` the uniqueness is PARTIAL — exactly one row per slot supersedes
+    nothing — and it is the four constraints together that keep the property.
+
+    🔴 `supersedes_correction_id` IS THE ONLY WAY OUT OF A BRICKED FIELD, AND IT
+    IS AN APPEND AND NOT A MARK. A ledger row whose before-state never matched
+    occupies the only legal next revision forever: `0072` refuses every UPDATE it
+    could authorise, and `0071`'s triggers refuse both the repair and the
+    removal, for the owner and for a superuser. A `superseded_at` column set in
+    place would be an UPDATE of a ledger row, so the pointer runs the other way —
+    the REPLACEMENT names what it replaces, written once at INSERT, and nothing
+    about an existing row ever changes. `0111` carries the four constraints, the
+    recovery statement, and the one thing this does NOT close: superseding frees
+    the slot, it does not revoke the superseded row's ability to authorise the
+    transition IT describes.
     """
 
     __tablename__ = "golden_corrections"
@@ -242,6 +264,13 @@ class GoldenCorrection(_TenantRow):
     value_after: Mapped[str | None] = mapped_column(Text, nullable=True)
     na_reason_after: Mapped[str | None] = mapped_column(NA_REASON, nullable=True)
     revision_after: Mapped[int] = mapped_column(Integer, nullable=False)
+    # NULL on an original claim, and that nullability is load-bearing twice: the
+    # partial unique index below counts exactly these rows, and the four-column
+    # foreign key is MATCH SIMPLE, so a NULL here exempts the row from it without
+    # anything having to describe an original as a special case.
+    supersedes_correction_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), nullable=True
+    )
 
     __table_args__ = (
         ForeignKeyConstraint(
@@ -249,11 +278,64 @@ class GoldenCorrection(_TenantRow):
             ("golden_fields.tenant_id", "golden_fields.id"),
             name="fk_golden_corrections_tenant_id_golden_field_id_golden_fields",
         ),
+        # The target of the self-reference below and nothing else. `(tenant_id,
+        # id)` is already the primary key, so this adds no uniqueness claim — it
+        # exists because PostgreSQL requires a unique constraint over the exact
+        # columns a foreign key references.
         UniqueConstraint(
+            "tenant_id",
+            "id",
+            "golden_field_id",
+            "revision_after",
+            name="uq_golden_corrections_id_names_its_field_and_revision",
+        ),
+        # FOUR COLUMNS, NOT TWO: a row may only supersede a row of the SAME field
+        # at the SAME revision. Two columns would let a recovery row point at an
+        # unrelated correction and then sit outside the partial index below as a
+        # second live claim on its own slot. `0111` carries the reasoning.
+        ForeignKeyConstraint(
+            ("tenant_id", "supersedes_correction_id", "golden_field_id", "revision_after"),
+            (
+                "golden_corrections.tenant_id",
+                "golden_corrections.id",
+                "golden_corrections.golden_field_id",
+                "golden_corrections.revision_after",
+            ),
+            name="fk_golden_corrections_supersedes_the_same_slot",
+        ),
+        # A row is superseded at most once, so the chain per slot never forks.
+        # NULLs are distinct in a PostgreSQL unique index, so the many rows that
+        # supersede nothing do not collide.
+        UniqueConstraint(
+            "tenant_id",
+            "supersedes_correction_id",
+            name="uq_golden_corrections_tenant_id_supersedes_correction_id",
+        ),
+        CheckConstraint(
+            "supersedes_correction_id IS NULL OR supersedes_correction_id <> id",
+            name="a_row_does_not_supersede_itself",
+        ),
+        # 🔴 DECLARED HERE AND NOT ONLY IN THE MIGRATION, BECAUSE `alembic check`
+        # COMPARES INDEXES — `0051`'s partial index carries the same note. A
+        # `UniqueConstraint` cannot express either of these: the first is partial
+        # because superseded rows STAY, and the second is not unique at all.
+        Index(
+            "ix_golden_corrections_one_original_claim_per_revision",
             "tenant_id",
             "golden_field_id",
             "revision_after",
-            name="uq_golden_corrections_tenant_id_golden_field_id_revision_after",
+            unique=True,
+            postgresql_where=text("supersedes_correction_id IS NULL"),
+        ),
+        # `0072`'s per-row lookup, which the unique constraint used to serve and
+        # the partial one cannot: after a recovery the authorising row is a
+        # SUPERSEDING row, and those are exactly the rows the partial index
+        # leaves out.
+        Index(
+            "ix_golden_corrections_tenant_id_golden_field_id_revision_after",
+            "tenant_id",
+            "golden_field_id",
+            "revision_after",
         ),
         CheckConstraint(
             "num_nonnulls(value_before, na_reason_before) = 1",

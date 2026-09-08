@@ -176,16 +176,23 @@ INSERT_GOLDEN = """
     RETURNING id
 """
 
+# ONE statement for both an original claim and a recovery, with `:supersedes`
+# NULL for the first — `0111` says why the two are one row shape: superseding is
+# an ordinary append that names what it replaces, not a second kind of act.
+# `RETURNING id` because a recovery has to name the row it supersedes, and every
+# other caller is free to ignore it.
 INSERT_LEDGER = """
     INSERT INTO golden_corrections
         (tenant_id, golden_field_id, act, signed_by, reason, source_citation,
          tag_before, tag_after, value_before, na_reason_before,
-         value_after, na_reason_after, revision_after)
+         value_after, na_reason_after, revision_after, supersedes_correction_id)
     VALUES
         (:tenant, :golden_field_id, CAST(:act AS golden_act), :signed_by, :reason,
          :citation, CAST(:tag_before AS golden_tag), CAST(:tag_after AS golden_tag),
          :value_before, CAST(:na_reason_before AS na_reason),
-         :value_after, CAST(:na_reason_after AS na_reason), :revision_after)
+         :value_after, CAST(:na_reason_after AS na_reason), :revision_after,
+         :supersedes)
+    RETURNING id
 """
 
 # The two halves of the DELETE + re-INSERT transplant `0101` closes. Literal
@@ -266,6 +273,8 @@ def _ledger_parameters(**overrides: object) -> dict[str, object]:
         "value_after": "Lot 7, Block 2",
         "na_reason_after": None,
         "revision_after": 1,
+        # NULL is an ORIGINAL claim. A recovery names the dead row it replaces.
+        "supersedes": None,
     }
     parameters.update(overrides)
     return parameters
@@ -906,9 +915,11 @@ def test_one_ledger_row_cannot_authorise_the_same_move_twice(golden_engine: Engi
     Two things close it together and this test drives both. The trigger requires
     `revision = OLD.revision + 1`, so a second application of the same signature
     would have to be at revision 1 again and is not; and
-    `uq_golden_corrections_tenant_id_golden_field_id_revision_after` refuses a
-    SECOND ledger row at revision 1, so the obvious way round it is refused by the
-    constraint rather than by the trigger.
+    `ix_golden_corrections_one_original_claim_per_revision` refuses a SECOND
+    ledger row at revision 1, so the obvious way round it is refused by the index
+    rather than by the trigger. That index is PARTIAL as of `0111` — it counts
+    only rows that supersede nothing — and the replay below supersedes nothing,
+    so it is still the object that refuses.
     """
     golden_field_id = _establish(golden_engine)
     signed = _ledger_parameters(
@@ -1270,4 +1281,295 @@ def test_a_named_person_can_still_promote_an_engine_reading(golden_engine: Engin
         "editing anything: if source_citation is now anchored to a page and a "
         "bounding box, delete this test and correct 0102's docstring. Do not "
         "'fix' this test to match."
+    )
+
+
+# --- 5. a ledger row that can never apply does not brick the field ----------
+#
+# 🔴 THE TRAP `0111` OPENS A WAY OUT OF, AND IT NEEDS NO ATTACKER. `0072` moves
+# a golden value only on a ledger row describing exactly that transition at
+# exactly `OLD.revision + 1`; `0071` allows one row per slot and refuses UPDATE
+# and DELETE on the table for every role including a superuser. A row whose
+# `value_before` came from a stale read therefore occupies the only legal next
+# revision FOREVER: it can never authorise anything, it cannot be repaired, it
+# cannot be removed, and no later revision is reachable because the trigger
+# requires exactly +1. An ordinary client retry produces it.
+#
+# The tests below hold both halves: the trap is still real (nothing here makes a
+# dead row writable or removable), and the field now has a way forward.
+#
+# 🔴 NO TEST HERE MAY COMMIT A SUPERSEDED ROW, AND THIS IS NOT TIDINESS.
+# `0111`'s `downgrade()` restores `0071`'s TOTAL unique constraint and therefore
+# RAISES `23505` over a slot that holds two rows — deliberately, because the
+# older schema cannot represent that ledger and deleting rows to make room is the
+# one thing this design refuses. `conftest.migrated_database` tears every module
+# down with `alembic downgrade base`, so a committed superseded row turns this
+# module's teardown red and takes the next module's schema with it. MEASURED on
+# this tree, writing it the obvious way:
+#
+#     could not create unique index
+#     "uq_golden_corrections_tenant_id_golden_field_id_revision_after"
+#     DETAIL:  Duplicate keys exist.
+#
+# The two tests that need a recovery to EXIST therefore do their whole sequence
+# on one connection and roll it back. `0072`'s trigger reads the transaction's
+# own uncommitted writes, so nothing is lost by it.
+#
+# WHAT WAS WATCHED GO RED, one mutation of `0111` at a time, each restored:
+#   * partial unique index made TOTAL — the pre-`0111` schema — three tests
+#     failed, the recovery INSERT itself taking `23505`. That is the brick;
+#   * four-column key narrowed to `(tenant_id, supersedes_correction_id)` —
+#     `test_a_row_cannot_supersede_one_belonging_to_another_field`, DID NOT RAISE;
+#   * `uq_golden_corrections_tenant_id_supersedes_correction_id` removed —
+#     `test_a_ledger_row_can_be_superseded_only_once`, DID NOT RAISE;
+#   * `ck_golden_corrections_a_row_does_not_supersede_itself` removed —
+#     `test_a_ledger_row_cannot_supersede_itself`, DID NOT RAISE.
+# `test_a_stale_before_image_leaves_a_ledger_row_nothing_can_repair` passed under
+# every one of them, which is the point of it: it asserts the trap, not the fix.
+
+
+def _bricked(golden_engine: Engine) -> tuple[uuid.UUID, uuid.UUID]:
+    """A committed golden field at revision 0 and a dead ledger row at revision 1.
+
+    The dead row is dead for the reason a real one would be: its `value_before`
+    is what a stale read returned, and the field never held that value. `0072`
+    compares against `OLD.value`, so no UPDATE this row could authorise exists.
+    """
+    golden_field_id = _establish(golden_engine)
+    with golden_engine.begin() as connection:
+        dead = uuid.UUID(
+            str(
+                connection.execute(
+                    text(INSERT_LEDGER),
+                    _ledger_parameters(
+                        golden_field_id=golden_field_id,
+                        act="correct",
+                        value_before="Lot 3, Block 1",
+                        value_after="Lot 8, Block 2",
+                        citation="deed book 44, page 12",
+                        tag_after="ruled",
+                    ),
+                ).scalar_one()
+            )
+        )
+    return golden_field_id, dead
+
+
+def test_a_stale_before_image_leaves_a_ledger_row_nothing_can_repair(
+    golden_engine: Engine,
+) -> None:
+    """🔴 THE FINDING, REPRODUCED. Four refusals, and every one of them is correct.
+
+    This test asserts that the trap is REAL rather than that it is fixed —
+    `0111` does not stop a dead row being written and does not make one editable.
+    If any assertion here goes green the wrong way, an append-only guarantee has
+    been weakened somewhere, and that is worth more alarm than the brick was.
+    """
+    golden_field_id, dead = _bricked(golden_engine)
+
+    # 1. It authorises nothing: the transition it describes never happened.
+    refused = _refuses(
+        golden_engine,
+        MOVE_GOLDEN,
+        {
+            "tenant": TENANT,
+            "id": golden_field_id,
+            "value": "Lot 8, Block 2",
+            "tag": "ruled",
+            "citation": "deed book 44, page 12",
+            "revision": 1,
+        },
+    )
+    assert _sqlstate(refused) == FEATURE_NOT_SUPPORTED_SQLSTATE, (
+        f"the dead row authorised a move it does not describe: {refused}"
+    )
+
+    # 2. A corrected ORIGINAL row cannot take the slot — this is what makes the
+    #    supersede necessary rather than merely tidy.
+    retried = _refuses(
+        golden_engine,
+        INSERT_LEDGER,
+        _ledger_parameters(
+            golden_field_id=golden_field_id,
+            act="correct",
+            value_after="Lot 8, Block 2",
+            citation="deed book 44, page 12",
+            tag_after="ruled",
+        ),
+    )
+    assert _sqlstate(retried) == UNIQUE_VIOLATION_SQLSTATE, (
+        f"a second ORIGINAL claim on an occupied slot returned "
+        f"{_sqlstate(retried)!r} rather than {UNIQUE_VIOLATION_SQLSTATE}: {retried}"
+    )
+
+    # 3 and 4. The row can be neither repaired nor removed, by anybody. This
+    #    connection is the container SUPERUSER, so these are the triggers and
+    #    cannot be the ACL.
+    for statement in (
+        "UPDATE golden_corrections SET value_before = 'Lot 7, Block 2' WHERE id = :id",
+        "DELETE FROM golden_corrections WHERE id = :id",
+    ):
+        error = _refuses(golden_engine, statement, {"id": dead})
+        assert _sqlstate(error) == FEATURE_NOT_SUPPORTED_SQLSTATE, (
+            f"`{statement.split()[0]}` on a ledger row returned {_sqlstate(error)!r}: {error}"
+        )
+
+
+def test_a_recovery_row_supersedes_the_dead_one_and_the_value_moves(
+    golden_engine: Engine,
+) -> None:
+    """🔴 THE POSITIVE CONTROL, AND THE WHOLE POINT OF `0111`.
+
+    Without it every refusal above is satisfied by a ledger that accepts nothing.
+    The recovery is one INSERT — no DELETE, no UPDATE, no privilege beyond the
+    `INSERT` `0071` already grants `titlepipe_app` — and BOTH rows survive: the
+    failed attempt is evidence, not litter.
+    """
+    golden_field_id, dead = _bricked(golden_engine)
+
+    with golden_engine.connect() as connection:
+        connection.execute(
+            text(INSERT_LEDGER),
+            _ledger_parameters(
+                golden_field_id=golden_field_id,
+                act="correct",
+                # The TRUE before-state, which is what the dead row got wrong.
+                value_before="Lot 7, Block 2",
+                value_after="Lot 8, Block 2",
+                citation="deed book 44, page 12",
+                tag_after="ruled",
+                reason="supersedes a correction written from a stale read",
+                supersedes=dead,
+            ),
+        )
+        connection.execute(
+            text(MOVE_GOLDEN),
+            {
+                "tenant": TENANT,
+                "id": golden_field_id,
+                "value": "Lot 8, Block 2",
+                "tag": "ruled",
+                "citation": "deed book 44, page 12",
+                "revision": 1,
+            },
+        )
+        moved = connection.execute(
+            text("SELECT value, tag, revision FROM golden_fields WHERE id = :id"),
+            {"id": golden_field_id},
+        ).one()
+        kept = connection.execute(
+            text(
+                "SELECT count(*) FROM golden_corrections "
+                "WHERE golden_field_id = :id AND revision_after = 1"
+            ),
+            {"id": golden_field_id},
+        ).scalar_one()
+        # See this section's note: a committed superseded row is a downgrade this
+        # module's teardown cannot perform.
+        connection.rollback()
+
+    assert tuple(moved) == ("Lot 8, Block 2", "ruled", 1), (
+        f"the field is still bricked after a recovery row was written: {tuple(moved)}"
+    )
+    assert kept == 2, (
+        f"the slot holds {kept} ledger rows, not 2. The dead row is part of the "
+        f"permanent record and a recovery that removed it would be the deletion "
+        f"this design exists to refuse."
+    )
+
+
+def test_a_row_cannot_supersede_one_belonging_to_another_field(
+    golden_engine: Engine,
+) -> None:
+    """The four-column key, and the reason it is four rather than two.
+
+    A two-column `(tenant_id, supersedes_correction_id)` reference would have let
+    a recovery row point at an unrelated correction. It would then be exempt from
+    the partial unique index — which counts only rows superseding nothing — and
+    would sit on its own slot as a SECOND live claim, which is the property
+    `0071`'s unique constraint existed to prevent.
+    """
+    _, dead = _bricked(golden_engine)
+    elsewhere, _ = _bricked(golden_engine)
+
+    error = _refuses(
+        golden_engine,
+        INSERT_LEDGER,
+        _ledger_parameters(
+            golden_field_id=elsewhere,
+            act="correct",
+            value_before="Lot 7, Block 2",
+            value_after="Lot 8, Block 2",
+            citation="deed book 44, page 12",
+            tag_after="ruled",
+            supersedes=dead,
+        ),
+    )
+    _refusal_names(
+        error, FOREIGN_KEY_VIOLATION_SQLSTATE, "fk_golden_corrections_supersedes_the_same_slot"
+    )
+
+
+def test_a_ledger_row_can_be_superseded_only_once(golden_engine: Engine) -> None:
+    """The chain never forks, so "the live claim" is one row and not a set.
+
+    Two rows superseding the same dead one would both be outside the partial
+    unique index and neither would supersede the other — two live claims on one
+    revision, and no answer to "who made it".
+    """
+    golden_field_id, dead = _bricked(golden_engine)
+    recovery = _ledger_parameters(
+        golden_field_id=golden_field_id,
+        act="correct",
+        value_before="Lot 7, Block 2",
+        value_after="Lot 8, Block 2",
+        citation="deed book 44, page 12",
+        tag_after="ruled",
+        supersedes=dead,
+    )
+
+    # One connection for both, rolled back — see this section's note. `_refuses`
+    # opens its own connection and would not see the first row at all, so the
+    # second INSERT would succeed and the test would pass for the wrong reason.
+    with golden_engine.connect() as connection:
+        connection.execute(text(INSERT_LEDGER), recovery)
+        with pytest.raises(DBAPIError) as raised:
+            connection.execute(text(INSERT_LEDGER), {**recovery, "value_after": "Lot 9, Block 2"})
+        connection.rollback()
+
+    _refusal_names(
+        raised.value,
+        UNIQUE_VIOLATION_SQLSTATE,
+        "uq_golden_corrections_tenant_id_supersedes_correction_id",
+    )
+
+
+def test_a_ledger_row_cannot_supersede_itself(golden_engine: Engine) -> None:
+    """A self-loop is a chain with no original, invisible to the partial index."""
+    golden_field_id = _establish(golden_engine)
+    own_id = uuid.uuid4()
+
+    error = _refuses(
+        golden_engine,
+        # The one statement in this module that names `id`, because a self-
+        # reference has to know the id before the row exists.
+        INSERT_LEDGER.replace(
+            "(tenant_id, golden_field_id,", "(id, tenant_id, golden_field_id,"
+        ).replace("(:tenant, :golden_field_id,", "(:own_id, :tenant, :golden_field_id,"),
+        {
+            **_ledger_parameters(
+                golden_field_id=golden_field_id,
+                act="correct",
+                value_after="Lot 8, Block 2",
+                citation="deed book 44, page 12",
+                tag_after="ruled",
+                supersedes=own_id,
+            ),
+            "own_id": own_id,
+        },
+    )
+    _refusal_names(
+        error,
+        CHECK_VIOLATION_SQLSTATE,
+        "ck_golden_corrections_a_row_does_not_supersede_itself",
     )
