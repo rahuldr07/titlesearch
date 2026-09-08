@@ -829,9 +829,7 @@ EXEMPT_ATTRIBUTE_NAMES: Final = frozenset(
 # checker off; none of them is visible to the AST, which is why they are
 # matched against comment text. `pyright: strict` is deliberately absent —
 # it tightens, and this rule is about loosening without a record.
-# ---------------------------------------------------------------------------
 # CONVENTIONS.md §10 — the layering. Rules 8-11; see the module docstring.
-# ---------------------------------------------------------------------------
 #
 # Each key is a PACKAGE PATH BELOW THE DISTRIBUTION PACKAGE, matched as a
 # component prefix by `_module_path` — the same anchoring `_path_exemption`

@@ -65,6 +65,18 @@ naming a file that is not there is judged on its name alone.
 They read the WORKING TREE copy, which is not necessarily what is staged. A
 `git add` followed by an edit is outside what this can see.
 
+The INSERT dump marker needs THREE CONSECUTIVE ROWS in the one spelling
+`INSERT INTO <table> VALUES (`. MEASURED 2026-09-08 against the pattern
+itself: two rows pass, `INSERT INTO t (a, b) VALUES (...)` — pg_dump's
+`--column-inserts` form — passes at any count, and a single multi-row
+`INSERT INTO t VALUES (1),(2),(3);` passes. None of that is a hole in the
+guard for a tool-generated dump, which carries the `pg_dump`/`mysqldump`
+header or a `COPY ... FROM stdin` block and is refused on those; it is the
+ceiling on a HAND-WRITTEN or header-stripped `.sql` seed with no SSN in it.
+What would close it: parsing the file as SQL rather than matching row shapes,
+which is a dependency this guard does not have and should not grow for one
+marker out of four.
+
 `--tree` covers tracked files plus untracked files that git does not ignore. A
 path listed in `.gitignore` is deliberately outside version control and is not
 walked; the 644 MB directory would not be named by it.
@@ -81,10 +93,6 @@ import re
 import subprocess
 import sys
 from pathlib import Path
-
-# ---------------------------------------------------------------------------
-# Type rule
-# ---------------------------------------------------------------------------
 
 # Extensions that carry client documents, a golden-set database, or client data
 # already extracted out of one. Refused everywhere, including inside exempt
@@ -259,10 +267,6 @@ def candidate_suffixes(name: str) -> list[str]:
     return found
 
 
-# ---------------------------------------------------------------------------
-# Signature rule
-# ---------------------------------------------------------------------------
-
 # (offset, magic bytes, what it is). Matched against the head of the file, so a
 # renamed or extensionless county package is refused for being one. The read is
 # capped at HEAD_BYTES, which is why the tar signature at 257 is the deepest
@@ -329,10 +333,6 @@ def content_signature(head: bytes) -> str | None:
     return None
 
 
-# ---------------------------------------------------------------------------
-# Extract rule
-# ---------------------------------------------------------------------------
-#
 # EVERY PATTERN BELOW IS WRITTEN WITH A METACHARACTER BETWEEN ITS WORDS, and
 # that is load-bearing rather than stylistic. CI runs this guard over every
 # tracked file, which includes this one. A pattern spelled as the plain string
@@ -366,7 +366,9 @@ DUMP_MARKERS: tuple[tuple[re.Pattern[str], str], ...] = (
         # single `INSERT INTO ... VALUES (` is how a migration seeds a lookup or
         # how a docstring shows the shape it refuses. MEASURED 2026-09-08: the
         # one-row form flagged 0112, whose only match is an example inside its
-        # own docstring demonstrating the bound it adds.
+        # own docstring demonstrating the bound it adds. What raising it to
+        # three costs is in "What this guard does NOT do"; pinned by
+        # `tests/test_check_no_client_data.py::test_the_insert_marker_*`.
         re.compile(
             r"(?:^\s*INSERT\s+INTO\s+\S+\s+VALUES\s*\(.*$\n?){3,}",
             re.IGNORECASE | re.MULTILINE,
@@ -563,7 +565,6 @@ ALLOWLIST: dict[str, tuple[str, str]] = {
         "e3926563e68894eacec750c08cfd4d2c6c9b433f0a25e3507b5a50ff5fbd504e",
         "UI crop of a PRESENT — UNREADABLE row; all values are packages/mocks fixtures",
     ),
-    # ---------------------------------------------------------------------
     # Reviewed 2026-08-06; revised 2026-08-08. The 2026-08-06 review admitted
     # 68 screenshot and document files by hash and REFUSED 13, escalating them
     # to the owner. The 2026-08-08 reorganization resolved the escalation by
@@ -580,7 +581,6 @@ ALLOWLIST: dict[str, tuple[str, str]] = {
     # below was opened and read in full. Re-inspect before updating a hash —
     # a file with the same name produced from a real package would look almost
     # identical and would not be safe.
-    # ---------------------------------------------------------------------
     "docs/rulebook-source/2_Golden_Rules.docx": (
         "b8e86d50336d73920bcfe46da1f68d3aaada5dce1437f9d65a2f030dd688af2b",
         "rulebook rules text only; read in full — no party, property, parcel, amount or recording detail, and no comments/notes/author metadata",
@@ -611,11 +611,6 @@ ALLOWLIST: dict[str, tuple[str, str]] = {
         "vendor 66805 typing rulebook (skill source); read in full — no party, property, address or case data; six bare instrument-number format examples and internal cost-model figures only",
     ),
 }
-
-
-# ---------------------------------------------------------------------------
-# The rules, applied
-# ---------------------------------------------------------------------------
 
 
 def _content_violation(path: Path) -> str | None:
