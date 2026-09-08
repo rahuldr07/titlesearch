@@ -62,7 +62,15 @@ PUBLIC_ROLE = "PUBLIC"
 # would restore the table-wide grant and make `state`, `tenant_id`, `order_id` and
 # `path` writable again.
 #
-# The other nineteen names arrived with the `integration/backend-2026-09` merge.
+# 🔴 `users` LEFT IT ON 2026-09-08 FOR A WORSE VERSION OF THE SAME REASON.
+# `0120` does the identical three lines. The table-wide grant let the app role
+# rewrite `users.role` for any row inside its own tenant — MEASURED at `0102`
+# against postgres:18.4, `UPDATE 1` — which is the row every authorization
+# decision is read from. `tenant_isolation` is not a defence: the row a seat
+# promotes is its own, so it is inside the policy, and RLS has no opinion about
+# WHICH COLUMN of a permitted row is written.
+#
+# The other eighteen names arrived with the `integration/backend-2026-09` merge.
 # Each is a tenant-scoped table created by `0005`-`0080` whose revision grants the
 # ordinary three verbs; the exceptions are the two lists after this one, and the
 # reason a table is in one of those rather than here is always a trigger or a
@@ -74,10 +82,10 @@ APP_WRITABLE_TABLES = (
     "pages",
     "field_readings",
     "tenants",
-    # `0005`, `0006`, `0020`, `0030`, `0080`.
+    # `0005`, `0006`, `0030`, `0080`. `users` is NOT here — `0120` narrowed it
+    # for `fields`' reason and a worse one; see `USERS_UPDATABLE_COLUMNS`.
     "record_classifications",
     "legal_holds",
-    "users",
     "documents",
     "clients",
     # `0040` — the instrument spine and the DERIVED links over it.
@@ -118,7 +126,11 @@ APP_APPEND_SHAPED_TABLES = (
     "audit_log",
     "golden_corrections",
     "reports",
+    # Neither of these is append-only either, and both are here for the same
+    # third reason: their UPDATE is granted per column, so they hold two TABLE
+    # verbs. See `COLUMN_SCOPED_UPDATE_GRANTS`.
     "fields",
+    "users",
 )
 
 # Read-only to the app, and both are outside tenancy. `rules` is the global
@@ -152,6 +164,43 @@ FIELDS_UPDATABLE_COLUMNS = (
     "why",
     "consequence",
 )
+
+# `0120::USERS_APP_UPDATABLE_COLUMNS`. TWO, AND THE SIX THAT ARE ABSENT ARE THE
+# POINT: `role`, `identity_provider`, `identity_subject`, `tenant_id`, `id`,
+# `created_at`.
+#
+# `role` is the escalation — a seat that can edit its own row can promote itself.
+# `identity_provider` and `identity_subject` are the same escalation through a
+# door that never touches `role`: repoint an ordinary seat's subject at the
+# admin's provider id and the admin's next sign-in resolves to a row of the
+# attacker's choosing. `tenant_id` is `0002`'s missing `WITH CHECK`, exactly as on
+# `fields`. `id` and `created_at` are insert-only.
+#
+# The two that remain are the two writes this system actually has: an address
+# that changed at the provider (a seat is found by `(provider, organization,
+# subject)`, never by email), and `0020`'s "a seat is retired by writing
+# `deactivated_at`".
+USERS_UPDATABLE_COLUMNS = (
+    "email",
+    "deactivated_at",
+)
+
+# 🔴 EVERY COLUMN-SCOPED UPDATE GRANT IN THE SCHEMA, IN ONE PLACE.
+# Four consumers read this — `EXACT_NON_OWNER_ACL` and `EXPECTED_COLUMN_GRANTS`
+# below, and two assertions in `test_forced_rls_and_grants.py` — and they used to
+# read two hand-copied tuples instead. `CONVENTIONS.md` §11.2 is about exactly
+# that: the 34-finding review came down to lists that had to agree and silently
+# stopped agreeing, so a third table narrowed this way adds ONE entry here rather
+# than a fifth copy somewhere.
+#
+# Still written out rather than imported from `migrations/versions/`, for
+# `APP_WRITABLE_TABLES`' reason — a test that derives its expectation from the
+# module under test moves whenever that module does and pins nothing. This file
+# is not the module under test.
+COLUMN_SCOPED_UPDATE_GRANTS = {
+    "fields": FIELDS_UPDATABLE_COLUMNS,
+    "users": USERS_UPDATABLE_COLUMNS,
+}
 
 # ---------------------------------------------------------------------------
 # 🔴 `0060`'s QUEUE GRANTS. NOT THIS REPOSITORY'S TABLES, STILL THIS
@@ -300,12 +349,16 @@ EXACT_NON_OWNER_ACL = frozenset(
         ),
         # `0003` and `0005`: the rulebook and the statutory floor are read-only.
         *(f"relation:{table}:SELECT:{APP_ROLE}" for table in APP_READ_ONLY_TABLES),
-        # `0032`: the seventeen columns that replaced the table-wide UPDATE on
-        # `fields`. THESE ARE THE ONLY COLUMN-LEVEL ENTRIES IN THIS CONTRACT and
-        # the only ones there should ever be — a column grant is invisible to
-        # `relacl` and to `has_table_privilege`, so anything not written here is a
-        # privilege no other assertion in this repository can see.
-        *(f"column:fields.{column}:UPDATE:{APP_ROLE}" for column in FIELDS_UPDATABLE_COLUMNS),
+        # `0032`'s seventeen on `fields` and `0120`'s two on `users`. THESE ARE
+        # THE ONLY COLUMN-LEVEL ENTRIES IN THIS CONTRACT — a column grant is
+        # invisible to `relacl` and to `has_table_privilege`, so anything not
+        # written here is a privilege no other assertion in this repository can
+        # see.
+        *(
+            f"column:{table}.{column}:UPDATE:{APP_ROLE}"
+            for table, columns in COLUMN_SCOPED_UPDATE_GRANTS.items()
+            for column in columns
+        ),
         # `0060`: the queue, granted by hand because the vendored DDL ships no
         # GRANTs. The worker's DELETE is the only DELETE anywhere in this schema.
         *(
@@ -492,11 +545,12 @@ CONNECT_TIME_STATE_QUERY = """
 """
 
 
-# The rendered form of `0032`'s seventeen, so the test and the harness step
-# compare the same strings. `sorted()` at use so the literal reads by column
-# rather than alphabetically, which is how `FIELD_APP_UPDATABLE_COLUMNS` reads.
+# The rendered form of every column-scoped grant, so the test and the harness
+# step compare the same strings.
 EXPECTED_COLUMN_GRANTS = frozenset(
-    f"UPDATE on fields.{column} to {APP_ROLE}" for column in FIELDS_UPDATABLE_COLUMNS
+    f"UPDATE on {table}.{column} to {APP_ROLE}"
+    for table, columns in COLUMN_SCOPED_UPDATE_GRANTS.items()
+    for column in columns
 )
 
 

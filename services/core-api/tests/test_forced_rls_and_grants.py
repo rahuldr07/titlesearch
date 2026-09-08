@@ -102,6 +102,7 @@ from typing import NamedTuple
 from uuid import UUID
 
 import pytest
+from acl_contract import COLUMN_SCOPED_UPDATE_GRANTS
 from alembic import command
 from alembic.config import Config
 from minimal_rows import insert_orders_returning
@@ -435,30 +436,20 @@ APPEND_ONLY_GRANTED_VERBS = ("SELECT", "INSERT")
 # Deriving them means a column that leaves the granted list arrives in the
 # withheld one automatically and is asserted as refused rather than becoming
 # unasserted in both directions.
-COLUMN_SCOPED_UPDATE_TABLES = frozenset({"fields"})
-
-# `0032::FIELD_APP_UPDATABLE_COLUMNS`, written out rather than imported for
-# `REVISION_0002_TENANT_TABLES`' reason: a test that builds its expectation from
-# the module under test moves whenever that module does and pins nothing.
-FIELDS_UPDATABLE_COLUMNS = (
-    "value",
-    "na_reason",
-    "source_document_id",
-    "source_page_no",
-    "source_snippet",
-    "source_line_coords",
-    "engine_id",
-    "engine_confidence_raw",
-    "approved_by",
-    "approved_at",
-    "correction_reason",
-    "excluded_reason",
-    "excluded_by",
-    "excluded_at",
-    "asking",
-    "why",
-    "consequence",
-)
+# 🔴 `users` JOINED `fields` ON 2026-09-08 AND THE REASON IS WORSE THERE.
+# `0120` revoked the table-wide UPDATE on `users` after the same three lines,
+# because it let the app role rewrite `users.role` for any row inside its own
+# tenant — the row every authorization decision is READ from. MEASURED at `0102`
+# against postgres:18.4: `UPDATE users SET role = 'admin'` by `titlepipe_app`
+# with the tenant GUC set answered `UPDATE 1`.
+#
+# 🔴 IMPORTED, NOT COPIED, AND THAT IS A CHANGE. This file used to carry its own
+# transcription of `fields`' seventeen beside `acl_contract.py`'s — two lists
+# that had to agree, which `CONVENTIONS.md` §11.2 identifies as the shape of the
+# whole 34-finding review. The anti-derivation reason `REVISION_0002_TENANT
+# _TABLES` gives is intact: `acl_contract.py` is a test module, not the module
+# under test, so the expectation still does not move when a migration does.
+COLUMN_SCOPED_UPDATE_TABLES = frozenset(COLUMN_SCOPED_UPDATE_GRANTS)
 
 # 🔴 `rules` IS THE ONE TABLE AT A SINGLE VERB, AND THE NARROWNESS IS A PLAN 02
 # RULING RATHER THAN A GAP. Task 4 is `GET /api/rules` — read-only. Rule CREATION
@@ -1585,27 +1576,31 @@ def test_every_tenant_table_is_forced_isolated_and_reachable_by_the_app(
             )
 
 
-def test_the_narrowed_update_grant_on_fields_is_exactly_seventeen_columns(
-    migrated_database: str, seam_engine: Callable[[str], Engine], app_role: str
+@pytest.mark.parametrize("table", sorted(COLUMN_SCOPED_UPDATE_GRANTS))
+def test_the_narrowed_update_grant_is_exactly_the_named_columns(
+    table: str,
+    migrated_database: str,
+    seam_engine: Callable[[str], Engine],
+    app_role: str,
 ) -> None:
     """🔴 THE ONE ASSERTION IN THIS FILE THAT READS `has_column_privilege`.
 
     Everything else here asks `has_table_privilege`, which answers about the
     TABLE and returns FALSE for a role holding only column grants. `0032` revoked
-    the table-wide `UPDATE ON fields` and granted seventeen columns instead, so
-    every other assertion in this file now reports `titlepipe_app has no UPDATE
-    on fields` — true of the catalog, and a false statement about the system,
-    because the app writes seventeen of that table's columns on every correction.
+    the table-wide `UPDATE ON fields` and `0120` did the same to `users`, so
+    every other assertion in this file now reports `titlepipe_app has no UPDATE`
+    on both — true of the catalog, and a false statement about the system.
 
-    BOTH DIRECTIONS, AS AN EXACT PARTITION OF THE TABLE'S COLUMNS. The granted
-    seventeen are asserted present and the remaining six absent, and the six are
-    DERIVED by subtracting the seventeen from the catalog rather than listed — so
-    a column added to `fields` by a later revision lands in the withheld set
-    automatically and is asserted refused, instead of being unasserted in both
-    directions until somebody remembers it.
+    BOTH DIRECTIONS, AS AN EXACT PARTITION OF EACH TABLE'S COLUMNS. The granted
+    columns are asserted present and the rest absent, and the rest are DERIVED by
+    subtracting rather than listed — so a column added by a later revision lands
+    in the withheld set automatically and is asserted refused, instead of being
+    unasserted in both directions until somebody remembers it.
 
     WHAT EACH WITHHELD COLUMN IS PROTECTING, since a bare list reads as an
-    oversight:
+    oversight.
+
+    `fields`, withholding six:
 
     * `tenant_id` — the column every `tenant_isolation` policy keys on. `0002`
       writes no `WITH CHECK`, so the read predicate is reused for writes, and a
@@ -1620,12 +1615,26 @@ def test_the_narrowed_update_grant_on_fields_is_exactly_seventeen_columns(
       repointed at another order is a correction nobody can audit;
     * `id` and `created_at` — insert-only by `0001`'s server defaults.
 
-    A `GRANT UPDATE ON fields TO titlepipe_app` restoring the table-wide grant
-    fails here on all six, which is the point: a column grant is ADDED to a table
-    grant rather than shadowing it, so the narrowing survives only as long as the
-    table-level revoke does.
+    `users`, withholding six, and the first three are why `0120` exists:
+
+    * `role` — MEASURED at `0102` against postgres:18.4: `titlepipe_app` with the
+      tenant GUC set ran `UPDATE users SET role = 'admin'` on a row of its own
+      tenant and got `UPDATE 1`. `auth/dependencies.require_seat` reads the role
+      off this row precisely so the wire cannot assert it; a wire that can write
+      the row has asserted it anyway;
+    * `identity_provider` and `identity_subject` — the same escalation without
+      touching `role`. Repointing a seat's subject at another person's provider
+      id makes their next sign-in resolve to a row of the attacker's choosing,
+      and `uq_users_tenant_id_identity_provider_identity_subject` refuses a
+      DUPLICATE pair rather than a stolen one;
+    * `tenant_id`, `id`, `created_at` — as on `fields`.
+
+    A `GRANT UPDATE ON <table> TO titlepipe_app` restoring the table-wide grant
+    fails here on every withheld column, which is the point: a column grant is
+    ADDED to a table grant rather than shadowing it, so each narrowing survives
+    only as long as its table-level revoke does.
     """
-    granted = set(FIELDS_UPDATABLE_COLUMNS)
+    granted = set(COLUMN_SCOPED_UPDATE_GRANTS[table])
     engine = seam_engine(migrated_database)
     try:
         with engine.connect() as connection:
@@ -1634,33 +1643,34 @@ def test_the_narrowed_update_grant_on_fields_is_exactly_seventeen_columns(
                 for row in connection.execute(
                     text(
                         "SELECT a.attname FROM pg_attribute a "
-                        "WHERE a.attrelid = 'public.fields'::regclass "
+                        "WHERE a.attrelid = ('public.' || :table)::regclass "
                         "  AND a.attnum > 0 AND NOT a.attisdropped"
-                    )
+                    ),
+                    {"table": table},
                 )
             }
             writable = {
                 column
                 for column in sorted(columns)
                 if connection.execute(
-                    text("SELECT has_column_privilege(:role, 'fields', :column, 'UPDATE')"),
-                    {"role": app_role, "column": column},
+                    text("SELECT has_column_privilege(:role, :table, :column, 'UPDATE')"),
+                    {"role": app_role, "table": table, "column": column},
                 ).scalar_one()
             }
     finally:
         engine.dispose()
 
     assert granted <= columns, (
-        f"FIELDS_UPDATABLE_COLUMNS names columns fields does not have: "
-        f"{sorted(granted - columns)}. 0032 granted UPDATE on them, so either the "
-        f"column was renamed and the grant was not, or this literal is stale."
+        f"COLUMN_SCOPED_UPDATE_GRANTS names columns {table} does not have: "
+        f"{sorted(granted - columns)}. The revision granted UPDATE on them, so "
+        f"either the column was renamed and the grant was not, or this literal "
+        f"is stale."
     )
 
     assert writable == granted, (
-        f"{app_role} can UPDATE {sorted(writable)} on fields, not "
-        f"{sorted(granted)}. Extra: {sorted(writable - granted)} — the six "
-        f"withheld columns are tenant_id, state, order_id, path, id and "
-        f"created_at, and each is a different refusal; missing: "
+        f"{app_role} can UPDATE {sorted(writable)} on {table}, not "
+        f"{sorted(granted)}. Extra: {sorted(writable - granted)} — each withheld "
+        f"column is a different refusal and this docstring names them; missing: "
         f"{sorted(granted - writable)} — the app takes 42501 from a line that "
         f"appears in no handler."
     )

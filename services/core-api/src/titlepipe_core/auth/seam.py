@@ -33,7 +33,11 @@ or is reported as an unproven residual. This is the naming.
    client still sending the header is told, instead of being silently downgraded
    to anonymous and left to guess why its data is empty.
 
-`tests/test_auth_seam.py` drives (1) through (4).
+`tests/test_auth_seam.py` drives (2), (3) and (4). Machine (1) is driven by
+`tests/test_settings.py::test_a_deployed_environment_refuses_an_unsafe_setting`
+parametrised on `mock_auth_enabled`, and stays there rather than being restated:
+it is a property of `CoreApiSettings`, and a second copy is one that can pass
+while the first is deleted.
 
 ---------------------------------------------------------------------------
 🔴 UNPROVEN RESIDUAL — WHAT THE CHAIN ABOVE DOES NOT COVER.
@@ -68,6 +72,7 @@ from dataclasses import dataclass
 from titlepipe_core.auth.directory import SeatDirectory, StaticSeatDirectory
 from titlepipe_core.auth.mock import MockHeaderProvider, development_seats
 from titlepipe_core.auth.provider import IdentityProvider, ProviderRegistry
+from titlepipe_core.auth.workos_provider import WorkOSAuthKitProvider
 from titlepipe_core.settings import CoreApiSettings
 
 __all__ = [
@@ -99,10 +104,19 @@ class AuthSeam:
     def can_authenticate(self) -> bool:
         """Whether this process can produce a seat at all.
 
-        False today for every deployed configuration: no real provider adapter
-        exists and no database-backed directory exists. Exposed so a startup log
-        line can say so out loud rather than leaving it to be discovered by a
-        401.
+        🔴 STILL FALSE FOR EVERY DEPLOYED CONFIGURATION, AND THE REASON CHANGED.
+        A real adapter now exists and is registered — see `build_auth_seam`. What
+        is missing is the other half: `directory.py` has no database-backed
+        implementation, so `seats` is `None` and `dependencies.require_seat`
+        refuses with `no_seat_directory_is_configured`. `api/routers/` has no
+        `/auth/login` or `/auth/callback` either, so nothing sets the cookie the
+        WorkOS adapter reads.
+
+        Exposed so a startup log line says that out loud rather than leaving it
+        to be discovered by a 401.
+        `tests/test_auth_seam.py::test_a_deployed_seam_still_cannot_authenticate
+        _because_it_has_no_directory` is what keeps this answer honest as each
+        piece lands.
         """
         return bool(self.providers) and self.seats is not None
 
@@ -110,10 +124,16 @@ class AuthSeam:
 def build_auth_seam(settings: CoreApiSettings) -> AuthSeam:
     """The ONLY place an identity provider is constructed.
 
-    Adopting WorkOS AuthKit or Clerk is a new `auth/<vendor>.py` implementing
+    Adopting a vendor is a new `auth/<vendor>.py` implementing
     `provider.IdentityProvider` and one branch here. No other file in this
     service learns the vendor's name — `dependencies.require_seat` calls the
     registry, and the registry calls whatever is in it.
+
+    🔴 ORDER. WorkOS is asked FIRST. `ProviderRegistry` takes the first adapter
+    that recognises a request, and a developer holding a genuine WorkOS session
+    must not be downgraded to a demo seat by a stale `x-mock-role` the frontend
+    is still sending. The mock adapter answers `None` when its header is absent,
+    so asking WorkOS first costs the development path nothing.
 
     🔴 MACHINE 2 OF 4 (see the module docstring). The mock adapter exists only
     under `mock_auth_enabled`, and `settings.py` will not let that be true in
@@ -126,6 +146,29 @@ def build_auth_seam(settings: CoreApiSettings) -> AuthSeam:
     """
     providers: list[IdentityProvider] = []
     seats: SeatDirectory | None = None
+
+    # Gated on the two FIELDS rather than on `settings.workos_configured`, which
+    # says the same thing: `_workos_is_configured_or_absent` makes the pair
+    # all-or-nothing, but pyright cannot see through a property to a validator,
+    # so reading the property here would leave `api_key` typed `SecretStr | None`
+    # and the construction below unreachable without an assert. The two
+    # expressions are pinned to each other by `tests/test_auth_seam.py::test_the
+    # _seam_registers_workos_exactly_when_settings_says_it_is_configured`.
+    api_key = settings.workos_api_key
+    client_id = settings.workos_client_id
+    if api_key is not None and client_id is not None:
+        providers.append(
+            WorkOSAuthKitProvider(
+                api_key=api_key.get_secret_value(),
+                client_id=client_id,
+                # NOT a second secret. The AuthKit cookie is a Fernet box and
+                # `cookie_seal_password` is already validated as a Fernet key at
+                # startup; `settings.py` records why there is no
+                # `workos_cookie_password` beside it.
+                cookie_password=settings.cookie_seal_password.get_secret_value(),
+                session_cookie_name=settings.workos_session_cookie_name,
+            )
+        )
 
     if settings.mock_auth_enabled:
         providers.append(MockHeaderProvider(environment=settings.environment))

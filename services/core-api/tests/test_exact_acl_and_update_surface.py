@@ -50,9 +50,9 @@ from collections.abc import Callable
 from acl_contract import (
     CATALOG_ACL_QUERY,
     COLUMN_ACL_QUERY,
+    COLUMN_SCOPED_UPDATE_GRANTS,
     CONNECT_TIME_STATE_QUERY,
     DEFAULT_ACL_QUERY,
-    FIELDS_UPDATABLE_COLUMNS,
     acl_divergence,
     column_grant_divergence,
     connect_time_state,
@@ -126,7 +126,7 @@ def test_no_mapped_column_carries_onupdate_and_no_mapper_declares_version_id_col
 # ---------------------------------------------------------------------------
 # (ii) THE GRANTED COLUMN SET vs THE APP'S MUTATED COLUMN SET
 # ---------------------------------------------------------------------------
-def test_the_column_level_grants_are_exactly_0032s_narrowing_of_fields(
+def test_the_column_level_grants_are_exactly_the_two_narrowings(
     migrated_database: str, seam_engine: Callable[[str], Engine]
 ) -> None:
     """🔴 `pg_attribute.attacl` IS READ BY THIS TEST AND BY ALMOST NOTHING ELSE.
@@ -191,13 +191,16 @@ def test_the_column_level_grants_are_exactly_0032s_narrowing_of_fields(
     # THE POSITIVE CONTROL, because both assertions above are satisfied by a query
     # that returned nothing at all — wrong schema name, an `attacl IS NOT NULL`
     # that stopped matching — and an empty catalog is EXACTLY the state this test
-    # used to assert. Seventeen, MEASURED at head 2026-09-05.
-    assert len(column_acls) == len(FIELDS_UPDATABLE_COLUMNS), (
+    # used to assert. Seventeen on `fields` (`0032`) plus two on `users` (`0120`),
+    # derived from the same mapping the expectation above is built from so a third
+    # narrowed table does not need this number edited by hand.
+    expected_column_grants = sum(len(columns) for columns in COLUMN_SCOPED_UPDATE_GRANTS.values())
+    assert len(column_acls) == expected_column_grants, (
         f"the column-ACL read returned {len(column_acls)} rows, not "
-        f"{len(FIELDS_UPDATABLE_COLUMNS)}. Zero here would satisfy both assertions "
-        f"above and would mean 0032's narrowing did not land — which restores a "
-        f"table-wide UPDATE only if somebody also re-granted it, and otherwise "
-        f"means the app cannot correct a field at all."
+        f"{expected_column_grants}. Zero here would satisfy both assertions above "
+        f"and would mean the narrowings did not land — which restores a table-wide "
+        f"UPDATE only if somebody also re-granted it, and otherwise means the app "
+        f"can neither correct a field nor retire a seat."
     )
 
 
@@ -705,7 +708,7 @@ def test_the_only_identity_column_is_the_vendored_one_and_nothing_is_generated(
     WHY THE ONE EXCEPTION COSTS NOTHING, STATED RATHER THAN ASSUMED. The hazard is
     an identity column inside a COLUMN-SCOPED grant, where the server writes a
     column the caller does not hold. `0060` grants the queue at TABLE level only
-    — `test_the_column_level_grants_are_exactly_0032s_narrowing_of_fields` is what
+    — `test_the_column_level_grants_are_exactly_the_two_narrowings` is what
     holds that, since the only column grants in this schema are on `fields` — so
     nobody inserting into `procrastinate_workers` can be short a column privilege
     for `id`. Its sequence needs no `USAGE` either, for a different reason `0060`
@@ -888,10 +891,11 @@ def test_no_table_carries_both_a_column_grant_and_a_before_row_trigger(
         f"name, or `tgisinternal` inverted. The collision assertion above passes "
         f"trivially on an empty read."
     )
-    assert len(column_grants) == 17, (
-        f"the column-ACL read returned {len(column_grants)} rows, not 17. The "
-        f"collision assertion above passes trivially when this is empty, which is "
-        f"what the schema looked like before 0032."
+    expected_column_grants = sum(len(columns) for columns in COLUMN_SCOPED_UPDATE_GRANTS.values())
+    assert len(column_grants) == expected_column_grants, (
+        f"the column-ACL read returned {len(column_grants)} rows, not "
+        f"{expected_column_grants}. The collision assertion above passes trivially "
+        f"when this is empty, which is what the schema looked like before 0032."
     )
 
 
