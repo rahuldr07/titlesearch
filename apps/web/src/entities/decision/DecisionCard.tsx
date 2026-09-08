@@ -25,7 +25,8 @@ export type DecisionCardProps = {
    * `Field.readings` here would be the UI deciding which engines are in the
    * comparison, so the caller passes the pair the server nominated.
    */
-  readonly readings?: { readonly a: FieldReading; readonly b: FieldReading } | undefined;
+  readonly readings?:
+    { readonly a: FieldReading; readonly b: FieldReading } | undefined;
   /**
    * The field's display name and state rubric, both passed in — an entity
    * may not import a feature, so the words arrive as props. Without `label`
@@ -41,7 +42,8 @@ export type DecisionCardProps = {
    * to make one.
    */
   readonly consequence?: string | null | undefined;
-  readonly onOpenCitation?: ((citation: { docId: string; page: number }) => void) | undefined;
+  readonly onOpenCitation?:
+    ((citation: { docId: string; page: number }) => void) | undefined;
   readonly onAdoptReading?: ((reading: FieldReading) => void) | undefined;
   /** Confirm / Edit / Escalate. Composed by the feature, which owns the chords. */
   readonly actions: React.ReactNode;
@@ -71,10 +73,10 @@ export function DecisionCard({
           {label ?? field.path}
         </span>
         {/*
-          * `sel-state` wraps the rubric alone: a spec asserts its exact text,
-          * so the pill has to be a sibling rather than a child — otherwise
-          * the id carries two sentences and the assertion can never hold.
-          */}
+         * `sel-state` wraps the rubric alone: a spec asserts its exact text,
+         * so the pill has to be a sibling rather than a child — otherwise
+         * the id carries two sentences and the assertion can never hold.
+         */}
         <span className="flex items-center gap-4">
           {rubric !== undefined && (
             <span

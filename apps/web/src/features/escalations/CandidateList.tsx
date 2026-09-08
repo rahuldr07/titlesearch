@@ -8,7 +8,11 @@ import { RulePill } from "../../entities/rule/RulePill";
  * composed. The cards select nothing — there is no per-candidate route or
  * selection in this screen's contract.
  */
-export function CandidateList({ candidates }: { readonly candidates: readonly Rule[] }) {
+export function CandidateList({
+  candidates,
+}: {
+  readonly candidates: readonly Rule[];
+}) {
   if (candidates.length === 0) {
     return (
       <Empty

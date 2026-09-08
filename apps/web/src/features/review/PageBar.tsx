@@ -70,29 +70,29 @@ export function PageBar(props: {
       </div>
 
       <div className="flex items-center gap-4">
-      <Toggle
-        data-testid="follow-citation"
-        aria-label="Follow the open field's citation"
-        isSelected={props.following}
-        onChange={props.onFollowing}
-      >
-        {props.following ? "◉ Following" : "○ Free"}
-      </Toggle>
+        <Toggle
+          data-testid="follow-citation"
+          aria-label="Follow the open field's citation"
+          isSelected={props.following}
+          onChange={props.onFollowing}
+        >
+          {props.following ? "◉ Following" : "○ Free"}
+        </Toggle>
 
-      <SegmentedControl
-        label="Page magnification — a view control, not a measurement"
-        selectedKeys={[props.zoom]}
-        onSelectionChange={(keys) => {
-          const picked = [...keys][0];
-          if (isZoom(picked)) props.onZoom(picked);
-        }}
-      >
-        {STEPS.map((step) => (
-          <Segment key={step.id} id={step.id}>
-            {step.label}
-          </Segment>
-        ))}
-      </SegmentedControl>
+        <SegmentedControl
+          label="Page magnification — a view control, not a measurement"
+          selectedKeys={[props.zoom]}
+          onSelectionChange={(keys) => {
+            const picked = [...keys][0];
+            if (isZoom(picked)) props.onZoom(picked);
+          }}
+        >
+          {STEPS.map((step) => (
+            <Segment key={step.id} id={step.id}>
+              {step.label}
+            </Segment>
+          ))}
+        </SegmentedControl>
       </div>
     </div>
   );

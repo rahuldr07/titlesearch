@@ -45,14 +45,15 @@ function Gateway({ delivery }: { readonly delivery: DeliveryWithReport }) {
       <CardHeader>
         <span>Reissue gateway (Law 9)</span>
         <span className="font-mono text-label leading-flat font-semibold text-ink-muted">
-          {version === null ? "no version on this row" : `v${String(version)} immutable`}
+          {version === null
+            ? "no version on this row"
+            : `v${String(version)} immutable`}
         </span>
       </CardHeader>
       <CardBody className="flex flex-col gap-8">
         <p className="font-sans text-meta leading-body text-ink-secondary">
-          Delivered reports are immutable records. Reissuing generates a
-          certified new version with a stated reason, preserving full audit
-          history for the lender.
+          Delivered reports are immutable records. Reissuing generates a certified new
+          version with a stated reason, preserving full audit history for the lender.
         </p>
 
         {reissue.isError && reissue.error !== null && (
@@ -64,8 +65,8 @@ function Gateway({ delivery }: { readonly delivery: DeliveryWithReport }) {
 
         {options.length === 0 ? (
           <p className="font-sans text-label leading-body text-ink-muted">
-            The reason vocabulary has not arrived; without it there is nothing
-            to state on the record, so the act stays closed.
+            The reason vocabulary has not arrived; without it there is nothing to state
+            on the record, so the act stays closed.
           </p>
         ) : (
           <RadioGroup
@@ -123,9 +124,7 @@ function Gateway({ delivery }: { readonly delivery: DeliveryWithReport }) {
 }
 
 /** The row the reissue would supersede: the highest version the server returned. */
-function latest(
-  rows: readonly DeliveryWithReport[],
-): DeliveryWithReport | null {
+function latest(rows: readonly DeliveryWithReport[]): DeliveryWithReport | null {
   return rows.reduce<DeliveryWithReport | null>(
     (best, row) =>
       best === null || (row.report?.version ?? 0) > (best.report?.version ?? 0)

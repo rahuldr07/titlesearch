@@ -49,8 +49,8 @@ export const WithCitationBox: Story = {
       <>
         THIS INDENTURE, made this 14th day of March, 1974, between JOHN P. WHITFIELD and
         ELEANOR M. WHITFIELD, husband and wife, party of the first part, and{" "}
-        <CitationBox>MARIA L. ESTRADA, a married woman</CitationBox> as her sole and separate
-        property, party of the second part, WITNESSETH.
+        <CitationBox>MARIA L. ESTRADA, a married woman</CitationBox> as her sole and
+        separate property, party of the second part, WITNESSETH.
       </>
     ),
   },

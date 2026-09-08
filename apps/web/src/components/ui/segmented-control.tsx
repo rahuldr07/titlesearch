@@ -76,7 +76,12 @@ export type SegmentProps = Omit<
  * group-level wrapper above, so a whole blocked control still states its
  * rule on hover.
  */
-export function Segment({ disabledBecause, children, accent = false, ...props }: SegmentProps) {
+export function Segment({
+  disabledBecause,
+  children,
+  accent = false,
+  ...props
+}: SegmentProps) {
   return (
     <ToggleButton
       {...props}

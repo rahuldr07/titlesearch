@@ -1,7 +1,11 @@
-import { LabelContext, Label as LabelPrimitive, type LabelProps } from "react-aria-components"
+import {
+  LabelContext,
+  Label as LabelPrimitive,
+  type LabelProps,
+} from "react-aria-components";
 
-import { cx } from "@/components/ui/cx"
-import { labelClass } from "@/components/ui/field-chrome"
+import { cx } from "@/components/ui/cx";
+import { labelClass } from "@/components/ui/field-chrome";
 
 /**
  * The field label: 11px w700 grey above the control. Disabled recedes to
@@ -23,19 +27,19 @@ function Label({ className, htmlFor, slot, ...props }: LabelProps) {
         "group-data-[disabled=true]:text-ink-disabled",
         "peer-disabled:cursor-not-allowed peer-disabled:text-ink-disabled",
         "peer-data-disabled:text-ink-disabled",
-        className
+        className,
       )}
       {...props}
       htmlFor={htmlFor}
       slot={slot}
     />
-  )
+  );
 
   if (htmlFor && slot === undefined) {
-    return <LabelContext.Provider value={null}>{label}</LabelContext.Provider>
+    return <LabelContext.Provider value={null}>{label}</LabelContext.Provider>;
   }
 
-  return label
+  return label;
 }
 
-export { Label }
+export { Label };

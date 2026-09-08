@@ -33,7 +33,12 @@ export type ScrollAreaProps = {
   readonly className?: string | undefined;
 };
 
-export function ScrollArea({ children, label, axis = "vertical", className }: ScrollAreaProps) {
+export function ScrollArea({
+  children,
+  label,
+  axis = "vertical",
+  className,
+}: ScrollAreaProps) {
   return (
     <div
       data-slot="scroll-area"

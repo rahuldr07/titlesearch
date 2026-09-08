@@ -33,7 +33,9 @@ export type DisabledAttributes = {
  * `title` is set only when disabled, so an enabled control does not acquire a
  * stray native tooltip that would shadow a real one.
  */
-export function disabledAttributes(reason: string | null | undefined): DisabledAttributes {
+export function disabledAttributes(
+  reason: string | null | undefined,
+): DisabledAttributes {
   const blocked = typeof reason === "string" && reason.length > 0;
   return {
     isDisabled: blocked,

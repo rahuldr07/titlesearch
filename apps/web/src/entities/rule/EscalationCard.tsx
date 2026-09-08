@@ -22,7 +22,11 @@ export type EscalationCardProps = {
   readonly className?: string | undefined;
 };
 
-export function EscalationCard({ escalation, actions, className }: EscalationCardProps) {
+export function EscalationCard({
+  escalation,
+  actions,
+  className,
+}: EscalationCardProps) {
   /*
    * Not a derivation of state — a restatement of the mandatory rule.
    * `rule_id` is the server's own field; nothing about the card's appearance
@@ -66,12 +70,14 @@ export function EscalationCard({ escalation, actions, className }: EscalationCar
           data-refusal="no-rule"
           className="rounded-sm border border-state-halt-border bg-state-halt-surface px-6 py-4 font-sans text-meta leading-close text-state-halt"
         >
-          Open. A ruling alone is not a resolution — this closes when a rule is
-          cited or drafted.
+          Open. A ruling alone is not a resolution — this closes when a rule is cited or
+          drafted.
         </p>
       )}
 
-      {actions !== undefined && <div className="flex items-center gap-6">{actions}</div>}
+      {actions !== undefined && (
+        <div className="flex items-center gap-6">{actions}</div>
+      )}
     </article>
   );
 }

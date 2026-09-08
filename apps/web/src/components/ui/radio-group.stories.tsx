@@ -50,7 +50,9 @@ export const GroupBlocked: Story = {
     expect(
       canvasElement.querySelector('[data-slot="radio-group"][data-disabled-reason]'),
     ).not.toBeNull();
-    expect(canvasElement.querySelector("[title]")?.getAttribute("title")).toContain("released");
+    expect(canvasElement.querySelector("[title]")?.getAttribute("title")).toContain(
+      "released",
+    );
   },
 };
 

@@ -17,7 +17,9 @@ export function RecentOrders() {
     <section className="flex flex-col gap-8">
       <div className="flex flex-wrap items-baseline justify-between gap-6">
         <div className="flex items-baseline gap-5">
-          <h2 className="text-body font-bold leading-tight text-ink-primary">Recent orders</h2>
+          <h2 className="text-body font-bold leading-tight text-ink-primary">
+            Recent orders
+          </h2>
           {/* "Latest 10 of 35", from the server's own two numbers.
               `page_size` clamped to `total` rather than `orders.length`
               counted — the rows are never re-counted here. */}

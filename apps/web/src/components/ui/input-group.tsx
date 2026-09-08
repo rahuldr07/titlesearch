@@ -1,12 +1,12 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { Group, type GroupProps } from "react-aria-components"
+import * as React from "react";
+import { Group, type GroupProps } from "react-aria-components";
 
-import { cx } from "@/components/ui/cx"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { controlClass, controlHeight } from "@/components/ui/field-chrome"
+import { cx } from "@/components/ui/cx";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { controlClass, controlHeight } from "@/components/ui/field-chrome";
 
 /**
  * A control with things attached — a search box with a magnifier, a money
@@ -33,11 +33,11 @@ function InputGroup({ className, ...props }: GroupProps) {
         "has-[>[data-align=block-end]]:h-auto has-[>[data-align=block-end]]:flex-col",
         "has-[>[data-align=block-start]]:h-auto has-[>[data-align=block-start]]:flex-col",
         "has-[>textarea]:h-auto",
-        className
+        className,
       )}
       {...props}
     />
-  )
+  );
 }
 
 /**
@@ -49,7 +49,7 @@ const strippedControl = [
   "flex-1 rounded-sm border-0 bg-transparent px-0 outline-none",
   "focus-visible:outline-none focus-visible:border-0",
   "disabled:bg-transparent disabled:border-0",
-]
+];
 
 function InputGroupInput({ className, ...props }: React.ComponentProps<typeof Input>) {
   return (
@@ -58,18 +58,21 @@ function InputGroupInput({ className, ...props }: React.ComponentProps<typeof In
       className={cx(strippedControl, className)}
       {...props}
     />
-  )
+  );
 }
 
-function InputGroupTextarea({ className, ...props }: React.ComponentProps<typeof Textarea>) {
+function InputGroupTextarea({
+  className,
+  ...props
+}: React.ComponentProps<typeof Textarea>) {
   return (
     <Textarea
       data-slot="input-group-control"
       className={cx(strippedControl, "resize-none py-4", className)}
       {...props}
     />
-  )
+  );
 }
 
-export { InputGroup, InputGroupInput, InputGroupTextarea }
-export { InputGroupAddon, InputGroupButton, InputGroupText } from "./input-group-parts"
+export { InputGroup, InputGroupInput, InputGroupTextarea };
+export { InputGroupAddon, InputGroupButton, InputGroupText } from "./input-group-parts";

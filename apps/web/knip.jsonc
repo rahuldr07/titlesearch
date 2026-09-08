@@ -10,33 +10,25 @@
     "e2e/**/*.spec.ts",
     "e2e/helpers/*.ts",
     "e2e-live/**/*.spec.ts",
-    "*.test.ts"
+    "*.test.ts",
   ],
-  "project": [
-    "src/**/*.{ts,tsx,css}",
-    ".storybook/**/*.ts",
-    "scripts/*.mjs"
-  ],
+  "project": ["src/**/*.{ts,tsx,css}", ".storybook/**/*.ts", "scripts/*.mjs"],
   "ignoreDependencies": [
     "@tanstack/react-table",
     "react-hook-form",
     "@hookform/resolvers",
     "msw",
-    "@testing-library/react"
+    "@testing-library/react",
   ],
-  "ignoreBinaries": [
-    "psql"
-  ],
+  "ignoreBinaries": ["psql"],
   "rules": {
     "types": "warn",
-    "enumMembers": "warn"
+    "enumMembers": "warn",
   },
   // Hides exactly 25 unused exports + 42 unused exported types (measured
   // 2026-09-08, knip 6.32.3), every one in the ui-kit barrel — no unused
   // FILES, so no component is wholly dead. Removal of those exports is
   // owned by a dead-code batch; the inventory is in
   // docs/refactor-2026-09/CI.md §knip. Delete this ignore when that lands.
-  "ignore": [
-    "src/components/ui/**"
-  ]
+  "ignore": ["src/components/ui/**"],
 }

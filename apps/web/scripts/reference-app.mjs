@@ -24,8 +24,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { gunzipSync } from "node:zlib";
 import { join, resolve } from "node:path";
 
-const EXPORT =
-  "docs/frontend/design-2026-08/reference-app.html";
+const EXPORT = "docs/frontend/design-2026-08/reference-app.html";
 
 /** The two payload lines, found by shape rather than by number — the export
  *  is regenerated from time to time and a hard-coded 370/382 would rot into a

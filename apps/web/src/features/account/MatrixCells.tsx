@@ -24,7 +24,10 @@ export function ModuleRows({
         {module}
       </span>
       {rows.map((row) => (
-        <div key={row.id} className="col-span-5 grid grid-cols-subgrid items-center border-b border-line-subtle py-4">
+        <div
+          key={row.id}
+          className="col-span-5 grid grid-cols-subgrid items-center border-b border-line-subtle py-4"
+        >
           <div className="flex min-w-0 flex-col gap-1">
             <span className="font-sans text-meta leading-close font-medium text-ink-primary">
               {row.label}
@@ -34,7 +37,9 @@ export function ModuleRows({
                 </span>
               )}
             </span>
-            <span className="font-sans text-label leading-flat text-ink-muted">{row.note}</span>
+            <span className="font-sans text-label leading-flat text-ink-muted">
+              {row.note}
+            </span>
           </div>
           {row.cells.map((cell) => (
             <MatrixCell

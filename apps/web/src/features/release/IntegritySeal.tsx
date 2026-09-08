@@ -13,9 +13,9 @@ export function IntegritySeal(props: {
           No integrity seal
         </span>
         <p className="font-sans text-label leading-body text-scan-ink">
-          The digest exists only once a release is filed. The server computes it
-          over the composed manifest and returns it; until then this sheet is a
-          proof, not a deliverable.
+          The digest exists only once a release is filed. The server computes it over
+          the composed manifest and returns it; until then this sheet is a proof, not a
+          deliverable.
         </p>
       </div>
     );

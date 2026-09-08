@@ -8,9 +8,7 @@ import { cx } from "../../components/ui";
  * one. A flagged reading renders the server's `note` verbatim, never a
  * sentence composed here.
  */
-export function OpticalProfile(props: {
-  readonly optical: readonly OpticalReading[];
-}) {
+export function OpticalProfile(props: { readonly optical: readonly OpticalReading[] }) {
   return (
     <div className="overflow-hidden rounded-lg border border-line-strong bg-surface-panel">
       <h2 className="border-b border-line-subtle bg-surface-sunken px-7 py-5 text-label font-bold leading-flat text-ink-faint">

@@ -22,7 +22,8 @@ export function DocketExcerpt({
     >
       <div className="flex items-center justify-between gap-4 border-b border-action-border bg-action-surface px-7 py-3">
         <span className="font-sans text-label leading-flat font-semibold text-ink-muted">
-          {excerpt.note ?? `Source excerpt · ${excerpt.doc_id} · p${String(excerpt.page)}`}
+          {excerpt.note ??
+            `Source excerpt · ${excerpt.doc_id} · p${String(excerpt.page)}`}
         </span>
         {orderId !== null && (
           <Link
@@ -51,7 +52,11 @@ export function DocketExcerpt({
  * The determination for a seat that does not hold it — visible and disabled
  * under the hint; the button's disablement carries the same sentence.
  */
-export function LockedDetermination({ escalation }: { readonly escalation: Escalation }) {
+export function LockedDetermination({
+  escalation,
+}: {
+  readonly escalation: Escalation;
+}) {
   const hint =
     escalation.qc_owner !== null
       ? `This determination belongs to QC — with ${escalation.qc_owner}. You are signed in without the QC grant — read-only here.`
@@ -67,7 +72,11 @@ export function LockedDetermination({ escalation }: { readonly escalation: Escal
           {hint}
         </p>
         <div>
-          <Button data-testid="resolve-btn-locked" variant="primary" disabledBecause={hint}>
+          <Button
+            data-testid="resolve-btn-locked"
+            variant="primary"
+            disabledBecause={hint}
+          >
             Resolve the cluster
           </Button>
         </div>
@@ -84,27 +93,26 @@ export function IdentityGrid({
   readonly identity: NonNullable<Escalation["identity"]>;
 }) {
   return (
-
-            <div
-              data-testid="identity-grid"
-              className="grid grid-cols-2 overflow-hidden rounded-md border border-line-strong"
-            >
-              <div className="flex flex-col gap-1 border-r border-line-strong px-7 py-5">
-                <span className="font-sans text-label leading-flat font-semibold text-ink-muted">
-                  {identity.debtor_label}
-                </span>
-                <span className="font-mono text-body leading-close font-semibold text-ink-primary">
-                  {identity.debtor}
-                </span>
-              </div>
-              <div className="flex flex-col gap-1 px-7 py-5">
-                <span className="font-sans text-label leading-flat font-semibold text-ink-muted">
-                  {identity.owner_label}
-                </span>
-                <span className="font-mono text-body leading-close font-semibold text-ink-primary">
-                  {identity.owner}
-                </span>
-              </div>
-            </div>
-            );
+    <div
+      data-testid="identity-grid"
+      className="grid grid-cols-2 overflow-hidden rounded-md border border-line-strong"
+    >
+      <div className="flex flex-col gap-1 border-r border-line-strong px-7 py-5">
+        <span className="font-sans text-label leading-flat font-semibold text-ink-muted">
+          {identity.debtor_label}
+        </span>
+        <span className="font-mono text-body leading-close font-semibold text-ink-primary">
+          {identity.debtor}
+        </span>
+      </div>
+      <div className="flex flex-col gap-1 px-7 py-5">
+        <span className="font-sans text-label leading-flat font-semibold text-ink-muted">
+          {identity.owner_label}
+        </span>
+        <span className="font-mono text-body leading-close font-semibold text-ink-primary">
+          {identity.owner}
+        </span>
+      </div>
+    </div>
+  );
 }

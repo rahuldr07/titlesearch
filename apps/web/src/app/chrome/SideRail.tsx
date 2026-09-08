@@ -1,9 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useRouterState } from "@tanstack/react-router";
-import {
-  RailBadgesResponse,
-  type GrantedPermissionSchema,
-} from "@titlepipe/contract";
+import { RailBadgesResponse, type GrantedPermissionSchema } from "@titlepipe/contract";
 import { get } from "../../shared/api";
 import { SECTION_ORDER } from "./doors";
 import { RailBrand, RailSearch } from "./RailBrand";

@@ -67,7 +67,9 @@ function Cell(props: {
 }) {
   return (
     <div className="flex gap-5 text-meta">
-      <dt className="w-60 shrink-0 leading-body font-medium text-ink-muted">{props.term}</dt>
+      <dt className="w-60 shrink-0 leading-body font-medium text-ink-muted">
+        {props.term}
+      </dt>
       {props.value === null ? (
         <dd className="min-w-0 flex-1 leading-body text-ink-muted">
           {props.absent ?? "Not stated"}

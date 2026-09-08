@@ -110,7 +110,10 @@ export function ReleaseAct(props: { readonly composed: CompositionResponse }) {
       </div>
 
       {held !== null && (
-        <p data-testid="release-hold" className="font-sans text-meta leading-body text-ink-secondary">
+        <p
+          data-testid="release-hold"
+          className="font-sans text-meta leading-body text-ink-secondary"
+        >
           {held}
         </p>
       )}

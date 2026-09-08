@@ -63,9 +63,9 @@ export function IngestScreen() {
             Package Intake &amp; Registration
           </h1>
           <p className="max-w-320 font-sans text-body leading-body text-ink-muted">
-            Upload scanned county abstract documents. Files undergo automated
-            SHA-256 verification and antivirus quarantine before binding to
-            examiner workstation.
+            Upload scanned county abstract documents. Files undergo automated SHA-256
+            verification and antivirus quarantine before binding to examiner
+            workstation.
           </p>
         </header>
 

@@ -55,7 +55,9 @@ body {
  * ring the whole modal card; `dialog.tsx`'s own `outline-none` loses to this
  * rule on source order at equal specificity.
  */
-:where(a, button, input, textarea, select, [tabindex]):not([role="dialog"]):focus-visible {
+:where(a, button, input, textarea, select, [tabindex]):not(
+    [role="dialog"]
+  ):focus-visible {
   outline: 2px solid var(--color-action);
   outline-offset: 2px;
 }

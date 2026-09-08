@@ -1,12 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent } from "storybook/test";
 
-import {
-  Command,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "./command";
+import { Command, CommandInput, CommandItem, CommandList } from "./command";
 import { CommandPalette } from "./commandPalette";
 import { onCanvas } from "./kitGround";
 

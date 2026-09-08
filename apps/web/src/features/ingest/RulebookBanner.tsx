@@ -23,8 +23,8 @@ export function RulebookBanner(props: {
         data-testid="rulebook-banner-idle"
         className="rounded-md border border-line-strong bg-surface-sunken px-6 py-5 font-sans text-meta leading-body text-ink-muted"
       >
-        Choose a client and a product, and the checklist that resolves for the
-        pair is named here.
+        Choose a client and a product, and the checklist that resolves for the pair is
+        named here.
       </p>
     );
   }
@@ -41,8 +41,8 @@ export function RulebookBanner(props: {
         data-testid="rulebook-banner-unresolved"
         className="rounded-md border border-state-attend-border bg-state-attend-surface px-6 py-5 font-sans text-meta leading-body text-state-attend"
       >
-        The server has not resolved a checklist for this client and product.
-        Nothing is assumed in its place.
+        The server has not resolved a checklist for this client and product. Nothing is
+        assumed in its place.
       </p>
     );
   }

@@ -79,7 +79,9 @@ export const StageBlocked: Story = {
      * stage vanishes. See tabs.tsx.
      */
     expect(document.querySelectorAll("[data-slot='tabs-trigger']")).toHaveLength(2);
-    const tab = document.querySelector("[data-slot='tabs-trigger'][data-disabled-reason]");
+    const tab = document.querySelector(
+      "[data-slot='tabs-trigger'][data-disabled-reason]",
+    );
     expect(tab?.getAttribute("data-disabled-reason")).toBe(reason);
     // Rule 12 again: blocked, not hidden.
     expect(tab?.textContent).toContain("Release");

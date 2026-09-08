@@ -6,7 +6,11 @@
  */
 
 /* ── disabled: this kit has no boolean disabled prop ──────────────────────── */
-export { disabledAttributes, type Disablement, type DisabledAttributes } from "./disabled";
+export {
+  disabledAttributes,
+  type Disablement,
+  type DisabledAttributes,
+} from "./disabled";
 export { cx } from "./cx";
 
 /* ── controls ─────────────────────────────────────────────────────────────── */
@@ -60,11 +64,22 @@ export {
    own row rendering, and a caller-supplied <tr> is exactly what stops it
    virtualizing. A screen supplies columns. */
 export { Table, type TableProps } from "./table";
-export { statusColumn, type ColumnAlign, type RowStatus, type TableColumn } from "./tableColumns";
+export {
+  statusColumn,
+  type ColumnAlign,
+  type RowStatus,
+  type TableColumn,
+} from "./tableColumns";
 export { DataCell } from "./dataCell";
 
 /* ── overlays ─────────────────────────────────────────────────────────────── */
-export { Dialog, DialogBody, DialogFooter, DialogTrigger, type DialogProps } from "./dialog";
+export {
+  Dialog,
+  DialogBody,
+  DialogFooter,
+  DialogTrigger,
+  type DialogProps,
+} from "./dialog";
 export {
   Popover,
   PopoverDescription,
@@ -76,8 +91,14 @@ export {
 export { Tooltip, TooltipTrigger, type ChipTooltipProps } from "./tooltip";
 
 /* ── navigation ───────────────────────────────────────────────────────────── */
-export { BreadcrumbTrail, BreadcrumbItem, BreadcrumbLink, BreadcrumbCurrent,
-  BreadcrumbSeparator, type BreadcrumbTrailProps } from "./breadcrumb";
+export {
+  BreadcrumbTrail,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbCurrent,
+  BreadcrumbSeparator,
+  type BreadcrumbTrailProps,
+} from "./breadcrumb";
 export {
   Tabs,
   TabList,
@@ -95,17 +116,34 @@ export { Badge, StatusMark, type Mark, type BadgeProps } from "./badge";
 export { Separator } from "./separator";
 export { Skeleton } from "./skeleton";
 export { Empty } from "./empty";
-export { Progress, ProgressTrack, ProgressIndicator, ProgressLabel, ProgressValue } from "./progress";
+export {
+  Progress,
+  ProgressTrack,
+  ProgressIndicator,
+  ProgressLabel,
+  ProgressValue,
+} from "./progress";
 /* The one the screens use. `progress` above is the bar, for continuous work. */
 export { ProgressMeter, type ProgressMeterProps } from "./progress-meter";
 export { Kbd } from "./kbd";
 export { Card, CardHeader, CardBody, InnerPanel, type CardProps } from "./card";
-export { SegmentedControl, Segment, type SegmentedControlProps, type SegmentProps } from "./segmented-control";
+export {
+  SegmentedControl,
+  Segment,
+  type SegmentedControlProps,
+  type SegmentProps,
+} from "./segmented-control";
 export { Alert, type AlertProps, type AlertTone } from "./alert";
 export { Avatar, AvatarLabel, type AvatarProps } from "./avatar";
 export { Spinner, type SpinnerProps } from "./spinner";
 export { ScrollArea, type ScrollAreaProps } from "./scroll-area";
-export { Split, SplitPanel, SplitHandle, type SplitProps, type SplitPanelProps } from "./resizable";
+export {
+  Split,
+  SplitPanel,
+  SplitHandle,
+  type SplitProps,
+  type SplitPanelProps,
+} from "./resizable";
 export { DECISION_MIN, DECISION_MAX } from "./splitBand";
 /* The rail column. */
 export * from "./sidebar";

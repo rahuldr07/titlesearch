@@ -20,7 +20,9 @@ export type StatePillProps = {
  * noValueStates.ts is one: the six members must differ in every channel, and
  * a table can be read at a glance to check that.
  */
-const PILL: Readonly<Record<FieldState, { mark: string; label: string; chrome: string }>> = {
+const PILL: Readonly<
+  Record<FieldState, { mark: string; label: string; chrome: string }>
+> = {
   /** The pipeline has not ruled yet. Resting, receding, no weight. */
   pending: { mark: "•", label: "Pending", chrome: "text-ink-muted font-normal" },
   /**
@@ -39,9 +41,17 @@ const PILL: Readonly<Record<FieldState, { mark: string; label: string; chrome: s
     chrome: "text-state-attend font-semibold",
   },
   /** A person ruled it correct. Full settled weight. */
-  confirmed: { mark: "✓", label: "Confirmed", chrome: "text-state-settled font-semibold" },
+  confirmed: {
+    mark: "✓",
+    label: "Confirmed",
+    chrome: "text-state-settled font-semibold",
+  },
   /** A person changed it. Settled, and distinguished by its own sentence. */
-  corrected: { mark: "✓", label: "Corrected", chrome: "text-state-settled font-semibold" },
+  corrected: {
+    mark: "✓",
+    label: "Corrected",
+    chrome: "text-state-settled font-semibold",
+  },
   /** Stopped, and it stays stopped until a rule resolves it. */
   escalated: { mark: "◆", label: "Escalated", chrome: "text-state-halt font-semibold" },
 };

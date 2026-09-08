@@ -15,8 +15,8 @@ import { escalations as escalationsRead } from "../../shared/queries";
 export function PolicyExceptions(props: { readonly orderId: string }) {
   const escalations = useRead(escalationsRead);
 
-  const namingThisOrder = (escalations.data?.escalations ?? []).filter(
-    (escalation) => escalation.order_ids.includes(props.orderId),
+  const namingThisOrder = (escalations.data?.escalations ?? []).filter((escalation) =>
+    escalation.order_ids.includes(props.orderId),
   );
 
   return (
@@ -28,7 +28,9 @@ export function PolicyExceptions(props: { readonly orderId: string }) {
             data-testid="policy-exceptions-count"
             className="rounded-pill border border-state-halt-border bg-state-halt-surface px-4 py-1 font-mono text-label font-bold leading-flat text-state-halt"
           >
-            {namingThisOrder.length === 1 ? "1 item" : `${namingThisOrder.length} items`}
+            {namingThisOrder.length === 1
+              ? "1 item"
+              : `${namingThisOrder.length} items`}
           </span>
         )}
       </CardHeader>
@@ -67,8 +69,8 @@ function ExceptionRows(props: {
         data-testid="policy-exceptions-none"
         className="font-sans text-meta leading-body text-ink-secondary"
       >
-        No escalation names this order. That is the server&apos;s answer, not an
-        absence of one.
+        No escalation names this order. That is the server&apos;s answer, not an absence
+        of one.
       </p>
     );
   }
@@ -89,8 +91,7 @@ function ExceptionRows(props: {
           </span>
           {exception.resolution === null ? (
             <span className="font-sans text-label leading-body text-state-attend">
-              Open — settled at the escalations door, and refused there without a
-              rule.
+              Open — settled at the escalations door, and refused there without a rule.
             </span>
           ) : (
             <span className="font-sans text-label leading-body text-ink-secondary">
@@ -101,9 +102,7 @@ function ExceptionRows(props: {
                 </span>
               )}
               {exception.resolved_by !== null && (
-                <span className="ml-4 text-ink-muted">
-                  {exception.resolved_by}
-                </span>
+                <span className="ml-4 text-ink-muted">{exception.resolved_by}</span>
               )}
             </span>
           )}

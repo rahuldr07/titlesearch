@@ -38,8 +38,8 @@ export function AccessPanel() {
                   data-testid="rbac-readonly-banner"
                   className="rounded-md border border-state-attend-border bg-state-attend-surface px-7 py-4 font-sans text-meta leading-body text-state-attend"
                 >
-                  Read-only — RBAC grants this seat VIEW access to settings.
-                  Role changes and cell edits are disabled.
+                  Read-only — RBAC grants this seat VIEW access to settings. Role
+                  changes and cell edits are disabled.
                 </p>
               )}
               <Card padding="none">

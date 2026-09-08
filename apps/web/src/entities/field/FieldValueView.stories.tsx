@@ -30,7 +30,9 @@ type Story = StoryObj<typeof meta>;
 
 /** The ordinary case: a value that carries its source. */
 export const Cited: Story = {
-  args: { value: { kind: "cited", cited: { value: "MARIA L. ESTRADA", citation: CITATION } } },
+  args: {
+    value: { kind: "cited", cited: { value: "MARIA L. ESTRADA", citation: CITATION } },
+  },
 };
 
 export const CitedClickable: Story = {
@@ -104,7 +106,12 @@ export const AbsencesAndTheDefect: Story = {
   args: { value: { kind: "uncited", value: "MARIA L. ESTRADA" } },
   render: () => (
     <div className="flex flex-col gap-8">
-      <FieldValueView value={{ kind: "cited", cited: { value: "MARIA L. ESTRADA", citation: CITATION } }} />
+      <FieldValueView
+        value={{
+          kind: "cited",
+          cited: { value: "MARIA L. ESTRADA", citation: CITATION },
+        }}
+      />
       <FieldValueView value={{ kind: "uncited", value: "MARIA L. ESTRADA" }} />
       {NaReason.options.map((reason) => (
         <FieldValueView key={reason} value={naFieldValue(reason, null)} />

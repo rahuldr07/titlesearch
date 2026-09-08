@@ -54,9 +54,9 @@ export function ShortcutsOverlay() {
           </div>
         </div>
         <p className="text-meta leading-body text-ink-muted">
-          Every row is a key this app installs. A shortcut the screens do not
-          bind cannot be listed here. The four no-value states are not keys —
-          they are in the no-value guide, which the command palette opens.
+          Every row is a key this app installs. A shortcut the screens do not bind
+          cannot be listed here. The four no-value states are not keys — they are in the
+          no-value guide, which the command palette opens.
         </p>
       </DialogBody>
       <DialogFooter>

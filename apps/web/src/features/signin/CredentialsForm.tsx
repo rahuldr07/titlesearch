@@ -47,8 +47,8 @@ export function CredentialsForm() {
           role="alert"
           className="text-meta leading-body text-state-halt"
         >
-          Password sign-in is not connected. This build has no authentication
-          service behind it — use a demo account below.
+          Password sign-in is not connected. This build has no authentication service
+          behind it — use a demo account below.
         </p>
       )}
     </Form>

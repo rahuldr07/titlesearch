@@ -42,9 +42,7 @@ test("intake runs the gateway inline on file drop and renders the server's verdi
   await expect(steps).toHaveCount(3);
   await expect(steps.first()).toHaveAttribute("data-state", "passed");
   await expect(steps.last()).toHaveAttribute("data-state", "passed");
-  await expect(page.getByTestId("quarantine-pill")).toContainText(
-    "Quarantine Clear",
-  );
+  await expect(page.getByTestId("quarantine-pill")).toContainText("Quarantine Clear");
 
   // The digest is DATA (QuarantineResponse.sha256), rendered verbatim.
   await expect(page.getByTestId("sha256")).toContainText("sha256");
@@ -54,9 +52,10 @@ test("intake runs the gateway inline on file drop and renders the server's verdi
   // the mock's contrast row is the server saying no, and it renders as sent.
   const readings = page.getByTestId("optical-reading");
   await expect(readings).toHaveCount(3);
-  await expect(
-    readings.filter({ hasText: "Contrast floor" }),
-  ).toHaveAttribute("data-ok", "false");
+  await expect(readings.filter({ hasText: "Contrast floor" })).toHaveAttribute(
+    "data-ok",
+    "false",
+  );
   await expect(readings.filter({ hasText: "Contrast floor" })).toContainText(
     "flagged under Law 3",
   );

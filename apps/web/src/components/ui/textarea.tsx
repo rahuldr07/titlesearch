@@ -1,9 +1,12 @@
-import * as React from "react"
-import { composeRenderProps, TextArea as TextareaPrimitive } from "react-aria-components"
+import * as React from "react";
+import {
+  composeRenderProps,
+  TextArea as TextareaPrimitive,
+} from "react-aria-components";
 
-import { cx } from "@/components/ui/cx"
-import { disabledNativeAttributes, type Disablement } from "@/components/ui/disabled"
-import { controlClass } from "@/components/ui/field-chrome"
+import { cx } from "@/components/ui/cx";
+import { disabledNativeAttributes, type Disablement } from "@/components/ui/disabled";
+import { controlClass } from "@/components/ui/field-chrome";
 
 /**
  * The multi-line control, on the same box as Input (field-chrome.ts).
@@ -18,8 +21,8 @@ export type TextareaProps = Omit<
 > &
   Disablement & {
     /** Mono is for data only. Opt in; nothing infers it. */
-    readonly data?: boolean | undefined
-  }
+    readonly data?: boolean | undefined;
+  };
 
 function Textarea({ className, data, disabledBecause, ...props }: TextareaProps) {
   return (
@@ -32,11 +35,11 @@ function Textarea({ className, data, disabledBecause, ...props }: TextareaProps)
           controlClass,
           "flex field-sizing-content min-h-36 py-5",
           data === true && "font-mono",
-          resolved
-        )
+          resolved,
+        ),
       )}
     />
-  )
+  );
 }
 
-export { Textarea }
+export { Textarea };

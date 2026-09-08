@@ -33,7 +33,9 @@ export function DecisionQuestion({ asking, why }: DecisionQuestionProps) {
   return (
     <div data-decision-question="authored" className="flex flex-col gap-3">
       {/* 28px — the decision question's size. */}
-      <h2 className={cx("font-sans text-title leading-tight text-ink-primary")}>{asking}</h2>
+      <h2 className={cx("font-sans text-title leading-tight text-ink-primary")}>
+        {asking}
+      </h2>
       {/*
         `why` is independently optional. An authored question with no authored
         reason renders as a question with no reason — not as a question with a

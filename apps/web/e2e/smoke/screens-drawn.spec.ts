@@ -53,10 +53,14 @@ test("templates architect: catalog, live sheet, split diff, inspector and save d
   await expect(page.getByTestId("sheet-block-vesting")).toBeVisible();
   // NA simulation swaps in the SERVED declaration string.
   await page.getByTestId("na-sim-unreadable").click();
-  await expect(page.getByTestId("sheet-na-vesting")).toContainText("Unreadable on source deed");
+  await expect(page.getByTestId("sheet-na-vesting")).toContainText(
+    "Unreadable on source deed",
+  );
   // Split diff draws baseline against the client's phrasing.
   await page.getByRole("radio", { name: "Split diff" }).click();
-  await expect(page.getByTestId("diff-vesting")).toContainText("Product baseline default");
+  await expect(page.getByTestId("diff-vesting")).toContainText(
+    "Product baseline default",
+  );
   // The drawn Save exists (live for the admin dev-default seat).
   await expect(page.getByTestId("template-save")).toBeVisible();
 });

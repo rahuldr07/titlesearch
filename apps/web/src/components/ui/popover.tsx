@@ -31,7 +31,11 @@ export type SurfacePopoverProps = Omit<PopoverProps, "className"> & {
   readonly width?: "natural" | "trigger";
 };
 
-export function Popover({ offset = 6, width = "natural", ...props }: SurfacePopoverProps) {
+export function Popover({
+  offset = 6,
+  width = "natural",
+  ...props
+}: SurfacePopoverProps) {
   return (
     <PopoverPrimitive
       {...props}

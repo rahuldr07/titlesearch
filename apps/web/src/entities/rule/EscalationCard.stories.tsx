@@ -44,7 +44,10 @@ export const Open: Story = { args: { escalation: BASE } };
  */
 export const RuledButNoRule: Story = {
   args: {
-    escalation: { ...BASE, resolution: "Take the reading that matches the vesting deed." },
+    escalation: {
+      ...BASE,
+      resolution: "Take the reading that matches the vesting deed.",
+    },
   },
   play: async ({ canvasElement }) => {
     const card = canvasElement.querySelector("[data-escalation]");

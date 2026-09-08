@@ -3,7 +3,13 @@ import type { BlindEntryInput, CaptureScheduleResponse } from "@titlepipe/contra
 import { useRead } from "../../app/useRead";
 import { QueryState } from "../../entities/state/QueryState";
 import { CAPTURE_ORDER, captureSchedule } from "../../shared/blindQueries";
-import { blankSheet, isAnswered, toWire, type DraftEntry, type DraftSheet } from "./draftEntry";
+import {
+  blankSheet,
+  isAnswered,
+  toWire,
+  type DraftEntry,
+  type DraftSheet,
+} from "./draftEntry";
 import { CaptureSheet } from "./CaptureSheet";
 import { CaptureReceipt } from "./CaptureReceipt";
 import { SeatGaps } from "./SeatGaps";
@@ -33,10 +39,10 @@ export function BlindSeatScreen() {
           Capture seat
         </h1>
         <p className="font-sans text-meta leading-body text-ink-secondary">
-          Key what the package says, field by field, with the page it came off
-          and how sure you are. You are not shown the machine&rsquo;s reading or
-          the other seat&rsquo;s — that is what makes the measurement worth
-          taking, and the server enforces it rather than this screen.
+          Key what the package says, field by field, with the page it came off and how
+          sure you are. You are not shown the machine&rsquo;s reading or the other
+          seat&rsquo;s — that is what makes the measurement worth taking, and the server
+          enforces it rather than this screen.
         </p>
       </div>
 
@@ -52,7 +58,9 @@ export function BlindSeatScreen() {
 }
 
 function SheetBody(props: { readonly schedule: CaptureScheduleResponse }) {
-  const [sheet, setSheet] = useState<DraftSheet>(() => blankSheet(props.schedule.sections));
+  const [sheet, setSheet] = useState<DraftSheet>(() =>
+    blankSheet(props.schedule.sections),
+  );
 
   const capture = useCapture(props.schedule.order_id, () => {
     // The server accepted them; the sheet is cleared for the next package. The

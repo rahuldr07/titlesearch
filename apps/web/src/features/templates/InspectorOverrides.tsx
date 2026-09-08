@@ -32,8 +32,7 @@ export function InspectorOverrides() {
           Jurisdiction simulator
         </span>
         <span className="block pt-1 font-sans text-label leading-close text-ink-muted">
-          Preview how state-specific regulatory overrides modify standard block
-          outputs.
+          Preview how state-specific regulatory overrides modify standard block outputs.
         </span>
       </div>
 

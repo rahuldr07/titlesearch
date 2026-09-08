@@ -77,7 +77,9 @@ function InstrumentRow(props: {
           : "border-line-strong bg-surface-panel text-ink-secondary hover:bg-row-hover",
       )}
     >
-      <span className="min-w-0 flex-1 truncate text-meta leading-close">{it.label}</span>
+      <span className="min-w-0 flex-1 truncate text-meta leading-close">
+        {it.label}
+      </span>
       {/* A book/page reference is data, so it is mono. Null means the package
           holds no index entry for it, and nothing is drawn in its place. */}
       {it.recorded_ref !== null && (

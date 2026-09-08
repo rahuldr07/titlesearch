@@ -57,7 +57,10 @@ export function Card({ tone, edge, padding, className, children }: CardProps) {
 
   return (
     <InsideCard value={true}>
-      <div data-slot="card" className={cx("rounded-lg", surface({ tone, edge, padding }), className)}>
+      <div
+        data-slot="card"
+        className={cx("rounded-lg", surface({ tone, edge, padding }), className)}
+      >
         {children}
       </div>
     </InsideCard>
@@ -82,7 +85,11 @@ export function InnerPanel({ tone, edge, padding, className, children }: CardPro
     <InsidePanel value={true}>
       <div
         data-slot="inner-panel"
-        className={cx("rounded-md", surface({ tone, edge: edge ?? "hairline", padding }), className)}
+        className={cx(
+          "rounded-md",
+          surface({ tone, edge: edge ?? "hairline", padding }),
+          className,
+        )}
       >
         {children}
       </div>

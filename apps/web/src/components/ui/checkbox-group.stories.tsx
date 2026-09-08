@@ -62,7 +62,9 @@ export const GroupBlocked: Story = {
     expect(
       canvasElement.querySelector('[data-slot="checkbox-group"][data-disabled-reason]'),
     ).not.toBeNull();
-    expect(canvasElement.querySelector("[title]")?.getAttribute("title")).toContain("released");
+    expect(canvasElement.querySelector("[title]")?.getAttribute("title")).toContain(
+      "released",
+    );
   },
 };
 
@@ -71,7 +73,10 @@ export const OneOptionBlocked: Story = {
   render: (args) => (
     <CheckboxGroup {...args}>
       <Checkbox value="quarantine">Quarantine passed</Checkbox>
-      <Checkbox value="optical" disabledBecause="Blocked: no optical profile on this package.">
+      <Checkbox
+        value="optical"
+        disabledBecause="Blocked: no optical profile on this package."
+      >
         Optical profile read
       </Checkbox>
     </CheckboxGroup>

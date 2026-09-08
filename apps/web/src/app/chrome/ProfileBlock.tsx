@@ -64,7 +64,10 @@ export function ProfileBlock() {
 
       {/* What this role may do, under the name row. The lines live in
           `demoAccounts.ts` beside the roster. */}
-      <p data-testid="role-hint" className="text-label leading-body text-rail-ink-muted">
+      <p
+        data-testid="role-hint"
+        className="text-label leading-body text-rail-ink-muted"
+      >
         {ROLE_HINTS[account.role]}
       </p>
 
@@ -98,9 +101,7 @@ function ResetButton() {
       data-testid="demo-reset"
       title="Restore the demo to fresh intake"
       onClick={() => {
-        void post("/api/demo/reset", Ack).then(() =>
-          queryClient.invalidateQueries(),
-        );
+        void post("/api/demo/reset", Ack).then(() => queryClient.invalidateQueries());
       }}
       className="tp-state tp-press flex items-center gap-2 rounded-pill border border-rail-line px-4 py-1 text-label leading-flat text-rail-ink hover:text-surface-panel"
     >

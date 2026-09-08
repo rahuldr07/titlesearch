@@ -34,9 +34,9 @@ export function Workbench() {
         <header className="mb-20">
           <h1 className="text-title text-ink-primary">Component workbench</h1>
           <p className="mt-4 text-body text-ink-secondary">
-            Hover, click and hold, and press <Kbd>Tab</Kbd> from the top. Press feedback is a
-            1px settle with an inset shadow — never a bounce. The focus ring should appear on
-            keyboard traversal and stay off a mouse press.
+            Hover, click and hold, and press <Kbd>Tab</Kbd> from the top. Press feedback
+            is a 1px settle with an inset shadow — never a bounce. The focus ring should
+            appear on keyboard traversal and stay off a mouse press.
           </p>
         </header>
 
@@ -45,30 +45,51 @@ export function Workbench() {
           <Button variant="secondary">Edit</Button>
           <Button variant="ghost">Dismiss</Button>
           <Button variant="halt">Halt</Button>
-          <Button variant="secondary" size="sm">Small</Button>
-          <Button variant="secondary" size="lg">Large</Button>
-          <Button variant="secondary" icon aria-label="Next field">→</Button>
-          <Button variant="secondary" disabledBecause="Blocked: T1 second read not countersigned.">
+          <Button variant="secondary" size="sm">
+            Small
+          </Button>
+          <Button variant="secondary" size="lg">
+            Large
+          </Button>
+          <Button variant="secondary" icon aria-label="Next field">
+            →
+          </Button>
+          <Button
+            variant="secondary"
+            disabledBecause="Blocked: T1 second read not countersigned."
+          >
             Blocked
           </Button>
         </Row>
 
-        <Row title="Toggles" note="a group is ONE answer — one accessible name, not four boxes">
+        <Row
+          title="Toggles"
+          note="a group is ONE answer — one accessible name, not four boxes"
+        >
           <CheckboxGroup aria-label="Layers" defaultValue={["a"]}>
             <Checkbox value="a">Quarantine passed</Checkbox>
             <Checkbox value="b">Optical profile read</Checkbox>
           </CheckboxGroup>
-          <Checkbox isSelected={checked} onChange={setChecked}>Standalone</Checkbox>
+          <Checkbox isSelected={checked} onChange={setChecked}>
+            Standalone
+          </Checkbox>
           <RadioGroup aria-label="Seat" value={radio} onChange={setRadio}>
             <RadioGroupItem value="a">Seat A</RadioGroupItem>
             <RadioGroupItem value="b">Seat B</RadioGroupItem>
           </RadioGroup>
-          <Switch isSelected={on} onChange={setOn}>Follow evidence</Switch>
+          <Switch isSelected={on} onChange={setOn}>
+            Follow evidence
+          </Switch>
           <Switch disabledBecause="Blocked: no package loaded.">Blocked switch</Switch>
-          <Toggle isSelected={pinned} onChange={setPinned}>Pin panel</Toggle>
+          <Toggle isSelected={pinned} onChange={setPinned}>
+            Pin panel
+          </Toggle>
         </Row>
 
-        <Row title="Navigation" note="arrow keys belong to the widget, not to the chord layer">
+        <Row
+          title="Navigation"
+          note="arrow keys belong to the widget, not to the chord layer"
+        >
           <SegmentedControl label="Filter" defaultSelectedKeys={["all"]}>
             <Segment id="all">All</Segment>
             <Segment id="open">Open</Segment>
@@ -87,9 +108,15 @@ export function Workbench() {
                   Review
                 </Tab>
               </TabList>
-              <TabPanel id="one"><p className="text-meta text-ink-secondary">Panel one.</p></TabPanel>
-              <TabPanel id="two"><p className="text-meta text-ink-secondary">Panel two.</p></TabPanel>
-              <TabPanel id="three"><p className="text-meta text-ink-secondary">Panel three.</p></TabPanel>
+              <TabPanel id="one">
+                <p className="text-meta text-ink-secondary">Panel one.</p>
+              </TabPanel>
+              <TabPanel id="two">
+                <p className="text-meta text-ink-secondary">Panel two.</p>
+              </TabPanel>
+              <TabPanel id="three">
+                <p className="text-meta text-ink-secondary">Panel three.</p>
+              </TabPanel>
             </Tabs>
           </div>
         </Row>

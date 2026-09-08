@@ -114,7 +114,9 @@ export const ActiveDoorIsFilled: Story = {
   play: async ({ canvas }) => {
     const active = await canvas.findByTestId("door-overview");
     const resting = await canvas.findByTestId("door-queue");
-    expect(getComputedStyle(active).backgroundColor).toBe(tokenColour("--color-action"));
+    expect(getComputedStyle(active).backgroundColor).toBe(
+      tokenColour("--color-action"),
+    );
     expect(getComputedStyle(active).color).toBe(tokenColour("--color-ink-on-action"));
     expect(getComputedStyle(active).fontWeight).toBe("600");
     expect(getComputedStyle(active).backgroundColor).not.toBe(

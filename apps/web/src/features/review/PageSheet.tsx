@@ -60,7 +60,12 @@ export function PageSheet(props: {
   const raster = named !== null && named !== rasterFailed ? named : null;
 
   return (
-    <div className={cx("relative flex justify-center overflow-hidden p-8", ZOOM[props.zoom])}>
+    <div
+      className={cx(
+        "relative flex justify-center overflow-hidden p-8",
+        ZOOM[props.zoom],
+      )}
+    >
       <div
         data-testid="cite-zoom-wrap"
         data-cite-zoomed={zoomed ? "1" : "0"}

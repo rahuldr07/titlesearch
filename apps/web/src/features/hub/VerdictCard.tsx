@@ -39,11 +39,13 @@ export function VerdictCard(props: {
 
         {/* `settled`/`decisions` are optional — absent is "the server did not
             say", printed as silence rather than filled in. */}
-        {props.census?.settled === undefined ||
-        props.census.decisions === undefined ? (
-          <p data-testid="census-silent" className="text-meta leading-close text-ink-muted">
-            The server sent no decision census for this order. That is not zero — it
-            is the server not saying.
+        {props.census?.settled === undefined || props.census.decisions === undefined ? (
+          <p
+            data-testid="census-silent"
+            className="text-meta leading-close text-ink-muted"
+          >
+            The server sent no decision census for this order. That is not zero — it is
+            the server not saying.
           </p>
         ) : (
           <ProgressMeter

@@ -25,9 +25,13 @@ function Workstation() {
   return (
     <Frame>
       <Split>
-        <SplitPanel defaultSize="50" minSize={DECISION_MIN} maxSize={DECISION_MAX}><Decision /></SplitPanel>
+        <SplitPanel defaultSize="50" minSize={DECISION_MIN} maxSize={DECISION_MAX}>
+          <Decision />
+        </SplitPanel>
         <SplitHandle label="Resize the decision column" />
-        <SplitPanel><Evidence /></SplitPanel>
+        <SplitPanel>
+          <Evidence />
+        </SplitPanel>
       </Split>
     </Frame>
   );
@@ -61,7 +65,9 @@ export const HandleIsANamedTabStop: Story = {
 export const ResizesFromTheKeyboardWithoutADrag: Story = {
   render,
   play: async ({ canvasElement }) => {
-    const handle = canvasElement.querySelector<HTMLElement>('[data-slot="split-handle"]');
+    const handle = canvasElement.querySelector<HTMLElement>(
+      '[data-slot="split-handle"]',
+    );
     const left = canvasElement.querySelector<HTMLElement>("[data-panel]");
     if (handle === null || left === null) throw new Error("split did not render");
     const before = left.getBoundingClientRect().width;
@@ -86,7 +92,9 @@ export const ResizesFromTheKeyboardWithoutADrag: Story = {
 export const HomeAndEndLandOnTheDesignsBand: Story = {
   render,
   play: async ({ canvasElement }) => {
-    const handle = canvasElement.querySelector<HTMLElement>('[data-slot="split-handle"]');
+    const handle = canvasElement.querySelector<HTMLElement>(
+      '[data-slot="split-handle"]',
+    );
     const left = canvasElement.querySelector<HTMLElement>("[data-panel]");
     if (handle === null || left === null) throw new Error("no split");
 
@@ -96,7 +104,10 @@ export const HomeAndEndLandOnTheDesignsBand: Story = {
      */
     const share = () => {
       const panels = [...canvasElement.querySelectorAll<HTMLElement>("[data-panel]")];
-      const available = panels.reduce((sum, p) => sum + p.getBoundingClientRect().width, 0);
+      const available = panels.reduce(
+        (sum, p) => sum + p.getBoundingClientRect().width,
+        0,
+      );
       return (left.getBoundingClientRect().width / available) * 100;
     };
 

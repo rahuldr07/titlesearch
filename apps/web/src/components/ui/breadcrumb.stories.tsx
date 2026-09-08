@@ -130,7 +130,9 @@ export const SeparatorIsAGlyph: Story = {
     </BreadcrumbTrail>
   ),
   play: ({ canvasElement }) => {
-    const seps = [...canvasElement.querySelectorAll('[data-slot="breadcrumb-separator"]')];
+    const seps = [
+      ...canvasElement.querySelectorAll('[data-slot="breadcrumb-separator"]'),
+    ];
     expect(seps.map((n) => n.textContent)).toEqual(["/"]);
     expect(canvasElement.querySelectorAll("svg")).toHaveLength(0);
   },

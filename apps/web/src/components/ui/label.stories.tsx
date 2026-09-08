@@ -46,12 +46,13 @@ export const AboveItsControl: Story = {
  */
 export const AlongsideBlockedControl: Story = {
   render: () => (
-    <TextField defaultValue="2019-0043117" isDisabled className="flex w-90 flex-col gap-3">
+    <TextField
+      defaultValue="2019-0043117"
+      isDisabled
+      className="flex w-90 flex-col gap-3"
+    >
       <Label>Instrument number</Label>
-      <Input
-        data
-        disabledBecause="Read from the clerk stamp."
-      />
+      <Input data disabledBecause="Read from the clerk stamp." />
     </TextField>
   ),
 };

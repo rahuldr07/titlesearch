@@ -14,7 +14,11 @@ const PHASE: Readonly<
   Record<PipelineStage["phase"], { mark: string; ink: string; ring: string }>
 > = {
   done: { mark: "✓", ink: "text-state-settled", ring: "border-state-settled-muted" },
-  running: { mark: "•", ink: "text-action animate-tp-pulse", ring: "border-action-border" },
+  running: {
+    mark: "•",
+    ink: "text-action animate-tp-pulse",
+    ring: "border-action-border",
+  },
   halted: { mark: "◆", ink: "text-state-halt", ring: "border-state-halt-border" },
   waiting: { mark: "•", ink: "text-ink-faint", ring: "border-line-strong" },
 };

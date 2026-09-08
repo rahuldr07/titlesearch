@@ -36,8 +36,7 @@ export function IngestForm(props: {
       ? "Drop the package to begin"
       : !scan.done
         ? "Waiting on quarantine"
-        : scan.ready &&
-            (props.values.client_id === "" || props.values.product === "")
+        : scan.ready && (props.values.client_id === "" || props.values.product === "")
           ? "Pick client and product"
           : null;
 

@@ -128,7 +128,8 @@ export const DecidingAnAbsence: Story = {
       ...FIELD,
       value: null,
       na_reason: "PRESENT_UNREADABLE",
-      asking: "The instrument number is on the page but illegible. Record it as unreadable?",
+      asking:
+        "The instrument number is on the page but illegible. Record it as unreadable?",
       why: "Microfilm density loss across the clerk stamp band.",
     },
     consequence: "An unreadable instrument number blocks the chain from terminating.",

@@ -23,12 +23,19 @@ export type FieldValueViewProps = {
 
 type CitationOpen = NonNullable<ComponentProps<typeof CitationRef>["onOpen"]>;
 
-export function FieldValueView({ value, onOpenCitation, className }: FieldValueViewProps) {
+export function FieldValueView({
+  value,
+  onOpenCitation,
+  className,
+}: FieldValueViewProps) {
   switch (value.kind) {
     /** A field value is data, so it is mono. */
     case "cited":
       return (
-        <span data-field-render="cited" className={cx("flex flex-col gap-1", className)}>
+        <span
+          data-field-render="cited"
+          className={cx("flex flex-col gap-1", className)}
+        >
           <span className="font-mono text-body leading-close text-ink-primary">
             {value.cited.value}
           </span>

@@ -1,6 +1,6 @@
-import { cx } from "@/components/ui/cx"
-import { Label } from "@/components/ui/label"
-import { Separator } from "@/components/ui/separator"
+import { cx } from "@/components/ui/cx";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 
 /**
  * The outer form structure — set, legend, group, separator. field.tsx holds
@@ -14,11 +14,11 @@ function FieldSet({ className, ...props }: React.ComponentProps<"fieldset">) {
       className={cx(
         "flex flex-col gap-8 border-0 m-0 p-0",
         "has-[>[data-slot=checkbox-group]]:gap-6 has-[>[data-slot=radio-group]]:gap-6",
-        className
+        className,
       )}
       {...props}
     />
-  )
+  );
 }
 
 /**
@@ -42,11 +42,11 @@ function FieldLegend({
         "data-[variant=legend]:text-ink-primary",
         "data-[variant=label]:text-label data-[variant=label]:font-bold",
         "data-[variant=label]:text-ink-muted",
-        className
+        className,
       )}
       {...props}
     />
-  )
+  );
 }
 
 function FieldGroup({ className, ...props }: React.ComponentProps<"div">) {
@@ -56,11 +56,11 @@ function FieldGroup({ className, ...props }: React.ComponentProps<"div">) {
       className={cx(
         "group/field-group @container/field-group flex w-full flex-col gap-10",
         "data-[slot=checkbox-group]:gap-6 *:data-[slot=field-group]:gap-8",
-        className
+        className,
       )}
       {...props}
     />
-  )
+  );
 }
 
 /**
@@ -89,7 +89,7 @@ function FieldSeparator({
         </span>
       )}
     </div>
-  )
+  );
 }
 
 /**
@@ -111,11 +111,11 @@ function FieldLabel({ className, ...props }: React.ComponentProps<typeof Label>)
         "has-[>[data-slot=field]]:has-[:focus-visible]:border-action",
         "*:data-[slot=field]:p-5",
         "has-[>[data-slot=field]]:w-full has-[>[data-slot=field]]:flex-col",
-        className
+        className,
       )}
       {...props}
     />
-  )
+  );
 }
 
-export { FieldSet, FieldLegend, FieldGroup, FieldSeparator, FieldLabel }
+export { FieldSet, FieldLegend, FieldGroup, FieldSeparator, FieldLabel };

@@ -38,7 +38,9 @@ import { notify } from "../../shared/notify";
  * advances the queue: the reviewer still holds the order, which is what the
  * refusal means.
  */
-export function usePassOrder(order: { readonly id: string; readonly ref: string } | null) {
+export function usePassOrder(
+  order: { readonly id: string; readonly ref: string } | null,
+) {
   const client = useQueryClient();
 
   return useMutation({

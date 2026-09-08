@@ -1,6 +1,14 @@
 import { useState } from "react";
 import type { Rule } from "@titlepipe/contract";
-import { Button, ComboBox, Option, Label, RadioGroup, RadioGroupItem, Textarea } from "../../components/ui";
+import {
+  Button,
+  ComboBox,
+  Option,
+  Label,
+  RadioGroup,
+  RadioGroupItem,
+  Textarea,
+} from "../../components/ui";
 import { RuleEffect } from "../../entities/rule/RuleEffect";
 import { holdReason, type ResolutionMode } from "./holdReason";
 
@@ -16,7 +24,10 @@ import { holdReason, type ResolutionMode } from "./holdReason";
 export type ResolveCardProps = {
   readonly rules: readonly Rule[];
   readonly pending: boolean;
-  readonly onResolve: (ruling: string, rule: { rule_id: string } | { draft: { text: string } }) => void;
+  readonly onResolve: (
+    ruling: string,
+    rule: { rule_id: string } | { draft: { text: string } },
+  ) => void;
 };
 
 export function ResolveCard({ rules, pending, onResolve }: ResolveCardProps) {
@@ -71,7 +82,9 @@ export function ResolveCard({ rules, pending, onResolve }: ResolveCardProps) {
             ))}
           </ComboBox>
           {/* What citing it will do — read off the server's status. */}
-          {cited !== undefined && <RuleEffect code={cited.code} status={cited.status} />}
+          {cited !== undefined && (
+            <RuleEffect code={cited.code} status={cited.status} />
+          )}
         </div>
       ) : (
         <div className="flex flex-col gap-4">
@@ -94,7 +107,12 @@ export function ResolveCard({ rules, pending, onResolve }: ResolveCardProps) {
         variant="primary"
         disabledBecause={pending ? "Sending — the server has not answered yet." : held}
         onPress={() =>
-          onResolve(ruling, mode === "cite" && ruleId !== null ? { rule_id: ruleId } : { draft: { text: draft } })
+          onResolve(
+            ruling,
+            mode === "cite" && ruleId !== null
+              ? { rule_id: ruleId }
+              : { draft: { text: draft } },
+          )
         }
       >
         {held === null ? "Resolve the cluster" : "Resolve — held without a rule"}

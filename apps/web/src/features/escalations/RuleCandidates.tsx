@@ -65,8 +65,8 @@ export function RuleCandidates({
         data-testid="reject-absent"
         className="font-sans text-meta leading-body text-ink-muted"
       >
-        The design&rsquo;s &ldquo;reject pattern&rdquo; is absent because no endpoint refuses a
-        candidate — an unconfirmed one simply stays pending and inert.
+        The design&rsquo;s &ldquo;reject pattern&rdquo; is absent because no endpoint
+        refuses a candidate — an unconfirmed one simply stays pending and inert.
       </p>
     </div>
   );
@@ -102,7 +102,10 @@ function Candidate({
           value={rule.jurisdiction_scope ?? "every jurisdiction — unscoped"}
         />
         <Fact label="Confirmed by" value={rule.confirmed_by ?? "nobody yet"} />
-        <Fact label="Source" value={rule.source_doc_ref ?? "no source document recorded"} />
+        <Fact
+          label="Source"
+          value={rule.source_doc_ref ?? "no source document recorded"}
+        />
       </dl>
       {canConfirm && (
         <div>
@@ -129,7 +132,9 @@ function Candidate({
 function Fact({ label, value }: { readonly label: string; readonly value: string }) {
   return (
     <div className="flex flex-col gap-1">
-      <dt className="font-sans text-label leading-flat font-bold text-ink-muted">{label}</dt>
+      <dt className="font-sans text-label leading-flat font-bold text-ink-muted">
+        {label}
+      </dt>
       <dd className="font-sans text-label leading-close text-ink-secondary">{value}</dd>
     </div>
   );

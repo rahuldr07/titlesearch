@@ -7,7 +7,12 @@ const STAGES: readonly Stage[] = [
   { id: "quarantine", label: "Quarantine gateway", status: "done", note: "3 checks" },
   { id: "split", label: "Instrument split", status: "done", note: "41 instruments" },
   { id: "ocr", label: "Text layer recovery", status: "done", note: "412 pages" },
-  { id: "extract", label: "Dual-engine extraction", status: "running", note: "268 of 412" },
+  {
+    id: "extract",
+    label: "Dual-engine extraction",
+    status: "running",
+    note: "268 of 412",
+  },
   { id: "merge", label: "Merge and route", status: "waiting", note: null },
   { id: "review", label: "Examination", status: "waiting", note: null },
 ];

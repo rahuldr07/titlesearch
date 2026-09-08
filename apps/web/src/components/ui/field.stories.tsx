@@ -66,10 +66,7 @@ export const BlockedWithReason: Story = {
     <Field className="w-90">
       <TextField defaultValue="2019-0043117" isDisabled className="flex flex-col gap-3">
         <Label>Instrument number</Label>
-        <Input
-          data
-          disabledBecause="Read from the clerk stamp."
-        />
+        <Input data disabledBecause="Read from the clerk stamp." />
         <FieldDescription>Read from the clerk stamp — not editable.</FieldDescription>
       </TextField>
     </Field>

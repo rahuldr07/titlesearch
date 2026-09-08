@@ -1,15 +1,15 @@
-import type * as React from "react"
-import { type VariantProps } from "class-variance-authority"
+import type * as React from "react";
+import { type VariantProps } from "class-variance-authority";
 import {
   Button as ButtonPrimitive,
   Link as LinkPrimitive,
   type ButtonProps as ButtonPrimitiveProps,
   type LinkProps as LinkPrimitiveProps,
-} from "react-aria-components"
+} from "react-aria-components";
 
-import { cx } from "@/components/ui/cx"
-import { buttonVariants } from "@/components/ui/button-chrome"
-import { disabledAttributes, type Disablement } from "@/components/ui/disabled"
+import { cx } from "@/components/ui/cx";
+import { buttonVariants } from "@/components/ui/button-chrome";
+import { disabledAttributes, type Disablement } from "@/components/ui/disabled";
 
 /**
  * The variant table lives in button-chrome.ts because Fast Refresh cannot
@@ -17,11 +17,11 @@ import { disabledAttributes, type Disablement } from "@/components/ui/disabled"
  */
 
 type Shared = VariantProps<typeof buttonVariants> &
-  Disablement & { readonly className?: string | undefined }
+  Disablement & { readonly className?: string | undefined };
 
 export type ButtonProps = Omit<ButtonPrimitiveProps, "isDisabled" | "className"> &
   React.RefAttributes<HTMLButtonElement> &
-  Shared
+  Shared;
 
 /**
  * `isDisabled` is omitted, so the only way to disable a button in this app
@@ -36,7 +36,7 @@ function Button({
   ref,
   ...props
 }: ButtonProps) {
-  const attrs = disabledAttributes(disabledBecause)
+  const attrs = disabledAttributes(disabledBecause);
   return (
     <ButtonPrimitive
       data-slot="button"
@@ -47,11 +47,11 @@ function Button({
       ref={keepTitle(attrs.title, ref)}
       className={cx(buttonVariants({ variant, size, icon }), className)}
     />
-  )
+  );
 }
 
 export type LinkButtonProps = Omit<LinkPrimitiveProps, "isDisabled" | "className"> &
-  Shared & { readonly ref?: React.Ref<HTMLAnchorElement> }
+  Shared & { readonly ref?: React.Ref<HTMLAnchorElement> };
 
 /** Navigation that must LOOK like a button. Still an anchor to the browser. */
 function LinkButton({
@@ -63,7 +63,7 @@ function LinkButton({
   ref,
   ...props
 }: LinkButtonProps) {
-  const attrs = disabledAttributes(disabledBecause)
+  const attrs = disabledAttributes(disabledBecause);
   return (
     <LinkPrimitive
       data-slot="button"
@@ -74,7 +74,7 @@ function LinkButton({
       ref={keepTitle(attrs.title, ref)}
       className={cx(buttonVariants({ variant, size, icon }), className)}
     />
-  )
+  );
 }
 
 /**
@@ -89,10 +89,10 @@ function keepTitle<T extends HTMLElement>(
   ref: React.Ref<T> | undefined,
 ) {
   return (el: T | null) => {
-    if (el !== null && title !== undefined) el.setAttribute("title", title)
-    if (typeof ref === "function") ref(el)
-    else if (ref !== null && ref !== undefined) ref.current = el
-  }
+    if (el !== null && title !== undefined) el.setAttribute("title", title);
+    if (typeof ref === "function") ref(el);
+    else if (ref !== null && ref !== undefined) ref.current = el;
+  };
 }
 
-export { Button, LinkButton }
+export { Button, LinkButton };

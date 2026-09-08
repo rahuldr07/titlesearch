@@ -15,7 +15,10 @@ export function GapRow(props: { readonly gap: CompletenessGap }) {
       className="flex flex-col gap-5 rounded-lg bg-surface-panel p-8"
     >
       <div className="flex items-baseline gap-5">
-        <span aria-hidden className="font-mono text-meta leading-flat text-state-attend">
+        <span
+          aria-hidden
+          className="font-mono text-meta leading-flat text-state-attend"
+        >
           ◆
         </span>
         {/* `line_number` lets the reader get back to the line they answered —

@@ -5,9 +5,7 @@ import type { QuarantineResolved } from "@titlepipe/contract";
  * server's sentences (`QuarantineResolved.note_*`) — "the rulebook bound" is
  * a server claim the browser has no standing to compose.
  */
-export function RulebookNote(props: {
-  readonly resolved: QuarantineResolved | null;
-}) {
+export function RulebookNote(props: { readonly resolved: QuarantineResolved | null }) {
   if (props.resolved === null) {
     return (
       <div
@@ -19,9 +17,8 @@ export function RulebookNote(props: {
           Rulebook binds after quarantine
         </p>
         <p className="font-sans text-meta leading-body text-ink-secondary">
-          Jurisdiction is read from the recorded clerk stamp once the package
-          passes optical quarantine, so the state overlay can never be
-          hand-picked wrong.
+          Jurisdiction is read from the recorded clerk stamp once the package passes
+          optical quarantine, so the state overlay can never be hand-picked wrong.
         </p>
       </div>
     );

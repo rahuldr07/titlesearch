@@ -45,9 +45,7 @@ export const useOverlays = create<OverlayState>((set, getState) => ({
         : [...s.stack, "order-history"],
     })),
   open: (overlay) =>
-    set((s) =>
-      s.stack.includes(overlay) ? s : { stack: [...s.stack, overlay] },
-    ),
+    set((s) => (s.stack.includes(overlay) ? s : { stack: [...s.stack, overlay] })),
   close: (overlay) =>
     set((s) => ({ stack: s.stack.filter((o) => o !== overlay), ...forget(overlay) })),
   toggle: (overlay) =>

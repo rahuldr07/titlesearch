@@ -22,7 +22,6 @@ export { FOCUSED_ITEM_ROLES };
  */
 export type FocusTarget = Pick<Element, "tagName" | "getAttribute" | "closest">;
 
-
 /**
  * Is a text surface or composite widget holding focus?
  * Four tests, cheapest first, each covering what the one before it cannot:
@@ -49,6 +48,7 @@ export function focusOwnsKeys(active: FocusTarget | null): boolean {
  * global constructor would make this unrunnable in the DOM-free test.
  */
 function isContentEditable(active: FocusTarget): boolean {
-  const editable: unknown = (active as { isContentEditable?: unknown }).isContentEditable;
+  const editable: unknown = (active as { isContentEditable?: unknown })
+    .isContentEditable;
   return editable === true;
 }

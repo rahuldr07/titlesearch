@@ -36,7 +36,11 @@ function Reading(props: {
   }
 
   return (
-    <TextField aria-label={props.field.label} value={props.draft.value} onChange={props.onValue}>
+    <TextField
+      aria-label={props.field.label}
+      value={props.draft.value}
+      onChange={props.onValue}
+    >
       <Input
         data={props.field.kind !== "text"}
         type={props.field.kind === "date" ? "date" : "text"}

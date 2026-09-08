@@ -86,9 +86,9 @@ export function SidebarMenuLink(props: {
         "text-meta leading-flat",
         props.active
           ? "bg-action font-semibold text-ink-on-action"
-          // Resting is 400 and active is 600, so weight carries the "you are
-          // here" signal alongside the fill.
-          : "font-normal text-rail-ink hover:bg-rail-line",
+          : // Resting is 400 and active is 600, so weight carries the "you are
+            // here" signal alongside the fill.
+            "font-normal text-rail-ink hover:bg-rail-line",
       )}
     >
       {props.children}

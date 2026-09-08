@@ -19,7 +19,11 @@ import type { Citation, FieldValue } from "../shared/fieldValue";
  * glance that they do not. Every value below is synthetic and obviously so.
  */
 
-const CITATION: Citation = { docId: "DOC-0000", page: 12, snippet: "…a specimen line…" };
+const CITATION: Citation = {
+  docId: "DOC-0000",
+  page: 12,
+  snippet: "…a specimen line…",
+};
 
 const FIVE: readonly FieldValue[] = [
   { kind: "na-not-present" },
@@ -43,12 +47,23 @@ export function DomainHalf() {
         </div>
       </Row>
 
-      <Row title="A value, and a value with no source" note="the second is a defect, drawn as one">
-        <FieldValueView value={{ kind: "cited", cited: { value: "SPECIMEN VALUE", citation: CITATION } }} />
+      <Row
+        title="A value, and a value with no source"
+        note="the second is a defect, drawn as one"
+      >
+        <FieldValueView
+          value={{
+            kind: "cited",
+            cited: { value: "SPECIMEN VALUE", citation: CITATION },
+          }}
+        />
         <FieldValueView value={{ kind: "uncited", value: "SPECIMEN VALUE" }} />
       </Row>
 
-      <Row title="Field state" note="rendered verbatim from the server — confidence never promotes or demotes it">
+      <Row
+        title="Field state"
+        note="rendered verbatim from the server — confidence never promotes or demotes it"
+      >
         <StatePill state="pending" />
         <StatePill state="auto_confirmed" />
         <StatePill state="needs_review" />
@@ -66,13 +81,19 @@ export function DomainHalf() {
         <OrderRef orderRef="TP-0000-0000" emphasis="spotlight" />
       </Row>
 
-      <Row title="Rules" note="a PENDING rule renders visibly inert — it cannot affect the pipeline yet">
+      <Row
+        title="Rules"
+        note="a PENDING rule renders visibly inert — it cannot affect the pipeline yet"
+      >
         <RulePill code="R00" status="pending" />
         <RulePill code="R00" status="live" />
         <RulePill code="R00" status="retired" />
       </Row>
 
-      <Row title="The NA picker" note="all four are always offered — removing one makes a correct answer unsayable">
+      <Row
+        title="The NA picker"
+        note="all four are always offered — removing one makes a correct answer unsayable"
+      >
         <div className="w-210">
           <NaStateGrid value="NOT_FOUND" onChange={() => {}} />
         </div>
@@ -91,19 +112,36 @@ export function DomainHalf() {
             { id: "a", label: "Intake", status: "done" },
             { id: "b", label: "Extraction", status: "done", note: "000 pages" },
             { id: "c", label: "Review", status: "running" },
-            { id: "d", label: "Second read", status: "blocked", note: "Waiting on a countersign" },
+            {
+              id: "d",
+              label: "Second read",
+              status: "blocked",
+              note: "Waiting on a countersign",
+            },
             { id: "e", label: "Release", status: "waiting" },
           ]}
         />
       </Row>
 
-      <Row title="Evidence" note="paper, not placeholder bars (rule 8) — all CSS, no assets">
+      <Row
+        title="Evidence"
+        note="paper, not placeholder bars (rule 8) — all CSS, no assets"
+      >
         <ClerkStamp caption="Recorded" detail="BK 0000 PG 00" />
-        <PaperSheet className="w-190" stamp={<ClerkStamp caption="Recorded" detail="0000-00-00" />}>
-          <p>A specimen page. The words are the server's; this component only lays them down.</p>
+        <PaperSheet
+          className="w-190"
+          stamp={<ClerkStamp caption="Recorded" detail="0000-00-00" />}
+        >
+          <p>
+            A specimen page. The words are the server's; this component only lays them
+            down.
+          </p>
         </PaperSheet>
         <PaperSheet className="w-190" degraded>
-          <p>The same page, reported degraded by the server — never inferred from extraction.</p>
+          <p>
+            The same page, reported degraded by the server — never inferred from
+            extraction.
+          </p>
         </PaperSheet>
       </Row>
     </>

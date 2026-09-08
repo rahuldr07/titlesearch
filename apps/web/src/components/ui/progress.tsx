@@ -31,7 +31,6 @@ function useProgress() {
   return context;
 }
 
-
 function ProgressContent({
   children,
   percentage,
@@ -101,7 +100,9 @@ function ProgressIndicator({ className, ...props }: React.ComponentProps<"span">
     <span
       data-slot="progress-indicator"
       className={cx("tp-move h-full bg-state-settled", className)}
-      style={{ width }} /* rules-allow: a continuous percentage has no class form — see header */
+      style={{
+        width,
+      }} /* rules-allow: a continuous percentage has no class form — see header */
       {...props}
     />
   );
@@ -111,7 +112,10 @@ function ProgressLabel({ className, ...props }: LabelProps) {
   return (
     <LabelPrimitive
       data-slot="progress-label"
-      className={cx("font-sans text-meta leading-close font-semibold text-ink-primary", className)}
+      className={cx(
+        "font-sans text-meta leading-close font-semibold text-ink-primary",
+        className,
+      )}
       {...props}
     />
   );
@@ -128,7 +132,10 @@ function ProgressValue({
   return (
     <span
       data-slot="progress-value"
-      className={cx("ml-auto font-mono text-meta leading-close text-ink-secondary", className)}
+      className={cx(
+        "ml-auto font-mono text-meta leading-close text-ink-secondary",
+        className,
+      )}
       {...props}
     >
       {children && valueText != null ? children(valueText) : valueText}

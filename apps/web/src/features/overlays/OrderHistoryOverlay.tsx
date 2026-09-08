@@ -97,7 +97,9 @@ function Body({ orderId }: { readonly orderId: string }) {
             {context.data?.order_ref ?? orderId}
           </span>
           <span className="shrink-0 rounded-pill border border-line-strong bg-surface-sunken px-4 py-1 font-mono text-label leading-flat text-ink-muted">
-            {pages === null || pages === undefined ? "Page count unread" : `${String(pages)} pp`}
+            {pages === null || pages === undefined
+              ? "Page count unread"
+              : `${String(pages)} pp`}
           </span>
         </div>
         {context.data !== undefined && (
@@ -166,7 +168,10 @@ function Row(props: { readonly event: OrderTimelineEvent; readonly n: number }) 
           <span className="flex items-center gap-3 text-meta font-semibold leading-close text-ink-primary">
             {event.attend && (
               <>
-                <span aria-hidden className="font-mono text-label leading-flat text-state-attend">
+                <span
+                  aria-hidden
+                  className="font-mono text-label leading-flat text-state-attend"
+                >
                   ◆
                 </span>
                 <span className="sr-only">needs attention</span>
@@ -180,7 +185,9 @@ function Row(props: { readonly event: OrderTimelineEvent; readonly n: number }) 
           </span>
         </div>
         {event.detail !== null && (
-          <span className="truncate text-label leading-close text-ink-muted">{event.detail}</span>
+          <span className="truncate text-label leading-close text-ink-muted">
+            {event.detail}
+          </span>
         )}
       </div>
     </li>

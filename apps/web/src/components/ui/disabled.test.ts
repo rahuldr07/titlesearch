@@ -29,7 +29,11 @@ test("both carry the reason verbatim, on title and on the data attribute", () =>
 });
 
 test("no reason means live, and no stray tooltip", () => {
-  for (const a of [disabledAttributes(undefined), disabledNativeAttributes(null), disabledAttributes("")]) {
+  for (const a of [
+    disabledAttributes(undefined),
+    disabledNativeAttributes(null),
+    disabledAttributes(""),
+  ]) {
     expect(a.title).toBeUndefined();
     expect(a["data-disabled-reason"]).toBeUndefined();
   }

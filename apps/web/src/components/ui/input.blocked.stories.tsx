@@ -25,9 +25,7 @@ type Story = StoryObj<typeof meta>;
 const REASON = "Blocked: T1 second read not countersigned.";
 
 export const BlockedInputRefusesTyping: Story = {
-  render: () => (
-    <Input aria-label="Corrected value" disabledBecause={REASON} />
-  ),
+  render: () => <Input aria-label="Corrected value" disabledBecause={REASON} />,
   play: async ({ canvasElement }) => {
     const input = canvasElement.querySelector<HTMLInputElement>("[data-slot='input']");
     if (input === null) throw new Error("no input rendered");

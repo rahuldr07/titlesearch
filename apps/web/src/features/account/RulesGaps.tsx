@@ -14,17 +14,17 @@ export function RulesGaps() {
         has={
           <>
             Nothing. There is no product entity in{" "}
-            <code className="font-mono text-label">packages/contract</code>: no
-            product record, no overlay-per-product join, and no endpoint that writes
-            one. A product name typed into this screen would name a search depth the
-            pipeline has never been told about.
+            <code className="font-mono text-label">packages/contract</code>: no product
+            record, no overlay-per-product join, and no endpoint that writes one. A
+            product name typed into this screen would name a search depth the pipeline
+            has never been told about.
           </>
         }
         needs={
           <>
             A product shape carrying its own overlay rules — the neighbouring
-            `Rule.jurisdiction_scope` is the closest thing on the wire and scopes a
-            rule to a PLACE, not to a product.
+            `Rule.jurisdiction_scope` is the closest thing on the wire and scopes a rule
+            to a PLACE, not to a product.
           </>
         }
       />
@@ -35,9 +35,8 @@ export function RulesGaps() {
           <>
             Nothing. `RulesResponse` is a flat list with no layer on any row, so the
             three counts the design prints would be the browser sorting rules into
-            buckets it invented and then counting its own buckets — a resolution
-            order asserted by the UI, which is the one thing a rulebook screen may
-            never do.
+            buckets it invented and then counting its own buckets — a resolution order
+            asserted by the UI, which is the one thing a rulebook screen may never do.
           </>
         }
         needs={
@@ -53,17 +52,17 @@ export function RulesGaps() {
         drawn="Coverage — the state coverage map: counties verified, overlay rules and a live/pending status per state (design §Settings, Rules & routing → Coverage)"
         has={
           <>
-            Nothing. No coverage, county-verification or state-readiness shape exists
-            in the contract. `JurisdictionResponse` (design2.ts:120) answers for ONE
-            code that was asked for; it carries no roster of states and no notion of
-            a state being live.
+            Nothing. No coverage, county-verification or state-readiness shape exists in
+            the contract. `JurisdictionResponse` (design2.ts:120) answers for ONE code
+            that was asked for; it carries no roster of states and no notion of a state
+            being live.
           </>
         }
         needs={
           <>
-            A coverage endpoint whose rows carry the server&rsquo;s own verified
-            count and its own status. &ldquo;Live in this state&rdquo; is a
-            compliance claim, and this screen may not compute one.
+            A coverage endpoint whose rows carry the server&rsquo;s own verified count
+            and its own status. &ldquo;Live in this state&rdquo; is a compliance claim,
+            and this screen may not compute one.
           </>
         }
       />

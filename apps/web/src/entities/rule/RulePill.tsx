@@ -50,7 +50,9 @@ export function RulePill({ code, status, className }: RulePillProps) {
         {code}
       </span>
       {pill.note !== null && (
-        <span className="font-sans text-label leading-close text-ink-muted">{pill.note}</span>
+        <span className="font-sans text-label leading-close text-ink-muted">
+          {pill.note}
+        </span>
       )}
     </span>
   );

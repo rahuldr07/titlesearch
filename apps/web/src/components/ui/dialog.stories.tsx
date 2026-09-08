@@ -41,7 +41,9 @@ export const WithActions: Story = {
       <>
         <DialogBody>This cannot be undone. The package is stamped and sent.</DialogBody>
         <DialogFooter>
-          <Button variant="ghost" slot="close">Cancel</Button>
+          <Button variant="ghost" slot="close">
+            Cancel
+          </Button>
           <Button>Release</Button>
         </DialogFooter>
       </>

@@ -31,8 +31,8 @@ export function PageMatrix(props: {
         data-testid="page-matrix-empty"
         className="font-sans text-meta leading-body text-ink-secondary"
       >
-        The server counted no pages in this package. That is the count it
-        served, not a page list this screen failed to read.
+        The server counted no pages in this package. That is the count it served, not a
+        page list this screen failed to read.
       </p>
     );
   }
@@ -74,9 +74,8 @@ export function PageMatrix(props: {
         })}
       </ul>
       <p className="mt-8 border-t border-line-subtle pt-8 font-sans text-label leading-body text-ink-muted">
-        One block per page of the package the server counted. Hover a block to
-        read what happened to that page; choosing one opens the workstation
-        there.
+        One block per page of the package the server counted. Hover a block to read what
+        happened to that page; choosing one opens the workstation there.
       </p>
     </>
   );

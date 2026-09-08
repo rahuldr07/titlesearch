@@ -47,5 +47,7 @@ test("a timeline failure degrades the event trail only", async ({ page }) => {
   await page.goto("/orders/ord_demo_1");
   // The verdict is a different read, so it must still render.
   await expect(page.getByTestId("order-ref")).toBeVisible({ timeout: 20_000 });
-  await expect(page.getByText("The server has not sent this order's thread.")).toBeVisible();
+  await expect(
+    page.getByText("The server has not sent this order's thread."),
+  ).toBeVisible();
 });

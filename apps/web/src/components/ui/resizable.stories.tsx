@@ -30,7 +30,9 @@ export const Workstation: Story = {
           <Decision />
         </SplitPanel>
         <SplitHandle label="Resize the decision column" />
-        <SplitPanel><Evidence /></SplitPanel>
+        <SplitPanel>
+          <Evidence />
+        </SplitPanel>
       </Split>
     </Frame>
   ),
@@ -41,11 +43,17 @@ export const AtTheMinimum: Story = {
   render: () => (
     <Frame>
       <Split>
-        <SplitPanel defaultSize={DECISION_MIN} minSize={DECISION_MIN} maxSize={DECISION_MAX}>
+        <SplitPanel
+          defaultSize={DECISION_MIN}
+          minSize={DECISION_MIN}
+          maxSize={DECISION_MAX}
+        >
           <Decision />
         </SplitPanel>
         <SplitHandle label="Resize the decision column" />
-        <SplitPanel><Evidence /></SplitPanel>
+        <SplitPanel>
+          <Evidence />
+        </SplitPanel>
       </Split>
     </Frame>
   ),
@@ -56,11 +64,17 @@ export const AtTheMaximum: Story = {
   render: () => (
     <Frame>
       <Split>
-        <SplitPanel defaultSize={DECISION_MAX} minSize={DECISION_MIN} maxSize={DECISION_MAX}>
+        <SplitPanel
+          defaultSize={DECISION_MAX}
+          minSize={DECISION_MIN}
+          maxSize={DECISION_MAX}
+        >
           <Decision />
         </SplitPanel>
         <SplitHandle label="Resize the decision column" />
-        <SplitPanel><Evidence /></SplitPanel>
+        <SplitPanel>
+          <Evidence />
+        </SplitPanel>
       </Split>
     </Frame>
   ),
@@ -71,9 +85,13 @@ export const Vertical: Story = {
   render: () => (
     <Frame>
       <Split orientation="vertical">
-        <SplitPanel defaultSize="60"><Decision /></SplitPanel>
+        <SplitPanel defaultSize="60">
+          <Decision />
+        </SplitPanel>
         <SplitHandle label="Resize the upper pane" />
-        <SplitPanel><Evidence /></SplitPanel>
+        <SplitPanel>
+          <Evidence />
+        </SplitPanel>
       </Split>
     </Frame>
   ),
@@ -95,7 +113,9 @@ export const PanesScrollNotTheFrame: Story = {
         </SplitPanel>
         <SplitHandle label="Resize the decision column" />
         <SplitPanel>
-          <ScrollArea label="Evidence"><Evidence /></ScrollArea>
+          <ScrollArea label="Evidence">
+            <Evidence />
+          </ScrollArea>
         </SplitPanel>
       </Split>
     </Frame>

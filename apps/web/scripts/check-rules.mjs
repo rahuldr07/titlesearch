@@ -354,7 +354,11 @@ for (const file of files) {
 
     for (const b of BANNED) {
       // Scoped exemption: correct INSIDE one at-rule, an error everywhere else.
-      if (b.exemptInAtRule && openAtRule !== null && b.exemptInAtRule.test(openAtRule)) {
+      if (
+        b.exemptInAtRule &&
+        openAtRule !== null &&
+        b.exemptInAtRule.test(openAtRule)
+      ) {
         continue;
       }
       if (b.re.test(raw)) {

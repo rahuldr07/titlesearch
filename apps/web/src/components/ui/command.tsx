@@ -35,7 +35,11 @@ export function Command({ children }: { readonly children: ReactNode }) {
  * The search row: a band inside the dialog's surface, not an input box — a
  * hairline-ruled row on control-fill with no border and no radius of its own.
  */
-export function CommandInput({ placeholder = "Search commands…" }: { readonly placeholder?: string }) {
+export function CommandInput({
+  placeholder = "Search commands…",
+}: {
+  readonly placeholder?: string;
+}) {
   return (
     <SearchField
       autoFocus
@@ -71,7 +75,10 @@ export function CommandList<T extends object>(props: MenuProps<T>) {
   );
 }
 
-export type CommandItemProps = Omit<MenuItemProps, "className" | "children" | "textValue"> & {
+export type CommandItemProps = Omit<
+  MenuItemProps,
+  "className" | "children" | "textValue"
+> & {
   /** Plain text. Doubles as the filter and typeahead string. */
   readonly children: string;
   /** The chord that runs this command, e.g. "c". Rendered in mono. */

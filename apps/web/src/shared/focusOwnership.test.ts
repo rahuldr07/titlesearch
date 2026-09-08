@@ -10,7 +10,10 @@ import { FOCUSED_ITEM_ROLES, focusOwnsKeys, type FocusTarget } from "./focusOwne
  */
 
 /** A focusable element, without a DOM. `closest` answers for ancestors. */
-function focused(role: string | null, ancestorSelectorsMatched: string[] = []): FocusTarget {
+function focused(
+  role: string | null,
+  ancestorSelectorsMatched: string[] = [],
+): FocusTarget {
   return {
     tagName: "DIV",
     getAttribute: (name: string) => (name === "role" ? role : null),
@@ -45,7 +48,16 @@ describe("container roles are matched as ANCESTORS, never by equality", () => {
    * Focus is on the item, so the container is an ancestor — a test asking
    * "is the active element a listbox" answers no every time.
    */
-  test.each(["listbox", "menu", "menubar", "grid", "treegrid", "tree", "radiogroup", "tablist"])(
+  test.each([
+    "listbox",
+    "menu",
+    "menubar",
+    "grid",
+    "treegrid",
+    "tree",
+    "radiogroup",
+    "tablist",
+  ])(
     "a plain element inside a [role='%s'] stands the global layer down",
     (container) => {
       expect(focusOwnsKeys(focused(null, [`[role='${container}']`]))).toBe(true);
@@ -100,10 +112,12 @@ describe("the two scope values are NOT interchangeable", () => {
   test.each(ALWAYS_PRESENT)("%s marks itself widget, never own", async (file) => {
     const { readFileSync } = await import("node:fs");
     const source = readFileSync(file, "utf8");
-    const literals = [...source.matchAll(/data-chord-scope="([a-z]+)"/g)].map((m) => m[1]);
-    const viaConstant = [...source.matchAll(/\{\.\.\.(chordWidget|chordOverlay)\}/g)].map((m) =>
-      m[1] === "chordWidget" ? "widget" : "own",
+    const literals = [...source.matchAll(/data-chord-scope="([a-z]+)"/g)].map(
+      (m) => m[1],
     );
+    const viaConstant = [
+      ...source.matchAll(/\{\.\.\.(chordWidget|chordOverlay)\}/g),
+    ].map((m) => (m[1] === "chordWidget" ? "widget" : "own"));
     const attributes = [...literals, ...viaConstant];
     expect(attributes.length).toBeGreaterThan(0);
     for (const value of attributes) {
@@ -177,7 +191,14 @@ describe("the role table itself", () => {
   });
 
   test("CONTAINER roles are not in the item table — they cannot hold focus", () => {
-    for (const container of ["listbox", "menu", "grid", "tree", "tablist", "radiogroup"]) {
+    for (const container of [
+      "listbox",
+      "menu",
+      "grid",
+      "tree",
+      "tablist",
+      "radiogroup",
+    ]) {
       expect(FOCUSED_ITEM_ROLES.has(container)).toBe(false);
     }
   });

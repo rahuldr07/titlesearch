@@ -1,7 +1,4 @@
-import {
-  ListBoxItem,
-  type ListBoxItemProps,
-} from "react-aria-components";
+import { ListBoxItem, type ListBoxItemProps } from "react-aria-components";
 
 import { disabledAttributes, type Disablement } from "./disabled";
 import { collectionItem, markGutter } from "./overlaySurface";

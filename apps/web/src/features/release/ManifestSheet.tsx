@@ -24,7 +24,10 @@ export function ManifestSheet(props: { readonly composed: CompositionResponse })
       {...(composed.seal_sha256 !== null
         ? {
             stamp: (
-              <ClerkStamp caption="Released" detail={`Template ${composed.template_version}`} />
+              <ClerkStamp
+                caption="Released"
+                detail={`Template ${composed.template_version}`}
+              />
             ),
           }
         : {})}
@@ -44,7 +47,11 @@ export function ManifestSheet(props: { readonly composed: CompositionResponse })
 
       <div data-testid="manifest-blocks" className="flex flex-col gap-12 pt-12">
         {composed.blocks.map((block) => (
-          <section key={block.id} id={`manifest-${block.id}`} data-testid={`manifest-${block.id}`}>
+          <section
+            key={block.id}
+            id={`manifest-${block.id}`}
+            data-testid={`manifest-${block.id}`}
+          >
             <h3 className="flex items-baseline justify-between gap-6 border-b border-page-line pb-4 text-meta leading-close text-page-ink">
               <span className="font-serif tracking-caps uppercase">
                 {`${block.numeral} · ${block.title}`}
@@ -61,7 +68,8 @@ export function ManifestSheet(props: { readonly composed: CompositionResponse })
                   key={`${block.id}-${value.label}`}
                   className="grid grid-cols-[minmax(0,2fr)_minmax(0,5fr)] items-baseline gap-8"
                 >
-                  <dt className="font-sans text-label leading-close tracking-caps uppercase text-scan-ink">{/* rules-allow: the certificate's small-caps label column is drawn uppercase (RULING-2026-08-29) */}
+                  <dt className="font-sans text-label leading-close tracking-caps uppercase text-scan-ink">
+                    {/* rules-allow: the certificate's small-caps label column is drawn uppercase (RULING-2026-08-29) */}
                     {value.label}
                   </dt>
                   <dd className="font-serif text-body leading-document text-page-ink">

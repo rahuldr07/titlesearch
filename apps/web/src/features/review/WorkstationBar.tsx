@@ -49,7 +49,11 @@ export function WorkstationBar(props: {
             >
               {settled}/{decisions} VERIFIED
             </span>
-            <ProgressMeter label="Decisions settled" settled={settled} total={decisions} />
+            <ProgressMeter
+              label="Decisions settled"
+              settled={settled}
+              total={decisions}
+            />
           </div>
         )}
 

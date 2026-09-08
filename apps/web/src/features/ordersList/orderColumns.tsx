@@ -27,7 +27,9 @@ export const ORDER_COLUMNS: readonly TableColumn<OrderRow>[] = [
     header: "Client",
     width: "170px",
     cell: (row) => (
-      <span className="truncate text-meta leading-close text-ink-faint">{row.client}</span>
+      <span className="truncate text-meta leading-close text-ink-faint">
+        {row.client}
+      </span>
     ),
   },
   {
@@ -91,7 +93,15 @@ export const ORDER_COLUMNS: readonly TableColumn<OrderRow>[] = [
           )}
         >
           {/* The clock glyph. */}
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden>
+          <svg
+            width="13"
+            height="13"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            aria-hidden
+          >
             <path d="M12 8v4l3 3" />
             <circle cx="12" cy="12" r="9" />
           </svg>

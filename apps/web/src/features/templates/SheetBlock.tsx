@@ -34,11 +34,14 @@ export function SheetBlock({
       onClick={onPick}
       className={cx(
         "tp-state flex w-full cursor-pointer flex-col gap-4 rounded-lg border p-6 text-left",
-        selected ? "border-action bg-surface-panel" : "border-transparent hover:bg-surface-panel",
+        selected
+          ? "border-action bg-surface-panel"
+          : "border-transparent hover:bg-surface-panel",
       )}
     >
       <span className="flex items-center justify-between gap-4">
-        <span className="font-sans text-label leading-flat font-bold tracking-caps uppercase text-ink-muted">{/* rules-allow: the sheet's block caps are drawn uppercase (RULING-2026-08-29) */}
+        <span className="font-sans text-label leading-flat font-bold tracking-caps uppercase text-ink-muted">
+          {/* rules-allow: the sheet's block caps are drawn uppercase (RULING-2026-08-29) */}
           {block.title}
         </span>
         <span className="shrink-0 rounded-pill bg-action-surface px-4 py-1 font-sans text-label leading-flat font-semibold text-ink-secondary">
@@ -51,7 +54,8 @@ export function SheetBlock({
           data-testid={`sheet-na-${block.key}`}
           className="rounded-md border border-state-attend-border bg-state-attend-surface p-5 font-mono text-label leading-body text-state-attend"
         >
-          <span className="block font-bold tracking-caps uppercase">{naLabel}</span>{/* rules-allow: the NA declaration's cap is drawn uppercase (RULING-2026-08-29) */}
+          <span className="block font-bold tracking-caps uppercase">{naLabel}</span>
+          {/* rules-allow: the NA declaration's cap is drawn uppercase (RULING-2026-08-29) */}
           {naText}
         </span>
       ) : (
@@ -67,7 +71,12 @@ export function SheetBlock({
 
       <span className="grid grid-cols-[minmax(0,1fr)_minmax(0,2.5fr)] gap-x-8 gap-y-2">
         {block.rows.map((row) => (
-          <SheetRow key={row.label} label={row.label} value={row.value} mono={row.mono} />
+          <SheetRow
+            key={row.label}
+            label={row.label}
+            value={row.value}
+            mono={row.mono}
+          />
         ))}
       </span>
 

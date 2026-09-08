@@ -50,9 +50,7 @@ export function PaperSheet({
         className,
       )}
     >
-      {stamp !== undefined && (
-        <div className="mb-8 flex justify-end">{stamp}</div>
-      )}
+      {stamp !== undefined && <div className="mb-8 flex justify-end">{stamp}</div>}
       {/* Justified, serif, on the scan leading (2.1) — typed instruments are
           set loose, and a tight leading makes a scan read as a web page. */}
       <div

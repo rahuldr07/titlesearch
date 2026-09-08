@@ -62,11 +62,7 @@ export function ServedOrder(props: { readonly order: Order }) {
           value={order.product}
           absent="No resolved product — the order did not pass validation"
         />
-        <Fact
-          term="Period"
-          value={order.period_label}
-          absent="No period on record"
-        />
+        <Fact term="Period" value={order.period_label} absent="No period on record" />
         <Fact
           term="Package"
           value={order.pages === null ? null : `${order.pages} pages`}
@@ -92,9 +88,7 @@ function Fact(props: {
 }) {
   return (
     <div className="flex flex-col gap-2">
-      <dt className="text-label font-bold leading-flat text-ink-faint">
-        {props.term}
-      </dt>
+      <dt className="text-label font-bold leading-flat text-ink-faint">{props.term}</dt>
       {props.value === null ? (
         <dd className="text-meta leading-close text-ink-faint">
           {props.absent ?? "Not stated"}

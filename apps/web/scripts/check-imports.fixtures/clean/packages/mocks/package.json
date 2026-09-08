@@ -1,4 +1,7 @@
 {
   "name": "@titlepipe/mocks",
-  "exports": { ".": "./src/index.ts", "./browser": "./src/browser.ts" }
+  "exports": {
+    ".": "./src/index.ts",
+    "./browser": "./src/browser.ts"
+  }
 }

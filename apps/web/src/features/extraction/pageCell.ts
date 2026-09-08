@@ -24,7 +24,8 @@ export function stateOf(page: SourcePage | undefined): CellState {
  */
 export function cellLabel(n: number, page: SourcePage | undefined): string {
   if (page === undefined) return `Page ${n} — no reader read this page`;
-  if (page.degraded) return `Page ${n} — ${page.kind} · the server marked this scan degraded`;
+  if (page.degraded)
+    return `Page ${n} — ${page.kind} · the server marked this scan degraded`;
   if (!page.read_in_full) return `Page ${n} — ${page.kind} · not read in full`;
   return `Page ${n} — ${page.kind} · read`;
 }
@@ -43,9 +44,10 @@ export const PAINT: Readonly<Record<CellState, string>> = {
 };
 
 /** The legend row, in the order a reader meets the states. */
-export const LEGEND: readonly { readonly state: CellState; readonly label: string }[] = [
-  { state: "read", label: "Read" },
-  { state: "partial", label: "Not read in full" },
-  { state: "degraded", label: "Degraded scan" },
-  { state: "unread", label: "Nobody read it" },
-];
+export const LEGEND: readonly { readonly state: CellState; readonly label: string }[] =
+  [
+    { state: "read", label: "Read" },
+    { state: "partial", label: "Not read in full" },
+    { state: "degraded", label: "Degraded scan" },
+    { state: "unread", label: "Nobody read it" },
+  ];

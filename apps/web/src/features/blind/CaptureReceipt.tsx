@@ -33,10 +33,9 @@ export function CaptureReceipt(props: {
           {props.accepted.entry_ids.join(" · ")}
         </p>
         <p className="text-meta leading-body text-ink-secondary">
-          These ids are the whole of what this seat is told. The server does not
-          return what it did with the entries, what the machine read, or what the
-          other seat keyed — that silence is the measurement, not a missing
-          screen.
+          These ids are the whole of what this seat is told. The server does not return
+          what it did with the entries, what the machine read, or what the other seat
+          keyed — that silence is the measurement, not a missing screen.
         </p>
       </div>
     </Card>

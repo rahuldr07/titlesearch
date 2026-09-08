@@ -31,7 +31,11 @@ export type SplitProps = {
 /** The group. Fills its parent and never scrolls — the panes do (ScrollArea). */
 export function Split({ children, orientation = "horizontal", className }: SplitProps) {
   return (
-    <Group data-slot="split" orientation={orientation} className={cx("flex h-full min-h-0 w-full", className)}>
+    <Group
+      data-slot="split"
+      orientation={orientation}
+      className={cx("flex h-full min-h-0 w-full", className)}
+    >
       {children}
     </Group>
   );
@@ -50,7 +54,13 @@ export type SplitPanelProps = {
   readonly className?: string | undefined;
 };
 
-export function SplitPanel({ children, defaultSize, minSize, maxSize, className }: SplitPanelProps) {
+export function SplitPanel({
+  children,
+  defaultSize,
+  minSize,
+  maxSize,
+  className,
+}: SplitPanelProps) {
   return (
     <Panel
       data-slot="split-panel"

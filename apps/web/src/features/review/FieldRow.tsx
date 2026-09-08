@@ -84,7 +84,9 @@ export function FieldRow({
         "grid-cols-[140px_minmax(0,1fr)_70px_24px]",
         /* The design separates rows by a 4px gap and answers the pointer
            with a border, not by a rule between them. */
-        selected ? "bg-action-surface" : "hover:border-action-border hover:bg-row-hover",
+        selected
+          ? "bg-action-surface"
+          : "hover:border-action-border hover:bg-row-hover",
       )}
     >
       {/* 140px — the label, with the T1 chip beside it. Mono, the rubric

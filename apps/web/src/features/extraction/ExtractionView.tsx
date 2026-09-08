@@ -1,7 +1,12 @@
 import { Badge, Card } from "../../components/ui";
 import { RouteButton } from "../../app/chrome/RouteButton";
 import { useRead } from "../../app/useRead";
-import { orderContext, orderFields, orderPages, orderPipeline } from "../../shared/queries";
+import {
+  orderContext,
+  orderFields,
+  orderPages,
+  orderPipeline,
+} from "../../shared/queries";
 import { ExtractionHeader } from "./ExtractionHeader";
 import { MetaStrip } from "./MetaStrip";
 import { PageMatrix, PageMatrixLegend } from "./PageMatrix";
@@ -45,10 +50,7 @@ export function ExtractionView(props: { readonly orderId: string }) {
         <Badge tone="halt">◆ The gate has halted this order</Badge>
       )}
 
-      <MetaStrip
-        pipeline={pipeline.data}
-        orderRef={context.data?.order_ref ?? null}
-      />
+      <MetaStrip pipeline={pipeline.data} orderRef={context.data?.order_ref ?? null} />
 
       <div className="grid grid-cols-[minmax(0,1fr)_340px] items-start gap-12">
         <div className="flex min-w-0 flex-col gap-12">
@@ -59,9 +61,9 @@ export function ExtractionView(props: { readonly orderId: string }) {
                 judgments never auto-confirm and engine self-confidence never
                 gates a confirm. */}
             <p className="mt-12 rounded-r-lg border-l-4 border-action bg-action-surface p-8 font-sans text-meta font-medium leading-body text-ink-secondary">
-              Engine confidence is recorded for telemetry and is never used to
-              bypass a human read. Every conflict is confirmed by an examiner,
-              and no escalation is resolved without a rule.
+              Engine confidence is recorded for telemetry and is never used to bypass a
+              human read. Every conflict is confirmed by an examiner, and no escalation
+              is resolved without a rule.
             </p>
             {/* `remaining` is the server's census figure; absent means the
                 server did not say, and the footer stays down rather than

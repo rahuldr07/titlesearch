@@ -6,5 +6,9 @@ import type { ReactNode } from "react";
  * would be the table knowing what its data means.
  */
 export function DataCell({ children }: { readonly children: ReactNode }) {
-  return <span className="font-mono text-meta leading-close text-ink-secondary">{children}</span>;
+  return (
+    <span className="font-mono text-meta leading-close text-ink-secondary">
+      {children}
+    </span>
+  );
 }

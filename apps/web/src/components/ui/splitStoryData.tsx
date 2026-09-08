@@ -38,9 +38,8 @@ export function Decision() {
 export function Evidence() {
   return (
     <div className="h-full bg-surface-paper p-8 font-serif leading-document text-page-ink">
-      Know all men by these presents, that the grantor, for and in consideration
-      of ten dollars and other good and valuable consideration, does hereby
-      grant.
+      Know all men by these presents, that the grantor, for and in consideration of ten
+      dollars and other good and valuable consideration, does hereby grant.
     </div>
   );
 }

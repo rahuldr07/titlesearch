@@ -32,7 +32,10 @@ import {
 export function FormsHalf() {
   return (
     <>
-      <Row title="Text entry" note="type here, then press a chord key — it must stay text">
+      <Row
+        title="Text entry"
+        note="type here, then press a chord key — it must stay text"
+      >
         <Field className="w-140">
           <TextField className="flex flex-col gap-3">
             <Label>Order reference</Label>
@@ -41,7 +44,11 @@ export function FormsHalf() {
           </TextField>
         </Field>
         <Field className="w-140">
-          <TextField defaultValue="BK 0000 PG 00" className="flex flex-col gap-3" isInvalid>
+          <TextField
+            defaultValue="BK 0000 PG 00"
+            className="flex flex-col gap-3"
+            isInvalid
+          >
             <Label>Refused</Label>
             <Input data />
             {/* The server's wording. The client never authors a refusal. */}
@@ -55,7 +62,11 @@ export function FormsHalf() {
           </TextField>
         </Field>
         <Field className="w-140">
-          <TextField defaultValue="0000-0000000" isDisabled className="flex flex-col gap-3">
+          <TextField
+            defaultValue="0000-0000000"
+            isDisabled
+            className="flex flex-col gap-3"
+          >
             <Label>Read from the stamp</Label>
             <Input data disabledBecause="Blocked: read from the clerk stamp." />
             <FieldDescription>Blocked: read from the clerk stamp.</FieldDescription>
@@ -63,7 +74,10 @@ export function FormsHalf() {
         </Field>
       </Row>
 
-      <Row title="Input group" note="the WRAPPER owns the box — focus is drawn once, not twice">
+      <Row
+        title="Input group"
+        note="the WRAPPER owns the box — focus is drawn once, not twice"
+      >
         <InputGroup className="w-140">
           <InputGroupAddon>
             <InputGroupText>◆</InputGroupText>
@@ -106,15 +120,24 @@ export function FormsHalf() {
           <Command>
             <CommandInput />
             <CommandList aria-label="Commands">
-              <CommandItem id="confirm" keys="c">Confirm the reading</CommandItem>
-              <CommandItem id="escalate" keys="e">Escalate to a rule</CommandItem>
-              <CommandItem id="next" keys="j">Next field</CommandItem>
+              <CommandItem id="confirm" keys="c">
+                Confirm the reading
+              </CommandItem>
+              <CommandItem id="escalate" keys="e">
+                Escalate to a rule
+              </CommandItem>
+              <CommandItem id="next" keys="j">
+                Next field
+              </CommandItem>
             </CommandList>
           </Command>
         </div>
       </Row>
 
-      <Row title="Separator" note="a hairline divides an interior — depth separates a surface">
+      <Row
+        title="Separator"
+        note="a hairline divides an interior — depth separates a surface"
+      >
         <div className="w-210">
           <FieldSeparator>or</FieldSeparator>
         </div>

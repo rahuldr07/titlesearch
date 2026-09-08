@@ -26,7 +26,9 @@ export function Address({ row }: { readonly row: OrderRow }) {
           copied across it measured 1.84:1 on white at 11px and axe called it
           a SERIOUS violation. The design is authority on geometry, not on
           whether a reader can see the text. */}
-      <span className="truncate text-label leading-flat text-ink-faint">{row.place}</span>
+      <span className="truncate text-label leading-flat text-ink-faint">
+        {row.place}
+      </span>
     </span>
   );
 }

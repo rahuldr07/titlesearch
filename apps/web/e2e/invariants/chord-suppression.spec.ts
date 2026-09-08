@@ -64,16 +64,10 @@ test("the drawn NA grid stands where the select was, and z zooms to the citation
   await expect(page.getByTestId("na-state-grid")).toHaveCount(0);
   // …then `z` toggles the drawn citation zoom…
   await page.keyboard.press("z");
-  await expect(page.getByTestId("evidence-pane")).toHaveAttribute(
-    "data-zoomed",
-    "1",
-  );
+  await expect(page.getByTestId("evidence-pane")).toHaveAttribute("data-zoomed", "1");
   // …and Escape fits again, as the drawn note says.
   await page.keyboard.press("Escape");
-  await expect(page.getByTestId("evidence-pane")).toHaveAttribute(
-    "data-zoomed",
-    "0",
-  );
+  await expect(page.getByTestId("evidence-pane")).toHaveAttribute("data-zoomed", "0");
 });
 
 test("the ? map stands the REVIEW chords down — c must not confirm a T1 ruling", async ({
@@ -88,9 +82,7 @@ test("the ? map stands the REVIEW chords down — c must not confirm a T1 ruling
   await page.keyboard.press("Escape");
   await expect(page.getByTestId("key-map")).toHaveCount(0);
   await page.keyboard.press("c");
-  await expect(page.getByTestId("verified-meter-label")).not.toHaveText(
-    before ?? "",
-  );
+  await expect(page.getByTestId("verified-meter-label")).not.toHaveText(before ?? "");
 });
 
 test("the command palette owns / and ? while it is up", async ({ page }) => {
@@ -132,7 +124,9 @@ test("countersign is refused by the SERVER with a 409, not by button state", asy
     method: "POST",
     match: "/countersign",
     status: 409,
-    body: { error: "a second read must come from a different examiner than the one who ruled" },
+    body: {
+      error: "a second read must come from a different examiner than the one who ruled",
+    },
   });
   await openReview(page);
   const signature = page.getByTestId("countersign-signature");

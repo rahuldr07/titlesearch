@@ -88,7 +88,9 @@ export function Table<TRow>({
             about a set the DOM is only ever holding a window of. */}
         <div
           className="relative w-full"
-          style={{ height: virtualizer.getTotalSize() }} /* rules-allow: a virtualizer's spacer height is computed per scroll frame from the row count — no token or class can express it, and this is the mechanism rather than a shortcut */
+          style={{
+            height: virtualizer.getTotalSize(),
+          }} /* rules-allow: a virtualizer's spacer height is computed per scroll frame from the row count — no token or class can express it, and this is the mechanism rather than a shortcut */
         >
           {virtualizer.getVirtualItems().map((item) => {
             const row = rows[item.index];

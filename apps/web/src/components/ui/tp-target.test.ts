@@ -9,7 +9,10 @@ import { readFileSync } from "node:fs";
  * future component.
  */
 const css = readFileSync(new URL("./a11y.css", import.meta.url), "utf8");
-const target = css.slice(css.indexOf("@utility tp-target"), css.indexOf("@utility tp-ring"));
+const target = css.slice(
+  css.indexOf("@utility tp-target"),
+  css.indexOf("@utility tp-ring"),
+);
 
 test("tp-target yields to a component that declared its own height floor", () => {
   expect(target).toMatch(/&:not\(\[class\*="min-h-"\]\)/);

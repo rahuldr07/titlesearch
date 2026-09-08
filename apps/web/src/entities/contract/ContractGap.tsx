@@ -32,7 +32,9 @@ export function ContractGap(props: {
         {props.drawn}
       </p>
       <p className="font-sans text-meta leading-body text-ink-secondary">{props.has}</p>
-      <p className="font-sans text-meta leading-body text-ink-secondary">{props.needs}</p>
+      <p className="font-sans text-meta leading-body text-ink-secondary">
+        {props.needs}
+      </p>
     </section>
   );
 }

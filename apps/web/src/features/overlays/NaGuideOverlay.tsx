@@ -34,8 +34,8 @@ export function NaGuideOverlay() {
     >
       <DialogBody>
         <p className="text-meta leading-body text-ink-secondary">
-          Four states about the document, one about the pipeline. They never
-          collapse into one dash, and nothing is derived from a null value.
+          Four states about the document, one about the pipeline. They never collapse
+          into one dash, and nothing is derived from a null value.
         </p>
         {/* The design caps this modal nowhere and lets the five cards run;
             480px is the sibling shortcut modal's height and keeps it inside a

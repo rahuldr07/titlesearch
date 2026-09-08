@@ -1,10 +1,10 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { cva, type VariantProps } from "class-variance-authority"
+import * as React from "react";
+import { cva, type VariantProps } from "class-variance-authority";
 
-import { cx } from "@/components/ui/cx"
-import { Button } from "@/components/ui/button"
+import { cx } from "@/components/ui/cx";
+import { Button } from "@/components/ui/button";
 
 /**
  * The chrome that attaches to a control — addon, inner button, inner text.
@@ -27,8 +27,8 @@ const inputGroupAddonVariants = cva(
       },
     },
     defaultVariants: { align: "inline-start" },
-  }
-)
+  },
+);
 
 /**
  * Clicking the chrome focuses the control, because the chrome looks like part
@@ -47,12 +47,12 @@ function InputGroupAddon({
       data-align={align}
       className={cx(inputGroupAddonVariants({ align }), className)}
       onClick={(e) => {
-        if ((e.target as HTMLElement).closest("button")) return
-        e.currentTarget.parentElement?.querySelector("input")?.focus()
+        if ((e.target as HTMLElement).closest("button")) return;
+        e.currentTarget.parentElement?.querySelector("input")?.focus();
       }}
       {...props}
     />
-  )
+  );
 }
 
 /**
@@ -73,7 +73,7 @@ function InputGroupButton({
       className={cx("h-13 min-h-13 gap-3 rounded-sm px-4", className)}
       {...props}
     />
-  )
+  );
 }
 
 function InputGroupText({ className, ...props }: React.ComponentProps<"span">) {
@@ -83,11 +83,11 @@ function InputGroupText({ className, ...props }: React.ComponentProps<"span">) {
       className={cx(
         "flex items-center gap-3 font-sans text-meta leading-close text-ink-muted",
         "[&_svg]:pointer-events-none",
-        className
+        className,
       )}
       {...props}
     />
-  )
+  );
 }
 
-export { InputGroupAddon, InputGroupButton, InputGroupText }
+export { InputGroupAddon, InputGroupButton, InputGroupText };

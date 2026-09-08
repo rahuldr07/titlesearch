@@ -46,7 +46,8 @@ export function OrderPicker({
               )}
             >
               <span className="font-mono text-meta leading-close">
-                {rows.find((r) => r.report?.order_ref != null)?.report?.order_ref ?? orderId}
+                {rows.find((r) => r.report?.order_ref != null)?.report?.order_ref ??
+                  orderId}
               </span>
               <span className="font-sans text-label leading-flat">
                 {rows.length === 1 ? "one version" : `${String(rows.length)} versions`}

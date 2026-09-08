@@ -32,10 +32,7 @@ export const BLANK_ORDER: CreateOrderRequest = {
  * absence and names it. Nothing is validated here — a client-side gate would
  * be a second list drifting from the server's.
  */
-export function packageForm(
-  values: CreateOrderRequest,
-  file: File | null,
-): FormData {
+export function packageForm(values: CreateOrderRequest, file: File | null): FormData {
   const form = new FormData();
   for (const [key, value] of Object.entries(values)) {
     if (value.trim() !== "") form.append(key, value.trim());

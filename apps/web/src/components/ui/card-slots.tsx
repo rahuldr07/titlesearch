@@ -1,7 +1,10 @@
 import type { ReactNode } from "react";
 import { cx } from "./cx";
 
-type SlotProps = { readonly children: ReactNode; readonly className?: string | undefined };
+type SlotProps = {
+  readonly children: ReactNode;
+  readonly className?: string | undefined;
+};
 
 /* The named layout regions of a Card; the nesting contexts stay in card.tsx. */
 

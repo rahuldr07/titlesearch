@@ -61,16 +61,12 @@ export function RefusedCard(props: {
       </ul>
 
       <p className="font-sans text-meta leading-body text-ink-secondary">
-        This refusal is protection, not pedantry. A package missing its order
-        identity does not fail at upload — it fails four stages later, silently,
-        as a wrong value on a delivered report.
+        This refusal is protection, not pedantry. A package missing its order identity
+        does not fail at upload — it fails four stages later, silently, as a wrong value
+        on a delivered report.
       </p>
 
-      <Button
-        data-testid="refused-back"
-        onPress={props.onBack}
-        className="w-fit"
-      >
+      <Button data-testid="refused-back" onPress={props.onBack} className="w-fit">
         Back — attach what is missing
       </Button>
     </div>

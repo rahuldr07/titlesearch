@@ -56,7 +56,9 @@ export function ProgressMeter({ label, settled, total, caption }: ProgressMeterP
         </div>
       )}
       {caption !== undefined && (
-        <span className="font-mono text-label leading-flat text-ink-secondary">{caption}</span>
+        <span className="font-mono text-label leading-flat text-ink-secondary">
+          {caption}
+        </span>
       )}
     </ProgressBar>
   );

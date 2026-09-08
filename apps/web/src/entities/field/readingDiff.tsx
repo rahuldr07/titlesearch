@@ -13,7 +13,9 @@ export function ReadingText({
   readonly className?: string | undefined;
 }) {
   return (
-    <span className={cx("font-mono text-body leading-close text-ink-primary", className)}>
+    <span
+      className={cx("font-mono text-body leading-close text-ink-primary", className)}
+    >
       {segments.map((segment, i) => (
         <span
           // Segments are positional and have no identity of their own; the

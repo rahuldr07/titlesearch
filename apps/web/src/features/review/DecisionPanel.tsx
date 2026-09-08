@@ -89,7 +89,9 @@ export function DecisionPanel(props: {
         label={fieldLabel(field.path)}
         consequence={field.consequence}
         rubric={panelRubric(field, readCited(field)).text}
-        readings={comparison.kind === "pair" ? { a: comparison.a, b: comparison.b } : undefined}
+        readings={
+          comparison.kind === "pair" ? { a: comparison.a, b: comparison.b } : undefined
+        }
         onAdoptReading={(reading) => {
           // Into the editor, never retyped — and into one that is already
           // open without discarding what has been typed beside it.
@@ -108,16 +110,17 @@ export function DecisionPanel(props: {
             <DecisionActions
               pending={writes.pending}
               onConfirm={() => writes.confirm(field.id, machineRead)}
-              onOpen={(next) => open(next, next === "correct" ? (machineRead ?? "") : "")}
+              onOpen={(next) =>
+                open(next, next === "correct" ? (machineRead ?? "") : "")
+              }
             />
           ) : (
             <p
               data-testid="settled-no-acts"
               className="text-meta leading-body text-ink-secondary"
             >
-              The server settled this field and did not put it in the review
-              queue. It is shown here with its provenance; nothing on this
-              screen re-opens it.
+              The server settled this field and did not put it in the review queue. It
+              is shown here with its provenance; nothing on this screen re-opens it.
             </p>
           )
         }
@@ -144,10 +147,7 @@ export function DecisionPanel(props: {
       {/* The quoted line with the read marked in it. Absent where no reader
           typed an excerpt; null where one arrived without match offsets. */}
       {field.source_excerpt !== null && field.source_excerpt !== undefined && (
-        <ExcerptStrip
-          excerpt={field.source_excerpt}
-          onView={props.onViewPage}
-        />
+        <ExcerptStrip excerpt={field.source_excerpt} onView={props.onViewPage} />
       )}
 
       {/*

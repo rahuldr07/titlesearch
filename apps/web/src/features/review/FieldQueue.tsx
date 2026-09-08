@@ -58,58 +58,58 @@ export function FieldQueue(props: {
               ? `p${Math.min(...cited)}`
               : `p${Math.min(...cited)}–p${Math.max(...cited)}`;
         return (
-        <section
-          key={section.id}
-          id={`section-${section.id}`}
-          className="border-b border-line-subtle px-9 py-9"
-        >
-          <div className="mb-4 flex items-baseline justify-between gap-4">
-            <span className="flex min-w-0 items-baseline gap-4">
-              <h3 className="text-meta font-bold leading-close text-ink-primary">
-                {section.title}
-              </h3>
-              {range !== null && (
-                <span className="font-mono text-label leading-flat tabular-nums text-ink-faint">
-                  {range}
+          <section
+            key={section.id}
+            id={`section-${section.id}`}
+            className="border-b border-line-subtle px-9 py-9"
+          >
+            <div className="mb-4 flex items-baseline justify-between gap-4">
+              <span className="flex min-w-0 items-baseline gap-4">
+                <h3 className="text-meta font-bold leading-close text-ink-primary">
+                  {section.title}
+                </h3>
+                {range !== null && (
+                  <span className="font-mono text-label leading-flat tabular-nums text-ink-faint">
+                    {range}
+                  </span>
+                )}
+              </span>
+              {section.flagged && queued > 0 && (
+                <span className="text-label font-semibold leading-flat text-ink-muted">
+                  {queued} flagged
                 </span>
               )}
-            </span>
-            {section.flagged && queued > 0 && (
-              <span className="text-label font-semibold leading-flat text-ink-muted">
-                {queued} flagged
-              </span>
-            )}
-          </div>
-
-          <div className="flex flex-col gap-2">
-            {section.fields.map((field) => (
-            <div key={field.id} onDoubleClick={() => props.onEdit(field)}>
-              {props.editingPath === field.path ? (
-                <InlineEdit
-                  path={field.path}
-                  initial={confirmValue(field) ?? ""}
-                  pending={props.pending}
-                  onSave={(value) => props.onSaveInline(field, value)}
-                  onCancel={props.onCancelInline}
-                />
-              ) : (
-                <FieldRow
-                  field={field}
-                  selected={field.id === props.selectedId}
-                  ruinous={isRuinous(field)}
-                  onPreview={() => props.onPreview(field)}
-                  onPreviewEnd={props.onPreviewEnd}
-                  onEdit={() => props.onEdit(field)}
-                  onSelect={() => {
-                    if (props.canSelect(field)) props.onSelect(field);
-                  }}
-                />
-              )}
-              {field.id === props.selectedId && props.renderOpen()}
             </div>
-            ))}
-          </div>
-        </section>
+
+            <div className="flex flex-col gap-2">
+              {section.fields.map((field) => (
+                <div key={field.id} onDoubleClick={() => props.onEdit(field)}>
+                  {props.editingPath === field.path ? (
+                    <InlineEdit
+                      path={field.path}
+                      initial={confirmValue(field) ?? ""}
+                      pending={props.pending}
+                      onSave={(value) => props.onSaveInline(field, value)}
+                      onCancel={props.onCancelInline}
+                    />
+                  ) : (
+                    <FieldRow
+                      field={field}
+                      selected={field.id === props.selectedId}
+                      ruinous={isRuinous(field)}
+                      onPreview={() => props.onPreview(field)}
+                      onPreviewEnd={props.onPreviewEnd}
+                      onEdit={() => props.onEdit(field)}
+                      onSelect={() => {
+                        if (props.canSelect(field)) props.onSelect(field);
+                      }}
+                    />
+                  )}
+                  {field.id === props.selectedId && props.renderOpen()}
+                </div>
+              ))}
+            </div>
+          </section>
         );
       })}
     </div>

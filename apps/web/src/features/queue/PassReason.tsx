@@ -106,8 +106,8 @@ export function PassReason(props: {
           role="alert"
           className="text-meta leading-close text-state-halt"
         >
-          A pass needs its reason — the next person inherits this order and the
-          reason is what they inherit with it.
+          A pass needs its reason — the next person inherits this order and the reason
+          is what they inherit with it.
         </p>
       )}
       <p className="text-label leading-close text-ink-faint">

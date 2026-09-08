@@ -19,7 +19,11 @@ type Story = StoryObj<typeof meta>;
 
 export const WithSnippet: Story = {
   args: {
-    citation: { docId: "DOC-8841", page: 12, snippet: "MARIA L. ESTRADA, a married woman" },
+    citation: {
+      docId: "DOC-8841",
+      page: 12,
+      snippet: "MARIA L. ESTRADA, a married woman",
+    },
   },
 };
 
@@ -34,7 +38,11 @@ export const WithoutSnippet: Story = {
 /** Click-to-source: a record becomes an affordance. */
 export const Clickable: Story = {
   args: {
-    citation: { docId: "DOC-8841", page: 12, snippet: "MARIA L. ESTRADA, a married woman" },
+    citation: {
+      docId: "DOC-8841",
+      page: 12,
+      snippet: "MARIA L. ESTRADA, a married woman",
+    },
     onOpen: () => {},
   },
 };

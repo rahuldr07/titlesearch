@@ -39,7 +39,9 @@ export const Blocked: Story = {
   render: (args) => <Switch {...args}>Show retired rules</Switch>,
   play: ({ canvasElement }) => {
     expect(canvasElement.querySelector("[data-disabled-reason]")).not.toBeNull();
-    expect(canvasElement.querySelector("[title]")?.getAttribute("title")).toContain("role");
+    expect(canvasElement.querySelector("[title]")?.getAttribute("title")).toContain(
+      "role",
+    );
   },
 };
 

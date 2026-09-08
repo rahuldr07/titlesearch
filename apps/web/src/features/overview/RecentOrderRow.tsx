@@ -35,7 +35,9 @@ export function RecentOrderRow(props: { readonly row: OrderRow }) {
         <span className="truncate text-body font-semibold leading-close text-ink-primary">
           {row.addr}
         </span>
-        <span className="truncate text-label leading-flat text-ink-disabled">{row.place}</span>
+        <span className="truncate text-label leading-flat text-ink-disabled">
+          {row.place}
+        </span>
       </span>
 
       <span className="w-85 shrink-0 truncate px-6 text-meta leading-close text-ink-faint">
@@ -103,7 +105,15 @@ function HistoryButton(props: { readonly id: string; readonly orderRef: string }
       )}
     >
       {/* The clock glyph. */}
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden>
+      <svg
+        width="13"
+        height="13"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        aria-hidden
+      >
         <path d="M12 8v4l3 3" />
         <circle cx="12" cy="12" r="9" />
       </svg>

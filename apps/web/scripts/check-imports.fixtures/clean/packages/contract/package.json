@@ -1,4 +1,6 @@
 {
   "name": "@titlepipe/contract",
-  "exports": { ".": "./src/index.ts" }
+  "exports": {
+    ".": "./src/index.ts"
+  }
 }

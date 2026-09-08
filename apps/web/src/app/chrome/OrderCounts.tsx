@@ -25,7 +25,10 @@ export function OrderCounts(props: { readonly orderId: string }) {
      one. */
   if (census === undefined) {
     return (
-      <span data-testid="order-counts" className="text-meta leading-flat text-ink-faint">
+      <span
+        data-testid="order-counts"
+        className="text-meta leading-flat text-ink-faint"
+      >
         No census on this order
       </span>
     );

@@ -1,8 +1,8 @@
-import { useMemo } from "react"
-import { cva, type VariantProps } from "class-variance-authority"
+import { useMemo } from "react";
+import { cva, type VariantProps } from "class-variance-authority";
 
-import { cx } from "@/components/ui/cx"
-import { descriptionClass, errorClass } from "@/components/ui/field-chrome"
+import { cx } from "@/components/ui/cx";
+import { descriptionClass, errorClass } from "@/components/ui/field-chrome";
 
 /**
  * A single field and its parts; the containers live in field-set.tsx and are
@@ -30,8 +30,8 @@ const fieldVariants = cva(
       },
     },
     defaultVariants: { orientation: "vertical" },
-  }
-)
+  },
+);
 
 function Field({
   className,
@@ -46,17 +46,20 @@ function Field({
       className={cx(fieldVariants({ orientation }), className)}
       {...props}
     />
-  )
+  );
 }
 
 function FieldContent({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="field-content"
-      className={cx("group/field-content flex flex-1 flex-col gap-1 leading-close", className)}
+      className={cx(
+        "group/field-content flex flex-1 flex-col gap-1 leading-close",
+        className,
+      )}
       {...props}
     />
-  )
+  );
 }
 
 /**
@@ -71,11 +74,11 @@ function FieldTitle({ className, ...props }: React.ComponentProps<"div">) {
       className={cx(
         "flex w-fit items-center gap-4 font-sans text-meta leading-close font-semibold",
         "text-ink-primary group-data-[disabled=true]/field:text-ink-disabled",
-        className
+        className,
       )}
       {...props}
     />
-  )
+  );
 }
 
 /**
@@ -91,11 +94,11 @@ function FieldDescription({ className, ...props }: React.ComponentProps<"p">) {
         "text-left group-has-data-horizontal/field:text-balance",
         "[[data-variant=legend]+&]:-mt-3 last:mt-0 nth-last-2:-mt-2",
         "[&>a]:underline [&>a]:underline-offset-4 [&>a:hover]:text-action",
-        className
+        className,
       )}
       {...props}
     />
-  )
+  );
 }
 
 /**
@@ -109,30 +112,43 @@ function FieldError({
   errors,
   ...props
 }: React.ComponentProps<"div"> & {
-  errors?: Array<{ message?: string } | undefined>
+  errors?: Array<{ message?: string } | undefined>;
 }) {
   const content = useMemo(() => {
-    if (children) return children
-    if (!errors?.length) return null
+    if (children) return children;
+    if (!errors?.length) return null;
 
-    const uniqueErrors = [...new Map(errors.map((e) => [e?.message, e])).values()]
-    if (uniqueErrors.length === 1) return uniqueErrors[0]?.message
+    const uniqueErrors = [...new Map(errors.map((e) => [e?.message, e])).values()];
+    if (uniqueErrors.length === 1) return uniqueErrors[0]?.message;
 
     return (
       <ul className="ml-8 flex list-disc flex-col gap-2">
-        {uniqueErrors.map((error, index) => error?.message && <li key={index}>{error.message}</li>)}
+        {uniqueErrors.map(
+          (error, index) => error?.message && <li key={index}>{error.message}</li>,
+        )}
       </ul>
-    )
-  }, [children, errors])
+    );
+  }, [children, errors]);
 
-  if (!content) return null
+  if (!content) return null;
 
   return (
-    <div role="alert" data-slot="field-error" className={cx(errorClass, className)} {...props}>
+    <div
+      role="alert"
+      data-slot="field-error"
+      className={cx(errorClass, className)}
+      {...props}
+    >
       {content}
     </div>
-  )
+  );
 }
 
-export { Field, FieldContent, FieldTitle, FieldDescription, FieldError }
-export { FieldSet, FieldLegend, FieldGroup, FieldSeparator, FieldLabel } from "./field-set"
+export { Field, FieldContent, FieldTitle, FieldDescription, FieldError };
+export {
+  FieldSet,
+  FieldLegend,
+  FieldGroup,
+  FieldSeparator,
+  FieldLabel,
+} from "./field-set";

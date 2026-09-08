@@ -24,7 +24,7 @@ export const UNBUILT_SCREENS: readonly ScreenDescriptor[] = [
     binds:
       "QueueNextResponse (endpoints.ts:75) — GET /api/queue/next · PassOrderRequest/PassOrderResponse (endpoints.ts:218-226) — POST /api/orders/{id}/pass, `order.pass` (authz.ts:93)",
     missing:
-      "BUILT (features/queue), restored 2026-09-05 under card TP-2 after the 2026-08-28 deletion. What it does NOT bind is the point: reference-app.html draws no Queue artboard at all — its screen named `queue` is labelled Overview in the rail and \"Queue & Pipeline Overview\" in the palette, and the browsable table with Assigned/Due columns lives on All Orders. So the geometry here is the reference app's own (card, type ramp, 44px controls), the surface is the one the CONTRACT supports, and no column, chip or row the design draws for a list is reproduced: an assignment column, an SLA/due chip and a per-row Open→ are each refused by INVARIANTS 22-25 and by the absence of any field to bind them to. GET /api/queue/bands is served by the mocks and read by nothing — see docs/frontend/CONTRACT-GAP-queue.md.",
+      'BUILT (features/queue), restored 2026-09-05 under card TP-2 after the 2026-08-28 deletion. What it does NOT bind is the point: reference-app.html draws no Queue artboard at all — its screen named `queue` is labelled Overview in the rail and "Queue & Pipeline Overview" in the palette, and the browsable table with Assigned/Due columns lives on All Orders. So the geometry here is the reference app\'s own (card, type ramp, 44px controls), the surface is the one the CONTRACT supports, and no column, chip or row the design draws for a list is reproduced: an assignment column, an SLA/due chip and a per-row Open→ are each refused by INVARIANTS 22-25 and by the absence of any field to bind them to. GET /api/queue/bands is served by the mocks and read by nothing — see docs/frontend/CONTRACT-GAP-queue.md.',
   },
   {
     path: "/ingest",
@@ -74,7 +74,8 @@ export const UNBUILT_SCREENS: readonly ScreenDescriptor[] = [
     path: "/templates",
     screen: "Templates",
     binds: "TemplateResponse (design2.ts) — GET /api/templates",
-    missing: "No write endpoint, so the design's editor is absent rather than disabled.",
+    missing:
+      "No write endpoint, so the design's editor is absent rather than disabled.",
   },
   {
     path: "/jurisdiction",

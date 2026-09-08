@@ -25,7 +25,10 @@ export const OptionBlocked: Story = {
     children: (
       <>
         <Option id="travis">Travis</Option>
-        <Option id="tarrant" disabledBecause="Blocked: no rulebook layer for Tarrant yet.">
+        <Option
+          id="tarrant"
+          disabledBecause="Blocked: no rulebook layer for Tarrant yet."
+        >
           Tarrant
         </Option>
       </>

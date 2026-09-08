@@ -1,7 +1,14 @@
 import { useState } from "react";
 import { useRead } from "../../app/useRead";
 import { rules } from "../../shared/accountQueries";
-import { Badge, Card, Input, Label, Segment, SegmentedControl } from "../../components/ui";
+import {
+  Badge,
+  Card,
+  Input,
+  Label,
+  Segment,
+  SegmentedControl,
+} from "../../components/ui";
 import { PanelFrame } from "./AccountPanel";
 import { QueryState } from "../../entities/state/QueryState";
 import { RulesGaps } from "./RulesGaps";

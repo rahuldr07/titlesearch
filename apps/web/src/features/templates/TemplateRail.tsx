@@ -32,8 +32,7 @@ export function TemplateRail({
     (t) =>
       (client === "All" || t.client === client) &&
       (product === "All" || t.product === product) &&
-      (q === "" ||
-        `${t.name} ${t.client} ${t.product}`.toLowerCase().includes(q)),
+      (q === "" || `${t.name} ${t.client} ${t.product}`.toLowerCase().includes(q)),
   );
 
   return (
@@ -56,7 +55,9 @@ export function TemplateRail({
           <Select
             label="Client"
             selectedKey={client}
-            onSelectionChange={(key: Key | null) => setClient(key === null ? "All" : String(key))}
+            onSelectionChange={(key: Key | null) =>
+              setClient(key === null ? "All" : String(key))
+            }
           >
             {["All", ...catalog.clients].map((name) => (
               <Option key={name} id={name}>
@@ -67,7 +68,9 @@ export function TemplateRail({
           <Select
             label="Product"
             selectedKey={product}
-            onSelectionChange={(key: Key | null) => setProduct(key === null ? "All" : String(key))}
+            onSelectionChange={(key: Key | null) =>
+              setProduct(key === null ? "All" : String(key))
+            }
           >
             {["All", ...catalog.products].map((name) => (
               <Option key={name} id={name}>

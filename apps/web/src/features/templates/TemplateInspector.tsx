@@ -39,7 +39,13 @@ export function TemplateInspector({
           onSelectionChange={(keys) => {
             const next = [...keys][0];
             setTab(
-              next === "na" ? "na" : next === "overrides" ? "overrides" : next === "audit" ? "audit" : "syntax",
+              next === "na"
+                ? "na"
+                : next === "overrides"
+                  ? "overrides"
+                  : next === "audit"
+                    ? "audit"
+                    : "syntax",
             );
           }}
         >
@@ -72,7 +78,12 @@ export function TemplateInspector({
                 <span className="font-sans text-label leading-flat font-bold text-ink-primary">
                   Sentence format expression
                 </span>
-                <Button variant="ghost" size="sm" data-testid="wording-reset" onPress={onReset}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  data-testid="wording-reset"
+                  onPress={onReset}
+                >
                   ↺ Reset
                 </Button>
               </div>
@@ -101,7 +112,11 @@ export function TemplateInspector({
                     aria-label={`Insert ${token} (e.g. ${sample})`}
                     className="rounded-pill border border-action-border bg-action-surface font-mono text-label text-ink-secondary"
                     onPress={() => {
-                      onWording(wording === "" || wording.endsWith(" ") ? wording + token : `${wording} ${token}`);
+                      onWording(
+                        wording === "" || wording.endsWith(" ")
+                          ? wording + token
+                          : `${wording} ${token}`,
+                      );
                     }}
                   >
                     {token}
@@ -114,15 +129,18 @@ export function TemplateInspector({
               <span className="block pb-2 font-sans text-label leading-flat font-bold text-ink-secondary">
                 Live output preview
               </span>
-              <span data-testid="live-preview" className="font-sans text-label leading-body text-ink-primary">
+              <span
+                data-testid="live-preview"
+                className="font-sans text-label leading-body text-ink-primary"
+              >
                 {interpolate(wording, block.tokens)}
               </span>
             </div>
 
             <p className="rounded-md border border-line-subtle bg-surface-sunken p-5 font-sans text-label leading-body text-ink-muted">
-              <span className="font-bold">System constraint:</span> client
-              templates dictate formatting and syntax. Structural inclusion and
-              search depth remain governed immutably by product overlays.
+              <span className="font-bold">System constraint:</span> client templates
+              dictate formatting and syntax. Structural inclusion and search depth
+              remain governed immutably by product overlays.
             </p>
           </>
         )}

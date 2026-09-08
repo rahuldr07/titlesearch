@@ -23,7 +23,11 @@ import {
 export interface ReadDescriptor<T> {
   readonly path: string;
   readonly key: readonly unknown[];
-  readonly schema: { safeParse(input: unknown): { success: true; data: T } | { success: false; error: { message: string } } };
+  readonly schema: {
+    safeParse(
+      input: unknown,
+    ): { success: true; data: T } | { success: false; error: { message: string } };
+  };
 }
 
 /**
@@ -72,7 +76,9 @@ export function orderPipeline(id: string): ReadDescriptor<OrderPipelineResponse>
   };
 }
 
-export function orderCompleteness(id: string): ReadDescriptor<OrderCompletenessResponse> {
+export function orderCompleteness(
+  id: string,
+): ReadDescriptor<OrderCompletenessResponse> {
   return {
     path: `/api/orders/${id}/completeness`,
     key: ["orders", id, "completeness"],

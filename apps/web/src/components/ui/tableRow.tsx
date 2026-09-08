@@ -25,7 +25,9 @@ export function TableHeaderRow<TRow>({
       aria-rowindex={1}
       data-slot="table-header"
       className="tp-z-raised sticky top-0 grid border-b border-line-strong bg-control-fill"
-      style={{ gridTemplateColumns: template }} /* rules-allow: the column track list is caller data (tableColumns.tsx) with no fixed value set a utility could enumerate */
+      style={{
+        gridTemplateColumns: template,
+      }} /* rules-allow: the column track list is caller data (tableColumns.tsx) with no fixed value set a utility could enumerate */
     >
       {columns.map((column) => (
         <div
@@ -91,7 +93,11 @@ export function TableRow<TRow>({
         "border-b border-line-subtle hover:bg-row-hover",
         onActivate !== undefined && "cursor-pointer",
       )}
-      style={{ gridTemplateColumns: template, height: ROW_HEIGHT, transform: `translateY(${offset}px)` }} /* rules-allow: the Y offset comes from the virtualizer per frame and the track list is caller data; neither is expressible as a class */
+      style={{
+        gridTemplateColumns: template,
+        height: ROW_HEIGHT,
+        transform: `translateY(${offset}px)`,
+      }} /* rules-allow: the Y offset comes from the virtualizer per frame and the track list is caller data; neither is expressible as a class */
     >
       {columns.map((column) => (
         <div

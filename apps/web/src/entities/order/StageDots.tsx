@@ -45,7 +45,10 @@ export function StageDots({ stages, className }: StageDotsProps) {
           data-stage-status={stage.status}
           className="flex items-baseline gap-5"
         >
-          <span aria-hidden className={cx("font-mono text-body leading-flat", DOT[stage.status].chrome)}>
+          <span
+            aria-hidden
+            className={cx("font-mono text-body leading-flat", DOT[stage.status].chrome)}
+          >
             {DOT[stage.status].mark}
           </span>
           <span className="font-sans text-meta leading-close text-ink-primary">

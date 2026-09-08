@@ -22,14 +22,17 @@ type Story = StoryObj<typeof meta>;
 /** Nothing chosen. The reviewer has not ruled yet, and that is not an NA state. */
 export const Unchosen: Story = { args: { value: null, onChange: () => {} } };
 
-export const NotFoundChosen: Story = { args: { value: "NOT_FOUND", onChange: () => {} } };
+export const NotFoundChosen: Story = {
+  args: { value: "NOT_FOUND", onChange: () => {} },
+};
 
 /** Blocked states its reason, and the server authored this sentence. */
 export const BlockedWithReason: Story = {
   args: {
     value: null,
     onChange: () => {},
-    disabledBecause: "Blocked: this field is not absence-only — enter a value or escalate.",
+    disabledBecause:
+      "Blocked: this field is not absence-only — enter a value or escalate.",
   },
 };
 

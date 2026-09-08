@@ -26,7 +26,10 @@ export function EscalationDetail({
   /** `null` when the reader does not hold `escalation.resolve` — the card
    * then renders disabled-with-hint, never absent. */
   readonly onResolve:
-    | ((ruling: string, rule: { rule_id: string } | { draft: { text: string } }) => void)
+    | ((
+        ruling: string,
+        rule: { rule_id: string } | { draft: { text: string } },
+      ) => void)
     | null;
 }) {
   const settledBy = rules.find((rule) => rule.id === escalation.rule_id);
@@ -46,7 +49,10 @@ export function EscalationDetail({
           {escalation.order_ids.map((id) => (
             <OrderRef key={id} orderRef={id} />
           ))}
-          <span aria-hidden className="font-sans text-label leading-flat text-ink-faint">
+          <span
+            aria-hidden
+            className="font-sans text-label leading-flat text-ink-faint"
+          >
             ·
           </span>
           <span className="font-mono text-label leading-flat text-ink-secondary">

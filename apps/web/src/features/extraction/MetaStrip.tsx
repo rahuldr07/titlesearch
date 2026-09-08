@@ -25,7 +25,9 @@ export function MetaStrip(props: {
         />
         <Cell
           label="Volume"
-          value={props.pipeline.volume_label ?? "No count — the package could not be read"}
+          value={
+            props.pipeline.volume_label ?? "No count — the package could not be read"
+          }
         />
       </dl>
       <p

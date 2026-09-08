@@ -19,8 +19,16 @@
  */
 @utility tp-paper-grain {
   background-image:
-    repeating-linear-gradient(0deg, transparent 0 3px, var(--color-scan-line-soft) 3px 4px),
-    repeating-linear-gradient(90deg, transparent 0 5px, var(--color-scan-line-soft) 5px 6px);
+    repeating-linear-gradient(
+      0deg,
+      transparent 0 3px,
+      var(--color-scan-line-soft) 3px 4px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent 0 5px,
+      var(--color-scan-line-soft) 5px 6px
+    );
   background-blend-mode: multiply;
 }
 

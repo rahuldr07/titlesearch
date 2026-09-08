@@ -19,18 +19,25 @@ import {
  * holds, printed unfiltered, so a reader can check that what the sheet says
  * is what the server sent.
  */
-export function CompositionJson({ composed }: { readonly composed: CompositionResponse }) {
+export function CompositionJson({
+  composed,
+}: {
+  readonly composed: CompositionResponse;
+}) {
   return (
     <DialogTrigger>
       <Button variant="ghost" size="sm" data-testid="composition-json-open">
         JSON
       </Button>
-      <Dialog title={`Compiled report data — ${composed.order_id}`} testId="composition-json">
+      <Dialog
+        title={`Compiled report data — ${composed.order_id}`}
+        testId="composition-json"
+      >
         <DialogBody>
           <p className="font-sans text-meta leading-body text-ink-secondary">
-            The composition read for this order, exactly as it arrived and
-            exactly as the sheet above was drawn from it. Nothing here is
-            recomputed by this screen.
+            The composition read for this order, exactly as it arrived and exactly as
+            the sheet above was drawn from it. Nothing here is recomputed by this
+            screen.
           </p>
           {/* Scrolls in its own box — the page body never scrolls sideways. */}
           <pre

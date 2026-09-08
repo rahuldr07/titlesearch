@@ -20,7 +20,12 @@ export type CommandPaletteProps = {
   readonly children: ReactNode;
 };
 
-export function CommandPalette({ title, isOpen, onOpenChange, children }: CommandPaletteProps) {
+export function CommandPalette({
+  title,
+  isOpen,
+  onOpenChange,
+  children,
+}: CommandPaletteProps) {
   return (
     <Dialog title={title} isOpen={isOpen} onOpenChange={onOpenChange} isDismissable>
       <Command>{children}</Command>

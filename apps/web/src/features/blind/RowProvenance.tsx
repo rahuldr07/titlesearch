@@ -30,7 +30,9 @@ export function RowProvenance(props: {
         placeholder="Say how sure you are…"
         selectedKey={props.draft.confidence}
         onSelectionChange={(key: Key | null) => {
-          props.onChange({ confidence: CONFIDENCES.find((c) => c.id === key)?.id ?? null });
+          props.onChange({
+            confidence: CONFIDENCES.find((c) => c.id === key)?.id ?? null,
+          });
         }}
       >
         {CONFIDENCES.map((confidence) => (

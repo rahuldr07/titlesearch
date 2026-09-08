@@ -49,13 +49,22 @@ export function isAnswered(draft: DraftEntry): boolean {
  * collapse into one grey dash.
  */
 export const ABSENCES: readonly { readonly id: NaReason; readonly gloss: string }[] = [
-  { id: "NOT_PRESENT", gloss: "Not present — this county does not use this field at all" },
+  {
+    id: "NOT_PRESENT",
+    gloss: "Not present — this county does not use this field at all",
+  },
   { id: "NOT_FOUND", gloss: "Not found — searched the package, nothing of record" },
   { id: "NOT_STATED", gloss: "Not stated — the document is there and is silent on it" },
-  { id: "PRESENT_UNREADABLE", gloss: "Present, unreadable — on the page, could not be read" },
+  {
+    id: "PRESENT_UNREADABLE",
+    gloss: "Present, unreadable — on the page, could not be read",
+  },
 ];
 
-export const CONFIDENCES: readonly { readonly id: BlindConfidence; readonly gloss: string }[] = [
+export const CONFIDENCES: readonly {
+  readonly id: BlindConfidence;
+  readonly gloss: string;
+}[] = [
   { id: "certain", gloss: "Certain — read it plainly" },
   { id: "probable", gloss: "Probable — read it, would not swear to a character" },
   { id: "unclear", gloss: "Unclear — say so rather than guess" },
@@ -66,7 +75,10 @@ export const CONFIDENCES: readonly { readonly id: BlindConfidence; readonly glos
  * identifier; the value is sent exactly as keyed, because it is the record
  * being made and a client that tidied it would edit the thing being measured.
  */
-export function toWire(draft: DraftEntry, confidence: BlindConfidence): BlindEntryInput {
+export function toWire(
+  draft: DraftEntry,
+  confidence: BlindConfidence,
+): BlindEntryInput {
   const base = { path: draft.path, source_citation: draft.citation.trim(), confidence };
   return draft.absence === null
     ? { ...base, value: draft.value }

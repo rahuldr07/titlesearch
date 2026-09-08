@@ -89,12 +89,20 @@ describe("orders search scoped terms", () => {
 
 describe("delivery retry is the transit act on a bounced transmission only", () => {
   test("an unsigned reissue draft is refused — retry may not transmit around the signature", async () => {
-    const reissued = await post("/api/deliveries/del_1/reissue", { reason: "A value in the delivered report requires correction or updating" }, "ops");
+    const reissued = await post(
+      "/api/deliveries/del_1/reissue",
+      { reason: "A value in the delivered report requires correction or updating" },
+      "ops",
+    );
     expect(reissued.status).toBe(200);
     const { deliveries } = await getJson<Deliveries>("/api/deliveries");
     const draft = deliveries.find((d) => d.status === "draft");
     expect(draft).toBeDefined();
-    const retried = await post(`/api/deliveries/${draft?.id ?? ""}/retry`, undefined, "ops");
+    const retried = await post(
+      `/api/deliveries/${draft?.id ?? ""}/retry`,
+      undefined,
+      "ops",
+    );
     expect(retried.status).toBe(409);
     // The draft is still a draft — nothing transmitted.
     const after = await getJson<Deliveries>("/api/deliveries");
@@ -126,21 +134,37 @@ describe("demo reset restores every mutable store to its seed", () => {
   test("deliveries, seals, countersigns, timelines, templates, audit all return to seed", async () => {
     // Seed figures, read before any mutation.
     const seedDeliveries = (await getJson<Deliveries>("/api/deliveries")).deliveries;
-    const seedTimeline = await getJson<{ events: unknown[] }>("/api/orders/ord_demo_1/timeline");
+    const seedTimeline = await getJson<{ events: unknown[] }>(
+      "/api/orders/ord_demo_1/timeline",
+    );
     const seedAudit = await getJson<{ entries: unknown[] }>("/api/audit");
-    const seedTemplate = await getJson<{ version: string }>("/api/templates/tpl_or_to_v2");
+    const seedTemplate = await getJson<{ version: string }>(
+      "/api/templates/tpl_or_to_v2",
+    );
     expect(seedTemplate.version).toBe("v2.1");
 
     // Mutate one store of each module.
     await post("/api/deliveries/del_2/retry", undefined, "ops");
-    await post("/api/deliveries/del_1/reissue", { reason: "reissue for the reset test" }, "ops");
+    await post(
+      "/api/deliveries/del_1/reissue",
+      { reason: "reissue for the reset test" },
+      "ops",
+    );
     for (const f of ["fld_jgmt_hit", "fld_mtg_amount", "fld_legal_desc"]) {
       // The QC seat, not a typed name: `senior` resolves to an examiner who is
       // not the `admin` who ruled these rows, which is what the 409 checks.
-      const signed = await post(`/api/fields/${f}/countersign`, { signature: SEAT_IDENTITIES.senior }, "senior");
+      const signed = await post(
+        `/api/fields/${f}/countersign`,
+        { signature: SEAT_IDENTITIES.senior },
+        "senior",
+      );
       expect(signed.status).toBe(200);
     }
-    await post("/api/orders/ord_demo_14/release", { signature: SEAT_IDENTITIES.ops }, "ops");
+    await post(
+      "/api/orders/ord_demo_14/release",
+      { signature: SEAT_IDENTITIES.ops },
+      "ops",
+    );
     await fetch(url("/api/templates/tpl_or_to_v2"), {
       method: "PATCH",
       headers: { "content-type": "application/json", "x-mock-role": "engineer" },
@@ -153,24 +177,45 @@ describe("demo reset restores every mutable store to its seed", () => {
     // release now files the delivery it produced. Before that, signing a
     // release moved nothing and left the delivered record empty, so the
     // certified artifact had no screen to appear on.
-    expect((await getJson<Deliveries>("/api/deliveries")).deliveries.length).toBe(seedDeliveries.length + 2);
+    expect((await getJson<Deliveries>("/api/deliveries")).deliveries.length).toBe(
+      seedDeliveries.length + 2,
+    );
     const drained = await getJson<Countersigns>("/api/orders/ord_demo_1/countersigns");
     expect(drained.required.every((r) => r.countersigned_by !== null)).toBe(true);
-    expect((await getJson<{ events: unknown[] }>("/api/orders/ord_demo_1/timeline")).events.length).toBe(seedTimeline.events.length + 1);
-    expect((await getJson<{ version: string }>("/api/templates/tpl_or_to_v2")).version).toBe("v2.1 → v2.2 draft");
-    expect((await getJson<{ entries: unknown[] }>("/api/audit")).entries.length).toBeGreaterThan(seedAudit.entries.length);
+    expect(
+      (await getJson<{ events: unknown[] }>("/api/orders/ord_demo_1/timeline")).events
+        .length,
+    ).toBe(seedTimeline.events.length + 1);
+    expect(
+      (await getJson<{ version: string }>("/api/templates/tpl_or_to_v2")).version,
+    ).toBe("v2.1 → v2.2 draft");
+    expect(
+      (await getJson<{ entries: unknown[] }>("/api/audit")).entries.length,
+    ).toBeGreaterThan(seedAudit.entries.length);
 
     const reset = await post("/api/demo/reset");
     expect(reset.status).toBe(200);
 
     // Every store is back at seed.
-    expect(await getJson<Deliveries>("/api/deliveries")).toEqual({ deliveries: seedDeliveries });
+    expect(await getJson<Deliveries>("/api/deliveries")).toEqual({
+      deliveries: seedDeliveries,
+    });
     const ledger = await getJson<Countersigns>("/api/orders/ord_demo_1/countersigns");
     expect(ledger.required.map((r) => r.countersigned_by)).toEqual([null, null, null]);
-    expect((await getJson<{ events: unknown[] }>("/api/orders/ord_demo_1/timeline")).events.length).toBe(seedTimeline.events.length);
-    expect((await getJson<{ entries: unknown[] }>("/api/audit")).entries.length).toBe(seedAudit.entries.length);
-    expect((await getJson<{ version: string }>("/api/templates/tpl_or_to_v2")).version).toBe("v2.1");
-    const composition = await getJson<{ releasable: boolean; seal_sha256: string | null }>("/api/orders/ord_demo_14/composition");
+    expect(
+      (await getJson<{ events: unknown[] }>("/api/orders/ord_demo_1/timeline")).events
+        .length,
+    ).toBe(seedTimeline.events.length);
+    expect((await getJson<{ entries: unknown[] }>("/api/audit")).entries.length).toBe(
+      seedAudit.entries.length,
+    );
+    expect(
+      (await getJson<{ version: string }>("/api/templates/tpl_or_to_v2")).version,
+    ).toBe("v2.1");
+    const composition = await getJson<{
+      releasable: boolean;
+      seal_sha256: string | null;
+    }>("/api/orders/ord_demo_14/composition");
     expect(composition.releasable).toBe(true);
     expect(composition.seal_sha256).toBeNull();
   });

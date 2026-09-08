@@ -18,7 +18,12 @@ export type NoValueChipProps = {
   readonly children?: ReactNode;
 };
 
-export function NoValueChip({ render, sentence, className, children }: NoValueChipProps) {
+export function NoValueChip({
+  render,
+  sentence,
+  className,
+  children,
+}: NoValueChipProps) {
   const descriptor = NO_VALUE[render];
   return (
     <span

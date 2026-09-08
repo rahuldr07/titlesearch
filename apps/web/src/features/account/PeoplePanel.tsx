@@ -78,16 +78,18 @@ export function PeoplePanel() {
                       disabledBecause={held}
                       onSelectionChange={(key: Key | null) => {
                         const next = key === null ? null : String(key);
-                        if (next !== null && next !== person.role) assign(person.id, next);
+                        if (next !== null && next !== person.role)
+                          assign(person.id, next);
                       }}
                     >
-                      {(roles.includes(person.role) ? roles : [person.role, ...roles]).map(
-                        (role) => (
-                          <Option key={role} id={role}>
-                            {role}
-                          </Option>
-                        ),
-                      )}
+                      {(roles.includes(person.role)
+                        ? roles
+                        : [person.role, ...roles]
+                      ).map((role) => (
+                        <Option key={role} id={role}>
+                          {role}
+                        </Option>
+                      ))}
                     </Select>
                     <span className="truncate text-label leading-flat text-ink-muted">
                       {person.status}
@@ -103,9 +105,9 @@ export function PeoplePanel() {
             </Card>
 
             <p className="text-meta leading-body text-ink-secondary">
-              A role change posts to the server and repaints from its answer —
-              nothing here edits a row locally (RULED 2026-08-29; the picker is
-              drawn, so it is built).
+              A role change posts to the server and repaints from its answer — nothing
+              here edits a row locally (RULED 2026-08-29; the picker is drawn, so it is
+              built).
             </p>
           </div>
         )}

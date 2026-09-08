@@ -40,7 +40,10 @@ export function SecondHalf() {
   const [dialogOpen, setDialogOpen] = useState(false);
   return (
     <>
-      <Row title="Marks and status" note="one signal per row — a mark plus weight, never a colour alone">
+      <Row
+        title="Marks and status"
+        note="one signal per row — a mark plus weight, never a colour alone"
+      >
         <Badge tone="accent">Accent</Badge>
         <Badge tone="settled">Settled</Badge>
         <Badge tone="attend">Attend</Badge>
@@ -61,10 +64,20 @@ export function SecondHalf() {
         </TooltipTrigger>
       </Row>
 
-      <Row title="Progress and absence" note="the dots are the meter; the bar is for continuous work">
-        <div className="w-130"><ProgressMeter label="Decisions" settled={11} total={18} /></div>
+      <Row
+        title="Progress and absence"
+        note="the dots are the meter; the bar is for continuous work"
+      >
         <div className="w-130">
-          <ProgressMeter label="Decisions" settled={18} total={18} caption="18 of 18 settled" />
+          <ProgressMeter label="Decisions" settled={11} total={18} />
+        </div>
+        <div className="w-130">
+          <ProgressMeter
+            label="Decisions"
+            settled={18}
+            total={18}
+            caption="18 of 18 settled"
+          />
         </div>
         <div className="w-130">
           <Progress value={40} aria-label="Pages read">
@@ -75,9 +88,15 @@ export function SecondHalf() {
             </ProgressTrack>
           </Progress>
         </div>
-        <div className="w-100"><Skeleton height="subject" /></div>
-        <div className="w-100"><Skeleton height="body" width="half" /></div>
-        <div className="w-100"><Skeleton height="label" width="quarter" /></div>
+        <div className="w-100">
+          <Skeleton height="subject" />
+        </div>
+        <div className="w-100">
+          <Skeleton height="body" width="half" />
+        </div>
+        <div className="w-100">
+          <Skeleton height="label" width="quarter" />
+        </div>
       </Row>
 
       <Row title="Surfaces" note="inner = outer − gap; a card inside a card throws">
@@ -93,13 +112,22 @@ export function SecondHalf() {
           <Empty
             title="No open escalations"
             reason="Nothing is waiting on a ruling."
-            action={<Button variant="secondary" size="sm">Open the queue</Button>}
+            action={
+              <Button variant="secondary" size="sm">
+                Open the queue
+              </Button>
+            }
           />
         </div>
       </Row>
 
-      <Row title="Overlays" note="open them — focus must move in, trap, and return on Escape">
-        <Button variant="secondary" onPress={() => setDialogOpen(true)}>Open dialog</Button>
+      <Row
+        title="Overlays"
+        note="open them — focus must move in, trap, and return on Escape"
+      >
+        <Button variant="secondary" onPress={() => setDialogOpen(true)}>
+          Open dialog
+        </Button>
         <PopoverTrigger>
           <Button variant="secondary">Open popover</Button>
           <Popover>
@@ -111,7 +139,11 @@ export function SecondHalf() {
             </PopoverHeader>
           </Popover>
         </PopoverTrigger>
-        <Dialog isOpen={dialogOpen} onOpenChange={setDialogOpen} title="Keyboard shortcuts">
+        <Dialog
+          isOpen={dialogOpen}
+          onOpenChange={setDialogOpen}
+          title="Keyboard shortcuts"
+        >
           <DialogBody>
             <p className="text-meta text-ink-secondary">
               Press <Kbd>C</Kbd> now. Nothing behind this dialog may act on it.
@@ -120,7 +152,9 @@ export function SecondHalf() {
             <p className="text-meta text-ink-muted">A hairline, not a card edge.</p>
           </DialogBody>
           <DialogFooter>
-            <Button variant="secondary" onPress={() => setDialogOpen(false)}>Close</Button>
+            <Button variant="secondary" onPress={() => setDialogOpen(false)}>
+              Close
+            </Button>
           </DialogFooter>
         </Dialog>
       </Row>

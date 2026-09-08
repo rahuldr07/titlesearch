@@ -14,7 +14,11 @@ test("the domain layer's stylesheet is reachable from the root", () => {
 
 test("every stylesheet in the tree is imported somewhere", () => {
   // Adding a .css file and forgetting to import it is the exact failure above.
-  const known = ["./components/ui/ui.css", "./components/ui/overlays.css", "./entities/entities.css"];
+  const known = [
+    "./components/ui/ui.css",
+    "./components/ui/overlays.css",
+    "./entities/entities.css",
+  ];
   for (const path of known) expect(styles).toContain(path);
 });
 

@@ -63,10 +63,7 @@ type NaFieldValueKind = Extract<FieldValue, { kind: `na-${string}` }>["kind"];
  * the frozen enum to this union, for callers that legitimately iterate
  * `NaReason.options`. Consumption still switches over `kind`.
  */
-export function naFieldValue(
-  reason: NaReason,
-  citation: Citation | null,
-): FieldValue {
+export function naFieldValue(reason: NaReason, citation: Citation | null): FieldValue {
   const kind = NA_KIND[reason];
   return kind === "na-present-unreadable" ? { kind, citation } : { kind };
 }

@@ -36,7 +36,9 @@ export const Vertical: Story = {
             <span className="font-sans text-meta leading-close text-ink-primary">
               {row.label}
             </span>
-            <span className="font-mono text-label leading-flat text-ink-muted">{row.ref}</span>
+            <span className="font-mono text-label leading-flat text-ink-muted">
+              {row.ref}
+            </span>
           </div>
         ))}
       </ScrollArea>
@@ -71,7 +73,8 @@ export const BothAxes: Story = {
         <div className="w-320 bg-surface-paper p-8 font-serif leading-document text-page-ink">
           {rows.map((row) => (
             <p key={row.ref} className="whitespace-nowrap">
-              {row.label} — conveyed by warranty deed recorded at {row.ref}, Harris County
+              {row.label} — conveyed by warranty deed recorded at {row.ref}, Harris
+              County
             </p>
           ))}
         </div>

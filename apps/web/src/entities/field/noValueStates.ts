@@ -42,7 +42,8 @@ export const NO_VALUE: Readonly<Record<NoValueRender, NoValueDescriptor>> = {
   NOT_FOUND: {
     sentence: "Searched — nothing of record",
     mark: "◆",
-    chrome: "border-dashed border-na-not-found-border bg-transparent text-na-not-found-ink",
+    chrome:
+      "border-dashed border-na-not-found-border bg-transparent text-na-not-found-ink",
     surfacedForReview: true,
   },
   /** The hatch stripe. The search returned a document; the document is silent. */

@@ -29,7 +29,11 @@ export function AppendCondition() {
             data-testid="append-condition-input"
           />
         </TextField>
-        <Button variant="secondary" disabledBecause={HELD} data-testid="append-condition-submit">
+        <Button
+          variant="secondary"
+          disabledBecause={HELD}
+          data-testid="append-condition-submit"
+        >
           Append
         </Button>
       </div>

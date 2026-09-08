@@ -15,7 +15,9 @@ export function CaptureSheet(props: {
   const held = holdReason(props.answered, props.missingRequired);
   // Row testids number across the whole sheet, not per section.
   const position = new Map(
-    props.schedule.sections.flatMap((s) => s.fields).map((f, i) => [f.path, i] as const),
+    props.schedule.sections
+      .flatMap((s) => s.fields)
+      .map((f, i) => [f.path, i] as const),
   );
 
   return (
@@ -25,8 +27,7 @@ export function CaptureSheet(props: {
           Abstractor call back sheet
         </h2>
         <p className="font-mono text-label leading-flat text-ink-muted">
-          Package{" "}
-          <span data-testid="capture-order">{props.schedule.order_id}</span> ·{" "}
+          Package <span data-testid="capture-order">{props.schedule.order_id}</span> ·{" "}
           {props.schedule.pages} pages · seat {props.schedule.seat}
         </p>
       </div>
@@ -60,7 +61,9 @@ export function CaptureSheet(props: {
           variant="primary"
           data-testid="capture-file"
           disabledBecause={
-            props.pending ? "Sending — the server has not answered yet." : held ?? undefined
+            props.pending
+              ? "Sending — the server has not answered yet."
+              : (held ?? undefined)
           }
           onPress={props.onFile}
         >

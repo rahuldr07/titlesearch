@@ -23,7 +23,11 @@
  */
 .tp-paper-grain ::selection,
 .tp-paper-grain::selection {
-  background-color: color-mix(in srgb, var(--color-paper-stamp) 16%, transparent); /* rules-allow: composing a token with transparency is what color-mix is for; the hardcoded-colour rule targets literals */
+  background-color: color-mix(
+    in srgb,
+    var(--color-paper-stamp) 16%,
+    transparent
+  ); /* rules-allow: composing a token with transparency is what color-mix is for; the hardcoded-colour rule targets literals */
   color: var(--color-page-ink);
 }
 

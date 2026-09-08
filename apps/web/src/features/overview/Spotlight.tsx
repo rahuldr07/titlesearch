@@ -42,8 +42,8 @@ export function Spotlight(props: {
             Active spotlight
           </span>
           <p className="text-meta leading-body text-ink-secondary">
-            The queue has nothing for this seat right now. Served work appears
-            here, one order at a time — it cannot be picked by hand.
+            The queue has nothing for this seat right now. Served work appears here, one
+            order at a time — it cannot be picked by hand.
           </p>
           <Link
             to="/orders-list"

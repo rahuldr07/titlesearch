@@ -24,10 +24,10 @@ export const controlClass = [
   // browser's default button.
   "file:inline-flex file:h-14 file:border-0 file:bg-transparent",
   "file:font-sans file:text-meta file:font-semibold file:text-ink-primary",
-]
+];
 
 /** 36px, at ui.css's 2px base. */
-export const controlHeight = "h-18"
+export const controlHeight = "h-18";
 
 /**
  * 11px w700 grey, sentence case, above the control. Deliberately ink-muted
@@ -39,11 +39,12 @@ export const controlHeight = "h-18"
 export const labelClass = [
   "flex items-center gap-3 select-none",
   "font-sans text-label leading-close font-bold text-ink-muted",
-]
+];
 
 /** Standing help and refusal wording. 13px, one tier in from the value. */
 export const descriptionClass =
-  "font-sans text-meta leading-close font-normal text-ink-secondary"
+  "font-sans text-meta leading-close font-normal text-ink-secondary";
 
 /** The server's field-level refusal. Halt ink, never a filled red box. */
-export const errorClass = "font-sans text-meta leading-close font-normal text-state-halt"
+export const errorClass =
+  "font-sans text-meta leading-close font-normal text-state-halt";

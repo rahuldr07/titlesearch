@@ -1,5 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
-import { MePermissionsResponse, type GrantedPermissionSchema } from "@titlepipe/contract";
+import {
+  MePermissionsResponse,
+  type GrantedPermissionSchema,
+} from "@titlepipe/contract";
 import { get } from "../../shared/api";
 import { useSession } from "../../shared/session";
 

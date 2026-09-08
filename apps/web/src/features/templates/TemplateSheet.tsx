@@ -26,7 +26,8 @@ export function TemplateSheet({
     <div className="w-full max-w-360">
       <div className="border border-page-line bg-surface-paper px-16 py-14 shadow-sm">
         <div className="border-b border-page-line pb-6 text-center">
-          <div className="font-sans text-meta leading-close font-bold tracking-caps uppercase text-page-ink">{/* rules-allow: the rendered report's title is drawn uppercase (RULING-2026-08-29) */}
+          <div className="font-sans text-meta leading-close font-bold tracking-caps uppercase text-page-ink">
+            {/* rules-allow: the rendered report's title is drawn uppercase (RULING-2026-08-29) */}
             Title search report
           </div>
           <div className="pt-2 font-mono text-label leading-close text-scan-ink">

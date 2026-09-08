@@ -41,7 +41,10 @@ export function SampleInspector({
       </Button>
       <Dialog title={sample.name}>
         <DialogBody>
-          <p data-testid="sample-inspector" className="font-sans text-meta leading-close text-ink-secondary">
+          <p
+            data-testid="sample-inspector"
+            className="font-sans text-meta leading-close text-ink-secondary"
+          >
             {client !== null && (
               <>
                 {"Client "}
@@ -84,8 +87,12 @@ function SampleFact({
 }) {
   return (
     <div className="flex flex-col gap-2">
-      <span className="font-sans text-label leading-flat font-bold text-ink-muted">{label}</span>
-      <span className="font-sans text-meta leading-body text-ink-primary">{children}</span>
+      <span className="font-sans text-label leading-flat font-bold text-ink-muted">
+        {label}
+      </span>
+      <span className="font-sans text-meta leading-body text-ink-primary">
+        {children}
+      </span>
     </div>
   );
 }

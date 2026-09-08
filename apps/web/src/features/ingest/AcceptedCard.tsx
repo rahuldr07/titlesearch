@@ -29,8 +29,8 @@ export function AcceptedCard(props: {
       </h2>
 
       <p className="font-sans text-meta leading-body text-ink-muted">
-        Order <span className="font-mono">{props.order.external_ref}</span> is
-        signed for and queued.{" "}
+        Order <span className="font-mono">{props.order.external_ref}</span> is signed
+        for and queued.{" "}
         {props.order.pages === null
           ? "Dual-engine extraction begins from here."
           : `Dual-engine extraction pipeline is actively processing ${String(props.order.pages)} scanned pages.`}

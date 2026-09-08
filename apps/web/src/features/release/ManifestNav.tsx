@@ -11,7 +11,10 @@ import { ContractGap } from "../../entities/contract/ContractGap";
  */
 export function ManifestNav(props: { readonly blocks: readonly ManifestBlock[] }) {
   return (
-    <nav aria-label="Manifest blocks" className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-8">
+    <nav
+      aria-label="Manifest blocks"
+      className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-8"
+    >
       <span className="font-sans text-label leading-flat font-bold text-ink-muted">
         Manifest blocks
       </span>
@@ -43,19 +46,18 @@ export function ManifestNav(props: { readonly blocks: readonly ManifestBlock[] }
         drawn="A second document behind a 'Publication manifest / Telemetry log' tab pair, and a per-block Included / Omitted toggle"
         has={
           <>
-            One document. `CompositionResponse` (design.ts) returns a single
-            `blocks` array and names no second manifest, and `ManifestBlock`
-            is six fields — id, numeral, title, values, field_count, cited —
-            with no `optional` and no include flag.
+            One document. `CompositionResponse` (design.ts) returns a single `blocks`
+            array and names no second manifest, and `ManifestBlock` is six fields — id,
+            numeral, title, values, field_count, cited — with no `optional` and no
+            include flag.
           </>
         }
         needs={
           <>
-            For the tab: a `kind` on the composition, or a second read beside
-            it. For the toggle: `ManifestBlock.optional: boolean` and
-            `included: boolean`, plus the endpoint that writes the second —
-            omitting a block only in the browser would sign a sheet the server
-            never composed.
+            For the tab: a `kind` on the composition, or a second read beside it. For
+            the toggle: `ManifestBlock.optional: boolean` and `included: boolean`, plus
+            the endpoint that writes the second — omitting a block only in the browser
+            would sign a sheet the server never composed.
           </>
         }
       />

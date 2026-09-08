@@ -129,7 +129,8 @@ function* walk(dir) {
 /** Try the bundler's candidate list for an extensionless or .js specifier. */
 function resolveAsFile(base) {
   const candidates = [base];
-  if (base.endsWith(".js")) candidates.push(base.slice(0, -3) + ".ts", base.slice(0, -3) + ".tsx");
+  if (base.endsWith(".js"))
+    candidates.push(base.slice(0, -3) + ".ts", base.slice(0, -3) + ".tsx");
   for (const ext of SOURCE_EXTS) candidates.push(base + ext);
   for (const ext of SOURCE_EXTS) candidates.push(join(base, "index" + ext));
   for (const c of candidates) {
@@ -199,7 +200,11 @@ function parseEdges(file) {
         reexport: false,
         line: lineOf(st),
       });
-    } else if (ts.isExportDeclaration(st) && st.moduleSpecifier && ts.isStringLiteral(st.moduleSpecifier)) {
+    } else if (
+      ts.isExportDeclaration(st) &&
+      st.moduleSpecifier &&
+      ts.isStringLiteral(st.moduleSpecifier)
+    ) {
       edges.push({
         spec: st.moduleSpecifier.text,
         kind: st.isTypeOnly ? "type" : "static",
@@ -277,12 +282,14 @@ if (existsSync(PACKAGES_DIR))
   }
 
 for (const root of scanRoots)
-  for (const file of walk(root))
-    modules.set(file, { zone: zoneOf(file), edges: [] });
+  for (const file of walk(root)) modules.set(file, { zone: zoneOf(file), edges: [] });
 
 const offenses = [];
 const shortPath = (file) =>
-  relative(rootFlag !== -1 ? resolve(args[rootFlag + 1]) : resolve(WEB_ROOT, "../.."), file);
+  relative(
+    rootFlag !== -1 ? resolve(args[rootFlag + 1]) : resolve(WEB_ROOT, "../.."),
+    file,
+  );
 
 for (const [file, mod] of modules) {
   for (const edge of parseEdges(file)) {
@@ -344,7 +351,8 @@ function reexportChain(from, target) {
     }
   }
   const chain = [];
-  for (let cur = target; cur !== null; cur = prev.get(cur) ?? null) chain.unshift(shortPath(cur));
+  for (let cur = target; cur !== null; cur = prev.get(cur) ?? null)
+    chain.unshift(shortPath(cur));
   return chain.join(" -> ");
 }
 
@@ -364,14 +372,20 @@ for (const [file, mod] of modules) {
     }
     const to = modules.get(edge.to).zone;
     const toFeature = to.startsWith("feature:") ? to.slice("feature:".length) : null;
-    const fromFeature = from.startsWith("feature:") ? from.slice("feature:".length) : null;
+    const fromFeature = from.startsWith("feature:")
+      ? from.slice("feature:".length)
+      : null;
 
     if (toFeature !== null && from === "ui") {
       offenses.push(
         `${shortPath(file)}:${edge.line} [ui-imports-feature] ` +
           `components/ui imports features/${toFeature} — the design system may not know features exist`,
       );
-    } else if (toFeature !== null && fromFeature !== null && toFeature !== fromFeature) {
+    } else if (
+      toFeature !== null &&
+      fromFeature !== null &&
+      toFeature !== fromFeature
+    ) {
       offenses.push(
         `${shortPath(file)}:${edge.line} [cross-feature] ` +
           `features/${fromFeature} imports features/${toFeature} — features do not import each other`,
@@ -426,7 +440,8 @@ for (const [file, mod] of modules) {
       const zone = modules.get(cur).zone;
       if (zone === "pkg:mocks" || zone === "workbench") {
         const chain = [];
-        for (let c = cur; c !== null; c = prev.get(c) ?? null) chain.unshift(shortPath(c));
+        for (let c = cur; c !== null; c = prev.get(c) ?? null)
+          chain.unshift(shortPath(c));
         offenses.push(
           `${shortPath(cur)} [prod-reaches-dev] reachable from src/main.tsx over ` +
             `static imports: ${chain.join(" -> ")} — mocks and workbench are dev-only`,
@@ -434,7 +449,8 @@ for (const [file, mod] of modules) {
         continue;
       }
       for (const edge of modules.get(cur).edges) {
-        if (edge.kind !== "static" || edge.to === undefined || prev.has(edge.to)) continue;
+        if (edge.kind !== "static" || edge.to === undefined || prev.has(edge.to))
+          continue;
         prev.set(edge.to, cur);
         queue.push(edge.to);
       }

@@ -55,7 +55,9 @@ export const Blocked: Story = {
     // single query would have hidden the react-aria `title` drop (blockedHint.tsx).
     const box = canvasElement.querySelector("[data-disabled-reason]");
     expect(box?.getAttribute("data-disabled-reason")).toContain("released");
-    expect(canvasElement.querySelector("[title]")?.getAttribute("title")).toContain("released");
+    expect(canvasElement.querySelector("[title]")?.getAttribute("title")).toContain(
+      "released",
+    );
   },
 };
 

@@ -21,8 +21,7 @@ export function CertifiedDeliverables({
     return (
       <Card>
         <p className="font-sans text-meta leading-body text-ink-secondary">
-          No delivery here names a report, so there is no order to fetch
-          artifacts for.
+          No delivery here names a report, so there is no order to fetch artifacts for.
         </p>
       </Card>
     );

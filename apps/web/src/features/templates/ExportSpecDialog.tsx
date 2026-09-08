@@ -13,7 +13,11 @@ import {
  * seal are all served on `TemplateDetailResponse`; the digest is the
  * server's seal over the spec it emits — nothing is hashed in the browser.
  */
-export function ExportSpecDialog({ template }: { readonly template: TemplateDetailResponse }) {
+export function ExportSpecDialog({
+  template,
+}: {
+  readonly template: TemplateDetailResponse;
+}) {
   return (
     <DialogTrigger>
       <Button variant="secondary" size="sm" data-testid="open-export-manifest">
@@ -21,7 +25,10 @@ export function ExportSpecDialog({ template }: { readonly template: TemplateDeta
       </Button>
       <Dialog title="Template export & cryptographic manifest">
         <DialogBody>
-          <p data-testid="export-manifest" className="font-sans text-meta leading-body text-ink-secondary">
+          <p
+            data-testid="export-manifest"
+            className="font-sans text-meta leading-body text-ink-secondary"
+          >
             {"Template spec for "}
             <span className="font-semibold text-ink-primary">{template.name}</span>
             {` (${template.version}). The compiled spec itself is the JSON schema view, verbatim, as the server composed it.`}
@@ -68,8 +75,12 @@ function ManifestRow({
 }) {
   return (
     <div className="flex flex-col gap-2">
-      <span className="font-sans text-label leading-flat font-bold text-ink-muted">{label}</span>
-      <span className="font-sans text-meta leading-close text-ink-primary">{children}</span>
+      <span className="font-sans text-label leading-flat font-bold text-ink-muted">
+        {label}
+      </span>
+      <span className="font-sans text-meta leading-close text-ink-primary">
+        {children}
+      </span>
     </div>
   );
 }

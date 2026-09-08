@@ -27,9 +27,9 @@ export function DeliveryScreen({ order }: { readonly order?: string | undefined 
    * matches nothing and the first row shows, which is the same answer as
    * arriving with no key at all.
    */
-  const asked = order === undefined ? null : (orders.find(([id]) => id === order) ?? null);
-  const current =
-    orders.find(([id]) => id === selected) ?? asked ?? orders[0] ?? null;
+  const asked =
+    order === undefined ? null : (orders.find(([id]) => id === order) ?? null);
+  const current = orders.find(([id]) => id === selected) ?? asked ?? orders[0] ?? null;
   /*
    * Two screens share this route. Arriving from an order's stage strip
    * (`?order=`) it is that order's record and its own versions — "only the
@@ -54,8 +54,8 @@ export function DeliveryScreen({ order }: { readonly order?: string | undefined 
           Delivered
         </h1>
         <p className="max-w-320 font-sans text-body leading-body text-ink-secondary">
-          What left the building, and the record of it leaving. Both versions of
-          a reissued order stay on the record — the pair is the defect record.
+          What left the building, and the record of it leaving. Both versions of a
+          reissued order stay on the record — the pair is the defect record.
         </p>
       </header>
 
@@ -111,11 +111,7 @@ export function DeliveryScreen({ order }: { readonly order?: string | undefined 
               <h2 className="font-sans text-label leading-flat font-bold text-ink-faint">
                 Other delivered orders
               </h2>
-              <OrderPicker
-                orders={others}
-                current={null}
-                onSelect={setSelected}
-              />
+              <OrderPicker orders={others} current={null} onSelect={setSelected} />
             </section>
           )}
         </>

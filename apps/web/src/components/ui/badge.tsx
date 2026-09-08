@@ -18,7 +18,8 @@ const capsule = cva(
   {
     variants: {
       tone: {
-        settled: "border-state-settled-border bg-state-settled-surface text-state-settled",
+        settled:
+          "border-state-settled-border bg-state-settled-surface text-state-settled",
         attend: "border-state-attend-border bg-state-attend-surface text-state-attend",
         halt: "border-state-halt-border bg-state-halt-surface text-state-halt",
         // A spend of the accent — once per screen, with the primary action.
@@ -37,7 +38,11 @@ export type BadgeProps = VariantProps<typeof capsule> & {
 /** A moment of record: released, quarantine clear, T1. Never an ordinary row. */
 export function Badge({ tone, className, children }: BadgeProps) {
   return (
-    <span data-slot="badge" data-tone={tone ?? "settled"} className={cx(capsule({ tone }), className)}>
+    <span
+      data-slot="badge"
+      data-tone={tone ?? "settled"}
+      className={cx(capsule({ tone }), className)}
+    >
       {children}
     </span>
   );

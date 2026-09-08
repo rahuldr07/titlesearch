@@ -92,7 +92,12 @@ export function PageBody(props: {
   return (
     <div className="flex flex-col gap-6">
       {props.pinned && (
-        <Pin n={props.n} marked={marked} box={props.box} previewing={props.previewing} />
+        <Pin
+          n={props.n}
+          marked={marked}
+          box={props.box}
+          previewing={props.previewing}
+        />
       )}
       {/*
         The box is measured against the lines, not the sheet — that is the

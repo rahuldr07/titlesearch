@@ -1,4 +1,4 @@
-import { cva } from "class-variance-authority"
+import { cva } from "class-variance-authority";
 
 /**
  * Button variant table. --spacing is 2px, so heights read as N × 2px (h-19 is
@@ -60,7 +60,7 @@ const buttonVariants = cva(
       icon: { true: "px-0 aspect-square", false: "" },
     },
     defaultVariants: { variant: "secondary", size: "md", icon: false },
-  }
-)
+  },
+);
 
-export { buttonVariants }
+export { buttonVariants };

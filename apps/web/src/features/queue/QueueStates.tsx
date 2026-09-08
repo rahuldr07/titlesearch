@@ -31,8 +31,8 @@ export function QueueHeader() {
        * the design, rather than left assuming the list failed to load.
        */}
       <p className="max-w-240 text-meta leading-body text-ink-secondary">
-        The server chooses. There is one order at a time and no way to pick a
-        different one — pass with a reason and the next is served.
+        The server chooses. There is one order at a time and no way to pick a different
+        one — pass with a reason and the next is served.
       </p>
     </header>
   );
@@ -107,10 +107,8 @@ export function PassedNote(props: { readonly orderRef: string }) {
       className="text-meta leading-close text-ink-secondary"
     >
       Recorded — you passed{" "}
-      <span className="font-mono tabular-nums text-ink-primary">
-        {props.orderRef}
-      </span>
-      . The server chose what is below.
+      <span className="font-mono tabular-nums text-ink-primary">{props.orderRef}</span>.
+      The server chose what is below.
     </p>
   );
 }

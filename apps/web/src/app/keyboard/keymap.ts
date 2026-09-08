@@ -15,9 +15,7 @@ export type ChordAction = "open-palette" | "toggle-key-map" | "pop-layer";
 
 /** Sentence case. Sections are the design's grouping, not new facts. */
 export type ChordSection =
-  | "In the review workstation"
-  | "Moving around"
-  | "Leaving a layer";
+  "In the review workstation" | "Moving around" | "Leaving a layer";
 
 export interface ChordSpec {
   readonly id: string;

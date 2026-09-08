@@ -28,7 +28,9 @@ export function fieldLabel(path: string): string {
      (`assessment.tax_status`). Drop the repeat, but only while a word
      survives it. */
   const words = name.toUpperCase().split(" ");
-  const leaf = (words[0] === section && words.length > 1 ? words.slice(1) : words).join(" ");
+  const leaf = (words[0] === section && words.length > 1 ? words.slice(1) : words).join(
+    " ",
+  );
   return index === null ? `${section} ${leaf}` : `${section} ${index} — ${leaf}`;
 }
 

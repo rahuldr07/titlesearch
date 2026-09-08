@@ -33,7 +33,8 @@ export function OrdersListScreen() {
               All orders
             </h1>
             <p className="max-w-400 text-meta leading-body text-ink-secondary">
-              Every order in the pipeline and the delivered record — search, filter, page.
+              Every order in the pipeline and the delivered record — search, filter,
+              page.
             </p>
           </div>
           <OrdersSearch browse={browse} matches={matches} />
@@ -48,10 +49,18 @@ export function OrdersListScreen() {
               if (chosen.success) browse.choose(chosen.data);
             }}
           >
-            <Segment accent id="all">All orders</Segment>
-            <Segment accent id="active">In pipeline</Segment>
-            <Segment accent id="waiting">Queries and gaps</Segment>
-            <Segment accent id="delivered">Delivered history</Segment>
+            <Segment accent id="all">
+              All orders
+            </Segment>
+            <Segment accent id="active">
+              In pipeline
+            </Segment>
+            <Segment accent id="waiting">
+              Queries and gaps
+            </Segment>
+            <Segment accent id="delivered">
+              Delivered history
+            </Segment>
           </SegmentedControl>
           {query.data !== undefined && (
             <span className="font-mono text-meta leading-close text-ink-secondary">

@@ -51,7 +51,9 @@ export function CountersignPanel(props: { readonly orderId: string }) {
               </h2>
               {/* The list length is what arrived; nothing here counts anything. */}
               <span className="font-mono text-label leading-flat font-bold text-action">
-                {outstanding.length === 1 ? "1 ruling" : `${outstanding.length} rulings`}
+                {outstanding.length === 1
+                  ? "1 ruling"
+                  : `${outstanding.length} rulings`}
               </span>
             </div>
 

@@ -35,7 +35,8 @@ export function CountersignSettled(props: {
       </p>
       {signers.length > 0 && (
         <p className="mt-3 font-mono text-label leading-flat text-state-settled">
-          <span aria-hidden>✓</span> T1 second read countersigned by {signers.join(", ")}
+          <span aria-hidden>✓</span> T1 second read countersigned by{" "}
+          {signers.join(", ")}
         </p>
       )}
     </div>

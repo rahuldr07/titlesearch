@@ -18,7 +18,8 @@ const region = cva(
   {
     variants: {
       tone: {
-        settled: "border-state-settled-border bg-state-settled-surface text-state-settled",
+        settled:
+          "border-state-settled-border bg-state-settled-surface text-state-settled",
         attend: "border-state-attend-border bg-state-attend-surface text-state-attend",
         halt: "border-state-halt-border bg-state-halt-surface text-state-halt",
       },
@@ -46,7 +47,13 @@ export type AlertProps = VariantProps<typeof region> & {
   readonly className?: string | undefined;
 };
 
-export function Alert({ tone = "halt", message, title, action, className }: AlertProps) {
+export function Alert({
+  tone = "halt",
+  message,
+  title,
+  action,
+  className,
+}: AlertProps) {
   const mark = tone ?? "halt";
   return (
     <div
@@ -57,7 +64,11 @@ export function Alert({ tone = "halt", message, title, action, className }: Aler
       role={mark === "halt" ? "alert" : "status"}
       className={cx(region({ tone }), className)}
     >
-      <span aria-hidden data-slot="alert-mark" className="font-mono text-meta leading-body">
+      <span
+        aria-hidden
+        data-slot="alert-mark"
+        className="font-mono text-meta leading-body"
+      >
         {GLYPH[mark]}
       </span>
       <div className="flex min-w-0 flex-col gap-3">

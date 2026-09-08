@@ -9,7 +9,11 @@ import { ReceiptStep } from "./ReceiptStep";
  * one the record says has not happened. A bounced delivery is `attend`, not
  * `halt`: the failure is transit, never quality.
  */
-export function TransmissionReceipt({ delivery }: { readonly delivery: DeliveryWithReport }) {
+export function TransmissionReceipt({
+  delivery,
+}: {
+  readonly delivery: DeliveryWithReport;
+}) {
   const reached = delivery.delivered_at !== null;
   return (
     <Card padding="none">
@@ -38,7 +42,10 @@ export function TransmissionReceipt({ delivery }: { readonly delivery: DeliveryW
 
         {reached && delivery.delivered_at !== null && (
           <div className="flex justify-end">
-            <ClerkStamp caption="Transmitted" detail={`${delivery.method} · ${delivery.delivered_at}`} />
+            <ClerkStamp
+              caption="Transmitted"
+              detail={`${delivery.method} · ${delivery.delivered_at}`}
+            />
           </div>
         )}
       </CardBody>

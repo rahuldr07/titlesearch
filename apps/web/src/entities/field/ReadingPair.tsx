@@ -48,8 +48,18 @@ export function ReadingPair({ a, b, onAdopt, adoptBlockedBecause }: ReadingPairP
     <div data-reading-pair className="flex flex-col gap-5">
       {a.value !== b.value && <PairRubric />}
       <div className="grid grid-cols-2 gap-6">
-        <ReadingSide reading={a} other={b} {...(onAdopt ? { onAdopt } : {})} blocked={adoptBlockedBecause} />
-        <ReadingSide reading={b} other={a} {...(onAdopt ? { onAdopt } : {})} blocked={adoptBlockedBecause} />
+        <ReadingSide
+          reading={a}
+          other={b}
+          {...(onAdopt ? { onAdopt } : {})}
+          blocked={adoptBlockedBecause}
+        />
+        <ReadingSide
+          reading={b}
+          other={a}
+          {...(onAdopt ? { onAdopt } : {})}
+          blocked={adoptBlockedBecause}
+        />
       </div>
     </div>
   );
@@ -145,7 +155,9 @@ function ReadingValue({
   readonly other: FieldReading;
 }) {
   if (reading.value === null) {
-    return <NoValueChip render="not-extracted" sentence="This engine returned nothing" />;
+    return (
+      <NoValueChip render="not-extracted" sentence="This engine returned nothing" />
+    );
   }
   return <ReadingText segments={segmentsFor(reading.value, other.value ?? "")} />;
 }

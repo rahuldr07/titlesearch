@@ -131,8 +131,12 @@ describe("a request with no credential is refused, never promoted", () => {
 
   test("a forged role stays 403 on mutation and 400 on the projection", async () => {
     const forged = { [MOCK_ROLE_HEADER]: "superadmin" };
-    expect((await post("/api/golden/corrections", CORRECTION, forged)).status).toBe(403);
-    expect((await fetch(url("/api/me/permissions"), { headers: forged })).status).toBe(400);
+    expect((await post("/api/golden/corrections", CORRECTION, forged)).status).toBe(
+      403,
+    );
+    expect((await fetch(url("/api/me/permissions"), { headers: forged })).status).toBe(
+      400,
+    );
   });
 
   test("the permissions projection refuses a header-less caller instead of answering admin", async () => {
@@ -154,9 +158,13 @@ describe("a request with no credential is refused, never promoted", () => {
      */
     for (const path of ["/api/me/permissions", "/api/lifecycle", "/api/queue/bands"]) {
       expect((await fetch(url(path))).status, path).toBe(401);
-      const seated = await fetch(url(path), { headers: { [MOCK_ROLE_HEADER]: "reviewer" } });
+      const seated = await fetch(url(path), {
+        headers: { [MOCK_ROLE_HEADER]: "reviewer" },
+      });
       expect(seated.status, path).toBe(200);
-      const wider = await fetch(url(path), { headers: { [MOCK_ROLE_HEADER]: "admin" } });
+      const wider = await fetch(url(path), {
+        headers: { [MOCK_ROLE_HEADER]: "admin" },
+      });
       expect(await seated.text(), path).not.toBe(await wider.text());
     }
   });
@@ -208,16 +216,24 @@ describe("the golden ledger's signature cannot be chosen by the caller", () => {
     // gf_4 rather than gf_2: the seed already resolved gf_2, and a resolved
     // field 409s — the test would then be reading a seed name and calling it
     // a signature.
-    await post("/api/golden/gf_4/confirm", { reason: "the seed reads correctly" }, {
-      [MOCK_ROLE_HEADER]: "senior",
-      "x-mock-actor": FORGERY,
-    });
+    await post(
+      "/api/golden/gf_4/confirm",
+      { reason: "the seed reads correctly" },
+      {
+        [MOCK_ROLE_HEADER]: "senior",
+        "x-mock-actor": FORGERY,
+      },
+    );
     const first = (await goldenField("gf_4"))?.corrected_by;
     await post("/api/demo/reset");
-    await post("/api/golden/gf_4/confirm", { reason: "the seed reads correctly" }, {
-      [MOCK_ROLE_HEADER]: "engineer",
-      "x-mock-actor": FORGERY,
-    });
+    await post(
+      "/api/golden/gf_4/confirm",
+      { reason: "the seed reads correctly" },
+      {
+        [MOCK_ROLE_HEADER]: "engineer",
+        "x-mock-actor": FORGERY,
+      },
+    );
     const second = (await goldenField("gf_4"))?.corrected_by;
     expect(first).toBe(SEAT_IDENTITIES.senior);
     expect(second).toBe(SEAT_IDENTITIES.engineer);
@@ -225,10 +241,14 @@ describe("the golden ledger's signature cannot be chosen by the caller", () => {
   });
 
   test("a demotion is signed the same way", async () => {
-    const res = await post("/api/golden/gf_3/demote", { reason: "the instrument is illegible at this line" }, {
-      [MOCK_ROLE_HEADER]: "engineer",
-      "x-mock-actor": FORGERY,
-    });
+    const res = await post(
+      "/api/golden/gf_3/demote",
+      { reason: "the instrument is illegible at this line" },
+      {
+        [MOCK_ROLE_HEADER]: "engineer",
+        "x-mock-actor": FORGERY,
+      },
+    );
     expect(res.status).toBe(201);
     expect((await goldenField("gf_3"))?.corrected_by).toBe(SEAT_IDENTITIES.engineer);
   });
@@ -241,7 +261,8 @@ describe("the golden ledger's signature cannot be chosen by the caller", () => {
      * cannot fail. `rule_draft_hoa` is the seed's pending rule; entries are
      * unshifted, so the new row is at the head.
      */
-    const audit = async () => AuditResponse.parse(await (await fetch(url("/api/audit"))).json());
+    const audit = async () =>
+      AuditResponse.parse(await (await fetch(url("/api/audit"))).json());
     const before = await audit();
     const confirmed = await post("/api/rules/rule_draft_hoa/confirm", undefined, {
       [MOCK_ROLE_HEADER]: "engineer",
@@ -262,17 +283,27 @@ describe("the golden ledger's signature cannot be chosen by the caller", () => {
      * were ruled by `admin`, so admin is now refused there and senior is not —
      * and the typed signature, which is a client field, changes neither answer.
      */
-    const asAdmin = await post("/api/fields/fld_jgmt_hit/countersign", { signature: "R. Menon" }, {
-      [MOCK_ROLE_HEADER]: "admin",
-      "x-mock-actor": "R. Menon",
-    });
+    const asAdmin = await post(
+      "/api/fields/fld_jgmt_hit/countersign",
+      { signature: "R. Menon" },
+      {
+        [MOCK_ROLE_HEADER]: "admin",
+        "x-mock-actor": "R. Menon",
+      },
+    );
     expect(asAdmin.status).toBe(409);
 
-    const asSenior = await post("/api/fields/fld_jgmt_hit/countersign", { signature: SEAT_IDENTITIES.senior }, {
-      [MOCK_ROLE_HEADER]: "senior",
-    });
+    const asSenior = await post(
+      "/api/fields/fld_jgmt_hit/countersign",
+      { signature: SEAT_IDENTITIES.senior },
+      {
+        [MOCK_ROLE_HEADER]: "senior",
+      },
+    );
     expect(asSenior.status).toBe(200);
-    const ledger = (await (await fetch(url("/api/orders/ord_demo_1/countersigns"))).json()) as {
+    const ledger = (await (
+      await fetch(url("/api/orders/ord_demo_1/countersigns"))
+    ).json()) as {
       required: { field_id: string; countersigned_by: string | null }[];
     };
     expect(
@@ -294,12 +325,23 @@ describe("the browser's mock-auth headers are exactly the set core-api refuses",
    * dropped and its quiet companion is not.
    */
   const read = (relative: string) =>
-    readFileSync(new URL(`../../../../services/core-api/src/titlepipe_core/${relative}`, import.meta.url), "utf8");
+    readFileSync(
+      new URL(
+        `../../../../services/core-api/src/titlepipe_core/${relative}`,
+        import.meta.url,
+      ),
+      "utf8",
+    );
 
   function coreApiRefusedHeaders(): string[] {
     const guardSource = read("api/mock_auth_guard.py");
-    const members = /MOCK_AUTH_HEADERS:\s*Final\s*=\s*frozenset\(\{([^}]*)\}\)/.exec(guardSource);
-    expect(members, "MOCK_AUTH_HEADERS is no longer a frozenset literal in mock_auth_guard.py").not.toBeNull();
+    const members = /MOCK_AUTH_HEADERS:\s*Final\s*=\s*frozenset\(\{([^}]*)\}\)/.exec(
+      guardSource,
+    );
+    expect(
+      members,
+      "MOCK_AUTH_HEADERS is no longer a frozenset literal in mock_auth_guard.py",
+    ).not.toBeNull();
     const mockSource = read("auth/mock.py");
     return (members?.[1] ?? "")
       .split(",")
@@ -309,8 +351,13 @@ describe("the browser's mock-auth headers are exactly the set core-api refuses",
         // Each member is a NAME imported from auth/mock.py — resolve it to the
         // literal there, because the guard deliberately does not spell the
         // header out twice.
-        const literal = new RegExp(`^${symbol}:\\s*Final\\s*=\\s*"([^"]+)"`, "m").exec(mockSource);
-        expect(literal, `${symbol} has no string literal in auth/mock.py`).not.toBeNull();
+        const literal = new RegExp(`^${symbol}:\\s*Final\\s*=\\s*"([^"]+)"`, "m").exec(
+          mockSource,
+        );
+        expect(
+          literal,
+          `${symbol} has no string literal in auth/mock.py`,
+        ).not.toBeNull();
         return literal?.[1] ?? symbol;
       });
   }
@@ -334,11 +381,15 @@ describe("the browser's mock-auth headers are exactly the set core-api refuses",
      */
     const { globSync } = await import("node:fs");
     const offenders: string[] = [];
-    for (const file of globSync("src/**/*.{ts,tsx}", { cwd: new URL("../../", import.meta.url).pathname })) {
-      if (file.endsWith("mock-auth.test.ts") || file.endsWith("mockHandlers.test.ts")) continue;
+    for (const file of globSync("src/**/*.{ts,tsx}", {
+      cwd: new URL("../../", import.meta.url).pathname,
+    })) {
+      if (file.endsWith("mock-auth.test.ts") || file.endsWith("mockHandlers.test.ts"))
+        continue;
       const source = readFileSync(new URL(`../../${file}`, import.meta.url), "utf8");
       for (const match of source.matchAll(/"(x-mock-[a-z-]+)"/g)) {
-        if (!file.endsWith("shared/api.ts")) offenders.push(`${file}: ${match[1] ?? ""}`);
+        if (!file.endsWith("shared/api.ts"))
+          offenders.push(`${file}: ${match[1] ?? ""}`);
       }
     }
     expect(offenders).toEqual([]);

@@ -3,7 +3,12 @@ import { Empty, Segment, SegmentedControl } from "../../components/ui";
 import { usePermissions, hasAction } from "../../app/session/permissions";
 import { useSignedIn } from "../../app/session/signedIn";
 import { QueryState } from "../../entities/state/QueryState";
-import { useConfirmRule, useEscalations, useResolveEscalation, useRules } from "./useEscalations";
+import {
+  useConfirmRule,
+  useEscalations,
+  useResolveEscalation,
+  useRules,
+} from "./useEscalations";
 import { EscalationQueue } from "./EscalationQueue";
 import { EscalationDetail } from "./EscalationDetail";
 import { CandidateList } from "./CandidateList";
@@ -69,7 +74,11 @@ export function EscalationsScreen() {
             never draw "Nothing escalated" over a failed read. */}
         <div className="min-h-0 flex-1 overflow-y-auto p-6">
           {queries ? (
-            <QueryState query={escalations} of="the escalation queue" failedTitle="Inbox unavailable">
+            <QueryState
+              query={escalations}
+              of="the escalation queue"
+              failedTitle="Inbox unavailable"
+            >
               {(data) => (
                 <EscalationQueue
                   escalations={data.escalations}
@@ -113,7 +122,10 @@ export function EscalationsScreen() {
                     resolving={resolve.pending}
                     /* Null → the locked, visible determination. */
                     {...(mayResolve
-                      ? { onResolve: (ruling, rule) => resolve.resolve({ ruling, rule }) }
+                      ? {
+                          onResolve: (ruling, rule) =>
+                            resolve.resolve({ ruling, rule }),
+                        }
                       : { onResolve: null })}
                   />
                 )

@@ -103,11 +103,7 @@ export const BlockedWithReason: Story = {
 export const Invalid: Story = {
   render: () => (
     <InputGroup defaultValue="2019-43117" className="w-140">
-      <InputGroupInput
-        aria-label="Instrument number"
-        data
-        aria-invalid
-      />
+      <InputGroupInput aria-label="Instrument number" data aria-invalid />
       <InputGroupAddon align="inline-end">
         <InputGroupText className="text-state-halt">✕</InputGroupText>
       </InputGroupAddon>

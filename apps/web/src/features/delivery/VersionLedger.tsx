@@ -14,7 +14,9 @@ export function VersionLedger({
   /** Version numbers some row on this ledger claims to supersede. */
   const supersededVersions = new Set(
     versions.flatMap((row) =>
-      row.report?.supersedes === null || row.report === null ? [] : [row.report.supersedes],
+      row.report?.supersedes === null || row.report === null
+        ? []
+        : [row.report.supersedes],
     ),
   );
 
@@ -47,7 +49,9 @@ export function VersionLedger({
             >
               <div className="flex flex-wrap items-baseline justify-between gap-3">
                 <span className="font-mono text-body leading-close font-bold text-ink-primary">
-                  {version === null ? "no report on this delivery" : `v${String(version)}`}
+                  {version === null
+                    ? "no report on this delivery"
+                    : `v${String(version)}`}
                 </span>
                 {draft ? (
                   <span className="shrink-0 rounded-pill border border-state-attend-border bg-surface-panel px-5 py-1 font-sans text-label leading-flat font-semibold text-state-attend">

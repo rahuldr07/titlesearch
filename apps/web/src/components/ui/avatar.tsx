@@ -25,7 +25,13 @@ export type AvatarProps = {
   readonly className?: string | undefined;
 };
 
-export function Avatar({ name, initials, size = "md", onRail, className }: AvatarProps) {
+export function Avatar({
+  name,
+  initials,
+  size = "md",
+  onRail,
+  className,
+}: AvatarProps) {
   return (
     <span
       data-slot="avatar"
@@ -66,7 +72,12 @@ export function AvatarLabel({
       data-slot="avatar-label"
       className={cx("inline-flex items-center gap-5", className)}
     >
-      <Avatar name={name} initials={initials} size="sm" {...(onRail === true ? { onRail } : {})} />
+      <Avatar
+        name={name}
+        initials={initials}
+        size="sm"
+        {...(onRail === true ? { onRail } : {})}
+      />
       <span
         className={cx(
           "font-sans text-meta leading-close",

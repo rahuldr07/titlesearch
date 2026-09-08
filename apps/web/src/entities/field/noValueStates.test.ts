@@ -38,7 +38,8 @@ describe("the five no-value renders", () => {
     const signatures = RENDERS.map((render) => {
       const chrome = NO_VALUE[render].chrome;
       const ink = chrome.match(/\btext-[a-z0-9-]+/)?.[0] ?? "";
-      const border = chrome.match(/\bborder-(solid|dashed|dotted)\b|\btp-na-hatch\b/)?.[0] ?? "";
+      const border =
+        chrome.match(/\bborder-(solid|dashed|dotted)\b|\btp-na-hatch\b/)?.[0] ?? "";
       expect(ink, `${render} declares no ink`).not.toBe("");
       expect(border, `${render} declares no border style or hatch`).not.toBe("");
       return `${ink}|${border}`;

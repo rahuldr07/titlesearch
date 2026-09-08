@@ -24,8 +24,8 @@ export function OverviewHeader(props: {
         </h1>
         {/* The lede — fixed screen copy. */}
         <p className="max-w-320 text-body leading-body text-ink-secondary">
-          Real-time abstract tracking across incoming packages, dual-engine
-          extraction, human verification, and certified delivery.
+          Real-time abstract tracking across incoming packages, dual-engine extraction,
+          human verification, and certified delivery.
         </p>
       </div>
 

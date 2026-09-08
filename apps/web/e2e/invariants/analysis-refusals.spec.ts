@@ -122,9 +122,10 @@ test("thin-coverage cells say NO TRUTH YET rather than carrying a number", async
     }[];
   };
   const thin = body.cells.filter((c) => c.no_truth_yet);
-  expect(thin.length, "the fixture must exercise the NO TRUTH YET case").toBeGreaterThan(
-    0,
-  );
+  expect(
+    thin.length,
+    "the fixture must exercise the NO TRUTH YET case",
+  ).toBeGreaterThan(0);
   for (const cell of thin) {
     expect(cell.accuracy_by_tag).toBeNull();
   }
@@ -323,7 +324,9 @@ test("no order or review payload marks a field as a probe", async ({ page }) => 
     "/api/queue/next",
   ]) {
     const body = await json(page, url);
-    const leaked = keyPaths(body).filter((k) => /probe|planted|synthetic_defect/i.test(k));
+    const leaked = keyPaths(body).filter((k) =>
+      /probe|planted|synthetic_defect/i.test(k),
+    );
     expect(leaked, `${url} leaks a probe marking`).toEqual([]);
   }
 });

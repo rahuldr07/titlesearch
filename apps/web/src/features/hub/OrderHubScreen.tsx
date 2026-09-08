@@ -72,16 +72,16 @@ export function OrderHubScreen(props: { readonly orderId: string }) {
         )}
 
         {/*
-          * `AutomatedOperations` was here and is gone: it printed the same
-          * nine stage rows that `StageTimeline` prints in the extraction
-          * block a few hundred pixels below, so the hub said everything
-          * twice on one 3414px page. The design keeps them apart because
-          * they are two screens (isHub / isProcessing); until that route
-          * split is ruled on, one list is the honest rendering. Restore
-          * this and drop the extraction block instead if the ruling goes
-          * the other way — `AutomatedOperations.tsx` is in git history at
-          * 7d2268c and restores as-is.
-          */}
+         * `AutomatedOperations` was here and is gone: it printed the same
+         * nine stage rows that `StageTimeline` prints in the extraction
+         * block a few hundred pixels below, so the hub said everything
+         * twice on one 3414px page. The design keeps them apart because
+         * they are two screens (isHub / isProcessing); until that route
+         * split is ruled on, one list is the honest rendering. Restore
+         * this and drop the extraction block instead if the ruling goes
+         * the other way — `AutomatedOperations.tsx` is in git history at
+         * 7d2268c and restores as-is.
+         */}
         <DeterministicChecks
           gateOpen={completeness.data?.gate_open}
           gaps={completeness.data?.gaps}
