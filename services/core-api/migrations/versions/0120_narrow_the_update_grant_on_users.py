@@ -88,6 +88,10 @@ stops that being silent is
 _the_named_columns` and `tests/acl_contract.py`'s whole-catalog literal, which
 fails on a restored table grant because a column grant is added to it rather than
 replaced by it. That is detection, not prevention.
+
+RELINKED AT INTEGRATION, 2026-09-08: `down_revision` was `0102` - the head this file's author
+found - and is now `0112`, the last of the schema revisions that landed in parallel. Placement
+is for a single head, not a dependency.
 """
 
 from collections.abc import Sequence
@@ -96,7 +100,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "0120"
-down_revision: str | None = "0102"
+down_revision: str | None = "0112"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
