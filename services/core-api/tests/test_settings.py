@@ -13,11 +13,9 @@ import traceback
 import pytest
 from pydantic import SecretStr, ValidationError
 
-from titlepipe_core.settings import (
-    DEVELOPMENT_SEAL_PASSWORD,
-    CoreApiSettings,
-)
+from titlepipe_core.settings import CoreApiSettings
 from titlepipe_domain import Environment, LogRenderer
+from titlepipe_service_kit.settings import DEVELOPMENT_SEAL_PASSWORD
 from titlepipe_service_kit.settings_errors import (
     HIDE_INPUT_IN_ERRORS,
     SettingsValidationError,
@@ -303,10 +301,12 @@ def test_unknown_configuration_keys_are_rejected() -> None:
 
 # --- the boot failure that must not print what it was validating -----------
 #
-# `CoreApiSettings` does NOT inherit `BaseServiceSettings`, so the
-# `__pydantic_init_subclass__` seal that holds `hide_input_in_errors` True on
-# the shared base does not reach this class. These three are the whole machine
-# for it, and each was watched fail:
+# `CoreApiSettings` now inherits `BaseServiceSettings`, whose
+# `__pydantic_init_subclass__` seal holds `hide_input_in_errors` True and whose
+# `from_environment` rebuilds the error at the boundary. These three stay as
+# this service's witness that the seal actually reaches this class — the base's
+# own tests exercise the base, not what a subclass's merged `model_config` ends
+# up holding — and each was watched fail before the machinery moved:
 #
 #   - a bare `raise` at the `from_environment` boundary reds the first;
 #   - deleting `hide_input_in_errors=True` reds the other two;
@@ -378,7 +378,8 @@ def test_a_direct_construction_renders_no_input_at_all() -> None:
 def test_the_model_hides_its_input() -> None:
     """The config key itself, because nothing else in this service asserts it.
 
-    `CoreApiSettings` is outside the sealed hierarchy, so this is the only
-    thing standing between a copy-pasted `SettingsConfigDict` and the leak.
+    The base seal refuses a subclass whose merged `model_config` unsets this,
+    so what is asserted here is that the seal reached THIS class's effective
+    config — the failure this would catch is the class leaving the hierarchy.
     """
     assert CoreApiSettings.model_config.get(HIDE_INPUT_IN_ERRORS) is True
