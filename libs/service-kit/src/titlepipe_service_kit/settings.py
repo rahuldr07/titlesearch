@@ -128,7 +128,6 @@ class BaseServiceSettings(BaseSettings):
 
     debug: bool = False
 
-    # --- observability ----------------------------------------------------
     log_level: str = "INFO"
     log_renderer: LogRenderer | None = None
     redaction_enabled: bool = True
@@ -296,6 +295,11 @@ class BaseHttpServiceSettings(BaseServiceSettings):
     which is true of a worker, which is why this is a second class rather than
     more fields on the first.
 
+    ONE OF THE TWO HAS ARRIVED, and the past tense above would hide it.
+    `BlindApiSettings` inherits this; `CoreApiSettings` still declares
+    `BaseSettings` and still carries its own copy of every clause here, so this
+    seal covers Blind and does not cover Core. Open as FX-25.
+
     Nothing here imports a web framework and nothing here may. These are
     *values*: a port number, an origin list, a boolean. The server that reads
     them lives in the service.
@@ -333,11 +337,7 @@ class BaseHttpServiceSettings(BaseServiceSettings):
 
     @model_validator(mode="after")
     def _seal_password_is_a_fernet_key(self) -> Self:
-        """A Fernet key, checked by DECODING it — not by counting characters.
-
-        The length is the cheap half; the alphabet is the half that catches a
-        truncated paste or a base64 (not urlsafe) variant, both of which are 44
-        characters and neither of which WorkOS will accept.
+        """A Fernet key, checked by DECODING it. See `SEAL_KEY_BYTES` for why.
 
         Sealed against redefinition for the same reason as the deployment
         refusal: this rule was already wrong in one of the two services that had

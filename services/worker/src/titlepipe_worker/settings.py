@@ -101,13 +101,11 @@ class WorkerSettings(BaseServiceSettings):
 
     service_name: ServiceName = ServiceName.WORKER
 
-    # --- workload bounds --------------------------------------------------
     # See THE CONCURRENCY RULING in the module docstring. This is render-svc's
     # bound, deliberately, and it is the stricter of the two.
     max_concurrent_jobs: int = Field(default=2, ge=1, le=32)
     max_concurrent_provider_calls: int = Field(default=8, ge=1, le=128)
 
-    # --- spend bounds -----------------------------------------------------
     # "Accuracy first, cost second" is the owner mandate; these are a runaway
     # guard, not an optimisation target. None of the provider SDKs are
     # dependencies yet — the ceiling must be a startup-validated value before
@@ -115,7 +113,6 @@ class WorkerSettings(BaseServiceSettings):
     daily_spend_ceiling_usd: Decimal = Field(default=Decimal("25.00"), gt=0)
     per_order_spend_ceiling_usd: Decimal = Field(default=Decimal("2.50"), gt=0)
 
-    # --- document conversion ---------------------------------------------
     # DOCX to PDF runs in an isolated Gotenberg container that must be
     # internal, pinned by digest and denied general outbound network access —
     # "no public document converter" is a rejected item in the plan, not a
@@ -123,7 +120,6 @@ class WorkerSettings(BaseServiceSettings):
     gotenberg_url: str = "http://gotenberg:3000"
     gotenberg_timeout_seconds: float = Field(default=120.0, gt=0, le=900)
 
-    # --- the queue --------------------------------------------------------
     # The DSN the work loop connects with, as `titlepipe_worker`.
     #
     # 🔴 IT IS `TITLEPIPE_WORKER_DATABASE_URL` AND IS THE THIRD NAME IN A SET OF
