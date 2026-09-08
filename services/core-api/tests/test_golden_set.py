@@ -19,10 +19,9 @@ closed-world reads of the live catalog rather than by writing rows:
   leaderboard that scores an engine against itself, and the query that forgets
   it does not look wrong. There is no such column anywhere in `public`;
 * `test_golden_and_engine_vocabularies_never_meet_in_one_relation` — no relation
-  holds a column from both vocabularies. This is the one that will have
-  something to catch: `field_readings` gains `engine_id` in another worker's
-  revision, and on THIS branch the assertion passes with nothing to catch, which
-  is said here rather than left for a reader to discover;
+  holds a column from both vocabularies. Both are live at 0102, so it now
+  passes because the schema is right rather than because one side is empty, and
+  the per-relation control inside it is what distinguishes those two;
 * `test_the_golden_tag_labels_...` and `test_the_golden_act_labels_...` — neither
   vocabulary has a label for a machine, so an engine-derived truth and an
   "engine reading promoted" act are not merely discouraged but unrepresentable.
@@ -96,17 +95,46 @@ NO_ACTOR_SQLSTATE = "28000"
 FOREIGN_KEY_VIOLATION_SQLSTATE = "23503"
 UNIQUE_VIOLATION_SQLSTATE = "23505"
 
-# The column names that mean "a machine produced this". A closed list, because
-# the assertion it feeds is a closed-world one: a column outside this list is not
-# caught, and the honest position is that this catches the vocabulary the
-# repository actually uses rather than every conceivable spelling.
-ENGINE_OUTPUT_COLUMNS = frozenset(
-    {"engine_id", "engine_version", "engine_kind", "confidence", "model", "model_version"}
-)
+# 🔴 SUBSTRINGS AND NOT A CLOSED LIST, BECAUSE THE CLOSED LIST HAD HOLES. It was
+# `{engine_id, engine_version, engine_kind, confidence, model, model_version}`,
+# and MEASURED against head 0102 that set misses three of the seven live
+# engine-output columns: `fields.engine_confidence_raw`,
+# `field_readings.confidence_raw` and `audit_log.engine_model_version`. An
+# `engine_confidence_raw` landing on `golden_fields` was a place to record that a
+# model produced a truth, and neither assertion below would have seen it.
+#
+# Every name in the old set contains one of these three fragments, so this is a
+# STRICT SUPERSET of it — not a subset check standing in for a refusal. MEASURED
+# on the live catalog at 0102: these three match exactly the seven real
+# engine-output columns and nothing else, so the widening costs no false
+# positive on today's schema.
+ENGINE_OUTPUT_FRAGMENTS = ("engine", "confidence", "model")
 
-# The column names that mean "a person established this". Both are on
-# `golden_fields` and nowhere else today.
-GOLDEN_TRUTH_COLUMNS = frozenset({"established_by", "established_reason"})
+# RESIDUAL, AND IT IS THE SAME SHAPE AS BEFORE, JUST SMALLER. A column spelled
+# `reader_a_said` or `ocr_score` carries model output under a name with none of
+# these fragments in it, and no catalog assertion could be written that would
+# catch it. What is closed is the vocabulary this repository actually uses.
+
+# The column names that mean "A PERSON ESTABLISHED THIS AS TRUTH". Three, on two
+# tables, and the second table is the point: with only `golden_fields`' pair in
+# here the schema-wide assertion below could match no relation but
+# `golden_fields`, so it was exactly the `golden_fields`-only assertion that
+# followed it — one test with one effective leg, which is how it read as
+# passing while covering half of what it says.
+#
+# `golden_corrections.signed_by` belongs because `0102` treats it and
+# `established_by` as one kind of thing: both must resolve to an active `users`
+# seat. `intake_signoffs.signed_by` joins the population by name collision, and
+# that is left in rather than special-cased — an engine column on a sign-off
+# table would be a defect too.
+#
+# 🔴 `fields.approved_by` IS DELIBERATELY NOT HERE, AND IT IS THE ONE THAT LOOKS
+# LIKE IT SHOULD BE. It means "a reviewer confirmed this reading", which is the
+# review workflow and not ground truth; `fields` legitimately holds it beside
+# `engine_id` and `engine_confidence_raw`. `audit_log.actor_*` is out for the
+# same reason — the audit trail records WHICH ENGINE under WHOSE REQUEST and has
+# to hold both. Adding either would make this test red on correct schema.
+GOLDEN_TRUTH_COLUMNS = frozenset({"established_by", "established_reason", "signed_by"})
 
 # What an `is_golden`-shaped discriminator would be called. The point of the
 # assertion is the SHAPE — a boolean beside model output saying "this one is
@@ -115,6 +143,29 @@ GOLDEN_FLAG_COLUMNS = frozenset({"is_golden", "golden", "is_truth", "is_ground_t
 
 GOLDEN_TABLE = "golden_fields"
 LEDGER_TABLE = "golden_corrections"
+
+# The live engine-output columns at head 0102, and the live truth columns, named
+# per relation. They are the POSITIVE CONTROL for the two closed-world tests
+# below and not a schema inventory: both assert a NEGATIVE over a catalog read,
+# and a read that returned nothing — wrong schema, `relkind` mistyped, a
+# fragment retyped into something that matches no column — satisfies a negative
+# and proves nothing. `>=` and not `==` so a legitimately added engine column is
+# not a red here; growth on either side is the sweep's business.
+LIVE_ENGINE_OUTPUT = {
+    "fields": {"engine_id", "engine_confidence_raw"},
+    "field_readings": {"engine_id", "engine_version", "confidence_raw"},
+    "audit_log": {"engine_id", "engine_model_version"},
+}
+LIVE_GOLDEN_TRUTH = {
+    GOLDEN_TABLE: {"established_by", "established_reason"},
+    LEDGER_TABLE: {"signed_by"},
+}
+
+
+def _engine_output(names: frozenset[str]) -> set[str]:
+    """The columns in `names` that mean "a machine produced this"."""
+    return {name for name in names if any(part in name for part in ENGINE_OUTPUT_FRAGMENTS)}
+
 
 TENANT = uuid.UUID("33333333-3333-3333-3333-333333333333")
 OTHER_TENANT = uuid.UUID("44444444-4444-4444-4444-444444444444")
@@ -377,10 +428,15 @@ def test_no_relation_in_the_schema_carries_a_golden_flag(golden_engine: Engine) 
         f"itself: {flagged}"
     )
 
-    assert columns[GOLDEN_TABLE] >= GOLDEN_TRUTH_COLUMNS, (
+    # `LIVE_GOLDEN_TRUTH[GOLDEN_TABLE]` and not the whole vocabulary: the
+    # vocabulary now spans two golden tables, and `signed_by` is on the ledger.
+    # This control read `>= GOLDEN_TRUTH_COLUMNS` and went red the moment
+    # `signed_by` joined the set, which is the control working.
+    assert columns[GOLDEN_TABLE] >= LIVE_GOLDEN_TRUTH[GOLDEN_TABLE], (
         f"the catalog read itself has moved: {GOLDEN_TABLE} does not report "
-        f"{sorted(GOLDEN_TRUTH_COLUMNS)}, so the negative above read an empty "
-        f"schema and means nothing. It reports {sorted(columns.get(GOLDEN_TABLE, ()))}"
+        f"{sorted(LIVE_GOLDEN_TRUTH[GOLDEN_TABLE])}, so the negative above read "
+        f"an empty schema and means nothing. It reports "
+        f"{sorted(columns.get(GOLDEN_TABLE, ()))}"
     )
 
 
@@ -394,36 +450,50 @@ def test_golden_and_engine_vocabularies_never_meet_in_one_relation(
     has no shape: it would have to be a person typing the value with a citation
     and a reason, which is an ordinary establishment.
 
-    🔴 ON THIS BRANCH THIS ASSERTION HAS NOTHING TO CATCH, AND SAYING SO IS THE
-    HONEST POSITION. `field_readings` at this revision carries only
-    `line_coords`; `engine_id` and `engine_version` land in another worker's
-    revision. So today the intersection is empty because one side of it is empty
-    everywhere. It is written now because it is one line now and a rewrite once
-    the two vocabularies are both live — and because the day somebody adds
-    `engine_id` to `golden_fields` for convenience is the day it earns itself.
+    🔴 THIS ASSERTION USED TO HAVE NOTHING TO CATCH, AND THEN STOPPED SAYING SO.
+    The version before this one recorded that `field_readings` "carries only
+    `line_coords`" and that `engine_id` and `engine_version` were another
+    worker's revision. `0032` landed them, so both vocabularies are live now and
+    the intersection is empty because the schema is right rather than because
+    one side of it is empty. The control below is what says which of those two
+    it is.
 
-    The vocabularies are CLOSED LISTS. A column spelled `reader_a_said` is not
-    caught, and no catalog assertion could be written that would be.
+    IT ALSO COULD NOT FAIL ON ITS OWN TERMS. `GOLDEN_TRUTH_COLUMNS` was two
+    names on one table, so the schema-wide sweep could only ever flag
+    `golden_fields`, which is what the assertion after it checked directly — one
+    test, one effective leg, reading as two. `signed_by` puts a second golden
+    table and a third relation in the sweep's population, and the engine
+    vocabulary is now fragments rather than a list with three live columns
+    missing from it. See both constants for the measurements.
     """
     with golden_engine.connect() as connection:
         columns = _columns_by_relation(connection)
 
+    for relation, expected in LIVE_ENGINE_OUTPUT.items():
+        assert _engine_output(columns[relation]) >= expected, (
+            f"the catalog read or the engine vocabulary has moved: {relation} "
+            f"reports {sorted(_engine_output(columns[relation]))}, not at least "
+            f"{sorted(expected)}. The sweep below is a negative and would pass "
+            f"on an empty read."
+        )
+    for relation, expected in LIVE_GOLDEN_TRUTH.items():
+        assert columns[relation] & GOLDEN_TRUTH_COLUMNS >= expected, (
+            f"the catalog read or the truth vocabulary has moved: {relation} "
+            f"reports {sorted(columns[relation] & GOLDEN_TRUTH_COLUMNS)}, not at "
+            f"least {sorted(expected)}. With one of these two empty the sweep "
+            f"below narrows to the other table and stops being schema-wide."
+        )
+
     both = sorted(
-        f"{relation}: {sorted(names & GOLDEN_TRUTH_COLUMNS)} beside "
-        f"{sorted(names & ENGINE_OUTPUT_COLUMNS)}"
+        f"{relation}: {sorted(names & GOLDEN_TRUTH_COLUMNS)} beside {sorted(_engine_output(names))}"
         for relation, names in columns.items()
-        if names & GOLDEN_TRUTH_COLUMNS and names & ENGINE_OUTPUT_COLUMNS
+        if names & GOLDEN_TRUTH_COLUMNS and _engine_output(names)
     )
     assert both == [], (
         "a relation holds both a golden-truth column and an engine-output "
         "column. Ground truth and model output in one row is what the separate "
-        f"tables exist to prevent: {both}"
-    )
-
-    assert not (columns[GOLDEN_TABLE] & ENGINE_OUTPUT_COLUMNS), (
-        f"{GOLDEN_TABLE} has grown an engine column: "
-        f"{sorted(columns[GOLDEN_TABLE] & ENGINE_OUTPUT_COLUMNS)}. There is then "
-        f"a place to record that a model produced a truth."
+        "tables exist to prevent, and on a golden table it is a place to record "
+        f"that a model produced a truth: {both}"
     )
 
 
@@ -541,8 +611,26 @@ def test_a_golden_field_that_breaks_a_refusal_rule_is_refused_by_name(
 
     The signer cases are `packages/mocks/src/handlers.ts`'s
     `?? "unknown"` — a permanent, unreversible correction signed with a name that
-    identifies nobody, returning 201 — and the engine namespace that makes
-    "a machine established this" unstorable rather than merely unusual.
+    identifies nobody, returning 201 — and the engine namespace.
+
+    🔴 THE ENGINE NAMESPACE REFUSES A SPELLING NOTHING IN THIS REPOSITORY
+    PRODUCES, AND THESE TWO CASES ARE THE ONLY PLACE `engine:` APPEARS AT ALL.
+    Live engine ids are BARE: `packages/mocks/src/handlers.ts` ships
+    `gemini-2.5-flash`, `llmwhisperer-hq`, `tesseract` and `pdftotext`, and a
+    process signing as itself writes one of those. `established_by =
+    'tesseract'` passes `established_by_is_not_an_engine` — it is not a `23514`,
+    it never was, and this pair of cases has never been evidence that it would
+    be. What actually refuses it is `0102`: `established_by` and `signed_by`
+    must resolve to an active `users` seat, so `tesseract` is `28000` unless
+    somebody created a seat for it. THAT is the machine.
+
+    These two cases stay because the namespace is still a real constraint and a
+    row that DOES arrive spelled `engine:tesseract` is still refused by it — but
+    it is the weaker leg, and reading them as the guard against a machine signer
+    is how `0102`'s defect stayed open through 41 green golden tests. Closing
+    the gap for real would mean `NOT LIKE` on the live engine ids, which is a
+    list that has to agree with a table nothing here can see; the seat lookup
+    is the answer that does not need that list.
 
     The `value`/`na_reason` cases are the two NA states, which must never
     collapse: a golden row with neither is a truth nobody finished establishing,

@@ -77,7 +77,17 @@ def test_no_forbidden_package_is_even_installed() -> None:
 def test_a_core_database_credential_is_refused_in_every_environment() -> None:
     """Including development. A developer who can reach the Core database from
     here will write code that assumes it, and the isolation is already lost by
-    the time staging refuses."""
+    the time staging refuses.
+
+    🔴 `allowed_hosts` IS SUPPLIED, AND IT IS NOT DECORATION. The Core DSN must
+    be the ONLY thing wrong with this configuration, or the assertion is
+    satisfied by whichever validator happens to run first. It used to be this
+    one by declaration order inside a single class; `BlindApiSettings` now
+    inherits the deployment refusal, and a base-class validator runs BEFORE a
+    subclass's — so with `allowed_hosts` left empty the staging and production
+    passes came back "allowed_hosts is empty" and the isolation claim was never
+    reached. A `match=` is what turned that into a failure instead of a pass.
+    """
     for environment in Environment:
         with pytest.raises(ValidationError, match="never hold a Core database credential"):
             BlindApiSettings(
@@ -86,7 +96,8 @@ def test_a_core_database_credential_is_refused_in_every_environment() -> None:
                 host="0.0.0.0",
                 docs_enabled=False,
                 cors_allowed_origins=("https://capture.titlepipe.example",),
-                cookie_seal_password=SecretStr("a-real-32-character-seal-secret!"),
+                allowed_hosts=("capture.titlepipe.example",),
+                cookie_seal_password=SecretStr("YS1yZWFsLWJsaW5kLXNlYWwtc2VjcmV0LTMyYnl0ZXM="),
             )
 
 

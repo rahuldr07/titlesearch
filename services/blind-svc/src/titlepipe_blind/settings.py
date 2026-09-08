@@ -1,17 +1,29 @@
 """Typed configuration for the Blind API, validated at startup.
 
-Same shape and the same refusals as the Core API, plus the ones that exist only
-here. Blindness is structural — separate deployment, separate database,
-separate object-store credentials — and configuration is where that structure
-is declared, so configuration is where it can be silently undone.
-
-The two extra refusals are deliberate:
+Everything a deployable shares — the environment refusals, the seal-password
+rule, the Host/CORS/docs knobs and the input-hiding seal — comes from
+`BaseHttpServiceSettings`. What is left here is the two refusals that exist
+only in this service:
 
 - **No Core database.** If a Core connection string is supplied to this service
   at all, something has been wired wrong; the process refuses to start rather
   than holding a credential it must never have.
 - **No shared object store.** The blind storage credential must point at the
   blind-input location, not at the extraction or reports areas.
+
+Both are checked in EVERY environment, including development, which is why they
+are a validator of their own rather than clauses on
+`additional_unsafe_for_deployment` — that hook runs only when the environment is
+deployed.
+
+🔴 THIS CLASS USED TO BE A PRIVATE COPY OF THE WHOLE MODEL, AND THE COPY WAS
+WRONG. It carried `SEAL_PASSWORD_LENGTH = 32` — the Fernet key's decoded BYTE
+count, not its 44-character encoded length — plus a 32-character placeholder
+that is not urlsafe-base64 at all. core-api found and fixed that identical bug
+and `titlepipe_service_kit.settings` records the account; this copy kept it,
+because nothing in this service reads `cookie_seal_password` yet, so no test
+ever exercised the value. Inheriting is what makes the bug unrepeatable here:
+there is no longer a second number to be wrong.
 
 🔴 A FAILED VALIDATION HERE USED TO PRINT THE ENVIRONMENT IT WAS VALIDATING.
 pydantic appends `input_value=` to a `ValidationError`: the RAW pre-validation
@@ -27,29 +39,20 @@ DSN password sitting beside it in the truncation window:
 stderr as an uncaught traceback with the redaction pipeline not yet running —
 `scrub_credentials` matches that DSN exactly and never gets the chance. Both
 halves of the answer live in `titlepipe_service_kit.settings_errors`:
-`hide_input_in_errors` in the config below, and `redacted_settings_error` at the
-`from_environment` boundary.
+`hide_input_in_errors`, now held by `BaseServiceSettings.__pydantic_init
+_subclass__` rather than by this file's own config, and `redacted_settings_error`
+at the `from_environment` boundary.
 """
 
 from __future__ import annotations
 
 from typing import Self
 
-from pydantic import Field, SecretStr, ValidationError, model_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import Field, SecretStr, model_validator
+from pydantic_settings import SettingsConfigDict
 
-from titlepipe_domain import Environment, LogRenderer, ServiceName
-from titlepipe_service_kit.settings_errors import redacted_settings_error
-
-SEAL_PASSWORD_LENGTH = 32
-
-# Exactly 32 characters, and listed as a placeholder so a deployed environment
-# refuses to start with it.
-DEVELOPMENT_SEAL_PASSWORD = "development-only-seal-password!!"  # noqa: S105
-
-PLACEHOLDER_SECRETS = frozenset(
-    {"", "change-me", "changeme", "secret", "placeholder", DEVELOPMENT_SEAL_PASSWORD}
-)
+from titlepipe_domain import ServiceName
+from titlepipe_service_kit.settings import BaseHttpServiceSettings
 
 # Storage prefixes this service is permitted to be pointed at. `blind-input/` is
 # the only one that exists for it; the rest belong to Core and the workers.
@@ -57,118 +60,27 @@ ALLOWED_STORAGE_PREFIX = "blind-input"
 FORBIDDEN_STORAGE_PREFIXES = ("quarantine", "validated", "pages", "reports", "temporary")
 
 
-class BlindApiSettings(BaseSettings):
+class BlindApiSettings(BaseHttpServiceSettings):
     """Blind API configuration. Instantiating this validates it."""
 
-    model_config = SettingsConfigDict(
-        env_prefix="TITLEPIPE_BLIND_",
-        env_file=None,
-        extra="forbid",
-        frozen=True,
-        # See the module docstring. Without it a failed validation prints the
-        # raw pre-validation environment dict, secrets included.
-        hide_input_in_errors=True,
-    )
+    model_config = SettingsConfigDict(env_prefix="TITLEPIPE_BLIND_")
 
-    # No default. A forgotten variable must not silently mean "development":
-    # the container binds 0.0.0.0, so failing open would publish the API docs,
-    # the placeholder seal password and detailed exception bodies. Requiring it
-    # turns that into a startup error, which is the cheap failure.
-    environment: Environment
     service_name: ServiceName = ServiceName.BLIND_API
-
-    host: str = "127.0.0.1"
     port: int = Field(default=8100, ge=1, le=65535)
-    debug: bool = False
-    reload: bool = False
-    docs_enabled: bool = True
-    cors_allowed_origins: tuple[str, ...] = ()
-    # An empty allowlist is correct when the browser app is served from this
-    # same origin: no cross-origin request is ever made, so CORS headers are
-    # unnecessary and the safest configuration is none at all. But an empty
-    # allowlist is *also* what an operator who simply forgot looks like, and
-    # those must not be indistinguishable — so the safe case is opted into
-    # explicitly and the forgetful case still fails startup.
-    same_origin_deployment: bool = False
 
-    # Host header allowlist. Empty is permitted only outside deployed
-    # environments; a deployed service that accepts any Host is open to
-    # cache poisoning and forged absolute links.
-    allowed_hosts: tuple[str, ...] = ()
-
-    cookie_seal_password: SecretStr = SecretStr(DEVELOPMENT_SEAL_PASSWORD)
-    mock_auth_enabled: bool = False
-
-    # Isolation. Both must stay empty/blind-scoped; see the validators below.
+    # Isolation. Both must stay empty/blind-scoped; see the validator below.
     core_database_url: SecretStr | None = None
     blind_storage_prefix: str = ALLOWED_STORAGE_PREFIX
 
-    log_level: str = "INFO"
-    log_renderer: LogRenderer | None = None
-    redaction_enabled: bool = True
-
-    @property
-    def effective_log_renderer(self) -> LogRenderer:
-        if self.log_renderer is not None:
-            return self.log_renderer
-        return LogRenderer.JSON if self.environment.is_deployed else LogRenderer.CONSOLE
-
-    @property
-    def openapi_url(self) -> str | None:
-        return "/openapi.json" if self.docs_enabled else None
-
-    @classmethod
-    def from_environment(cls) -> BlindApiSettings:
-        """Build from the process environment.
-
-        `environment` has no default, so a type checker sees a required
-        argument missing here. pydantic-settings fills it from the environment
-        at runtime, and if it is absent that is exactly the startup failure the
-        missing default exists to cause.
-
-        There is no `model_config`-aware spelling that avoids the suppression.
-        pyright models this class through pydantic's `dataclass_transform` and
-        synthesises `__init__` from the *fields*; it never sees the real
-        `BaseSettings.__init__`, whose signature ends in `**values: Any` and
-        whose leading parameters are the `_env_file` / `_case_sensitive` knobs.
-        Passing one of those does not satisfy it — pyright answers
-        `No parameter named "_env_file"` on top of the missing-argument report.
-        `model_validate({})` type-checks but is not the same call: the settings
-        sources run from `__init__`, so it would read no environment at all.
-
-        ## Why the failure is caught and re-raised
-
-        This is the boot boundary: `create_app` calls it before
-        `configure_logging`, so whatever comes out reaches stderr as a traceback
-        with no redaction running. A `ValidationError` renders the raw input
-        dict it was given, so it is rebuilt here as field names and reasons.
-
-        `from None`, not `from exc`: chaining would print the original beneath
-        the replacement under "The above exception was the direct cause", which
-        is the same leak one line lower down.
-        """
-        try:
-            return cls()  # pyright: ignore[reportCallIssue]  # rules-allow(any-type): pyright synthesises `__init__` from the fields, so the deliberately default-less `environment` reads as a missing argument; pydantic-settings supplies it from the environment at runtime
-        except ValidationError as exc:
-            raise redacted_settings_error(cls.__name__, exc) from None
-
-    @model_validator(mode="after")
-    def _seal_password_is_the_right_length(self) -> Self:
-        secret = self.cookie_seal_password.get_secret_value()
-        if len(secret) != SEAL_PASSWORD_LENGTH:
-            raise ValueError(
-                f"cookie_seal_password must be exactly {SEAL_PASSWORD_LENGTH} characters; "
-                f"got {len(secret)}"
-            )
-        return self
-
     @model_validator(mode="after")
     def _the_blind_boundary_holds_in_every_environment(self) -> Self:
-        """Unlike the other checks, this one applies in development too.
+        """Unlike the deployment refusals, this one applies in development too.
 
         A developer who can reach the Core database from the blind service will
         write code that assumes it, and the isolation is then already lost by
-        the time staging refuses.
+        the time staging refuses. That is why it is a validator rather than an
+        `additional_unsafe_for_deployment` clause: the hook is consulted only
+        when `environment.is_deployed`.
         """
         violations: list[str] = []
         if self.core_database_url is not None:
@@ -183,47 +95,4 @@ class BlindApiSettings(BaseSettings):
             )
         if violations:
             raise ValueError("blind isolation violated: " + "; ".join(violations))
-        return self
-
-    @model_validator(mode="after")
-    def _deployed_environments_refuse_unsafe_configuration(self) -> Self:
-        if not self.environment.is_deployed:
-            return self
-
-        unsafe: list[str] = []
-        if self.debug:
-            unsafe.append("debug is enabled")
-        if self.reload:
-            unsafe.append("reload is enabled")
-        if self.mock_auth_enabled:
-            unsafe.append("mock auth is enabled")
-        if self.docs_enabled:
-            unsafe.append("public API docs are enabled")
-        if not self.redaction_enabled:
-            unsafe.append("log redaction is disabled")
-        if "*" in self.cors_allowed_origins:
-            unsafe.append("CORS allows any origin")
-        if not self.cors_allowed_origins and not self.same_origin_deployment:
-            unsafe.append(
-                "CORS allowlist is empty; set same_origin_deployment=true if the app "
-                "is served from this origin and cross-origin access is not wanted"
-            )
-        if self.cors_allowed_origins and self.same_origin_deployment:
-            unsafe.append(
-                "same_origin_deployment is set but a CORS allowlist is configured; "
-                "the two contradict each other"
-            )
-        if self.cookie_seal_password.get_secret_value() in PLACEHOLDER_SECRETS:
-            unsafe.append("cookie_seal_password is a placeholder")
-        if self.host == "127.0.0.1":
-            unsafe.append("host is loopback-only and unreachable behind a proxy")
-        if not self.allowed_hosts:
-            unsafe.append("allowed_hosts is empty; the service would accept any Host header")
-        if "*" in self.allowed_hosts:
-            unsafe.append("allowed_hosts contains a wildcard")
-
-        if unsafe:
-            raise ValueError(
-                f"unsafe configuration for {self.environment.value}: " + "; ".join(unsafe)
-            )
         return self

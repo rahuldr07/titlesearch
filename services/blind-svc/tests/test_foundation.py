@@ -7,6 +7,7 @@ than the internal one would be exactly backwards.
 
 from __future__ import annotations
 
+import base64
 import traceback
 from collections.abc import AsyncGenerator
 
@@ -20,8 +21,9 @@ from starlette.responses import StreamingResponse
 from titlepipe_blind.api.errors import CODE_INTERNAL_ERROR, GENERIC_INTERNAL_MESSAGE
 from titlepipe_blind.api.request_context import REQUEST_ID_HEADER
 from titlepipe_blind.app import create_app
-from titlepipe_blind.settings import DEVELOPMENT_SEAL_PASSWORD, BlindApiSettings
+from titlepipe_blind.settings import BlindApiSettings
 from titlepipe_domain import Environment, LogRenderer, RefusalError
+from titlepipe_service_kit.settings import DEVELOPMENT_SEAL_PASSWORD
 from titlepipe_service_kit.settings_errors import (
     HIDE_INPUT_IN_ERRORS,
     SettingsValidationError,
@@ -29,7 +31,11 @@ from titlepipe_service_kit.settings_errors import (
 from titlepipe_service_kit.telemetry.logging import configure_logging, get_logger
 from titlepipe_test_support import FrozenClock, SequenceIdFactory
 
-GOOD_SECRET = "a-real-32-character-seal-secret!"
+# A valid Fernet key — urlsafe-base64 of 32 bytes, 44 characters. Not "a
+# 32-character string": that distinction is the bug this file now pins, and
+# it is spelled out per module because `from conftest import ...` resolves
+# only under pytest's legacy import mode (`conftest.py` records the break).
+GOOD_SECRET = "YS1yZWFsLWJsaW5kLXNlYWwtc2VjcmV0LTMyYnl0ZXM="
 
 
 def deployed(**overrides: object) -> BlindApiSettings:
@@ -78,6 +84,65 @@ def test_production_refuses_an_empty_cors_allowlist_by_default() -> None:
 def test_production_refuses_the_placeholder_secret() -> None:
     with pytest.raises(ValidationError, match="placeholder"):
         deployed(cookie_seal_password=SecretStr(DEVELOPMENT_SEAL_PASSWORD))
+
+
+# --- the seal is a FERNET KEY, and this service used to disagree ------------
+#
+# 🔴 EVERY ONE OF THESE FOUR WAS WATCHED FAIL ON THE PREVIOUS `settings.py`,
+# which carried its own `SEAL_PASSWORD_LENGTH = 32` and a 32-character
+# placeholder that is not urlsafe-base64. In that state:
+#
+#   * `test_a_real_fernet_key_is_accepted` -> `must be exactly 32 characters;
+#     got 44` — the service REFUSED every credential WorkOS can issue;
+#   * `test_a_thirty_two_character_string_is_refused` -> DID NOT RAISE — the
+#     one length that cannot be a key was the only one accepted;
+#   * `test_forty_four_characters_of_the_wrong_alphabet_is_refused` -> `must be
+#     exactly 32 characters; got 44`, which is a refusal for the wrong reason
+#     and would have passed a `pytest.raises(ValidationError)` written without
+#     a `match=`;
+#   * `test_the_development_default_satisfies_its_own_rule` -> the constructed
+#     default came back as `development-only-seal-password!!` where the shared
+#     `DEVELOPMENT_SEAL_PASSWORD` is `ZGV2ZWxvcG1lbnQtb25seS1zZWFsLXBhc3N3b3JkISE=`,
+#     which is the private copy answering in place of the one home.
+#
+# Nothing in this service reads `cookie_seal_password` yet, which is why no
+# existing test exercised the value and why the copy stayed wrong.
+
+
+def test_a_real_fernet_key_is_accepted() -> None:
+    assert len(GOOD_SECRET) == 44
+    assert len(base64.urlsafe_b64decode(GOOD_SECRET)) == 32
+    assert deployed().cookie_seal_password.get_secret_value() == GOOD_SECRET
+
+
+def test_a_thirty_two_character_string_is_refused() -> None:
+    """The exact value this service used to require, and it is not a key.
+
+    32 is the DECODED byte count. A 32-character password is the shape an
+    operator produces by following a "must be exactly 32 characters"
+    instruction, which is what `.env.example` used to say.
+    """
+    with pytest.raises(ValidationError, match="44-character"):
+        deployed(cookie_seal_password=SecretStr("a-real-32-character-seal-secret!"))
+
+
+def test_forty_four_characters_of_the_wrong_alphabet_is_refused() -> None:
+    """Length is the cheap half. This is the half that catches a bad paste."""
+    with pytest.raises(ValidationError, match=r"urlsafe-base64|decode to exactly"):
+        deployed(cookie_seal_password=SecretStr("!" * 44))
+
+
+def test_the_development_default_satisfies_its_own_rule() -> None:
+    """The default must pass the real validator, not a weaker one.
+
+    It did not before: the placeholder was 32 characters and so was the check,
+    so the only value ever exercised was the one that should have failed.
+    """
+    assert len(DEVELOPMENT_SEAL_PASSWORD) == 44
+    assert len(base64.urlsafe_b64decode(DEVELOPMENT_SEAL_PASSWORD)) == 32
+    assert BlindApiSettings(
+        environment=Environment.DEVELOPMENT
+    ).cookie_seal_password.get_secret_value() == (DEVELOPMENT_SEAL_PASSWORD)
 
 
 def test_health_and_readiness(client: TestClient) -> None:
@@ -173,13 +238,20 @@ def _reset_structlog() -> object:
 
 # --- the boot failure that must not print what it was validating -----------
 #
-# The same leak core-api proved, reproduced identically here: `BlindApiSettings`
-# is a second private copy of the settings model, outside the sealed
-# `BaseServiceSettings` hierarchy, so nothing but these tests holds
-# `hide_input_in_errors` True for it. Each was watched fail — a bare `raise` at
-# the `from_environment` boundary reds the first; deleting
-# `hide_input_in_errors=True` reds the other two; doing both reds the first on
-# its leak assertion, with `PrOdPw123` in the formatted traceback.
+# The same leak core-api proved, reproduced identically here. Each of these was
+# watched fail — a bare `raise` at the `from_environment` boundary reds the
+# first; deleting `hide_input_in_errors=True` reds the other two; doing both
+# reds the first on its leak assertion, with `PrOdPw123` in the formatted
+# traceback.
+#
+# 🔴 THESE ARE NO LONGER THE ONLY THING HOLDING IT. The comment here used to say
+# `BlindApiSettings` was a private copy outside the sealed `BaseServiceSettings`
+# hierarchy, so nothing but these tests held `hide_input_in_errors` True for it.
+# It is inside that hierarchy now, and `BaseServiceSettings.__pydantic_init
+# _subclass__` refuses at class-definition time any subclass that sets the flag
+# to anything but True — a machine, not a test. These stay because the seal
+# holds the FLAG and these hold the BEHAVIOUR: that the flag is what stops the
+# DSN reaching a traceback, through this service's own `create_app` ordering.
 #
 # The credential carried here is `core_database_url` — the one this service
 # must never hold. It is a bystander to the failure, which is the shape of the

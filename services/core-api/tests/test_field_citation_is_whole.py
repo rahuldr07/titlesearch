@@ -11,12 +11,16 @@
 
 ## Half a citation is not a weaker citation, it is none
 
-`api/schemas/provenance.py` already states the property for the WIRE: "a
-response carrying a `source_doc_id` with no `source_page` renders as uncited on
-the client, so a backend that emits one has published a value it cannot cite
-while believing it did". `0090` is the same property at the STORE, which is the
-layer that holds for writers nobody has written yet — the extraction worker
-included.
+A response carrying a `source_doc_id` with no `source_page` renders as uncited
+on the client, so a backend that emits one has published a value it cannot cite
+while believing it did. `0090` is that property at the STORE, which is the layer
+that holds for writers nobody has written yet — the extraction worker included.
+
+**AND THE STORE IS THE ONLY LAYER THAT HOLDS IT.** This paragraph used to cite
+`api/schemas/provenance.py` as stating the same property for the WIRE. That
+module had zero importers and no endpoint served a field, and it is deleted;
+`api/schemas/__init__.py` records what its deletion leaves open, which is that
+`0090` constrains rows and not projections of them.
 
 ## The three shapes, and why only one of them is refused
 
@@ -32,12 +36,11 @@ included.
 
 ## `source_snippet` and `source_line_coords` are NOT in the pair
 
-Deliberately, and `provenance.py` gives the reason for the wire's half of it: a
-snippet is the excerpt shown beside the value and its absence degrades the
-reader's experience, while a page reference's absence changes whether the value
-is CITED. Requiring the snippet would refuse readings from engines that locate a
-page and return no excerpt, which is the fabrication pressure
-`field_readings.line_coords` exists to avoid.
+Deliberately. A snippet is the excerpt shown beside the value and its absence
+degrades the reader's experience, while a page reference's absence changes
+whether the value is CITED. Requiring the snippet would refuse readings from
+engines that locate a page and return no excerpt, which is the fabrication
+pressure `field_readings.line_coords` exists to avoid.
 
 ## Everything here connects as the container SUPERUSER
 
@@ -271,8 +274,7 @@ def test_a_document_without_a_page_is_refused(citation_engine: Engine) -> None:
     """The other half, and it is not the lesser one.
 
     A document id with no page is "somewhere in these forty pages", which reads
-    on the review screen as a sourced value and is not one. `provenance.py`
-    states this half for the wire in exactly those terms.
+    on the review screen as a sourced value and is not one.
     """
     error = _refuses(
         citation_engine,

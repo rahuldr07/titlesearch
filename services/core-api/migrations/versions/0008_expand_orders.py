@@ -10,6 +10,8 @@ writer. Nothing in it touches a table, type or function `0005`-`0007` create, so
 changes the graph and not the result.
 The prose below is the author's and describes the branch as written; this line is the read of
 the chain that `alembic upgrade head` actually walks.
+The same pass folded the intake pair the author called `0014` and `0015` into the single revision
+`0051`; the references below have been retargeted, and a design note naming `0014` means `0051`.
 
 ---------------------------------------------------------------------------
 🔴 `orders` ALREADY EXISTS. THIS IS AN `ALTER`, NOT A `CREATE`, AND THAT IS
@@ -41,7 +43,7 @@ on 0005-0007: it touches no table they create, no enum they define and no
 function they install. god relinearizes; this file must not be rebased onto her
 chain by hand.
 
-## What is deferred to `0014`, and what is NOT
+## What is deferred to `0051`, and what is NOT
 
 `product_id`, `frozen_config_version_id` and `period_label` are added HERE, with
 every other column, and only the two composite FOREIGN KEYS binding the first two
@@ -52,21 +54,32 @@ does not survive contact with `alembic check`.
 `models/orders.py` declares all three. `alembic check` compares `Base.metadata`
 against the live catalog and fails on any column the models have and the database
 does not, so an `orders` missing them is drift at every revision from here to
-`0014` — and, more immediately, every ORM `INSERT` names all sixteen columns and
+`0051` — and, more immediately, every ORM `INSERT` names all sixteen columns and
 gets `column "product_id" of relation "orders" does not exist`. MEASURED on this
 tree: leaving them out took `test_the_repository_reads_and_writes_through_the
 _scoped_session` from passing to that exact error.
 
 **WHAT SEPARABILITY THEN MEANS, PRECISELY.** The intake/product/sign-off layer is
 BUILT UNDER ASSUMPTION — god ruled it in ahead of the owner's answer. If the owner
-reverses it, `0015` and `0014` are dropped, and what `orders` is left holding is
-two nullable uuid columns that no constraint references and nothing populates.
-That is inert. The alternative — the FKs here — would leave `orders` referencing
-two dropped tables, which is not.
+reverses it, `0051` is dropped, and what `orders` is left holding is three
+nullable columns — `product_id`, `frozen_config_version_id`, `period_label` —
+that nothing populates. That is inert. The alternative — the FKs here — would
+leave `orders` referencing two dropped tables, which is not.
 
-`ck_orders_period_label_needs_a_product` lands here rather than with `0014`
-because it names only `orders`' own columns; it is not an intake dependency, it is
-a statement about this table.
+Two of the three ARE named by a constraint, and it survives with them:
+`ck_orders_period_label_needs_a_product` lands here rather than with `0051`
+because it names only `orders`' own columns. Both its referents outlive the
+reversal, so it stays satisfiable rather than becoming a check against a column
+that is gone.
+
+🔴 THE ONE-COMMAND REVERSAL IS NO LONGER ONE COMMAND, AND `0051` STILL SAYS IT
+IS. That claim was written when `0051` was this branch's head. Relinearization
+made the chain LINEAR through `0060`, `0070`, `0071`, `0072`, `0080`, `0090`,
+`0100`, `0101` and `0102`, so `alembic downgrade 0050` now unwinds all nine of
+them on the way past and they have to be replayed afterwards. What `0051` still
+owns is that no revision after it REFERENCES an intake table — that is the
+property that keeps the unpicking mechanical, and it is the one worth
+protecting. Nothing enforces it; it is a review rule, stated in `0051`.
 
 ## `NOT NULL` with no server default, against a table that must be empty
 
@@ -250,7 +263,7 @@ def upgrade() -> None:
 
     # 🔴 THE TWO INTAKE REFERENCES, COLUMNS ONLY. Their composite foreign keys —
     # `(tenant_id, product_id) REFERENCES products (tenant_id, id)` and the same
-    # shape onto `client_config_versions` — are added by `0014`, with the tables
+    # shape onto `client_config_versions` — are added by `0051`, with the tables
     # they point at. Until then these are two nullable uuid columns that nothing
     # constrains, which is what makes the intake layer droppable. See the module
     # docstring for why the COLUMNS could not also wait.

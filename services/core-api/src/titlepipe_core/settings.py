@@ -42,8 +42,8 @@ from titlepipe_domain import Environment, LogRenderer, ServiceName
 # The full account of why the length is checked against the DECODED byte count,
 # and why the placeholder is a structurally valid Fernet key, lives there.
 #
-# `blind-svc` keeps its own pair: its seal is 32 characters and its placeholder
-# is a different value, so importing these there would be wrong, not tidier.
+# This once added that `blind-svc` keeps its own pair "because its seal is 32
+# characters" — the bug restated as a design. It inherits the base now.
 from titlepipe_service_kit.settings import (
     DEVELOPMENT_SEAL_PASSWORD,
     PLACEHOLDER_SECRETS,
