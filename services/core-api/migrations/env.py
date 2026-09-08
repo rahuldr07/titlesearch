@@ -52,8 +52,10 @@ from __future__ import annotations
 
 import os
 from logging.config import fileConfig
+from typing import NoReturn
 
 from alembic import context
+from alembic.runtime.migration import MigrationContext
 from alembic.script import ScriptDirectory
 from sqlalchemy import engine_from_config, pool, text
 from sqlalchemy.engine import Connection
@@ -260,6 +262,67 @@ def run_migrations_offline() -> None:
     )
 
 
+def _refused_autocommit_block() -> NoReturn:
+    """What `MigrationContext.autocommit_block` is replaced by.
+
+    A plain function and not a `@contextmanager`, so it raises when the block is
+    CALLED rather than when it is entered — one step earlier, and with no
+    unreachable `yield` to explain. `NoReturn` is assignable to the context
+    manager the real method returns, so the substitution typechecks.
+    """
+    raise RuntimeError(
+        "a migration on this chain opened an autocommit block, and this env.py "
+        "refuses them. `autocommit_block` COMMITS the transaction the run is in "
+        "before it yields, so DDL inside it survives a later failure — including "
+        "the row-level-security coverage check below, which is the whole reason "
+        "that check is inside `begin_transaction()`. If a statement genuinely "
+        "cannot run in a transaction, it does not belong in this chain: run it as "
+        "an operator step and record it in the revision's docstring."
+    )
+
+
+def _refuse_autocommit_blocks(migration_context: MigrationContext) -> None:
+    """Make "the whole run rolls back with it", four frames down, TRUE.
+
+    ---------------------------------------------------------------------------
+    🔴 THAT CLAIM WAS FALSE, AND FALSE IN THE DIRECTION THAT WEDGES THE DATABASE.
+    ---------------------------------------------------------------------------
+    MEASURED 2026-09-08 against postgres:18.4 on this chain at `0102`, with a
+    revision whose whole body was `with op.get_context().autocommit_block():
+    op.execute("CREATE TABLE leftover (tenant_id uuid NOT NULL)")`:
+
+        alembic upgrade head  ->  RlsCoverageError on `leftover`, as designed
+        to_regclass('public.leftover')  ->  leftover      (it survived)
+        alembic_version                 ->  0102          (it did not land)
+
+    So the refusal was correct, the rollback was not, and the two states
+    disagree. Then, DELETING THE ATTACK REVISION FROM THE TREE ENTIRELY: the very
+    next `alembic upgrade head` fails on the same `leftover`, and every one after
+    it, because the coverage check runs at head against a table no revision now
+    creates. Recovery is a manual `DROP TABLE` by somebody holding the owner —
+    outside Alembic, on a database Alembic can no longer touch.
+
+    `autocommit_block` COMMITS the transaction before it yields; alembic's own
+    docstring says so in a `.. warning::`. Nothing downstream can roll back what
+    it committed, so this closes the block itself rather than trying to undo it.
+
+    REPLACED ON THE INSTANCE, NOT THE CLASS. `op.get_context()` returns this same
+    `MigrationContext`, so an instance attribute shadows the method for exactly
+    this run; patching `MigrationContext.autocommit_block` would hold for the
+    process, and `tests/conftest.py` runs migrations 29 times in one pytest
+    process alongside code that has every right to use the block.
+
+    RESIDUAL — this closes ONE door, and the others are open. A revision can
+    still leave the transaction by calling `op.get_bind().commit()`, by
+    `exec_driver_sql("COMMIT")`, or by building an engine of its own; all three
+    end in the same wedged state and none of them is refused here. What would
+    close them is a check on the way OUT — that the connection is still in the
+    transaction `begin_transaction()` opened — which detects rather than
+    prevents and is not written. `check:rules` bans none of these.
+    """
+    migration_context.autocommit_block = _refused_autocommit_block
+
+
 def _assert_coverage_at_head(connection: Connection) -> None:
     """`assert_rls_coverage`, but only when the run finished ON a head.
 
@@ -367,6 +430,7 @@ def run_migrations_online() -> None:
                 target_metadata=target_metadata,
                 include_name=_include_name,
             )
+            _refuse_autocommit_blocks(context.get_context())
 
             with context.begin_transaction():
                 context.run_migrations()
@@ -380,6 +444,13 @@ def run_migrations_online() -> None:
                 # it. Checking after the commit would leave the database in the
                 # un-isolated state the check just refused, with
                 # `alembic_version` claiming the revision landed.
+                #
+                # "The whole run rolls back with it" is TRUE only because
+                # `_refuse_autocommit_blocks` above shuts the one supported way
+                # out of this transaction. Read its docstring before weakening
+                # that: it carries the measurement of what the sentence cost
+                # while it was merely asserted, and the residual of what it still
+                # does not cover.
                 #
                 # It runs as `titlepipe_owner` — who the `SET ROLE` above made
                 # this connection — which reads `pg_class` and `pg_policies` for

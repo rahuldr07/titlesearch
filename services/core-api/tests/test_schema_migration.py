@@ -2415,3 +2415,123 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.execute("DROP TABLE partial_upgrade_probe")
 '''
+
+
+def test_a_revision_that_opens_an_autocommit_block_is_refused_and_leaves_nothing(
+    migrated_database: str,
+    alembic_config: Callable[[str], Config],
+    migration_dsn: str,
+    alembic_version_table: str,
+    seam_engine: Callable[[str], Engine],
+    tmp_path: Path,
+) -> None:
+    """🔴 `env.py` SAID "THE WHOLE RUN ROLLS BACK WITH IT" AND IT DID NOT.
+
+    The sibling above proves a FAILING revision leaves nothing behind. This is
+    the one shape that escaped it: `autocommit_block` commits the transaction
+    before it yields, so DDL inside it is already durable when anything later
+    refuses — and what refuses is the row-level-security coverage check, whose
+    entire reason for living inside `begin_transaction()` is that sentence.
+
+    MEASURED 2026-09-08 against postgres:18.4 on the 0102 chain, before `env.py`
+    refused the block, with a probe revision whose whole body was this one's:
+
+        alembic upgrade head            ->  RlsCoverageError on `leftover`
+        to_regclass('public.leftover')  ->  leftover   (it survived the rollback)
+        alembic_version                 ->  0102       (the revision did not land)
+
+    The two disagree, and the disagreement is terminal rather than untidy: with
+    the probe revision DELETED FROM THE TREE ENTIRELY, the next `upgrade head`
+    fails on the same `leftover` and so does every one after it, because the
+    coverage check runs at head against a table no revision now creates. Recovery
+    was a manual `DROP TABLE` by somebody holding the owner.
+
+    So the last assertion here is not decoration: `upgrade head` AFTER the
+    refusal is the property that was actually broken.
+
+    The probe goes to `tmp_path` and is reached through `version_locations`, for
+    the reason the sibling gives — nothing is ever written to
+    `migrations/versions/`. No `downgrade` to base first: the chain at head with
+    one new revision on top IS the scenario, and running it from anywhere else
+    would be testing something easier.
+
+    WHEN THIS TEST FAILS IT WEDGES THE MODULE, and that is the defect rather than
+    a flaw in the test: the guard being gone means the probe table committed, so
+    every later test in this module meets the coverage check faulting a table
+    nothing creates. Confirmed by driving it — with
+    `_refuse_autocommit_blocks` deleted from `env.py`, this fails on
+    `RlsCoverageError … autocommit_block_probe` instead of the refusal. Fix the
+    guard; do not chase the cascade.
+    """
+    real_config = alembic_config(migration_dsn)
+    versions = Path(str(real_config.get_main_option("script_location"))) / "versions"
+
+    head = ScriptDirectory.from_config(real_config).get_current_head()
+    assert head is not None, "there is no head revision to hang the probe off"
+    (tmp_path / "autocommit_block_probe.py").write_text(
+        _AUTOCOMMIT_BLOCK_REVISION.format(down_revision=head), encoding="utf-8"
+    )
+
+    probe_config = alembic_config(migration_dsn)
+    probe_config.set_main_option("path_separator", "os")
+    probe_config.set_main_option("version_locations", f"{versions}{os.pathsep}{tmp_path}")
+
+    with pytest.raises(RuntimeError, match="opened an autocommit block"):
+        command.upgrade(probe_config, "head")
+
+    engine = seam_engine(migrated_database)
+    try:
+        with engine.connect() as connection:
+            surviving = _public_schema_objects(connection, alembic_version_table)
+            current = connection.execute(
+                text(f"SELECT version_num FROM {alembic_version_table}")  # noqa: S608
+            ).scalar_one()
+    finally:
+        engine.dispose()
+
+    assert f"r:{AUTOCOMMIT_PROBE_TABLE}" not in surviving["relations"], (
+        f"{AUTOCOMMIT_PROBE_TABLE} survived the refusal, so the DDL inside the "
+        f"autocommit block committed and `env.py`'s rollback claim is still false"
+    )
+    assert str(current) == head, "the refused revision moved alembic_version"
+
+    # The wedge, driven from the other side: with the probe gone, the tree still
+    # migrates. This is what failed for every subsequent run before the refusal.
+    command.upgrade(real_config, "head")
+
+
+# The table the probe creates inside its autocommit block. Named here so the
+# assertion above and the revision source below cannot drift apart.
+AUTOCOMMIT_PROBE_TABLE = "autocommit_block_probe"
+
+# A revision whose only statement is DDL inside an autocommit block, used only by
+# the test above. A string rather than a file in `migrations/versions/` for the
+# reason `_FAILING_REVISION` gives: a real file there would be picked up by every
+# ordinary `upgrade` in the suite.
+#
+# It carries a `tenant_id` and no policy DELIBERATELY. Before `env.py` refused the
+# block, that shape is what turned a refusal into a wedge — the coverage check at
+# head faulted the leftover table on every later run, including runs of a tree
+# this revision had been deleted from.
+_AUTOCOMMIT_BLOCK_REVISION = '''"""A revision that does its DDL in an autocommit block. Test fixture only."""
+
+from __future__ import annotations
+
+from collections.abc import Sequence
+
+from alembic import op
+
+revision: str = "autocommit_block_probe"
+down_revision: str | None = "{down_revision}"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
+
+
+def upgrade() -> None:
+    with op.get_context().autocommit_block():
+        op.execute("CREATE TABLE autocommit_block_probe (tenant_id uuid NOT NULL)")
+
+
+def downgrade() -> None:
+    op.execute("DROP TABLE autocommit_block_probe")
+'''
