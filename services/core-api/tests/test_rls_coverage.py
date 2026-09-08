@@ -37,6 +37,7 @@ from titlepipe_core.db import make_engine
 from titlepipe_core.db.rls_coverage import (
     POLICY_COMMAND,
     PUBLIC_ROLES,
+    SCHEMA,
     TENANT_GUC,
     UNSCOPED_TABLES,
     PolicyFacts,
@@ -503,6 +504,113 @@ async def test_the_boot_check_reads_the_catalog_as_the_unprivileged_app_role(
             await assert_rls_coverage_async(connection)
     finally:
         await engine.dispose()
+
+
+# The second schema the census had to grow to see. Prefixed like the table probes
+# and for the same reason: no migration may ever take the name, and the drop in
+# the `finally` is `CASCADE`, which would take a real schema's contents with it.
+PROBE_SCHEMA = f"{PROBE_PREFIX}sidecar"
+
+
+def test_a_perfectly_isolated_table_outside_the_owned_schema_is_still_a_fault() -> None:
+    """🔴 The pure half of the schema hole. ENABLE, FORCE, tenant column, and the
+    exact policy every healthy case here uses — and it is refused anyway.
+
+    Location is judged BEFORE row security, so this cannot be argued green by
+    fixing the RLS on it: the fault is that it exists outside `SCHEMA` at all,
+    which is what `roles.sql`'s `CREATE ON DATABASE` revoke is the other end of.
+    """
+    elsewhere = TableFacts(
+        "secrets", rls_enabled=True, rls_forced=True, has_tenant_column=True, schema="sidecar"
+    )
+    faults = analyse_coverage([elsewhere], [_healthy_policy("secrets")])
+    assert [(f.table, f.fault) for f in faults] == [
+        ("sidecar.secrets", "table_outside_the_owned_schema")
+    ]
+
+
+def test_an_allowlisted_name_cannot_exempt_a_table_in_another_schema() -> None:
+    """`UNSCOPED_TABLES` is a list of BARE names, so before the location check ran
+    first a table in another schema could take one of those names and be waved
+    through by the allowlist — the allowlist reading as a schema-wide exemption.
+    """
+    exempt = next(iter(UNSCOPED_TABLES))
+    smuggled = TableFacts(
+        exempt, rls_enabled=False, rls_forced=False, has_tenant_column=True, schema="sidecar"
+    )
+    assert [f.fault for f in analyse_coverage([smuggled], [])] == ["table_outside_the_owned_schema"]
+
+
+def test_a_tenant_table_in_a_second_schema_is_seen_by_the_live_census(
+    migrated_database: str, seam_engine: Callable[[str], Engine]
+) -> None:
+    """🔴 THE PROOF, and the one that needed the SQL to change rather than the
+    judgement: before 2026-09-08 both catalog reads carried `WHERE nspname =
+    'public'`, so this table was not in the set and `audit_rls_coverage` returned
+    `()` with it sitting there.
+
+    MEASURED the same day, end to end: the same table reached by a real
+    `alembic upgrade head` (after one `GRANT CREATE ON DATABASE`, which is the
+    only thing that stood in the way) migrated green, and `titlepipe_app` pinned
+    to one tenant then read both tenants' rows out of it.
+
+    Deliberately given ENABLE, FORCE and a policy, so a census that reached it but
+    judged it by row security alone would still pass and this would not.
+    """
+    with seam_engine(migrated_database).connect() as connection:
+        connection.execute(text(f"CREATE SCHEMA {PROBE_SCHEMA}"))
+        connection.execute(
+            text(
+                f"CREATE TABLE {PROBE_SCHEMA}.secrets ("
+                "  tenant_id uuid NOT NULL,"
+                "  id uuid NOT NULL,"
+                "  CONSTRAINT pk_probe_sidecar_secrets PRIMARY KEY (tenant_id, id))"
+            )
+        )
+        connection.execute(text(f"ALTER TABLE {PROBE_SCHEMA}.secrets ENABLE ROW LEVEL SECURITY"))
+        connection.execute(text(f"ALTER TABLE {PROBE_SCHEMA}.secrets FORCE ROW LEVEL SECURITY"))
+        connection.execute(
+            text(
+                f"CREATE POLICY tenant_isolation ON {PROBE_SCHEMA}.secrets USING "
+                f"(tenant_id = NULLIF(current_setting('{TENANT_GUC}', true), '')::uuid)"
+            )
+        )
+        connection.commit()
+        try:
+            faults = {(f.table, f.fault) for f in audit_rls_coverage(connection)}
+            assert faults == {(f"{PROBE_SCHEMA}.secrets", "table_outside_the_owned_schema")}
+            with pytest.raises(RlsCoverageError, match=PROBE_SCHEMA):
+                assert_rls_coverage(connection)
+        finally:
+            connection.execute(text(f"DROP SCHEMA {PROBE_SCHEMA} CASCADE"))
+            connection.commit()
+        assert audit_rls_coverage(connection) == ()
+
+
+def test_the_census_still_excludes_the_servers_own_schemas(
+    migrated_database: str, seam_engine: Callable[[str], Engine]
+) -> None:
+    """The other side of the census widening: `pg_catalog` holds tables with no
+    row security at all, so a census that stopped filtering would report hundreds
+    of faults on every run and be deleted within the day.
+
+    `pg_%` is excluded BY PREFIX, and the prefix is the server's own reservation
+    rather than our convention. MEASURED 2026-09-08 against postgres:18.4:
+    `CREATE SCHEMA pg_hideout` is refused with `unacceptable schema name … The
+    prefix "pg_" is reserved for system schemas`, so the exclusion cannot be used
+    as a hiding place. `information_schema` has no such backstop and is excluded
+    by name; see the module docstring's residual.
+    """
+    with seam_engine(migrated_database).connect() as connection:
+        assert audit_rls_coverage(connection) == ()
+        catalog_tables = connection.execute(
+            text(
+                "SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace "
+                "WHERE c.relkind IN ('r','p') AND n.nspname IN ('pg_catalog','information_schema')"
+            )
+        ).scalar_one()
+        assert catalog_tables > 0, "nothing was being excluded, so the exclusion proves nothing"
+        assert SCHEMA == "public"
 
 
 def test_the_guc_the_check_requires_is_the_one_the_policies_read(

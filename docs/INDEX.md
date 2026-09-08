@@ -44,6 +44,7 @@ same commit.
 | Document | Status | Purpose |
 |---|---|---|
 | `BUILD-PLAN.md` | AUTHORITATIVE | Canonical backend build plan since 2026-08-04 |
+| `TRUST-MODEL.md` | AUTHORITATIVE | Who can defeat which database guarantee, and what would notice. Measured 2026-09-08. **Read before writing "cannot", "immutable", "append-only" or "tamper-proof" anywhere** |
 | `RUNNING-LOCALLY.md` | AUTHORITATIVE | Runbook: the dev database, the two-DSN role split, and running core-api locally. `migration-harness.yml` is the authority it defers to |
 | `PLAN.md` | SUPERSEDED by `BUILD-PLAN.md` | The reconciled mid-2026 plan (own banner says so) |
 | `IMPLEMENTATION_PLAN.md` | SUPERSEDED by `BUILD-PLAN.md` | Earlier implementation plan (own banner) |

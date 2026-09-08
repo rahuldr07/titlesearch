@@ -109,8 +109,21 @@ corrections; `0071`'s composite foreign key stops it once corrections exist.
 That residual is real and is named rather than argued away.
 
 Nothing here is a control against whoever administers the cluster. `ENABLE
-ALWAYS` closes the `session_replication_role = 'replica'` hole `0004` measured;
-a superuser remains a superuser.
+ALWAYS` closes the `session_replication_role = 'replica'` hole `0004` measured.
+
+🔴 THIS SENTENCE USED TO END "a superuser remains a superuser", AND THAT IS TOO
+GENEROUS BY ONE ROLE. The residual is `titlepipe_owner`, which is not a superuser
+and is one `SET ROLE` from `titlepipe_migration` — a LOGIN role whose DSN is in
+every deployment's environment. `ALTER TABLE` is gated on OWNERSHIP, not on a
+grantable privilege, so there is no grant to withhold. MEASURED 2026-09-08
+against postgres:18.4 as `titlepipe_migration`: `SET ROLE titlepipe_owner; ALTER
+TABLE golden_fields DISABLE TRIGGER golden_fields_ledger_required;` succeeds and
+`tgenabled` goes to `'D'`; `ENABLE ALWAYS` puts it back to `'A'` and the catalog
+is byte-identical to one nobody touched. `audit_log` recorded none of it.
+
+`docs/backend/TRUST-MODEL.md` is the whole measurement and, more usefully, what
+would NOTICE — which is not in the database, because a control the owner can
+switch off is not a control against the owner.
 """
 
 from __future__ import annotations

@@ -339,6 +339,14 @@ def _create_append_only_trigger() -> None:
     not a control against whoever administers the cluster. Nothing in a database
     can be.
 
+    🔴 "WHOEVER ADMINISTERS THE CLUSTER" IS NOT A DBA IN ANOTHER TEAM. It is
+    `titlepipe_owner`, one `SET ROLE` from `titlepipe_migration`, whose DSN this
+    file's own `env.py` requires on every run. `ALTER TABLE audit_log DISABLE
+    TRIGGER audit_log_append_only` is the whole attack and it needs OWNERSHIP,
+    not a privilege. `docs/backend/TRUST-MODEL.md` carries the measurement and
+    the detection story; read it before restating this sentence anywhere a
+    customer sees it.
+
     🔴 `CREATE FUNCTION`, NOT `CREATE OR REPLACE`, AND THAT IS DELIBERATE. With
     `OR REPLACE`, a `downgrade()` that forgot its `DROP FUNCTION` would leave the
     old body in place and the next `upgrade` would silently overwrite it — a

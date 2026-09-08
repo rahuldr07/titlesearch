@@ -1526,4 +1526,113 @@ HAVING count(*) > 0
 \gexec
 
 
+-- -----------------------------------------------------------------------------
+-- NO `titlepipe_%` ROLE MAY HOLD `CREATE ON DATABASE` — added 2026-09-08
+-- -----------------------------------------------------------------------------
+-- The header already says the owner has `CREATE ON SCHEMA public` and no
+-- `CREATE ON DATABASE`, and until today that sentence was true only because
+-- PostgreSQL's DEFAULT `datacl` grants `CREATE` to the database owner and to
+-- nobody else. Nothing in this file revoked it and no test asserted it, so ONE
+-- `GRANT CREATE ON DATABASE` — a statement any superuser or database owner can
+-- issue in passing — made a second schema creatable.
+--
+-- WHAT THAT COSTS, MEASURED 2026-09-08 against postgres:18.4 on the 0102 chain:
+-- with `CREATE` granted to `titlepipe_owner`, a revision doing `CREATE SCHEMA
+-- sidecar; CREATE TABLE sidecar.secrets (tenant_id uuid, body text)` plus the
+-- two grants the app role needs ran `alembic upgrade head` to completion,
+-- `assert_rls_coverage` returned no faults, and `titlepipe_app` with
+-- `app.current_tenant` pinned to one tenant read BOTH tenants' rows out of it.
+-- `db/rls_coverage.py` now censuses every schema, so that table would be a fault
+-- today. This is the other end: the privilege that made it reachable, revoked
+-- and then asserted absent, so neither end has to hold alone.
+--
+-- ONLY ROWS THAT EXIST ARE REVOKED, for the reason the membership block gives at
+-- length: a `REVOKE` that matches nothing is not an error, and a `REVOKE` a
+-- non-owner has no right to issue is a WARNING that `ON_ERROR_STOP` never sees.
+-- Generating from `aclexplode(datacl)` means a fresh cluster — `datacl` NULL,
+-- no rows — emits nothing at all.
+--
+-- `PUBLIC` IS IN THE PREDICATE AND IS NOT A `titlepipe_%` NAME. `grantee = 0` is
+-- how `aclexplode` spells it, and `CREATE` held by `PUBLIC` reaches every one of
+-- these roles just as surely as an explicit grant would. It is quoted as the
+-- bare keyword rather than through `%I`, which would emit `"PUBLIC"` — a
+-- quoted identifier naming a role that does not exist.
+SELECT format(
+           'REVOKE CREATE ON DATABASE %I FROM %s',
+           current_database(),
+           CASE WHEN a.grantee = 0 THEN 'PUBLIC' ELSE quote_ident(a.grantee::regrole::text) END
+       )
+FROM pg_catalog.pg_database d
+CROSS JOIN LATERAL aclexplode(d.datacl) AS a
+WHERE d.datname = current_database()
+  AND a.privilege_type = 'CREATE'
+  AND (a.grantee = 0 OR a.grantee::regrole::text LIKE 'titlepipe\_%')
+\gexec
+
+-- ...and read back, because the `REVOKE` above cannot reach two of the three
+-- ways a role gets here.
+--
+-- `has_database_privilege` and NOT `aclexplode`, which is the opposite choice
+-- from the schema block above it, and the two are not in conflict: that block
+-- asserts a grant is PRESENT and had to ask the explicit question because
+-- `PUBLIC`'s own entries answer the effective one for it. This asserts a
+-- privilege is ABSENT, where every route in counts — an explicit grant, a grant
+-- to `PUBLIC`, and OWNERSHIP OF THE DATABASE, which carries `CREATE` with no ACL
+-- entry to generate a `REVOKE` from.
+--
+-- 🔴 SO THIS REFUSES A CLUSTER WHERE THE DATABASE IS OWNED BY A `titlepipe_%`
+-- ROLE, and the reason is that revoking there does not STAY revoked. All
+-- MEASURED 2026-09-08 against postgres:18.4, on a `CREATE DATABASE ownedtest
+-- OWNER titlepipe_owner` — a plausible provisioning line:
+--
+--     datacl NULL, owner_create -> true, and aclexplode yields no rows,
+--       so the block above emits nothing and this one RAISEs;
+--     an explicit REVOKE CREATE ... FROM titlepipe_owner does work:
+--       datacl -> {=Tc/titlepipe_owner,titlepipe_owner=Tc/titlepipe_owner},
+--       owner_create -> false;
+--     ...and then, as titlepipe_migration — the DSN every deployment holds —
+--       SET ROLE titlepipe_owner; GRANT CREATE ON DATABASE ownedtest TO
+--       titlepipe_owner;  -> owner_create back to true.
+--
+-- A database's owner holds grant option on it, so converging this one would be
+-- a revoke the next `alembic upgrade` can undo without asking anybody. That is
+-- the difference between this case and the two above it, which is why this is a
+-- refusal and those are `REVOKE`s. `docs/backend/TRUST-MODEL.md` is the general
+-- form of the same argument.
+--
+-- ROLE MEMBERSHIP IS NOT ASKED ABOUT, AND EVERY ROLE IS ASKED SEPARATELY BECAUSE
+-- OF IT. `has_database_privilege` follows INHERITED privilege only, and
+-- `titlepipe_migration` holds its membership of `titlepipe_owner` `WITH INHERIT
+-- FALSE` — so `titlepipe_owner` holding `CREATE` would answer FALSE for
+-- `titlepipe_migration` while `SET ROLE titlepipe_owner`, which `env.py` does on
+-- every run, reaches it anyway. Naming all five closes that by not needing to
+-- reason about it.
+SELECT format(
+           'DO $createdb$ BEGIN RAISE EXCEPTION %L; END $createdb$',
+           format(
+               'roles.sql: refusing to finish — %s can CREATE in database %s. '
+               'CREATE ON DATABASE is what makes a second schema possible, and a '
+               'tenant table in a schema other than public was invisible to the '
+               'row-level-security coverage check until 2026-09-08 and fully '
+               'cross-tenant readable. The block above either generated no '
+               'REVOKE or generated one that did nothing, which leaves two '
+               'causes. Either the privilege is held through an ACL entry this '
+               'run has no right to revoke — run this file as a superuser or as '
+               'the owner of the database. Or a titlepipe role OWNS the '
+               'database, where CREATE comes with the ownership and has no ACL '
+               'entry to revoke; revoking it by hand works and does not last, '
+               'because the owner holds grant option and titlepipe_migration '
+               'can SET ROLE to it. Reassign the database to an operator role — '
+               'no titlepipe role should own it.',
+               string_agg(r.rolname, ', ' ORDER BY r.rolname),
+               current_database()
+           )
+       )
+FROM pg_catalog.pg_roles r
+WHERE r.rolname LIKE 'titlepipe\_%'
+  AND has_database_privilege(r.rolname, current_database(), 'CREATE')
+HAVING count(*) > 0
+\gexec
+
+
 COMMIT;

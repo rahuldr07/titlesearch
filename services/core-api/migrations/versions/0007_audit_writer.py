@@ -64,7 +64,9 @@ edit; they do not PROVE one didn't happen"*. Three attackers, three controls:
 
 * **the ordinary caller** — stopped by `0001`'s append-only triggers and by `0002`
   withholding UPDATE and DELETE from `titlepipe_app`;
-* **whoever bypassed the triggers** (a superuser, a restore, a direct catalog
+* **whoever bypassed the triggers** (`titlepipe_owner` with one `ALTER TABLE …
+  DISABLE TRIGGER`, reachable by `SET ROLE` from the migration DSN — see
+  `docs/backend/TRUST-MODEL.md`; also a superuser, a restore, a direct catalog
   write, `session_replication_role='replica'`) — DETECTED, not stopped, by
   `audit_chain_verify()`. A deleted row leaves a gap in `chain_position`; an
   edited row's stored `row_hash` no longer matches a recomputation; a re-hashed
