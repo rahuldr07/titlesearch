@@ -322,36 +322,16 @@ class CoreApiSettings(BaseSettings):
             )
         return self
 
-    @model_validator(mode="after")
-    def _deployed_environments_refuse_unsafe_configuration(self) -> Self:
-        if not self.environment.is_deployed:
-            return self
+    def additional_unsafe_for_deployment(self) -> list[str]:
+        """The refusals that exist only in this service: WorkOS and the app DSN.
 
+        The other twelve clauses this method's predecessor carried — debug,
+        redaction, reload, mock auth, docs, the three CORS rules, the seal
+        placeholder, loopback host and both allowed_hosts rules — are the base
+        hierarchy's verbatim and are collected from it along the MRO, so this
+        lists only what no other deployable refuses.
+        """
         unsafe: list[str] = []
-        if self.debug:
-            unsafe.append("debug is enabled")
-        if self.reload:
-            unsafe.append("reload is enabled")
-        if self.mock_auth_enabled:
-            unsafe.append("mock auth is enabled")
-        if self.docs_enabled:
-            unsafe.append("public API docs are enabled")
-        if not self.redaction_enabled:
-            unsafe.append("log redaction is disabled")
-        if "*" in self.cors_allowed_origins:
-            unsafe.append("CORS allows any origin")
-        if not self.cors_allowed_origins and not self.same_origin_deployment:
-            unsafe.append(
-                "CORS allowlist is empty; set same_origin_deployment=true if the app "
-                "is served from this origin and cross-origin access is not wanted"
-            )
-        if self.cors_allowed_origins and self.same_origin_deployment:
-            unsafe.append(
-                "same_origin_deployment is set but a CORS allowlist is configured; "
-                "the two contradict each other"
-            )
-        if self.cookie_seal_password.get_secret_value() in PLACEHOLDER_SECRETS:
-            unsafe.append("cookie_seal_password is a placeholder")
         if not self.workos_configured:
             # WHAT MAKES THE WORKOS ADAPTER MANDATORY WHERE IT MATTERS.
             # Without this a deployed service starts with an EMPTY provider
@@ -381,15 +361,4 @@ class CoreApiSettings(BaseSettings):
                 "on /health and /ready while answering every product request with a "
                 "503 the caller is invited to retry"
             )
-        if self.host == "127.0.0.1":
-            unsafe.append("host is loopback-only and unreachable behind a proxy")
-        if not self.allowed_hosts:
-            unsafe.append("allowed_hosts is empty; the service would accept any Host header")
-        if "*" in self.allowed_hosts:
-            unsafe.append("allowed_hosts contains a wildcard")
-
-        if unsafe:
-            raise ValueError(
-                f"unsafe configuration for {self.environment.value}: " + "; ".join(unsafe)
-            )
-        return self
+        return unsafe
