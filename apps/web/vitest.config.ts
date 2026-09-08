@@ -43,6 +43,10 @@ export default defineConfig({
             // Pure-logic entity tests. Kept DOM-free on purpose so rules like
             // no-value exhaustiveness are provable without a browser.
             "src/**/*.test.ts",
+            // The import-direction checker's fixture cases: each rule proven
+            // able to fail against a planted violation. Node env — it spawns
+            // scripts/check-imports.mjs as a child process.
+            "scripts/**/*.test.ts",
           ],
           environment: "node",
         },
