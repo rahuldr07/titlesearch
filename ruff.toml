@@ -13,6 +13,7 @@ src = [
     "services/blind-svc/src",
     "services/worker/src",
     "libs/domain/src",
+    "libs/http-kit/src",
     "libs/service-kit/src",
     "libs/test-support/src",
 ]
@@ -86,6 +87,7 @@ ignore = [
 [lint.isort]
 known-first-party = [
     "titlepipe_domain",
+    "titlepipe_http_kit",
     "titlepipe_service_kit",
     "titlepipe_test_support",
 ]

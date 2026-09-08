@@ -20,13 +20,13 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from titlepipe_core.api.errors import build_unhandled_response, register_error_handlers
 from titlepipe_core.api.mock_auth_guard import MockAuthGuardMiddleware
-from titlepipe_core.api.request_context import RequestContextMiddleware
 from titlepipe_core.api.routers import health, queue, rules
 from titlepipe_core.auth import build_auth_seam
 from titlepipe_core.lifespan import build_lifespan, build_resources
 from titlepipe_core.settings import CoreApiSettings
 from titlepipe_core.telemetry.logging import configure_logging
 from titlepipe_domain import Clock, IdFactory
+from titlepipe_http_kit.request_context import RequestContextMiddleware
 from titlepipe_service_kit.telemetry.hooks import RequestMetrics
 
 API_TITLE = "TitlePipe Core API"

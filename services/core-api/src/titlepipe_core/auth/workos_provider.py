@@ -216,7 +216,7 @@ class WorkOSAuthKitProvider:
         a key set that will not load. A person holding a perfectly good session
         would be told their session was bad, and a WorkOS outage would look like
         a fleet of expired cookies. `DependencyUnavailableError` is registered at
-        503 in `api/error_envelope.py`, which is the status that says retry.
+        503 in `titlepipe_http_kit.error_contract`, which is the status that says retry.
 
         The vendor's message names infrastructure — a URL, a timeout, a TLS
         failure — so it goes to the log line and `_UNVERIFIABLE_MESSAGE` goes to

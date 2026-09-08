@@ -66,7 +66,7 @@ def render_next_order(handover: Handover | None) -> QueueNextResponse:
     ruling is `QueueService`'s, not this module's.
 
     `DomainError` and not `NotImplementedError` for the refusal, and the BASE
-    class specifically. `error_envelope.py::DOMAIN_ERROR_STATUS` has no entry for
+    class specifically. `titlepipe_http_kit.error_contract::DOMAIN_ERROR_STATUS` has no entry for
     the base, so `status_for` answers 500 — the truthful status, because this is a
     fault in this service and there is nothing the caller can change. A
     `RefusalError` would say 422 and blame the request; a

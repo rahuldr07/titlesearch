@@ -18,12 +18,6 @@ from fastapi.testclient import TestClient
 from pydantic import SecretStr, ValidationError
 from starlette.responses import StreamingResponse
 
-from titlepipe_blind.api.errors import (
-    CODE_INTERNAL_ERROR,
-    GENERIC_HTTP_MESSAGE,
-    GENERIC_INTERNAL_MESSAGE,
-)
-from titlepipe_blind.api.request_context import REQUEST_ID_HEADER
 from titlepipe_blind.app import create_app
 from titlepipe_blind.settings import BlindApiSettings
 from titlepipe_domain import (
@@ -33,6 +27,12 @@ from titlepipe_domain import (
     LogRenderer,
     RefusalError,
 )
+from titlepipe_http_kit.error_contract import (
+    CODE_INTERNAL_ERROR,
+    GENERIC_HTTP_MESSAGE,
+    GENERIC_INTERNAL_MESSAGE,
+)
+from titlepipe_http_kit.request_context import REQUEST_ID_HEADER
 from titlepipe_service_kit.settings import DEVELOPMENT_SEAL_PASSWORD
 from titlepipe_service_kit.settings_errors import (
     HIDE_INPUT_IN_ERRORS,
@@ -316,10 +316,10 @@ def test_the_model_hides_its_input() -> None:
 
 
 # The blind service's half of `core-api/tests/test_errors.py`'s three
-# `_publishable_detail` tests. `api/errors.py` in each service carries the
-# function byte-for-byte, because `libs/service-kit` has no `api` module yet;
-# these are what make the two copies observably the same rather than assumed to
-# be. A change to one that is not made to the other reds here.
+# `publishable_detail` tests. The function is one copy now — it moved to
+# `titlepipe_http_kit.error_contract` — but both halves stay: each asserts the
+# behaviour through ITS OWN app and handler wiring, which is what a shared
+# implementation does not prove.
 _AUTHORED_DETAIL = "capture 41c9 was sealed for a different typist"
 
 

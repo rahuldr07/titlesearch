@@ -32,8 +32,8 @@ above is about.
 
 `HTTPException` IS BANNED IN THIS FILE and everywhere else under `src/` except
 `api/errors.py` — `scripts/check_backend_rules.py` rule 4. What is raised is a
-`DomainError`, which `api/error_envelope.py` maps to a status through
-`status_for` and renders through `envelope`, so the caller gets the same
+`DomainError`, which `titlepipe_http_kit.error_contract` maps to a status
+through `status_for` and `api/error_envelope.py` renders through `envelope`, so the caller gets the same
 `{"error": ..., "code": ..., "request_id": ..., "details": {}}` shape as every
 other failure in this service and can branch on a `code` that does not move when
 the wording does. `error` IS THE SENTENCE AND IS NOT AN OBJECT — the browser

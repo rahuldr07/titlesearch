@@ -44,11 +44,6 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from pydantic import BaseModel
 
-from titlepipe_core.api.error_envelope import (
-    CODE_INTERNAL_ERROR,
-    CODE_VALIDATION_FAILED,
-    DOMAIN_ERROR_STATUS,
-)
 from titlepipe_core.app import create_app
 from titlepipe_core.settings import CoreApiSettings
 from titlepipe_domain import (
@@ -60,6 +55,11 @@ from titlepipe_domain import (
     RefusalError,
     UnauthenticatedError,
     ValidationError,
+)
+from titlepipe_http_kit.error_contract import (
+    CODE_INTERNAL_ERROR,
+    CODE_VALIDATION_FAILED,
+    DOMAIN_ERROR_STATUS,
 )
 from titlepipe_test_support import FrozenClock, SequenceIdFactory
 
