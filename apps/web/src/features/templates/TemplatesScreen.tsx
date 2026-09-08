@@ -6,12 +6,9 @@ import { useSignedIn } from "../../app/session/signedIn";
 import { templateCatalog, templateDetail } from "../../shared/templateQueries";
 import { QueryState } from "../../entities/state/QueryState";
 import { TemplateRail } from "./TemplateRail";
-import { TemplateCanvas } from "./TemplateCanvas";
+import { TemplateCanvas, type TemplateView } from "./TemplateCanvas";
 import { TemplateInspector } from "./TemplateInspector";
-import type { NaModeId } from "./useTemplates";
-
-export type TemplateView = "sheet" | "diff" | "json";
-export type NaSimMode = "normal" | NaModeId;
+import type { NaSimMode } from "./useTemplates";
 
 /**
  * Templates Architect — three columns: catalog rail left, live sheet /

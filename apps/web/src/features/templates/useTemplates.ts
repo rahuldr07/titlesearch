@@ -71,3 +71,4 @@ export const NA_MODES = [
   { id: "unreadable", label: "4. Unreadable" },
 ] as const;
 export type NaModeId = (typeof NA_MODES)[number]["id"];
+export type NaSimMode = "normal" | NaModeId;

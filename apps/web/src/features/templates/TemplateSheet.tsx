@@ -1,5 +1,5 @@
 import type { TemplateDetailResponse } from "@titlepipe/contract";
-import type { NaSimMode } from "./TemplatesScreen";
+import type { NaSimMode } from "./useTemplates";
 import { SheetBlock } from "./SheetBlock";
 
 /**

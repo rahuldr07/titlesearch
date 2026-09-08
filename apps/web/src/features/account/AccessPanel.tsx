@@ -3,7 +3,7 @@ import { usePermissions, hasAction } from "../../app/session/permissions";
 import { useRead } from "../../app/useRead";
 import { rbacMatrix } from "../../shared/accountQueries";
 import { Card } from "../../components/ui";
-import { PanelFrame } from "./AccountPanel";
+import { PanelFrame } from "./PanelFrame";
 import { QueryState } from "../../entities/state/QueryState";
 import { useCycleRbac } from "./useSettings";
 import { ModuleRows } from "./MatrixCells";

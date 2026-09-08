@@ -1,4 +1,4 @@
-import { OrderHubScreen } from "../../features/hub/OrderHubScreen";
+import { OrderHubScreen } from "../../features/hub";
 
 /**
  * The order-scoped door: the HUB, and only the hub.

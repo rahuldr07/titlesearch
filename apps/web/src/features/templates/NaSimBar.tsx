@@ -1,6 +1,5 @@
 import { cx } from "../../components/ui";
-import { NA_MODES } from "./useTemplates";
-import type { NaSimMode } from "./TemplatesScreen";
+import { NA_MODES, type NaSimMode } from "./useTemplates";
 
 /**
  * The NA simulation bar — Data present · the four numbered absence modes.

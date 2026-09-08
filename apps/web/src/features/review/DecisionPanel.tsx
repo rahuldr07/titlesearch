@@ -9,7 +9,8 @@ import { isQueued } from "./queue";
 import { confirmValue, readCited } from "../../shared/provenance";
 import { useReviewWrites } from "./useReviewWrites";
 import { DecisionActions } from "./DecisionActions";
-import { DecisionEditor, type EditorMode } from "./DecisionEditor";
+import { DecisionEditor } from "./DecisionEditor";
+import type { EditorMode } from "./editorHold";
 import { ExcerptStrip } from "./ExcerptStrip";
 import { useDecisionKeys } from "./useReviewKeys";
 

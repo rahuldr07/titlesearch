@@ -4,7 +4,7 @@ import { usePermissions, hasAction } from "../../app/session/permissions";
 import { useSignedIn } from "../../app/session/signedIn";
 import { people, rbacMatrix } from "../../shared/accountQueries";
 import { Badge, Card, Option, Select } from "../../components/ui";
-import { PanelFrame } from "./AccountPanel";
+import { PanelFrame } from "./PanelFrame";
 import { QueryState } from "../../entities/state/QueryState";
 import { useAssignRole } from "./useSettings";
 

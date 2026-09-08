@@ -1,4 +1,4 @@
-import type { DemoAccount } from "../../app/session/signedIn";
+import type { DemoAccount } from "../../app/session/demoAccounts";
 import { ACCOUNT_LICENSES } from "../../app/session/demoAccounts";
 
 /**

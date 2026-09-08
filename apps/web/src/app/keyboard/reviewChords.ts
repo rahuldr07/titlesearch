@@ -1,4 +1,4 @@
-import type { ChordSpec } from "./keymap";
+import type { ChordSpec } from "./chordSpec";
 
 /**
  * The workstation's six keys — in the registry but not on the window. Keys

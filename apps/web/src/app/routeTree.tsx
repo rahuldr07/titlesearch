@@ -2,10 +2,10 @@ import { createRoute } from "@tanstack/react-router";
 import { rootRoute } from "./rootRoute";
 import { BLIND_SEAT_SCREEN } from "./chrome/orderScreens";
 import { accountSearch } from "./accountSearch";
-import { AccountScreen } from "../features/account/AccountScreen";
+import { AccountScreen } from "../features/account";
 import { staticRoutes, ACCOUNT_PATH, DELIVERY_PATH } from "./staticRoutes";
 import { deliverySearch } from "./deliverySearch";
-import { DeliveryScreen } from "../features/delivery/DeliveryScreen";
+import { DeliveryScreen } from "../features/delivery";
 import { Placeholder } from "./chrome/Placeholder";
 import { orderRoutes } from "./orderRoutes";
 

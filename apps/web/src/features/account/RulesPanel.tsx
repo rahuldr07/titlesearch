@@ -9,7 +9,7 @@ import {
   Segment,
   SegmentedControl,
 } from "../../components/ui";
-import { PanelFrame } from "./AccountPanel";
+import { PanelFrame } from "./PanelFrame";
 import { QueryState } from "../../entities/state/QueryState";
 import { RulesGaps } from "./RulesGaps";
 

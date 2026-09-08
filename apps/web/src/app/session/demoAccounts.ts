@@ -1,5 +1,15 @@
 import { SEAT_IDENTITIES, type Role } from "@titlepipe/contract";
-import type { DemoAccount } from "./signedIn";
+
+export interface DemoAccount {
+  readonly id: string;
+  readonly name: string;
+  readonly email: string;
+  /** The contract role, never the design's job title. */
+  readonly role: Role;
+  /** The design's own words for the seat, shown beside the name. */
+  readonly seat: string;
+  readonly initials: string;
+}
 
 /**
  * The four demo accounts — the sign-in screen's "demo — continue as" rows.

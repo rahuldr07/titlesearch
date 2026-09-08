@@ -2,7 +2,8 @@ import { useMemo } from "react";
 import { useChords, type ChordBindings } from "../../shared/chords";
 import { useOverlays } from "./overlays";
 import { useSignedIn } from "../session/signedIn";
-import { KEYMAP, type ChordAction } from "./keymap";
+import { KEYMAP } from "./keymap";
+import type { ChordAction } from "./chordSpec";
 
 /**
  * The global chord layer, installed once — from `keymap.ts`. The registry

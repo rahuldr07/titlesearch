@@ -1,6 +1,5 @@
 import { create } from "zustand";
-import type { Role } from "@titlepipe/contract";
-import { DEMO_ACCOUNTS } from "./demoAccounts";
+import { DEMO_ACCOUNTS, type DemoAccount } from "./demoAccounts";
 
 /**
  * Whether anybody is signed in. There is no authentication surface in the
@@ -12,17 +11,6 @@ import { DEMO_ACCOUNTS } from "./demoAccounts";
  * The one thing it genuinely owns: chords are not installed while this is
  * null (`shared/chords.ts`).
  */
-export interface DemoAccount {
-  readonly id: string;
-  readonly name: string;
-  readonly email: string;
-  /** The contract role, never the design's job title. */
-  readonly role: Role;
-  /** The design's own words for the seat, shown beside the name. */
-  readonly seat: string;
-  readonly initials: string;
-}
-
 interface SignedInState {
   account: DemoAccount | null;
   signIn: (account: DemoAccount) => void;
