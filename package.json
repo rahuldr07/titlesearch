@@ -3,6 +3,16 @@
   "private": true,
   "packageManager": "pnpm@10.33.2",
   "scripts": {
-    "typecheck": "pnpm -r typecheck"
+    "format:check": "pnpm --filter @titlepipe/web exec prettier --check . && python3 scripts/run_python_checks.py format-check",
+    "format": "pnpm --filter @titlepipe/web run format && python3 scripts/run_python_checks.py format",
+    "lint": "pnpm --filter @titlepipe/web lint && python3 scripts/run_python_checks.py lint",
+    "typecheck": "pnpm -r typecheck && python3 scripts/run_python_checks.py typecheck",
+    "check:architecture": "pnpm --filter @titlepipe/web check:rules && pnpm --filter @titlepipe/web check:imports && python3 scripts/check_backend_rules.py",
+    "check:dead-code": "pnpm --filter @titlepipe/web knip",
+    "test:unit": "pnpm --filter @titlepipe/web test && python3 scripts/run_python_checks.py test --projects unit",
+    "test:integration": "python3 scripts/run_python_checks.py test --projects integration",
+    "test:e2e": "pnpm --filter @titlepipe/web test:e2e",
+    "check": "pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run check:architecture && pnpm run test:unit",
+    "verify": "pnpm run check && pnpm run check:dead-code && pnpm run test:integration && pnpm run test:e2e"
   }
 }
