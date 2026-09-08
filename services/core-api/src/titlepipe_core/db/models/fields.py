@@ -169,7 +169,8 @@ class Field(_TenantRow):
         # pipeline to invent a citation. The snippet and the coords are
         # deliberately outside the pair — their absence degrades a reader's
         # experience, a page reference's absence changes whether the value is
-        # CITED (`api/schemas/provenance.py` states the same split for the wire).
+        # CITED. The wire has no field envelope yet and this constraint does
+        # not reach a projection — `api/schemas/__init__.py` holds that residual.
         #
         # This TIGHTENS `unreadable_cites_a_page` above: a page is nameable only
         # inside a document, so `PRESENT_UNREADABLE` now needs both halves.

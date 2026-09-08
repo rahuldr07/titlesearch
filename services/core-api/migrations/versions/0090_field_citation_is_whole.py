@@ -61,11 +61,16 @@ these forty pages").
 
 ## `source_snippet` and `source_line_coords` are NOT in the pair
 
-`api/schemas/provenance.py` states the reason for the wire's half of the same
-property and it holds here: a snippet is the excerpt shown beside the value and
-its absence degrades the reader's experience, while a page reference's absence
-changes whether the value is CITED. Folding the snippet in would refuse readings
-from engines that locate a page and return no excerpt.
+A snippet is the excerpt shown beside the value and its absence degrades the
+reader's experience, while a page reference's absence changes whether the value
+is CITED. Folding the snippet in would refuse readings from engines that locate
+a page and return no excerpt.
+
+This paragraph used to cite `api/schemas/provenance.py` as stating the same
+split for the WIRE. That module is deleted — it had no importers and no
+endpoint served a field. `api/schemas/__init__.py` carries the residual: this
+constraint holds for ROWS, and a projection that drops one half is still
+unguarded.
 
 ## 🔴 THE INTERACTION WITH `0032`'s `unreadable_cites_a_page`, WHICH TIGHTENS
 
