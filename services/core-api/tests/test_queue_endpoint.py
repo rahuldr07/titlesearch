@@ -1,64 +1,53 @@
-"""`GET /api/queue/next` — the refusal, the empty answer, and the invariant.
+"""`GET /api/queue/next` — the refusal, the empty answer, and the render.
 
-## The three things unproven without this file
+## 🔴 WHAT THIS FILE GOT WRONG, AND WHAT CHANGED BECAUSE OF IT
 
-1. **The route refuses, and BOTH reasons are named.** The 401 is what a caller
-   sees; the missing migration is what they would see next. A test that pinned
-   only the 401 would go green the day somebody wired a principal in, and the
-   first real order would 500.
-2. **The empty queue renders exactly `{"order": null}`**, against committed
-   bytes, through the real response model. That is the one path the mapper can
-   serve today and it is the one that must not drift.
-3. **The invariant is in the signatures.** No layer of this stack accepts a
-   parameter that would let a caller choose their order. Asserted by INSPECTION
-   of the three signatures rather than by prose, because prose is what
-   `docs/INVARIANTS.md` #22 already is and it did not stop a cursor being
-   proposed for this endpoint in PLAN.md §4.
+It used to assert that `api/mappers/queue.py` refuses every order, and it was
+right when it was written: `orders` had three columns. `0008` gave the table nine
+of the twelve the mapper named, and two of the remaining three were never
+absences — `state`/`state_code` and `pages`/`page_count` differ in NAME, not in
+existence. **Nothing went red**, because every assertion here was about the fact
+of the refusal and none was about its reason. The endpoint could not serve an
+order on a tree that held the data, and the suite called that correct.
 
-## Why there is no "a real order comes back" test
-
-Because there is no such response. `api/mappers/queue.py` refuses a populated
-queue — twelve of the thirteen fields `packages/contract/src/entities.ts:56-77`
-requires have no column on `orders` — and the refusal is asserted below as the
-behaviour it is. Writing a test that constructs the thirteen-field DTO by hand
-and compares it to a fixture would prove that Pydantic serialises a model, which
-`test_rules_contract_parity.py` already establishes, while suggesting this
-service can produce one.
+So: a test that asserts a refusal asserts WHY it refuses, against something that
+moves when the reason moves. Below, the render is checked field by field against
+the row's own columns, the surviving refusal is checked against the ORDER IN
+HAND rather than a list of schema facts, and
+`test_every_contract_field_is_sourced_from_a_column_or_a_named_resolution` goes
+red the day a column this endpoint reads is renamed out from under it.
 
 ## No Zod counterpart, and that is a stated gap rather than a hidden one
 
-`test_rules_contract_parity.py` is paired with `apps/web/contract-parity.test.ts`
-and says why neither is sufficient alone. **THIS ENDPOINT'S FIXTURE IS
-UNILATERAL.** `packages/contract` declares `QueueNextResponse` — this file
-transcribes from it — but nothing on the TypeScript side reads
-`contract-fixtures/queue-next-empty.json`, so the null envelope is checked
-against this service and against a transcription, not against a parser. Same
-shape of gap `test_rule_history_contract_parity.py` records, same disposition: a
-REQUEST in the build report, not something this file can close.
+`packages/contract` declares `QueueNextResponse` and this file transcribes from
+it, but nothing on the TypeScript side reads `contract-fixtures/
+queue-next-empty.json`. Same shape of gap `test_rule_history_contract_parity.py`
+records, same disposition: a REQUEST in the build report, not something this file
+can close.
 """
 
 from __future__ import annotations
 
 import inspect
 import json
+import uuid
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Final
 
 import pytest
 from fastapi.testclient import TestClient
+from minimal_rows import a_minimal_order
 from pydantic import SecretStr
 
 from titlepipe_core.api.dependencies import principal_tenant
-from titlepipe_core.api.mappers.queue import (
-    COLUMNS_THE_ORDERS_TABLE_DOES_NOT_HAVE,
-    render_next_order,
-)
+from titlepipe_core.api.mappers.queue import render_next_order
 from titlepipe_core.api.routers.queue import next_order as next_order_route
-from titlepipe_core.api.schemas.queue import QueueNextResponse
+from titlepipe_core.api.schemas.queue import QueueNextResponse, QueueOrderResponse
 from titlepipe_core.app import create_app
 from titlepipe_core.db.models import Order
 from titlepipe_core.db.repositories.queue import OrderQueueRepository
-from titlepipe_core.services.queue_service import QueueService
+from titlepipe_core.services.queue_service import Handover, QueueService
 from titlepipe_core.settings import CoreApiSettings
 from titlepipe_domain import DomainError, Environment
 
@@ -75,6 +64,17 @@ UNUSED_DSN: Final = "postgresql+psycopg://u:p@db.titlepipe.example:5432/t"
 # `tenant` says WHOSE queue; anything else would say WHICH order.
 PERMITTED_PARAMETERS: Final = frozenset({"self", "tenant", "session_factory"})
 
+# The two contract fields that are columns under another name, and the one that
+# is not a column at all. Written HERE and not imported from the mapper on
+# purpose: a test that reads its expectation out of the code it is checking
+# cannot notice the code changing. `product` is `products.name`, resolved by
+# `QueueService` — `api/mappers/queue.py` carries the residual on which of
+# `name`/`code` the contract means.
+CONTRACT_FIELD_TO_COLUMN: Final[dict[str, str]] = {"state": "state_code", "pages": "page_count"}
+CONTRACT_FIELDS_WITH_NO_COLUMN: Final = frozenset({"product"})
+
+ORDER_COLUMNS: Final = frozenset(Order.__table__.columns.keys())
+
 
 def _client() -> TestClient:
     """The real app, with the real error handlers and the real dependency."""
@@ -89,43 +89,65 @@ def _fixture_text(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
-def test_the_handover_refuses_until_a_principal_and_an_assignment_column_exist() -> None:
-    """🔴 THE ENDPOINT ANSWERS 401 TO EVERY CALLER, AND THIS NAMES BOTH REASONS.
+def _an_order(ordinal: int) -> Order:
+    """An order with every column this endpoint reads set, and set DISTINCTLY.
 
-    THE 401 IS ONLY THE FIRST OF THEM, and a test that pinned it alone would
-    turn green the moment somebody wired a principal in — at which point the
-    first order handed over 500s in `api/mappers/queue.py`, and the second
-    problem is discovered by a reviewer rather than by this suite. So the two are
-    asserted TOGETHER: this test fails if the route stops refusing while the
-    orders table still lacks the twelve columns the contract requires.
+    `ordinal` makes two calls differ in every one of them, which is what
+    `test_nothing_on_the_wire_is_a_constant_this_module_invented` needs and what
+    stops a field being asserted against a value that is also its neighbour's.
+    `a_minimal_order` supplies the tenant and the `NOT NULL` floor; everything
+    named here is named because the mapper reads it.
+    """
+    return a_minimal_order(
+        uuid.uuid4(),
+        id=uuid.uuid4(),
+        client_id=uuid.uuid4(),
+        product_id=uuid.uuid4(),
+        external_ref=f"MC-{ordinal}",
+        jurisdiction=f"jurisdiction-{ordinal}",
+        state_code=f"S{ordinal}",
+        county=f"county-{ordinal}",
+        status=f"status-{ordinal}",
+        period_label=f"period-{ordinal}",
+        page_count=ordinal,
+        arrived_at=datetime(2026, 9, ordinal, 9, 0, tzinfo=UTC),
+        accepted_at=datetime(2026, 9, ordinal, 10, 0, tzinfo=UTC),
+        delivered_at=datetime(2026, 9, ordinal, 11, 0, tzinfo=UTC),
+    )
 
-    ---------------------------------------------------------------------------
-    WHAT TO DO WHEN THIS GOES RED, in the order that makes it safe:
-    ---------------------------------------------------------------------------
-    1. `orders` grows the twelve columns
-       (`COLUMNS_THE_ORDERS_TABLE_DOES_NOT_HAVE`, which is imported here rather
-       than transcribed, so the list cannot drift). Then `render_next_order`
-       stops raising and this test's second assertion is what needs deleting.
-    2. Authentication lands and `api/dependencies.py::principal_tenant` returns a
-       real tenant. Then the first assertion needs replacing with one that drives
-       a session.
-    3. **AND THE THING NEITHER ASSERTION COVERS**: `orders` has no column to
-       write an assignment into, so `QueueService.next_order` hands the SAME row
-       to every concurrent caller. That is invisible today because nothing
-       reaches it. Whoever removes step 2's refusal owns it, and the answer is a
-       claim column plus a write, not a lock in Python.
 
-    `client_id` is asserted by name in the sentence, not merely that a sentence
-    exists: the refusal's whole value is that it says which columns are missing,
-    and a message that lost its list would still be a 500 with an error string.
+def _a_handover(ordinal: int = 1) -> Handover:
+    return Handover(order=_an_order(ordinal), product_name=f"Current Owner {ordinal}")
+
+
+def _rendered(handover: Handover) -> QueueOrderResponse:
+    order = render_next_order(handover).order
+    assert order is not None, "a populated hand-over rendered `{'order': null}`"
+    return order
+
+
+def test_the_principal_is_now_the_ONLY_thing_between_this_route_and_a_served_order() -> None:
+    """🔴 THE ENDPOINT ANSWERS 401 TO EVERY CALLER, FOR EXACTLY ONE REASON.
+
+    This test used to assert TWO refusals — the 401 and the mapper's — and the
+    second one silently stopped being true. So the second assertion is now the
+    opposite claim: the mapper RENDERS. If it ever refuses a populated order
+    again, this goes red beside the 401 rather than a year later.
+
+    WHAT TO DO WHEN THIS GOES RED: authentication has landed and
+    `api/dependencies.py::principal_tenant` returns a real tenant. Before
+    deleting the first assertion, read this — **`orders` has no column to write
+    an assignment into, so `QueueService.next_order` hands the SAME row to every
+    concurrent caller.** It is invisible today because nothing reaches it.
+    Whoever removes the refusal owns it, and the answer is a claim column plus a
+    write, not a lock in Python.
     """
     with _client() as client:
         response = client.get("/api/queue/next")
 
     assert response.status_code == 401, (
         f"the hand-over answered {response.status_code}, not 401. If a principal has landed, read "
-        f"the second assertion below BEFORE deleting this one: the mapper still cannot render an "
-        f"order, so un-refusing here turns every non-empty queue into a 500."
+        f"this test's docstring BEFORE deleting the assertion: nothing claims the order."
     )
     body = response.json()
     sentence = body["error"]
@@ -146,33 +168,21 @@ def test_the_handover_refuses_until_a_principal_and_an_assignment_column_exist()
         f"does not exist."
     )
 
-    missing = list(COLUMNS_THE_ORDERS_TABLE_DOES_NOT_HAVE)
-    assert missing, (
-        "`COLUMNS_THE_ORDERS_TABLE_DOES_NOT_HAVE` is empty, so the migration has landed and the "
-        "mapper can render an order. The 401 above is now the ONLY thing standing between this "
-        "route and a working queue — see step 3 in this test's docstring, which is the part no "
-        "assertion covers: `orders` still needs somewhere to write an assignment before two "
-        "reviewers stop being handed the same row."
-    )
-    assert "client_id" in missing, (
-        f"the missing-column list no longer names `client_id`: {missing}. The refusal's value is "
-        f"that it says WHICH columns are absent; a list that lost its members is a 500 with a "
-        f"sentence attached."
+    rendered = render_next_order(_a_handover())
+    assert rendered.order is not None, (
+        "the mapper has started refusing a populated order again. That is the defect this file "
+        "was rewritten for: the 401 hides it, so the suite has to say it out loud."
     )
 
 
 def test_the_empty_queue_renders_the_committed_envelope_and_nothing_else() -> None:
     """`None` in, `{"order": null}` out, byte for byte.
 
-    Against the COMMITTED FIXTURE rather than against a dict built in this file,
-    so the assertion holds on the bytes a Zod parser would read. `order` is
-    `.nullable()` in `endpoints.ts:74-78`, which requires the key PRESENT — a
-    model serialising it away under `exclude_none` produces `{}`, which Zod
-    rejects, and which a comparison against a Python dict with a `None` value
-    would not notice.
-
-    Round-tripped through `model_validate_json` as well, because `extra="forbid"`
-    is what catches a key the fixture grew that no model declares.
+    Against the COMMITTED FIXTURE rather than a dict built in this file, so the
+    assertion holds on the bytes a Zod parser would read. `order` is `.nullable()`
+    in `endpoints.ts:74-78`, which requires the key PRESENT — a model serialising
+    it away under `exclude_none` produces `{}`, which Zod rejects and which a
+    comparison against a Python dict with a `None` value would not notice.
     """
     rendered = render_next_order(None)
 
@@ -197,35 +207,148 @@ def test_the_empty_queue_renders_the_committed_envelope_and_nothing_else() -> No
     )
 
 
-def test_the_mapper_refuses_a_row_rather_than_inventing_twelve_values() -> None:
-    """A populated queue raises, and the sentence names the columns.
+def test_a_populated_order_renders_every_contract_field_from_its_own_column() -> None:
+    """Thirteen fields, each against the column it came from.
 
-    The refusal is not tested through the route, because the route cannot reach
-    it — `principal_tenant` refuses first. This drives the mapper directly, which
-    is the layer that would have to invent the values.
-
-    A `db.models.Order` instance is constructed with NO arguments. It needs none:
-    the point is that a row reaching this function is refused whatever it holds,
-    and supplying an id would suggest the refusal depends on what is in it.
+    The three that are not a straight copy are the whole of FX-3 and are asserted
+    by name: `state` is `state_code`, `pages` is `page_count`, and `product` is
+    the name `QueueService` resolved rather than anything on the row.
     """
+    handover = _a_handover()
+    order = handover.order
+    rendered = _rendered(handover)
+
+    assert rendered.id == str(order.id)
+    assert rendered.client_id == str(order.client_id)
+    assert rendered.external_ref == order.external_ref
+    assert rendered.jurisdiction == order.jurisdiction
+    assert rendered.county == order.county
+    assert rendered.status == order.status
+    assert rendered.period_label == order.period_label
+
+    assert rendered.state == order.state_code, (
+        f"`state` rendered {rendered.state!r}, not `state_code` ({order.state_code!r}). The "
+        f"contract calls it `state` and the column is `state_code`; that difference is a NAME "
+        f"and it was read as an absence for a whole merge."
+    )
+    assert rendered.pages == order.page_count, (
+        f"`pages` rendered {rendered.pages!r}, not `page_count` ({order.page_count!r}) — the "
+        f"second of the two naming differences."
+    )
+    assert rendered.product == handover.product_name, (
+        f"`product` rendered {rendered.product!r} rather than the resolved name "
+        f"{handover.product_name!r}. `entities.ts:62-69` declares a rendered label; "
+        f"`orders.product_id` is a uuid and putting it here is a value no caller can read."
+    )
+    assert str(order.product_id) not in (rendered.product or ""), (
+        "`product` carries the product's uuid. That is the identity, not the label the contract "
+        "asks for, and a reviewer would read a uuid where the product name belongs."
+    )
+
+    assert rendered.arrived_at == order.arrived_at.isoformat()
+    assert rendered.accepted_at is not None
+    assert rendered.accepted_at == order.accepted_at.isoformat() if order.accepted_at else False
+    assert rendered.delivered_at == (order.delivered_at.isoformat() if order.delivered_at else None)
+
+
+def test_nothing_on_the_wire_is_a_constant_this_module_invented() -> None:
+    """Every field moves when its source moves. Principle 6, as a machine.
+
+    Two hand-overs differing in every source. A field that comes back equal is
+    one the mapper is supplying rather than reading — `""`, `0`, `"unknown"` and
+    a hard-coded status all look like a working endpoint and are the exact
+    failure `CLAUDE.md`'s "never emit a value you can't cite" names.
+    """
+    first = _rendered(_a_handover(1)).model_dump()
+    second = _rendered(_a_handover(2)).model_dump()
+
+    assert set(first) == set(QueueOrderResponse.model_fields), "the DTO grew a field"
+    constants = sorted(field for field in first if first[field] == second[field])
+    assert not constants, (
+        f"{constants} rendered identically for two orders that share no source value, so the "
+        f"mapper is supplying them rather than reading them."
+    )
+
+
+def test_the_mapper_refuses_an_order_whose_product_did_not_resolve_and_says_which_field() -> None:
+    """The one surviving refusal, asserted on its REASON.
+
+    It is derived from the order in hand — `product_id` set, no name — and not
+    from a list of columns written down once, which is how the old refusal
+    outlived its cause. The message must name the field; a refusal that lost its
+    subject is a 500 with a sentence attached.
+    """
+    order = _an_order(1)
+    assert order.product_id is not None, "the fixture must name a product for this to be the case"
+
     with pytest.raises(DomainError) as raised:
-        render_next_order(Order())
+        render_next_order(Handover(order=order, product_name=None))
 
     message = str(raised.value)
     assert type(raised.value) is DomainError, (
         f"the mapper raised {type(raised.value).__name__}, not the base `DomainError`. "
-        f"`pytest.raises(DomainError)` above catches every subclass, so this is the assertion "
-        f"that pins the base — and the one that goes red if somebody reaches for a subclass. "
-        f"`api/mappers/queue.py` records why the base specifically: `DOMAIN_ERROR_STATUS` has no "
-        f"entry for it, so `status_for` answers 500 — a fault in this service, with nothing the "
-        f"caller can change. A subclass would claim 422, 503 or 404 and every one of those is a "
-        f"different and wrong story."
+        f"`pytest.raises(DomainError)` catches every subclass, so this is the assertion that "
+        f"pins the base. `DOMAIN_ERROR_STATUS` has no entry for it, so `status_for` answers 500 "
+        f"— a fault in this service with nothing the caller can change. A subclass would claim "
+        f"422, 503 or 404 and every one of those is a different and wrong story."
     )
-    for column in COLUMNS_THE_ORDERS_TABLE_DOES_NOT_HAVE:
-        assert column in message, (
-            f"the refusal does not name `{column}`: {message!r}. The list is what makes this "
-            f"actionable rather than an apology."
-        )
+    assert "product" in message, (
+        f"the refusal does not name the field it could not render: {message!r}."
+    )
+    assert "columns the contract requires" not in message, (
+        f"the refusal has gone back to claiming `orders` is missing columns: {message!r}. It is "
+        f"not: `0008` added them, and the message asserting otherwise while `orders` had a "
+        f"`NOT NULL client_id` is what this file exists to stop."
+    )
+
+
+def test_an_order_that_resolved_no_product_renders_null_rather_than_refusing() -> None:
+    """The two absences are different, and only one of them is a refusal.
+
+    `entities.ts:62-69` says an order that failed validation has no resolved
+    product, so `product: null` is an ORDINARY answer. Refusing it would collapse
+    "resolved nothing" into "resolved something I cannot name" — the
+    `NOT_PRESENT` / `PRESENT_UNREADABLE` mistake with different nouns.
+    """
+    order = _an_order(1)
+    order.product_id = None
+
+    rendered = _rendered(Handover(order=order, product_name=None))
+
+    assert rendered.product is None, (
+        f"`product` rendered {rendered.product!r} for an order that resolved none. `null` is what "
+        f"the contract reserves for exactly this."
+    )
+
+
+def test_every_contract_field_is_sourced_from_a_column_or_a_named_resolution() -> None:
+    """🔴 THE MACHINE FX-3 DID NOT HAVE.
+
+    The mapper renders thirteen fields; `orders` was rebuilt under it by another
+    workstream and the two sides stopped lining up with nothing to say so. This
+    walks the DTO against the live table: a contract field is a column of that
+    name, a column this file names as differently spelled, or one of the fields
+    with no column at all. Renaming `state_code` — or dropping `page_count` —
+    fails HERE, naming the field, rather than at whichever caller first serves an
+    order.
+    """
+    unsourced: list[str] = []
+    for field in QueueOrderResponse.model_fields:
+        if field in CONTRACT_FIELDS_WITH_NO_COLUMN:
+            continue
+        column = CONTRACT_FIELD_TO_COLUMN.get(field, field)
+        if column not in ORDER_COLUMNS:
+            unsourced.append(f"{field} -> orders.{column}")
+
+    assert not unsourced, (
+        f"{unsourced} name columns `orders` does not have. Either the column was renamed and the "
+        f"mapper still reads the old name, or a contract field arrived with nothing behind it. "
+        f"The columns that exist are {sorted(ORDER_COLUMNS)}."
+    )
+    assert set(QueueOrderResponse.model_fields) >= CONTRACT_FIELDS_WITH_NO_COLUMN, (
+        f"{sorted(CONTRACT_FIELDS_WITH_NO_COLUMN)} is excused from the check above and is no "
+        f"longer a field of the DTO, so the exemption is now hiding nothing and should go."
+    )
 
 
 def test_no_layer_of_the_handover_accepts_a_parameter_that_chooses_an_order() -> None:
@@ -236,13 +359,9 @@ def test_no_layer_of_the_handover_accepts_a_parameter_that_chooses_an_order() ->
     there when PLAN.md §4 recorded a live proposal to add a browsable list with a
     cursor to this endpoint, so this reads the three signatures instead.
 
-    `tenant` is permitted because it says WHOSE queue and never WHICH order —
-    and it is not a parameter the CALLER supplies: `api/routers/queue.py` takes
-    it from a dependency, so there is no query string, header or path segment
-    that reaches it. `session_factory` is wiring, from the same place.
-
-    A `limit`, `cursor`, `after`, `county`, `skip` or `order_id` on any of the
-    three fails here, in the layer that grew it, rather than in a review.
+    `tenant` is permitted because it says WHOSE queue and never WHICH order — and
+    it is not a parameter the CALLER supplies: `api/routers/queue.py` takes it
+    from a dependency. `session_factory` is wiring, from the same place.
     """
     signatures = {
         "OrderQueueRepository.next_for_handover": inspect.signature(
@@ -269,11 +388,7 @@ def test_the_principal_dependency_takes_nothing_off_the_request() -> None:
     `api/routers/rules.py` bans anticipating Plan 03's auth, and names the shape
     it ends as: `packages/mocks/src/handlers.ts:405`, a missing header defaulting
     to an admin, in a file everybody trusted. `principal_tenant` cannot become
-    that by accident, because it is handed nothing to default FROM — no
-    `Request`, no settings object, no header parameter.
-
-    A future edit that gives it a `Request` is the moment to re-read that ban,
-    and this is what makes the edit visible instead of ordinary.
+    that by accident, because it is handed nothing to default FROM.
     """
     parameters = list(inspect.signature(principal_tenant).parameters)
 

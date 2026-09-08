@@ -1,131 +1,98 @@
-"""The hand-over, rendered — and the half of it that cannot be, refused.
+"""`Order` -> the wire, and the one field that has no source on the row.
 
-`CONVENTIONS.md` §10 says why mappers exist here when most codebases skip them:
-model-to-DTO is where this application can silently LIE, so it gets a name and
-one home. This module is the first time that pays for itself in the only way that
-matters, by making a lie IMPOSSIBLE TO WRITE ACCIDENTALLY rather than by catching
-one after the fact.
+`CONVENTIONS.md` §10a: mappers exist so the model-to-DTO step has ONE place, not
+because the enforcement lives here. What lives here is the correspondence between
+`db/models/orders.py` and `packages/contract/src/entities.ts:56-77` — including
+the two fields whose names differ on the two sides and the one that is not a
+column at all.
 
-## The gap, stated once
+🔴 THIS MODULE USED TO REFUSE EVERY ORDER, naming twelve columns `orders` did not
+have. Nine of the twelve had landed in `0008`, and three were never absences:
+`state`/`state_code` and `pages`/`page_count` are NAMES, and `product` is a
+resolution. The refusal outlived its reason by one merge and nothing went red,
+because `tests/test_queue_endpoint.py` asserted THAT it refused and never WHY —
+so the message went on telling callers `orders` has no `client_id` while `orders`
+had a `NOT NULL client_id`. The refusal below is derived from the row in hand
+rather than from a list of schema facts written down once.
 
-`packages/contract/src/entities.ts:56-77` requires thirteen fields on an `Order`.
-`db/models.py::Order` has three columns: `id`, `created_at` and `tenant_id`, and
-PLAN.md §2 calls that a deliberately bare skeleton. So twelve of the thirteen —
-`client_id`, `external_ref`, `jurisdiction`, `state`, `county`, `product`,
-`period_label`, `pages`, `status`, `arrived_at`, `accepted_at`, `delivered_at` —
-have nothing to be rendered FROM.
+## `product` is the one field with no column behind it
 
-There are three things this file could do about that and two of them are wrong:
+`entities.ts:62-69` puts `product` beside `period_label`, "a rendered label the
+server composes"; `orders.product_id` is a uuid. `QueueService` resolves the name
+and this module refuses a row whose product did not resolve, rather than sending
+`null` — `entities.ts` reserves `null` for an order that resolved NO product, and
+sending it for an order that resolved one it could not name collapses two facts
+into one value.
 
-* **invent them.** `""`, `0`, `"unknown"`, `null`. CLAUDE.md: never emit a value
-  you can't cite. A `county` of `""` is not missing data on this screen, it is a
-  county — and `pages: 0` asserts that somebody counted;
-* **narrow the DTO to `id`.** `api/schemas/queue.py` records why that is a
-  DIFFERENT DOCUMENT rather than a smaller promise: Zod refuses a missing key, so
-  the browser rejects the response on twelve fields at once;
-* **refuse, naming the columns.** Below.
+RESIDUAL: `product` carries `products.name` and not `products.code`, and the
+contract picks neither. The evidence is that `packages/mocks` serves labels
+("Current Owner") and `name` is the label column. A ruling closes it;
+`docs/frontend/CONTRACT-GAP-queue.md` collects this endpoint's open questions.
 
-## Why the refusal is HERE and not in the router or the service
+## Timestamps are `.isoformat()` and the DTO says `str`
 
-Because this is the only layer that can SEE both objects. The router holds a DTO
-it did not build and the service holds a row it does not render; neither is in a
-position to notice that the two do not meet. §10 puts them together here exactly
-once, which makes this the one place the mismatch is observable — and a mismatch
-that is observable in one place gets one guard rather than twelve defaults spread
-across whoever wrote each field.
-
-It is also the layer whose failure mode is already understood.
-`api/routers/rules.py` records that a `ValidationError` out of a mapper means a
-label reached the wire that the contract does not have — a DEFECT IN THIS
-SERVICE, rendered as a 500 by `handle_unexpected`, deliberately outside the
-`except SQLAlchemyError` that would dress it as an outage. What is raised below
-is the same kind of thing said earlier: not "this row failed to validate" but
-"this row cannot be attempted".
-
-## `render_next_order(None)` is COMPLETE, and that is not a technicality
-
-The empty queue is a real path, it is the ordinary answer for a reviewer with
-nothing waiting, and it renders exactly: `{"order": null}`, no invention, no
-guess. The populated path is the one that cannot. Saying so with a branch — one
-half returning, one half raising — is the honest shape, and it is why this file
-exists now rather than after the migration: when the columns land, the `raise`
-becomes twelve assignments and NOTHING ELSE IN THE STACK MOVES.
-
-## What replaces the raise, and who owns it
-
-A migration adding those twelve columns to `orders`, which is `db/models/**` and
-`migrations/**` — not this branch's, by boundary. Until it lands, no caller
-reaches the raise at all: `api/dependencies.py::principal_tenant` refuses every
-request to this route before the service runs. Two gaps, one of which hides the
-other, so both are named where they are and both are pinned by
-`tests/test_queue_endpoint.py`.
+`entities.ts` declares all three as `z.string()`, so the DTO transcribes `str`
+and the format is chosen here — one home, and the transcription stays faithful to
+the document it answers to. `DateTime(timezone=True)` on all three means the
+offset is always present.
 """
 
 from __future__ import annotations
 
-from titlepipe_core.api.schemas.queue import QueueNextResponse
-from titlepipe_core.db.models import Order
+from datetime import datetime
+
+from titlepipe_core.api.schemas.queue import QueueNextResponse, QueueOrderResponse
+from titlepipe_core.services.queue_service import Handover
 from titlepipe_domain import DomainError
 
-# The twelve `entities.ts:56-77` requires and `db/models.py::Order` does not
-# have, in the contract's own declaration order. A TUPLE and not a sentence,
-# because the refusal below names them and a reader fixing this needs the list —
-# and because when the migration lands, this tuple emptying is the diff.
-COLUMNS_THE_ORDERS_TABLE_DOES_NOT_HAVE: tuple[str, ...] = (
-    "client_id",
-    "external_ref",
-    "jurisdiction",
-    "state",
-    "county",
-    "product",
-    "period_label",
-    "pages",
-    "status",
-    "arrived_at",
-    "accepted_at",
-    "delivered_at",
-)
-
-# Client-safe by contract, like every `DomainError` message. It names no host and
-# no DSN; what it does name is a schema fact, which is not a secret and is the
-# only thing that would let a caller understand a 500 they cannot retry away.
-_CANNOT_RENDER = (
-    "An order cannot be rendered for the queue yet: `orders` has no {count} of the "
-    "columns the contract requires ({columns}). Nothing may be substituted for them."
+# Client-safe by contract, like every `DomainError` message: it names no host and
+# no DSN. What it names is one order's state, which is what would let a caller
+# understand a 500 they cannot retry away.
+_UNRESOLVED_PRODUCT = (
+    "An order cannot be rendered for the queue: it names a product that could not be resolved "
+    "to a name. `product` is a rendered label, and a null there would say the order resolved no "
+    "product at all — which is a different fact. Nothing may be substituted for it."
 )
 
 
-def render_next_order(row: Order | None) -> QueueNextResponse:
+def _optional_moment(moment: datetime | None) -> str | None:
+    return None if moment is None else moment.isoformat()
+
+
+def render_next_order(handover: Handover | None) -> QueueNextResponse:
     """`GET /api/queue/next` — one order or none. `endpoints.ts:74-78`.
 
-    `None` renders. A row does not, and raises rather than guessing; the module
-    docstring argues both halves and neither is restated.
+    `None` is the empty queue and renders `{"order": null}`. It is a 200 and the
+    ruling is `QueueService`'s, not this module's.
 
-    `DomainError` and not `NotImplementedError`, which is the obvious spelling
-    and the wrong one. `api/errors.py` registers a handler for `DomainError` and
-    turns it into the one envelope with a `code` a caller can branch on;
-    `NotImplementedError` reaches `handle_unexpected`, which renders a bare
-    `INTERNAL_ERROR` and — correctly, for something it cannot identify — tells
-    the caller nothing. This failure is identifiable and the sentence is worth
-    keeping.
-
-    The BASE `DomainError` specifically, not one of its subclasses.
-    `error_envelope.py::DOMAIN_ERROR_STATUS` has no entry for it, so
-    `mapped_status_for` returns `None` and `status_for` answers 500 — which is
-    the truthful status: this is a fault in this service, not a refusal of the
-    caller's request, and there is nothing they can change to make it succeed. A
+    `DomainError` and not `NotImplementedError` for the refusal, and the BASE
+    class specifically. `error_envelope.py::DOMAIN_ERROR_STATUS` has no entry for
+    the base, so `status_for` answers 500 — the truthful status, because this is a
+    fault in this service and there is nothing the caller can change. A
     `RefusalError` would say 422 and blame the request; a
     `DependencyUnavailableError` would say 503 and invite a retry that cannot
-    work. Both are the shape `api/routers/rules.py` records as the defect it
-    fixed in the other direction, and `tests/test_errors.py` already asserts that
-    an unmapped `DomainError` is logged as `domain_error_unmapped`, which is
-    exactly the line an operator should find beside this.
+    work. `tests/test_errors.py` already asserts an unmapped `DomainError` logs
+    `domain_error_unmapped`, which is the line an operator finds beside this.
     """
-    if row is None:
+    if handover is None:
         return QueueNextResponse(order=None)
-    raise DomainError(
-        _CANNOT_RENDER.format(
-            count=len(COLUMNS_THE_ORDERS_TABLE_DOES_NOT_HAVE),
-            columns=", ".join(COLUMNS_THE_ORDERS_TABLE_DOES_NOT_HAVE),
+    order = handover.order
+    if order.product_id is not None and handover.product_name is None:
+        raise DomainError(_UNRESOLVED_PRODUCT)
+    return QueueNextResponse(
+        order=QueueOrderResponse(
+            id=str(order.id),
+            client_id=str(order.client_id),
+            external_ref=order.external_ref,
+            jurisdiction=order.jurisdiction,
+            state=order.state_code,
+            county=order.county,
+            product=handover.product_name,
+            period_label=order.period_label,
+            pages=order.page_count,
+            status=order.status,
+            arrived_at=order.arrived_at.isoformat(),
+            accepted_at=_optional_moment(order.accepted_at),
+            delivered_at=_optional_moment(order.delivered_at),
         )
     )

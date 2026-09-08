@@ -24,13 +24,15 @@ sentence for every resource, so the handler layer answers it, and the refusal is
 a TRUE statement rather than a stand-in — this service has no session mechanism,
 so no caller has a valid session.
 
-**AND THE PRINCIPAL IS NOT THE ONLY THING MISSING.** `api/mappers/queue.py`
-cannot render an order at all: twelve of the thirteen fields
-`packages/contract/src/entities.ts:56-77` requires have no column on `orders`.
-The 401 hides that, and a reader who removes it to "unblock the queue" turns
-every non-empty response into a 500. The two are named together in
-`tests/test_queue_endpoint.py::test_the_handover_refuses_until_a_principal_and_an_assignment_column_exist`,
-which fails the day either one is treated as the whole story.
+**AND IT IS NOW THE ONLY THING MISSING** — which it was not until FX-3.
+`api/mappers/queue.py` used to refuse every order as well, and the 401 hid that
+for a whole merge. `tests/test_queue_endpoint.py::test_the_principal_is_now_the
+_ONLY_thing_between_this_route_and_a_served_order` asserts both halves in one
+place so the hidden one cannot come back unannounced.
+
+RESIDUAL, and it is what the 401 hides today: `orders` has no column to write an
+assignment into, so two concurrent callers are handed the SAME row. Whoever
+removes the refusal owns it; the answer is a claim column plus a write.
 
 The 401 is not a placeholder for auth in the sense `api/routers/rules.py` bans.
 That module refuses a stand-in USER, a role header, a `mock_auth_enabled` branch
@@ -104,8 +106,6 @@ async def next_order(session_factory: SessionFactory, tenant: PrincipalTenant) -
     reason `api/routers/rules.py` records: rendering inside the service would put
     it under `scoped_read`'s `except SQLAlchemyError`, which does not catch a
     `ValidationError` today and would dress a defect in this service as a
-    downstream outage the moment anyone widened it. It matters more here — the
-    mapper's ordinary answer for a non-empty queue is a raise, and a 503 with
-    "try again shortly" would invite a retry against a missing migration.
+    downstream outage the moment anyone widened it.
     """
     return render_next_order(await QueueService(session_factory).next_order(tenant))

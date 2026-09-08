@@ -7,24 +7,17 @@ answerable to `packages/contract/src/entities.ts:56-77` (`Order`) and
 parser: MSW serves this route today, so the shape below is not a proposal — it
 is the shape a response has to have to be parsed by the code that already exists.
 
-## Why the whole thirteen fields are here when the table has three columns
+## All thirteen, and a smaller DTO is not a smaller promise
 
-`db/models.py::Order` is `id`, `created_at` and `tenant_id`. Twelve of the
-thirteen fields below have no column behind them. They are transcribed anyway,
-because the alternative is a smaller DTO — and a smaller DTO is not a smaller
-promise, it is a DIFFERENT DOCUMENT that `Order.nullable()` rejects outright.
-Zod strips unknown keys and REFUSES missing ones, so a response carrying only
-`id` reaches `apps/web` as `expected string, received undefined` on twelve
-fields at once. Writing the contract's shape down here and being unable to fill
-it is the honest state; writing a shape we can fill and calling it the queue is
-the failure `api/schemas/rules.py` opens by naming.
+Zod strips unknown keys and REFUSES missing ones, so a response short of a field
+reaches `apps/web` as `expected string, received undefined` rather than as a
+partial order. A narrowed DTO is a DIFFERENT DOCUMENT that `Order.nullable()`
+rejects outright, which is why the transcription is complete.
 
-**WHAT IS MISSING IS A MIGRATION, AND IT IS NOT THIS BRANCH'S.** `client_id`,
-`external_ref`, `jurisdiction`, `state`, `county`, `product`, `period_label`,
-`pages`, `status`, `arrived_at`, `accepted_at` and `delivered_at` are columns on
-`orders` that `migrations/` has never created — PLAN.md §2 calls the schema a
-deliberately bare skeleton. `api/mappers/queue.py` is where that gap becomes a
-refusal instead of twelve invented values, and it names the same twelve.
+🔴 THIS DOCSTRING USED TO SAY TWELVE OF THE THIRTEEN HAD NO COLUMN. `0008` gave
+`orders` nine of them, and two of the three that looked absent were columns under
+another name. `api/mappers/queue.py` carries what that cost and what still stands
+— `product` is a resolution, not a column.
 
 ## `status` is `str` and NOT a `Literal`, and that is transcribed too
 
