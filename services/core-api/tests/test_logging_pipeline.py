@@ -12,9 +12,9 @@ import json
 import pytest
 import structlog
 
-from titlepipe_core.telemetry.logging import configure_logging, get_logger
 from titlepipe_domain import Environment, LogRenderer
 from titlepipe_domain.redaction import REDACTED
+from titlepipe_service_kit.telemetry.logging import configure_logging, get_logger
 
 SIGNED_URL = (
     "https://packages.r2.example/quarantine/abc123.pdf"
