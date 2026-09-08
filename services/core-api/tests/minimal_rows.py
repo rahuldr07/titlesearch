@@ -472,7 +472,7 @@ class _MinimalRow:
 # trail available to it until it has a seat. `insert_actor` writes that seat, and
 # every call site that invents a tenant has to call it first.
 SEED_ACTOR_SUBJECT = "TEST-ONLY-1"
-SEED_ACTOR_SEAT = "reviewer"
+SEED_ACTOR_SEAT = "senior"
 
 SEED_ORDINAL = "ordinal"
 SEED_ORDINAL_TEXT = "ordinal_text"
@@ -507,8 +507,9 @@ MINIMAL_ROWS: Final[Mapping[str, _MinimalRow]] = MappingProxyType(
         # IS NO LONGER `'TEST-ONLY'`. `0100` resolves the pair against `users` in
         # the same tenant and refuses `28000` unless it names an ACTIVE row whose
         # `role` IS the declared seat. The `users` spec below writes
-        # `identity_subject = 'TEST-ONLY-' || :ordinal_text` with `role`
-        # `'reviewer'`, and ORDINAL 1 is the one every seeded tenant has — tenant A
+        # `identity_subject = 'TEST-ONLY-' || :ordinal_text` with
+        # `SEED_ACTOR_SEAT` as the role, and ORDINAL 1 is the one every seeded
+        # tenant has — tenant A
         # takes two rows per table and tenant B one, so `'TEST-ONLY-2'` would
         # resolve in A and refuse in B. A literal rather than the ordinal
         # expression, so that `insert_audit_log` stays a statement with one bind
@@ -537,11 +538,12 @@ MINIMAL_ROWS: Final[Mapping[str, _MinimalRow]] = MappingProxyType(
         "users": _MinimalRow(
             columns={
                 "email": "'test-only-' || :ordinal_text || '@test-only.invalid'",
-                # `reviewer` is the least-privileged of `0020`'s six labels. A seat is
-                # not optional and there is no neutral member, so the seed picks the
-                # one that can do least rather than inventing a meaning for a row it
-                # has no opinion about.
-                "role": "'reviewer'",
+                # This was `reviewer`, the least-privileged of `0020`'s six labels,
+                # until `0121`: this row signs `golden_fields`/`golden_corrections`
+                # below, and establishment is now refused from reviewer, ops and
+                # typist. `senior` is the least-privileged seat that can still
+                # perform every act the seed performs.
+                "role": f"'{SEED_ACTOR_SEAT}'",
                 "identity_provider": "'TEST-ONLY'",
                 "identity_subject": "'TEST-ONLY-' || :ordinal_text",
             }

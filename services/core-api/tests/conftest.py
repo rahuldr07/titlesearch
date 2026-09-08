@@ -1752,12 +1752,14 @@ ISOLATION_ACTOR_SEAT_GUC = "app.actor_seat"
 # 🔴 THESE TWO ARE NO LONGER FREE LITERALS. `0100` resolves the pair against
 # `users` in the tenant of the row being written and refuses `28000` unless it
 # names an ACTIVE row whose `role` IS the declared seat. `minimal_rows` seeds
-# `identity_subject = 'TEST-ONLY-' || :ordinal_text` with `role = 'reviewer'` in
-# EVERY seeded tenant, and ordinal 1 is the one every tenant has — tenant A gets
-# two rows per table and tenant B one, so `'TEST-ONLY-2'` would resolve in A and
-# refuse in B. Still implausible on sight, which is what the literal was for.
+# `identity_subject = 'TEST-ONLY-' || :ordinal_text` with `role = 'senior'` in
+# EVERY seeded tenant — `senior` since `0121`, which refuses golden signatures
+# from the reviewer seat the seed used to hold — and ordinal 1 is the one every
+# tenant has: tenant A gets two rows per table and tenant B one, so
+# `'TEST-ONLY-2'` would resolve in A and refuse in B. Still implausible on
+# sight, which is what the literal was for.
 ISOLATION_ACTOR_SUBJECT = "TEST-ONLY-1"
-ISOLATION_ACTOR_SEAT = "reviewer"
+ISOLATION_ACTOR_SEAT = "senior"
 ISOLATION_ACTOR = ISOLATION_ACTOR_SUBJECT
 
 # The function `0007` attaches to every audited table. DERIVED FROM, NOT COMPARED
