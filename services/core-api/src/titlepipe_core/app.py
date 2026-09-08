@@ -5,7 +5,7 @@ lets a test construct an app with staging settings and an injected clock without
 the import graph deciding for it, and it keeps configuration out of module
 scope where it cannot be overridden.
 
-🔴 THIS SAID "No product `/api/*` route exists at Gate 1. Only liveness and
+THIS SAID "No product `/api/*` route exists at Gate 1. Only liveness and
 readiness." IT IS NO LONGER TRUE. `GET /api/rules` is served, and it is the only
 product route: the rulebook is global, so it is the one read that needs no
 principal and could therefore be built before identity exists. Everything else in
@@ -94,7 +94,7 @@ def create_app(
     # preflight never reaches it, and the 500 that middleware builds is still
     # inside the CORS layer and still carries its correlation id.
     #
-    # 🔴 THE GUARD IS ADDED FIRST, SO IT RUNS INNERMOST, AND IT IS ADDED
+    # THE GUARD IS ADDED FIRST, SO IT RUNS INNERMOST, AND IT IS ADDED
     # UNCONDITIONALLY. Innermost because its refusal must carry the correlation
     # id `RequestContextMiddleware` establishes and must be seen by a browser as
     # a 401 rather than as a CORS failure. Unconditionally because that is what

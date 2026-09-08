@@ -1,7 +1,7 @@
 """`scoped_read` — the one place a use case opens a scoped session and decides
 what a database failure means.
 
-🔴 THIS WAS `api/reads.py` AND MOVED HERE ON 2026-09-05, WITH ITS FIRST
+THIS WAS `api/reads.py` AND MOVED HERE ON 2026-09-05, WITH ITS FIRST
 ARGUMENT CHANGED FROM A `Request` TO A SESSIONMAKER. CONVENTIONS.md §10 puts the
 use case in `services/` and forbids that layer `fastapi`, and a service cannot
 call a function that wants a `Request` — so the question was not where the file

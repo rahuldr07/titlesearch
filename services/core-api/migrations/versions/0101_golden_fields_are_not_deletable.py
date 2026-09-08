@@ -57,7 +57,7 @@ already exists cannot be replaced by a different row wearing its identity —
 which is what `0072`'s seven columns are about. A backdated new establishment is
 a different defect and belongs with whoever owns `created_at`'s provenance.
 
-## 🔴 THE CEILING
+## THE CEILING
 
 `titlepipe_owner` can `DROP TRIGGER golden_fields_no_delete ON golden_fields`
 and then delete freely, and `titlepipe_owner` is one `SET ROLE` from

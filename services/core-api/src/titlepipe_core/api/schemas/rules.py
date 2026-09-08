@@ -39,7 +39,7 @@ different document and Zod rejects it.
 
 ## These are DTOs and nothing here knows what a storage row looks like
 
-🔴 `from_rows` LIVED ON BOTH ENVELOPES AND MOVED OUT ON 2026-09-05, to
+`from_rows` LIVED ON BOTH ENVELOPES AND MOVED OUT ON 2026-09-05, to
 `api/mappers/rules.py`, along with this module's import of `db.models.Rule`.
 `CONVENTIONS.md` §10 makes the mapper the ONLY place a model and a DTO are
 imported together, and a classmethod here was the counter-example: it put the
@@ -73,7 +73,7 @@ RuleOrigin = Literal["spec", "escalation", "reconciliation", "complaint", "senio
 class RuleResponse(BaseModel):
     """One rulebook entry, in the nine fields `Rule` parses and no more.
 
-    🔴 `from_attributes` WAS SET HERE AND IS DELIBERATELY GONE (2026-09-05).
+    `from_attributes` WAS SET HERE AND IS DELIBERATELY GONE (2026-09-05).
     It let `RuleResponse.model_validate(row)` read a `db.models.Rule` directly,
     from anywhere — which is the thing `CONVENTIONS.md` §10 rules against, and a
     gate rule saying "a router may not build a DTO from a model" is a lint on top

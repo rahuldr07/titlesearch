@@ -1,6 +1,6 @@
 """The intake subsystem — **BUILT UNDER ASSUMPTION.**
 
-🔴 **THE OWNER HAS NOT ANSWERED WHETHER TITLEPIPE ACQUIRES THIS LAYER.** PLAN.md
+**THE OWNER HAS NOT ANSWERED WHETHER TITLEPIPE ACQUIRES THIS LAYER.** PLAN.md
 §9 question 2 asks it, `docs/frontend/open-rulings.md` asks it in eight places
 (Q4-Q10), and the answer is not in. god ruled recommendation (a) — build it, and
 build it early — and this module is that ruling made real. **IF THE OWNER ANSWERS
@@ -125,7 +125,7 @@ class ClientConfigVersion(_TenantRow):
             "NOT is_current OR published_at IS NOT NULL",
             name="current_means_published",
         ),
-        # 🔴 DECLARED HERE AND NOT ONLY IN THE MIGRATION, BECAUSE `alembic check`
+        # DECLARED HERE AND NOT ONLY IN THE MIGRATION, BECAUSE `alembic check`
         # COMPARES INDEXES. An index the database has and `Base.metadata` does not
         # is drift at every revision from now on — autogenerate emits a
         # `drop_index` for it — and the drift would be permanent, since the index
@@ -152,7 +152,7 @@ class ClientConfigVersion(_TenantRow):
 class ClientConfigLine(_TenantRow):
     """One override in one config version — and **it names where it came from.**
 
-    🔴 `origin_ref` IS `NOT NULL`, AND THAT IS THE WHOLE TABLE. `decisions.md`'s
+    `origin_ref` IS `NOT NULL`, AND THAT IS THE WHOLE TABLE. `decisions.md`'s
     own strongest line, adopted by the plan's §1 regardless of how Q4-Q10
     resolve: *"every effective line carries its origin — a line with no traceable
     source is a config defect"*. That is principle 6 — never emit a value you
@@ -241,7 +241,7 @@ class IntakeSignoff(_TenantRow):
 class IntakeSignoffLine(_TenantRow):
     """One answered checklist line. **A `NO` CARRIES ITS COMMENT OR IT IS REFUSED.**
 
-    🔴 `ck_intake_signoff_lines_a_no_states_why`. `intake.ts:16-19` gives the
+    `ck_intake_signoff_lines_a_no_states_why`. `intake.ts:16-19` gives the
     reason and it is a liability one: a NO becomes a disclosure the reviewer must
     later accept or escalate, and "a disclosure nobody wrote a reason for cannot
     be judged by the person who inherits it". `comment_required` is served to the

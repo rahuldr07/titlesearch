@@ -61,7 +61,7 @@ QUEUE_INFRASTRUCTURE_TABLES: Final = frozenset(
 )
 
 
-# 🔴 THE ALLOWLIST. Every name here must NOT be isolated, and needs its reason in this comment and
+# THE ALLOWLIST. Every name here must NOT be isolated, and needs its reason in this comment and
 # not in a commit message. Adding one is a reviewer-visible diff that has to argue the table has no
 # tenant in it; `rls_coverage.exempt_table_is_tenant_scoped` stops the list being used the other way
 # round — a name here that has grown a `tenant_id` is reported as a fault rather than honoured.

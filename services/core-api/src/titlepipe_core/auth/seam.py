@@ -5,9 +5,7 @@ One function decides which identity providers this process has. Everything else
 in this package is called BY something rather than deciding anything, which is
 what makes "who can authenticate here" a question with a single answer.
 
----------------------------------------------------------------------------
-🔴 THE MACHINE THAT MAKES `x-mock-role` UNTRUSTABLE, NAMED IN ORDER.
----------------------------------------------------------------------------
+THE MACHINE THAT MAKES `x-mock-role` UNTRUSTABLE, NAMED IN ORDER.
 `CONVENTIONS.md` §9: every safety property names the machine that enforces it,
 or is reported as an unproven residual. This is the naming.
 
@@ -39,9 +37,7 @@ parametrised on `mock_auth_enabled`, and stays there rather than being restated:
 it is a property of `CoreApiSettings`, and a second copy is one that can pass
 while the first is deleted.
 
----------------------------------------------------------------------------
-🔴 UNPROVEN RESIDUAL — WHAT THE CHAIN ABOVE DOES NOT COVER.
----------------------------------------------------------------------------
+UNPROVEN RESIDUAL — WHAT THE CHAIN ABOVE DOES NOT COVER.
 **The whole chain is rooted in one environment variable.** Every lock keys off
 `TITLEPIPE_ENVIRONMENT`. A production host started with
 `TITLEPIPE_ENVIRONMENT=development` and `TITLEPIPE_MOCK_AUTH_ENABLED=true` gets
@@ -104,7 +100,7 @@ class AuthSeam:
     def can_authenticate(self) -> bool:
         """Whether this process can produce a seat at all.
 
-        🔴 STILL FALSE FOR EVERY DEPLOYED CONFIGURATION, AND THE REASON CHANGED.
+        STILL FALSE FOR EVERY DEPLOYED CONFIGURATION, AND THE REASON CHANGED.
         A real adapter now exists and is registered — see `build_auth_seam`. What
         is missing is the other half: `directory.py` has no database-backed
         implementation, so `seats` is `None` and `dependencies.require_seat`
@@ -129,13 +125,13 @@ def build_auth_seam(settings: CoreApiSettings) -> AuthSeam:
     service learns the vendor's name — `dependencies.require_seat` calls the
     registry, and the registry calls whatever is in it.
 
-    🔴 ORDER. WorkOS is asked FIRST. `ProviderRegistry` takes the first adapter
+    ORDER. WorkOS is asked FIRST. `ProviderRegistry` takes the first adapter
     that recognises a request, and a developer holding a genuine WorkOS session
     must not be downgraded to a demo seat by a stale `x-mock-role` the frontend
     is still sending. The mock adapter answers `None` when its header is absent,
     so asking WorkOS first costs the development path nothing.
 
-    🔴 MACHINE 2 OF 4 (see the module docstring). The mock adapter exists only
+    MACHINE 2 OF 4 (see the module docstring). The mock adapter exists only
     under `mock_auth_enabled`, and `settings.py` will not let that be true in
     staging or production. Note what this function does NOT do: it does not
     check the environment itself. It does not have to, and adding the check here

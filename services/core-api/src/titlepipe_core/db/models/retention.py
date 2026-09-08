@@ -7,7 +7,7 @@ in neither copy: the migrations shipped and the models did not, which
 `alembic check` reports as three tables the database has and `Base.metadata` does
 not. This module is the salvage, unchanged in substance.
 
-🔴 **THE TAXONOMY IS TWO AXES AND NOT ONE.** `record_class` answers HOW LONG a
+**THE TAXONOMY IS TWO AXES AND NOT ONE.** `record_class` answers HOW LONG a
 record must be kept and `data_class` answers WHAT KIND OF DATA is in it. They are
 separate columns on `record_classifications` because a real record needs both at
 once: an escrow ledger holding NPI is `escrow_accounting` + `npi`, and a single
@@ -55,7 +55,7 @@ class RetentionWindow(_Row):
     `tests/test_forced_rls_and_grants.py` are the machines that keep the
     exemption honest — both expire it the moment the table grows a `tenant_id`.
 
-    🔴 **THIS TABLE IS EMPTY ON EVERY DATABASE AND THAT IS THE DELIVERABLE.** The
+    **THIS TABLE IS EMPTY ON EVERY DATABASE AND THAT IS THE DELIVERABLE.** The
     numbers are the owner's ruling and are still open. `retention_window()` in
     migration `0005` raises `55000` naming the `(record_class, jurisdiction)`
     pair when no row is ruled — it does not return NULL and it has no default
@@ -115,7 +115,7 @@ class RecordClassification(_TenantRow):
 
     __table_args__ = (
         UniqueConstraint("tenant_id", "subject_table", "subject_id"),
-        # 🔴 THE SLOT EXISTS IN THE TYPE AND IS REFUSED IN THIS TABLE — see
+        # THE SLOT EXISTS IN THE TYPE AND IS REFUSED IN THIS TABLE — see
         # `RECORD_CLASS_LABELS` in `enums.py` for why both have to be true.
         CheckConstraint(
             f"record_class <> '{RECORD_CLASS_LABELS[-1]}'::{RECORD_CLASS_TYPE_NAME}",
@@ -140,7 +140,7 @@ class LegalHold(_TenantRow):
     `titlepipe_app` holds no DELETE — and a release is all three of
     `released_at` / `released_by` / `release_reason` or none of them.
 
-    🔴 A HOLD NAMES ONE `(subject_table, subject_id)` AND REACHES NOTHING
+    A HOLD NAMES ONE `(subject_table, subject_id)` AND REACHES NOTHING
     DERIVED FROM IT. Cascade needs the domain tables and their derivation edges;
     `build-retention-audit.md` §7 carries it as an open gap, because a hold that
     silently fails to reach a derived copy is the same failure as no hold at all.
@@ -159,7 +159,7 @@ class LegalHold(_TenantRow):
             "num_nonnulls(released_at, released_by, release_reason) IN (0, 3)",
             name="release_is_all_or_nothing",
         ),
-        # 🔴 A PARTIAL UNIQUE INDEX, AND THE PREDICATE IS THE POINT: at most one
+        # A PARTIAL UNIQUE INDEX, AND THE PREDICATE IS THE POINT: at most one
         # LIVE hold per subject, and any number of released ones, because the
         # history of holds on a record is itself evidence. Tenant-prefixed for
         # `_TenantRow`'s reason — unique enforcement runs before a policy's

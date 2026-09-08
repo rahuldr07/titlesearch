@@ -1,4 +1,4 @@
-"""🔴 THE SWAP BOUNDARY. Adopting an identity provider is one class in here.
+"""THE SWAP BOUNDARY. Adopting an identity provider is one class in here.
 
 `IdentityProvider` is the ONE interface that has to be implemented to move this
 system from the development header adapter to a real provider. Nothing above it
@@ -86,7 +86,7 @@ class Credentials(Protocol):
 
 @runtime_checkable
 class IdentityProvider(Protocol):
-    """🔴 IMPLEMENT THIS AND THE VENDOR IS ADOPTED. Nothing else changes.
+    """IMPLEMENT THIS AND THE VENDOR IS ADOPTED. Nothing else changes.
 
     `name` is the adapter's own identifier and the value it must put in every
     `ProviderIdentity.provider` it returns. It is stored on the `users` row, so

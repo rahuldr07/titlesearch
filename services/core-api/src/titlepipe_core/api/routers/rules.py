@@ -48,7 +48,7 @@ a connection that dropped, a pool with nothing left — `OperationalError`,
 `InterfaceError`, SQLAlchemy's own `TimeoutError` — are all that, and answering
 503 with "try again shortly" is true.
 
-🔴 A `ProgrammingError` IS NOT, AND EVERY `SQLAlchemyError` USED TO GET THE SAME
+A `ProgrammingError` IS NOT, AND EVERY `SQLAlchemyError` USED TO GET THE SAME
 ANSWER. A missing `GRANT SELECT ON rules`, or a database nobody ran
 `alembic upgrade head` against, is PERMANENT: the reviewer booted core-api
 against an un-migrated database and got `/ready` 200 with `database_answers:

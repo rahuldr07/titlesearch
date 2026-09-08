@@ -5,9 +5,7 @@ Revision ID: 0031
 Revises: 0030
 Create Date: 2026-09-04
 
----------------------------------------------------------------------------
-🔴 AN `ALTER`, NOT A `CREATE`, SO THE RLS TRIPLE IS DELIBERATELY ABSENT.
----------------------------------------------------------------------------
+AN `ALTER`, NOT A `CREATE`, SO THE RLS TRIPLE IS DELIBERATELY ABSENT.
 `0001::upgrade` creates `packages` and `pages` with three columns each and
 `0002::_isolate` puts `ENABLE ROW LEVEL SECURITY`, `FORCE ROW LEVEL SECURITY` and
 the `tenant_isolation` policy on both. CONVENTIONS §1 requires those three in the
@@ -23,10 +21,8 @@ runs inside the migration transaction reads `pg_class.relrowsecurity`,
 column, and rolls the whole run back if any of the three is missing. Both tables
 are in its population whether or not this revision touches their policies.
 
----------------------------------------------------------------------------
-🔴 `packages.py`'s DOCSTRINGS NAME `0005` FOR TWO MACHINES, AND `0005` IS NOT
+`packages.py`'s DOCSTRINGS NAME `0005` FOR TWO MACHINES, AND `0005` IS NOT
    THAT REVISION. THEY LAND HERE.
----------------------------------------------------------------------------
 `models/packages.py` says, twice, that migration `0005` carries the
 `packages_identity_is_immutable` trigger and the
 `uq_packages_one_accepted_per_order` partial unique index. Revision `0005` on
@@ -60,7 +56,7 @@ So this revision refuses to run against a populated table, and says which of the
 two situations it is rather than leaving PostgreSQL's one-column message to read
 like a defect in the DDL.
 
-🔴 **AND THE OBVIOUS SPELLING OF THAT GUARD IS VACUOUS — see
+**AND THE OBVIOUS SPELLING OF THAT GUARD IS VACUOUS — see
 `_refuse_if_populated`.** `SELECT count(*)` issued by the role a migration runs
 as returns 0 on a `FORCE ROW LEVEL SECURITY` table no matter how many rows it
 holds. MEASURED 2026-09-04 against postgres:18.4 on this schema, one row inserted
@@ -132,10 +128,8 @@ ACCEPTED_PACKAGE_INDEX = "uq_packages_one_accepted_per_order"
 def _refuse_if_populated(table: str, columns: Sequence[str]) -> None:
     """Refuse, by name, before adding a `NOT NULL` column with no default.
 
-    ---------------------------------------------------------------------------
-    🔴 THE `NO FORCE` DANCE IS NOT DEFENSIVE PROGRAMMING. WITHOUT IT THIS
+    THE `NO FORCE` DANCE IS NOT DEFENSIVE PROGRAMMING. WITHOUT IT THIS
        FUNCTION READS 0 ON EVERY DATABASE AND REFUSES NOTHING.
-    ---------------------------------------------------------------------------
     `0002` puts `FORCE ROW LEVEL SECURITY` on both tables, and `FORCE` is
     precisely the clause that removes the table owner's exemption. `env.py`
     connects as `titlepipe_migration` and `SET ROLE`s to `titlepipe_owner`, so
@@ -176,9 +170,7 @@ def _refuse_if_populated(table: str, columns: Sequence[str]) -> None:
 def _create_identity_trigger() -> None:
     """`packages.sha256`, `byte_size` and `tenant_id` cannot be changed by an UPDATE.
 
-    ---------------------------------------------------------------------------
-    🔴 WHY A TABLE-LEVEL MACHINE AND NOT A HANDLER CHECK.
-    ---------------------------------------------------------------------------
+    WHY A TABLE-LEVEL MACHINE AND NOT A HANDLER CHECK.
     `sha256` IS the package's identity. The engine-output spine keys on
     `(package_digest, page_no, render_params, engine_id, engine_version,
     config_digest)`, so the digest is simultaneously the dedupe key and the
@@ -266,7 +258,6 @@ def upgrade() -> None:
     PACKAGE_STATUS.create(op.get_bind(), checkfirst=False)
     PAGE_KIND.create(op.get_bind(), checkfirst=False)
 
-    # -- packages ----------------------------------------------------------
     op.add_column("packages", sa.Column("order_id", postgresql.UUID(as_uuid=True), nullable=False))
     op.add_column("packages", sa.Column("sha256", sa.Text(), nullable=False))
     # `BigInteger`: a county search package of several hundred megabytes is
@@ -289,7 +280,7 @@ def upgrade() -> None:
         ["tenant_id", "id"],
     )
 
-    # 🔴 NOT UNIQUE ON `(tenant_id, sha256)`. Two orders over the same county
+    # NOT UNIQUE ON `(tenant_id, sha256)`. Two orders over the same county
     # genuinely share a package's bytes, and that sharing is load-bearing — "a
     # read is a property of the document, not of who asked" — so the digest may
     # repeat across orders and the sharing happens through the DIGEST at the
@@ -317,7 +308,7 @@ def upgrade() -> None:
         "status <> 'quarantined' OR quarantine_note IS NOT NULL",
     )
 
-    # 🔴 EXACTLY ONE ACCEPTED PACKAGE PER ORDER, AND IT IS AN INDEX RATHER THAN A
+    # EXACTLY ONE ACCEPTED PACKAGE PER ORDER, AND IT IS AN INDEX RATHER THAN A
     # CHECK BECAUSE A CHECK SEES ONE ROW. A second acceptance is a unique
     # violation at write time, which is what makes `accepted` a state rather than
     # a boolean worth having. A partial index and not a plain one: `received`,
@@ -338,7 +329,6 @@ def upgrade() -> None:
 
     _create_identity_trigger()
 
-    # -- pages -------------------------------------------------------------
     op.add_column("pages", sa.Column("package_id", postgresql.UUID(as_uuid=True), nullable=False))
     op.add_column("pages", sa.Column("page_no", sa.Integer(), nullable=False))
     # The PDF page's own dimensions, as a PAIR. The three coordinate spaces stay
@@ -350,7 +340,7 @@ def upgrade() -> None:
     op.add_column("pages", sa.Column("height_pt", sa.Numeric(10, 3), nullable=True))
     op.add_column("pages", sa.Column("rotation_deg", sa.Integer(), nullable=True))
     op.add_column("pages", sa.Column("text_char_count", sa.Integer(), nullable=True))
-    # 🔴 ALL THREE CLASSIFICATION COLUMNS ARE NULLABLE, AND NULL MEANS "NOT YET
+    # ALL THREE CLASSIFICATION COLUMNS ARE NULLABLE, AND NULL MEANS "NOT YET
     # CLASSIFIED" RATHER THAN "NO". A boolean defaulted to `false` would make an
     # unclassified page indistinguishable from one the classifier looked at and
     # rejected — the same collapse `na_reason` exists to prevent, arriving here as
@@ -405,7 +395,7 @@ def upgrade() -> None:
 def downgrade() -> None:
     """Reverse of `upgrade`, in reverse order, with `0008`'s two naming spellings.
 
-    🔴 A CHECK CONSTRAINT IS DROPPED BY ITS SHORT NAME AND A UNIQUE CONSTRAINT BY
+    A CHECK CONSTRAINT IS DROPPED BY ITS SHORT NAME AND A UNIQUE CONSTRAINT BY
     ITS FULL ONE, IN THE SAME FILE. `NAMING_CONVENTION["ck"]` is
     `ck_%(table_name)s_%(constraint_name)s`, and a convention containing
     `%(constraint_name)s` WRAPS whatever name it is given — on the drop as well as

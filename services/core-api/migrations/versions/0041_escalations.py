@@ -13,9 +13,7 @@ these are independent, and `0040` is named as the parent because a linear range
 is what god relinearizes cleanly. Other ranges are in flight in parallel and are
 not reconciled here.
 
----------------------------------------------------------------------------
-🔴 THE TWO REFUSALS THIS FILE EXISTS TO MOVE OUT OF PROSE.
----------------------------------------------------------------------------
+THE TWO REFUSALS THIS FILE EXISTS TO MOVE OUT OF PROSE.
 CLAUDE.md states both as product requirements. Until this revision they were held
 by the contract's `min(1)` and a required `rule` union, which means they held for
 the one client that parses the contract and for nothing else — not for a script,
@@ -52,7 +50,7 @@ be a provenance claim nobody can cite.
   trigger would also catch is not a hazard here: resolving nothing changes
   nothing.
 
-  🔴 **AND IT REFUSES `retired` TOO, WHICH IS NOT WHAT "not pending" MEANS.**
+  **AND IT REFUSES `retired` TOO, WHICH IS NOT WHAT "not pending" MEANS.**
   `rule_status` has three labels and only `live` is a rule in force. Writing the
   guard as `<> 'pending'` would let a RETIRED rule — one deliberately withdrawn
   — close a question, which is a worse outcome than the pending case it was
@@ -61,7 +59,7 @@ be a provenance claim nobody can cite.
 
 ## What a `CHECK` cannot do, and what is therefore honestly not enforced
 
-⚠️ **"AN ESCALATION NAMES AT LEAST ONE ORDER" IS NOT ENFORCED, AND THIS SAYS SO
+**"AN ESCALATION NAMES AT LEAST ONE ORDER" IS NOT ENFORCED, AND THIS SAYS SO
 RATHER THAN IMPLYING IT IS.** `escalation_orders` is a join table; a row in
 `escalations` with no rows in it is a well-formed escalation pointing at nothing.
 Closing that needs either a DEFERRED constraint trigger — which fires at COMMIT
@@ -115,7 +113,7 @@ CONVENTIONS §1, as in `0040`. Both tables are `_TenantRow`s: real `tenant_id`,
 what a resolution IS on `escalations`: the row is inserted open and closed in
 place.
 
-🔴 **THE TRIGGER IS NOT REACHED BY THE GRANT AND DOES NOT NEED TO BE.** A `BEFORE
+**THE TRIGGER IS NOT REACHED BY THE GRANT AND DOES NOT NEED TO BE.** A `BEFORE
 ROW` trigger runs as part of the statement regardless of the writer's privileges
 and regardless of RLS, which is what makes it the right machine for a rule that
 must hold for `titlepipe_owner` and for a migration as much as for the app role.
@@ -132,7 +130,7 @@ it has no meaning to retain once the escalation is gone, and a `RESTRICT` parent
 would make an escalation undeletable by its own attribute list. The reference to
 `orders` gets NO `ondelete`, because there the parent is a real record.
 
-⚠️ **WHAT THIS REVISION DOES NOT FIX, AND WHICH IS NOT MINE TO:** as in `0040`,
+**WHAT THIS REVISION DOES NOT FIX, AND WHICH IS NOT MINE TO:** as in `0040`,
 `tests/test_forced_rls_and_grants.py::EXPECTED_TENANT_TABLES` is compared for
 EQUALITY against the catalog derivation, so two more tenant tables take that one
 assertion red on its exact-set line while all four per-table properties hold.
@@ -167,7 +165,7 @@ TABLES = ("escalations", "escalation_orders")
 LIVE_RULE_FUNCTION = "escalations_resolution_needs_a_live_rule"
 LIVE_RULE_TRIGGER = "trg_escalations_resolution_needs_a_live_rule"
 
-# 🔴 THE LABEL IS WRITTEN OUT AS A LITERAL AND NOT IMPORTED. `rule_status` is
+# THE LABEL IS WRITTEN OUT AS A LITERAL AND NOT IMPORTED. `rule_status` is
 # `('live', 'pending', 'retired')` and `live` is the only one that is a rule in
 # force. A migration is a frozen snapshot; importing `RULE_STATUS_LABELS` from
 # the models would let a later edit there silently change what this trigger
@@ -217,7 +215,7 @@ def _tenant_primary_key() -> sa.PrimaryKeyConstraint:
     `pk_escalations` in one schema is a migration-time `already exists` with no
     Python-level error anywhere.
 
-    🔴 **`escalation_orders` KEEPS THIS KEY RATHER THAN TAKING `(tenant_id,
+    **`escalation_orders` KEEPS THIS KEY RATHER THAN TAKING `(tenant_id,
     escalation_id, order_id)` AS ITS PRIMARY KEY.** The natural key is asserted
     separately, by the unique constraint below. Making it the primary key instead
     would drop this one table below the `(tenant_id, id)` convention the whole
@@ -271,7 +269,7 @@ def _release(table: str) -> None:
 def _enable_always(table: str, trigger: str) -> None:
     """`ENABLE ALWAYS`, and then read `pg_trigger.tgenabled` back to prove it.
 
-    🔴 `'O'` IS NOT A WEAKER `'A'`, IT IS A TRIGGER THAT CAN BE OFF FOR A WHOLE
+    `'O'` IS NOT A WEAKER `'A'`, IT IS A TRIGGER THAT CAN BE OFF FOR A WHOLE
     SESSION. `0004` establishes the rule and the measurement behind it: a per-role
     `session_replication_role = 'replica'` default is applied at CONNECT and never
     checked again, so a trigger left at the `'O'` (origin) default is silently
@@ -313,9 +311,7 @@ def _enable_always(table: str, trigger: str) -> None:
 
 
 def upgrade() -> None:
-    # -----------------------------------------------------------------------
     # `escalations` — the question, and the four facts that close it.
-    # -----------------------------------------------------------------------
     op.create_table(
         "escalations",
         *_identity_columns(),
@@ -323,7 +319,7 @@ def upgrade() -> None:
         # `text` and not an array of field paths: the cluster is one addressable
         # thing the question is ABOUT, and the wire treats it as one string.
         sa.Column("field_path_cluster", sa.Text(), nullable=False),
-        # 🔴 REFUSAL ONE, AS A COLUMN CONSTRAINT: no question, no escalation.
+        # REFUSAL ONE, AS A COLUMN CONSTRAINT: no question, no escalation.
         sa.Column("question", sa.Text(), nullable=False),
         # NULLABLE, and deliberately not symmetric with `resolved_by`: the system
         # raises escalations too, and naming an actor for those would be a
@@ -353,11 +349,11 @@ def upgrade() -> None:
         sa.Column("identity_owner_label", sa.Text(), nullable=True),
         sa.Column("identity_owner", sa.Text(), nullable=True),
         _tenant_primary_key(),
-        # 🔴 SINGLE-COLUMN, AND CORRECT: `rules` is GLOBAL, so `rules (id)` is
+        # SINGLE-COLUMN, AND CORRECT: `rules` is GLOBAL, so `rules (id)` is
         # its whole primary key and there is no tenant column to pair with. See
         # `0040`'s docstring, and `0003`'s for the ruling.
         sa.ForeignKeyConstraint(["rule_id"], ["rules.id"]),
-        # 🔴 REFUSAL TWO, HALF ONE. Four facts, together or not at all.
+        # REFUSAL TWO, HALF ONE. Four facts, together or not at all.
         sa.CheckConstraint(
             "num_nonnulls(resolution, rule_id, resolved_by, resolved_at) IN (0, 4)",
             name="resolution_cites_a_rule",
@@ -377,9 +373,7 @@ def upgrade() -> None:
         ),
     )
 
-    # -----------------------------------------------------------------------
     # `escalation_orders` — the parent's `order_ids`, as a table.
-    # -----------------------------------------------------------------------
     op.create_table(
         "escalation_orders",
         *_identity_columns(),
@@ -404,9 +398,7 @@ def upgrade() -> None:
         ),
     )
 
-    # -----------------------------------------------------------------------
-    # 🔴 REFUSAL TWO, HALF TWO: THE RULE CITED MUST BE LIVE.
-    # -----------------------------------------------------------------------
+    # REFUSAL TWO, HALF TWO: THE RULE CITED MUST BE LIVE.
     # A `CHECK` cannot read another table, so this is a trigger. It is `BEFORE`
     # rather than `AFTER` so the row never lands at all, and `FOR EACH ROW`
     # because it needs `NEW`.
@@ -423,7 +415,7 @@ def upgrade() -> None:
     # escalation is the ordinary row, and `resolution_cites_a_rule` is what
     # decides whether a null `rule_id` is legal. Two machines, one question each.
     #
-    # 🔴 `S608` IS SUPPRESSED ON THE FUNCTION BODY, AND WHAT MAKES IT SAFE IS
+    # `S608` IS SUPPRESSED ON THE FUNCTION BODY, AND WHAT MAKES IT SAFE IS
     # CHECKABLE RATHER THAN ASSERTED: the only interpolations in this f-string
     # are `LIVE_RULE_FUNCTION` and `LIVE_RULE_STATUS`, both module-level literals
     # defined above. Nothing caller-supplied reaches the string — a migration has
@@ -486,7 +478,7 @@ def upgrade() -> None:
     """)
     _enable_always("escalations", LIVE_RULE_TRIGGER)
 
-    # 🔴 THE RLS TRIPLE AND THE GRANTS, IN THE SAME REVISION AS THE `CREATE`.
+    # THE RLS TRIPLE AND THE GRANTS, IN THE SAME REVISION AS THE `CREATE`.
     # Neither implies the other: a perfect policy with no grant is `42501`, and a
     # grant with no policy is every tenant's rows.
     for table in TABLES:

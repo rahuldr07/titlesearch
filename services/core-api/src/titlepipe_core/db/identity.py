@@ -20,20 +20,20 @@ MEASURED against pyright 1.1.411. The alternatives were a banned
 `# pyright: ignore` (`scripts/check_backend_rules.py` refuses one without a
 `rules-allow`) or renaming a symbol in a module this revision does not own.
 
-A restated convention is a convention that can drift, so it is not left to
-reading: `tests/test_identity_schema.py::test_the_identity_tables_carry_the_same
-_identity_columns_as_a_domain_tenant_table` reads `users`, `clients` and `orders`
-out of `information_schema` and compares the three shared columns and the primary
-key IN KEY ORDER. If `_TenantRow` changes, that test goes red here.
+RESIDUAL: NOTHING COMPARES THE RESTATEMENT TO WHAT IT RESTATES. This paragraph
+cited `tests/test_identity_schema.py::test_the_identity_tables_carry_the_same_
+identity_columns_as_a_domain_tenant_table` for that comparison; no such file has
+ever existed, so an edit to `_TenantRow` leaves these two tables behind in
+silence. What would close it is that test, reading `users`, `clients` and
+`orders` out of `information_schema` and comparing the three shared columns and
+the primary key IN KEY ORDER.
 
----------------------------------------------------------------------------
-🔴 THE ROLE COLUMN IS THE AUTHORIZATION INPUT, AND IT IS A COLUMN AND NOT A
+THE ROLE COLUMN IS THE AUTHORIZATION INPUT, AND IT IS A COLUMN AND NOT A
    CLAIM. `docs/PRD.md` §9's correction note is explicit: "PostgreSQL owns
    authorization — WorkOS's own role/permission claims are deliberately
    ignored". That sentence is the whole reason this column exists here rather
    than being read off a token: a permission change takes effect on the NEXT
    REQUEST because the next request reads this row, not at token expiry.
----------------------------------------------------------------------------
 `titlepipe_core.auth` states the same property from the other side, and states
 what enforces it: `ProviderIdentity` has no role field, so no provider — real or
 mock — has anywhere to put one.
@@ -67,7 +67,7 @@ __all__ = [
     "User",
 ]
 
-# 🔴 EXACTLY THESE SIX LABELS, IN EXACTLY THIS ORDER. They are
+# EXACTLY THESE SIX LABELS, IN EXACTLY THIS ORDER. They are
 # `packages/contract/src/authz.ts`'s `ROLES` verbatim, and that array is what the
 # browser derives every door and affordance from. `docs/PRD.md` §5 names the same
 # six seats in prose — Reviewer, Senior, Ops lead, Engineer, Typist (temp),
@@ -91,10 +91,14 @@ __all__ = [
 # importing it, exactly as `0001` repeats `NA_REASON_LABELS` and `0003` repeats
 # the rulebook's: a migration is a frozen snapshot of one revision, and an import
 # would let a later edit here silently rewrite what `0020` claims to have
-# created. The two are held together via the LIVE CATALOG — see
-# `tests/test_identity_schema.py`, which asserts this tuple against literals AND
-# against `pg_enum`'s labels in `enumsortorder`, because those two legs catch
-# different mutations.
+# created.
+#
+# RESIDUAL: NOTHING HOLDS THE TWO COPIES TOGETHER. This comment claimed the live
+# catalog did, via `tests/test_identity_schema.py`, which does not exist; no test
+# imports this tuple at all. `test_schema_migration.py::_enum_labels` is the leg
+# that covers `na_reason`, `rule_status` and `rule_origin` against `pg_enum` in
+# `enumsortorder`, and `user_role` is simply not among them. Adding it there,
+# plus a literal assertion, is what closes this.
 USER_ROLE_LABELS: Final = ("reviewer", "senior", "ops", "engineer", "typist", "admin")
 
 USER_ROLE_TYPE_NAME: Final = "user_role"
@@ -112,7 +116,7 @@ class _IdentityRow(Base):
     `__abstract__` means SQLAlchemy maps no table for this class, so it produces
     no DDL and never appears in `Base.metadata.tables`.
 
-    🔴 `tenant_id` IS DECLARED FIRST AND IS PART OF THE PRIMARY KEY. SQLAlchemy
+    `tenant_id` IS DECLARED FIRST AND IS PART OF THE PRIMARY KEY. SQLAlchemy
     builds an implicit primary key in table-column order and, within one class,
     table-column order is declaration order — so the key comes out
     `(tenant_id, id)`. `_TenantRow` reaches the same place from a subclass, where
@@ -147,10 +151,8 @@ class _IdentityRow(Base):
 class User(_IdentityRow):
     """One person's seat in one tenant.
 
-    ---------------------------------------------------------------------------
-    🔴 `(tenant_id, identity_provider, identity_subject)` IS UNIQUE, AND THE
+    `(tenant_id, identity_provider, identity_subject)` IS UNIQUE, AND THE
        `tenant_id` PREFIX IS LOAD-BEARING RATHER THAN TIDY.
-    ---------------------------------------------------------------------------
     `db/models._TenantRow` measures the cross-tenant existence oracle a
     single-column key opens under `FORCE ROW LEVEL SECURITY`: unique enforcement
     runs BEFORE a policy's `WITH CHECK`, so an INSERT distinguishes a value held
@@ -184,7 +186,7 @@ class User(_IdentityRow):
     __tablename__ = "users"
 
     __table_args__ = (
-        # 🔴 NOT UNIQUE, AND `0100` IS WHY IT EXISTS AT ALL. That revision's
+        # NOT UNIQUE, AND `0100` IS WHY IT EXISTS AT ALL. That revision's
         # `resolve_actor` looks a seat up by `(tenant_id, identity_subject)` on
         # every insert into `audit_log`, and the unique constraint below leads
         # `(tenant_id, identity_provider, identity_subject)` — the provider sits
@@ -204,7 +206,7 @@ class User(_IdentityRow):
             "identity_subject",
             name="uq_users_tenant_id_identity_provider_identity_subject",
         ),
-        # 🔴 THE THREE CHECKS ARE THE SEAM'S PRECONDITIONS, WRITTEN WHERE THEY
+        # THE THREE CHECKS ARE THE SEAM'S PRECONDITIONS, WRITTEN WHERE THEY
         # CANNOT BE SKIPPED BY A CODE PATH.
         #
         # `email = lower(email)`: without it `Ada@x.test` and `ada@x.test` are two
@@ -265,7 +267,7 @@ class Client(_IdentityRow):
     tables belong to the domain schema, and `relations.tenant_fk` is where the
     reasoning lives.
 
-    🔴 THE COLUMNS BELOW ARE WHY THAT CONSTRAINT IS NOT BOOKKEEPING.
+    THE COLUMNS BELOW ARE WHY THAT CONSTRAINT IS NOT BOOKKEEPING.
     `delivery_method`, `delivery_config` and `template_ref` are the DESTINATION a
     rendered report is transmitted to, so an order naming another tenant's client
     is one shop's deliverable addressed to another shop's customer.

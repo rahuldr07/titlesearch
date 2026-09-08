@@ -6,7 +6,7 @@ because the enforcement lives here. What lives here is the correspondence betwee
 the two fields whose names differ on the two sides and the one that is not a
 column at all.
 
-🔴 THIS MODULE USED TO REFUSE EVERY ORDER, naming twelve columns `orders` did not
+THIS MODULE USED TO REFUSE EVERY ORDER, naming twelve columns `orders` did not
 have. Nine of the twelve had landed in `0008`, and three were never absences:
 `state`/`state_code` and `pages`/`page_count` are NAMES, and `product` is a
 resolution. The refusal outlived its reason by one merge and nothing went red,

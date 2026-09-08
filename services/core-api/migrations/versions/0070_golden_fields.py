@@ -9,13 +9,11 @@ CONVENTIONS §8 forbids guessing a `down_revision` while several workers write
 revisions at once; the chain is linearised at integration and this file is not
 rebased onto anybody else's.
 
----------------------------------------------------------------------------
-🔴 WHAT THIS TABLE IS FOR. Every accuracy number in this system currently reads
+WHAT THIS TABLE IS FOR. Every accuracy number in this system currently reads
    `NO_TRUTH_YET`, because no golden set exists for either measured package.
    Cross-engine agreement is NOT a substitute — three engines agreed on a WRONG
    reading at 0.20 confidence on the worst pages of one package (PLAN §6). This
    table is the only thing that can settle which reading was right.
----------------------------------------------------------------------------
 
 ## The distinction this schema exists to make unrepresentable
 
@@ -142,7 +140,7 @@ branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 
-# 🔴 EXACTLY THESE FOUR LABELS, IN THIS ORDER — `packages/contract/src/enums.ts`
+# EXACTLY THESE FOUR LABELS, IN THIS ORDER — `packages/contract/src/enums.ts`
 # `GoldenTag` at :70, verbatim. Repeated here rather than imported from
 # `titlepipe_core.db.golden_models`, for the reason `0001` and `0003` both give:
 # a migration is a frozen snapshot of one revision, and an import would let a
@@ -184,7 +182,7 @@ ENGINE_SUBJECT_NAMESPACE = "engine:"
 # by name, lower-cased and trimmed, so the fallback cannot land here.
 UNSIGNED_SENTINEL = "unknown"
 
-# 🔴 CHECK CONSTRAINTS ARE NAMED BY THEIR RULE ALONE, NOT BY `ck_<table>_<rule>`.
+# CHECK CONSTRAINTS ARE NAMED BY THEIR RULE ALONE, NOT BY `ck_<table>_<rule>`.
 #
 # `models.NAMING_CONVENTION`'s `ck` pattern is `ck_%(table_name)s_%(constraint
 # _name)s`, and a naming convention containing `%(constraint_name)s` is applied
@@ -292,7 +290,7 @@ def upgrade() -> None:
         sa.Column("value", sa.Text(), nullable=True),
         _enum_column("na_reason", NA_REASON, nullable=True),
         _enum_column("tag", GOLDEN_TAG, nullable=False),
-        # 🔴 `NOT NULL`, WHICH DIVERGES FROM THE WIRE ON PURPOSE.
+        # `NOT NULL`, WHICH DIVERGES FROM THE WIRE ON PURPOSE.
         # `packages/contract/src/entities.ts::GoldenField.source_citation` is
         # `z.string().nullable()`. A truth nobody can trace to a document is not
         # a truth this system is allowed to score an engine against ("never emit
@@ -310,7 +308,7 @@ def upgrade() -> None:
         # is a correction, and `0072` is what makes the count mean something.
         sa.Column("revision", sa.Integer(), nullable=False, server_default=sa.text("0")),
         sa.PrimaryKeyConstraint("tenant_id", "id"),
-        # 🔴 COMPOSITE, AND A SINGLE-COLUMN FK HERE WOULD BE A DEFECT
+        # COMPOSITE, AND A SINGLE-COLUMN FK HERE WOULD BE A DEFECT
         # (CONVENTIONS §1). `(tenant_id, order_id)` is what makes it impossible
         # for one tenant's golden row to name another tenant's order — the
         # constraint refuses it, without any policy being consulted.
@@ -370,7 +368,7 @@ def downgrade() -> None:
 
     op.drop_table(TABLE)
 
-    # 🔴 `DROP TABLE` DOES NOT DROP A TYPE. `na_reason` is `0001`'s and is NOT
+    # `DROP TABLE` DOES NOT DROP A TYPE. `na_reason` is `0001`'s and is NOT
     # dropped here — this revision did not create it, and dropping a type another
     # revision owns would break `fields` on the way back down.
     GOLDEN_TAG.drop(op.get_bind(), checkfirst=False)

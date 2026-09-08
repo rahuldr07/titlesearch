@@ -1,6 +1,6 @@
 """`escalations` — a question that cannot be closed without citing a rule.
 
-🔴 **AN ESCALATION NEVER RESOLVES WITHOUT A RULE, AND THAT IS A DOMAIN FACT ABOUT
+**AN ESCALATION NEVER RESOLVES WITHOUT A RULE, AND THAT IS A DOMAIN FACT ABOUT
 HOW THIS BUSINESS GOVERNS ITS OWN CORRECTNESS.** The plan's §1 records it as
 enforced today only at the contract level (`min(1)` plus a required `rule`
 union), which means it holds for the one client that parses the contract and for
@@ -8,7 +8,7 @@ nothing else. `ck_escalations_resolution_cites_a_rule` below moves it to the
 storage layer, where it holds for every writer including the ones nobody has
 written yet — the same move `fields.correction_reason` makes for corrections.
 
-🔴 **AND THE RULE IT CITES MAY NOT BE `pending`.** CLAUDE.md: a PENDING rule
+**AND THE RULE IT CITES MAY NOT BE `pending`.** CLAUDE.md: a PENDING rule
 cannot affect the pipeline until an engineer confirms it. Visibility is not
 effect — `0003`'s ruling keeps pending rules readable by everyone — but
 RESOLVING a question by citing a rule nobody has confirmed is precisely letting a
@@ -63,7 +63,7 @@ class Escalation(_TenantRow):
         # `chain.ChainLink` for why a single-column reference is correct here and
         # a defect anywhere tenant-scoped.
         sa.ForeignKeyConstraint(["rule_id"], ["rules.id"]),
-        # 🔴 THE REFUSAL, AT THE STORAGE LAYER. A resolution is three facts —
+        # THE REFUSAL, AT THE STORAGE LAYER. A resolution is three facts —
         # what was decided, which rule decides it, and who signed — and they
         # arrive together or the row stays open. Resolving with a null `rule_id`
         # is a write error, not a 200.
@@ -120,7 +120,7 @@ class EscalationOrder(_TenantRow):
     in another tenant. An array is exactly the shape that cannot carry that
     constraint.
 
-    ⚠️ **"AT LEAST ONE ORDER" IS NOT ENFORCED HERE AND THIS SAYS SO.** A row in
+    **"AT LEAST ONE ORDER" IS NOT ENFORCED HERE AND THIS SAYS SO.** A row in
     the parent with no rows here is a well-formed escalation pointing at nothing.
     Closing it needs either a deferred constraint trigger or an insert path that
     writes both in one statement, and neither is a decision this table can make

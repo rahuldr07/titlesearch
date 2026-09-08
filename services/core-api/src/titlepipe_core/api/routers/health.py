@@ -11,11 +11,8 @@ exist, and returns 503 when any is not ready so the platform routes around it.
 
 Neither is under `/api`. They are platform surface, not product surface.
 
-🔴 THAT SENTENCE USED TO END "…and no product endpoint exists at Gate 1", WHICH
-IS NOW FALSE. `GET /api/rules` is served (`api/routers/rules.py`), and this file
-is where both that module and its tests send a reader for the argument about the
-prefix — so a stale clause here is one somebody reads as current. The prefix rule
-is unchanged and is the half that matters: these two stay OUT of `/api` because
+This file is where `api/routers/rules.py` and its tests send a reader for the
+argument about the prefix: these two stay OUT of `/api` because
 Plan 03 will authenticate that prefix, and a platform probe that needs a session
 is a probe that reports an outage every time identity is down.
 """
@@ -42,7 +39,7 @@ class ReadinessResponse(BaseModel):
 
     ready: bool
     service: str
-    # 🔴 THE DESCRIPTION IS WHERE THE STARTUP-SNAPSHOT CAVEAT HAS TO LIVE, and it
+    # THE DESCRIPTION IS WHERE THE STARTUP-SNAPSHOT CAVEAT HAS TO LIVE, and it
     # read "Per-dependency result. Extended as dependencies land." while
     # `database_answers` was already being reported from a probe that runs ONCE.
     # An operator reading `"database_answers": true` in a deployed environment

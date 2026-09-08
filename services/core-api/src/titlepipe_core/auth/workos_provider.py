@@ -1,8 +1,6 @@
 """WorkOS AuthKit, behind `provider.IdentityProvider`. One class, no callers changed.
 
----------------------------------------------------------------------------
-🔴 THIS ADAPTER HAS NEVER AUTHENTICATED ANYBODY. IT IS UNEXERCISED.
----------------------------------------------------------------------------
+THIS ADAPTER HAS NEVER AUTHENTICATED ANYBODY. IT IS UNEXERCISED.
 There are no WorkOS credentials on this machine and no tenant to point at, so
 nothing here has been run against the real thing. What IS tested is everything
 this file decides on its own — which cookie it reads, what it refuses, what it
@@ -143,7 +141,7 @@ class WorkOSAuthKitProvider:
     ) -> None:
         """Build the SDK client once, and pass every credential EXPLICITLY.
 
-        🔴 THE EXPLICIT ARGUMENTS ARE THE POINT, not ceremony.
+        THE EXPLICIT ARGUMENTS ARE THE POINT, not ceremony.
         `AsyncWorkOSClient.__init__` falls back to `os.environ["WORKOS_API_KEY"]`
         and `os.environ["WORKOS_CLIENT_ID"]` when they are omitted — MEASURED in
         `workos/_base_client.py` at 10.3.0. This service's configuration is
@@ -191,7 +189,7 @@ class WorkOSAuthKitProvider:
             cookie_password=self._cookie_password,
         )
 
-        # 🔴 `authenticate()` IS SYNCHRONOUS AND IT BLOCKS ON THE NETWORK.
+        # `authenticate()` IS SYNCHRONOUS AND IT BLOCKS ON THE NETWORK.
         # The SDK's own comment says it "only performs local operations", which
         # is true of the Fernet unseal and false of the JWT verification: PyJWT's
         # `PyJWKClient` fetches the tenant's key set with
@@ -211,7 +209,7 @@ class WorkOSAuthKitProvider:
         return self._identity_from(outcome)
 
     def _unverifiable(self, error: PyJWKClientError) -> DependencyUnavailableError:
-        """🔴 THE ONE FAILURE THAT IS NOT A REFUSAL. 503, never `None`.
+        """THE ONE FAILURE THAT IS NOT A REFUSAL. 503, never `None`.
 
         `None` is "not signed in", which `dependencies.require_seat` turns into a
         401 telling the caller to present a credential — and no credential fixes
@@ -239,7 +237,7 @@ class WorkOSAuthKitProvider:
         `dependencies.require_seat` turns the `None` into the same
         "Not signed in." every other failure produces.
 
-        🔴 A JWKS FETCH FAILURE DOES NOT REACH HERE. The SDK catches only
+        A JWKS FETCH FAILURE DOES NOT REACH HERE. The SDK catches only
         `jwt.exceptions.InvalidTokenError`, and `PyJWKClientError` is a sibling
         of it rather than a subclass — MEASURED in `jwt/exceptions.py`, where
         both derive from `PyJWTError` — so a key set that will not load raises
@@ -316,7 +314,7 @@ class WorkOSAuthKitProvider:
 
         return ProviderIdentity(
             provider=WORKOS_PROVIDER_NAME,
-            # 🔴 THE WORKOS USER ID, WHICH IS THE PERSON. Not the email, which
+            # THE WORKOS USER ID, WHICH IS THE PERSON. Not the email, which
             # they can change, and not a role — `outcome.role`, `outcome.roles`
             # and `outcome.permissions` are all present on this object and all
             # thrown away here. `ProviderIdentity` has no field for them, so

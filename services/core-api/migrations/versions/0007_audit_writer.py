@@ -43,7 +43,7 @@ description) and is specified to live encrypted under the same per-record DEK as
 the field it describes, so destroying that key shreds it without breaking the
 chain.
 
-🔴 **THIS REVISION SHIPS THE ASSERTION HALF ONLY, AND CREATES NO PAYLOAD COLUMN
+**THIS REVISION SHIPS THE ASSERTION HALF ONLY, AND CREATES NO PAYLOAD COLUMN
 AT ALL.** Field encryption is out of scope this phase — it is gated on a
 platform/KMS decision the owner has not made (PLAN.md §8 step 6, §9). The
 alternatives were both worse than an honest gap: a plaintext before/after column
@@ -132,7 +132,7 @@ RULE_PROVENANCE_TAGS = ("RULED", "DERIVED", "OPEN", "CONFLICT")
 # The session context the writer reads. Custom GUCs, the same mechanism `0002`'s
 # policies read `app.current_tenant` through.
 #
-# 🔴 A ROLE CAN SET ITS OWN GUC, SO THESE ARE NOT A PRIVILEGE AND ARE NOT
+# A ROLE CAN SET ITS OWN GUC, SO THESE ARE NOT A PRIVILEGE AND ARE NOT
 # CLAIMED AS ONE. `0002` measured it: `titlepipe_app` sets `app.current_tenant`
 # freely. What they buy is that a change with NO actor declared is REFUSED rather
 # than recorded anonymously — the caller can lie about who it is, and cannot
@@ -162,7 +162,7 @@ AUDITED_TABLES = ("record_classifications", "legal_holds")
 
 CHAIN_POSITION_CONSTRAINT = "uq_audit_log_tenant_id_chain_position"
 
-# 🔴 THE TWO CHECK CONSTRAINTS ARE NAMED HERE WITHOUT THEIR `ck_audit_log_`
+# THE TWO CHECK CONSTRAINTS ARE NAMED HERE WITHOUT THEIR `ck_audit_log_`
 # PREFIX, AND THE ASYMMETRY WITH `CHAIN_POSITION_CONSTRAINT` ABOVE IS REAL RATHER
 # THAN AN OVERSIGHT. `Base.metadata`'s naming convention (`models.py::
 # NAMING_CONVENTION`) spells `ck` as `ck_%(table_name)s_%(constraint_name)s` and
@@ -253,7 +253,7 @@ def _add_assertion_columns() -> None:
     * `engine_id` + `engine_model_version` — machine identity where a machine
       produced the value.
 
-    🔴 `engine_cost_usd` AND `engine_latency_ms` ARE IN §5'S LIST AND ARE NOT
+    `engine_cost_usd` AND `engine_latency_ms` ARE IN §5'S LIST AND ARE NOT
     HERE. Both are properties of ONE ENGINE CALL, and the audit row is a property
     of one DATABASE CHANGE; a single change can follow several calls, so the two
     do not correspond one-to-one and a column would have to pick one arbitrarily.
@@ -312,7 +312,7 @@ def _add_assertion_columns() -> None:
         "(rule_id IS NULL) = (rule_provenance IS NULL)",
     )
 
-    # 🔴 THE UNIQUE CONSTRAINT IS THE TAMPER DETECTOR, NOT A TIDINESS RULE.
+    # THE UNIQUE CONSTRAINT IS THE TAMPER DETECTOR, NOT A TIDINESS RULE.
     # `chain_position` is dense per tenant, assigned under an advisory lock, so a
     # row REMOVED by anyone who bypassed the append-only triggers leaves a hole
     # that `audit_chain_verify` reports. The uniqueness half separately refuses a
@@ -350,7 +350,7 @@ def _create_chain_trigger() -> None:
     extension for a privileged role to create — the same constraint `0001` records
     for `gen_random_uuid()`).
 
-    🔴 `pg_advisory_xact_lock` IS WHAT MAKES THE CHAIN A CHAIN, AND IT IS THE COST
+    `pg_advisory_xact_lock` IS WHAT MAKES THE CHAIN A CHAIN, AND IT IS THE COST
     PLAN.md §5 NAMES. Without it two concurrent inserts for one tenant both read
     the same head and produce a fork; the unique constraint on
     `(tenant_id, chain_position)` would refuse the second, turning a silent fork
@@ -440,7 +440,7 @@ def _create_verify_function() -> None:
     `row_hash` key whose value was JSON null. Removing the key instead of nulling
     it produces a different string and every row would report a mismatch.
 
-    🔴 IT CANNOT DETECT A COMPLETE REWRITE. An attacker who edits a row and
+    IT CANNOT DETECT A COMPLETE REWRITE. An attacker who edits a row and
     recomputes every subsequent hash produces a chain this function calls intact.
     PLAN.md §5's answer is the external anchor — the chain head published to
     immutability-locked storage and countersigned outside the database — and
@@ -491,7 +491,7 @@ def _create_verify_function() -> None:
 def _create_writer_function() -> None:
     """`AFTER INSERT OR UPDATE OR DELETE FOR EACH ROW` on every audited table.
 
-    🔴 `FOR EACH ROW`, WHERE `0001`'S APPEND-ONLY TRIGGER IS `FOR EACH STATEMENT`,
+    `FOR EACH ROW`, WHERE `0001`'S APPEND-ONLY TRIGGER IS `FOR EACH STATEMENT`,
     AND BOTH ARE RIGHT. `0001` refuses a statement and must therefore fire even
     when the statement matches no rows — under RLS a cross-tenant UPDATE matches
     exactly zero, so a row trigger would be silent for the one case it exists for.
@@ -516,7 +516,7 @@ def _create_writer_function() -> None:
     tenant table anyway; a table missing either raises here rather than recording
     a row with a NULL subject.
 
-    🔴 NOT `SECURITY DEFINER`. It inserts as the CALLER, so `audit_log`'s
+    NOT `SECURITY DEFINER`. It inserts as the CALLER, so `audit_log`'s
     `tenant_isolation` policy is applied to the insert and a caller cannot write
     an audit row into another tenant's chain — the same `WITH CHECK` that `0002`
     measured refusing a cross-tenant INSERT. `SECURITY DEFINER` would make this
@@ -602,7 +602,7 @@ def _create_writer_function() -> None:
 def _attach(table: str) -> None:
     """One audited table: the trigger, then `ENABLE ALWAYS`, then the read-back.
 
-    🔴 WHAT IS *NOT* IN `AUDITED_TABLES`, STATED SO IT IS A GAP RATHER THAN AN
+    WHAT IS *NOT* IN `AUDITED_TABLES`, STATED SO IT IS A GAP RATHER THAN AN
     ASSUMPTION. `orders`, `packages`, `pages`, `fields` and `field_readings` are
     `0001`'s skeleton and are NOT audited by this revision. They are being
     remodelled by another worker this phase and attaching a trigger to a table
@@ -683,7 +683,7 @@ def downgrade() -> None:
     ):
         op.drop_column(AUDIT_TABLE, column)
 
-    # 🔴 `DROP COLUMN` DOES NOT DROP A TYPE — the same shape as `0001`'s enum
+    # `DROP COLUMN` DOES NOT DROP A TYPE — the same shape as `0001`'s enum
     # note. Without this a fresh upgrade works and only the SECOND one fails,
     # with `type "audit_action" already exists`.
     AUDIT_ACTION.drop(op.get_bind(), checkfirst=False)

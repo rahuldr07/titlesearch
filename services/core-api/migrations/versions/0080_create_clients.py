@@ -10,10 +10,8 @@ than guessed, so `CONVENTIONS.md` §8's "set `down_revision` to the head as your
 it and let god linearize" does not apply. The `0080+` range is reserved for revisions
 written after the merge.
 
----------------------------------------------------------------------------
-🔴 WHY THIS EXISTS: A MODEL WITH NO MIGRATION, WHICH IS THE ONE DRIFT
+WHY THIS EXISTS: A MODEL WITH NO MIGRATION, WHICH IS THE ONE DRIFT
    DIRECTION NOTHING ELSE IN THIS REPOSITORY CATCHES.
----------------------------------------------------------------------------
 `db/identity.py` has mapped `Client` since the auth seam landed. No revision created
 the table, so every migrated database was missing it while every model import claimed
 it was there. The RLS coverage check enumerates the DATABASE, so it saw nothing to
@@ -41,7 +39,7 @@ inventing it.
 has none, and `{}` would be a fabricated value standing in for an absence — the
 `field_readings.line_coords` precedent.
 
-## 🔴 THE COMPOSITE FOREIGN KEYS ARE STILL NOT DECLARED, AND THAT IS DELIBERATE HERE
+## THE COMPOSITE FOREIGN KEYS ARE STILL NOT DECLARED, AND THAT IS DELIBERATE HERE
 
 `orders.client_id` and `client_config_versions.client_id` exist and reference nothing.
 `0008` records the reason — `clients` was on another worker's chain — and calls the
@@ -166,7 +164,7 @@ def upgrade() -> None:
         sa.Column("report_shape", sa.Text(), nullable=False),
         # Nullable: a client on the default template names no template.
         sa.Column("template_ref", sa.Text(), nullable=True),
-        # 🔴 `(tenant_id, id)`, IN THAT ORDER. `db/models._TenantRow` carries the measured
+        # `(tenant_id, id)`, IN THAT ORDER. `db/models._TenantRow` carries the measured
         # cross-tenant existence oracle a single-column `id` key opens under `FORCE ROW
         # LEVEL SECURITY`: unique enforcement runs BEFORE a policy's `WITH CHECK`, so an
         # INSERT distinguishes an id held by another tenant from one held by nobody, to a
@@ -186,7 +184,7 @@ def upgrade() -> None:
     # grant `titlepipe_app` gets `42501 permission denied for table clients` and a read test
     # reports zero rows and calls it isolation.
     #
-    # 🔴 NO `DELETE`, matching `0002` and `0020`: `PLAN.md`'s role separation gives
+    # NO `DELETE`, matching `0002` and `0020`: `PLAN.md`'s role separation gives
     # `titlepipe_app` no DELETE, no TRUNCATE and no DDL anywhere. A client that stops being
     # a customer is a client whose orders still have to name somebody.
     #

@@ -15,9 +15,7 @@ the parent is STATED rather than reconciled here, and god linearizes.
 The dependency is real and not bookkeeping: the constraint names two columns
 `0032` adds to `fields`, so anything before `0032` is a `column does not exist`.
 
----------------------------------------------------------------------------
-🔴 WHY THIS EXISTS, AND WHY THE DEADLINE IS THE EXTRACTION WORKER'S FIRST ROW.
----------------------------------------------------------------------------
+WHY THIS EXISTS, AND WHY THE DEADLINE IS THE EXTRACTION WORKER'S FIRST ROW.
 A row carrying `source_page_no = 7` with `source_document_id = NULL` was written
 through real RLS at head `0080` and the database accepted it. Page seven of
 WHAT. That row is a value the system cannot cite while every column on it says
@@ -72,7 +70,7 @@ endpoint served a field. `api/schemas/__init__.py` carries the residual: this
 constraint holds for ROWS, and a projection that drops one half is still
 unguarded.
 
-## 🔴 THE INTERACTION WITH `0032`'s `unreadable_cites_a_page`, WHICH TIGHTENS
+## THE INTERACTION WITH `0032`'s `unreadable_cites_a_page`, WHICH TIGHTENS
 
 `ck_fields_unreadable_cites_a_page` requires a page of any `PRESENT_UNREADABLE`
 field — "the ink is gone on a page somebody can name". Under this revision that

@@ -9,7 +9,7 @@ be one file that every reviewer has to page through to find one constraint.
 `base.py` IS the former `models.py`, moved with `git mv` so the rename is
 recorded and a concurrent edit to the old path still merges into it.
 
-🔴 **THE PLACEMENT RULE, STATED ONCE SO THAT THE NEXT TABLE HAS AN ANSWER RATHER
+**THE PLACEMENT RULE, STATED ONCE SO THAT THE NEXT TABLE HAS AN ANSWER RATHER
 THAN A PRECEDENT TO COPY.** `base.py` holds ONLY what exists because the system
 is multi-tenant: `Base`, `_Row`, `_TenantRow`, the DDL naming convention,
 `tenants` and `audit_log`. `enums.py` holds EVERY PostgreSQL enum type,
@@ -35,7 +35,7 @@ re-exported here. Nothing outside this directory was edited to accommodate the
 move. That is the property that makes the move safe to do while four other
 people are writing against the same tree.
 
-🔴 **EVERY MODEL MODULE MUST BE IMPORTED HERE, AND THE REASON IS NOT TIDINESS.**
+**EVERY MODEL MODULE MUST BE IMPORTED HERE, AND THE REASON IS NOT TIDINESS.**
 A declarative class registers its `Table` on `Base.metadata` when the module
 defining it is IMPORTED, not when it is written. A module nobody imports is a
 table `alembic check` cannot see, so its migration and its model can disagree

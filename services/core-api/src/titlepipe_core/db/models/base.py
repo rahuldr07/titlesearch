@@ -8,10 +8,8 @@ to every one of them). Nothing else. **A TABLE THAT DESCRIBES TITLE SEARCH LIVES
 IN A DOMAIN MODULE**, and there is a mechanical reason for the rule beyond taste:
 this module is imported by every other model module, so anything added here is
 imported by all of them, and a domain table placed here would be reachable from
-modules that have no business knowing it exists. `orders.py`, `packages.py`,
-`fields.py`, `documents.py`, `chain.py`, `intake.py`, `escalations.py`,
-`delivery.py` and `rulebook.py` import FROM here and never the other way, which
-is what keeps the import graph a tree.
+modules that have no business knowing it exists. Every domain module imports
+FROM here and none the other way, which is what keeps the import graph a tree.
 
 **`rules` IS THE ONE TABLE IN THIS PACKAGE DELIBERATELY NOT A `_TenantRow`.** It
 lives in `rulebook.py`, and saying so here is the point: every statement below
@@ -66,7 +64,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from titlepipe_core.db.models.enums import AUDIT_ACTION, RULE_PROVENANCE_LABELS
 
-# 🔴 `_Row` AND `_TenantRow` ARE IN `__all__`, AND THE LEADING UNDERSCORE MEANS
+# `_Row` AND `_TenantRow` ARE IN `__all__`, AND THE LEADING UNDERSCORE MEANS
 # "ABSTRACT, NEVER A TABLE" RATHER THAN "PRIVATE TO THIS MODULE". Every domain
 # module in this package subclasses one of them, so they are the package's
 # public declaration surface — and pyright is the machine that decides which of
@@ -94,7 +92,7 @@ __all__ = ["NAMING_CONVENTION", "AuditLog", "Base", "Tenant", "_Row", "_TenantRo
 # because the day it is missing is the day a constraint is created without it,
 # and renaming a live constraint costs more than declaring the rule now.
 #
-# 🔴 IT IS THE `pk` ENTRY, AND THE WIRING, THAT THE DATABASE PROVES. MEASURED
+# IT IS THE `pk` ENTRY, AND THE WIRING, THAT THE DATABASE PROVES. MEASURED
 # 2026-08-05 on the tree before this change: deleting
 # `naming_convention=NAMING_CONVENTION` from `Base.metadata`, changing `pk` to
 # `%(table_name)s_pkey`, and narrowing `ix` from `column_0_N_name` to
@@ -164,10 +162,8 @@ class _TenantRow(_Row):
     flag stays so that dropping `tenant_id` from the key cannot silently make the
     column nullable.
 
-    ---------------------------------------------------------------------------
-    🔴 `tenant_id` IS PART OF THE PRIMARY KEY, AND IT CLOSES A CROSS-TENANT
+    `tenant_id` IS PART OF THE PRIMARY KEY, AND IT CLOSES A CROSS-TENANT
        EXISTENCE ORACLE THAT RLS CANNOT CLOSE.
-    ---------------------------------------------------------------------------
     Unique enforcement runs BEFORE a policy's `WITH CHECK`, so under
     `ENABLE` + `FORCE ROW LEVEL SECURITY` with Task 4's `tenant_isolation`
     policy, a `PRIMARY KEY (id)` answers "does this id exist in some other
@@ -237,10 +233,8 @@ class AuditLog(_TenantRow):
     triggers of `0001`/`0004` and `tests/test_audit_writer.py` holds `0007`'s
     writer.
 
-    ---------------------------------------------------------------------------
-    🔴 THIS MODEL EXISTS SO `alembic check` CAN SEE THE COLUMNS. IT IS NOT AN
+    THIS MODEL EXISTS SO `alembic check` CAN SEE THE COLUMNS. IT IS NOT AN
        INSERT SURFACE, AND NO REPOSITORY MAY BE BUILT ON IT.
-    ---------------------------------------------------------------------------
     Every column below is written by `audit_record_change()` and
     `audit_chain_link()` in migration `0007`, inside the transaction of the
     change being recorded. Application code that constructs an `AuditLog` and
@@ -267,7 +261,7 @@ class AuditLog(_TenantRow):
     `subject_table` is `text` and not `regclass`: a `regclass` follows a RENAME,
     so an old row would silently start naming the new table.
 
-    🔴 `rule_provenance` IS `text` WITH A CHECK AND NOT THE `rule_provenance`
+    `rule_provenance` IS `text` WITH A CHECK AND NOT THE `rule_provenance`
     ENUM TYPE, and the two coexist on purpose. `0007` chose a CHECK because a
     type in that name was being created in parallel by `0040` for
     `chain_links.provenance`; on the integrated chain both exist, `0040` owns the
@@ -289,7 +283,7 @@ class AuditLog(_TenantRow):
             "(rule_id IS NULL) = (rule_provenance IS NULL)",
             name="a_cited_rule_carries_its_provenance",
         ),
-        # 🔴 THE TAMPER DETECTOR, NOT A TIDINESS RULE. `chain_position` is dense
+        # THE TAMPER DETECTOR, NOT A TIDINESS RULE. `chain_position` is dense
         # per tenant, so a row REMOVED by anyone who got behind the append-only
         # triggers leaves a hole `audit_chain_verify()` reports. The uniqueness
         # half separately refuses a fork.
@@ -301,7 +295,7 @@ class AuditLog(_TenantRow):
     )
     actor_subject: Mapped[str] = mapped_column(Text, nullable=False)
     actor_seat: Mapped[str] = mapped_column(Text, nullable=False)
-    # 🔴 SERVER-ASSIGNED, NOT APPLICATION-SUPPLIED. `0100`'s
+    # SERVER-ASSIGNED, NOT APPLICATION-SUPPLIED. `0100`'s
     # `audit_log_bind_actor` runs `BEFORE INSERT` and OVERWRITES both, so a value
     # sent from here is discarded rather than honoured. They are mapped anyway
     # because `alembic check` compares the model to the catalog and an unmapped

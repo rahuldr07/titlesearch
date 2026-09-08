@@ -31,7 +31,7 @@ from titlepipe_core.db.models.relations import tenant_fk
 class Package(_TenantRow):
     """The uploaded bundle. **IMMUTABLE, BECAUSE ITS IDENTITY IS ITS CONTENT.**
 
-    🔴 `sha256` IS THE IDENTITY AND MODELLING THIS ROW AS MUTABLE WOULD BREAK
+    `sha256` IS THE IDENTITY AND MODELLING THIS ROW AS MUTABLE WOULD BREAK
     CONTENT-ADDRESSING OUTRIGHT. The plan's §2 keys the whole engine-output spine
     on `(package_digest, page_no, render_params, engine_id, engine_version,
     config_digest)` — the digest is simultaneously the dedupe key and the
@@ -65,7 +65,7 @@ class Package(_TenantRow):
     by `0031`, not by a status check anywhere. A second acceptance is a unique
     violation at write time.
 
-    🔴 BOTH MACHINES WERE ATTRIBUTED TO `0005` UNTIL 2026-09-04 AND `0005` IS
+    BOTH MACHINES WERE ATTRIBUTED TO `0005` UNTIL 2026-09-04 AND `0005` IS
     NOT THAT REVISION. It is `record_class_taxonomy`; `0006` is `legal_holds` and
     `0007` is the audit writer. Neither the trigger nor the index existed in any
     revision on any branch — the numbers were assumed when this file was written

@@ -1,6 +1,6 @@
 """Instruments of record, the DERIVED chain over them, and the human stop.
 
-🔴 **THE CHAIN IS DERIVED AND THE SCHEMA SAYS SO IN A COLUMN.** Kaveri/D4
+**THE CHAIN IS DERIVED AND THE SCHEMA SAYS SO IN A COLUMN.** Kaveri/D4
 measured the one real corpus package and found the vocabulary the old design
 assumed is not in the data: "deeds are `instruments` with page ranges; nothing
 links one to the next in the source — any chain is DERIVED, and how is UNKNOWN
@@ -22,7 +22,7 @@ document, or only as a line in an index. `instruments.document_id` is NULLABLE
 and that null is the whole distinction — collapsing the tables would force every
 index-only judgment to invent a page range it does not have.
 
-⚠️ **IF A LATER RULING SAYS AN INDEX ENTRY IS JUST A DOCUMENT OF ANOTHER KIND,
+**IF A LATER RULING SAYS AN INDEX ENTRY IS JUST A DOCUMENT OF ANOTHER KIND,
 `instruments` COLLAPSES INTO `documents`.** That reversal is named in the build
 report rather than hidden, because it is a real one.
 """

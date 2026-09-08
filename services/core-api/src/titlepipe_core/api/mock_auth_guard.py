@@ -1,4 +1,4 @@
-"""🔴 MACHINE 4 OF 4 — a request carrying `x-mock-role` is REFUSED, not ignored,
+"""MACHINE 4 OF 4 — a request carrying `x-mock-role` is REFUSED, not ignored,
 wherever the mock adapter does not exist.
 
 `auth/seam.py` names the whole chain; this is the last link and the only one
@@ -79,7 +79,7 @@ MOCK_AUTH_REFUSED_MESSAGE: Final = (
 # would make "am I signed in?" depend on which layer refused.
 _STATUS: Final = 401
 
-# 🔴 BOTH PROTOCOLS THAT CARRY HEADERS, AND `websocket` IS HERE BECAUSE IT WAS
+# BOTH PROTOCOLS THAT CARRY HEADERS, AND `websocket` IS HERE BECAUSE IT WAS
 # NOT. The guard tested `scope["type"] != "http"` and passed everything else
 # through, so a websocket handler read `x-mock-role` in a configuration where
 # every HTTP route refuses it — machine 4's "cannot reach a handler" was a

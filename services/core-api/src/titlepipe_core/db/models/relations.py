@@ -1,6 +1,6 @@
 """`tenant_fk` — the only way a table in this package points at another one.
 
-🔴 **A SINGLE-COLUMN FOREIGN KEY TO A TENANT-SCOPED TABLE IS A DEFECT, AND THIS
+**A SINGLE-COLUMN FOREIGN KEY TO A TENANT-SCOPED TABLE IS A DEFECT, AND THIS
 FUNCTION EXISTS SO THAT WRITING ONE TAKES MORE EFFORT THAN WRITING THE RIGHT
 THING.** Every tenant table's primary key is `(tenant_id, id)` (see
 `base._TenantRow` for the cross-tenant existence oracle that key closes and the
@@ -49,7 +49,7 @@ def tenant_fk(
     built a constraint on a column that does not exist — or, worse, on one that
     does and means something else.
 
-    🔴 `name` IS THE ESCAPE HATCH FOR POSTGRESQL'S 63-BYTE IDENTIFIER LIMIT, AND
+    `name` IS THE ESCAPE HATCH FOR POSTGRESQL'S 63-BYTE IDENTIFIER LIMIT, AND
     IT IS NEEDED BECAUSE THE NAMING CONVENTION CAN GENERATE A LONGER NAME THAN
     THE DATABASE CAN HOLD. `base.NAMING_CONVENTION` renders a foreign key as
     `fk_<table>_tenant_id_<column>_<target_table>`, and four references in this

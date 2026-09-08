@@ -11,9 +11,7 @@ references no other table.
 The prose below is the author's and describes the branch as written; this line is the read of
 the chain that `alembic upgrade head` actually walks.
 
----------------------------------------------------------------------------
-🔴 THE ASSUMED PARENT IS `0004`, AND IT IS AN ASSUMPTION RATHER THAN A READ.
----------------------------------------------------------------------------
+THE ASSUMED PARENT IS `0004`, AND IT IS AN ASSUMPTION RATHER THAN A READ.
 `CONVENTIONS.md` §8: several workers write migrations at once, so `down_revision`
 is set to the head as this tree found it — `0004_append_only_enable_always` — and
 the chain is linearized at integration rather than guessed at here. Revisions
@@ -27,10 +25,8 @@ line.
 and one table, references no other table, and its policy reads a GUC rather than
 joining. A reordering therefore changes the revision graph and not the result.
 
----------------------------------------------------------------------------
-🔴 RLS IS ENABLED, FORCED AND POLICIED IN THIS SAME MIGRATION, WHICH IS THE
+RLS IS ENABLED, FORCED AND POLICIED IN THIS SAME MIGRATION, WHICH IS THE
    RULE AND NOT A PRECAUTION.
----------------------------------------------------------------------------
 `CONVENTIONS.md` §1: a tenant-scoped table created without all three is a defect.
 `0002` is the counter-example that makes the rule concrete — its `upgrade()` is
 seven hardcoded `_isolate` calls, so a table created later is simply not in them,
@@ -98,7 +94,7 @@ branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 
-# 🔴 EXACTLY THESE SIX LABELS, IN EXACTLY THIS ORDER — `packages/contract/src/
+# EXACTLY THESE SIX LABELS, IN EXACTLY THIS ORDER — `packages/contract/src/
 # authz.ts`'s `ROLES` verbatim, and `docs/PRD.md` §5's six seats in the same
 # order. Repeated here rather than imported, for the reason the module docstring
 # gives. `enumsortorder` is what `<`, `ORDER BY` and `MIN()` on this type use, so
@@ -206,11 +202,11 @@ def upgrade() -> None:
         # that cannot be honestly populated is NULL and stays NULL" is exactly
         # this case. `is_active boolean` would carry less — an audit asks WHEN.
         sa.Column("deactivated_at", sa.DateTime(timezone=True), nullable=True),
-        # 🔴 `(tenant_id, id)`, IN THAT ORDER. See `db/models._TenantRow` for the
+        # `(tenant_id, id)`, IN THAT ORDER. See `db/models._TenantRow` for the
         # measured cross-tenant existence oracle a single-column `id` key opens
         # under `FORCE ROW LEVEL SECURITY`.
         sa.PrimaryKeyConstraint("tenant_id", "id", name="pk_users"),
-        # 🔴 BOTH UNIQUE CONSTRAINTS LEAD WITH `tenant_id`, AND THAT IS THE WHOLE
+        # BOTH UNIQUE CONSTRAINTS LEAD WITH `tenant_id`, AND THAT IS THE WHOLE
         # POINT OF WRITING THEM OUT HERE. Unique enforcement runs BEFORE a
         # policy's `WITH CHECK`, so `uq_users_email` without the prefix would
         # answer "is this address already a user of some other tenant?" to a
@@ -254,7 +250,7 @@ def upgrade() -> None:
     # without this grant `titlepipe_app` gets `42501 permission denied for table
     # users` and a read test reports zero rows and calls it isolation.
     #
-    # 🔴 NO `DELETE`, and the absence is a decision. `0002` grants the app
+    # NO `DELETE`, and the absence is a decision. `0002` grants the app
     # `SELECT, INSERT, UPDATE` on every tenant table and `DELETE` on none;
     # `PLAN.md`'s role separation says `titlepipe_app` has "no DELETE, no
     # TRUNCATE, no DDL". A seat is retired by writing `deactivated_at`, which is
@@ -286,7 +282,7 @@ def downgrade() -> None:
 
     op.drop_table("users")
 
-    # 🔴 `DROP TABLE` DOES NOT DROP A TYPE. Without this line a fresh upgrade
+    # `DROP TABLE` DOES NOT DROP A TYPE. Without this line a fresh upgrade
     # still works and only the SECOND one — the one after a downgrade — fails,
     # with `type "user_role" already exists`.
     USER_ROLE.drop(op.get_bind(), checkfirst=False)

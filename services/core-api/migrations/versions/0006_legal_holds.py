@@ -132,7 +132,7 @@ def upgrade() -> None:
         ),
     )
 
-    # 🔴 A PARTIAL UNIQUE INDEX, AND THE PREDICATE IS THE POINT. Unique on
+    # A PARTIAL UNIQUE INDEX, AND THE PREDICATE IS THE POINT. Unique on
     # `(tenant_id, subject_table, subject_id)` only `WHERE released_at IS NULL`,
     # so one subject can carry a long history of released holds and at most one
     # live one. A total unique constraint would make the second matter in a
@@ -188,7 +188,7 @@ def _create_hold_active_function() -> None:
     matches the partial index's predicate exactly — if the two ever diverge, the
     index stops being the uniqueness guarantee this function assumes.
 
-    🔴 NOT `SECURITY DEFINER`, AND THE TENANT ARGUMENT IS NOT A SUBSTITUTE FOR
+    NOT `SECURITY DEFINER`, AND THE TENANT ARGUMENT IS NOT A SUBSTITUTE FOR
     RLS. The function runs as the caller, so `legal_holds`' `tenant_isolation`
     policy is applied to the SELECT inside it: passing another tenant's id
     returns FALSE because the policy hides the rows, not because the parameter
@@ -227,7 +227,7 @@ def _create_hold_active_function() -> None:
 
 
 def _create_disposable_function() -> None:
-    """🔴 THE ONE FUNCTION DISPOSAL IS ALLOWED TO ASK. Everything it can refuse on.
+    """THE ONE FUNCTION DISPOSAL IS ALLOWED TO ASK. Everything it can refuse on.
 
     PLAN.md §2 names the machine and this is it: *disposal selects candidates
     through exactly one function, that function's query joins `legal_holds`.*
@@ -255,7 +255,7 @@ def _create_disposable_function() -> None:
     an anchor from `created_at` would be inventing the one input that decides
     whether a deletion is lawful.
 
-    🔴 WHAT THIS FUNCTION DOES NOT DO, so nobody reads more assurance into it than
+    WHAT THIS FUNCTION DOES NOT DO, so nobody reads more assurance into it than
     it holds: it does not enumerate candidates, it does not delete anything, it
     does not reach derived copies of the subject, and NOTHING IN THE DATABASE
     FORCES A FUTURE DISPOSAL JOB TO CALL IT. That last one is the residual — the

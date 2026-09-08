@@ -10,9 +10,7 @@ nothing `0020` creates, so the reorder is graph-only.
 The prose below is the author's and describes the branch as written; this line is the read of
 the chain that `alembic upgrade head` actually walks.
 
----------------------------------------------------------------------------
-🔴 THIS IS A `CREATE`, AND IT IS THE ONLY ONE IN THIS WORKER'S THREE REVISIONS.
----------------------------------------------------------------------------
+THIS IS A `CREATE`, AND IT IS THE ONLY ONE IN THIS WORKER'S THREE REVISIONS.
 `0001::upgrade` created `packages`, `pages`, `fields` and `field_readings` as
 three-column skeletons and `0002` isolated them, so the revisions that give those
 four their domain columns are `ALTER`s and correctly do not repeat the RLS triple
@@ -45,9 +43,7 @@ them. So `GRANT SELECT, INSERT, UPDATE` lands here, in the same shape `0002`
 gives the six tables it isolated. `DELETE` is absent for the reason it is absent
 there: no verb is granted that no code path needs.
 
----------------------------------------------------------------------------
-🔴 THE OVERLAP INVARIANT IS **NOT** ENFORCED HERE, AND SAYING SO IS THE POINT.
----------------------------------------------------------------------------
+THE OVERLAP INVARIANT IS **NOT** ENFORCED HERE, AND SAYING SO IS THE POINT.
 Two documents in one package may not claim the same page. The unique constraint
 below closes only half of it — two documents cannot START on the same page — and
 a second document beginning INSIDE this one's span still inserts cleanly. The
@@ -167,7 +163,7 @@ def upgrade() -> None:
         # so a single-column `id` key answers "does this id exist in another
         # tenant?" to a caller who can neither read nor count the row.
         sa.PrimaryKeyConstraint("tenant_id", "id"),
-        # 🔴 THE COMPOSITE FOREIGN KEY, WHICH IS THE ONLY LEGAL FORM HERE.
+        # THE COMPOSITE FOREIGN KEY, WHICH IS THE ONLY LEGAL FORM HERE.
         # `packages`' key is `(tenant_id, id)`, so `REFERENCES packages (id)`
         # does not even name a key and PostgreSQL rejects it. The composite form
         # additionally carries something the short form cannot: `tenant_id`

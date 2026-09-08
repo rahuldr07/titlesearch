@@ -66,12 +66,9 @@ from titlepipe_core.db.repositories.base import TenantRepository
 class OrderQueueRepository(TenantRepository[Order]):
     """Reads `orders` for the hand-over, through a session that names a tenant.
 
-    Inherits, where `RuleRepository` does not, and the difference is the table:
-    `orders` carries `tenant_id` and revision `0002`'s `tenant_isolation` policy,
-    so "constructed over a scoped session" is a claim that is TRUE of it. The
-    base's refusal message — the one about every read being filtered against a
-    tenant that was never established, and every write refused by the policy's
-    `WITH CHECK` — is the right diagnosis for this class, which is precisely why
+    The base's refusal message — every read filtered against a tenant that was
+    never established, every write refused by the policy's `WITH CHECK` — is the
+    right diagnosis for this class, which is precisely why
     `_GLOBAL_TABLE_CONSEQUENCE` is not.
 
     `get` and `add` come with the base and are not overridden. `get`'s contract
@@ -83,11 +80,8 @@ class OrderQueueRepository(TenantRepository[Order]):
     def __init__(self, session: AsyncSession) -> None:
         """Binds `Order`, so a caller cannot pair this class with another table.
 
-        The base takes `model` as a constructor parameter because it is generic
-        over seven tables — `base.py` records why it cannot be a `ClassVar`. A
-        queue repository is over exactly one, so it is bound here rather than at
-        the call site, and `OrderQueueRepository(session)` reads the same as
-        `RuleRepository(session)` at every use.
+        The base takes `model` as a parameter because it is generic over seven
+        tables; `base.py` records why it cannot be a `ClassVar`.
         """
         super().__init__(session, Order)
 

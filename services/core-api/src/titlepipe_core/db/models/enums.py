@@ -16,7 +16,7 @@ declarative base, so the edge points from the tables to the types and the import
 graph stays a tree. The reverse edge would be the ordering problem, and there is
 no reason to add it.
 
-🔴 **TWO CLASSES OF ENUM LIVE HERE AND THE DIFFERENCE IS THE MOST IMPORTANT
+**TWO CLASSES OF ENUM LIVE HERE AND THE DIFFERENCE IS THE MOST IMPORTANT
 THING IN THE FILE.** A CONFIRMED enum's labels are `packages/contract/src/*.ts`
 verbatim — the browser parses those exact strings through Zod at its own
 boundary, so a label that differs by a character makes every response a
@@ -50,15 +50,13 @@ from typing import Final
 
 from sqlalchemy.dialects.postgresql import ENUM
 
-# ---------------------------------------------------------------------------
 # THE SKELETON'S THREE — created by migrations `0001` and `0003`, which repeat
 # every label below verbatim. Editing a tuple here does NOT edit the migration;
 # `tests/test_schema_migration.py` reading the live `pg_enum` is what holds the
 # two copies together.
-# ---------------------------------------------------------------------------
 
 
-# 🔴 EXACTLY FOUR LABELS, IN THIS ORDER. `migrations/versions/0001_skeleton.py`
+# EXACTLY FOUR LABELS, IN THIS ORDER. `migrations/versions/0001_skeleton.py`
 # repeats this tuple verbatim and `tests/test_schema_migration.py` asserts the
 # live `pg_enum` against it — on the count AND on `enumsortorder`, separately,
 # because a reordering leaves the count untouched.
@@ -93,7 +91,7 @@ NA_REASON_TYPE_NAME: Final = "na_reason"
 
 NA_REASON: Final = ENUM(*NA_REASON_LABELS, name=NA_REASON_TYPE_NAME, create_type=False)
 
-# 🔴 THE RULEBOOK'S TWO ENUMS. LABELS AND ORDER ARE `packages/contract/src/enums
+# THE RULEBOOK'S TWO ENUMS. LABELS AND ORDER ARE `packages/contract/src/enums
 # .ts` VERBATIM — `RuleStatus` at :72, `RuleOrigin` at :75-81 — and the browser
 # parses the same strings through Zod at its own boundary. Lower case there and
 # lower case here on purpose: a database that folded them would make every
@@ -129,13 +127,11 @@ RULE_ORIGIN_TYPE_NAME: Final = "rule_origin"
 RULE_STATUS: Final = ENUM(*RULE_STATUS_LABELS, name=RULE_STATUS_TYPE_NAME, create_type=False)
 RULE_ORIGIN: Final = ENUM(*RULE_ORIGIN_LABELS, name=RULE_ORIGIN_TYPE_NAME, create_type=False)
 
-# ---------------------------------------------------------------------------
 # CONFIRMED — `packages/contract/src/enums.ts`, verbatim.
-# ---------------------------------------------------------------------------
 
 # `FieldState` at `enums.ts:8-15`. The six members and their order.
 #
-# 🔴 `corrected` AND `escalated` ARE TERMINAL, AND NOTHING IN THIS TUPLE SAYS SO.
+# `corrected` AND `escalated` ARE TERMINAL, AND NOTHING IN THIS TUPLE SAYS SO.
 # An enum orders labels; it cannot express that two of them accept no successor.
 # The machine is in migration `0006`: a `titlepipe_field_transition` function
 # holding ONE conditional `UPDATE ... WHERE state <> ALL(terminal)`, zero rows
@@ -211,11 +207,9 @@ GAP_KIND_LABELS: Final = ("na_provisional", "disagreement", "period_short")
 # this is the closed set it may offer FROM.
 GAP_CLOSE_KIND_LABELS: Final = ("upload", "amend", "root_of_title", "change_product")
 
-# ---------------------------------------------------------------------------
 # INVENTED — decided here, no contract behind them. Marked as such on purpose.
-# ---------------------------------------------------------------------------
 
-# 🔴 INVENTED. `packages/contract` has no package-lifecycle vocabulary at all.
+# INVENTED. `packages/contract` has no package-lifecycle vocabulary at all.
 #
 # Four states because the domain needs exactly four distinctions: a package that
 # has arrived (`received`), one held back on an optical/quarantine check
@@ -226,7 +220,7 @@ GAP_CLOSE_KIND_LABELS: Final = ("upload", "amend", "root_of_title", "change_prod
 # it is the only reason `accepted` is a state rather than a boolean.
 PACKAGE_STATUS_LABELS: Final = ("received", "quarantined", "accepted", "superseded")
 
-# 🔴 INVENTED, and NARROWER than it looks. This is what a PAGE is, not what an
+# INVENTED, and NARROWER than it looks. This is what a PAGE is, not what an
 # INSTRUMENT is. Kaveri's measurement against the one real corpus package is the
 # whole reason it exists: 67 of 101 pages are name-search / index output rather
 # than instruments — "the single most important fact for classification" — so a
@@ -242,22 +236,20 @@ PACKAGE_STATUS_LABELS: Final = ("received", "quarantined", "accepted", "supersed
 # A page nobody has classified is NULL. See the module docstring.
 PAGE_KIND_LABELS: Final = ("instrument", "index_search", "exhibit")
 
-# 🔴 INVENTED, but the four words are the plan's own, not this file's:
+# INVENTED, but the four words are the plan's own, not this file's:
 # §1 names client configuration as a delta over a product baseline where clients
 # hold only overrides — "waive / narrow / replace / add". An enum rather than
 # `text` because a fifth effect changes what an effective-config resolver has to
 # do, and it should not be able to arrive as data.
 CONFIG_LINE_EFFECT_LABELS: Final = ("waive", "narrow", "replace", "add")
 
-# ---------------------------------------------------------------------------
 # THE RETENTION AND AUDIT THREE — created by migrations `0005` and `0007`, which
 # repeat every label below verbatim, exactly as `0001` and `0003` do for the
 # skeleton's. They arrived on a branch that still had `db/models.py` as one file;
 # the labels are Kaveri's and are moved here unchanged, because this module is
 # where a PostgreSQL enum type lives.
-# ---------------------------------------------------------------------------
 
-# 🔴 INVENTED, AND THE TWO AXES ARE THE POINT — COLLAPSING THEM MAKES A REAL
+# INVENTED, AND THE TWO AXES ARE THE POINT — COLLAPSING THEM MAKES A REAL
 # RECORD UNREPRESENTABLE. `record_class` answers HOW LONG a record must be kept;
 # `data_class` answers WHAT KIND OF DATA is in it. An escrow ledger containing
 # NPI is `escrow_accounting` + `npi` and needs BOTH columns to say so; one axis
@@ -279,20 +271,18 @@ RECORD_CLASS_LABELS: Final = (
     "operational_telemetry",
 )
 
-# 🔴 INVENTED. `discovery-data-domain.md` §"Classes used", lower-cased; `pub_id`
+# INVENTED. `discovery-data-domain.md` §"Classes used", lower-cased; `pub_id`
 # is that document's `PUB-ID`. Measured against the one real corpus package
 # rather than decided here.
 DATA_CLASS_LABELS: Final = ("npi", "pub_id", "client", "ops", "ref", "safe")
 
-# 🔴 INVENTED, and NOT the four verbs it looks like. These are `TG_OP`'s three
+# INVENTED, and NOT the four verbs it looks like. These are `TG_OP`'s three
 # ROW-level verbs and nothing else. `TRUNCATE` is deliberately absent: it is
 # statement-level, it cannot name a row, and on every audited table it is refused
 # before it could be recorded.
 AUDIT_ACTION_LABELS: Final = ("insert", "update", "delete")
 
-# ---------------------------------------------------------------------------
 # The type names and the bound `ENUM` objects.
-# ---------------------------------------------------------------------------
 # `<domain>_<concept>`, per the shared conventions §3.
 
 FIELD_STATE_TYPE_NAME: Final = "field_state"

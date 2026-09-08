@@ -7,9 +7,7 @@ Create Date: 2026-09-08
 ASSUMED PARENT: `0102`, the head this worktree found. `CONVENTIONS.md` §8 — god
 linearizes.
 
----------------------------------------------------------------------------
-🔴 WHAT WAS OPEN, AND IT IS NOT "AN ORDER NAMING A CLIENT THAT DOES NOT EXIST"
----------------------------------------------------------------------------
+WHAT WAS OPEN, AND IT IS NOT "AN ORDER NAMING A CLIENT THAT DOES NOT EXIST"
 `0008` and `0080` both record the missing constraint, and both describe it as a
 dangling reference. The demonstrated form is worse: an order in tenant A could
 hold tenant B's REAL client id, and a second order could hold an id issued
@@ -33,10 +31,8 @@ had to declare it too or `alembic check` goes red in the other direction. It is
 declared in `db/models/orders.Order` and `db/models/intake.ClientConfigVersion`
 in the same commit as this file.
 
----------------------------------------------------------------------------
-🔴 MEASURED 2026-09-08 AGAINST postgres:18.4: WRITTEN THE OBVIOUS WAY, THIS
+MEASURED 2026-09-08 AGAINST postgres:18.4: WRITTEN THE OBVIOUS WAY, THIS
    MIGRATION REPORTS SUCCESS AND VALIDATES NOTHING.
----------------------------------------------------------------------------
 `ADD CONSTRAINT ... FOREIGN KEY` validates existing rows with an ORDINARY SQL
 SCAN, run as the session user. Under `FORCE ROW LEVEL SECURITY` that user is
 `titlepipe_owner` with no tenant established, so the scan matches zero rows. One

@@ -33,7 +33,7 @@ from titlepipe_core.db.models.enums import FIELD_STATE, NA_REASON
 from titlepipe_core.db.models.jsonb import bounded_jsonb_object
 from titlepipe_core.db.models.relations import tenant_fk
 
-# 🔴 THE PREFIX IS THE LIVE SERVER GUARD'S, VERBATIM, AND THE LIVE SEED DATA
+# THE PREFIX IS THE LIVE SERVER GUARD'S, VERBATIM, AND THE LIVE SEED DATA
 # CONTRADICTS IT. `packages/mocks/src/handlers.ts:777` refuses any exclude whose
 # path does not `startsWith("judgments.")`, and the plan's §1 records that
 # restriction as old R13's. The SAME FILE seeds field paths spelled
@@ -53,10 +53,8 @@ class Field(_TenantRow):
     states are labels of the enum, and `needs_review` is never derived from
     `value IS NULL` (CLAUDE.md).
 
-    -------------------------------------------------------------------------
-    🔴 `correction_reason` — THE COLUMN THAT DID NOT EXIST, AND THE WHOLE POINT
+    `correction_reason` — THE COLUMN THAT DID NOT EXIST, AND THE WHOLE POINT
        OF THIS TABLE'S CHANGE.
-    -------------------------------------------------------------------------
     Venkat/D2 measured the live behaviour: `CorrectFieldRequest.reason` is
     `z.string().optional()` on the wire, and the handler
     (`packages/mocks/src/handlers.ts`, `POST /api/fields/:id/correct`) validates
@@ -81,9 +79,7 @@ class Field(_TenantRow):
     column becomes lossy silently, and that dependency is why the two are
     documented together rather than in two places.
 
-    -------------------------------------------------------------------------
-    🔴 THE STATE MACHINE, AND WHY NO CONSTRAINT IN THIS CLASS EXPRESSES IT.
-    -------------------------------------------------------------------------
+    THE STATE MACHINE, AND WHY NO CONSTRAINT IN THIS CLASS EXPRESSES IT.
     `corrected` and `escalated` accept no successor. A `CHECK` cannot say that —
     a check sees one row, not a transition. The machine is `0006`'s
     `titlepipe_field_transition` function: ONE conditional
@@ -101,9 +97,7 @@ class Field(_TenantRow):
     insufficient_privilege` from PostgreSQL rather than a green test. The only
     granted path is the transition function.
 
-    -------------------------------------------------------------------------
-    🔴 EXCLUSION IS A FLAG, NOT A STATE, AND THE PLAN PICKED THAT DELIBERATELY.
-    -------------------------------------------------------------------------
+    EXCLUSION IS A FLAG, NOT A STATE, AND THE PLAN PICKED THAT DELIBERATELY.
     `state` answers "is this value settled, and by whom". `excluded_reason`
     answers "does this row appear on the deliverable". Both can be true at once
     and neither implies the other: a satisfied judgment can be accurately
@@ -165,7 +159,7 @@ class Field(_TenantRow):
             "num_nonnulls(approved_by, approved_at) IN (0, 2)",
             name="approval_is_whole",
         ),
-        # 🔴 HALF A CITATION IS NOT A WEAKER CITATION, IT IS NONE. `0090`. The
+        # HALF A CITATION IS NOT A WEAKER CITATION, IT IS NONE. `0090`. The
         # measured row was `source_page_no = 7` beside `source_document_id
         # IS NULL` — page seven of what — and it was accepted here for as long
         # as this table existed. `IN (0, 2)` and NOT `= 2`: both-null stays
@@ -235,7 +229,7 @@ class Field(_TenantRow):
 class FieldReading(_TenantRow):
     """One engine's reading of one field.
 
-    🔴 `line_coords` IS NULLABLE AND THE NULLABILITY IS THE POINT. An engine
+    `line_coords` IS NULLABLE AND THE NULLABILITY IS THE POINT. An engine
     without coordinate support declares `null` and never fabricates a box —
     Reader A is a VLM and genuinely cannot cite one. `NOT NULL` here would force
     every adapter to invent coordinates to satisfy the schema, which is the
@@ -261,7 +255,7 @@ class FieldReading(_TenantRow):
             "attempt_ordinal",
             name="uq_field_readings_one_answer_per_engine_version_attempt",
         ),
-        # 🔴 THE COORDINATE TRAP, MADE UNREPRESENTABLE RATHER THAN DOCUMENTED.
+        # THE COORDINATE TRAP, MADE UNREPRESENTABLE RATHER THAN DOCUMENTED.
         # The plan's §2 verified THREE coordinate spaces coexisting — the PDF
         # page (612x792pt), the rendered raster (1391x1800px), and the engine's
         # own SQUARE 1000x1000 box grid — and NONE of them are recorded in raw

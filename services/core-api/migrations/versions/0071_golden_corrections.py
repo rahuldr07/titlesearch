@@ -8,13 +8,11 @@ ASSUMED PARENT: `0070`, this worker's own previous revision. `0070`'s docstring
 records the assumption about the head below it, and CONVENTIONS §8 is why
 neither guesses further.
 
----------------------------------------------------------------------------
-🔴 THE REFUSAL THIS TABLE IS. A golden correction needs a SOURCE, a REASON and a
+THE REFUSAL THIS TABLE IS. A golden correction needs a SOURCE, a REASON and a
    SIGNATURE. That rule exists today as `z.string().min(1)` in a browser schema
    and as prose in `CLAUDE.md`, and a browser schema refuses nothing that does
    not go through the browser. Here it is three `NOT NULL` columns and three
    CHECK constraints, so the write fails at the server or does not happen.
----------------------------------------------------------------------------
 
 ## Why the ledger is a table and not four columns on `golden_fields`
 
@@ -103,7 +101,7 @@ branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 
-# 🔴 EXACTLY THESE THREE LABELS, IN THIS ORDER, AND THERE IS NO FOURTH.
+# EXACTLY THESE THREE LABELS, IN THIS ORDER, AND THERE IS NO FOURTH.
 #
 # They are the three golden endpoints and nothing else. What is deliberately
 # ABSENT is any label meaning "an engine's reading was promoted" — the act does
@@ -296,7 +294,7 @@ def upgrade() -> None:
 
     _create_append_only_triggers()
 
-    # 🔴 `SELECT, INSERT` AND NOTHING ELSE, WHICH IS `0002`'s TREATMENT OF
+    # `SELECT, INSERT` AND NOTHING ELSE, WHICH IS `0002`'s TREATMENT OF
     # `audit_log`. The triggers refuse UPDATE and DELETE whatever the ACL says,
     # so granting either would change no behaviour and would MISSTATE THE INTENT
     # — an ACL reading `arwU` on the one table this system promises never to edit

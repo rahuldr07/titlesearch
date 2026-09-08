@@ -14,7 +14,7 @@ docs is an incident during an audit.
 Settings objects are never logged. `SecretStr` keeps a secret out of `repr`,
 and nothing here dumps the model.
 
-🔴 A FAILED VALIDATION HERE USED TO PRINT THE ENVIRONMENT IT WAS VALIDATING —
+A FAILED VALIDATION HERE USED TO PRINT THE ENVIRONMENT IT WAS VALIDATING —
 a five-character `cookie_seal_password` published the app DSN password beside it
 as `input_value={'environment': 'producti...esql://u:PrOdPw123@h/d'}`. Both
 halves of the answer are in `titlepipe_service_kit.settings_errors`, which
@@ -35,7 +35,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from titlepipe_domain import Environment, LogRenderer, ServiceName
 
-# 🔴 IMPORTED, NOT REDECLARED. These four were a verbatim copy of the
+# IMPORTED, NOT REDECLARED. These four were a verbatim copy of the
 # `titlepipe_service_kit.settings` originals — the same constants, the same
 # 44-vs-32 lesson written out twice — and a copy of a rule is a place the rule
 # can quietly stop being true, which is the argument that package exists on.
@@ -73,7 +73,6 @@ class CoreApiSettings(BaseSettings):
     environment: Environment
     service_name: ServiceName = ServiceName.CORE_API
 
-    # --- HTTP surface -----------------------------------------------------
     host: str = "127.0.0.1"
     port: int = Field(default=8000, ge=1, le=65535)
     debug: bool = False
@@ -93,8 +92,7 @@ class CoreApiSettings(BaseSettings):
     # cache poisoning and forged absolute links.
     allowed_hosts: tuple[str, ...] = ()
 
-    # --- session ----------------------------------------------------------
-    # 🔴 THIS IS THE WORKOS COOKIE PASSWORD, and there is deliberately no
+    # THIS IS THE WORKOS COOKIE PASSWORD, and there is deliberately no
     # `workos_cookie_password` below. `auth/workos_provider.py` passes THIS
     # value to `load_sealed_session`: the AuthKit session cookie is a Fernet
     # box, and `_seal_password_is_a_fernet_key` already validates it as a Fernet
@@ -103,8 +101,7 @@ class CoreApiSettings(BaseSettings):
     cookie_seal_password: SecretStr = SecretStr(DEVELOPMENT_SEAL_PASSWORD)
     mock_auth_enabled: bool = False
 
-    # --- identity provider (WorkOS AuthKit) -------------------------------
-    # 🔴 WORKOS, AND ONLY WORKOS. `auth/seam.build_auth_seam` reads these to
+    # WORKOS, AND ONLY WORKOS. `auth/seam.build_auth_seam` reads these to
     # decide whether this process has a real identity provider; nothing else in
     # the service reads them, so the seam stays the one construction point.
     #
@@ -130,11 +127,10 @@ class CoreApiSettings(BaseSettings):
     # silently — every request simply looks signed-out.
     workos_session_cookie_name: str = "wos-session"
 
-    # --- database ---------------------------------------------------------
     # The DSN the REQUEST PATH connects with. Read by `lifespan.py`, which builds
     # the engine and the sessionmaker from it when the service starts.
     #
-    # 🔴 IT IS `TITLEPIPE_APP_DATABASE_URL` AND DELIBERATELY NOT
+    # IT IS `TITLEPIPE_APP_DATABASE_URL` AND DELIBERATELY NOT
     # `TITLEPIPE_DATABASE_URL`, WHICH IS ALREADY TAKEN AND MEANS SOMETHING ELSE.
     # `migrations/env.py` reads that name (`DATABASE_URL_VARIABLE`) and
     # `.env.example` documents it as the MIGRATION role's DSN, because
@@ -165,7 +161,7 @@ class CoreApiSettings(BaseSettings):
     # `lifespan.readiness` reports a database check only when one is configured,
     # so `/ready` stays 200 there.
     #
-    # 🔴 IT WAS OPTIONAL EVERYWHERE, AND THE ARGUMENT FOR THAT WAS WRONG. It ran:
+    # IT WAS OPTIONAL EVERYWHERE, AND THE ARGUMENT FOR THAT WAS WRONG. It ran:
     # reporting the check as `False` when unconfigured would 503 every developer,
     # and requiring a DSN would make every deployed-configuration fixture carry an
     # invented one. The first is a false dilemma — this validator is precisely the
@@ -183,7 +179,6 @@ class CoreApiSettings(BaseSettings):
     # incident during deploy, which is this module's opening rule.
     app_database_url: SecretStr | None = None
 
-    # --- observability ----------------------------------------------------
     log_level: str = "INFO"
     log_renderer: LogRenderer | None = None
     redaction_enabled: bool = True
@@ -358,7 +353,7 @@ class CoreApiSettings(BaseSettings):
         if self.cookie_seal_password.get_secret_value() in PLACEHOLDER_SECRETS:
             unsafe.append("cookie_seal_password is a placeholder")
         if not self.workos_configured:
-            # 🔴 WHAT MAKES THE WORKOS ADAPTER MANDATORY WHERE IT MATTERS.
+            # WHAT MAKES THE WORKOS ADAPTER MANDATORY WHERE IT MATTERS.
             # Without this a deployed service starts with an EMPTY provider
             # registry — `auth/provider.py`'s fail-closed state, which refuses
             # everyone and is therefore safe. Safe is not the bar: a staging box

@@ -23,7 +23,7 @@ from titlepipe_core.db.models.enums import RULE_ORIGIN, RULE_STATUS
 class Rule(_Row):
     """One rulebook entry. **GLOBAL, and therefore `_Row` rather than `_TenantRow`.**
 
-    🔴 THE MISSING `tenant_id` IS THE RULING, NOT THE OMISSION `_TenantRow`
+    THE MISSING `tenant_id` IS THE RULING, NOT THE OMISSION `_TenantRow`
     DESCRIBES. **THE RULING AND ITS CONSEQUENCES ARE STATED ONCE**, in
     `migrations/versions/0003_rules.py`'s module docstring — the frozen record of
     the decision — and this docstring cites it rather than restating it. It was

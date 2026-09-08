@@ -6,10 +6,8 @@ Create Date: 2026-09-08
 
 ASSUMED PARENT: `0110`, this worker's own previous revision.
 
----------------------------------------------------------------------------
-🔴 THE DEFECT: ONE INSERT PERMANENTLY BRICKS A GOLDEN FIELD, AND NO ATTACKER
+THE DEFECT: ONE INSERT PERMANENTLY BRICKS A GOLDEN FIELD, AND NO ATTACKER
    IS NEEDED.
----------------------------------------------------------------------------
 `0072` moves a golden value only when a `golden_corrections` row describes
 exactly that transition at exactly `OLD.revision + 1`. `0071` makes at most one
 row exist per `(tenant, field, revision_after)` and makes the table append-only
@@ -32,9 +30,7 @@ The field is frozen at revision N forever. `titlepipe_app` has no path out and
 neither has anybody else: this is the one shape in the schema where a legal
 INSERT by an ordinary caller destroys a row's future.
 
----------------------------------------------------------------------------
 THE RULING: MARKED, NOT DELETED — AND MARKED BY A FURTHER APPEND, NOT AN UPDATE
----------------------------------------------------------------------------
 The question this revision was asked is whether a superseded row may be MARKED
 rather than deleted. It may — but a `superseded_at` column set in place would be
 an UPDATE of a ledger row, and the append-only trigger is the strongest control
@@ -111,7 +107,7 @@ for. Two signatures survive in the record — D's, and the recovery's — and th
 No DELETE, no UPDATE, no privilege beyond the `INSERT` `0071` already grants
 `titlepipe_app`.
 
-## 🔴 WHAT THIS DOES NOT CLOSE
+## WHAT THIS DOES NOT CLOSE
 
 **A SUPERSEDED ROW IS NOT REVOKED.** `0072`'s trigger asks "does a
 `golden_corrections` row sign this change", not "does the LIVE one". So if a row
@@ -174,7 +170,7 @@ COLUMN = "supersedes_correction_id"
 # reason every revision in this chain gives: a migration is a frozen snapshot.
 ORIGINAL_UNIQUE = "uq_golden_corrections_tenant_id_golden_field_id_revision_after"
 
-# 🔴 THE FOUR NAMES ARE EXPLICIT BECAUSE THREE OF THEM OVERFLOW.
+# THE FOUR NAMES ARE EXPLICIT BECAUSE THREE OF THEM OVERFLOW.
 # `base.NAMING_CONVENTION` renders a foreign key as
 # `fk_<table>_<columns>_<target>`, which for four columns on this table comes to
 # 106 bytes against a 63-byte limit, and `uq_<table>_<columns>` for the FK's
@@ -189,7 +185,7 @@ SLOT_FOREIGN_KEY = "fk_golden_corrections_supersedes_the_same_slot"
 CHAIN_UNIQUE = "uq_golden_corrections_tenant_id_supersedes_correction_id"
 ORIGINAL_CLAIM_INDEX = "ix_golden_corrections_one_original_claim_per_revision"
 
-# 🔴 THE BARE RULE NAME, NOT THE RENDERED ONE, AND BOTH ENDS HAVE TO AGREE.
+# THE BARE RULE NAME, NOT THE RENDERED ONE, AND BOTH ENDS HAVE TO AGREE.
 # `base.NAMING_CONVENTION`'s `ck` pattern is the only one that takes
 # `%(constraint_name)s`, so alembic prefixes whatever is passed here — a full
 # `ck_golden_corrections_…` reaches the catalog as
@@ -236,7 +232,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    # 🔴 THIS DOWNGRADE CAN LEGITIMATELY FAIL, AND FAILING IS CORRECT. Restoring
+    # THIS DOWNGRADE CAN LEGITIMATELY FAIL, AND FAILING IS CORRECT. Restoring
     # `0071`'s TOTAL unique constraint over a table that has used the recovery
     # path raises `23505`: two rows share a slot, which is exactly what this
     # revision made legal. `pass` would be a defect (CONVENTIONS §8); a

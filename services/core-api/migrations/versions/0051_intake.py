@@ -4,10 +4,8 @@ Revision ID: 0051
 Revises: 0050
 Create Date: 2026-09-04
 
----------------------------------------------------------------------------
-🔴 EVERYTHING IN THIS REVISION IS BUILT UNDER ASSUMPTION, AND THE WHOLE
+EVERYTHING IN THIS REVISION IS BUILT UNDER ASSUMPTION, AND THE WHOLE
    REVISION IS THE UNIT OF REVERSAL.
----------------------------------------------------------------------------
 The owner has NOT answered whether TitlePipe acquires a product-and-sign-off
 layer. god ruled it in ahead of that answer, on one argument: the completeness
 gate sits IMMEDIATELY UPSTREAM of the most expensive step in the system —
@@ -73,7 +71,7 @@ onto another worker's chain by hand.
   `completeness_gaps`; storing it would create a second answer that can disagree
   with the gaps themselves.
 
-## 🔴 THREE TRIGGERS, ALL `AFTER ... FOR EACH ROW`, AND `AFTER` IS THE LOAD-BEARING WORD
+## THREE TRIGGERS, ALL `AFTER ... FOR EACH ROW`, AND `AFTER` IS THE LOAD-BEARING WORD
 
 A `BEFORE ROW` trigger runs with the INVOKER's privileges and any `NEW.*` it
 assigns is a column write outside the caller's grant — under a column-scoped
@@ -124,7 +122,7 @@ branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 
-# 🔴 FOUR TYPES, THREE CONFIRMED AND ONE INVENTED, AND THE DIFFERENCE IS
+# FOUR TYPES, THREE CONFIRMED AND ONE INVENTED, AND THE DIFFERENCE IS
 # RECORDED BECAUSE IT DECIDES WHO CORRECTS WHOM. `signoff_answer`, `gap_kind` and
 # `gap_close_kind` are `packages/contract/src/intake.ts` verbatim (:12, :122,
 # :131) — the browser parses these exact strings through Zod at its own boundary,
@@ -353,7 +351,7 @@ def _release(table: str) -> None:
 def _enable_always(table: str, trigger: str) -> None:
     """`ENABLE ALWAYS`, and then read `pg_trigger.tgenabled` back to prove it.
 
-    🔴 `'O'` IS NOT A WEAKER `'A'`, IT IS A TRIGGER THAT CAN BE OFF FOR A WHOLE
+    `'O'` IS NOT A WEAKER `'A'`, IT IS A TRIGGER THAT CAN BE OFF FOR A WHOLE
     SESSION. `0004` establishes the rule and the measurement behind it: a per-role
     `session_replication_role = 'replica'` default is applied at CONNECT and never
     checked again, so a trigger left at the `'O'` (origin) default is silently
@@ -402,7 +400,7 @@ def _create_triggers() -> None:
     sign-off, the order's gaps — so none of them is expressible as a constraint,
     and each is a trigger for that reason rather than by preference.
 
-    🔴 `CREATE FUNCTION`, NOT `CREATE OR REPLACE`, on all three. With `OR
+    `CREATE FUNCTION`, NOT `CREATE OR REPLACE`, on all three. With `OR
     REPLACE`, a `downgrade()` that forgot a `DROP FUNCTION` would leave the old
     body in place and the next `upgrade` would silently overwrite it — a round
     trip that passes while the schema is not actually being rebuilt. Plain
@@ -426,7 +424,7 @@ def _create_triggers() -> None:
     these hold against every role this system connects as and not against a
     session that has set that GUC — which is `SUSET`, so not `titlepipe_app`.
     """
-    # 🔴 `S608` IS SUPPRESSED ON THE TWO FUNCTION BODIES BELOW AND NOWHERE ELSE.
+    # `S608` IS SUPPRESSED ON THE TWO FUNCTION BODIES BELOW AND NOWHERE ELSE.
     # Ruff sees `SELECT ... FROM ... WHERE` inside an f-string and cannot tell a
     # plpgsql body from a query built out of user input. Every interpolated value
     # in both is a module-level literal defined at the top of this file —
@@ -475,7 +473,7 @@ def _create_triggers() -> None:
     )
 
     # ------------------------------------------------------------------ gate
-    # 🔴 THE COMPLETENESS GATE, AS A CONSTRAINT RATHER THAN AS A STEP SOME CALLER
+    # THE COMPLETENESS GATE, AS A CONSTRAINT RATHER THAN AS A STEP SOME CALLER
     # IS TRUSTED TO RUN. This is the ninth pipeline stage — entirely greenfield —
     # and it is the reason the intake layer was ruled in early: it sits
     # immediately upstream of ~1h51m of GPU per package.
@@ -651,7 +649,7 @@ def upgrade() -> None:
         "client_config_versions",
         *_identity_columns(),
         _tenant_column(),
-        # 🔴 NO FOREIGN KEY, AND IT IS A GAP RATHER THAN A DECISION. `clients` is
+        # NO FOREIGN KEY, AND IT IS A GAP RATHER THAN A DECISION. `clients` is
         # another worker's table and is not in this branch's chain, so
         # `(tenant_id, client_id) REFERENCES clients (tenant_id, id)` would name
         # a relation that does not exist and the revision would not run. Same
@@ -686,7 +684,7 @@ def upgrade() -> None:
         _tenant_primary_key(),
     )
 
-    # 🔴 A PARTIAL UNIQUE INDEX, NOT A UNIQUE CONSTRAINT, AND THE DIFFERENCE IS
+    # A PARTIAL UNIQUE INDEX, NOT A UNIQUE CONSTRAINT, AND THE DIFFERENCE IS
     # THE WHOLE DESIGN. A plain `UNIQUE (tenant_id, client_id, product_id)` would
     # allow one version per pair and delete the version history that makes an
     # order's frozen reference meaningful. `WHERE is_current` constrains only the
@@ -707,7 +705,7 @@ def upgrade() -> None:
         sa.Column("line_key", sa.Text(), nullable=False),
         _enum_column("effect", CONFIG_LINE_EFFECT, nullable=False),
         sa.Column("body", sa.Text(), nullable=True),
-        # 🔴 `NOT NULL`, AND IT IS THE WHOLE TABLE. "Every effective line carries
+        # `NOT NULL`, AND IT IS THE WHOLE TABLE. "Every effective line carries
         # its origin — a line with no traceable source is a config defect." That
         # is principle 6 generalised from field values to configuration, and the
         # `NOT NULL` IS the machine: an unciteable line is a write-time
@@ -770,7 +768,7 @@ def upgrade() -> None:
         sa.Column("line_key", sa.Text(), nullable=False),
         sa.Column("label", sa.Text(), nullable=False),
         sa.Column("group_label", sa.Text(), nullable=False),
-        # 🔴 `answer` IS NULLABLE AND `policy_suggestion` IS A DIFFERENT COLUMN.
+        # `answer` IS NULLABLE AND `policy_suggestion` IS A DIFFERENT COLUMN.
         # Policy may SUGGEST an answer, but the line is not signed until a person
         # answers it. One column holding both would make a default
         # indistinguishable from a claim — the same collapse `na_reason` refuses
@@ -796,7 +794,7 @@ def upgrade() -> None:
             name="uq_intake_signoff_lines_tenant_id_signoff_id_line_number",
         ),
         sa.CheckConstraint("line_number >= 1", name="line_number_starts_at_one"),
-        # 🔴 A `NO` CARRIES ITS COMMENT OR IT IS REFUSED, and the reason is a
+        # A `NO` CARRIES ITS COMMENT OR IT IS REFUSED, and the reason is a
         # liability one: a NO becomes a disclosure the reviewer must later accept
         # or escalate, and a disclosure nobody wrote a reason for cannot be judged
         # by the person who inherits it. `length(btrim(comment)) > 0` and not `IS
@@ -827,7 +825,7 @@ def upgrade() -> None:
         sa.Column("signoff_line_id", postgresql.UUID(as_uuid=True), nullable=True),
         sa.Column("line_number", sa.Integer(), nullable=False),
         sa.Column("line_label", sa.Text(), nullable=False),
-        # 🔴 BOTH `NOT NULL`, BECAUSE A GAP IS PRECISELY THE PAIR: what was
+        # BOTH `NOT NULL`, BECAUSE A GAP IS PRECISELY THE PAIR: what was
         # asserted, and what the package shows instead. One without the other is
         # not a gap, it is an opinion.
         sa.Column("claim", sa.Text(), nullable=False),
@@ -837,7 +835,7 @@ def upgrade() -> None:
         sa.Column("closed_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("closed_note", sa.Text(), nullable=True),
         _tenant_fk(table="completeness_gaps", column="order_id", target_table="orders"),
-        # 🔴 A COMPOSITE FOREIGN KEY WITH A NULLABLE CHILD COLUMN, AND THAT IS
+        # A COMPOSITE FOREIGN KEY WITH A NULLABLE CHILD COLUMN, AND THAT IS
         # WELL-DEFINED RATHER THAN A LOOPHOLE. PostgreSQL's default is `MATCH
         # SIMPLE`, under which a constraint whose column list contains any NULL is
         # not checked at all — so a `period_short` gap with a null
@@ -870,7 +868,7 @@ def upgrade() -> None:
     for table in TABLES:
         _isolate(table)
 
-    # 🔴 THE TWO FOREIGN KEYS `0008` DEFERRED, LANDING WITH THE TABLES THEY POINT
+    # THE TWO FOREIGN KEYS `0008` DEFERRED, LANDING WITH THE TABLES THEY POINT
     # AT — which is what `0008` said would happen and why it added the COLUMNS
     # without them. `orders` is not an intake table and does not become one: these
     # are dropped by this revision's `downgrade`, and what is left behind is two

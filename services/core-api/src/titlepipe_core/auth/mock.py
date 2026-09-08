@@ -111,7 +111,7 @@ class MockHeaderProvider:
     """
 
     def __init__(self, *, environment: Environment) -> None:
-        """🔴 MACHINE 1 OF 3. This object cannot exist in a deployed environment.
+        """MACHINE 1 OF 3. This object cannot exist in a deployed environment.
 
         `seam.build_auth_seam` already will not reach here for staging or
         production, and `CoreApiSettings` already will not construct with mock
@@ -152,7 +152,7 @@ class MockHeaderProvider:
             return None
         return ProviderIdentity(
             provider=MOCK_PROVIDER_NAME,
-            # 🔴 THE SUBJECT, NOT A ROLE. There is one demo person per seat, so
+            # THE SUBJECT, NOT A ROLE. There is one demo person per seat, so
             # the label and the person's handle happen to be the same string —
             # and they are the same string in the way `alice` is a username, not
             # in the way a claim is an assertion. What this request may DO is

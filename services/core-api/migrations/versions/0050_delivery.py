@@ -51,7 +51,7 @@ by hand.
   than as two implications precisely so that neither half can be added without
   the other.
 
-## 🔴 `reports` IS GRANTED `SELECT` AND `INSERT` AND DELIBERATELY NOT `UPDATE`
+## `reports` IS GRANTED `SELECT` AND `INSERT` AND DELIBERATELY NOT `UPDATE`
 
 `0002` sets the precedent on `audit_log` and states the reason there: granting
 `UPDATE` on a table the system promises never to edit in place would change no
@@ -103,7 +103,7 @@ branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 
-# 🔴 `DeliveryStatus` AT `packages/contract/src/enums.ts:104-111`, VERBATIM AND IN
+# `DeliveryStatus` AT `packages/contract/src/enums.ts:104-111`, VERBATIM AND IN
 # THAT ORDER. Repeated here rather than imported from `models.enums`, for the
 # reason `0001` and `0003` give for their own copies: a migration is a frozen
 # snapshot of the schema at one revision, and an import would let a later edit to
@@ -144,7 +144,7 @@ APP_ROLE = "titlepipe_app"
 # assertion exists to catch.
 TABLES = ("reports", "report_verified_checks", "deliveries", "delivery_receipt_steps")
 
-# 🔴 `reports` IS THE ONE TABLE AT TWO VERBS. See the module docstring.
+# `reports` IS THE ONE TABLE AT TWO VERBS. See the module docstring.
 APPEND_ONLY_TABLE = "reports"
 APPEND_ONLY_FUNCTION = "reports_reject_mutation"
 APPEND_ONLY_TRIGGER = "reports_are_append_only"
@@ -220,7 +220,7 @@ def _tenant_fk(
     have to render `fk_%(table_name)s_%(column_0_N_name)s_%(referred_table_name)s`
     in their head to check it against `models/delivery.py`.
 
-    🔴 **A SINGLE-COLUMN FOREIGN KEY TO A TENANT-SCOPED TABLE IS A DEFECT.** The
+    **A SINGLE-COLUMN FOREIGN KEY TO A TENANT-SCOPED TABLE IS A DEFECT.** The
     composite form carries a property the short form cannot: a child row CANNOT
     name a parent in another tenant, because `tenant_id` appears on both sides of
     one constraint. That is structural — it holds for `titlepipe_owner`, inside a
@@ -302,7 +302,7 @@ def _release(table: str) -> None:
 def _enable_always(table: str, trigger: str) -> None:
     """`ENABLE ALWAYS`, and then read `pg_trigger.tgenabled` back to prove it.
 
-    🔴 `'O'` IS NOT A WEAKER `'A'`, IT IS A TRIGGER THAT CAN BE OFF FOR A WHOLE
+    `'O'` IS NOT A WEAKER `'A'`, IT IS A TRIGGER THAT CAN BE OFF FOR A WHOLE
     SESSION. `0004` establishes the rule and the measurement behind it: a per-role
     `session_replication_role = 'replica'` default is applied at CONNECT and never
     checked again, so a trigger left at the `'O'` (origin) default is silently
@@ -351,7 +351,7 @@ def _create_append_only_trigger() -> None:
     reissue design is "what was delivered, and what was wrong with it", and it is
     empty if v1 can be edited into agreement with v2 afterwards.
 
-    🔴 **`FOR EACH STATEMENT` AND NOT `FOR EACH ROW`, AND THE REASON IS RLS
+    **`FOR EACH STATEMENT` AND NOT `FOR EACH ROW`, AND THE REASON IS RLS
     RATHER THAN TASTE.** Under `FORCE ROW LEVEL SECURITY` a cross-tenant `UPDATE`
     matches zero rows, and a row-level trigger does not fire at all when a
     statement affects none. A row trigger would therefore be SILENT for exactly
@@ -369,7 +369,7 @@ def _create_append_only_trigger() -> None:
     asserts the trigger census is exactly `audit_log`'s two, so it fails here —
     see the module docstring's note on integration edits.
 
-    🔴 `CREATE FUNCTION`, NOT `CREATE OR REPLACE`. With `OR REPLACE`, a
+    `CREATE FUNCTION`, NOT `CREATE OR REPLACE`. With `OR REPLACE`, a
     `downgrade()` that forgot its `DROP FUNCTION` would leave the old body in
     place and the next `upgrade` would silently overwrite it — a round trip that
     passes while the schema is not actually being rebuilt. Plain `CREATE FUNCTION`
@@ -515,7 +515,7 @@ def upgrade() -> None:
             target_table="reports",
             ondelete="CASCADE",
         ),
-        # 🔴 THE ONE SINGLE-COLUMN FOREIGN KEY IN THIS FILE, AND IT IS LEGAL
+        # THE ONE SINGLE-COLUMN FOREIGN KEY IN THIS FILE, AND IT IS LEGAL
         # BECAUSE `rules` IS GLOBAL. See the module docstring. No `ondelete`: a
         # rule a delivered report cites must not be deletable out from under it,
         # and `RESTRICT` — PostgreSQL's default — is what says so.
@@ -561,7 +561,7 @@ def upgrade() -> None:
         # `relations.py` — a `RESTRICT`-by-default parent that refuses to
         # disappear under its children is the failure that gets noticed.
         _tenant_fk(table="deliveries", column="report_id", target_table="reports"),
-        # 🔴 THE MACHINE FOR "`failed_transit` IS A TRANSIT STATE AND NEVER A
+        # THE MACHINE FOR "`failed_transit` IS A TRANSIT STATE AND NEVER A
         # QUALITY SIGNAL". Without it a retry could inherit a delivery instant
         # from the attempt that failed, and the record would show a delivery that
         # never happened — a retryable transit problem turned into a false
@@ -608,7 +608,7 @@ def upgrade() -> None:
             name="uq_delivery_receipt_steps_tenant_id_delivery_id_ordinal",
         ),
         sa.CheckConstraint("ordinal >= 1", name="ordinal_starts_at_one"),
-        # 🔴 ONE EQUALITY AND NOT TWO IMPLICATIONS. A step marked done with no
+        # ONE EQUALITY AND NOT TWO IMPLICATIONS. A step marked done with no
         # instant is a claim nobody timestamped; an instant on a step not marked
         # done is a timestamp for something that did not happen. Written as `=`,
         # neither half can be relaxed without the reader seeing the other go.

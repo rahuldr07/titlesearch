@@ -22,7 +22,7 @@ from sqlalchemy import CheckConstraint
 __all__ = ["MAX_JSONB_BYTES", "bounded_jsonb_object"]
 
 
-# 🔴 THE CEILING ON EVERY `jsonb` COLUMN IN THIS SCHEMA, IN ONE PLACE. 64 KiB.
+# THE CEILING ON EVERY `jsonb` COLUMN IN THIS SCHEMA, IN ONE PLACE. 64 KiB.
 #
 # `0112` adds the constraint to all four — `clients.delivery_config`,
 # `fields.source_line_coords`, `field_readings.line_coords` and the vendored
@@ -61,7 +61,7 @@ def bounded_jsonb_object(column: str, *, nullable: bool) -> CheckConstraint:
     suffix, so the upgrade succeeded and the downgrade could not find its own
     constraint.
 
-    🔴 `0112` REPEATS THIS EXPRESSION RATHER THAN IMPORTING IT, because a
+    `0112` REPEATS THIS EXPRESSION RATHER THAN IMPORTING IT, because a
     migration is a frozen snapshot. Nothing in Alembic compares the two —
     `alembic check` does not look at CHECK constraints at all, the same blind
     spot `test_schema_migration.py` records for enum labels — so the machine that
