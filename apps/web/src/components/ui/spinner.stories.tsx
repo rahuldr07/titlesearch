@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect } from "storybook/test";
 import { Spinner } from "./spinner";
-import { onPanel } from "./kitGround";
+import { onPanel } from "./kit-ground";
 
 /** Two sizes, two grounds, and one story that pins the reduced-motion behaviour. */
 const meta = {

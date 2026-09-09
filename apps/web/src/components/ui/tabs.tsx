@@ -11,7 +11,7 @@ import {
 } from "react-aria-components";
 
 import { cx } from "./cx";
-import { chordWidget } from "./overlaySurface";
+import { chordWidget } from "./overlay-surface";
 import { disabledAttributes, type Disablement } from "./disabled";
 
 /**

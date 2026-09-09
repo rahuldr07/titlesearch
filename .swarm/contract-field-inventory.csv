@@ -1,0 +1,776 @@
+file,line,type,field,ts_type,optional,nullable,runtime_validator_strictness
+enums.ts,8,FieldState,<enum>,"'pending'|'auto_confirmed'|'needs_review'|'confirmed'|'corrected'|'escalated'",no,no,z.enum closed
+enums.ts,35,NaReason,<enum>,"'NOT_PRESENT'|'NOT_FOUND'|'NOT_STATED'|'PRESENT_UNREADABLE'",no,no,z.enum closed
+enums.ts,47,BlindConfidence,<enum>,"'certain'|'probable'|'unclear'",no,no,z.enum closed
+enums.ts,51,TypistSeat,<enum>,"'A'|'B'",no,no,z.enum closed
+enums.ts,54,RuleStatus,<enum>,"'live'|'pending'|'retired'",no,no,z.enum closed
+enums.ts,57,RuleOrigin,<enum>,"'spec'|'escalation'|'reconciliation'|'complaint'|'senior'",no,no,z.enum closed
+enums.ts,67,RuleProvenance,<enum>,"'RULED'|'DERIVED'|'OPEN'|'CONFLICT'",no,no,z.enum closed
+enums.ts,70,GoldenTag,<enum>,"'delivered_report'|'ruled'|'suspect'|'agreed'",no,no,z.enum closed
+enums.ts,73,EngineKind,<enum>,"'vlm_image'|'ocr_text'|'hybrid'",no,no,z.enum closed
+enums.ts,80,HowItGotThrough,<enum>,"'auto_confirmed'|'human_confirmed'",no,no,z.enum closed
+enums.ts,84,JudgmentStatus,<enum>,"'active'|'satisfied'|'released'|'canceled'|'vacated'|'unknown'",no,no,z.enum closed
+enums.ts,98,OrderStatus,<alias>,string,no,no,z.string OPEN (deliberately unconstrained)
+enums.ts,107,DeliveryStatus,<enum>,"'draft'|'signed'|'digest_recorded'|'transmitted'|'acknowledged'|'failed_transit'",no,no,z.enum closed
+entities.ts,30,LineCoords,page,number,no,no,z.number().int()
+entities.ts,31,LineCoords,x,number,no,no,z.number().min(0).max(1)
+entities.ts,32,LineCoords,y,number,no,no,z.number().min(0).max(1)
+entities.ts,33,LineCoords,w,number,no,no,z.number().min(0).max(1)
+entities.ts,34,LineCoords,h,number,no,no,z.number().min(0).max(1)
+entities.ts,47,SourceExcerpt,doc_id,string,no,no,z.string()
+entities.ts,48,SourceExcerpt,page,number,no,no,z.number().int()
+entities.ts,49,SourceExcerpt,pre,string,no,no,z.string()
+entities.ts,50,SourceExcerpt,hit,string,no,no,z.string()
+entities.ts,51,SourceExcerpt,post,string,no,no,z.string()
+entities.ts,52,SourceExcerpt,note,string|null,no,yes,z.string().nullable()
+entities.ts,57,Order,id,string,no,no,z.string()
+entities.ts,58,Order,client_id,string,no,no,z.string()
+entities.ts,59,Order,external_ref,string,no,no,z.string()
+entities.ts,60,Order,jurisdiction,string,no,no,z.string()
+entities.ts,61,Order,state,string,no,no,z.string()
+entities.ts,62,Order,county,string,no,no,z.string()
+entities.ts,70,Order,product,string|null,no,yes,z.string().nullable()
+entities.ts,71,Order,period_label,string|null,no,yes,z.string().nullable()
+entities.ts,72,Order,pages,number|null,no,yes,z.number().int().nullable()
+entities.ts,73,Order,status,string,no,no,OrderStatus = z.string() OPEN
+entities.ts,74,Order,arrived_at,string,no,no,z.string() (no datetime format check)
+entities.ts,75,Order,accepted_at,string|null,no,yes,z.string().nullable()
+entities.ts,76,Order,delivered_at,string|null,no,yes,z.string().nullable()
+entities.ts,82,FieldReading,id,string,no,no,z.string()
+entities.ts,83,FieldReading,field_id,string,no,no,z.string()
+entities.ts,84,FieldReading,engine_id,string,no,no,z.string()
+entities.ts,85,FieldReading,value,string|null,no,yes,z.string().nullable()
+entities.ts,86,FieldReading,page,number|null,no,yes,z.number().int().nullable()
+entities.ts,87,FieldReading,snippet,string|null,no,yes,z.string().nullable()
+entities.ts,89,FieldReading,confidence_raw,number|null,no,yes,z.number().nullable() (no 0-1 bound)
+entities.ts,90,FieldReading,cost_usd,number,no,NO,z.number() REQUIRED NON-NULL no min
+entities.ts,91,FieldReading,latency_ms,number,no,NO,z.number() REQUIRED NON-NULL no int/min
+entities.ts,92,FieldReading,line_coords,LineCoords|null,no,yes,LineCoords.nullable()
+entities.ts,103,Field,id,string,no,no,z.string()
+entities.ts,104,Field,order_id,string,no,no,z.string()
+entities.ts,105,Field,path,string,no,no,z.string()
+entities.ts,106,Field,value,string|null,no,yes,z.string().nullable()
+entities.ts,107,Field,na_reason,NaReason|null,no,yes,NaReason.nullable()
+entities.ts,108,Field,state,FieldState,no,no,FieldState enum closed
+entities.ts,109,Field,source_doc_id,string|null,no,yes,z.string().nullable()
+entities.ts,110,Field,source_page,number|null,no,yes,z.number().int().nullable()
+entities.ts,111,Field,source_snippet,string|null,no,yes,z.string().nullable()
+entities.ts,112,Field,source_line_coords,LineCoords|null,no,yes,LineCoords.nullable()
+entities.ts,113,Field,engine_id,string|null,no,yes,z.string().nullable()
+entities.ts,114,Field,engine_confidence_raw,number|null,no,yes,z.number().nullable()
+entities.ts,115,Field,rule_refs,string[],no,no,z.array(z.string()) required
+entities.ts,116,Field,approved_by,string|null,no,yes,z.string().nullable()
+entities.ts,117,Field,approved_at,string|null,no,yes,z.string().nullable()
+entities.ts,119,Field,readings,FieldReading[]|undefined,yes,no,z.array(FieldReading).optional()
+entities.ts,127,Field,excluded_reason,string|null|undefined,yes,yes,z.string().nullable().optional() three-state
+entities.ts,135,Field,asking,string|null|undefined,yes,yes,z.string().nullable().optional()
+entities.ts,136,Field,why,string|null|undefined,yes,yes,z.string().nullable().optional()
+entities.ts,143,Field,consequence,string|null|undefined,yes,yes,z.string().nullable().optional()
+entities.ts,150,Field,source_excerpt,SourceExcerpt|null|undefined,yes,yes,SourceExcerpt.nullable().optional()
+entities.ts,155,Rule,id,string,no,no,z.string()
+entities.ts,156,Rule,code,string,no,no,z.string()
+entities.ts,157,Rule,text,string,no,no,z.string()
+entities.ts,158,Rule,origin,RuleOrigin,no,no,enum closed
+entities.ts,159,Rule,status,RuleStatus,no,no,enum closed
+entities.ts,160,Rule,jurisdiction_scope,string|null,no,yes,z.string().nullable()
+entities.ts,161,Rule,version,number,no,no,z.number().int()
+entities.ts,162,Rule,confirmed_by,string|null,no,yes,z.string().nullable()
+entities.ts,163,Rule,source_doc_ref,string|null,no,yes,z.string().nullable()
+entities.ts,168,Escalation,id,string,no,no,z.string()
+entities.ts,169,Escalation,field_path_cluster,string,no,no,z.string()
+entities.ts,170,Escalation,order_ids,string[],no,no,z.array(z.string())
+entities.ts,171,Escalation,question,string,no,no,z.string()
+entities.ts,172,Escalation,resolution,string|null,no,yes,z.string().nullable()
+entities.ts,173,Escalation,rule_id,string|null,no,yes,z.string().nullable()
+entities.ts,174,Escalation,resolved_by,string|null,no,yes,z.string().nullable()
+entities.ts,187,Escalation,raised_by,string|null,no,yes,z.string().nullable()
+entities.ts,188,Escalation,age,string|null,no,yes,z.string().nullable() (label not timestamp)
+entities.ts,189,Escalation,context,string|null,no,yes,z.string().nullable()
+entities.ts,190,Escalation,excerpt,SourceExcerpt|null,no,yes,SourceExcerpt.nullable()
+entities.ts,191,Escalation,identity,object|null,no,yes,inline z.object(...).nullable()
+entities.ts,193,Escalation.identity,debtor_label,string,no,no,z.string()
+entities.ts,194,Escalation.identity,debtor,string,no,no,z.string()
+entities.ts,195,Escalation.identity,owner_label,string,no,no,z.string()
+entities.ts,196,Escalation.identity,owner,string,no,no,z.string()
+entities.ts,199,Escalation,qc_owner,string|null,no,yes,z.string().nullable()
+entities.ts,205,Bug,id,string,no,no,z.string()
+entities.ts,206,Bug,order_id,string,no,no,z.string()
+entities.ts,207,Bug,field_id,string|null,no,yes,z.string().nullable()
+entities.ts,208,Bug,description,string,no,no,z.string()
+entities.ts,209,Bug,upstream_source,string|null,no,yes,z.string().nullable()
+entities.ts,210,Bug,status,string,no,no,z.string() OPEN vocabulary
+entities.ts,215,GoldenField,id,string,no,no,z.string()
+entities.ts,216,GoldenField,order_id,string,no,no,z.string()
+entities.ts,217,GoldenField,path,string,no,no,z.string()
+entities.ts,218,GoldenField,value,string|null,no,yes,z.string().nullable()
+entities.ts,219,GoldenField,tag,GoldenTag,no,no,enum closed
+entities.ts,220,GoldenField,source_citation,string|null,no,yes,z.string().nullable()
+entities.ts,221,GoldenField,corrected_from,string|null,no,yes,z.string().nullable()
+entities.ts,222,GoldenField,corrected_by,string|null,no,yes,z.string().nullable()
+entities.ts,223,GoldenField,corrected_at,string|null,no,yes,z.string().nullable()
+entities.ts,224,GoldenField,correction_reason,string|null,no,yes,z.string().nullable()
+entities.ts,229,Reconciliation,id,string,no,no,z.string()
+entities.ts,230,Reconciliation,order_id,string,no,no,z.string()
+entities.ts,231,Reconciliation,path,string,no,no,z.string()
+entities.ts,232,Reconciliation,value_a,string|null,no,yes,z.string().nullable()
+entities.ts,233,Reconciliation,value_b,string|null,no,yes,z.string().nullable()
+entities.ts,234,Reconciliation,ruling_value,string|null,no,yes,z.string().nullable()
+entities.ts,235,Reconciliation,citation,string|null,no,yes,z.string().nullable()
+entities.ts,236,Reconciliation,reason,string|null,no,yes,z.string().nullable()
+entities.ts,237,Reconciliation,ruled_by,string|null,no,yes,z.string().nullable()
+entities.ts,238,Reconciliation,general_rule_id,string|null,no,yes,z.string().nullable()
+entities.ts,243,Report,id,string,no,no,z.string()
+entities.ts,244,Report,order_id,string,no,no,z.string()
+entities.ts,245,Report,version,number,no,no,z.number().int()
+entities.ts,246,Report,shape,string,no,no,z.string()
+entities.ts,247,Report,rendered_at,string,no,no,z.string()
+entities.ts,252,Report,supersedes,number|null,no,yes,z.number().int().nullable()
+entities.ts,253,Report,reason,string|null,no,yes,z.string().nullable()
+entities.ts,264,ReceiptStep,id,string,no,no,z.string()
+entities.ts,265,ReceiptStep,at,string|null,no,yes,z.string().nullable()
+entities.ts,266,ReceiptStep,what,string,no,no,z.string()
+entities.ts,267,ReceiptStep,who,string,no,no,z.string()
+entities.ts,268,ReceiptStep,done,boolean,no,no,z.boolean()
+entities.ts,274,Delivery,id,string,no,no,z.string()
+entities.ts,275,Delivery,report_id,string,no,no,z.string()
+entities.ts,276,Delivery,method,string,no,no,z.string() OPEN vocabulary
+entities.ts,277,Delivery,status,DeliveryStatus,no,no,enum closed
+entities.ts,278,Delivery,attempted_at,string|null,no,yes,z.string().nullable()
+entities.ts,279,Delivery,delivered_at,string|null,no,yes,z.string().nullable()
+entities.ts,280,Delivery,evidence,string|null,no,yes,z.string().nullable()
+entities.ts,282,Delivery,receipt,ReceiptStep[],no,no,z.array(ReceiptStep) required
+entities.ts,287,Complaint,id,string,no,no,z.string()
+entities.ts,288,Complaint,order_id,string,no,no,z.string()
+entities.ts,289,Complaint,field_path,string,no,no,z.string()
+entities.ts,290,Complaint,shipped_value,string|null,no,yes,z.string().nullable()
+entities.ts,291,Complaint,client_value,string|null,no,yes,z.string().nullable()
+entities.ts,292,Complaint,how_it_got_through,HowItGotThrough,no,no,enum closed
+entities.ts,293,Complaint,resolution,string|null,no,yes,z.string().nullable()
+entities.ts,294,Complaint,rule_id,string|null,no,yes,z.string().nullable()
+entities.ts,295,Complaint,golden_offer_accepted,boolean|null,no,yes,z.boolean().nullable()
+entities.ts,300,Engine,id,string,no,no,z.string()
+entities.ts,301,Engine,kind,EngineKind,no,no,enum closed
+entities.ts,302,Engine,enabled,boolean,no,no,z.boolean()
+entities.ts,303,Engine,adapter_version,string,no,no,z.string()
+entities.ts,309,EngineRoutingCell,id,string,no,no,z.string()
+entities.ts,310,EngineRoutingCell,jurisdiction,string,no,no,z.string()
+entities.ts,311,EngineRoutingCell,section,string,no,no,z.string()
+entities.ts,312,EngineRoutingCell,seat,string,no,no,z.string()
+entities.ts,313,EngineRoutingCell,engine_id,string,no,no,z.string()
+entities.ts,314,EngineRoutingCell,approved_by,string,no,no,z.string() REQUIRED NON-NULL
+entities.ts,315,EngineRoutingCell,approved_at,string,no,no,z.string() REQUIRED NON-NULL
+entities.ts,316,EngineRoutingCell,evidence_url,string,no,no,z.string() REQUIRED NON-NULL (no .min(1) here; request form has min1)
+entities.ts,326,LeaderboardCell,engine_id,string,no,no,z.string()
+entities.ts,327,LeaderboardCell,section,string,no,no,z.string()
+entities.ts,328,LeaderboardCell,jurisdiction,string,no,no,z.string()
+entities.ts,329,LeaderboardCell,no_truth_yet,boolean,no,no,z.boolean() REQUIRED
+entities.ts,330,LeaderboardCell,accuracy_by_tag,Record<string number>|null,no,yes,z.record(z.string() z.number()).nullable()
+entities.ts,331,LeaderboardCell,cost_per_1k_pages_usd,number|null,no,yes,z.number().nullable()
+entities.ts,332,LeaderboardCell,p95_latency_ms,number|null,no,yes,z.number().nullable() (not int)
+entities.ts,333,LeaderboardCell,golden_coverage,number|null,no,yes,z.number().int().nullable()
+entities.ts,339,BlindEntryInput,path,string,no,no,z.string()
+entities.ts,340,BlindEntryInput,value,string|null,no,yes,z.string().nullable()
+entities.ts,341,BlindEntryInput,na_reason,NaReason|null|undefined,yes,yes,NaReason.nullable().optional()
+entities.ts,342,BlindEntryInput,source_citation,string,no,no,z.string().min(1) NON-EMPTY REQUIRED
+entities.ts,343,BlindEntryInput,confidence,BlindConfidence,no,no,enum closed
+authz.ts,30,ROLES,<const tuple>,"'reviewer'|'senior'|'ops'|'engineer'|'typist'|'admin'",no,no,TS const only - no zod
+authz.ts,45,Permission,action,string,no,no,TS interface only
+authz.ts,48,Permission,roles,readonly Role[],no,no,TS interface only
+authz.ts,50,Permission,path,string|undefined,yes,no,TS interface only
+authz.ts,52,Permission,when,Readonly<Record<string readonly (string|null)[]>>|undefined,yes,no,TS interface only
+authz.ts,133,Action,<union>,derived from PERMISSIONS[].action,no,no,compile-time only
+authz.ts,184,GrantedPermission,<Omit<Permission 'roles'>>,action/path?/when?,mixed,no,TS type only
+workspace.ts,14,Derivation,<enum>,"'cos'|'tos'|'update'|'y'",no,no,z.enum closed
+workspace.ts,18,LineApplication,<enum>,"'applies'|'narrowed'|'excluded'",no,no,z.enum closed
+workspace.ts,22,ConfigProduct,id,string,no,no,z.string()
+workspace.ts,23,ConfigProduct,code,string,no,no,z.string()
+workspace.ts,24,ConfigProduct,full,string,no,no,z.string()
+workspace.ts,25,ConfigProduct,sub,string,no,no,z.string()
+workspace.ts,26,ConfigProduct,period,string,no,no,z.string()
+workspace.ts,27,ConfigProduct,derivation,Derivation,no,no,enum closed
+workspace.ts,28,ConfigProduct,retired,boolean,no,no,z.boolean()
+workspace.ts,38,ConfigLine,id,string,no,no,z.string()
+workspace.ts,39,ConfigLine,n,number,no,no,z.number().int()
+workspace.ts,40,ConfigLine,label,string,no,no,z.string()
+workspace.ts,41,ConfigLine,group,string,no,no,z.string()
+workspace.ts,42,ConfigLine,answers,string[],no,no,z.array(z.string())
+workspace.ts,43,ConfigLine,comment_on_no,boolean,no,no,z.boolean()
+workspace.ts,44,ConfigLine,period_scoped,boolean,no,no,z.boolean()
+workspace.ts,45,ConfigLine,machine_check,string|null,no,yes,z.string().nullable()
+workspace.ts,46,ConfigLine,standard_text,string|null,no,yes,z.string().nullable()
+workspace.ts,47,ConfigLine,version,number,no,no,z.number().int()
+workspace.ts,48,ConfigLine,retired,boolean,no,no,z.boolean()
+workspace.ts,50,ConfigLine,cells,Record<string LineApplication>,no,no,z.record(z.string() LineApplication)
+workspace.ts,52,ConfigLine,scope,Record<string string>,no,no,z.record(z.string() z.string())
+workspace.ts,57,ConfigResponse,config_version,string,no,no,z.string()
+workspace.ts,58,ConfigResponse,frozen,boolean,no,no,z.boolean()
+workspace.ts,59,ConfigResponse,products,ConfigProduct[],no,no,z.array
+workspace.ts,60,ConfigResponse,lines,ConfigLine[],no,no,z.array
+workspace.ts,66,OverrideType,<enum>,"'waive'|'narrow'|'replace'|'add'",no,no,z.enum closed
+workspace.ts,70,ClientOverride,id,string,no,no,z.string()
+workspace.ts,71,ClientOverride,type,OverrideType,no,no,enum closed
+workspace.ts,72,ClientOverride,line_id,string|null,no,yes,z.string().nullable()
+workspace.ts,73,ClientOverride,description,string,no,no,z.string()
+workspace.ts,74,ClientOverride,note,string,no,no,z.string()
+workspace.ts,75,ClientOverride,authored_by,string,no,no,z.string()
+workspace.ts,76,ClientOverride,authored_at,string,no,no,z.string()
+workspace.ts,81,ClientRecord,id,string,no,no,z.string()
+workspace.ts,82,ClientRecord,code,string,no,no,z.string()
+workspace.ts,83,ClientRecord,name,string,no,no,z.string()
+workspace.ts,84,ClientRecord,product_ids,string[],no,no,z.array(z.string())
+workspace.ts,85,ClientRecord,signoff_defaults,Record<string string>,no,no,z.record
+workspace.ts,86,ClientRecord,overrides,ClientOverride[],no,no,z.array
+workspace.ts,92,ClientRecord,sign_offs,string|undefined,yes,no,z.string().optional() (label not count)
+workspace.ts,103,EffectiveLine,line_id,string,no,no,z.string()
+workspace.ts,104,EffectiveLine,n,number,no,no,z.number().int()
+workspace.ts,105,EffectiveLine,label,string,no,no,z.string()
+workspace.ts,106,EffectiveLine,application,LineApplication,no,no,enum closed
+workspace.ts,108,EffectiveLine,override_id,string|null,no,yes,z.string().nullable()
+workspace.ts,109,EffectiveLine,scope_note,string|null,no,yes,z.string().nullable()
+workspace.ts,114,EffectiveChecklist,client_id,string,no,no,z.string()
+workspace.ts,115,EffectiveChecklist,product_id,string,no,no,z.string()
+workspace.ts,116,EffectiveChecklist,lines,EffectiveLine[],no,no,z.array
+workspace.ts,118,EffectiveChecklist,conflict,string|null,no,yes,z.string().nullable()
+workspace.ts,119,EffectiveChecklist,conflict_acknowledged,boolean,no,no,z.boolean()
+workspace.ts,124,ClientsResponse,clients,ClientRecord[],no,no,z.array
+workspace.ts,125,ClientsResponse,effective,EffectiveChecklist[],no,no,z.array
+intake.ts,12,SignoffAnswer,<enum>,"'YES'|'NO'|'N/A'",no,no,z.enum closed
+intake.ts,26,OrderSignoffLine,line_id,string,no,no,z.string()
+intake.ts,27,OrderSignoffLine,n,number,no,no,z.number().int()
+intake.ts,28,OrderSignoffLine,label,string,no,no,z.string()
+intake.ts,29,OrderSignoffLine,group,string,no,no,z.string()
+intake.ts,30,OrderSignoffLine,answer,SignoffAnswer|null,no,yes,SignoffAnswer.nullable()
+intake.ts,31,OrderSignoffLine,comment,string|null,no,yes,z.string().nullable()
+intake.ts,32,OrderSignoffLine,comment_required,boolean,no,no,z.boolean()
+intake.ts,41,OrderSignoffLine,answers,SignoffAnswer[],no,no,z.array(SignoffAnswer)
+intake.ts,42,OrderSignoffLine,policy_suggestion,SignoffAnswer|null,no,yes,SignoffAnswer.nullable()
+intake.ts,43,OrderSignoffLine,machine_check,string|null,no,yes,z.string().nullable()
+intake.ts,44,OrderSignoffLine,period_scoped,boolean,no,no,z.boolean()
+intake.ts,45,OrderSignoffLine,prefilled_from_policy,boolean,no,no,z.boolean()
+intake.ts,50,OrderSignoffResponse,order_id,string,no,no,z.string()
+intake.ts,52,OrderSignoffResponse,signed_by,string|null,no,yes,z.string().nullable()
+intake.ts,53,OrderSignoffResponse,signed_at,string|null,no,yes,z.string().nullable()
+intake.ts,54,OrderSignoffResponse,product_name,string,no,no,z.string() REQUIRED NON-NULL
+intake.ts,55,OrderSignoffResponse,period_label,string,no,no,z.string() REQUIRED NON-NULL (contrast Order.period_label nullable)
+intake.ts,56,OrderSignoffResponse,lines,OrderSignoffLine[],no,no,z.array
+intake.ts,62,StagePhase,<enum>,"'done'|'running'|'halted'|'waiting'",no,no,z.enum closed
+intake.ts,65,StageOwner,<enum>,"'Automated'|'LLM agent'|'You'",no,no,z.enum closed
+intake.ts,69,PipelineStage,id,string,no,no,z.string()
+intake.ts,70,PipelineStage,label,string,no,no,z.string()
+intake.ts,71,PipelineStage,detail,string,no,no,z.string()
+intake.ts,72,PipelineStage,owner,StageOwner,no,no,enum closed
+intake.ts,73,PipelineStage,phase,StagePhase,no,no,enum closed
+intake.ts,79,PipelineStage,count,string|null,no,yes,z.string().nullable() (label not number)
+intake.ts,89,PipelineLogLine,time,string,no,no,z.string()
+intake.ts,90,PipelineLogLine,text,string,no,no,z.string()
+intake.ts,91,PipelineLogLine,warn,boolean,no,no,z.boolean()
+intake.ts,92,PipelineLogLine,strong,boolean,no,no,z.boolean()
+intake.ts,97,OrderPipelineResponse,order_id,string,no,no,z.string()
+intake.ts,98,OrderPipelineResponse,total_pages,number,no,no,z.number().int() REQUIRED NON-NULL
+intake.ts,99,OrderPipelineResponse,pages_relevant,number,no,no,z.number().int()
+intake.ts,100,OrderPipelineResponse,classifier_note,string,no,no,z.string()
+intake.ts,102,OrderPipelineResponse,gate_halted,boolean,no,no,z.boolean()
+intake.ts,103,OrderPipelineResponse,stages,PipelineStage[],no,no,z.array
+intake.ts,112,OrderPipelineResponse,package_name,string|null,no,yes,z.string().nullable()
+intake.ts,113,OrderPipelineResponse,volume_label,string|null,no,yes,z.string().nullable()
+intake.ts,114,OrderPipelineResponse,eta_label,string,no,no,z.string() REQUIRED NON-NULL
+intake.ts,115,OrderPipelineResponse,run_log,PipelineLogLine[],no,no,z.array
+intake.ts,116,OrderPipelineResponse,verified_checks,string[],no,no,z.array(z.string())
+intake.ts,122,GapKind,<enum>,"'na_provisional'|'disagreement'|'period_short'",no,no,z.enum closed
+intake.ts,131,GapCloseKind,<enum>,"'upload'|'amend'|'root_of_title'|'change_product'",no,no,z.enum closed
+intake.ts,135,GapCloseOption,kind,GapCloseKind,no,no,enum closed
+intake.ts,136,GapCloseOption,label,string,no,no,z.string()
+intake.ts,138,GapCloseOption,consequence,string,no,no,z.string() REQUIRED NON-NULL
+intake.ts,139,GapCloseOption,requires_comment,boolean,no,no,z.boolean()
+intake.ts,141,GapCloseOption,min_role,string|null,no,yes,z.string().nullable() (not Role enum)
+intake.ts,151,CompletenessGap,id,string,no,no,z.string()
+intake.ts,152,CompletenessGap,kind,GapKind,no,no,enum closed
+intake.ts,159,CompletenessGap,line_number,number,no,no,z.number().int()
+intake.ts,160,CompletenessGap,line_label,string,no,no,z.string()
+intake.ts,161,CompletenessGap,claim,string,no,no,z.string()
+intake.ts,162,CompletenessGap,evidence,string,no,no,z.string()
+intake.ts,164,CompletenessGap,close_options,GapCloseOption[],no,no,z.array
+intake.ts,165,CompletenessGap,closed_by,string|null,no,yes,z.string().nullable()
+intake.ts,166,CompletenessGap,closed_note,string|null,no,yes,z.string().nullable()
+intake.ts,171,OrderCompletenessResponse,order_id,string,no,no,z.string()
+intake.ts,173,OrderCompletenessResponse,gate_open,boolean,no,no,z.boolean()
+intake.ts,174,OrderCompletenessResponse,product_name,string,no,no,z.string()
+intake.ts,175,OrderCompletenessResponse,period_label,string,no,no,z.string()
+intake.ts,176,OrderCompletenessResponse,gaps,CompletenessGap[],no,no,z.array
+intake.ts,182,StageKind,<enum>,"'idle'|'halt'|'machine'|'done'",no,no,z.enum closed
+intake.ts,193,LifecycleOrder,id,string,no,no,z.string()
+intake.ts,194,LifecycleOrder,order_ref,string,no,no,z.string()
+intake.ts,195,LifecycleOrder,addr,string,no,no,z.string()
+intake.ts,196,LifecycleOrder,county,string,no,no,z.string()
+intake.ts,197,LifecycleOrder,waiting_on,string|null,no,yes,z.string().nullable()
+intake.ts,198,LifecycleOrder,waited,string|null,no,yes,z.string().nullable()
+intake.ts,199,LifecycleOrder,failed,boolean,no,no,z.boolean()
+intake.ts,200,LifecycleOrder,mine,boolean,no,no,z.boolean()
+intake.ts,201,LifecycleOrder,state_label,string|null,no,yes,z.string().nullable() deliberately NOT an enum
+intake.ts,210,LifecycleStage,id,string,no,no,z.string()
+intake.ts,211,LifecycleStage,label,string,no,no,z.string()
+intake.ts,219,LifecycleStage,sub,string,no,no,z.string()
+intake.ts,220,LifecycleStage,waiting_on,string,no,no,z.string() REQUIRED NON-NULL (contrast LifecycleOrder.waiting_on)
+intake.ts,221,LifecycleStage,kind,StageKind,no,no,enum closed
+intake.ts,222,LifecycleStage,count,number,no,no,z.number().int() server census
+intake.ts,223,LifecycleStage,orders,LifecycleOrder[],no,no,z.array
+intake.ts,235,LifecycleFigure,label,string,no,no,z.string()
+intake.ts,236,LifecycleFigure,value,number,no,no,z.number().int()
+intake.ts,238,LifecycleFigure,note,string,no,no,z.string()
+intake.ts,243,LifecycleResponse,scope_note,string,no,no,z.string()
+intake.ts,244,LifecycleResponse,total,number,no,no,z.number().int()
+intake.ts,245,LifecycleResponse,halted,number,no,no,z.number().int()
+intake.ts,246,LifecycleResponse,moving,number,no,no,z.number().int()
+intake.ts,247,LifecycleResponse,failed,number,no,no,z.number().int()
+intake.ts,257,LifecycleResponse,active,LifecycleFigure,no,no,object required
+intake.ts,258,LifecycleResponse,in_review,LifecycleFigure,no,no,object required
+intake.ts,259,LifecycleResponse,queries_and_gaps,LifecycleFigure,no,no,object required
+intake.ts,260,LifecycleResponse,delivered_recent,LifecycleFigure,no,no,object required
+intake.ts,261,LifecycleResponse,stages,LifecycleStage[],no,no,z.array
+intake.ts,275,LifecycleStamp,label,string,no,no,z.string() deliberately free string
+intake.ts,276,LifecycleStamp,tone,"'neutral'|'action'|'settled'|'attend'|'halt'",no,no,inline z.enum closed
+intake.ts,289,OrderStageTab,id,string,no,no,z.string() (documented stable vocabulary but unvalidated)
+intake.ts,290,OrderStageTab,label,string,no,no,z.string()
+intake.ts,291,OrderStageTab,done,boolean,no,no,z.boolean()
+intake.ts,292,OrderStageTab,badge,string|null,no,yes,z.string().nullable() (string not number)
+intake.ts,293,OrderStageTab,badge_tone,"'attend'|'settled'",no,no,inline z.enum closed
+intake.ts,298,OrderContextResponse,order_id,string,no,no,z.string()
+intake.ts,299,OrderContextResponse,order_ref,string,no,no,z.string()
+intake.ts,300,OrderContextResponse,product,string|null,no,yes,z.string().nullable()
+intake.ts,301,OrderContextResponse,period_label,string|null,no,yes,z.string().nullable()
+intake.ts,302,OrderContextResponse,pages,number|null,no,yes,z.number().int().nullable()
+intake.ts,303,OrderContextResponse,stamp,LifecycleStamp,no,no,object required
+intake.ts,309,OrderContextResponse,place,string|null,no,yes,z.string().nullable()
+intake.ts,311,OrderContextResponse,client,string|null,no,yes,z.string().nullable()
+intake.ts,313,OrderContextResponse,assigned,string|null,no,yes,z.string().nullable()
+intake.ts,318,OrderContextResponse,due,string|null,no,yes,z.string().nullable() label never computed
+intake.ts,320,OrderContextResponse,outstanding,number|null,no,yes,z.number().int().nullable()
+intake.ts,322,OrderContextResponse,stage_nav,OrderStageTab[],no,no,z.array
+intake.ts,324,OrderContextResponse,stage_tabs,OrderStageTab[],no,no,z.array
+intake.ts,330,AccountStatus,<enum>,"'Active'|'Suspended'|'Invited'",no,no,z.enum closed
+intake.ts,333,MfaState,<enum>,"'enrolled'|'pending'|'absent'",no,no,z.enum closed
+intake.ts,337,Person,id,string,no,no,z.string()
+intake.ts,338,Person,name,string,no,no,z.string()
+intake.ts,339,Person,email,string,no,no,z.string() NOT z.string().email()
+intake.ts,340,Person,role,string,no,no,z.string() NOT the Role enum
+intake.ts,341,Person,privileged,boolean,no,no,z.boolean()
+intake.ts,342,Person,status,AccountStatus,no,no,enum closed
+intake.ts,343,Person,mfa,MfaState,no,no,enum closed
+intake.ts,353,PeopleResponse,people,Person[],no,no,z.array
+intake.ts,354,PeopleResponse,privileged_without_mfa,number,no,no,z.number().int() server figure
+intake.ts,361,SessionRecord,id,string,no,no,z.string()
+intake.ts,362,SessionRecord,device,string,no,no,z.string()
+intake.ts,363,SessionRecord,where,string,no,no,z.string()
+intake.ts,364,SessionRecord,last_seen,string,no,no,z.string()
+intake.ts,365,SessionRecord,current,boolean,no,no,z.boolean()
+intake.ts,375,MeProfileResponse,name,string,no,no,z.string()
+intake.ts,376,MeProfileResponse,email,string,no,no,z.string() NOT email-validated
+intake.ts,377,MeProfileResponse,role,string,no,no,z.string() NOT Role enum
+intake.ts,379,MeProfileResponse,mfa,MfaState,no,no,enum closed
+intake.ts,380,MeProfileResponse,sessions,SessionRecord[],no,no,z.array
+intake.ts,397,Preferences,nav_collapsed,boolean|null,no,yes,z.boolean().nullable() three-state
+intake.ts,398,Preferences,reduced_motion,boolean,no,no,z.boolean()
+intake.ts,399,Preferences,default_zoom,number,no,no,z.number() no bound/int
+intake.ts,401,Preferences,theme,"'titlepipe'|'mocha'",no,no,z.enum().default('titlepipe') DEFAULTED (input optional output required)
+intake.ts,405,PreferencesResponse,preferences,Preferences,no,no,object required
+intake.ts,409,UpdatePreferencesRequest,<all>,Partial<Preferences>,yes,mixed,Preferences.partial() every key optional
+design.ts,12,OrderStage,<enum>,"'unassigned'|'intake'|'machine'|'gate'|'review'|'escalated'|'delivered'",no,no,z.enum closed
+design.ts,28,OrderRow,id,string,no,no,z.string()
+design.ts,29,OrderRow,order_ref,string,no,no,z.string()
+design.ts,30,OrderRow,addr,string,no,no,z.string()
+design.ts,31,OrderRow,place,string,no,no,z.string() REQUIRED (contrast OrderContextResponse.place nullable)
+design.ts,32,OrderRow,client,string,no,no,z.string() REQUIRED (contrast OrderContextResponse.client nullable)
+design.ts,33,OrderRow,product,string,no,no,z.string() REQUIRED (contrast Order.product nullable)
+design.ts,34,OrderRow,stage,OrderStage,no,no,enum closed
+design.ts,36,OrderRow,assigned_to,string|null,no,yes,z.string().nullable()
+design.ts,38,OrderRow,due,string|null,no,yes,z.string().nullable()
+design.ts,39,OrderRow,pages,number|null,no,yes,z.number().int().nullable()
+design.ts,43,OrderFilter,<enum>,"'all'|'active'|'waiting'|'delivered'",no,no,z.enum closed
+design.ts,52,OrdersPageResponse,orders,OrderRow[],no,no,z.array
+design.ts,53,OrdersPageResponse,total,number,no,no,z.number().int()
+design.ts,54,OrdersPageResponse,page,number,no,no,z.number().int()
+design.ts,55,OrdersPageResponse,page_size,number,no,no,z.number().int()
+design.ts,56,OrdersPageResponse,page_count,number,no,no,z.number().int()
+design.ts,58,OrdersPageResponse,query,string,no,no,z.string()
+design.ts,59,OrdersPageResponse,filter,OrderFilter,no,no,enum closed
+design.ts,73,ManifestValue,label,string,no,no,z.string()
+design.ts,74,ManifestValue,value,string,no,no,z.string() REQUIRED NON-NULL (unlike Field.value)
+design.ts,75,ManifestValue,pending,boolean,no,no,z.boolean()
+design.ts,76,ManifestValue,field_id,string|null,no,yes,z.string().nullable()
+design.ts,81,ManifestBlock,id,string,no,no,z.string()
+design.ts,82,ManifestBlock,numeral,string,no,no,z.string()
+design.ts,83,ManifestBlock,title,string,no,no,z.string()
+design.ts,85,ManifestBlock,values,ManifestValue[],no,no,z.array
+design.ts,86,ManifestBlock,field_count,number,no,no,z.number().int()
+design.ts,87,ManifestBlock,cited,number,no,no,z.number().int()
+design.ts,92,GateCheck,id,string,no,no,z.string()
+design.ts,93,GateCheck,label,string,no,no,z.string()
+design.ts,95,GateCheck,passed,boolean,no,no,z.boolean()
+design.ts,96,GateCheck,detail,string|null,no,yes,z.string().nullable()
+design.ts,101,CompositionResponse,order_id,string,no,no,z.string()
+design.ts,102,CompositionResponse,template_version,string,no,no,z.string()
+design.ts,103,CompositionResponse,blocks,ManifestBlock[],no,no,z.array
+design.ts,104,CompositionResponse,gates,GateCheck[],no,no,z.array
+design.ts,106,CompositionResponse,releasable,boolean,no,no,z.boolean()
+design.ts,107,CompositionResponse,blocked_reason,string|null,no,yes,z.string().nullable()
+design.ts,114,CompositionResponse,blocked_door,string|null,no,yes,z.string().nullable()
+design.ts,116,CompositionResponse,seal_sha256,string|null,no,yes,z.string().nullable() no hex/length check
+design.ts,118,CompositionResponse,released_at,string|null,no,yes,z.string().nullable()
+design.ts,124,ReleaseRequest,signature,string,no,no,z.string().min(1) NON-EMPTY
+design.ts,129,ReleaseResponse,order_id,string,no,no,z.string()
+design.ts,130,ReleaseResponse,version,number,no,no,z.number().int()
+design.ts,131,ReleaseResponse,seal_sha256,string,no,no,z.string() REQUIRED NON-NULL
+design.ts,132,ReleaseResponse,released_at,string,no,no,z.string() REQUIRED NON-NULL
+design.ts,140,Artifact,id,string,no,no,z.string()
+design.ts,141,Artifact,report_id,string,no,no,z.string()
+design.ts,142,Artifact,filename,string,no,no,z.string()
+design.ts,143,Artifact,media_type,string,no,no,z.string()
+design.ts,144,Artifact,bytes,number,no,no,z.number().int() no min
+design.ts,145,Artifact,sha256,string,no,no,z.string() no hex/length check
+design.ts,146,Artifact,href,string,no,no,z.string() NOT z.string().url()
+design.ts,150,ArtifactsResponse,artifacts,Artifact[],no,no,z.array
+design.ts,159,ReissueReasonsResponse,reasons,string[],no,no,z.array(z.string())
+design.ts,166,ReissueRequest,reason,string,no,no,z.string().min(1) NON-EMPTY
+design.ts,171,ReissueResponse,report,Report,no,no,object required
+design.ts,172,ReissueResponse,supersedes,number,no,no,z.number().int() REQUIRED NON-NULL (contrast Report.supersedes)
+design.ts,173,ReissueResponse,reason,string,no,no,z.string()
+design.ts,180,Countersign,id,string,no,no,z.string()
+design.ts,181,Countersign,field_id,string,no,no,z.string()
+design.ts,182,Countersign,ruled_by,string,no,no,z.string()
+design.ts,183,Countersign,countersigned_by,string,no,no,z.string() REQUIRED NON-NULL
+design.ts,184,Countersign,at,string,no,no,z.string()
+design.ts,189,CountersignsResponse,order_id,string,no,no,z.string()
+design.ts,191,CountersignsResponse,required,object[],no,no,z.array(inline object)
+design.ts,193,CountersignsResponse.required[],field_id,string,no,no,z.string()
+design.ts,194,CountersignsResponse.required[],path,string,no,no,z.string()
+design.ts,195,CountersignsResponse.required[],value,string|null,no,yes,z.string().nullable()
+design.ts,196,CountersignsResponse.required[],ruled_by,string,no,no,z.string()
+design.ts,197,CountersignsResponse.required[],countersigned_by,string|null,no,yes,z.string().nullable()
+design.ts,209,CountersignRequest,signature,string,no,no,z.string().min(1) NON-EMPTY
+design.ts,225,RbacLevel,<enum>,"'none'|'view'|'edit'",no,no,z.enum closed
+design.ts,229,RbacCell,role,string,no,no,z.string() NOT Role enum
+design.ts,230,RbacCell,level,RbacLevel,no,no,enum closed
+design.ts,231,RbacCell,locked,boolean,no,no,z.boolean()
+design.ts,236,RbacRow,id,string,no,no,z.string()
+design.ts,237,RbacRow,module,string,no,no,z.string()
+design.ts,238,RbacRow,label,string,no,no,z.string()
+design.ts,239,RbacRow,note,string,no,no,z.string()
+design.ts,241,RbacRow,live,boolean,no,no,z.boolean()
+design.ts,242,RbacRow,cells,RbacCell[],no,no,z.array
+design.ts,248,RbacMatrixResponse,roles,string[],no,no,z.array(z.string()) NOT Role enum
+design.ts,249,RbacMatrixResponse,rows,RbacRow[],no,no,z.array
+design.ts,255,RbacCycleRequest,row_id,string,no,no,z.string() no min(1)
+design.ts,256,RbacCycleRequest,role,string,no,no,z.string() no min(1)
+design.ts,266,PersonRoleRequest,role,string,no,no,z.string().min(1) NON-EMPTY (not Role enum)
+design2.ts,11,QuarantineState,<enum>,"'pending'|'running'|'passed'|'failed'",no,no,z.enum closed
+design2.ts,14,QuarantineStep,id,string,no,no,z.string()
+design2.ts,15,QuarantineStep,label,string,no,no,z.string()
+design2.ts,16,QuarantineStep,state,QuarantineState,no,no,enum closed
+design2.ts,18,QuarantineStep,detail,string|null,no,yes,z.string().nullable()
+design2.ts,26,OpticalReading,id,string,no,no,z.string()
+design2.ts,27,OpticalReading,label,string,no,no,z.string()
+design2.ts,28,OpticalReading,value,string,no,no,z.string() (finished label not number)
+design2.ts,29,OpticalReading,ok,boolean,no,no,z.boolean() server verdict
+design2.ts,30,OpticalReading,note,string|null,no,yes,z.string().nullable()
+design2.ts,42,QuarantineResolved,jurisdiction,string,no,no,z.string()
+design2.ts,43,QuarantineResolved,state,string,no,no,z.string()
+design2.ts,44,QuarantineResolved,county,string,no,no,z.string()
+design2.ts,46,QuarantineResolved,page_count_label,string,no,no,z.string()
+design2.ts,48,QuarantineResolved,jurisdiction_label,string,no,no,z.string()
+design2.ts,50,QuarantineResolved,note_title,string,no,no,z.string()
+design2.ts,51,QuarantineResolved,note_body,string,no,no,z.string()
+design2.ts,62,QuarantineResponse,order_id,string|null,no,yes,z.string().nullable()
+design2.ts,63,QuarantineResponse,sha256,string,no,no,z.string() no hex/length check
+design2.ts,64,QuarantineResponse,duplicate_of,string|null,no,yes,z.string().nullable()
+design2.ts,65,QuarantineResponse,steps,QuarantineStep[],no,no,z.array
+design2.ts,66,QuarantineResponse,optical,OpticalReading[],no,no,z.array
+design2.ts,67,QuarantineResponse,resolved,QuarantineResolved|null,no,yes,QuarantineResolved.nullable()
+design2.ts,82,TemplateNaMatrix,structurally_absent,string,no,no,z.string() (NOT_PRESENT slot)
+design2.ts,83,TemplateNaMatrix,not_found,string,no,no,z.string()
+design2.ts,84,TemplateNaMatrix,not_stated,string,no,no,z.string()
+design2.ts,85,TemplateNaMatrix,unreadable,string,no,no,z.string() (PRESENT_UNREADABLE slot)
+design2.ts,91,TemplateToken,token,string,no,no,z.string()
+design2.ts,92,TemplateToken,sample,string,no,no,z.string()
+design2.ts,98,TemplateSheetRow,label,string,no,no,z.string()
+design2.ts,99,TemplateSheetRow,value,string,no,no,z.string()
+design2.ts,101,TemplateSheetRow,mono,boolean,no,no,z.boolean()
+design2.ts,106,TemplateSheetBlock,key,string,no,no,z.string()
+design2.ts,107,TemplateSheetBlock,title,string,no,no,z.string()
+design2.ts,109,TemplateSheetBlock,lock_note,string,no,no,z.string()
+design2.ts,110,TemplateSheetBlock,rows,TemplateSheetRow[],no,no,z.array
+design2.ts,112,TemplateSheetBlock,wording,string,no,no,z.string()
+design2.ts,114,TemplateSheetBlock,baseline,string,no,no,z.string()
+design2.ts,115,TemplateSheetBlock,tokens,TemplateToken[],no,no,z.array
+design2.ts,117,TemplateSheetBlock,na_matrix,TemplateNaMatrix|null,no,yes,TemplateNaMatrix.nullable()
+design2.ts,119,TemplateSheetBlock,overlay_note,string|null,no,yes,z.string().nullable()
+design2.ts,124,TemplateStatus,<enum>,"'active'|'draft'",no,no,z.enum closed
+design2.ts,128,TemplateSummary,id,string,no,no,z.string()
+design2.ts,129,TemplateSummary,name,string,no,no,z.string()
+design2.ts,130,TemplateSummary,client,string,no,no,z.string()
+design2.ts,131,TemplateSummary,product,string,no,no,z.string()
+design2.ts,132,TemplateSummary,version,string,no,no,z.string() (STRING version - contrast Rule.version int)
+design2.ts,133,TemplateSummary,status,TemplateStatus,no,no,enum closed
+design2.ts,134,TemplateSummary,mapped_fields,number,no,no,z.number().int()
+design2.ts,135,TemplateSummary,total_fields,number,no,no,z.number().int()
+design2.ts,145,TemplateCatalogResponse,templates,TemplateSummary[],no,no,z.array
+design2.ts,146,TemplateCatalogResponse,clients,string[],no,no,z.array(z.string())
+design2.ts,147,TemplateCatalogResponse,products,string[],no,no,z.array(z.string())
+design2.ts,153,TemplateSampleDoc,id,string,no,no,z.string()
+design2.ts,154,TemplateSampleDoc,name,string,no,no,z.string()
+design2.ts,155,TemplateSampleDoc,doc_id,string,no,no,z.string()
+design2.ts,156,TemplateSampleDoc,uploaded,string,no,no,z.string()
+design2.ts,157,TemplateSampleDoc,blocks_extracted,number,no,no,z.number().int()
+design2.ts,158,TemplateSampleDoc,notes,string,no,no,z.string()
+design2.ts,159,TemplateSampleDoc,snippet,string,no,no,z.string()
+design2.ts,161,TemplateSampleDoc,box,string,no,no,z.string() VERBATIM STRING not LineCoords
+design2.ts,162,TemplateSampleDoc,page,number,no,no,z.number().int()
+design2.ts,168,TemplateDetailResponse,<extends TemplateSummary>,all TemplateSummary fields,no,no,TemplateSummary.extend
+design2.ts,169,TemplateDetailResponse,blocks,TemplateSheetBlock[],no,no,z.array
+design2.ts,170,TemplateDetailResponse,samples,TemplateSampleDoc[],no,no,z.array
+design2.ts,172,TemplateDetailResponse,sha256,string,no,no,z.string()
+design2.ts,173,TemplateDetailResponse,source_ref,string,no,no,z.string()
+design2.ts,174,TemplateDetailResponse,source_citation,string,no,no,z.string()
+design2.ts,176,TemplateDetailResponse,export_spec,string,no,no,z.string()
+design2.ts,185,TemplateSaveRequest,wording,Record<string string>,no,no,z.record(z.string() z.string()) no min(1) on values
+design2.ts,190,TemplateSaveResponse,id,string,no,no,z.string()
+design2.ts,191,TemplateSaveResponse,version,string,no,no,z.string()
+design2.ts,192,TemplateSaveResponse,saved_at,string,no,no,z.string()
+design2.ts,199,SheetField,path,string,no,no,z.string()
+design2.ts,200,SheetField,label,string,no,no,z.string()
+design2.ts,203,SheetField,kind,"'text'|'money'|'date'|'select'",no,no,inline z.enum closed
+design2.ts,204,SheetField,options,string[],no,no,z.array(z.string()) required (empty for non-select)
+design2.ts,205,SheetField,required,boolean,no,no,z.boolean()
+design2.ts,209,SheetSection,id,string,no,no,z.string()
+design2.ts,210,SheetSection,title,string,no,no,z.string()
+design2.ts,211,SheetSection,fields,SheetField[],no,no,z.array
+design2.ts,221,CaptureScheduleResponse,order_id,string,no,no,z.string()
+design2.ts,222,CaptureScheduleResponse,seat,string,no,no,z.string() NOT TypistSeat enum
+design2.ts,223,CaptureScheduleResponse,pages,number,no,no,z.number().int() REQUIRED NON-NULL
+design2.ts,224,CaptureScheduleResponse,sections,SheetSection[],no,no,z.array
+design2.ts,231,NullStateRow,path,string,no,no,z.string()
+design2.ts,232,NullStateRow,label,string,no,no,z.string()
+design2.ts,233,NullStateRow,reason,NaReason,no,no,enum closed REQUIRED NON-NULL
+design2.ts,234,NullStateRow,renders_as,string,no,no,z.string()
+design2.ts,239,JurisdictionRule,id,string,no,no,z.string()
+design2.ts,240,JurisdictionRule,code,string,no,no,z.string()
+design2.ts,241,JurisdictionRule,text,string,no,no,z.string()
+design2.ts,242,JurisdictionRule,applies,boolean,no,no,z.boolean()
+design2.ts,243,JurisdictionRule,scope_note,string|null,no,yes,z.string().nullable()
+design2.ts,248,JurisdictionResponse,code,string,no,no,z.string()
+design2.ts,249,JurisdictionResponse,label,string,no,no,z.string()
+design2.ts,250,JurisdictionResponse,baseline_note,string,no,no,z.string()
+design2.ts,251,JurisdictionResponse,rules,JurisdictionRule[],no,no,z.array
+design2.ts,252,JurisdictionResponse,null_states,NullStateRow[],no,no,z.array
+design2.ts,265,RailBadgesResponse,orders_total,number,no,no,z.number().int()
+design2.ts,266,RailBadgesResponse,qc,string|null,no,yes,z.string().nullable() finished label
+design2.ts,267,RailBadgesResponse,template_version,string,no,no,z.string()
+endpoints.ts,33,Ack,ok,true,no,no,z.literal(true)
+endpoints.ts,46,CreateOrderRequest,client_id,string,no,no,z.string() no min(1)
+endpoints.ts,47,CreateOrderRequest,external_ref,string,no,no,z.string() no min(1)
+endpoints.ts,49,CreateOrderRequest,product,string,no,no,z.string() no min(1)
+endpoints.ts,55,IngestRejection,rejected,true,no,no,z.literal(true)
+endpoints.ts,56,IngestRejection,missing_fields,string[],no,no,z.array(z.string())
+endpoints.ts,57,IngestRejection,reason,string,no,no,z.string()
+endpoints.ts,68,CreateOrderResponse,order,Order,no,no,object required
+endpoints.ts,76,QueueNextResponse,order,Order|null,no,yes,Order.nullable()
+endpoints.ts,91,QueueBandId,<enum>,"'mine'|'held'|'in_flight'|'delivered'",no,no,z.enum closed
+endpoints.ts,95,QueueBandOrder,id,string,no,no,z.string()
+endpoints.ts,96,QueueBandOrder,order_ref,string,no,no,z.string()
+endpoints.ts,97,QueueBandOrder,addr,string,no,no,z.string()
+endpoints.ts,98,QueueBandOrder,place,string,no,no,z.string()
+endpoints.ts,100,QueueBandOrder,waited,string|null,no,yes,z.string().nullable()
+endpoints.ts,101,QueueBandOrder,waiting_on,string,no,no,z.string() REQUIRED NON-NULL (contrast LifecycleOrder.waiting_on nullable)
+endpoints.ts,103,QueueBandOrder,state_label,string|null,no,yes,z.string().nullable()
+endpoints.ts,104,QueueBandOrder,mine,boolean,no,no,z.boolean()
+endpoints.ts,109,QueueBand,id,QueueBandId,no,no,enum closed
+endpoints.ts,110,QueueBand,title,string,no,no,z.string()
+endpoints.ts,111,QueueBand,note,string,no,no,z.string()
+endpoints.ts,113,QueueBand,count,number,no,no,z.number().int()
+endpoints.ts,114,QueueBand,orders,QueueBandOrder[],no,no,z.array
+endpoints.ts,124,QueueBandsResponse,bands,QueueBand[],no,no,z.array
+endpoints.ts,134,OrderCensus,fields,number,no,no,z.number().int() REQUIRED
+endpoints.ts,135,OrderCensus,auto_confirmed,number,no,no,z.number().int() REQUIRED
+endpoints.ts,136,OrderCensus,needs_review,number,no,no,z.number().int() REQUIRED
+endpoints.ts,138,OrderCensus,no_source,number,no,no,z.number().int() REQUIRED
+endpoints.ts,146,OrderCensus,decisions,number|undefined,yes,no,z.number().int().optional()
+endpoints.ts,147,OrderCensus,settled,number|undefined,yes,no,z.number().int().optional()
+endpoints.ts,148,OrderCensus,queue_rest,number|undefined,yes,no,z.number().int().optional()
+endpoints.ts,156,OrderCensus,remaining,number|undefined,yes,no,z.number().int().optional()
+endpoints.ts,163,OrderCensus,verdict_action,string|undefined,yes,no,z.string().optional() free string
+endpoints.ts,168,OrderFieldsResponse,order_id,string,no,no,z.string()
+endpoints.ts,169,OrderFieldsResponse,fields,Field[],no,no,z.array
+endpoints.ts,174,OrderFieldsResponse,census,OrderCensus|undefined,yes,no,OrderCensus.optional()
+endpoints.ts,184,ConfirmFieldRequest,value,string|null,no,yes,z.string().nullable() REQUIRED KEY
+endpoints.ts,190,CorrectFieldRequest,value,string|null,no,yes,z.string().nullable()
+endpoints.ts,191,CorrectFieldRequest,na_reason,string|null|undefined,yes,yes,z.string().nullable().optional() NOT NaReason enum (weaker than Field.na_reason)
+endpoints.ts,192,CorrectFieldRequest,reason,string,no,no,z.string().min(1) NON-EMPTY
+endpoints.ts,198,EscalateFieldRequest,question,string,no,no,z.string().min(1) NON-EMPTY
+endpoints.ts,209,PassOrderRequest,reason,string,no,no,z.string().min(1) NON-EMPTY
+endpoints.ts,214,PassOrderResponse,ok,true,no,no,z.literal(true)
+endpoints.ts,220,CreateBugRequest,order_id,string,no,no,z.string()
+endpoints.ts,221,CreateBugRequest,field_id,string|null|undefined,yes,yes,z.string().nullable().optional()
+endpoints.ts,222,CreateBugRequest,description,string,no,no,z.string().min(1) NON-EMPTY
+endpoints.ts,223,CreateBugRequest,upstream_source,string|undefined,yes,no,z.string().optional() (NOT nullable - contrast Bug.upstream_source nullable)
+endpoints.ts,236,ResolveEscalationRequest,ruling,string,no,no,z.string().min(1) NON-EMPTY
+endpoints.ts,237,ResolveEscalationRequest,rule,union,no,no,z.union([{rule_id}|{draft}]) REQUIRED - refusal encoded in schema
+endpoints.ts,238,ResolveEscalationRequest.rule.a,rule_id,string,no,no,z.string()
+endpoints.ts,241,ResolveEscalationRequest.rule.b.draft,text,string,no,no,z.string().min(1)
+endpoints.ts,242,ResolveEscalationRequest.rule.b.draft,jurisdiction_scope,string|null|undefined,yes,yes,z.string().nullable().optional()
+endpoints.ts,259,GoldenCorrectionRequest,golden_field_id,string,no,no,z.string()
+endpoints.ts,260,GoldenCorrectionRequest,corrected_value,string|null,no,yes,z.string().nullable()
+endpoints.ts,261,GoldenCorrectionRequest,source_citation,string,no,no,z.string().min(1) NON-EMPTY
+endpoints.ts,262,GoldenCorrectionRequest,reason,string,no,no,z.string().min(1) NON-EMPTY
+endpoints.ts,275,GoldenAffirmRequest,reason,string,no,no,z.string().min(1) NON-EMPTY
+endpoints.ts,288,BlindEntriesRequest,entries,BlindEntryInput[],no,no,z.array(...).min(1) NON-EMPTY ARRAY
+endpoints.ts,293,BlindEntriesResponse,accepted,true,no,no,z.literal(true)
+endpoints.ts,294,BlindEntriesResponse,entry_ids,string[],no,no,z.array(z.string())
+endpoints.ts,301,ReconciliationResponse,order_id,string,no,no,z.string()
+endpoints.ts,302,ReconciliationResponse,divergences,Reconciliation[],no,no,z.array
+endpoints.ts,312,ReconciliationRulingRequest,path,string,no,no,z.string()
+endpoints.ts,313,ReconciliationRulingRequest,ruling_value,string|null,no,yes,z.string().nullable()
+endpoints.ts,314,ReconciliationRulingRequest,citation,string,no,no,z.string().min(1) NON-EMPTY
+endpoints.ts,315,ReconciliationRulingRequest,reason,string|undefined,yes,no,z.string().optional()
+endpoints.ts,316,ReconciliationRulingRequest,general_rule_draft,object|undefined,yes,no,z.object(...).optional()
+endpoints.ts,318,ReconciliationRulingRequest.general_rule_draft,text,string,no,no,z.string().min(1)
+endpoints.ts,319,ReconciliationRulingRequest.general_rule_draft,jurisdiction_scope,string|null|undefined,yes,yes,z.string().nullable().optional()
+endpoints.ts,333,BenchCell,section,string,no,no,z.string()
+endpoints.ts,334,BenchCell,tag,GoldenTag,no,no,enum closed
+endpoints.ts,335,BenchCell,fields,number,no,no,z.number().int()
+endpoints.ts,336,BenchCell,passed,number,no,no,z.number().int()
+endpoints.ts,341,BenchFailRow,path,string,no,no,z.string()
+endpoints.ts,342,BenchFailRow,tag,GoldenTag,no,no,enum closed
+endpoints.ts,343,BenchFailRow,model_value,string|null,no,yes,z.string().nullable()
+endpoints.ts,344,BenchFailRow,seed_value,string|null,no,yes,z.string().nullable()
+endpoints.ts,345,BenchFailRow,source_note,string|null,no,yes,z.string().nullable()
+endpoints.ts,347,BenchFailRow,golden_field_id,string|null,no,yes,z.string().nullable()
+endpoints.ts,352,BenchSection,section,string,no,no,z.string()
+endpoints.ts,353,BenchSection,n,number,no,no,z.number().int()
+endpoints.ts,354,BenchSection,passed,number,no,no,z.number().int()
+endpoints.ts,355,BenchSection,suspect_note,string|null,no,yes,z.string().nullable()
+endpoints.ts,356,BenchSection,note,string|null,no,yes,z.string().nullable()
+endpoints.ts,357,BenchSection,fails,BenchFailRow[],no,no,z.array
+endpoints.ts,362,BenchResultsResponse,run_ref,string,no,no,z.string()
+endpoints.ts,363,BenchResultsResponse,seed_version,string,no,no,z.string()
+endpoints.ts,364,BenchResultsResponse,total_fields,number,no,no,z.number().int()
+endpoints.ts,365,BenchResultsResponse,orders,number,no,no,z.number().int()
+endpoints.ts,366,BenchResultsResponse,cells,BenchCell[],no,no,z.array
+endpoints.ts,367,BenchResultsResponse,sections,BenchSection[],no,no,z.array
+endpoints.ts,374,LeaderboardResponse,cells,LeaderboardCell[],no,no,z.array
+endpoints.ts,380,EngineRoutingRequest,jurisdiction,string,no,no,z.string()
+endpoints.ts,381,EngineRoutingRequest,section,string,no,no,z.string()
+endpoints.ts,382,EngineRoutingRequest,seat,string,no,no,z.string()
+endpoints.ts,383,EngineRoutingRequest,engine_id,string,no,no,z.string()
+endpoints.ts,384,EngineRoutingRequest,evidence_url,string,no,no,z.string().min(1) NON-EMPTY (not .url())
+endpoints.ts,398,MetricsSourceRate,source,string,no,no,z.string()
+endpoints.ts,399,MetricsSourceRate,correction_rate,number,no,no,z.number() unbounded
+endpoints.ts,400,MetricsSourceRate,n,number,no,no,z.number().int()
+endpoints.ts,402,MetricsSourceRate,alarm,boolean,no,no,z.boolean()
+endpoints.ts,403,MetricsSourceRate,note,string|null,no,yes,z.string().nullable()
+endpoints.ts,408,MetricsBacklogRow,path,string,no,no,z.string()
+endpoints.ts,409,MetricsBacklogRow,correction_rate,number,no,no,z.number()
+endpoints.ts,410,MetricsBacklogRow,n,number,no,no,z.number().int()
+endpoints.ts,416,MetricsResponse,catch_rate,number|null,no,yes,z.number().nullable() REQUIRED KEY
+endpoints.ts,417,MetricsResponse,probes_planted,number|null|undefined,yes,yes,optional+nullable (aggregate only)
+endpoints.ts,418,MetricsResponse,probes_caught,number|null|undefined,yes,yes,optional+nullable
+endpoints.ts,420,MetricsResponse,catch_rate_history,number[]|undefined,yes,no,z.array(z.number()).optional()
+endpoints.ts,422,MetricsResponse,catch_rate_floor,number|null|undefined,yes,yes,optional+nullable
+endpoints.ts,423,MetricsResponse,correction_rate,number|null|undefined,yes,yes,optional+nullable
+endpoints.ts,424,MetricsResponse,fields_reviewed,number|null|undefined,yes,yes,optional+nullable int
+endpoints.ts,425,MetricsResponse,corrected,number|null|undefined,yes,yes,optional+nullable int
+endpoints.ts,426,MetricsResponse,median_minutes_per_order,number|null|undefined,yes,yes,optional+nullable (order-level not per-person)
+endpoints.ts,427,MetricsResponse,auto_confirm_rate,number|null|undefined,yes,yes,optional+nullable
+endpoints.ts,428,MetricsResponse,auto_sample_correction_rate,number|null|undefined,yes,yes,optional+nullable
+endpoints.ts,429,MetricsResponse,auto_sample_n,number|null|undefined,yes,yes,optional+nullable int
+endpoints.ts,430,MetricsResponse,escalations_per_100,number|null|undefined,yes,yes,optional+nullable
+endpoints.ts,431,MetricsResponse,escalations_per_100_history,number[]|undefined,yes,no,optional array
+endpoints.ts,432,MetricsResponse,escalations_this_week,number|null|undefined,yes,yes,optional+nullable int
+endpoints.ts,433,MetricsResponse,correction_by_source,MetricsSourceRate[]|undefined,yes,no,optional array
+endpoints.ts,434,MetricsResponse,field_backlog,MetricsBacklogRow[]|undefined,yes,no,optional array
+endpoints.ts,440,MetricsResponse,blind_fifty,object|undefined,yes,no,inline z.object(...).optional()
+endpoints.ts,442,MetricsResponse.blind_fifty,orders_total,number,no,no,z.number().int()
+endpoints.ts,443,MetricsResponse.blind_fifty,submitted_a,number,no,no,z.number().int()
+endpoints.ts,444,MetricsResponse.blind_fifty,submitted_b,number,no,no,z.number().int()
+endpoints.ts,445,MetricsResponse.blind_fifty,ready_for_reconciliation,number,no,no,z.number().int()
+endpoints.ts,446,MetricsResponse.blind_fifty,oldest_waiting_days,number|null,no,yes,z.number().nullable()
+endpoints.ts,447,MetricsResponse.blind_fifty,reconciled,number,no,no,z.number().int()
+endpoints.ts,448,MetricsResponse.blind_fifty,drafts_pending,number,no,no,z.number().int()
+endpoints.ts,449,MetricsResponse.blind_fifty,judgment_fields_reconciled,number,no,no,z.number().int()
+endpoints.ts,450,MetricsResponse.blind_fifty,judgment_fields_target,number,no,no,z.number().int()
+endpoints.ts,451,MetricsResponse.blind_fifty,orders,object[],no,no,z.array(inline)
+endpoints.ts,453,MetricsResponse.blind_fifty.orders[],order_ref,string,no,no,z.string()
+endpoints.ts,454,MetricsResponse.blind_fifty.orders[],jurisdiction,string,no,no,z.string()
+endpoints.ts,455,MetricsResponse.blind_fifty.orders[],a_submitted,"'submitted'|'in_progress'|'not_started'",no,no,inline z.enum closed
+endpoints.ts,456,MetricsResponse.blind_fifty.orders[],b_submitted,"'submitted'|'in_progress'|'not_started'",no,no,inline z.enum closed
+endpoints.ts,457,MetricsResponse.blind_fifty.orders[],reconciliation,string|null,no,yes,z.string().nullable()
+endpoints.ts,458,MetricsResponse.blind_fifty.orders[],golden_line,string|null,no,yes,z.string().nullable()
+endpoints.ts,459,MetricsResponse.blind_fifty.orders[],drafts,string|null,no,yes,z.string().nullable()
+endpoints.ts,462,MetricsResponse.blind_fifty,section_coverage,object[],no,no,z.array(inline)
+endpoints.ts,464,MetricsResponse.blind_fifty.section_coverage[],section,string,no,no,z.string()
+endpoints.ts,465,MetricsResponse.blind_fifty.section_coverage[],fields,number,no,no,z.number().int()
+endpoints.ts,466,MetricsResponse.blind_fifty.section_coverage[],note,string|null,no,yes,z.string().nullable()
+endpoints.ts,467,MetricsResponse.blind_fifty.section_coverage[],warn,boolean,no,no,z.boolean()
+endpoints.ts,473,MetricsResponse,<catchall>,unknown,n/a,n/a,.catchall(z.unknown()) OPEN SHAPE - unknown keys pass validation
+endpoints.ts,482,DerivedSignalResponse,signal,string,no,no,z.string()
+endpoints.ts,483,DerivedSignalResponse,title,string,no,no,z.string()
+endpoints.ts,484,DerivedSignalResponse,note,string|null,no,yes,z.string().nullable()
+endpoints.ts,485,DerivedSignalResponse,rows,object[],no,no,z.array(inline)
+endpoints.ts,487,DerivedSignalResponse.rows[],head,string,no,no,z.string()
+endpoints.ts,488,DerivedSignalResponse.rows[],body,string,no,no,z.string()
+endpoints.ts,489,DerivedSignalResponse.rows[],meta,string|null,no,yes,z.string().nullable()
+endpoints.ts,490,DerivedSignalResponse.rows[],order_id,string|null,no,yes,z.string().nullable()
+endpoints.ts,499,CreateComplaintRequest,order_id,string,no,no,z.string()
+endpoints.ts,500,CreateComplaintRequest,field_path,string,no,no,z.string()
+endpoints.ts,501,CreateComplaintRequest,client_value,string|null|undefined,yes,yes,z.string().nullable().optional()
+endpoints.ts,502,CreateComplaintRequest,description,string|undefined,yes,no,z.string().optional()
+endpoints.ts,513,ResolveComplaintRequest,resolution,string,no,no,z.string().min(1) NON-EMPTY
+endpoints.ts,514,ResolveComplaintRequest,rule,union,no,no,z.union REQUIRED - refusal encoded
+endpoints.ts,515,ResolveComplaintRequest.rule.a,rule_id,string,no,no,z.string()
+endpoints.ts,518,ResolveComplaintRequest.rule.b.draft,text,string,no,no,z.string().min(1)
+endpoints.ts,519,ResolveComplaintRequest.rule.b.draft,jurisdiction_scope,string|null|undefined,yes,yes,nullable+optional
+endpoints.ts,523,ResolveComplaintRequest,golden_offer_accepted,boolean|undefined,yes,no,z.boolean().optional() (NOT nullable - contrast Complaint.golden_offer_accepted nullable)
+endpoints.ts,534,AuditEntry,id,string,no,no,z.string()
+endpoints.ts,535,AuditEntry,actor_id,string,no,no,z.string()
+endpoints.ts,536,AuditEntry,action,string,no,no,z.string() OPEN vocabulary (not Action union)
+endpoints.ts,537,AuditEntry,entity,string,no,no,z.string()
+endpoints.ts,538,AuditEntry,entity_id,string,no,no,z.string()
+endpoints.ts,539,AuditEntry,at,string,no,no,z.string()
+endpoints.ts,543,AuditResponse,entries,AuditEntry[],no,no,z.array
+endpoints.ts,556,OrderTimelineEvent,at,string,no,no,z.string()
+endpoints.ts,557,OrderTimelineEvent,kind,string,no,no,z.string() OPEN vocabulary
+endpoints.ts,558,OrderTimelineEvent,label,string,no,no,z.string()
+endpoints.ts,559,OrderTimelineEvent,detail,string|null,no,yes,z.string().nullable()
+endpoints.ts,560,OrderTimelineEvent,attend,boolean,no,no,z.boolean()
+endpoints.ts,565,OrderTimelineResponse,order_id,string,no,no,z.string()
+endpoints.ts,566,OrderTimelineResponse,events,OrderTimelineEvent[],no,no,z.array
+endpoints.ts,581,GrantedPermissionSchema,action,string,no,no,z.string() (NOT the Action union - runtime is weaker than authz.ts TS)
+endpoints.ts,582,GrantedPermissionSchema,path,string|undefined,yes,no,z.string().optional()
+endpoints.ts,583,GrantedPermissionSchema,when,Record<string (string|null)[]>|undefined,yes,no,z.record(z.string() z.array(z.string().nullable())).optional()
+endpoints.ts,590,MePermissionsResponse,role,Role,no,no,z.enum(ROLES) closed
+endpoints.ts,591,MePermissionsResponse,rules,GrantedPermissionSchema[],no,no,z.array
+endpoints.ts,602,DeliveryWithReport,<extends Delivery>,all Delivery fields,no,no,Delivery.extend
+endpoints.ts,602,DeliveryWithReport,report,Report|null,no,yes,Report.nullable()
+endpoints.ts,605,EscalationsResponse,escalations,Escalation[],no,no,z.array (no exported TS type)
+endpoints.ts,606,RulesResponse,rules,Rule[],no,no,z.array (no exported TS type)
+endpoints.ts,607,GoldenResponse,golden_fields,GoldenField[],no,no,z.array (no exported TS type)
+endpoints.ts,608,EnginesResponse,engines,Engine[],no,no,z.array (no exported TS type)
+endpoints.ts,609,RoutingResponse,cells,EngineRoutingCell[],no,no,z.array (no exported TS type)
+endpoints.ts,610,DeliveriesResponse,deliveries,DeliveryWithReport[],no,no,z.array (no exported TS type)
+endpoints.ts,613,ComplaintsResponse,complaints,Complaint[],no,no,z.array (no exported TS type)
+endpoints.ts,614,ReportsResponse,reports,Report[],no,no,z.array (no exported TS type)
+endpoints.ts,615,BugsResponse,bugs,Bug[],no,no,z.array (no exported TS type)
+endpoints.ts,628,SourcePage,n,number,no,no,z.number().int()
+endpoints.ts,630,SourcePage,read_in_full,boolean,no,no,z.boolean()
+endpoints.ts,632,SourcePage,kind,string,no,no,z.string() OPEN vocabulary
+endpoints.ts,633,SourcePage,lines,string[],no,no,z.array(z.string())
+endpoints.ts,635,SourcePage,degraded,boolean,no,no,z.boolean()
+endpoints.ts,649,PackageInstrument,id,string,no,no,z.string()
+endpoints.ts,651,PackageInstrument,label,string,no,no,z.string()
+endpoints.ts,653,PackageInstrument,kind,string,no,no,z.string() OPEN vocabulary
+endpoints.ts,654,PackageInstrument,first_page,number,no,no,z.number().int() inclusive
+endpoints.ts,655,PackageInstrument,last_page,number,no,no,z.number().int() inclusive
+endpoints.ts,656,PackageInstrument,recorded_ref,string|null,no,yes,z.string().nullable()
+endpoints.ts,665,OrderPagesResponse,order_id,string,no,no,z.string()
+endpoints.ts,666,OrderPagesResponse,total_pages,number,no,no,z.number().int()
+endpoints.ts,667,OrderPagesResponse,pages,SourcePage[],no,no,z.array
+endpoints.ts,668,OrderPagesResponse,instruments,PackageInstrument[],no,no,z.array REQUIRED (empty array is the answer)
+endpoints.ts,679,ExcludeFieldRequest,reason,string,no,no,z.string().min(1) NON-EMPTY

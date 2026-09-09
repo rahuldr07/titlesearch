@@ -1,9 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent } from "storybook/test";
 import { Split, SplitHandle, SplitPanel } from "./resizable";
-import { DECISION_MAX, DECISION_MIN } from "./splitBand";
-import { onPanel } from "./kitGround";
-import { Frame, Decision, Evidence } from "./splitStoryData";
+import { DECISION_MAX, DECISION_MIN } from "./split-band";
+import { onPanel } from "./kit-ground";
+import { Frame, Decision, Evidence } from "./split-story-data";
 
 /**
  * The two things about the split that are invisible on screen: the WCAG 2.2

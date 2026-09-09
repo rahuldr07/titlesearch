@@ -12,7 +12,7 @@ import {
 import { SearchIcon } from "lucide-react";
 
 import { cx } from "./cx";
-import { collectionItem, markGutter } from "./overlaySurface";
+import { collectionItem, markGutter } from "./overlay-surface";
 
 /**
  * The command menu's filtering shell and its parts, also usable inline in a

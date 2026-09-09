@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect } from "storybook/test";
 import { RadioGroup, RadioGroupItem } from "./radio-group";
-import { onPanel } from "./kitGround";
+import { onPanel } from "./kit-ground";
 
 /**
  * Two levels of blocking, and they carry different sentences: the whole

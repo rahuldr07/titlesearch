@@ -37,7 +37,7 @@ export function CountersignPanel(props: { readonly orderId: string }) {
           (entry) => entry.countersigned_by === null,
         );
         if (outstanding.length === 0) {
-          return <CountersignSettled required={data.required} />;
+          return <CountersignSettled required={data.required} unruled={data.unruled} />;
         }
 
         return (

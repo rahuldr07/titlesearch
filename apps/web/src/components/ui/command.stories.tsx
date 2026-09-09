@@ -2,8 +2,8 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent } from "storybook/test";
 
 import { Command, CommandInput, CommandItem, CommandList } from "./command";
-import { CommandPalette } from "./commandPalette";
-import { onCanvas } from "./kitGround";
+import { CommandPalette } from "./command-palette";
+import { onCanvas } from "./kit-ground";
 
 /**
  * The overlay the chord layer was written for: a palette is opened by a

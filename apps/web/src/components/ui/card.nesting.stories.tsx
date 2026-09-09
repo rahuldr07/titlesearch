@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect } from "storybook/test";
 import { Card, InnerPanel } from "./card";
-import { onCanvas } from "./kitGround";
-import { RenderBoundary } from "./renderBoundary";
+import { onCanvas } from "./kit-ground";
+import { RenderBoundary } from "./render-boundary";
 
 /**
  * Nested cards throw; these stories prove the throw is caught and displayed

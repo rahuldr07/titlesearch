@@ -69,6 +69,19 @@
 }
 
 /*
+ * The provenance mark's halo. An SVG stroke is centred on its path, so every
+ * pixel of casing a second, wider rect would give it is half INSIDE the
+ * region — which on a one-line OCR box (13 of 1000 units, about 8px on
+ * screen) painted over the line it points at. A drop-shadow renders outside
+ * the stroke's own edge and never inside it, so the mark holds its contrast
+ * on dark scan ink without touching a glyph.
+ */
+@utility tp-cite-mark {
+  filter: drop-shadow(0 0 1px var(--color-surface-paper))
+    drop-shadow(0 0 2px var(--color-surface-paper));
+}
+
+/*
  * Zoom-to-citation: the evidence sheet scales to 1.85 with the
  * transform-origin at the cited region's centre. The origin arrives at
  * runtime as two percentages computed from LineCoords — inline styles and

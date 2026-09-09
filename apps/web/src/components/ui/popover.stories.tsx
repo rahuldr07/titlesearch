@@ -9,7 +9,7 @@ import {
   PopoverTrigger,
 } from "./popover";
 import { Button } from "./button";
-import { onCanvas } from "./kitGround";
+import { onCanvas } from "./kit-ground";
 
 /**
  * Every story opens the popover. `defaultOpen` on the trigger rather than a

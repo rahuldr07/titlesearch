@@ -10,7 +10,7 @@ import {
 } from "react-aria-components";
 
 import { cx } from "./cx";
-import { chordOverlay } from "./overlaySurface";
+import { chordOverlay } from "./overlay-surface";
 
 /**
  * The modal owes the chord layer two things: role="dialog" (supplied by

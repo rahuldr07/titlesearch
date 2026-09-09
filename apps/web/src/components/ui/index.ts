@@ -52,7 +52,7 @@ export {
    mark, or the mark drifts. */
 export { Select, Option, type SelectProps, type OptionProps } from "./select";
 export { ComboBox, type ComboBoxProps } from "./combobox";
-export { CommandPalette, type CommandPaletteProps } from "./commandPalette";
+export { CommandPalette, type CommandPaletteProps } from "./command-palette";
 export {
   Command,
   CommandInput,
@@ -69,8 +69,8 @@ export {
   type ColumnAlign,
   type RowStatus,
   type TableColumn,
-} from "./tableColumns";
-export { DataCell } from "./dataCell";
+} from "./table-columns";
+export { DataCell } from "./data-cell";
 
 /* ── overlays ─────────────────────────────────────────────────────────────── */
 export {
@@ -144,7 +144,8 @@ export {
   type SplitProps,
   type SplitPanelProps,
 } from "./resizable";
-export { DECISION_MIN, DECISION_MAX } from "./splitBand";
+export { DECISION_MIN, DECISION_MAX } from "./split-band";
 /* The rail column. */
 export * from "./sidebar";
+export { sidebarDoorClass } from "./sidebar-chrome";
 export { useSidebar, SIDEBAR_KEY } from "./sidebar-context";

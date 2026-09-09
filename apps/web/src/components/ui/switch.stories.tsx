@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect } from "storybook/test";
 import { Switch } from "./switch";
-import { onPanel } from "./kitGround";
+import { onPanel } from "./kit-ground";
 
 /**
  * A switch commits immediately and has no confirm step, so every story here

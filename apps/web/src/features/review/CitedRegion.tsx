@@ -21,8 +21,39 @@ import type { LineCoords } from "@titlepipe/contract";
  * It adds no caption. A "Dual-Engine Match" pill would be a claim the wire
  * does not support — `LineCoords` carries one engine's position. What the
  * box marks is said in words below the sheet.
+ *
+ * OUTLINE, NOT A WASH. It used to paint the region with `fill-action/20`,
+ * which on a rendered raster covers the ink the reviewer is being asked to
+ * check — and a region is not always a line: a value found by reading down
+ * a whole judgment index cites the union of every block that fed it, which
+ * measured 62% of p69 on the Lincoln County package. A tinted rectangle over
+ * two thirds of a scanned page hides the evidence and marks nothing.
+ *
+ * AND THE OUTLINE IS DRAWN OUTSIDE THE REGION. An SVG stroke is centred on
+ * its path, so a rectangle drawn ON a reader's box paints half its width
+ * into the box. A reader's box is tight to the glyphs — the p26 order number
+ * is 13 of 1000 units tall, about 8 device pixels at sheet scale — so a 2.5px
+ * stroke plus a 5px casing put 7.5px of paint over an 8px line and struck out
+ * the text the mark exists to point at. The rect is inflated by `PAD` first,
+ * and the halo is a drop-shadow (`tp-cite-mark`), which renders outside the
+ * stroke and never inside it. The margin is in page units, so it stays
+ * proportional at every zoom, and it is a MARGIN, not a measurement: the
+ * comment above already holds — nothing downstream reads a number off this.
  */
 const SCALE = 1000;
+
+/**
+ * The clearance between the reader's box and the mark, in page units.
+ *
+ * MEASURED, not picked. On p26 of the Lincoln County package the line pitch
+ * is ~11px at sheet scale and a line's glyphs are ~8.5px of it, so two lines
+ * leave a gutter of about 2.5px — and a reader's box is not exactly the glyph
+ * box: it can sit a pixel or two proud of the ink it covers. At 3 units the
+ * stroke landed on the tops of the very characters it marks. 6 clears them,
+ * at the cost of grazing the line above on the tightest single-line boxes,
+ * which is the right way round: the marked line is the one being read.
+ */
+const PAD = 6;
 
 export function CitedRegion(props: { readonly box: LineCoords }) {
   const box = props.box;
@@ -49,15 +80,15 @@ export function CitedRegion(props: { readonly box: LineCoords }) {
       className="pointer-events-none absolute inset-0 h-full w-full"
     >
       <rect
-        x={box.x * SCALE}
-        y={box.y * SCALE}
-        width={box.w * SCALE}
-        height={box.h * SCALE}
+        x={box.x * SCALE - PAD}
+        y={box.y * SCALE - PAD}
+        width={box.w * SCALE + PAD * 2}
+        height={box.h * SCALE + PAD * 2}
         ref={mark}
         rx="4"
         vectorEffect="non-scaling-stroke"
         strokeWidth="2"
-        className="fill-action/20 stroke-action"
+        className="tp-cite-mark fill-none stroke-action"
       />
     </svg>
   );

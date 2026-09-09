@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect } from "storybook/test";
 
 import { Tab, TabList, TabPanel, Tabs } from "./tabs";
-import { onPanel } from "./kitGround";
+import { onPanel } from "./kit-ground";
 
 /**
  * The five stage tabs on the order bar are the case this is built for, so the

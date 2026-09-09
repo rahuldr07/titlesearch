@@ -1,5 +1,11 @@
 export { handlers } from "./handlers.js";
 export {
+  SAMPLE_PACKAGE_BYTES,
+  registerPackageForTest,
+  sampleBundle,
+  type Bundle,
+} from "./packages.js";
+export {
   demoFields,
   demoOrder,
   demoOrder2,

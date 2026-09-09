@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect } from "storybook/test";
 
 import { Table } from "./table";
-import { columns, orders, type Order } from "./tableStoryData";
+import { columns, orders, type Order } from "./table-story-data";
 import type { Decorator } from "@storybook/react-vite";
 
 /**

@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect } from "storybook/test";
 import { Avatar, AvatarLabel } from "./avatar";
-import { onPanel } from "./kitGround";
+import { onPanel } from "./kit-ground";
 
 /** Initials only — one story asserts no <img> is ever rendered. */
 const meta = {

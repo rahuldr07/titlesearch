@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect } from "storybook/test";
 import { Checkbox } from "./checkbox";
-import { onPanel } from "./kitGround";
+import { onPanel } from "./kit-ground";
 
 /**
  * A disabled control states its reason: the Blocked play asserts the sentence

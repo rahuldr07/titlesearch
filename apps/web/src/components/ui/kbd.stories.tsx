@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Kbd } from "./kbd";
-import { onPanel } from "./kitGround";
+import { onPanel } from "./kit-ground";
 
 /**
  * The design's actual chord vocabulary, rendered as written — `Esc` does not

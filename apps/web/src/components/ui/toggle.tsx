@@ -3,7 +3,7 @@ import { ToggleButton, type ToggleButtonProps } from "react-aria-components";
 
 import { cx } from "./cx";
 import { disabledAttributes, type Disablement } from "./disabled";
-import { BlockedHint } from "./blockedHint";
+import { BlockedHint } from "./blocked-hint";
 
 /**
  * A control that remembers one bit. The on state is a raised white cell on

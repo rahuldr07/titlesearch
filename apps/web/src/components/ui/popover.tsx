@@ -8,7 +8,7 @@ import {
 } from "react-aria-components";
 
 import { cx } from "./cx";
-import { chordOverlay, overlayCap, overlaySurface } from "./overlaySurface";
+import { chordOverlay, overlayCap, overlaySurface } from "./overlay-surface";
 
 /**
  * The popover carries `data-chord-scope="own"` here, on the one component

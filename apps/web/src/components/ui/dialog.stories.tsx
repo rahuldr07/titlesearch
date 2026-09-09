@@ -3,7 +3,7 @@ import { expect, userEvent } from "storybook/test";
 
 import { Dialog, DialogBody, DialogFooter, DialogTrigger } from "./dialog";
 import { Button } from "./button";
-import { onCanvas } from "./kitGround";
+import { onCanvas } from "./kit-ground";
 
 /* The overlay carries `data-chord-scope="own"` and `role="dialog"` — the two
    clauses of `overlayIsUp()` — and the chord story below asserts both. */

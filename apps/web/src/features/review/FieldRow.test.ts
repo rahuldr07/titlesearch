@@ -1,6 +1,7 @@
 import { expect, test } from "vitest";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 /**
  * `tp-field-row-grid` shipped as a DEAD CLASS: used once in FieldRow, declared
@@ -9,7 +10,7 @@ import { join } from "node:path";
  * check-rules and Storybook all see a class name and none sees whether a rule
  * was ever emitted. These two tests are that missing layer.
  */
-const SRC = new URL("../..", import.meta.url).pathname;
+const SRC = fileURLToPath(new URL("../..", import.meta.url));
 
 function walk(dir: string): string[] {
   const out: string[] = [];
@@ -26,7 +27,7 @@ const css = [
   ...files.filter((p) => p.endsWith(".css")),
   // Tokens declare `--animate-tp-pulse`, which Tailwind turns into a real
   // utility without any `@utility` block. Read so it is not a false positive.
-  new URL("../../../../../packages/ui-tokens/src/tokens.css", import.meta.url).pathname,
+  fileURLToPath(new URL("../../../../../packages/ui-tokens/src/tokens.css", import.meta.url)),
 ]
   .map((p) => readFileSync(p, "utf8"))
   .join("\n");

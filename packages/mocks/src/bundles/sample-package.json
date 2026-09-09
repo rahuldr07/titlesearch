@@ -1,0 +1,817 @@
+{
+  "_README": "SYNTHETIC. A hand-authored bundle in the generator's shape so the hydration path is testable before a real bundle exists. Every name, address, parcel and reference here is invented. Its sha256 is the digest of the ASCII bytes \"%PDF-1.4 sample package bytes\", so a test can build that file and reach this entry through the real upload path.",
+  "sha256": "efdfbe0b588cfa1f8b8730f97be66230bef414306a54e53332e760f86f25fade",
+  "slug": "sample-package",
+  "job": "web_sample_000000",
+  "source": {
+    "filename": "sample_package.pdf",
+    "bytes": 28,
+    "pages": 3
+  },
+  "package": {
+    "jurisdiction": "sample-mo",
+    "county": "Sample",
+    "state": "MO",
+    "parcel": "00-00-00-000-000-000.000",
+    "situs": "12 SAMPLE LN, SAMPLETON, MO 65000",
+    "owner_of_record": "SAMPLE FAMILY TRUST",
+    "stamp_page": 1,
+    "stamp_text": "Recorded in Sample County, Missouri",
+    "order_ref": "SAMPLE-0001",
+    "order_ref_page": 1
+  },
+  "engines": [
+    {
+      "id": "dots-mocr",
+      "role": "A",
+      "pages_read": 3
+    },
+    {
+      "id": "mineru",
+      "role": "B",
+      "pages_read": 3
+    },
+    {
+      "id": "unlimited-ocr",
+      "role": "C",
+      "pages_read": 3
+    }
+  ],
+  "pages": [
+    {
+      "n": 1,
+      "kind": "WARRANTY DEED",
+      "read_in_full": true,
+      "degraded": false,
+      "lines": [
+        "RECORDED IN SAMPLE COUNTY, MISSOURI · BOOK 100 PAGE 1",
+        "ORDER SAMPLE-0001 · PARCEL 00-00-00-000-000-000.000",
+        "",
+        "THIS WARRANTY DEED, made by HOLLIS T. MARCHBANK, a single person,",
+        "Grantor, to SAMPLE FAMILY TRUST, Grantee,",
+        "for and in consideration of the sum of ____________ Dollars,",
+        "conveys the real estate at 12 SAMPLE LN, SAMPLETON, MO 65000."
+      ],
+      "image_url": "/scan/web_sample_000000/page_0001.png",
+      "flags": {},
+      "consensus": 0.97
+    },
+    {
+      "n": 2,
+      "kind": "DEED OF TRUST",
+      "read_in_full": true,
+      "degraded": false,
+      "lines": [
+        "RECORDED IN SAMPLE COUNTY, MISSOURI · BOOK 100 PAGE 2",
+        "",
+        "DEED OF TRUST from SAMPLE FAMILY TRUST, Borrower, to",
+        "SAMPLETON SAVINGS BANK, Lender, its successors and assigns,",
+        "securing the principal sum of $150,000.00."
+      ],
+      "image_url": "/scan/web_sample_000000/page_0002.png",
+      "flags": {
+        "mineru": [
+          "LAYOUT_FAILED"
+        ]
+      },
+      "consensus": 0.9
+    },
+    {
+      "n": 3,
+      "kind": "DEED OF TRUST (cont.)",
+      "read_in_full": true,
+      "degraded": true,
+      "lines": [
+        "MATURITY DATE: [ scan below contrast floor — density loss ]",
+        "This debt is evidenced by Borrower's note dated the same date."
+      ],
+      "image_url": "/scan/web_sample_000000/page_0003.png",
+      "flags": {
+        "dots-mocr": [
+          "LOW_CONTRAST"
+        ],
+        "mineru": [
+          "LOW_CONTRAST"
+        ]
+      },
+      "consensus": 0.41
+    }
+  ],
+  "instruments": [
+    {
+      "id": "ins_1",
+      "label": "Warranty deed — Book 100 Page 1",
+      "kind": "deed",
+      "first_page": 1,
+      "last_page": 1,
+      "recorded_ref": "BK 100 PG 1"
+    },
+    {
+      "id": "ins_2",
+      "label": "Deed of trust — Book 100 Page 2",
+      "kind": "security_deed",
+      "first_page": 2,
+      "last_page": 3,
+      "recorded_ref": "BK 100 PG 2"
+    }
+  ],
+  "fields": [
+    {
+      "id": "fld_1",
+      "path": "header.order_number",
+      "template_row": "ORDER NUMBER",
+      "section": "header",
+      "value": "SAMPLE-0001",
+      "na_reason": null,
+      "state": "auto_confirmed",
+      "tier": "T3",
+      "source_doc_id": "ins_1",
+      "source_page": 1,
+      "source_snippet": "ORDER SAMPLE-0001 · PARCEL 00-00-00-000-000-000.000",
+      "source_excerpt": {
+        "doc_id": "ins_1",
+        "page": 1,
+        "pre": "ORDER ",
+        "hit": "SAMPLE-0001",
+        "post": " · PARCEL 00-00-00-000-000-000.000",
+        "note": null
+      },
+      "source_line_coords": {
+        "page": 1,
+        "x": 0.1176,
+        "y": 0.1429,
+        "w": 0.2157,
+        "h": 0.1429
+      },
+      "engine_id": "dots-mocr",
+      "engine_confidence_raw": null,
+      "rule_refs": [],
+      "approved_by": null,
+      "approved_at": null,
+      "readings": [
+        {
+          "id": "rd_1a",
+          "field_id": "fld_1",
+          "engine_id": "dots-mocr",
+          "value": "SAMPLE-0001",
+          "page": 1,
+          "snippet": "ORDER SAMPLE-0001",
+          "confidence_raw": null,
+          "cost_usd": 0,
+          "latency_ms": 0,
+          "line_coords": {
+            "page": 1,
+            "x": 0.1176,
+            "y": 0.1429,
+            "w": 0.2157,
+            "h": 0.1429
+          }
+        },
+        {
+          "id": "rd_1b",
+          "field_id": "fld_1",
+          "engine_id": "mineru",
+          "value": "SAMPLE-0001",
+          "page": 1,
+          "snippet": "ORDER SAMPLE-0001",
+          "confidence_raw": null,
+          "cost_usd": 0,
+          "latency_ms": 0,
+          "line_coords": {
+            "page": 1,
+            "x": 0.1176,
+            "y": 0.1429,
+            "w": 0.2157,
+            "h": 0.1429
+          }
+        }
+      ],
+      "asking": null,
+      "why": null,
+      "consequence": null,
+      "routed_because": "A=B"
+    },
+    {
+      "id": "fld_2",
+      "path": "property.parcel",
+      "template_row": "PARCEL",
+      "section": "property",
+      "value": "00-00-00-000-000-000.000",
+      "na_reason": null,
+      "state": "auto_confirmed",
+      "tier": "T2",
+      "source_doc_id": "ins_1",
+      "source_page": 1,
+      "source_snippet": "ORDER SAMPLE-0001 · PARCEL 00-00-00-000-000-000.000",
+      "source_excerpt": {
+        "doc_id": "ins_1",
+        "page": 1,
+        "pre": "ORDER SAMPLE-0001 · PARCEL ",
+        "hit": "00-00-00-000-000-000.000",
+        "post": "",
+        "note": null
+      },
+      "source_line_coords": {
+        "page": 1,
+        "x": 0.5294,
+        "y": 0.1429,
+        "w": 0.4706,
+        "h": 0.1429
+      },
+      "engine_id": "dots-mocr",
+      "engine_confidence_raw": null,
+      "rule_refs": [],
+      "approved_by": null,
+      "approved_at": null,
+      "readings": [
+        {
+          "id": "rd_2a",
+          "field_id": "fld_2",
+          "engine_id": "dots-mocr",
+          "value": "00-00-00-000-000-000.000",
+          "page": 1,
+          "snippet": "PARCEL 00-00-00-000-000-000.000",
+          "confidence_raw": null,
+          "cost_usd": 0,
+          "latency_ms": 0,
+          "line_coords": {
+            "page": 1,
+            "x": 0.5294,
+            "y": 0.1429,
+            "w": 0.4706,
+            "h": 0.1429
+          }
+        },
+        {
+          "id": "rd_2b",
+          "field_id": "fld_2",
+          "engine_id": "mineru",
+          "value": "00-00-00-000-000-000.000",
+          "page": 1,
+          "snippet": "PARCEL 00-00-00-000-000-000.000",
+          "confidence_raw": null,
+          "cost_usd": 0,
+          "latency_ms": 0,
+          "line_coords": {
+            "page": 1,
+            "x": 0.5294,
+            "y": 0.1429,
+            "w": 0.4706,
+            "h": 0.1429
+          }
+        }
+      ],
+      "asking": null,
+      "why": null,
+      "consequence": null,
+      "routed_because": "A=B"
+    },
+    {
+      "id": "fld_3",
+      "path": "vesting.grantor",
+      "template_row": "GRANTOR",
+      "section": "vesting",
+      "value": null,
+      "na_reason": null,
+      "state": "needs_review",
+      "tier": "T2",
+      "source_doc_id": "ins_1",
+      "source_page": 1,
+      "source_snippet": null,
+      "source_excerpt": null,
+      "source_line_coords": {
+        "page": 1,
+        "x": 0.0,
+        "y": 0.4286,
+        "w": 1.0,
+        "h": 0.1429
+      },
+      "engine_id": null,
+      "engine_confidence_raw": null,
+      "rule_refs": [],
+      "approved_by": null,
+      "approved_at": null,
+      "readings": [
+        {
+          "id": "rd_3a",
+          "field_id": "fld_3",
+          "engine_id": "dots-mocr",
+          "value": "HOLLIS T. MARCHBANK, A SINGLE PERSON",
+          "page": 1,
+          "snippet": "made by HOLLIS T. MARCHBANK, a single person,",
+          "confidence_raw": null,
+          "cost_usd": 0,
+          "latency_ms": 0,
+          "line_coords": {
+            "page": 1,
+            "x": 0.0,
+            "y": 0.4286,
+            "w": 1.0,
+            "h": 0.1429
+          }
+        },
+        {
+          "id": "rd_3b",
+          "field_id": "fld_3",
+          "engine_id": "mineru",
+          "value": "HOLLIS T. MARCHBANX, A SINGLE PERSON",
+          "page": 1,
+          "snippet": "made by HOLLIS T. MARCHBANX, a single person,",
+          "confidence_raw": null,
+          "cost_usd": 0,
+          "latency_ms": 0,
+          "line_coords": {
+            "page": 1,
+            "x": 0.08,
+            "y": 0.3,
+            "w": 0.7,
+            "h": 0.03
+          }
+        }
+      ],
+      "asking": "Confirm the grantor's surname.",
+      "why": "The two readers disagree on the grantor's surname.",
+      "consequence": "A misspelled grantor breaks the name search on the prior owner.",
+      "routed_because": "A≠B"
+    },
+    {
+      "id": "fld_4",
+      "path": "vesting.grantee",
+      "template_row": "GRANTEE",
+      "section": "vesting",
+      "value": "SAMPLE FAMILY TRUST",
+      "na_reason": null,
+      "state": "auto_confirmed",
+      "tier": "T2",
+      "source_doc_id": "ins_1",
+      "source_page": 1,
+      "source_snippet": "Grantor, to SAMPLE FAMILY TRUST, Grantee,",
+      "source_excerpt": {
+        "doc_id": "ins_1",
+        "page": 1,
+        "pre": "Grantor, to ",
+        "hit": "SAMPLE FAMILY TRUST",
+        "post": ", Grantee,",
+        "note": null
+      },
+      "source_line_coords": {
+        "page": 1,
+        "x": 0.2927,
+        "y": 0.5714,
+        "w": 0.4634,
+        "h": 0.1429
+      },
+      "engine_id": "dots-mocr",
+      "engine_confidence_raw": null,
+      "rule_refs": [],
+      "approved_by": null,
+      "approved_at": null,
+      "readings": [
+        {
+          "id": "rd_4a",
+          "field_id": "fld_4",
+          "engine_id": "dots-mocr",
+          "value": "SAMPLE FAMILY TRUST",
+          "page": 1,
+          "snippet": "to SAMPLE FAMILY TRUST, Grantee,",
+          "confidence_raw": null,
+          "cost_usd": 0,
+          "latency_ms": 0,
+          "line_coords": {
+            "page": 1,
+            "x": 0.2927,
+            "y": 0.5714,
+            "w": 0.4634,
+            "h": 0.1429
+          }
+        },
+        {
+          "id": "rd_4b",
+          "field_id": "fld_4",
+          "engine_id": "mineru",
+          "value": "SAMPLE FAMILY TRUST",
+          "page": 1,
+          "snippet": "to SAMPLE FAMILY TRUST, Grantee,",
+          "confidence_raw": null,
+          "cost_usd": 0,
+          "latency_ms": 0,
+          "line_coords": {
+            "page": 1,
+            "x": 0.2927,
+            "y": 0.5714,
+            "w": 0.4634,
+            "h": 0.1429
+          }
+        }
+      ],
+      "asking": null,
+      "why": null,
+      "consequence": null,
+      "routed_because": "A=B"
+    },
+    {
+      "id": "fld_5",
+      "path": "deed_of_trust.lender",
+      "template_row": "LENDER",
+      "section": "deed_of_trust",
+      "value": "SAMPLETON SAVINGS BANK",
+      "na_reason": null,
+      "state": "needs_review",
+      "tier": "T1",
+      "source_doc_id": "ins_2",
+      "source_page": 2,
+      "source_snippet": "SAMPLETON SAVINGS BANK, Lender, its successors and assigns,",
+      "source_excerpt": {
+        "doc_id": "ins_2",
+        "page": 2,
+        "pre": "",
+        "hit": "SAMPLETON SAVINGS BANK",
+        "post": ", Lender, its successors and assigns,",
+        "note": null
+      },
+      "source_line_coords": {
+        "page": 2,
+        "x": 0.0,
+        "y": 0.6,
+        "w": 0.3729,
+        "h": 0.2
+      },
+      "engine_id": "dots-mocr",
+      "engine_confidence_raw": null,
+      "rule_refs": [
+        "T1-lien-holder-identity"
+      ],
+      "approved_by": null,
+      "approved_at": null,
+      "readings": [
+        {
+          "id": "rd_5a",
+          "field_id": "fld_5",
+          "engine_id": "dots-mocr",
+          "value": "SAMPLETON SAVINGS BANK",
+          "page": 2,
+          "snippet": "SAMPLETON SAVINGS BANK, Lender,",
+          "confidence_raw": null,
+          "cost_usd": 0,
+          "latency_ms": 0,
+          "line_coords": {
+            "page": 2,
+            "x": 0.0,
+            "y": 0.6,
+            "w": 0.3729,
+            "h": 0.2
+          }
+        },
+        {
+          "id": "rd_5b",
+          "field_id": "fld_5",
+          "engine_id": "mineru",
+          "value": "SAMPLETON SAVINGS BANK",
+          "page": 2,
+          "snippet": "SAMPLETON SAVINGS BANK, Lender,",
+          "confidence_raw": null,
+          "cost_usd": 0,
+          "latency_ms": 0,
+          "line_coords": {
+            "page": 2,
+            "x": 0.0,
+            "y": 0.6,
+            "w": 0.3729,
+            "h": 0.2
+          }
+        }
+      ],
+      "asking": "Is the lender of record SAMPLETON SAVINGS BANK?",
+      "why": "The readers agree, and the lender of record is a ruinous-exposure field — never auto-confirmed.",
+      "consequence": "Naming the wrong holder of an open deed of trust sends the payoff to a stranger.",
+      "routed_because": "T1"
+    },
+    {
+      "id": "fld_6",
+      "path": "deed_of_trust.amount",
+      "template_row": "AMOUNT",
+      "section": "deed_of_trust",
+      "value": null,
+      "na_reason": null,
+      "state": "needs_review",
+      "tier": "T1",
+      "source_doc_id": "ins_2",
+      "source_page": 2,
+      "source_snippet": null,
+      "source_excerpt": null,
+      "source_line_coords": {
+        "page": 2,
+        "x": 0.0,
+        "y": 0.8,
+        "w": 1.0,
+        "h": 0.2
+      },
+      "engine_id": null,
+      "engine_confidence_raw": null,
+      "rule_refs": [
+        "T1-secured-principal"
+      ],
+      "approved_by": null,
+      "approved_at": null,
+      "readings": [
+        {
+          "id": "rd_6a",
+          "field_id": "fld_6",
+          "engine_id": "dots-mocr",
+          "value": "$150,000.00",
+          "page": 2,
+          "snippet": "securing the principal sum of $150,000.00.",
+          "confidence_raw": null,
+          "cost_usd": 0,
+          "latency_ms": 0,
+          "line_coords": {
+            "page": 2,
+            "x": 0.7143,
+            "y": 0.8,
+            "w": 0.2619,
+            "h": 0.2
+          }
+        },
+        {
+          "id": "rd_6b",
+          "field_id": "fld_6",
+          "engine_id": "mineru",
+          "value": "$156,000.00",
+          "page": 2,
+          "snippet": "securing the principal sum of $156,000.00.",
+          "confidence_raw": null,
+          "cost_usd": 0,
+          "latency_ms": 0,
+          "line_coords": {
+            "page": 2,
+            "x": 0.08,
+            "y": 0.38,
+            "w": 0.6,
+            "h": 0.03
+          }
+        }
+      ],
+      "asking": "Confirm the secured principal.",
+      "why": "The readers split on one digit of the principal.",
+      "consequence": "An understated secured principal understates the payoff.",
+      "routed_because": "A≠B"
+    },
+    {
+      "id": "fld_7",
+      "path": "deed_of_trust.maturity_date",
+      "template_row": "MATURITY DATE",
+      "section": "deed_of_trust",
+      "value": null,
+      "na_reason": "PRESENT_UNREADABLE",
+      "state": "needs_review",
+      "tier": "T2",
+      "source_doc_id": "ins_2",
+      "source_page": 3,
+      "source_snippet": "MATURITY DATE: [ scan below contrast floor — density loss ]",
+      "source_excerpt": null,
+      "source_line_coords": {
+        "page": 3,
+        "x": 0.0,
+        "y": 0.0,
+        "w": 1.0,
+        "h": 0.5
+      },
+      "engine_id": null,
+      "engine_confidence_raw": null,
+      "rule_refs": [],
+      "approved_by": null,
+      "approved_at": null,
+      "readings": [
+        {
+          "id": "rd_7a",
+          "field_id": "fld_7",
+          "engine_id": "dots-mocr",
+          "value": null,
+          "page": 3,
+          "snippet": null,
+          "confidence_raw": null,
+          "cost_usd": 0,
+          "latency_ms": 0,
+          "line_coords": null
+        },
+        {
+          "id": "rd_7b",
+          "field_id": "fld_7",
+          "engine_id": "mineru",
+          "value": null,
+          "page": 3,
+          "snippet": null,
+          "confidence_raw": null,
+          "cost_usd": 0,
+          "latency_ms": 0,
+          "line_coords": null
+        }
+      ],
+      "asking": "Read the maturity date — or declare the frame unreadable.",
+      "why": "The line is on the page and below the contrast floor; neither reader resolved it.",
+      "consequence": "A guessed maturity date misstates when the lien falls due.",
+      "routed_because": "degraded page"
+    },
+    {
+      "id": "fld_8",
+      "path": "vesting.consideration",
+      "template_row": "CONSIDERATION",
+      "section": "vesting",
+      "value": null,
+      "na_reason": "NOT_STATED",
+      "state": "auto_confirmed",
+      "tier": "T3",
+      "source_doc_id": "ins_1",
+      "source_page": 1,
+      "source_snippet": "for and in consideration of the sum of ____________ Dollars,",
+      "source_excerpt": null,
+      "source_line_coords": {
+        "page": 1,
+        "x": 0.0,
+        "y": 0.7143,
+        "w": 1.0,
+        "h": 0.1429
+      },
+      "engine_id": "dots-mocr",
+      "engine_confidence_raw": null,
+      "rule_refs": [],
+      "approved_by": null,
+      "approved_at": null,
+      "readings": [
+        {
+          "id": "rd_8a",
+          "field_id": "fld_8",
+          "engine_id": "dots-mocr",
+          "value": null,
+          "page": 1,
+          "snippet": "the sum of ____________ Dollars,",
+          "confidence_raw": null,
+          "cost_usd": 0,
+          "latency_ms": 0,
+          "line_coords": {
+            "page": 1,
+            "x": 0.0,
+            "y": 0.7143,
+            "w": 1.0,
+            "h": 0.1429
+          }
+        },
+        {
+          "id": "rd_8b",
+          "field_id": "fld_8",
+          "engine_id": "mineru",
+          "value": null,
+          "page": 1,
+          "snippet": "the sum of ____________ Dollars,",
+          "confidence_raw": null,
+          "cost_usd": 0,
+          "latency_ms": 0,
+          "line_coords": {
+            "page": 1,
+            "x": 0.0,
+            "y": 0.7143,
+            "w": 1.0,
+            "h": 0.1429
+          }
+        }
+      ],
+      "asking": null,
+      "why": null,
+      "consequence": null,
+      "routed_because": "A=B"
+    }
+  ],
+  "composition": {
+    "template_version": "v4.2",
+    "blocks": [
+      {
+        "id": "rb1",
+        "numeral": "I",
+        "title": "Header information",
+        "values": [
+          {
+            "label": "Order number",
+            "value": "SAMPLE-0001",
+            "pending": false,
+            "field_id": "fld_1"
+          },
+          {
+            "label": "Parcel",
+            "value": "00-00-00-000-000-000.000",
+            "pending": false,
+            "field_id": "fld_2"
+          }
+        ],
+        "field_count": 2,
+        "cited": 2
+      },
+      {
+        "id": "rb2",
+        "numeral": "III",
+        "title": "Vesting & encumbrances",
+        "values": [
+          {
+            "label": "Grantor",
+            "value": "HOLLIS T. MARCHBANK, A SINGLE PERSON",
+            "pending": true,
+            "field_id": "fld_3"
+          },
+          {
+            "label": "Grantee",
+            "value": "SAMPLE FAMILY TRUST",
+            "pending": false,
+            "field_id": "fld_4"
+          },
+          {
+            "label": "Consideration",
+            "value": "Instrument silent",
+            "pending": false,
+            "field_id": "fld_8"
+          },
+          {
+            "label": "Lender",
+            "value": "SAMPLETON SAVINGS BANK",
+            "pending": true,
+            "field_id": "fld_5"
+          },
+          {
+            "label": "Amount",
+            "value": "$150,000.00",
+            "pending": true,
+            "field_id": "fld_6"
+          },
+          {
+            "label": "Maturity date",
+            "value": "Present — unreadable",
+            "pending": true,
+            "field_id": "fld_7"
+          }
+        ],
+        "field_count": 6,
+        "cited": 6
+      }
+    ]
+  },
+  "report": {
+    "filename": "sample-package-typed-search-report-v1.pdf",
+    "media_type": "application/pdf",
+    "bytes": 0,
+    "sha256": "",
+    "href": "/scan/web_sample_000000/report-v1.pdf",
+    "shape": "A",
+    "version": 1
+  },
+  "quarantine": {
+    "optical": [
+      {
+        "id": "dpi",
+        "label": "Raster resolution",
+        "value": "1000×1000 px · greyscale",
+        "ok": true,
+        "note": null
+      },
+      {
+        "id": "stamp",
+        "label": "Clerk stamp located",
+        "value": "p1 · Recorded in Sample County, Missouri",
+        "ok": true,
+        "note": null
+      },
+      {
+        "id": "contrast",
+        "label": "Contrast floor",
+        "value": "1 page below",
+        "ok": false,
+        "note": "p3 — degraded for preview"
+      }
+    ],
+    "resolved_note_title": "Missouri overlay bound from clerk stamp",
+    "resolved_note_body": "Jurisdiction was read from the recorded clerk stamp on p1 — never hand-entered."
+  },
+  "pipeline": {
+    "pages_relevant": 3,
+    "classifier_note": "Every page of this package carries a report field.",
+    "package_name": "sample_package.pdf",
+    "volume_label": "3 scanned raster pages",
+    "eta_label": "read in 3 passes",
+    "verified_checks": [
+      "Every value on the draft points at a verifiable page and line citation",
+      "p3 explicitly recorded as unreadable, not collapsed into absent (Law 3)"
+    ],
+    "run_log": []
+  },
+  "timeline": [
+    {
+      "kind": "extracted",
+      "label": "extracted",
+      "detail": "3 relevant pages · 3 engines",
+      "attend": false
+    },
+    {
+      "kind": "review",
+      "label": "review 0/4",
+      "detail": "4 fields queued",
+      "attend": false
+    }
+  ]
+}

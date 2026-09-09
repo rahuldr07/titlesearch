@@ -10,7 +10,9 @@
     "./guard": "./src/guard.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "build:bundle": "node scripts/build-package-bundle.mjs",
+    "check:bundle": "node scripts/check-bundle.mjs"
   },
   "dependencies": {
     "@titlepipe/contract": "workspace:*",

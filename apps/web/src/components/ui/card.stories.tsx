@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Card, CardBody, CardHeader, InnerPanel } from "./card";
-import { onCanvas } from "./kitGround";
+import { onCanvas } from "./kit-ground";
 
 /**
  * A card lives on the canvas, not on a panel — onCanvas is the surface that

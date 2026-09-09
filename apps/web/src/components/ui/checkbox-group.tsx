@@ -7,7 +7,7 @@ import {
 
 import { cx } from "./cx";
 import { disabledAttributes, type Disablement } from "./disabled";
-import { BlockedHint } from "./blockedHint";
+import { BlockedHint } from "./blocked-hint";
 
 /**
  * Several checkboxes that are one answer, with one accessible name and

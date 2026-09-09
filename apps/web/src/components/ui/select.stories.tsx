@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect } from "storybook/test";
 
 import { Option, Select } from "./select";
-import { onPanel } from "./kitGround";
+import { onPanel } from "./kit-ground";
 
 /**
  * The options a title examiner actually picks between, not "Apple / Banana":

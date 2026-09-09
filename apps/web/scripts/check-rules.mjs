@@ -1,7 +1,9 @@
 /**
  * Code-quality bar, as a build gate. Only the mechanically checkable rules
- * live here; the judgment ones (prop count, decomposition, naming) are
- * review, not CI. Rules are written to catch the obvious evasions too —
+ * live here; the judgment ones (prop count, decomposition, whether a name is
+ * the RIGHT name) are review, not CI. File-name CASING is not a judgment —
+ * it is a fact about a directory's convention — so it is checked here, by
+ * `file-naming`. Rules are written to catch the obvious evasions too —
  * `rgb()` instead of hex, `p-[1.5rem]` instead of `p-[24px]`, `Date.parse()`
  * instead of `new Date()` — because a rule that only catches the naive
  * spelling catches nothing.
@@ -24,6 +26,7 @@
  */
 import { readFileSync, readdirSync, statSync, existsSync } from "node:fs";
 import { join, relative, basename, sep, dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const ROOT = process.cwd();
 const SRC = join(ROOT, "src");
@@ -277,6 +280,49 @@ for (const file of files) {
     });
   }
 
+  /*
+   * FILE NAMING (added 2026-09-04). This was folklore until a reviewer asked
+   * where the convention was written and the honest answer was "nowhere" —
+   * so `components/ui` had drifted into holding `radio-group.tsx` beside
+   * `commandPalette.tsx`, and `panel-ground.tsx` beside `entities/panelGround.tsx`:
+   * the same two words, two casings, two homes.
+   *
+   * Only the SHAPE is checked, never whether a name is a good one. Whether
+   * `orderCells` should have been `OrderCells` is a judgment about what the
+   * module exports and stays in review; whether it is spelled in the casing
+   * its directory uses is a fact, and facts belong in the gate.
+   *
+   *   src/components/**  kebab-case — the kit is shadcn's and keeps shadcn's
+   *                      spelling, which is what an upstream file lands as.
+   *   everywhere else    PascalCase for a module whose subject is a component,
+   *                      camelCase for one that exports functions or consts.
+   *                      Both are checked as "no dash, no underscore".
+   *
+   * The stem is the part before the first dot, so `card.nesting.stories.tsx`
+   * is judged on `card` and a suffix chain cannot smuggle a casing in.
+   */
+  const stem = basename(file).split(".")[0] ?? "";
+  if (rel.startsWith(join("src", "")) && /\.tsx?$/.test(rel) && stem !== "") {
+    const inKit = rel.startsWith(join("src", "components"));
+    const kebab = /^[a-z0-9]+(-[a-z0-9]+)*$/.test(stem);
+    const noDash = /^[A-Za-z][A-Za-z0-9]*$/.test(stem);
+    if (inKit && !kebab) {
+      add(
+        file,
+        1,
+        "file-naming",
+        `\`${stem}\` — src/components is kebab-case (§6); the kit keeps shadcn's spelling`,
+      );
+    } else if (!inKit && !noDash) {
+      add(
+        file,
+        1,
+        "file-naming",
+        `\`${stem}\` — PascalCase for a component module, camelCase otherwise (§6); kebab-case is the kit's spelling, not the app's`,
+      );
+    }
+  }
+
   if (BANNED_NAMES.test(basename(file)) || /[\\/]utils?[\\/]index\.tsx?$/i.test(rel)) {
     add(
       file,
@@ -325,8 +371,23 @@ for (const file of files) {
   }
 
   const feature = featureOf(rel);
+  /*
+   * `components/` joined this set on 2026-09-04. It had been the one layer
+   * the rule most needed to cover and did not: `components/ui` is a design
+   * system, and the whole reason `LinkButton` takes a plain `href` while
+   * `RouteButton` (typed `to`/`params`) lives in `app/` is that the kit must
+   * not know the app's route tree. `sidebar-menu.tsx` had imported the router
+   * anyway and the gate reported clean, because this line named two layers
+   * and the violation was in the third.
+   *
+   * `@tanstack/react-virtual` is deliberately NOT matched by the test below:
+   * a virtualiser is a rendering primitive, not a data or navigation
+   * dependency, and `table.tsx` is entitled to it.
+   */
   const isPresentational =
-    rel.startsWith(join("src", "shared")) || rel.startsWith(join("src", "entities"));
+    rel.startsWith(join("src", "shared")) ||
+    rel.startsWith(join("src", "entities")) ||
+    rel.startsWith(join("src", "components"));
 
   /** The at-rule enclosing the current line, and its brace depth. Per file. */
   let openAtRule = null;
@@ -466,10 +527,9 @@ function stringLiterals(line) {
  * this is not a Tailwind error, a tsc error or a lint error.
  */
 {
-  const tokensPath = new URL(
-    "../../../packages/ui-tokens/src/tokens.css",
-    import.meta.url,
-  ).pathname;
+  const tokensPath = fileURLToPath(
+    new URL("../../../packages/ui-tokens/src/tokens.css", import.meta.url),
+  );
   const text = readFileSync(tokensPath, "utf8");
   const seen = new Map();
   text.split("\n").forEach((line, i) => {

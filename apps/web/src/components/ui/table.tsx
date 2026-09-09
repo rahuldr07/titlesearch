@@ -1,10 +1,10 @@
 import { useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 
-import { chordWidget } from "./overlaySurface";
-import type { TableColumn } from "./tableColumns";
-import { TableHeaderRow, TableRow } from "./tableRow";
-import { ROW_HEIGHT } from "./rowHeight";
+import { chordWidget } from "./overlay-surface";
+import type { TableColumn } from "./table-columns";
+import { TableHeaderRow, TableRow } from "./table-row";
+import { ROW_HEIGHT } from "./row-height";
 
 /**
  * A grid of divs wearing ARIA, not a <table>: virtualization positions rows

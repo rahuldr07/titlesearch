@@ -384,7 +384,7 @@ describe("the browser's mock-auth headers are exactly the set core-api refuses",
     for (const file of globSync("src/**/*.{ts,tsx}", {
       cwd: new URL("../../", import.meta.url).pathname,
     })) {
-      if (file.endsWith("mock-auth.test.ts") || file.endsWith("mockHandlers.test.ts"))
+      if (file.endsWith("mockAuth.test.ts") || file.endsWith("mockHandlers.test.ts"))
         continue;
       const source = readFileSync(new URL(`../../${file}`, import.meta.url), "utf8");
       for (const match of source.matchAll(/"(x-mock-[a-z-]+)"/g)) {

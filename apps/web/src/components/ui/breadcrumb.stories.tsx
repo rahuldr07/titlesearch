@@ -7,7 +7,7 @@ import {
   BreadcrumbSeparator,
   BreadcrumbTrail,
 } from "./breadcrumb";
-import { onPanel } from "./kitGround";
+import { onPanel } from "./kit-ground";
 
 /** Every depth the app reaches, plus assertions that keep the last crumb honest. */
 const meta = {

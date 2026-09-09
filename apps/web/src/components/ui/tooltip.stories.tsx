@@ -3,7 +3,7 @@ import { expect, userEvent } from "storybook/test";
 
 import { Tooltip, TooltipTrigger } from "./tooltip";
 import { Button } from "./button";
-import { onCanvas } from "./kitGround";
+import { onCanvas } from "./kit-ground";
 
 /**
  * A tooltip is dark chrome on a light screen, so it stands on the canvas and

@@ -292,6 +292,15 @@ export function markOrderReleased(id: string, at: string): void {
   });
 }
 
+/**
+ * A partial re-decision of a row that is not a release — a hydrated order's
+ * stamp tone as its open work drains (packages.ts). Merged, so a release
+ * filed later still replaces it whole.
+ */
+export function overlayOrderRow(id: string, patch: Partial<DemoOrderRow>): void {
+  releasedOverlay.set(id, { ...(releasedOverlay.get(id) ?? {}), ...patch });
+}
+
 export function clearReleasedOverlay(): void {
   releasedOverlay.clear();
 }
@@ -311,6 +320,14 @@ export function addCreatedOrder(row: DemoOrderRow): void {
 
 export function clearCreatedOrders(): void {
   createdRows.length = 0;
+}
+
+/** The accept act on a created row: a real instant, recorded once. */
+export function acceptCreatedOrder(id: string, at: string): void {
+  const i = createdRows.findIndex((r) => r.id === id);
+  const row = createdRows[i];
+  if (row === undefined) return;
+  createdRows[i] = { ...row, status: "accepted", accepted_at: at };
 }
 
 export function demoOrderRows(): readonly DemoOrderRow[] {
@@ -1626,7 +1643,7 @@ export const demoPages: Record<
   string,
   {
     total: number;
-    pages: { n: number; read_in_full: boolean; kind: string; lines: string[]; degraded: boolean }[];
+    pages: { n: number; read_in_full: boolean; kind: string; lines: string[]; degraded: boolean; image_url?: string }[];
     /**
      * The partitioner's own boundaries, not a grouping of `pages[].kind`
      * (see `PackageInstrument`). The ranges cover the package contiguously —

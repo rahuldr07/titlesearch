@@ -13,7 +13,6 @@ export {
   SidebarGroup,
   SidebarGroupLabel,
   SidebarMenu,
-  SidebarMenuLink,
   SidebarMenuLabel,
 } from "./sidebar-menu";
 

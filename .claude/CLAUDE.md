@@ -22,4 +22,9 @@ Read `CLAUDE.md` at repo root first (doc order: docs/HANDOFF.md → docs/CONTEXT
 ## Conventions
 - Design pixel spec: `docs/archive/Title report review tool.zip` → `.dc.html` files (warm-paper palette, IBM Plex). Colors ONLY via tokens from `@titlepipe/ui-tokens` (`packages/ui-tokens/src/tokens.css`, imported by `apps/web/src/styles.css`) — no raw hex in TSX.
 - Every API response parses through `@titlepipe/contract` at the boundary (`apps/web/src/shared/api.ts`). Never widen a contract type locally — emit `CONTRACT GAP:` notes instead.
+- **File naming** (gated by `check:rules` → `file-naming`; the shape only, never whether the name is a good one):
+  - `src/components/**` → **kebab-case** (`radio-group.tsx`, `sidebar-menu.tsx`). The kit is shadcn's and keeps shadcn's spelling, so an upstream file lands unrenamed.
+  - Everywhere else → **PascalCase** when the module's subject is a component (`FieldRow.tsx`), **camelCase** when it exports functions or consts (`orderColumns.tsx`, `noValueStates.ts`). Enforced as "no dash, no underscore"; the Pascal-vs-camel call is review's.
+  - The stem is the part before the first dot, so `card.nesting.stories.tsx` is judged on `card`.
+- **`components/ui` may not import the route tree or the query client.** `presentational-fetches` covers `shared/`, `entities/` **and** `components/`. The kit exports the look (`buttonVariants`, `sidebarDoorClass`); `app/chrome/` composes it with `Link` (`RouteButton`, `SidebarMenuLink`).
 - Refusal rules (correction needs reason, escalation needs question, ruling needs citation, golden correction needs source+reason+signature) live in contract schemas + Playwright tests — never hand-rolled.

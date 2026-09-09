@@ -10,7 +10,7 @@ import { ChevronDownIcon } from "lucide-react";
 
 import { cx } from "./cx";
 import { disabledAttributes, type Disablement } from "./disabled";
-import { BlockedHint } from "./blockedHint";
+import { BlockedHint } from "./blocked-hint";
 import { Popover } from "./popover";
 import { controlHeight } from "./field-chrome";
 

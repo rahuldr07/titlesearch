@@ -1,30 +1,28 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect } from "storybook/test";
 import {
-  createMemoryHistory,
-  createRootRoute,
-  createRouter,
-  RouterProvider,
-} from "@tanstack/react-router";
-import {
   Sidebar,
   SidebarProvider,
   SidebarContent,
   SidebarGroup,
   SidebarGroupLabel,
   SidebarMenu,
-  SidebarMenuLink,
   SidebarMenuLabel,
+  sidebarDoorClass,
 } from "./index";
-import { tokenColour } from "./tokenColour";
+import { tokenColour } from "./token-colour";
 
 /**
  * The rail column's measurements, pinned: column 240 · door 38 high, radius
  * 14 · rubric 11px/700 at .14em tracking · door label 13px · active door
  * filled with the action colour under white. These are the values a future
  * edit is most likely to lose silently — every one still looks like a
- * sidebar when wrong. SidebarMenuLink is a router Link, so these mount a
- * memory router.
+ * sidebar when wrong.
+ *
+ * Plain anchors, not the routed `SidebarMenuLink`: that component lives in
+ * `app/chrome/` because the kit may not import the route tree, and what is
+ * under test here is the door's geometry, which is `sidebarDoorClass`. The
+ * memory router this story used to mount tested Storybook, not the rail.
  */
 function Rail() {
   return (
@@ -34,12 +32,12 @@ function Rail() {
           <SidebarGroup>
             <SidebarGroupLabel>Pipeline</SidebarGroupLabel>
             <SidebarMenu>
-              <SidebarMenuLink to="/" active testId="door-overview">
+              <a href="/" data-testid="door-overview" className={sidebarDoorClass(true)}>
                 <SidebarMenuLabel>Overview</SidebarMenuLabel>
-              </SidebarMenuLink>
-              <SidebarMenuLink to="/" active={false} testId="door-queue">
+              </a>
+              <a href="/" data-testid="door-queue" className={sidebarDoorClass(false)}>
                 <SidebarMenuLabel>Queue</SidebarMenuLabel>
-              </SidebarMenuLink>
+              </a>
             </SidebarMenu>
           </SidebarGroup>
         </SidebarContent>
@@ -48,19 +46,11 @@ function Rail() {
   );
 }
 
-function Harness() {
-  const router = createRouter({
-    routeTree: createRootRoute({ component: Rail }),
-    history: createMemoryHistory({ initialEntries: ["/"] }),
-  });
-  return <RouterProvider router={router} />;
-}
-
 const meta = {
   title: "Kit/Sidebar",
-  component: Harness,
+  component: Rail,
   parameters: { layout: "fullscreen" },
-} satisfies Meta<typeof Harness>;
+} satisfies Meta<typeof Rail>;
 export default meta;
 
 type Story = StoryObj<typeof meta>;
